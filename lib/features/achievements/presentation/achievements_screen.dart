@@ -35,11 +35,10 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
     if (state.isLoading && state.badges.isEmpty) {
       body = const Center(child: CircularProgressIndicator());
     } else {
-      final filtered = state.badges
-          .where((b) =>
-              _selectedCategory == null ||
-              b.definition.category == _selectedCategory)
-          .toList();
+      // The category filter is precomputed per chip in the display; the screen
+      // picks a list, it does not fold one.
+      final filtered = state.display?.badgesFor(_selectedCategory) ??
+          const <AchievementProgress>[];
       body = Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

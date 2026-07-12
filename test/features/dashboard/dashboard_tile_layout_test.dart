@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/presentation/reorder.dart';
-import 'package:openvitals/features/dashboard/presentation/dashboard_summary_presentation.dart';
+import 'package:openvitals/features/dashboard/application/dashboard_display.dart';
 
 StatTileData _tile(String title) => StatTileData(
       title: title,

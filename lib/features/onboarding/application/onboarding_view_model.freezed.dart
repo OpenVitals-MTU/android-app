@@ -14,7 +14,13 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$OnboardingState {
 
- HealthConnectAvailability get availability; Set<String> get grantedPermissions; bool get mindfulnessAvailable; bool get isCheckingPermissions;
+ HealthConnectAvailability get availability; Set<String> get grantedPermissions; bool get mindfulnessAvailable; bool get isCheckingPermissions; OnboardingDisplay get display;/// The permission-grant flow: the runtime dialog, and the trip to the
+/// Health Connect page a non-requestable permission needs. One user action,
+/// one command.
+ CommandState<void> get grant;/// Why the initial availability + granted-permission read failed, if it
+/// did. The screen degrades to the (empty) permission flow rather than
+/// hanging on the loader, which is what the thrown failure used to do.
+ ScreenError? get error;
 /// Create a copy of OnboardingState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +31,16 @@ $OnboardingStateCopyWith<OnboardingState> get copyWith => _$OnboardingStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OnboardingState&&(identical(other.availability, availability) || other.availability == availability)&&const DeepCollectionEquality().equals(other.grantedPermissions, grantedPermissions)&&(identical(other.mindfulnessAvailable, mindfulnessAvailable) || other.mindfulnessAvailable == mindfulnessAvailable)&&(identical(other.isCheckingPermissions, isCheckingPermissions) || other.isCheckingPermissions == isCheckingPermissions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OnboardingState&&(identical(other.availability, availability) || other.availability == availability)&&const DeepCollectionEquality().equals(other.grantedPermissions, grantedPermissions)&&(identical(other.mindfulnessAvailable, mindfulnessAvailable) || other.mindfulnessAvailable == mindfulnessAvailable)&&(identical(other.isCheckingPermissions, isCheckingPermissions) || other.isCheckingPermissions == isCheckingPermissions)&&(identical(other.display, display) || other.display == display)&&(identical(other.grant, grant) || other.grant == grant)&&(identical(other.error, error) || other.error == error));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,availability,const DeepCollectionEquality().hash(grantedPermissions),mindfulnessAvailable,isCheckingPermissions);
+int get hashCode => Object.hash(runtimeType,availability,const DeepCollectionEquality().hash(grantedPermissions),mindfulnessAvailable,isCheckingPermissions,display,grant,error);
 
 @override
 String toString() {
-  return 'OnboardingState(availability: $availability, grantedPermissions: $grantedPermissions, mindfulnessAvailable: $mindfulnessAvailable, isCheckingPermissions: $isCheckingPermissions)';
+  return 'OnboardingState(availability: $availability, grantedPermissions: $grantedPermissions, mindfulnessAvailable: $mindfulnessAvailable, isCheckingPermissions: $isCheckingPermissions, display: $display, grant: $grant, error: $error)';
 }
 
 
@@ -45,11 +51,11 @@ abstract mixin class $OnboardingStateCopyWith<$Res>  {
   factory $OnboardingStateCopyWith(OnboardingState value, $Res Function(OnboardingState) _then) = _$OnboardingStateCopyWithImpl;
 @useResult
 $Res call({
- HealthConnectAvailability availability, Set<String> grantedPermissions, bool mindfulnessAvailable, bool isCheckingPermissions
+ HealthConnectAvailability availability, Set<String> grantedPermissions, bool mindfulnessAvailable, bool isCheckingPermissions, OnboardingDisplay display, CommandState<void> grant, ScreenError? error
 });
 
 
-
+$OnboardingDisplayCopyWith<$Res> get display;$CommandStateCopyWith<void, $Res> get grant;
 
 }
 /// @nodoc
@@ -62,16 +68,37 @@ class _$OnboardingStateCopyWithImpl<$Res>
 
 /// Create a copy of OnboardingState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? availability = null,Object? grantedPermissions = null,Object? mindfulnessAvailable = null,Object? isCheckingPermissions = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? availability = null,Object? grantedPermissions = null,Object? mindfulnessAvailable = null,Object? isCheckingPermissions = null,Object? display = null,Object? grant = null,Object? error = freezed,}) {
   return _then(_self.copyWith(
 availability: null == availability ? _self.availability : availability // ignore: cast_nullable_to_non_nullable
 as HealthConnectAvailability,grantedPermissions: null == grantedPermissions ? _self.grantedPermissions : grantedPermissions // ignore: cast_nullable_to_non_nullable
 as Set<String>,mindfulnessAvailable: null == mindfulnessAvailable ? _self.mindfulnessAvailable : mindfulnessAvailable // ignore: cast_nullable_to_non_nullable
 as bool,isCheckingPermissions: null == isCheckingPermissions ? _self.isCheckingPermissions : isCheckingPermissions // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,display: null == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as OnboardingDisplay,grant: null == grant ? _self.grant : grant // ignore: cast_nullable_to_non_nullable
+as CommandState<void>,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as ScreenError?,
   ));
 }
-
+/// Create a copy of OnboardingState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$OnboardingDisplayCopyWith<$Res> get display {
+  
+  return $OnboardingDisplayCopyWith<$Res>(_self.display, (value) {
+    return _then(_self.copyWith(display: value));
+  });
+}/// Create a copy of OnboardingState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CommandStateCopyWith<void, $Res> get grant {
+  
+  return $CommandStateCopyWith<void, $Res>(_self.grant, (value) {
+    return _then(_self.copyWith(grant: value));
+  });
+}
 }
 
 
@@ -153,10 +180,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( HealthConnectAvailability availability,  Set<String> grantedPermissions,  bool mindfulnessAvailable,  bool isCheckingPermissions)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( HealthConnectAvailability availability,  Set<String> grantedPermissions,  bool mindfulnessAvailable,  bool isCheckingPermissions,  OnboardingDisplay display,  CommandState<void> grant,  ScreenError? error)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OnboardingState() when $default != null:
-return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAvailable,_that.isCheckingPermissions);case _:
+return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAvailable,_that.isCheckingPermissions,_that.display,_that.grant,_that.error);case _:
   return orElse();
 
 }
@@ -174,10 +201,10 @@ return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAva
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( HealthConnectAvailability availability,  Set<String> grantedPermissions,  bool mindfulnessAvailable,  bool isCheckingPermissions)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( HealthConnectAvailability availability,  Set<String> grantedPermissions,  bool mindfulnessAvailable,  bool isCheckingPermissions,  OnboardingDisplay display,  CommandState<void> grant,  ScreenError? error)  $default,) {final _that = this;
 switch (_that) {
 case _OnboardingState():
-return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAvailable,_that.isCheckingPermissions);case _:
+return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAvailable,_that.isCheckingPermissions,_that.display,_that.grant,_that.error);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +221,10 @@ return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAva
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( HealthConnectAvailability availability,  Set<String> grantedPermissions,  bool mindfulnessAvailable,  bool isCheckingPermissions)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( HealthConnectAvailability availability,  Set<String> grantedPermissions,  bool mindfulnessAvailable,  bool isCheckingPermissions,  OnboardingDisplay display,  CommandState<void> grant,  ScreenError? error)?  $default,) {final _that = this;
 switch (_that) {
 case _OnboardingState() when $default != null:
-return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAvailable,_that.isCheckingPermissions);case _:
+return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAvailable,_that.isCheckingPermissions,_that.display,_that.grant,_that.error);case _:
   return null;
 
 }
@@ -209,7 +236,7 @@ return $default(_that.availability,_that.grantedPermissions,_that.mindfulnessAva
 
 
 class _OnboardingState implements OnboardingState {
-  const _OnboardingState({this.availability = HealthConnectAvailability.available, final  Set<String> grantedPermissions = const <String>{}, this.mindfulnessAvailable = false, this.isCheckingPermissions = true}): _grantedPermissions = grantedPermissions;
+  const _OnboardingState({this.availability = HealthConnectAvailability.available, final  Set<String> grantedPermissions = const <String>{}, this.mindfulnessAvailable = false, this.isCheckingPermissions = true, this.display = _emptyDisplay, this.grant = const CommandState<void>.idle(), this.error}): _grantedPermissions = grantedPermissions;
   
 
 @override@JsonKey() final  HealthConnectAvailability availability;
@@ -222,6 +249,15 @@ class _OnboardingState implements OnboardingState {
 
 @override@JsonKey() final  bool mindfulnessAvailable;
 @override@JsonKey() final  bool isCheckingPermissions;
+@override@JsonKey() final  OnboardingDisplay display;
+/// The permission-grant flow: the runtime dialog, and the trip to the
+/// Health Connect page a non-requestable permission needs. One user action,
+/// one command.
+@override@JsonKey() final  CommandState<void> grant;
+/// Why the initial availability + granted-permission read failed, if it
+/// did. The screen degrades to the (empty) permission flow rather than
+/// hanging on the loader, which is what the thrown failure used to do.
+@override final  ScreenError? error;
 
 /// Create a copy of OnboardingState
 /// with the given fields replaced by the non-null parameter values.
@@ -233,16 +269,16 @@ _$OnboardingStateCopyWith<_OnboardingState> get copyWith => __$OnboardingStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OnboardingState&&(identical(other.availability, availability) || other.availability == availability)&&const DeepCollectionEquality().equals(other._grantedPermissions, _grantedPermissions)&&(identical(other.mindfulnessAvailable, mindfulnessAvailable) || other.mindfulnessAvailable == mindfulnessAvailable)&&(identical(other.isCheckingPermissions, isCheckingPermissions) || other.isCheckingPermissions == isCheckingPermissions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OnboardingState&&(identical(other.availability, availability) || other.availability == availability)&&const DeepCollectionEquality().equals(other._grantedPermissions, _grantedPermissions)&&(identical(other.mindfulnessAvailable, mindfulnessAvailable) || other.mindfulnessAvailable == mindfulnessAvailable)&&(identical(other.isCheckingPermissions, isCheckingPermissions) || other.isCheckingPermissions == isCheckingPermissions)&&(identical(other.display, display) || other.display == display)&&(identical(other.grant, grant) || other.grant == grant)&&(identical(other.error, error) || other.error == error));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,availability,const DeepCollectionEquality().hash(_grantedPermissions),mindfulnessAvailable,isCheckingPermissions);
+int get hashCode => Object.hash(runtimeType,availability,const DeepCollectionEquality().hash(_grantedPermissions),mindfulnessAvailable,isCheckingPermissions,display,grant,error);
 
 @override
 String toString() {
-  return 'OnboardingState(availability: $availability, grantedPermissions: $grantedPermissions, mindfulnessAvailable: $mindfulnessAvailable, isCheckingPermissions: $isCheckingPermissions)';
+  return 'OnboardingState(availability: $availability, grantedPermissions: $grantedPermissions, mindfulnessAvailable: $mindfulnessAvailable, isCheckingPermissions: $isCheckingPermissions, display: $display, grant: $grant, error: $error)';
 }
 
 
@@ -253,11 +289,11 @@ abstract mixin class _$OnboardingStateCopyWith<$Res> implements $OnboardingState
   factory _$OnboardingStateCopyWith(_OnboardingState value, $Res Function(_OnboardingState) _then) = __$OnboardingStateCopyWithImpl;
 @override @useResult
 $Res call({
- HealthConnectAvailability availability, Set<String> grantedPermissions, bool mindfulnessAvailable, bool isCheckingPermissions
+ HealthConnectAvailability availability, Set<String> grantedPermissions, bool mindfulnessAvailable, bool isCheckingPermissions, OnboardingDisplay display, CommandState<void> grant, ScreenError? error
 });
 
 
-
+@override $OnboardingDisplayCopyWith<$Res> get display;@override $CommandStateCopyWith<void, $Res> get grant;
 
 }
 /// @nodoc
@@ -270,17 +306,38 @@ class __$OnboardingStateCopyWithImpl<$Res>
 
 /// Create a copy of OnboardingState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? availability = null,Object? grantedPermissions = null,Object? mindfulnessAvailable = null,Object? isCheckingPermissions = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? availability = null,Object? grantedPermissions = null,Object? mindfulnessAvailable = null,Object? isCheckingPermissions = null,Object? display = null,Object? grant = null,Object? error = freezed,}) {
   return _then(_OnboardingState(
 availability: null == availability ? _self.availability : availability // ignore: cast_nullable_to_non_nullable
 as HealthConnectAvailability,grantedPermissions: null == grantedPermissions ? _self._grantedPermissions : grantedPermissions // ignore: cast_nullable_to_non_nullable
 as Set<String>,mindfulnessAvailable: null == mindfulnessAvailable ? _self.mindfulnessAvailable : mindfulnessAvailable // ignore: cast_nullable_to_non_nullable
 as bool,isCheckingPermissions: null == isCheckingPermissions ? _self.isCheckingPermissions : isCheckingPermissions // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,display: null == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as OnboardingDisplay,grant: null == grant ? _self.grant : grant // ignore: cast_nullable_to_non_nullable
+as CommandState<void>,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as ScreenError?,
   ));
 }
 
-
+/// Create a copy of OnboardingState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$OnboardingDisplayCopyWith<$Res> get display {
+  
+  return $OnboardingDisplayCopyWith<$Res>(_self.display, (value) {
+    return _then(_self.copyWith(display: value));
+  });
+}/// Create a copy of OnboardingState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CommandStateCopyWith<void, $Res> get grant {
+  
+  return $CommandStateCopyWith<void, $Res>(_self.grant, (value) {
+    return _then(_self.copyWith(grant: value));
+  });
+}
 }
 
 // dart format on

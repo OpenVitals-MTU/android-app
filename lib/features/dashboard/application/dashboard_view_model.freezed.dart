@@ -12,9 +12,9 @@ part of 'dashboard_view_model.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
-mixin _$DashboardState {
+mixin _$DashboardState implements DiagnosticableTreeMixin {
 
- LocalDate get selectedDate; DashboardData? get data; bool get isLoading; bool get isRefreshing; ScreenError? get error; SleepRangeMode get sleepRangeMode; ActivityWeekMode get activityWeekMode; bool get showOpenVitalsCalculatedCalories; HealthConnectAvailability get healthConnectAvailability; bool get minimumPermissionsGranted; Set<DashboardMetric> get loadingMetrics; Set<String> get unacknowledgedPermissions; bool get editing; List<String> get tileOrder; List<String> get ringOrder; Set<String> get hiddenTiles;
+ LocalDate get selectedDate; DashboardData? get data; DashboardDisplay? get display; DashboardGoals get goals; bool get isLoading; bool get isRefreshing; ScreenError? get error; SleepRangeMode get sleepRangeMode; ActivityWeekMode get activityWeekMode; bool get showOpenVitalsCalculatedCalories; HealthConnectAvailability get healthConnectAvailability; bool get minimumPermissionsGranted; Set<DashboardMetric> get loadingMetrics; Set<String> get unacknowledgedPermissions; bool get editing; List<String> get tileOrder; List<String> get ringOrder; Set<String> get hiddenTiles;
 /// Create a copy of DashboardState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -22,19 +22,25 @@ mixin _$DashboardState {
 $DashboardStateCopyWith<DashboardState> get copyWith => _$DashboardStateCopyWithImpl<DashboardState>(this as DashboardState, _$identity);
 
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'DashboardState'))
+    ..add(DiagnosticsProperty('selectedDate', selectedDate))..add(DiagnosticsProperty('data', data))..add(DiagnosticsProperty('display', display))..add(DiagnosticsProperty('goals', goals))..add(DiagnosticsProperty('isLoading', isLoading))..add(DiagnosticsProperty('isRefreshing', isRefreshing))..add(DiagnosticsProperty('error', error))..add(DiagnosticsProperty('sleepRangeMode', sleepRangeMode))..add(DiagnosticsProperty('activityWeekMode', activityWeekMode))..add(DiagnosticsProperty('showOpenVitalsCalculatedCalories', showOpenVitalsCalculatedCalories))..add(DiagnosticsProperty('healthConnectAvailability', healthConnectAvailability))..add(DiagnosticsProperty('minimumPermissionsGranted', minimumPermissionsGranted))..add(DiagnosticsProperty('loadingMetrics', loadingMetrics))..add(DiagnosticsProperty('unacknowledgedPermissions', unacknowledgedPermissions))..add(DiagnosticsProperty('editing', editing))..add(DiagnosticsProperty('tileOrder', tileOrder))..add(DiagnosticsProperty('ringOrder', ringOrder))..add(DiagnosticsProperty('hiddenTiles', hiddenTiles));
+}
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DashboardState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.data, data) || other.data == data)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isRefreshing, isRefreshing) || other.isRefreshing == isRefreshing)&&(identical(other.error, error) || other.error == error)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.activityWeekMode, activityWeekMode) || other.activityWeekMode == activityWeekMode)&&(identical(other.showOpenVitalsCalculatedCalories, showOpenVitalsCalculatedCalories) || other.showOpenVitalsCalculatedCalories == showOpenVitalsCalculatedCalories)&&(identical(other.healthConnectAvailability, healthConnectAvailability) || other.healthConnectAvailability == healthConnectAvailability)&&(identical(other.minimumPermissionsGranted, minimumPermissionsGranted) || other.minimumPermissionsGranted == minimumPermissionsGranted)&&const DeepCollectionEquality().equals(other.loadingMetrics, loadingMetrics)&&const DeepCollectionEquality().equals(other.unacknowledgedPermissions, unacknowledgedPermissions)&&(identical(other.editing, editing) || other.editing == editing)&&const DeepCollectionEquality().equals(other.tileOrder, tileOrder)&&const DeepCollectionEquality().equals(other.ringOrder, ringOrder)&&const DeepCollectionEquality().equals(other.hiddenTiles, hiddenTiles));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DashboardState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.data, data) || other.data == data)&&(identical(other.display, display) || other.display == display)&&(identical(other.goals, goals) || other.goals == goals)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isRefreshing, isRefreshing) || other.isRefreshing == isRefreshing)&&(identical(other.error, error) || other.error == error)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.activityWeekMode, activityWeekMode) || other.activityWeekMode == activityWeekMode)&&(identical(other.showOpenVitalsCalculatedCalories, showOpenVitalsCalculatedCalories) || other.showOpenVitalsCalculatedCalories == showOpenVitalsCalculatedCalories)&&(identical(other.healthConnectAvailability, healthConnectAvailability) || other.healthConnectAvailability == healthConnectAvailability)&&(identical(other.minimumPermissionsGranted, minimumPermissionsGranted) || other.minimumPermissionsGranted == minimumPermissionsGranted)&&const DeepCollectionEquality().equals(other.loadingMetrics, loadingMetrics)&&const DeepCollectionEquality().equals(other.unacknowledgedPermissions, unacknowledgedPermissions)&&(identical(other.editing, editing) || other.editing == editing)&&const DeepCollectionEquality().equals(other.tileOrder, tileOrder)&&const DeepCollectionEquality().equals(other.ringOrder, ringOrder)&&const DeepCollectionEquality().equals(other.hiddenTiles, hiddenTiles));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,data,isLoading,isRefreshing,error,sleepRangeMode,activityWeekMode,showOpenVitalsCalculatedCalories,healthConnectAvailability,minimumPermissionsGranted,const DeepCollectionEquality().hash(loadingMetrics),const DeepCollectionEquality().hash(unacknowledgedPermissions),editing,const DeepCollectionEquality().hash(tileOrder),const DeepCollectionEquality().hash(ringOrder),const DeepCollectionEquality().hash(hiddenTiles));
+int get hashCode => Object.hash(runtimeType,selectedDate,data,display,goals,isLoading,isRefreshing,error,sleepRangeMode,activityWeekMode,showOpenVitalsCalculatedCalories,healthConnectAvailability,minimumPermissionsGranted,const DeepCollectionEquality().hash(loadingMetrics),const DeepCollectionEquality().hash(unacknowledgedPermissions),editing,const DeepCollectionEquality().hash(tileOrder),const DeepCollectionEquality().hash(ringOrder),const DeepCollectionEquality().hash(hiddenTiles));
 
 @override
-String toString() {
-  return 'DashboardState(selectedDate: $selectedDate, data: $data, isLoading: $isLoading, isRefreshing: $isRefreshing, error: $error, sleepRangeMode: $sleepRangeMode, activityWeekMode: $activityWeekMode, showOpenVitalsCalculatedCalories: $showOpenVitalsCalculatedCalories, healthConnectAvailability: $healthConnectAvailability, minimumPermissionsGranted: $minimumPermissionsGranted, loadingMetrics: $loadingMetrics, unacknowledgedPermissions: $unacknowledgedPermissions, editing: $editing, tileOrder: $tileOrder, ringOrder: $ringOrder, hiddenTiles: $hiddenTiles)';
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+  return 'DashboardState(selectedDate: $selectedDate, data: $data, display: $display, goals: $goals, isLoading: $isLoading, isRefreshing: $isRefreshing, error: $error, sleepRangeMode: $sleepRangeMode, activityWeekMode: $activityWeekMode, showOpenVitalsCalculatedCalories: $showOpenVitalsCalculatedCalories, healthConnectAvailability: $healthConnectAvailability, minimumPermissionsGranted: $minimumPermissionsGranted, loadingMetrics: $loadingMetrics, unacknowledgedPermissions: $unacknowledgedPermissions, editing: $editing, tileOrder: $tileOrder, ringOrder: $ringOrder, hiddenTiles: $hiddenTiles)';
 }
 
 
@@ -45,11 +51,11 @@ abstract mixin class $DashboardStateCopyWith<$Res>  {
   factory $DashboardStateCopyWith(DashboardState value, $Res Function(DashboardState) _then) = _$DashboardStateCopyWithImpl;
 @useResult
 $Res call({
- LocalDate selectedDate, DashboardData? data, bool isLoading, bool isRefreshing, ScreenError? error, SleepRangeMode sleepRangeMode, ActivityWeekMode activityWeekMode, bool showOpenVitalsCalculatedCalories, HealthConnectAvailability healthConnectAvailability, bool minimumPermissionsGranted, Set<DashboardMetric> loadingMetrics, Set<String> unacknowledgedPermissions, bool editing, List<String> tileOrder, List<String> ringOrder, Set<String> hiddenTiles
+ LocalDate selectedDate, DashboardData? data, DashboardDisplay? display, DashboardGoals goals, bool isLoading, bool isRefreshing, ScreenError? error, SleepRangeMode sleepRangeMode, ActivityWeekMode activityWeekMode, bool showOpenVitalsCalculatedCalories, HealthConnectAvailability healthConnectAvailability, bool minimumPermissionsGranted, Set<DashboardMetric> loadingMetrics, Set<String> unacknowledgedPermissions, bool editing, List<String> tileOrder, List<String> ringOrder, Set<String> hiddenTiles
 });
 
 
-$DashboardDataCopyWith<$Res>? get data;
+$DashboardDataCopyWith<$Res>? get data;$DashboardDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -62,11 +68,13 @@ class _$DashboardStateCopyWithImpl<$Res>
 
 /// Create a copy of DashboardState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? data = freezed,Object? isLoading = null,Object? isRefreshing = null,Object? error = freezed,Object? sleepRangeMode = null,Object? activityWeekMode = null,Object? showOpenVitalsCalculatedCalories = null,Object? healthConnectAvailability = null,Object? minimumPermissionsGranted = null,Object? loadingMetrics = null,Object? unacknowledgedPermissions = null,Object? editing = null,Object? tileOrder = null,Object? ringOrder = null,Object? hiddenTiles = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? data = freezed,Object? display = freezed,Object? goals = null,Object? isLoading = null,Object? isRefreshing = null,Object? error = freezed,Object? sleepRangeMode = null,Object? activityWeekMode = null,Object? showOpenVitalsCalculatedCalories = null,Object? healthConnectAvailability = null,Object? minimumPermissionsGranted = null,Object? loadingMetrics = null,Object? unacknowledgedPermissions = null,Object? editing = null,Object? tileOrder = null,Object? ringOrder = null,Object? hiddenTiles = null,}) {
   return _then(_self.copyWith(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,data: freezed == data ? _self.data : data // ignore: cast_nullable_to_non_nullable
-as DashboardData?,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
+as DashboardData?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as DashboardDisplay?,goals: null == goals ? _self.goals : goals // ignore: cast_nullable_to_non_nullable
+as DashboardGoals,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,isRefreshing: null == isRefreshing ? _self.isRefreshing : isRefreshing // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,sleepRangeMode: null == sleepRangeMode ? _self.sleepRangeMode : sleepRangeMode // ignore: cast_nullable_to_non_nullable
@@ -94,6 +102,18 @@ $DashboardDataCopyWith<$Res>? get data {
 
   return $DashboardDataCopyWith<$Res>(_self.data!, (value) {
     return _then(_self.copyWith(data: value));
+  });
+}/// Create a copy of DashboardState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DashboardDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
+
+  return $DashboardDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
   });
 }
 }
@@ -177,10 +197,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  DashboardData? data,  bool isLoading,  bool isRefreshing,  ScreenError? error,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  HealthConnectAvailability healthConnectAvailability,  bool minimumPermissionsGranted,  Set<DashboardMetric> loadingMetrics,  Set<String> unacknowledgedPermissions,  bool editing,  List<String> tileOrder,  List<String> ringOrder,  Set<String> hiddenTiles)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  DashboardData? data,  DashboardDisplay? display,  DashboardGoals goals,  bool isLoading,  bool isRefreshing,  ScreenError? error,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  HealthConnectAvailability healthConnectAvailability,  bool minimumPermissionsGranted,  Set<DashboardMetric> loadingMetrics,  Set<String> unacknowledgedPermissions,  bool editing,  List<String> tileOrder,  List<String> ringOrder,  Set<String> hiddenTiles)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DashboardState() when $default != null:
-return $default(_that.selectedDate,_that.data,_that.isLoading,_that.isRefreshing,_that.error,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectAvailability,_that.minimumPermissionsGranted,_that.loadingMetrics,_that.unacknowledgedPermissions,_that.editing,_that.tileOrder,_that.ringOrder,_that.hiddenTiles);case _:
+return $default(_that.selectedDate,_that.data,_that.display,_that.goals,_that.isLoading,_that.isRefreshing,_that.error,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectAvailability,_that.minimumPermissionsGranted,_that.loadingMetrics,_that.unacknowledgedPermissions,_that.editing,_that.tileOrder,_that.ringOrder,_that.hiddenTiles);case _:
   return orElse();
 
 }
@@ -198,10 +218,10 @@ return $default(_that.selectedDate,_that.data,_that.isLoading,_that.isRefreshing
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  DashboardData? data,  bool isLoading,  bool isRefreshing,  ScreenError? error,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  HealthConnectAvailability healthConnectAvailability,  bool minimumPermissionsGranted,  Set<DashboardMetric> loadingMetrics,  Set<String> unacknowledgedPermissions,  bool editing,  List<String> tileOrder,  List<String> ringOrder,  Set<String> hiddenTiles)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  DashboardData? data,  DashboardDisplay? display,  DashboardGoals goals,  bool isLoading,  bool isRefreshing,  ScreenError? error,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  HealthConnectAvailability healthConnectAvailability,  bool minimumPermissionsGranted,  Set<DashboardMetric> loadingMetrics,  Set<String> unacknowledgedPermissions,  bool editing,  List<String> tileOrder,  List<String> ringOrder,  Set<String> hiddenTiles)  $default,) {final _that = this;
 switch (_that) {
 case _DashboardState():
-return $default(_that.selectedDate,_that.data,_that.isLoading,_that.isRefreshing,_that.error,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectAvailability,_that.minimumPermissionsGranted,_that.loadingMetrics,_that.unacknowledgedPermissions,_that.editing,_that.tileOrder,_that.ringOrder,_that.hiddenTiles);case _:
+return $default(_that.selectedDate,_that.data,_that.display,_that.goals,_that.isLoading,_that.isRefreshing,_that.error,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectAvailability,_that.minimumPermissionsGranted,_that.loadingMetrics,_that.unacknowledgedPermissions,_that.editing,_that.tileOrder,_that.ringOrder,_that.hiddenTiles);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -218,10 +238,10 @@ return $default(_that.selectedDate,_that.data,_that.isLoading,_that.isRefreshing
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  DashboardData? data,  bool isLoading,  bool isRefreshing,  ScreenError? error,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  HealthConnectAvailability healthConnectAvailability,  bool minimumPermissionsGranted,  Set<DashboardMetric> loadingMetrics,  Set<String> unacknowledgedPermissions,  bool editing,  List<String> tileOrder,  List<String> ringOrder,  Set<String> hiddenTiles)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  DashboardData? data,  DashboardDisplay? display,  DashboardGoals goals,  bool isLoading,  bool isRefreshing,  ScreenError? error,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  HealthConnectAvailability healthConnectAvailability,  bool minimumPermissionsGranted,  Set<DashboardMetric> loadingMetrics,  Set<String> unacknowledgedPermissions,  bool editing,  List<String> tileOrder,  List<String> ringOrder,  Set<String> hiddenTiles)?  $default,) {final _that = this;
 switch (_that) {
 case _DashboardState() when $default != null:
-return $default(_that.selectedDate,_that.data,_that.isLoading,_that.isRefreshing,_that.error,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectAvailability,_that.minimumPermissionsGranted,_that.loadingMetrics,_that.unacknowledgedPermissions,_that.editing,_that.tileOrder,_that.ringOrder,_that.hiddenTiles);case _:
+return $default(_that.selectedDate,_that.data,_that.display,_that.goals,_that.isLoading,_that.isRefreshing,_that.error,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectAvailability,_that.minimumPermissionsGranted,_that.loadingMetrics,_that.unacknowledgedPermissions,_that.editing,_that.tileOrder,_that.ringOrder,_that.hiddenTiles);case _:
   return null;
 
 }
@@ -232,12 +252,14 @@ return $default(_that.selectedDate,_that.data,_that.isLoading,_that.isRefreshing
 /// @nodoc
 
 
-class _DashboardState extends DashboardState {
-  const _DashboardState({required this.selectedDate, this.data, this.isLoading = true, this.isRefreshing = false, this.error, this.sleepRangeMode = SleepRangeMode.evening18h, this.activityWeekMode = ActivityWeekMode.mondayToSunday, this.showOpenVitalsCalculatedCalories = false, this.healthConnectAvailability = HealthConnectAvailability.available, this.minimumPermissionsGranted = true, final  Set<DashboardMetric> loadingMetrics = const <DashboardMetric>{}, final  Set<String> unacknowledgedPermissions = const <String>{}, this.editing = false, final  List<String> tileOrder = const <String>[], final  List<String> ringOrder = const <String>[], final  Set<String> hiddenTiles = const <String>{}}): _loadingMetrics = loadingMetrics,_unacknowledgedPermissions = unacknowledgedPermissions,_tileOrder = tileOrder,_ringOrder = ringOrder,_hiddenTiles = hiddenTiles,super._();
+class _DashboardState extends DashboardState with DiagnosticableTreeMixin {
+  const _DashboardState({required this.selectedDate, this.data, this.display, this.goals = kDefaultDashboardGoals, this.isLoading = true, this.isRefreshing = false, this.error, this.sleepRangeMode = SleepRangeMode.evening18h, this.activityWeekMode = ActivityWeekMode.mondayToSunday, this.showOpenVitalsCalculatedCalories = false, this.healthConnectAvailability = HealthConnectAvailability.available, this.minimumPermissionsGranted = true, final  Set<DashboardMetric> loadingMetrics = const <DashboardMetric>{}, final  Set<String> unacknowledgedPermissions = const <String>{}, this.editing = false, final  List<String> tileOrder = const <String>[], final  List<String> ringOrder = const <String>[], final  Set<String> hiddenTiles = const <String>{}}): _loadingMetrics = loadingMetrics,_unacknowledgedPermissions = unacknowledgedPermissions,_tileOrder = tileOrder,_ringOrder = ringOrder,_hiddenTiles = hiddenTiles,super._();
   
 
 @override final  LocalDate selectedDate;
 @override final  DashboardData? data;
+@override final  DashboardDisplay? display;
+@override@JsonKey() final  DashboardGoals goals;
 @override@JsonKey() final  bool isLoading;
 @override@JsonKey() final  bool isRefreshing;
 @override final  ScreenError? error;
@@ -290,19 +312,25 @@ class _DashboardState extends DashboardState {
 _$DashboardStateCopyWith<_DashboardState> get copyWith => __$DashboardStateCopyWithImpl<_DashboardState>(this, _$identity);
 
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'DashboardState'))
+    ..add(DiagnosticsProperty('selectedDate', selectedDate))..add(DiagnosticsProperty('data', data))..add(DiagnosticsProperty('display', display))..add(DiagnosticsProperty('goals', goals))..add(DiagnosticsProperty('isLoading', isLoading))..add(DiagnosticsProperty('isRefreshing', isRefreshing))..add(DiagnosticsProperty('error', error))..add(DiagnosticsProperty('sleepRangeMode', sleepRangeMode))..add(DiagnosticsProperty('activityWeekMode', activityWeekMode))..add(DiagnosticsProperty('showOpenVitalsCalculatedCalories', showOpenVitalsCalculatedCalories))..add(DiagnosticsProperty('healthConnectAvailability', healthConnectAvailability))..add(DiagnosticsProperty('minimumPermissionsGranted', minimumPermissionsGranted))..add(DiagnosticsProperty('loadingMetrics', loadingMetrics))..add(DiagnosticsProperty('unacknowledgedPermissions', unacknowledgedPermissions))..add(DiagnosticsProperty('editing', editing))..add(DiagnosticsProperty('tileOrder', tileOrder))..add(DiagnosticsProperty('ringOrder', ringOrder))..add(DiagnosticsProperty('hiddenTiles', hiddenTiles));
+}
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DashboardState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.data, data) || other.data == data)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isRefreshing, isRefreshing) || other.isRefreshing == isRefreshing)&&(identical(other.error, error) || other.error == error)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.activityWeekMode, activityWeekMode) || other.activityWeekMode == activityWeekMode)&&(identical(other.showOpenVitalsCalculatedCalories, showOpenVitalsCalculatedCalories) || other.showOpenVitalsCalculatedCalories == showOpenVitalsCalculatedCalories)&&(identical(other.healthConnectAvailability, healthConnectAvailability) || other.healthConnectAvailability == healthConnectAvailability)&&(identical(other.minimumPermissionsGranted, minimumPermissionsGranted) || other.minimumPermissionsGranted == minimumPermissionsGranted)&&const DeepCollectionEquality().equals(other._loadingMetrics, _loadingMetrics)&&const DeepCollectionEquality().equals(other._unacknowledgedPermissions, _unacknowledgedPermissions)&&(identical(other.editing, editing) || other.editing == editing)&&const DeepCollectionEquality().equals(other._tileOrder, _tileOrder)&&const DeepCollectionEquality().equals(other._ringOrder, _ringOrder)&&const DeepCollectionEquality().equals(other._hiddenTiles, _hiddenTiles));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DashboardState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.data, data) || other.data == data)&&(identical(other.display, display) || other.display == display)&&(identical(other.goals, goals) || other.goals == goals)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isRefreshing, isRefreshing) || other.isRefreshing == isRefreshing)&&(identical(other.error, error) || other.error == error)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.activityWeekMode, activityWeekMode) || other.activityWeekMode == activityWeekMode)&&(identical(other.showOpenVitalsCalculatedCalories, showOpenVitalsCalculatedCalories) || other.showOpenVitalsCalculatedCalories == showOpenVitalsCalculatedCalories)&&(identical(other.healthConnectAvailability, healthConnectAvailability) || other.healthConnectAvailability == healthConnectAvailability)&&(identical(other.minimumPermissionsGranted, minimumPermissionsGranted) || other.minimumPermissionsGranted == minimumPermissionsGranted)&&const DeepCollectionEquality().equals(other._loadingMetrics, _loadingMetrics)&&const DeepCollectionEquality().equals(other._unacknowledgedPermissions, _unacknowledgedPermissions)&&(identical(other.editing, editing) || other.editing == editing)&&const DeepCollectionEquality().equals(other._tileOrder, _tileOrder)&&const DeepCollectionEquality().equals(other._ringOrder, _ringOrder)&&const DeepCollectionEquality().equals(other._hiddenTiles, _hiddenTiles));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,data,isLoading,isRefreshing,error,sleepRangeMode,activityWeekMode,showOpenVitalsCalculatedCalories,healthConnectAvailability,minimumPermissionsGranted,const DeepCollectionEquality().hash(_loadingMetrics),const DeepCollectionEquality().hash(_unacknowledgedPermissions),editing,const DeepCollectionEquality().hash(_tileOrder),const DeepCollectionEquality().hash(_ringOrder),const DeepCollectionEquality().hash(_hiddenTiles));
+int get hashCode => Object.hash(runtimeType,selectedDate,data,display,goals,isLoading,isRefreshing,error,sleepRangeMode,activityWeekMode,showOpenVitalsCalculatedCalories,healthConnectAvailability,minimumPermissionsGranted,const DeepCollectionEquality().hash(_loadingMetrics),const DeepCollectionEquality().hash(_unacknowledgedPermissions),editing,const DeepCollectionEquality().hash(_tileOrder),const DeepCollectionEquality().hash(_ringOrder),const DeepCollectionEquality().hash(_hiddenTiles));
 
 @override
-String toString() {
-  return 'DashboardState(selectedDate: $selectedDate, data: $data, isLoading: $isLoading, isRefreshing: $isRefreshing, error: $error, sleepRangeMode: $sleepRangeMode, activityWeekMode: $activityWeekMode, showOpenVitalsCalculatedCalories: $showOpenVitalsCalculatedCalories, healthConnectAvailability: $healthConnectAvailability, minimumPermissionsGranted: $minimumPermissionsGranted, loadingMetrics: $loadingMetrics, unacknowledgedPermissions: $unacknowledgedPermissions, editing: $editing, tileOrder: $tileOrder, ringOrder: $ringOrder, hiddenTiles: $hiddenTiles)';
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+  return 'DashboardState(selectedDate: $selectedDate, data: $data, display: $display, goals: $goals, isLoading: $isLoading, isRefreshing: $isRefreshing, error: $error, sleepRangeMode: $sleepRangeMode, activityWeekMode: $activityWeekMode, showOpenVitalsCalculatedCalories: $showOpenVitalsCalculatedCalories, healthConnectAvailability: $healthConnectAvailability, minimumPermissionsGranted: $minimumPermissionsGranted, loadingMetrics: $loadingMetrics, unacknowledgedPermissions: $unacknowledgedPermissions, editing: $editing, tileOrder: $tileOrder, ringOrder: $ringOrder, hiddenTiles: $hiddenTiles)';
 }
 
 
@@ -313,11 +341,11 @@ abstract mixin class _$DashboardStateCopyWith<$Res> implements $DashboardStateCo
   factory _$DashboardStateCopyWith(_DashboardState value, $Res Function(_DashboardState) _then) = __$DashboardStateCopyWithImpl;
 @override @useResult
 $Res call({
- LocalDate selectedDate, DashboardData? data, bool isLoading, bool isRefreshing, ScreenError? error, SleepRangeMode sleepRangeMode, ActivityWeekMode activityWeekMode, bool showOpenVitalsCalculatedCalories, HealthConnectAvailability healthConnectAvailability, bool minimumPermissionsGranted, Set<DashboardMetric> loadingMetrics, Set<String> unacknowledgedPermissions, bool editing, List<String> tileOrder, List<String> ringOrder, Set<String> hiddenTiles
+ LocalDate selectedDate, DashboardData? data, DashboardDisplay? display, DashboardGoals goals, bool isLoading, bool isRefreshing, ScreenError? error, SleepRangeMode sleepRangeMode, ActivityWeekMode activityWeekMode, bool showOpenVitalsCalculatedCalories, HealthConnectAvailability healthConnectAvailability, bool minimumPermissionsGranted, Set<DashboardMetric> loadingMetrics, Set<String> unacknowledgedPermissions, bool editing, List<String> tileOrder, List<String> ringOrder, Set<String> hiddenTiles
 });
 
 
-@override $DashboardDataCopyWith<$Res>? get data;
+@override $DashboardDataCopyWith<$Res>? get data;@override $DashboardDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -330,11 +358,13 @@ class __$DashboardStateCopyWithImpl<$Res>
 
 /// Create a copy of DashboardState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? data = freezed,Object? isLoading = null,Object? isRefreshing = null,Object? error = freezed,Object? sleepRangeMode = null,Object? activityWeekMode = null,Object? showOpenVitalsCalculatedCalories = null,Object? healthConnectAvailability = null,Object? minimumPermissionsGranted = null,Object? loadingMetrics = null,Object? unacknowledgedPermissions = null,Object? editing = null,Object? tileOrder = null,Object? ringOrder = null,Object? hiddenTiles = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? data = freezed,Object? display = freezed,Object? goals = null,Object? isLoading = null,Object? isRefreshing = null,Object? error = freezed,Object? sleepRangeMode = null,Object? activityWeekMode = null,Object? showOpenVitalsCalculatedCalories = null,Object? healthConnectAvailability = null,Object? minimumPermissionsGranted = null,Object? loadingMetrics = null,Object? unacknowledgedPermissions = null,Object? editing = null,Object? tileOrder = null,Object? ringOrder = null,Object? hiddenTiles = null,}) {
   return _then(_DashboardState(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,data: freezed == data ? _self.data : data // ignore: cast_nullable_to_non_nullable
-as DashboardData?,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
+as DashboardData?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as DashboardDisplay?,goals: null == goals ? _self.goals : goals // ignore: cast_nullable_to_non_nullable
+as DashboardGoals,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,isRefreshing: null == isRefreshing ? _self.isRefreshing : isRefreshing // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,sleepRangeMode: null == sleepRangeMode ? _self.sleepRangeMode : sleepRangeMode // ignore: cast_nullable_to_non_nullable
@@ -363,6 +393,18 @@ $DashboardDataCopyWith<$Res>? get data {
 
   return $DashboardDataCopyWith<$Res>(_self.data!, (value) {
     return _then(_self.copyWith(data: value));
+  });
+}/// Create a copy of DashboardState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DashboardDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
+
+  return $DashboardDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
   });
 }
 }

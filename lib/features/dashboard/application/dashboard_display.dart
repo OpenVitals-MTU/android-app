@@ -1,14 +1,133 @@
 import 'package:flutter/material.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../domain/insights/daily_goals.dart';
 import '../../../domain/insights/sleep_score.dart';
+import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/dashboard_data.dart';
 import '../../../domain/model/dashboard_query.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/theme/app_colors.dart';
+
+part 'dashboard_display.freezed.dart';
+
+/// The screen-ready derivation of one loaded [DashboardData]: the summary
+/// mapped to ring/tile models, the user's saved layout already applied (order,
+/// hidden set, edit-mode expansion), the add-tray contents, and today's
+/// activities.
+///
+/// Built once per publish by [buildDashboardDisplay] — on each of the two load
+/// passes, and again on every layout mutation — and stored on the state. The
+/// screen renders it and derives nothing.
+@freezed
+abstract class DashboardDisplay with _$DashboardDisplay {
+  const factory DashboardDisplay({
+    /// Every tile in the user's saved order, hidden ones included — the set the
+    /// edit grid and the add-tray are computed from.
+    required List<StatTileData> orderedTiles,
+
+    /// The tiles the carousel actually shows.
+    required List<StatTileData> visibleTiles,
+
+    /// Both hero rings in the user's saved order, hidden ones included.
+    required List<RingCardData> orderedRings,
+
+    /// The hero rings the top row actually shows.
+    required List<RingCardData> visibleRings,
+
+    /// The effective hidden set: the saved one, plus (while editing) every
+    /// unsupported tile the user has never deliberately placed.
+    required Set<String> hiddenTitles,
+
+    /// The titles materialised only because the device does not support the
+    /// metric (see [DashboardSummary.unsupportedTitles]). Empty outside edit
+    /// mode.
+    required Set<String> unsupportedTitles,
+
+    /// The add-tray: the removed rings and tiles, in layout order.
+    required List<String> trayTitles,
+
+    /// Today's activities, with the single-workout fallback already folded in.
+    required List<ExerciseData> activities,
+  }) = _DashboardDisplay;
+}
+
+/// Pure derivation from the loaded day + the saved layout to the display model.
+/// No clock, no ref, no I/O — unit-testable with a fixture [DashboardData].
+DashboardDisplay buildDashboardDisplay(
+  DashboardData data,
+  UnitFormatter f,
+  AppLocalizations l10n, {
+  required DashboardGoals goals,
+  bool editing = false,
+  List<String> tileOrder = const <String>[],
+  List<String> ringOrder = const <String>[],
+  Set<String> hiddenTiles = const <String>{},
+}) {
+  // Edit mode materialises a tile for every metric, device-supported or not, so
+  // one the user removed can always be added back (Kotlin expands the spec list
+  // to `DashboardWidgetId.entries` while editing).
+  final summary = buildDashboardSummary(
+    data,
+    f,
+    l10n,
+    goals: goals,
+    includeUnsupported: editing,
+  );
+  // Flutter's layout is a deny-list (hiddenTiles) where Kotlin's is an
+  // allow-list, so a freshly-materialised unsupported tile would default to
+  // *visible* in the carousel. Treat one the user has never placed as hidden:
+  // it belongs in the add-tray until they choose it.
+  final hidden = <String>{
+    ...hiddenTiles,
+    if (editing)
+      for (final title in summary.unsupportedTitles)
+        if (!tileOrder.contains(title)) title,
+  };
+  // All data-present tiles in the user's saved order (hidden included, for the
+  // edit grid); the carousel shows only the non-hidden subset.
+  final orderedTiles = applyDashboardTileLayout(
+    summary.tiles,
+    order: tileOrder,
+    includeHidden: true,
+  );
+  // Hero rings share the same edit mode + hidden set; only their order is
+  // stored separately (they render in their own top row).
+  final orderedRings = applyDashboardLayout(
+    <RingCardData>[summary.steps, summary.weeklyCardio],
+    (r) => r.title,
+    order: ringOrder,
+    includeHidden: true,
+  );
+  return DashboardDisplay(
+    orderedTiles: orderedTiles,
+    visibleTiles: [
+      for (final t in orderedTiles)
+        if (!hidden.contains(t.title)) t,
+    ],
+    orderedRings: orderedRings,
+    visibleRings: [
+      for (final r in orderedRings)
+        if (!hidden.contains(r.title)) r,
+    ],
+    hiddenTitles: hidden,
+    unsupportedTitles: summary.unsupportedTitles,
+    trayTitles: [
+      for (final r in orderedRings)
+        if (hidden.contains(r.title)) r.title,
+      for (final t in orderedTiles)
+        if (hidden.contains(t.title)) t.title,
+    ],
+    activities: data.workouts.isNotEmpty
+        ? data.workouts
+        : (data.workout != null
+            ? <ExerciseData>[data.workout!]
+            : const <ExerciseData>[]),
+  );
+}
 
 /// Presentation data for one of the two hero ring cards (Steps, Weekly cardio).
 /// Port of the Kotlin `DashboardSummaryCard` inputs.

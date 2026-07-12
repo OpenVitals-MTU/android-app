@@ -6,11 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/presentation/reorder.dart';
-import '../../../di/providers.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/activity_models.dart';
-import '../../../domain/model/dashboard_data.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_router.dart' show routeObserver;
 import '../../../navigation/app_routes.dart';
@@ -28,7 +26,6 @@ import '../../../ui/components/widget_edit_controls.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../activity/presentation/exercise_labels.dart';
 import '../application/dashboard_view_model.dart';
-import 'dashboard_summary_presentation.dart';
 import '../../../ui/components/accent_icon_chip.dart';
 
 /// The OpenVitals summary dashboard — the nav-suite home branch rendered inside
@@ -137,64 +134,25 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
     final formatter = widget.formatter;
     final notifier = widget.notifier;
     final data = state.data;
+    final display = state.display;
     if (state.isLoading && data == null) {
       return const FullScreenLoading();
     }
     if (state.error != null && data == null) {
       return ErrorMessage(_errorText(state.error!));
     }
-    if (data == null) {
+    if (data == null || display == null) {
       return const ErrorMessage('No dashboard data yet.');
     }
 
-    // Edit mode materialises a tile for every metric, device-supported or not,
-    // so one the user removed can always be added back (Kotlin expands the spec
-    // list to `DashboardWidgetId.entries` while editing).
-    final summary = buildDashboardSummary(
-      data,
-      formatter,
-      l10n,
-      // The user's goals, not the defaults. The summary used to hardcode them,
-      // so a 6,000-step goal still read "of 8,000" here while the detail screen
-      // showed 6,000.
-      goals: DashboardGoals.fromPreferences(
-        ref.watch(preferencesRepositoryProvider),
-      ),
-      includeUnsupported: state.editing,
-    );
-    // Flutter's layout is a deny-list (hiddenTiles) where Kotlin's is an
-    // allow-list, so a freshly-materialised unsupported tile would default to
-    // *visible* in the carousel. Treat one the user has never placed as hidden:
-    // it belongs in the add-tray until they choose it.
-    final hiddenTiles = <String>{
-      ...state.hiddenTiles,
-      if (state.editing)
-        for (final title in summary.unsupportedTitles)
-          if (!state.tileOrder.contains(title)) title,
-    };
-    // All data-present tiles in the user's saved order (hidden included, for the
-    // edit grid); the carousel shows only the non-hidden subset.
-    final orderedTiles = applyDashboardTileLayout(
-      summary.tiles,
-      order: state.tileOrder,
-      includeHidden: true,
-    );
-    final visibleTiles = [
-      for (final t in orderedTiles)
-        if (!hiddenTiles.contains(t.title)) t,
-    ];
-    // Hero rings share the same edit mode + hidden set; only their order is
-    // stored separately (they render in their own top row).
-    final orderedRings = applyDashboardLayout(
-      <RingCardData>[summary.steps, summary.weeklyCardio],
-      (r) => r.title,
-      order: state.ringOrder,
-      includeHidden: true,
-    );
-    final visibleRings = [
-      for (final r in orderedRings)
-        if (!hiddenTiles.contains(r.title)) r,
-    ];
+    // Every ring, tile, tray entry and activity below was derived once, at load
+    // time (DashboardViewModel → buildDashboardDisplay). This method only reads
+    // them: the summary mapping, the layout order, the hidden set and the
+    // edit-mode expansion have all left the build path.
+    final orderedTiles = display.orderedTiles;
+    final visibleTiles = display.visibleTiles;
+    final orderedRings = display.orderedRings;
+    final visibleRings = display.visibleRings;
 
     return RefreshIndicator(
       onRefresh: notifier.refresh,
@@ -312,15 +270,10 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
           // nothing to reorder, but the user still needs a way to add them back.
           if (state.editing)
             HiddenWidgetsSection(
-              titles: [
-                for (final r in orderedRings)
-                  if (hiddenTiles.contains(r.title)) r.title,
-                for (final t in orderedTiles)
-                  if (hiddenTiles.contains(t.title)) t.title,
-              ],
+              titles: display.trayTitles,
               onAdd: (title) => notifier.addWidget(
                 title,
-                recordPlacement: summary.unsupportedTitles.contains(title),
+                recordPlacement: display.unsupportedTitles.contains(title),
               ),
             ),
           // DELIBERATE DEVIATION from the Kotlin app — do not "fix" this back.
@@ -333,7 +286,7 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
           // top-bar action. A parity audit will flag the missing card — intended.
           const SizedBox(height: 8),
           _ActivitiesSection(
-            data: data,
+            workouts: display.activities,
             formatter: formatter,
             onOpen: (location) => context.push(location),
           ),
@@ -912,20 +865,17 @@ class _HeroRingEditRow extends StatelessWidget {
 /// `dashboardActivitiesToday`.
 class _ActivitiesSection extends StatelessWidget {
   const _ActivitiesSection({
-    required this.data,
+    required this.workouts,
     required this.formatter,
     required this.onOpen,
   });
 
-  final DashboardData data;
+  final List<ExerciseData> workouts;
   final UnitFormatter formatter;
   final void Function(String location) onOpen;
 
   @override
   Widget build(BuildContext context) {
-    final workouts = data.workouts.isNotEmpty
-        ? data.workouts
-        : (data.workout != null ? <ExerciseData>[data.workout!] : const <ExerciseData>[]);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

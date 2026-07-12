@@ -9,6 +9,8 @@ import 'package:openvitals/domain/insights/daily_readiness.dart';
 import 'package:openvitals/domain/insights/intensity_minutes.dart';
 import 'package:openvitals/domain/insights/stress_tracking.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
+import 'package:openvitals/domain/model/refresh_mode.dart';
+import 'package:openvitals/features/readiness/application/training_readiness_details_view_model.dart';
 import 'package:openvitals/features/readiness/presentation/training_readiness_details_screen.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
@@ -86,6 +88,31 @@ const _trainingLoadFactor = DailyReadinessFactor(
   impact: ReadinessFactorImpact.positive,
 );
 
+/// The screen's view-model with the load stubbed out: the day it is asked for is
+/// the day it shows, carrying [insight] and the display derived from it. (The
+/// screen used to load through a `FutureProvider.family` this harness overrode;
+/// the load now lives in [TrainingReadinessDetailsViewModel].)
+class _FakeViewModel extends TrainingReadinessDetailsViewModel {
+  _FakeViewModel(this.insight);
+
+  final DailyReadinessInsight insight;
+
+  @override
+  TrainingReadinessDetailsState build() => TrainingReadinessDetailsState(
+        selectedDate: LocalDate.now(),
+        isLoading: false,
+        insight: insight,
+        display: buildTrainingReadinessDisplay(insight),
+      );
+
+  @override
+  Future<void> load(
+    LocalDate date, {
+    RefreshMode refreshMode = RefreshMode.normal,
+  }) async =>
+      state = state.copyWith(selectedDate: date.coerceAtMost(LocalDate.now()));
+}
+
 Future<Widget> _bootstrap({
   required DailyReadinessInsight insight,
   String date = '',
@@ -100,8 +127,8 @@ Future<Widget> _bootstrap({
       grantedHealthPermissionsProvider.overrideWith(
         (ref) async => {HcPermissions.readHeartRate, HcPermissions.readSleep},
       ),
-      trainingReadinessInsightProvider
-          .overrideWith((ref, arg) async => insight),
+      trainingReadinessDetailsProvider
+          .overrideWith(() => _FakeViewModel(insight)),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
-import '../../../di/providers.dart';
-import '../../../domain/insights/daily_goals.dart';
-import '../../../domain/insights/daily_readiness.dart';
-import '../../../domain/model/dashboard_query.dart';
-import '../../../domain/model/refresh_mode.dart';
 import '../../../data/source/health/health_permissions.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/health_date_picker.dart';
@@ -15,64 +11,7 @@ import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/period_navigator.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../application/daily_readiness_view_model.dart';
-
-/// Loads the [DailyReadinessInsight] for an arbitrary [LocalDate] (keyed by
-/// date so navigating days does not disturb the shared
-/// [dailyReadinessProvider] that backs the daily-readiness dashboard).
-/// Mirrors the load performed by [DailyReadinessViewModel.load].
-final trainingReadinessInsightProvider =
-    FutureProvider.autoDispose.family<DailyReadinessInsight, LocalDate>(
-  (ref, date) async {
-    final clamped = date.coerceAtMost(LocalDate.now());
-    final prefs = ref.read(preferencesRepositoryProvider);
-    final useCase = ref.read(loadDashboardDayUseCaseProvider);
-    final data = await useCase(
-      DashboardQuery(
-        date: clamped,
-        sleepRangeMode: prefs.sleepRangeMode,
-        activityWeekMode: prefs.activityWeekMode,
-        visibleMetrics: dailyReadinessMetrics,
-        refreshMode: RefreshMode.normal,
-      ),
-    );
-    return calculateDailyReadiness(
-      data,
-      goals: DailyReadinessGoalInputs(
-        stepsGoal: prefs.dailyGoalFor(MetricDailyGoalKey.steps),
-        hydrationLitersGoal: prefs.hydrationDailyGoalLiters,
-        activeMinutesGoal:
-            prefs.dailyGoalFor(MetricDailyGoalKey.activeCaloriesKcal) / 10.0,
-      ),
-    );
-  },
-);
-
-/// The training-side factor kinds shown on the training-readiness detail (Kotlin
-/// `TrainingReadinessFactorKinds`).
-const Set<ReadinessFactorKind> trainingReadinessFactorKinds =
-    <ReadinessFactorKind>{
-  ReadinessFactorKind.sleepBelowBaseline,
-  ReadinessFactorKind.sleepAboveBaseline,
-  ReadinessFactorKind.restingHrElevated,
-  ReadinessFactorKind.restingHrNormal,
-  ReadinessFactorKind.hrvBelowBaseline,
-  ReadinessFactorKind.hrvAboveBaseline,
-  ReadinessFactorKind.hrvNormal,
-  ReadinessFactorKind.trainingLoadHigh,
-  ReadinessFactorKind.trainingLoadNormal,
-  ReadinessFactorKind.intensityMinutesOnTarget,
-  ReadinessFactorKind.intensityMinutesBehind,
-  ReadinessFactorKind.physiologicalStressHigh,
-  ReadinessFactorKind.physiologicalStressLow,
-  ReadinessFactorKind.stressHigh,
-  ReadinessFactorKind.temperatureElevated,
-  ReadinessFactorKind.missingSleepData,
-  ReadinessFactorKind.missingHrvData,
-  ReadinessFactorKind.missingIntensityMinutes,
-  ReadinessFactorKind.missingStressData,
-  ReadinessFactorKind.newUserNotEnoughBaseline,
-};
+import '../application/training_readiness_details_view_model.dart';
 
 /// Training-readiness detail pushed over the shell
 /// (`/daily_readiness/training_readiness/:trainingReadinessDate`). Port of the
@@ -93,21 +32,21 @@ class TrainingReadinessDetailsScreen extends ConsumerStatefulWidget {
 
 class _TrainingReadinessDetailsScreenState
     extends ConsumerState<TrainingReadinessDetailsScreen> {
-  late LocalDate _selectedDate;
-
   @override
   void initState() {
     super.initState();
-    _selectedDate = parseIsoLocalDate(widget.date);
-  }
-
-  void _select(LocalDate date) {
-    setState(() => _selectedDate = date.coerceAtMost(LocalDate.now()));
+    // The route argument only says which day to open on; the view-model owns
+    // every day shown after that.
+    final date = parseIsoLocalDate(widget.date);
+    Future.microtask(
+      () => ref.read(trainingReadinessDetailsProvider.notifier).load(date),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(trainingReadinessInsightProvider(_selectedDate));
+    final state = ref.watch(trainingReadinessDetailsProvider);
+    final notifier = ref.read(trainingReadinessDetailsProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Training Readiness')),
@@ -118,19 +57,12 @@ class _TrainingReadinessDetailsScreenState
         },
         showInlineSyncBanner: false,
         child: RefreshIndicator(
-          onRefresh: () async =>
-              ref.invalidate(trainingReadinessInsightProvider(_selectedDate)),
-          child: async.when(
-            loading: () => const FullScreenLoading(),
-            error: (error, _) => ErrorMessage(error.toString()),
-            data: (insight) => _Content(
-              insight: insight,
-              selectedDate: _selectedDate,
-              canGoForward: _selectedDate.isBefore(LocalDate.now()),
-              onPreviousDay: () => _select(_selectedDate.minusDays(1)),
-              onNextDay: () => _select(_selectedDate.plusDays(1)),
-              onSelectDate: _select,
-            ),
+          onRefresh: notifier.refresh,
+          child: _Body(
+            state: state,
+            onPreviousDay: notifier.previousDay,
+            onNextDay: notifier.nextDay,
+            onSelectDate: notifier.selectDate,
           ),
         ),
       ),
@@ -138,9 +70,44 @@ class _TrainingReadinessDetailsScreenState
   }
 }
 
+class _Body extends StatelessWidget {
+  const _Body({
+    required this.state,
+    required this.onPreviousDay,
+    required this.onNextDay,
+    required this.onSelectDate,
+  });
+
+  final TrainingReadinessDetailsState state;
+  final VoidCallback onPreviousDay;
+  final VoidCallback onNextDay;
+  final void Function(LocalDate) onSelectDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final display = state.display;
+    if (state.isLoading && display == null) return const FullScreenLoading();
+    if (display == null) {
+      return ErrorMessage(
+        state.error == null
+            ? 'No readiness data for this day.'
+            : trainingReadinessErrorText(state.error!),
+      );
+    }
+    return _Content(
+      display: display,
+      selectedDate: state.selectedDate,
+      canGoForward: state.canGoForward,
+      onPreviousDay: onPreviousDay,
+      onNextDay: onNextDay,
+      onSelectDate: onSelectDate,
+    );
+  }
+}
+
 class _Content extends StatelessWidget {
   const _Content({
-    required this.insight,
+    required this.display,
     required this.selectedDate,
     required this.canGoForward,
     required this.onPreviousDay,
@@ -148,7 +115,7 @@ class _Content extends StatelessWidget {
     required this.onSelectDate,
   });
 
-  final DailyReadinessInsight insight;
+  final TrainingReadinessDisplay display;
   final LocalDate selectedDate;
   final bool canGoForward;
   final VoidCallback onPreviousDay;
@@ -157,22 +124,8 @@ class _Content extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUnknown = insight.state == ReadinessState.unknown;
-    final factors = insight.factors
-        .where((factor) => trainingReadinessFactorKinds.contains(factor.kind))
-        .toList();
-    final signals = factors.isEmpty
-        ? const ['No usable training-side signals were available.']
-        : [for (final f in factors) '${f.label}: ${f.detail}'];
-    final strain = [
-      insight.strainTarget,
-      if (insight.currentStrain != null) insight.currentStrain!,
-    ].join(' · ');
-    final guidance = <String>[
-      'Recommended: ${insight.suggestedWorkout}',
-      'Avoid: ${insight.avoid}',
-      if (strain.trim().isNotEmpty) 'Strain target: $strain',
-    ];
+    final signals = display.signals;
+    final guidance = display.guidance;
 
     final items = <Widget>[
       Padding(
@@ -193,12 +146,9 @@ class _Content extends StatelessWidget {
       ),
       _CardPad(
         child: _ScoreCard(
-          score: insight.trainingReadinessScore,
-          verdict: _scoreBandLabel(insight.trainingReadinessScore, isUnknown),
-          confidence: _confidenceText(
-            insight.confidence,
-            insight.confidenceReason,
-          ),
+          score: display.score,
+          verdict: display.verdict,
+          confidence: display.confidence,
           summary:
               'A training-side score for how well current recovery and load '
               'signals support exercise intensity.',
@@ -421,31 +371,14 @@ class _CardPad extends StatelessWidget {
 
 // ── Labels ───────────────────────────────────────────────────────────────────
 
-/// Verdict band for a readiness score (Kotlin `scoreBandLabel`).
-String _scoreBandLabel(int score, bool isUnknown) {
-  if (isUnknown) return 'Needs more data';
-  if (score >= 80) return 'Strong';
-  if (score >= 60) return 'Steady';
-  if (score >= 40) return 'Limited';
-  return 'Low';
-}
-
-/// Confidence line (Kotlin `readinessConfidenceText`).
-String _confidenceText(ReadinessConfidence confidence, String reason) {
-  final label = switch (confidence) {
-    ReadinessConfidence.high => 'High confidence',
-    ReadinessConfidence.medium => 'Medium confidence',
-    ReadinessConfidence.low => 'Low confidence',
-  };
-  final reasonLabel = switch (reason) {
-    'complete_data' => 'complete local data',
-    'missing_sleep_data' => 'sleep data missing',
-    'missing_hrv_data' => 'HRV data missing',
-    'new_user_not_enough_baseline' => 'baseline still building',
-    _ => 'partial local data',
-  };
-  return '$label · $reasonLabel';
-}
+/// Resolves a [ScreenError] into a display string.
+String trainingReadinessErrorText(ScreenError error) => switch (error) {
+      ScreenErrorMessage(:final text) => text,
+      ScreenErrorNotFound() => 'Not found.',
+      ScreenErrorMissingArgument() => 'Something went wrong.',
+      ScreenErrorPermissionDenied() => 'Permission denied.',
+      ScreenErrorHealthConnectUnavailable() => 'Health Connect is unavailable.',
+    };
 
 /// Parses an ISO `yyyy-MM-dd` argument into a [LocalDate] (falling back to today
 /// on any malformed input), matching the Kotlin nav-arg handling and the

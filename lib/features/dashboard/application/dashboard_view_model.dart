@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -13,8 +15,16 @@ import '../../../domain/model/dashboard_query.dart';
 import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/preferences/activity_week_mode.dart';
+import '../../../domain/preferences/app_language.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
+import 'dashboard_display.dart';
+
+// The rings, the tiles and the layout applied to them are the screen's data
+// model; it renders them straight out of here.
+export 'dashboard_display.dart';
 
 part 'dashboard_view_model.freezed.dart';
 
@@ -39,10 +49,11 @@ const Set<DashboardMetric> dashboardQuickMetrics = <DashboardMetric>{
 ///
 /// A subset faithful to the fields the summary UI actually consumes: the
 /// selected day (capped at today), the single aggregated [DashboardData]
-/// payload, loading/refresh/error flags, the resolved preference snapshot, the
-/// Health Connect availability + minimum-permission state, the set of metrics
-/// still loading in the background, and the missing-permission set the inline
-/// callout has not yet had acknowledged.
+/// payload, the [DashboardDisplay] derived from it, loading/refresh/error flags,
+/// the resolved preference snapshot (goals included), the Health Connect
+/// availability + minimum-permission state, the set of metrics still loading in
+/// the background, and the missing-permission set the inline callout has not yet
+/// had acknowledged.
 @freezed
 abstract class DashboardState with _$DashboardState {
   const DashboardState._();
@@ -50,6 +61,8 @@ abstract class DashboardState with _$DashboardState {
   const factory DashboardState({
     required LocalDate selectedDate,
     DashboardData? data,
+    DashboardDisplay? display,
+    @Default(kDefaultDashboardGoals) DashboardGoals goals,
     @Default(true) bool isLoading,
     @Default(false) bool isRefreshing,
     ScreenError? error,
@@ -99,6 +112,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
       sleepRangeMode: prefs.sleepRangeMode,
       activityWeekMode: prefs.activityWeekMode,
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
+      // The user's goals, not the defaults. The summary used to read these from
+      // the widget's own `ref`, so a 6,000-step goal still read "of 8,000" here
+      // while the detail screen showed 6,000.
+      goals: DashboardGoals.fromPreferences(prefs),
       tileOrder: prefs.dashboardWidgetOrder() ?? const <String>[],
       ringOrder: prefs.dashboardRingOrder() ?? const <String>[],
       hiddenTiles: prefs.dashboardHiddenWidgets(),
@@ -120,7 +137,14 @@ class DashboardViewModel extends Notifier<DashboardState> {
   }
 
   /// Toggles the metric-grid edit mode (drag-to-reorder + hide/show).
-  void toggleEditing() => state = state.copyWith(editing: !state.editing);
+  ///
+  /// Edit mode changes what the display *contains* (it materialises a tile for
+  /// every metric the device cannot serve), so the display is rebuilt — the
+  /// screen no longer re-derives it on the next frame.
+  void toggleEditing() {
+    state = state.copyWith(editing: !state.editing);
+    _rebuildDisplay();
+  }
 
   /// Persists a new tile order. [visibleIds] is the reordered sequence of the
   /// tiles currently on screen; previously-saved ids for tiles not present today
@@ -133,6 +157,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     ];
     ref.read(preferencesRepositoryProvider).setDashboardWidgetOrder(merged);
     state = state.copyWith(tileOrder: merged);
+    _rebuildDisplay();
   }
 
   /// Persists a new hero-ring order (Steps / Weekly cardio).
@@ -144,6 +169,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     ];
     ref.read(preferencesRepositoryProvider).setDashboardRingOrder(merged);
     state = state.copyWith(ringOrder: merged);
+    _rebuildDisplay();
   }
 
   /// Hides or shows a tile (by its title-key).
@@ -156,6 +182,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     }
     ref.read(preferencesRepositoryProvider).setDashboardHiddenWidgets(next);
     state = state.copyWith(hiddenTiles: next);
+    _rebuildDisplay();
   }
 
   /// Restores a widget from the edit-mode add-tray.
@@ -171,6 +198,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final merged = <String>[...state.tileOrder, title];
     ref.read(preferencesRepositoryProvider).setDashboardWidgetOrder(merged);
     state = state.copyWith(tileOrder: merged);
+    _rebuildDisplay();
   }
 
   void previousDay() {
@@ -216,11 +244,24 @@ class DashboardViewModel extends Notifier<DashboardState> {
 
   /// Requests the outstanding permissions, then refreshes the granted-permission
   /// providers the [HealthConnectGate] reads and reloads the day.
+  ///
+  /// A request that fails surfaces as the screen's error (a SnackBar, since data
+  /// is on screen) and stops there — the invalidations and the reload were
+  /// skipped by the thrown failure before, and still are.
   Future<void> grantPermissions() async {
     final missing = state.unacknowledgedPermissions;
     if (missing.isNotEmpty) {
-      (await ref.read(requestHealthPermissionsUseCaseProvider)(missing))
-          .orThrow();
+      final result =
+          await ref.read(requestHealthPermissionsUseCaseProvider)(missing);
+      if (!ref.mounted) return;
+      if (result case Err(:final failure)) {
+        state = state.copyWith(
+          error: failure.toScreenError(
+            fallback: 'Unable to request permissions.',
+          ),
+        );
+        return;
+      }
     }
     ref.invalidate(grantedHealthPermissionsProvider);
     ref.invalidate(healthConnectAvailabilityProvider);
@@ -244,12 +285,25 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // to the permission check rather than re-resolved inside it.
     final availability = await ref.read(healthConnectAvailabilityProvider.future);
     if (!ref.mounted || generation != _generation) return;
-    final minimumPermissionsGranted =
-        (await ref.read(checkMinimumHealthPermissionsUseCaseProvider)(
+    final permissionCheck =
+        await ref.read(checkMinimumHealthPermissionsUseCaseProvider)(
       availability,
-    ))
-            .orThrow();
+    );
     if (!ref.mounted || generation != _generation) return;
+    final bool minimumPermissionsGranted;
+    switch (permissionCheck) {
+      case Ok(:final value):
+        minimumPermissionsGranted = value;
+      case Err(:final failure):
+        // This used to throw out of the load with nothing catching it: the
+        // dashboard was left on its loader, forever.
+        state = state.copyWith(
+          isLoading: false,
+          isRefreshing: false,
+          error: failure.toScreenError(fallback: 'Unknown error'),
+        );
+        return;
+    }
 
     final keepData = refreshMode == RefreshMode.force && state.data != null;
     state = state.copyWith(
@@ -260,6 +314,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       sleepRangeMode: prefs.sleepRangeMode,
       activityWeekMode: prefs.activityWeekMode,
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
+      goals: DashboardGoals.fromPreferences(prefs),
       healthConnectAvailability: availability,
       minimumPermissionsGranted: minimumPermissionsGranted,
       loadingMetrics: const <DashboardMetric>{},
@@ -349,6 +404,9 @@ class DashboardViewModel extends Notifier<DashboardState> {
         prefs.acknowledgedPermissionsFor(_dashboardFeatureName);
     state = state.copyWith(
       data: data,
+      // Both passes publish through here, so both rebuild the display: the fast
+      // one shows the quick metrics, the background one folds the rest in.
+      display: _buildDisplay(data),
       isLoading: false,
       isRefreshing: false,
       loadingMetrics: loadingMetrics,
@@ -356,6 +414,42 @@ class DashboardViewModel extends Notifier<DashboardState> {
           data.missingPermissions.difference(acknowledged),
     );
     _refreshHomeWidgets(data, loadingMetrics: loadingMetrics);
+  }
+
+  /// Re-derives the display from the data already on the state — for the layout
+  /// mutations (edit mode, reorder, hide, add) that change what is shown without
+  /// reloading anything.
+  void _rebuildDisplay() {
+    final data = state.data;
+    if (data == null) return;
+    state = state.copyWith(display: _buildDisplay(data));
+  }
+
+  DashboardDisplay _buildDisplay(DashboardData data) => buildDashboardDisplay(
+        data,
+        ref.read(unitFormatterProvider),
+        _localizations(),
+        goals: state.goals,
+        editing: state.editing,
+        tileOrder: state.tileOrder,
+        ringOrder: state.ringOrder,
+        hiddenTiles: state.hiddenTiles,
+      );
+
+  /// The localizations the tile mapper needs, resolved without a
+  /// `BuildContext`: the display is derived here, off the widget tree. Mirrors
+  /// `app.dart`'s locale choice — the selected [AppLanguage], or the platform
+  /// locale when it is `system` — so the tiles read in the same language the
+  /// rest of the app does.
+  AppLocalizations _localizations() {
+    final tag = ref.read(appLanguageProvider).languageTag;
+    final locale =
+        tag != null ? Locale(tag) : PlatformDispatcher.instance.locale;
+    try {
+      return lookupAppLocalizations(locale);
+    } on FlutterError {
+      return lookupAppLocalizations(const Locale('en'));
+    }
   }
 
   /// Pushes the freshly-committed data to the home-screen widgets.

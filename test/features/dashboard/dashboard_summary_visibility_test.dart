@@ -6,7 +6,7 @@ import 'package:openvitals/domain/insights/body_energy_timeline.dart';
 import 'package:openvitals/domain/model/dashboard_data.dart';
 import 'package:openvitals/domain/model/dashboard_query.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
-import 'package:openvitals/features/dashboard/presentation/dashboard_summary_presentation.dart';
+import 'package:openvitals/features/dashboard/application/dashboard_display.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// Builds the summary for [supported], with no readings for any metric beyond

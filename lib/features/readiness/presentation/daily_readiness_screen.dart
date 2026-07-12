@@ -66,6 +66,7 @@ class _ReadinessBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final insight = state.insight;
+    final display = state.display;
     if (state.isLoading && insight == null) {
       return const FullScreenLoading();
     }
@@ -91,11 +92,12 @@ class _ReadinessBody extends StatelessWidget {
           },
         ),
       ),
-      if (insight != null)
+      if (insight != null && display != null)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: _ReadinessPanel(
             insight: insight,
+            display: display,
             onOpenBodyEnergy: () =>
                 context.push(AppRoutes.bodyEnergyDetailsLocation(date)),
             onOpenStress: () =>
@@ -131,12 +133,14 @@ class _ReadinessBody extends StatelessWidget {
 class _ReadinessPanel extends StatelessWidget {
   const _ReadinessPanel({
     required this.insight,
+    required this.display,
     required this.onOpenBodyEnergy,
     required this.onOpenStress,
     required this.onOpenTrainingReadiness,
   });
 
   final DailyReadinessInsight insight;
+  final DailyReadinessDisplay display;
   final VoidCallback onOpenBodyEnergy;
   final VoidCallback onOpenStress;
   final VoidCallback onOpenTrainingReadiness;
@@ -163,7 +167,7 @@ class _ReadinessPanel extends StatelessWidget {
                       Text('Daily readiness',
                           style: theme.textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600)),
-                      Text(_confidenceText(insight),
+                      Text(display.confidenceText,
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: scheme.onSurfaceVariant)),
                     ],
@@ -219,18 +223,17 @@ class _ReadinessPanel extends StatelessWidget {
             const SizedBox(height: 14),
             _InlineInfo(
               label: 'HRV status',
-              value: '${insight.hrvStatus.label} · ${insight.hrvStatus.detail}',
+              value: display.hrvStatusValue,
             ),
             const SizedBox(height: 8),
             _InlineInfo(
               label: 'Intensity minutes',
-              value:
-                  '${insight.intensityMinutes.label} · ${insight.intensityMinutes.detail}',
+              value: display.intensityMinutesValue,
             ),
             const SizedBox(height: 8),
             _TappableInfo(
               label: 'Stress level',
-              value: _stressValue(insight),
+              value: display.stressValue,
               onTap: onOpenStress,
             ),
             const Divider(height: 24),
@@ -255,20 +258,16 @@ class _ReadinessPanel extends StatelessWidget {
               color: AppColors.mindfulness,
             ),
             const SizedBox(height: 14),
-            _InlineInfo(
-              label: 'Strain',
-              value: [insight.strainTarget, if (insight.currentStrain != null) insight.currentStrain!]
-                  .join(' · '),
-            ),
+            _InlineInfo(label: 'Strain', value: display.strainValue),
             const SizedBox(height: 8),
             _InlineInfo(label: 'Goal', value: insight.adaptiveGoal),
-            if (insight.factors.isNotEmpty) ...[
+            if (display.topFactors.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text('Why',
                   style: theme.textTheme.labelMedium
                       ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              for (final factor in insight.factors.take(5))
+              for (final factor in display.topFactors)
                 _FactorRow(factor: factor),
             ],
             const DataSourceEducationItem(),
@@ -504,38 +503,6 @@ Color _impactColor(ReadinessFactorImpact impact, ColorScheme scheme) {
     case ReadinessFactorImpact.warning:
       return scheme.error;
   }
-}
-
-String _stressValue(DailyReadinessInsight insight) {
-  final stress = insight.physiologicalStress;
-  final score = stress.score != null ? ' · ${stress.score}/100' : '';
-  return '${stress.label}$score · ${stress.summary}';
-}
-
-String _confidenceText(DailyReadinessInsight insight) {
-  final String label;
-  switch (insight.confidence) {
-    case ReadinessConfidence.high:
-      label = 'High confidence';
-    case ReadinessConfidence.medium:
-      label = 'Medium confidence';
-    case ReadinessConfidence.low:
-      label = 'Low confidence';
-  }
-  final String reason;
-  switch (insight.confidenceReason) {
-    case 'complete_data':
-      reason = 'complete local data';
-    case 'missing_sleep_data':
-      reason = 'sleep data missing';
-    case 'missing_hrv_data':
-      reason = 'HRV data missing';
-    case 'new_user_not_enough_baseline':
-      reason = 'baseline still building';
-    default:
-      reason = 'partial local data';
-  }
-  return '$label · $reason';
 }
 
 String _isoDate(LocalDate date) => date.toString();

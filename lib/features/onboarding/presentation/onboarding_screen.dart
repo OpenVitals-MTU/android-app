@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/external_link.dart';
-import '../../../core/result/result.dart';
-import '../../../di/providers.dart';
+import '../../../core/presentation/screen_error.dart';
 import '../../../domain/model/health_connect_availability.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
@@ -67,6 +67,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final state = ref.watch(onboardingProvider);
     final notifier = ref.read(onboardingProvider.notifier);
 
+    // The grant flow is a command: a failed request (or a refused trip to the
+    // Health Connect page) is surfaced once, then returned to idle.
+    ref.listen(onboardingProvider.select((s) => s.grant), (previous, next) {
+      if (next is! CommandFailure<void>) return;
+      ScaffoldMessenger.maybeOf(context)
+          ?.showSnackBar(SnackBar(content: Text(_errorText(next.error))));
+      notifier.clearGrantCommand();
+    });
+
     if (state.isCheckingPermissions) {
       return const Scaffold(body: FullScreenLoading());
     }
@@ -118,8 +127,7 @@ class _OnboardingContent extends ConsumerWidget {
             width: 200,
             child: AppLanguageDropdown(
               selected: ref.watch(appLanguageProvider),
-              onSelect: (value) =>
-                  ref.read(preferencesRepositoryProvider).appLanguage = value,
+              onSelect: notifier.selectLanguage,
             ),
           ),
         ),
@@ -161,13 +169,12 @@ class _OnboardingContent extends ConsumerWidget {
       );
     }
 
-    final minimum = notifier.minimumOnboardingPermissions;
-    final onboardingPermissions = notifier.onboardingPermissions;
-    final granted = state.grantedPermissions;
-    final missingMinimum = minimum.difference(granted);
-    final minimumGranted = missingMinimum.isEmpty;
-    final missingOptional =
-        onboardingPermissions.difference(granted).difference(minimum);
+    // Everything the buttons and the rows need was worked out at load time
+    // (OnboardingViewModel → buildOnboardingDisplay); this method only reads it.
+    final display = state.display;
+    final missingMinimum = display.missingMinimum;
+    final minimumGranted = display.minimumGranted;
+    final missingOptional = display.missingOptional;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -225,13 +232,12 @@ class _OnboardingContent extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        for (final category in notifier.permissionCategories)
+        for (final row in display.rows)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: _PermissionCategoryRow(
-              category: category,
-              granted: granted,
-              onGrant: () => _onGrant(ref, category, granted),
+              row: row,
+              onGrant: () => _onGrant(row),
             ),
           ),
       ],
@@ -242,20 +248,12 @@ class _OnboardingContent extends ConsumerWidget {
   /// anything the runtime dialog can ask for is requested; a category whose only
   /// missing permissions are manual-only (e.g. exercise routes) instead opens the
   /// Health Connect settings page.
-  Future<void> _onGrant(
-    WidgetRef ref,
-    OnboardingPermissionCategory category,
-    Set<String> granted,
-  ) async {
-    if (!category.available) return;
-    final missing = category.permissions.difference(granted);
-    final requestable = missing.difference(category.manualPermissions);
-    final manual = missing.intersection(category.manualPermissions);
-    if (requestable.isNotEmpty) {
-      await notifier.requestPermissions(requestable);
-    } else if (manual.isNotEmpty) {
-      (await ref.read(healthRepositoryProvider).openHealthConnectSettings())
-          .orThrow();
+  Future<void> _onGrant(OnboardingCategoryRow row) async {
+    if (!row.category.available) return;
+    if (row.missingRequestable.isNotEmpty) {
+      await notifier.requestPermissions(row.missingRequestable);
+    } else if (row.missingManual.isNotEmpty) {
+      await notifier.openHealthConnectSettings();
     }
   }
 }
@@ -307,14 +305,9 @@ class _FeatureCard extends StatelessWidget {
 }
 
 class _PermissionCategoryRow extends StatelessWidget {
-  const _PermissionCategoryRow({
-    required this.category,
-    required this.granted,
-    required this.onGrant,
-  });
+  const _PermissionCategoryRow({required this.row, required this.onGrant});
 
-  final OnboardingPermissionCategory category;
-  final Set<String> granted;
+  final OnboardingCategoryRow row;
   final VoidCallback onGrant;
 
   @override
@@ -322,10 +315,15 @@ class _PermissionCategoryRow extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
-    final total = category.permissions.length;
-    final grantedCount = category.permissions.where(granted.contains).length;
-    final fullyGranted = category.available && grantedCount == total;
-    final partial = category.available && grantedCount > 0 && !fullyGranted;
+    final category = row.category;
+    final total = row.total;
+    final grantedCount = row.grantedCount;
+    final fullyGranted = row.fullyGranted;
+    final partial = row.partial;
+    // A category whose remaining permissions are all manual-only can't be
+    // granted through the runtime dialog — it shows "Open settings" and an
+    // "Open" action instead of "Grant" (Kotlin `isManualGrant`).
+    final isManualGrant = row.isManualGrant;
 
     // When a manual-only permission (e.g. exercise routes) is still missing,
     // append the "open Health Connect settings" note to the description, mirror-
@@ -335,15 +333,7 @@ class _PermissionCategoryRow extends StatelessWidget {
       category.id,
       available: category.available,
     );
-    final missing = category.permissions.difference(granted);
-    final missingRequestable = missing.difference(category.manualPermissions);
-    final missingManual = missing.intersection(category.manualPermissions);
-    // A category whose remaining permissions are all manual-only can't be
-    // granted through the runtime dialog — it shows "Open settings" and an
-    // "Open" action instead of "Grant" (Kotlin `isManualGrant`).
-    final isManualGrant =
-        missingRequestable.isEmpty && missingManual.isNotEmpty;
-    final description = category.available && missingManual.isNotEmpty
+    final description = category.available && row.missingManual.isNotEmpty
         ? l10n.onboardingCategoryAdditionalDataAccessManualNote(baseDescription)
         : baseDescription;
     final status = !category.available
@@ -479,6 +469,15 @@ class _UnavailableCard extends StatelessWidget {
     );
   }
 }
+
+/// Resolves a [ScreenError] into the message the grant-failure SnackBar shows.
+String _errorText(ScreenError error) => switch (error) {
+      ScreenErrorMessage(:final text) => text,
+      ScreenErrorNotFound() => 'Not found.',
+      ScreenErrorMissingArgument() => 'Something went wrong.',
+      ScreenErrorPermissionDenied() => 'Permission denied.',
+      ScreenErrorHealthConnectUnavailable() => 'Health Connect is unavailable.',
+    };
 
 /// Category title, localized one-to-one from the Kotlin
 /// `onboarding_category_*` strings, keyed by [OnboardingPermissionCategory.id].

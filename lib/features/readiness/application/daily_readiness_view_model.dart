@@ -10,6 +10,10 @@ import '../../../domain/insights/daily_readiness.dart';
 import '../../../domain/model/dashboard_data.dart';
 import '../../../domain/model/dashboard_query.dart';
 import '../../../domain/model/refresh_mode.dart';
+import 'daily_readiness_display.dart';
+
+// The panel renders the precomputed display straight out of here.
+export 'daily_readiness_display.dart';
 
 part 'daily_readiness_view_model.freezed.dart';
 
@@ -44,6 +48,7 @@ abstract class DailyReadinessState with _$DailyReadinessState {
     ScreenError? error,
     DashboardData? data,
     DailyReadinessInsight? insight,
+    DailyReadinessDisplay? display,
   }) = _DailyReadinessState;
 
   bool get canGoForward => selectedDate.isBefore(LocalDate.now());
@@ -81,6 +86,8 @@ class DailyReadinessViewModel extends Notifier<DailyReadinessState> {
       error: null,
     );
 
+    // LoadDashboardDayUseCase still throws rather than returning a Result, so
+    // this is the one bridge the seam reversal cannot remove from here.
     try {
       final data = await useCase(
         DashboardQuery(
@@ -92,10 +99,12 @@ class DailyReadinessViewModel extends Notifier<DailyReadinessState> {
         ),
       );
       if (!ref.mounted || generation != _generation) return;
+      final insight = calculateDailyReadiness(data, goals: goals);
       state = state.copyWith(
         isLoading: false,
         data: data,
-        insight: calculateDailyReadiness(data, goals: goals),
+        insight: insight,
+        display: buildDailyReadinessDisplay(insight),
         error: null,
       );
     } catch (error) {

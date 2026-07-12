@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DailyReadinessState {
 
- LocalDate get selectedDate; bool get isLoading; ScreenError? get error; DashboardData? get data; DailyReadinessInsight? get insight;
+ LocalDate get selectedDate; bool get isLoading; ScreenError? get error; DashboardData? get data; DailyReadinessInsight? get insight; DailyReadinessDisplay? get display;
 /// Create a copy of DailyReadinessState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $DailyReadinessStateCopyWith<DailyReadinessState> get copyWith => _$DailyReadine
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DailyReadinessState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data)&&(identical(other.insight, insight) || other.insight == insight));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DailyReadinessState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data)&&(identical(other.insight, insight) || other.insight == insight)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,isLoading,error,data,insight);
+int get hashCode => Object.hash(runtimeType,selectedDate,isLoading,error,data,insight,display);
 
 @override
 String toString() {
-  return 'DailyReadinessState(selectedDate: $selectedDate, isLoading: $isLoading, error: $error, data: $data, insight: $insight)';
+  return 'DailyReadinessState(selectedDate: $selectedDate, isLoading: $isLoading, error: $error, data: $data, insight: $insight, display: $display)';
 }
 
 
@@ -45,11 +45,11 @@ abstract mixin class $DailyReadinessStateCopyWith<$Res>  {
   factory $DailyReadinessStateCopyWith(DailyReadinessState value, $Res Function(DailyReadinessState) _then) = _$DailyReadinessStateCopyWithImpl;
 @useResult
 $Res call({
- LocalDate selectedDate, bool isLoading, ScreenError? error, DashboardData? data, DailyReadinessInsight? insight
+ LocalDate selectedDate, bool isLoading, ScreenError? error, DashboardData? data, DailyReadinessInsight? insight, DailyReadinessDisplay? display
 });
 
 
-$DashboardDataCopyWith<$Res>? get data;$DailyReadinessInsightCopyWith<$Res>? get insight;
+$DashboardDataCopyWith<$Res>? get data;$DailyReadinessInsightCopyWith<$Res>? get insight;$DailyReadinessDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -62,14 +62,15 @@ class _$DailyReadinessStateCopyWithImpl<$Res>
 
 /// Create a copy of DailyReadinessState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,Object? insight = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,Object? insight = freezed,Object? display = freezed,}) {
   return _then(_self.copyWith(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,data: freezed == data ? _self.data : data // ignore: cast_nullable_to_non_nullable
 as DashboardData?,insight: freezed == insight ? _self.insight : insight // ignore: cast_nullable_to_non_nullable
-as DailyReadinessInsight?,
+as DailyReadinessInsight?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as DailyReadinessDisplay?,
   ));
 }
 /// Create a copy of DailyReadinessState
@@ -95,6 +96,18 @@ $DailyReadinessInsightCopyWith<$Res>? get insight {
 
   return $DailyReadinessInsightCopyWith<$Res>(_self.insight!, (value) {
     return _then(_self.copyWith(insight: value));
+  });
+}/// Create a copy of DailyReadinessState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DailyReadinessDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
+
+  return $DailyReadinessDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
   });
 }
 }
@@ -178,10 +191,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  DashboardData? data,  DailyReadinessInsight? insight)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  DashboardData? data,  DailyReadinessInsight? insight,  DailyReadinessDisplay? display)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DailyReadinessState() when $default != null:
-return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.insight);case _:
+return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.insight,_that.display);case _:
   return orElse();
 
 }
@@ -199,10 +212,10 @@ return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  DashboardData? data,  DailyReadinessInsight? insight)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  DashboardData? data,  DailyReadinessInsight? insight,  DailyReadinessDisplay? display)  $default,) {final _that = this;
 switch (_that) {
 case _DailyReadinessState():
-return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.insight);case _:
+return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.insight,_that.display);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -219,10 +232,10 @@ return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  DashboardData? data,  DailyReadinessInsight? insight)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  DashboardData? data,  DailyReadinessInsight? insight,  DailyReadinessDisplay? display)?  $default,) {final _that = this;
 switch (_that) {
 case _DailyReadinessState() when $default != null:
-return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.insight);case _:
+return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.insight,_that.display);case _:
   return null;
 
 }
@@ -234,7 +247,7 @@ return $default(_that.selectedDate,_that.isLoading,_that.error,_that.data,_that.
 
 
 class _DailyReadinessState extends DailyReadinessState {
-  const _DailyReadinessState({required this.selectedDate, this.isLoading = true, this.error, this.data, this.insight}): super._();
+  const _DailyReadinessState({required this.selectedDate, this.isLoading = true, this.error, this.data, this.insight, this.display}): super._();
   
 
 @override final  LocalDate selectedDate;
@@ -242,6 +255,7 @@ class _DailyReadinessState extends DailyReadinessState {
 @override final  ScreenError? error;
 @override final  DashboardData? data;
 @override final  DailyReadinessInsight? insight;
+@override final  DailyReadinessDisplay? display;
 
 /// Create a copy of DailyReadinessState
 /// with the given fields replaced by the non-null parameter values.
@@ -253,16 +267,16 @@ _$DailyReadinessStateCopyWith<_DailyReadinessState> get copyWith => __$DailyRead
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DailyReadinessState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data)&&(identical(other.insight, insight) || other.insight == insight));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DailyReadinessState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data)&&(identical(other.insight, insight) || other.insight == insight)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,isLoading,error,data,insight);
+int get hashCode => Object.hash(runtimeType,selectedDate,isLoading,error,data,insight,display);
 
 @override
 String toString() {
-  return 'DailyReadinessState(selectedDate: $selectedDate, isLoading: $isLoading, error: $error, data: $data, insight: $insight)';
+  return 'DailyReadinessState(selectedDate: $selectedDate, isLoading: $isLoading, error: $error, data: $data, insight: $insight, display: $display)';
 }
 
 
@@ -273,11 +287,11 @@ abstract mixin class _$DailyReadinessStateCopyWith<$Res> implements $DailyReadin
   factory _$DailyReadinessStateCopyWith(_DailyReadinessState value, $Res Function(_DailyReadinessState) _then) = __$DailyReadinessStateCopyWithImpl;
 @override @useResult
 $Res call({
- LocalDate selectedDate, bool isLoading, ScreenError? error, DashboardData? data, DailyReadinessInsight? insight
+ LocalDate selectedDate, bool isLoading, ScreenError? error, DashboardData? data, DailyReadinessInsight? insight, DailyReadinessDisplay? display
 });
 
 
-@override $DashboardDataCopyWith<$Res>? get data;@override $DailyReadinessInsightCopyWith<$Res>? get insight;
+@override $DashboardDataCopyWith<$Res>? get data;@override $DailyReadinessInsightCopyWith<$Res>? get insight;@override $DailyReadinessDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -290,14 +304,15 @@ class __$DailyReadinessStateCopyWithImpl<$Res>
 
 /// Create a copy of DailyReadinessState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,Object? insight = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,Object? insight = freezed,Object? display = freezed,}) {
   return _then(_DailyReadinessState(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,data: freezed == data ? _self.data : data // ignore: cast_nullable_to_non_nullable
 as DashboardData?,insight: freezed == insight ? _self.insight : insight // ignore: cast_nullable_to_non_nullable
-as DailyReadinessInsight?,
+as DailyReadinessInsight?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as DailyReadinessDisplay?,
   ));
 }
 
@@ -324,6 +339,18 @@ $DailyReadinessInsightCopyWith<$Res>? get insight {
 
   return $DailyReadinessInsightCopyWith<$Res>(_self.insight!, (value) {
     return _then(_self.copyWith(insight: value));
+  });
+}/// Create a copy of DailyReadinessState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DailyReadinessDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
+
+  return $DailyReadinessDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
   });
 }
 }
