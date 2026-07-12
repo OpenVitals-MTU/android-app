@@ -26,7 +26,7 @@ class CheckBodyWritePermissionUseCase {
           granted: value,
         ),
       Err(:final failure) =>
-        WritePermissionStatus.failed(permissions, failure.cause ?? failure),
+        WritePermissionStatus.failed(permissions, failure),
     };
   }
 }

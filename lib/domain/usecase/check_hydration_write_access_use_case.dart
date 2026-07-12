@@ -1,3 +1,4 @@
+import '../../core/result/app_failure.dart';
 import '../../core/result/result.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
@@ -24,7 +25,7 @@ class HydrationEntryWriteAccess {
   final bool canWriteNutrition;
 
   /// Non-null when the probe failed rather than returned a verdict.
-  final Object? error;
+  final AppFailure? error;
 }
 
 /// Establishes both halves of a drink's write access in one pass.
@@ -48,7 +49,8 @@ class CheckHydrationWriteAccessUseCase {
     final hydrationPermissions = _hydrationRepository.hydrationWritePermissions;
     final nutritionPermissions = _nutritionRepository.nutritionWritePermissions;
 
-    HydrationEntryWriteAccess failed(Object error) => HydrationEntryWriteAccess(
+    HydrationEntryWriteAccess failed(AppFailure error) =>
+        HydrationEntryWriteAccess(
           hydrationPermissions: hydrationPermissions,
           nutritionPermissions: nutritionPermissions,
           canWriteHydration: false,
@@ -57,10 +59,10 @@ class CheckHydrationWriteAccessUseCase {
         );
 
     return switch (await _hydrationRepository.hasHydrationWritePermission()) {
-      Err(:final failure) => failed(failure.cause ?? failure),
+      Err(:final failure) => failed(failure),
       Ok(value: final canWriteHydration) => switch (
             await _nutritionRepository.hasNutritionWritePermission()) {
-          Err(:final failure) => failed(failure.cause ?? failure),
+          Err(:final failure) => failed(failure),
           Ok(value: final canWriteNutrition) => HydrationEntryWriteAccess(
               hydrationPermissions: hydrationPermissions,
               nutritionPermissions: nutritionPermissions,

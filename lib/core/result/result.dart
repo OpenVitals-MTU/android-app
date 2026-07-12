@@ -56,12 +56,21 @@ extension ResultX<T> on Result<T> {
         Err() => null,
       };
 
-  /// TEMPORARY migration bridge: unwraps the value or rethrows the original
-  /// throwable with its original stack, so not-yet-migrated callers keep the
-  /// exact throwing behavior they had before the Result migration.
+  /// Unwraps the value, or rethrows the original throwable with its original
+  /// stack.
   ///
-  /// Every use must disappear by the end of the migration; the closeout phase
-  /// deletes this member once `grep` finds no callers left in lib/.
+  /// This is the adapter to the parts of Dart that signal failure by throwing,
+  /// and it is *not* a shortcut for a view-model that should be switching on
+  /// the `Result`. The legitimate callers are:
+  ///
+  /// - a `FutureProvider` body, whose error channel (`AsyncError`) already IS
+  ///   Riverpod's version of this type — see `health_connect_gate.dart`;
+  /// - a background-isolate entrypoint, which has no screen to render a
+  ///   `ScreenError` onto and must fail loudly instead of silently;
+  /// - a repository composing another repository *inside* its own
+  ///   `runCatching`, where the throw is caught two lines later and re-typed.
+  ///
+  /// Anywhere else, switch on the `Result`.
   T orThrow() => switch (this) {
         Ok(:final value) => value,
         Err(:final failure) => Error.throwWithStackTrace(

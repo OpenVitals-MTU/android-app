@@ -261,7 +261,7 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       // either way the form cannot promise the drink will land.
       save: error == null
           ? const CommandState.idle()
-          : CommandState.failure(throwableToScreenError(error)),
+          : CommandState.failure(error.toScreenError()),
     );
   }
 

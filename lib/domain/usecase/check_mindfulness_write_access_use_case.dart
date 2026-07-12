@@ -1,3 +1,4 @@
+import '../../core/result/app_failure.dart';
 import '../../core/result/result.dart';
 import '../../data/repository/contract/mindfulness_repository.dart';
 
@@ -21,7 +22,7 @@ class MindfulnessWriteAccess {
   final bool granted;
 
   /// Non-null when the probe failed rather than returned a verdict.
-  final Object? error;
+  final AppFailure? error;
 }
 
 /// Establishes whether a mindfulness session can be written, and why not when it
@@ -53,7 +54,7 @@ class CheckMindfulnessWriteAccessUseCase {
           available: false,
           permissions: permissions,
           granted: false,
-          error: failure.cause ?? failure,
+          error: failure,
         ),
     };
   }

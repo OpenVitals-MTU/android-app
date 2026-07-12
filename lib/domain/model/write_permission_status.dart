@@ -1,3 +1,5 @@
+import '../../core/result/app_failure.dart';
+
 /// Whether a manual-entry screen may write, and which permissions that verdict
 /// is about.
 ///
@@ -27,5 +29,5 @@ class WritePermissionStatus {
   final bool granted;
 
   /// Non-null when the check failed rather than returned a verdict.
-  final Object? error;
+  final AppFailure? error;
 }

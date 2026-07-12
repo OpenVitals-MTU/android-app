@@ -447,7 +447,7 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       // either way the form cannot promise the save will land.
       save: error == null
           ? const CommandState.idle()
-          : CommandState.failure(throwableToScreenError(error)),
+          : CommandState.failure(error.toScreenError()),
     );
   }
 
