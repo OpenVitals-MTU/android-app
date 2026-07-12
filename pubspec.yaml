@@ -181,19 +181,20 @@ dev_dependencies:
 #
 # adaptive_icon_monochrome is what Android 13+ "themed icons" render: the glyph
 # as a pure alpha mask, which the launcher recolours to the wallpaper palette.
-# WITHOUT it no <monochrome> element is emitted, and a themed home screen has
+# WITHOUT it no <monochrome> element is emitted and a themed home screen has
 # nothing to theme -- which is how the Flutter port lost it. The source is the
 # Kotlin app's own silhouette (res/drawable-nodpi/open_vitals_launcher_monochrome.png,
-# recovered from 23c14d0), retrimmed: Kotlin drew it at gravity="fill" with no
-# inset, while this generator applies adaptive_icon_foreground_inset (16%) to the
-# monochrome layer as well, so the glyph is sized to land inside the viewport
-# after that inset rather than being shrunk by it.
+# recovered from 23c14d0).
 #
-# TODO(phase8-icon): the adaptive foreground is still the COMPOSITED icon (its own
-# circular background baked in) rather than a transparent-background glyph, so the
-# unthemed adaptive icon paints a circle over the #FBD6AC layer. Cutting a
-# transparent foreground glyph would fix it; the monochrome layer above already is
-# one.
+# adaptive_icon_foreground_inset is 0 because Kotlin drew BOTH layers at
+# gravity="fill", and the default 16% was visibly wrong: it shrank the icon to 68%
+# of the layer, so the teal disc floated inside a fat #FBD6AC ring instead of
+# filling the launcher's mask. The generator applies this one inset to the
+# foreground AND the monochrome, so it cannot be tuned per layer -- which is fine,
+# because at 0 both land where Kotlin had them. The foreground is the COMPOSITED
+# icon (its own background baked in), so it covers the background layer entirely;
+# that is Kotlin's design, not an oversight, and it is why no transparent
+# foreground glyph is needed.
 flutter_launcher_icons:
   image_path: "assets/icon/openvitals_icon.png"
   android: "ic_launcher"
@@ -202,6 +203,7 @@ flutter_launcher_icons:
   min_sdk_android: 26
   adaptive_icon_background: "#FBD6AC"
   adaptive_icon_foreground: "assets/icon/openvitals_icon.png"
+  adaptive_icon_foreground_inset: 0
   adaptive_icon_monochrome: "assets/icon/openvitals_icon_monochrome.png"
 
 # sqlparser 0.44.6 made DartPlaceholder a sealed class and removed the `.when`
