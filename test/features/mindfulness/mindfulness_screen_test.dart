@@ -16,7 +16,7 @@ import 'package:openvitals/domain/model/mindfulness_models.dart';
 import 'package:openvitals/domain/model/refresh_mode.dart';
 import 'package:openvitals/domain/query/mindfulness_period_data.dart';
 import 'package:openvitals/features/mindfulness/mindfulness_screen.dart';
-import 'package:openvitals/health/health_permissions.dart';
+import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 import 'package:openvitals/ui/components/metric_card.dart';
 

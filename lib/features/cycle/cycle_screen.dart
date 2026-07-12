@@ -8,7 +8,7 @@ import '../../core/period/time_range.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../core/time/local_date.dart';
 import '../../domain/model/cycle_models.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_providers.dart';
 import '../../ui/components/health_connect_gate.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvitals/sensors/ble/aggregators/ble_aggregators.dart';
-import 'package:openvitals/sensors/ble/parsers/ble_parsers.dart';
+import 'package:openvitals/data/source/sensors/ble/aggregators/ble_aggregators.dart';
+import 'package:openvitals/data/source/sensors/ble/parsers/ble_parsers.dart';
 
 /// Byte-exact port of the Kotlin `BleAggregatorsTest`.
 void main() {

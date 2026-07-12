@@ -22,7 +22,7 @@ import 'package:openvitals/domain/model/refresh_mode.dart';
 import 'package:openvitals/domain/query/activity_period_data.dart';
 import 'package:openvitals/features/activity/activity_metric.dart';
 import 'package:openvitals/features/activity/activity_metric_screen.dart';
-import 'package:openvitals/health/health_permissions.dart';
+import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/ui/charts/period_chart.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 import 'package:openvitals/ui/components/metric_card.dart';

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/time/local_date.dart';
 import '../../domain/insights/stress_tracking.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../ui/components/data_source_education_item.dart';
 import '../../ui/components/health_connect_gate.dart';
 import '../../ui/components/health_date_picker.dart';

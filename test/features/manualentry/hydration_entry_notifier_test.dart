@@ -11,7 +11,7 @@ import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/core/reminders/reminder_controller.dart';
 import 'package:openvitals/features/hydration/reminders/hydration_reminder_controller.dart';
 import 'package:openvitals/features/manualentry/hydration_entry_notifier.dart';
-import 'package:openvitals/health/health_permissions.dart';
+import 'package:openvitals/data/source/health/health_permissions.dart';
 
 /// An in-memory drink store + write log, standing in for prefs + Health Connect.
 class _FakeHydrationRepository implements HydrationRepository {

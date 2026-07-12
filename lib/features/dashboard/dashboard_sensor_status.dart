@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/model/ble_sensor_models.dart';
-import '../../sensors/ble/ble_sensor_coordinator.dart';
+import '../../data/source/sensors/ble/ble_sensor_coordinator.dart';
 
 /// One paired BLE sensor as the dashboard sees it: the persisted registry entry
 /// merged with the live connection/battery reading. Port of the Kotlin

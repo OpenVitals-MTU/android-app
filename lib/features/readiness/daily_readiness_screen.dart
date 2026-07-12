@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/time/local_date.dart';
 import '../../domain/insights/daily_readiness.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../navigation/app_routes.dart';
 import '../../ui/components/data_source_education_item.dart';
 import '../../ui/components/health_connect_gate.dart';

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/repository/contract/heart_repository.dart';
 import '../../data/repository/contract/vitals_repository.dart';
 import '../../domain/usecase/load_heart_period_use_case.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../ui/theme/app_colors.dart';
 
 // Vitals accent colours, ported from the Kotlin `HeartVitalsPresentation.kt`.

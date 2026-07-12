@@ -1,5 +1,5 @@
 import '../../../domain/model/health_connect_availability.dart';
-import '../../../health/health_data_source.dart';
+import '../../source/health/health_data_source.dart';
 
 /// The one rule every Health-Connect-backed repository has to apply before it
 /// trusts a permission: **a grant only counts when Health Connect is actually

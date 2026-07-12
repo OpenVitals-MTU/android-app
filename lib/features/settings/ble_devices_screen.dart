@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/model/ble_sensor_models.dart';
 import '../../l10n/app_localizations.dart';
-import '../../sensors/ble/ble_scan_permission.dart';
+import '../../data/source/sensors/ble/ble_scan_permission.dart';
 import 'ble_devices_notifier.dart';
 
 /// The Sensors settings screen: list paired BLE sensors (enable / edit / remove)

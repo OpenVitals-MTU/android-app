@@ -23,7 +23,7 @@ import 'package:openvitals/domain/model/sleep_models.dart';
 import 'package:openvitals/domain/preferences/sleep_range_mode.dart';
 import 'package:openvitals/domain/query/sleep_period_data.dart';
 import 'package:openvitals/features/sleep/sleep_screen.dart';
-import 'package:openvitals/health/health_permissions.dart';
+import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/ui/charts/period_chart.dart';
 import 'package:openvitals/ui/components/data_source_education_item.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';

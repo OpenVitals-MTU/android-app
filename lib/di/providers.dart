@@ -63,9 +63,9 @@ import '../features/hydration/reminders/hydration_reminder_controller.dart';
 import '../features/hydration/reminders/hydration_reminder_device.dart';
 import '../features/mindfulness/reminders/mindfulness_reminder_controller.dart';
 import '../features/mindfulness/reminders/mindfulness_reminder_device.dart';
-import '../health/health_data_source.dart';
-import '../health/native/health_connect_native_data_source.dart';
-import '../health/unsupported_health_data_source.dart';
+import '../data/source/health/health_data_source.dart';
+import '../data/source/health/native/health_connect_native_data_source.dart';
+import '../data/source/health/unsupported_health_data_source.dart';
 
 /// Riverpod DI graph, replacing the Hilt `AppModule` / `RepositoryModule`.
 ///

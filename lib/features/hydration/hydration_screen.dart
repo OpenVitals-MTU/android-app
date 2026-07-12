@@ -17,7 +17,7 @@ import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/components/paginated_entry_list.dart';
 import '../../ui/theme/app_colors.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import 'hydration_notifier.dart';
 import 'reminders/hydration_reminder_card.dart';
 import '../../ui/components/section_padding.dart';

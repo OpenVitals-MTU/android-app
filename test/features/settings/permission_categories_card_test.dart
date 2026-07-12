@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/features/settings/cards/permission_categories_card.dart';
-import 'package:openvitals/health/health_data_source.dart';
+import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// A [HealthDataSource] whose permission grants and availability are fixed by

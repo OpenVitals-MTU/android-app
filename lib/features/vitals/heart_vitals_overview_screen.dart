@@ -20,7 +20,7 @@ import '../../domain/model/refresh_mode.dart';
 import '../../domain/model/vitals_models.dart';
 import '../../domain/preferences/metric_detail_section_id.dart';
 import '../../domain/usecase/load_heart_period_use_case.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../navigation/app_routes.dart';
 import '../../state/app_providers.dart';

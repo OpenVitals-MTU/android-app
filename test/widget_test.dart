@@ -16,7 +16,7 @@ import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/preferences/app_language.dart';
 import 'package:openvitals/features/dashboard/dashboard_screen.dart';
 import 'package:openvitals/features/onboarding/onboarding_screen.dart';
-import 'package:openvitals/health/health_data_source.dart';
+import 'package:openvitals/data/source/health/health_data_source.dart';
 
 /// Builds the app wrapped in a `ProviderScope` with platform providers
 /// overridden. Returns the widget (rather than the override list) because

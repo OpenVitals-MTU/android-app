@@ -17,7 +17,7 @@ import 'package:openvitals/domain/preferences/metric_detail_section_id.dart';
 import 'package:openvitals/features/activity/activities_notifier.dart';
 import 'package:openvitals/features/activity/activities_screen.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_types.dart';
-import 'package:openvitals/health/health_permissions.dart';
+import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/charts/period_chart.dart';
 import 'package:openvitals/ui/charts/sparkline_chart.dart';

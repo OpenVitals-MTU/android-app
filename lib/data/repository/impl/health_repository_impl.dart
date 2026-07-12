@@ -1,6 +1,6 @@
 import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/permission_grant_mode.dart';
-import '../../../health/health_data_source.dart';
+import '../../source/health/health_data_source.dart';
 import '../contract/health_repository.dart';
 
 /// Port of the Kotlin `HealthRepositoryImpl` — a thin facade over the

@@ -16,7 +16,7 @@ import 'package:openvitals/features/manualentry/activity/activity_entry_notifier
 import 'package:openvitals/features/manualentry/activity/routeimport/route_file_parser.dart';
 import 'package:openvitals/features/settings/cards/fit_import_card.dart';
 import 'package:openvitals/features/settings/cards/route_import_card.dart';
-import 'package:openvitals/health/health_data_source.dart';
+import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// Grants every permission and reports Health Connect available, so the bulk

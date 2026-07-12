@@ -11,8 +11,8 @@ import '../../../data/prefs/preferences_repository.dart';
 import '../../../data/repository/impl/health_repository_impl.dart';
 import '../../../data/repository/impl/hydration_repository_impl.dart';
 import '../../../di/providers.dart' show openVitalsPackageName;
-import '../../../health/health_data_source.dart';
-import '../../../health/native/health_connect_native_data_source.dart';
+import '../../../data/source/health/health_data_source.dart';
+import '../../../data/source/health/native/health_connect_native_data_source.dart';
 import 'hydration_reminder_controller.dart';
 import 'hydration_reminder_device.dart';
 

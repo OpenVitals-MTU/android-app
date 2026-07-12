@@ -9,7 +9,7 @@ import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/preferences/app_language.dart';
 import 'package:openvitals/features/onboarding/onboarding_notifier.dart';
 import 'package:openvitals/features/onboarding/onboarding_screen.dart';
-import 'package:openvitals/health/health_data_source.dart';
+import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/app_language_dropdown.dart';
 

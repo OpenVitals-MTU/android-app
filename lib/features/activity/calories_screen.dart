@@ -5,7 +5,7 @@ import '../../core/period/period_range_preference_key.dart';
 import '../../core/period/time_range.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../domain/query/activity_period_data.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../state/app_providers.dart';
 import '../../ui/charts/period_chart.dart';
 import '../../ui/components/health_connect_gate.dart';

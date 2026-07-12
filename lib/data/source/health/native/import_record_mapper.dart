@@ -1,6 +1,6 @@
 import 'package:health_connect_native/health_connect_native.dart';
 
-import '../../domain/model/apple_health_import_records.dart';
+import '../../../../domain/model/apple_health_import_records.dart';
 
 /// Maps a domain [ImportRecord] to a typed [ImportRecordMsg] for the native
 /// bulk-insert bridge (replaces the JSON import serializer). Enum values are

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repository/contract/ble_device_repository.dart';
 import '../../di/providers.dart';
 import '../../domain/model/ble_sensor_models.dart';
-import '../../sensors/ble/ble_sensor_coordinator.dart';
+import '../../data/source/sensors/ble/ble_sensor_coordinator.dart';
 
 /// Sentinel so [BleDevicesUiState.copyWith] can distinguish "leave unchanged"
 /// from "set to null" on the nullable fields.

@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/repository/contract/ble_device_repository.dart';
-import '../../di/providers.dart';
-import '../../domain/model/ble_sensor_models.dart';
+import '../../../repository/contract/ble_device_repository.dart';
+import '../../../../di/providers.dart';
+import '../../../../domain/model/ble_sensor_models.dart';
 import 'ble_gatt_connection.dart';
 import 'ble_uuids.dart';
 

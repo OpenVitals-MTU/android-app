@@ -6,7 +6,7 @@ import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart'
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/features/settings/ble_devices_notifier.dart';
-import 'package:openvitals/sensors/ble/ble_sensor_coordinator.dart';
+import 'package:openvitals/data/source/sensors/ble/ble_sensor_coordinator.dart';
 
 /// Fake coordinator that returns canned capability-discovery results and never
 /// touches flutter_blue_plus.

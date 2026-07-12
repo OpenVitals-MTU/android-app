@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../di/providers.dart';
-import '../../../sensors/ble/ble_sensor_coordinator.dart';
+import '../../../data/source/sensors/ble/ble_sensor_coordinator.dart';
 import '../../../state/app_providers.dart';
 import 'activity_entry_notifier.dart';
 import 'recording/activity_recording.dart';

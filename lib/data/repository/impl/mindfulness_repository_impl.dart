@@ -3,7 +3,7 @@ import '../../../core/time/local_date.dart';
 import '../../../domain/model/mindfulness_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/mindfulness_period_data.dart';
-import '../../../health/health_data_source.dart';
+import '../../source/health/health_data_source.dart';
 import '../contract/mindfulness_repository.dart';
 import '../contract/repository_exceptions.dart';
 import 'repository_time.dart';

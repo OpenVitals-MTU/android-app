@@ -6,7 +6,7 @@ import '../../core/presentation/reorder.dart';
 import '../../di/providers.dart';
 import '../../domain/model/body_models.dart';
 import '../../domain/model/vitals_models.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../navigation/app_routes.dart';
 import '../../ui/components/health_connect_gate.dart';
 import '../../ui/components/loading_state.dart';

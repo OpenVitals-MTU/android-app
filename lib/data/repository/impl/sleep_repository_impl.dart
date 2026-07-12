@@ -5,8 +5,8 @@ import '../../../domain/model/sleep_models.dart';
 import '../../../domain/model/sleep_session_merging.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/query/sleep_period_data.dart';
-import '../../../health/health_data_source.dart';
-import '../../../health/health_permissions.dart';
+import '../../source/health/health_data_source.dart';
+import '../../source/health/health_permissions.dart';
 import '../contract/sleep_repository.dart';
 import 'health_connect_gating.dart';
 

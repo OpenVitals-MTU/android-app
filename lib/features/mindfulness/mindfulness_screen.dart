@@ -11,7 +11,7 @@ import '../../core/period/time_range.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../core/time/local_date.dart';
 import '../../domain/model/mindfulness_models.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../navigation/app_routes.dart';
 import '../../state/app_providers.dart';

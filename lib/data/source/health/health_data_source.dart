@@ -1,17 +1,17 @@
-import '../core/time/local_date.dart';
-import '../domain/model/activity_models.dart';
-import '../domain/model/exercise_session_metrics.dart';
-import '../domain/model/body_models.dart';
-import '../domain/model/cycle_models.dart';
-import '../domain/model/health_connect_availability.dart';
-import '../domain/model/health_connect_feature_status.dart';
-import '../domain/model/heart_models.dart';
-import '../domain/model/mindfulness_models.dart';
-import '../domain/model/nutrition_models.dart';
-import '../domain/model/sleep_models.dart';
-import '../domain/model/vitals_models.dart';
-import '../domain/preferences/sleep_range_mode.dart';
-import '../domain/model/apple_health_import_records.dart';
+import '../../../core/time/local_date.dart';
+import '../../../domain/model/activity_models.dart';
+import '../../../domain/model/exercise_session_metrics.dart';
+import '../../../domain/model/body_models.dart';
+import '../../../domain/model/cycle_models.dart';
+import '../../../domain/model/health_connect_availability.dart';
+import '../../../domain/model/health_connect_feature_status.dart';
+import '../../../domain/model/heart_models.dart';
+import '../../../domain/model/mindfulness_models.dart';
+import '../../../domain/model/nutrition_models.dart';
+import '../../../domain/model/sleep_models.dart';
+import '../../../domain/model/vitals_models.dart';
+import '../../../domain/preferences/sleep_range_mode.dart';
+import '../../../domain/model/apple_health_import_records.dart';
 import 'health_permissions.dart';
 
 /// The `HealthConnectManager` analogue: a single facade over the platform

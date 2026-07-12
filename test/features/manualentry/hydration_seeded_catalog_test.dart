@@ -13,7 +13,7 @@ import 'package:openvitals/domain/insights/caffeine_health_drink_catalog.dart';
 import 'package:openvitals/domain/model/caffeine_models.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/features/manualentry/hydration_entry_notifier.dart';
-import 'package:openvitals/health/health_data_source.dart';
+import 'package:openvitals/data/source/health/health_data_source.dart';
 
 /// Exercises the real drift-backed [BeverageStore], not a fake: the seeded
 /// catalog only exists because the store seeds it on first read, and the bug

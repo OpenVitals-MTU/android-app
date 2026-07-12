@@ -4,7 +4,7 @@ import '../../core/presentation/display_value.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../domain/model/activity_models.dart';
 import '../../domain/query/activity_period_data.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../ui/charts/bar_chart.dart';
 import '../../ui/theme/app_colors.dart';
 

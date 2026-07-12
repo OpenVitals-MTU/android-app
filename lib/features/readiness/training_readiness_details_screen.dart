@@ -7,7 +7,7 @@ import '../../domain/insights/daily_goals.dart';
 import '../../domain/insights/daily_readiness.dart';
 import '../../domain/model/dashboard_query.dart';
 import '../../domain/model/refresh_mode.dart';
-import '../../health/health_permissions.dart';
+import '../../data/source/health/health_permissions.dart';
 import '../../ui/components/health_connect_gate.dart';
 import '../../ui/components/health_date_picker.dart';
 import '../../ui/components/data_source_education_item.dart';

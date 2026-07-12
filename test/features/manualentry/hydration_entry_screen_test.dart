@@ -12,7 +12,7 @@ import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/core/presentation/measurement_input.dart';
 import 'package:openvitals/features/manualentry/hydration_entry_notifier.dart';
-import 'package:openvitals/health/health_permissions.dart';
+import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/features/manualentry/hydration_catalog_widgets.dart';
 import 'package:openvitals/features/manualentry/hydration_entry_screen.dart';
