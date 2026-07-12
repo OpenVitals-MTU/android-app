@@ -106,25 +106,34 @@ void main() {
     expect(xs, contains(closeTo(0.75, 0.001)));
   });
 
-  testWidgets('the line STEPS at each drink rather than ramping from midnight',
+  testWidgets('the line is the running total, plotted at each drink\'s real hour',
       (tester) async {
-    // You do not sip continuously from midnight: you drink nothing, then a glass,
-    // then nothing. A plain line from (0,0) to the first drink draws a diagonal
-    // saying you drank all morning, and the flat stretches between glasses — the
-    // part that tells you you have had nothing since nine — vanish into the slope.
+    // This used to be a STEP — two points per drink, so the flat stretch between
+    // glasses stayed flat and "nothing since nine" was legible at a glance.
+    //
+    // The lines are smoothed now, and a curve through a step is just the cumulative
+    // curve, so hydration is cumulative like every other day chart. The cost, worth
+    // stating: between two drinks the line slopes gently upward through hours you
+    // drank nothing. The totals and the hours are still exact; only the shape
+    // between them is inferred.
     await tester.pumpWidget(host([entry(6, 0.25), entry(18, 0.25)]));
 
     final plot = tester.widget<MetricLinePlot>(find.byType(MetricLinePlot));
 
-    // Two points share the 06:00 x: the total before the drink, and after it.
-    final atSix = plot.points.where((p) => (p.xFraction - 0.25).abs() < 0.001);
-    expect(atSix, hasLength(2));
-    expect(atSix.map((p) => p.value), containsAllInOrder([0.0, 0.25]));
+    // Anchored at midnight with nothing drunk.
+    expect(plot.points.first.xFraction, 0);
+    expect(plot.points.first.value, 0);
 
-    // And the value is still 0 right up to that moment — no morning ramp.
-    final beforeSix =
-        plot.points.where((p) => p.xFraction < 0.25 - 0.001).map((p) => p.value);
-    expect(beforeSix, everyElement(0.0));
+    // One point per drink, at its real hour, carrying the running total.
+    final atSix = plot.points.where((p) => (p.xFraction - 0.25).abs() < 0.001);
+    expect(atSix, hasLength(1));
+    expect(atSix.single.value, 0.25);
+
+    final atSix18 = plot.points.where((p) => (p.xFraction - 0.75).abs() < 0.001);
+    expect(atSix18.single.value, 0.5, reason: 'the total, not the glass');
+
+    // The total is held to the end of the axis — it never falls.
+    expect(plot.points.last.value, 0.5);
   });
 
   testWidgets('TODAY ends the chart at now, not at midnight', (tester) async {

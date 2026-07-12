@@ -41,9 +41,7 @@ class MindfulnessIntradayChartCard extends StatelessWidget {
     return MetricDayChart(
       axis: DayAxis(selectedDate, now: now),
       samples: samples,
-      // A session is a block of time you either sat through or did not — the total
-      // jumps when it ends, it does not creep upward through the afternoon.
-      shape: DaySeriesShape.step,
+      shape: DaySeriesShape.cumulative,
       range: ChartRange(0, totalMinutes < 1 ? 1 : totalMinutes),
       accentColor: AppColors.mindfulness,
       metricName: l10n.metricMindfulness,

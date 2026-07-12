@@ -55,22 +55,6 @@ void main() {
       expect(points.last.value, 400);
     });
 
-    test('step jumps at each entry instead of ramping between them', () {
-      final points =
-          DaySeriesShape.step.plot([sample(6, 0.3), sample(18, 0.8)], pastDay);
-
-      // Two points per entry at the same instant: the total before, and after. A
-      // ramp would draw you sipping steadily all morning and hide the fact that you
-      // have had nothing since six.
-      expect(points[1].xFraction, closeTo(0.25, 1e-9));
-      expect(points[1].value, 0.0, reason: 'the total before the first drink');
-      expect(points[2].xFraction, closeTo(0.25, 1e-9));
-      expect(points[2].value, 0.3, reason: 'and immediately after it');
-
-      expect(points[3].value, 0.3, reason: 'flat until the next drink');
-      expect(points[4].value, 0.8);
-    });
-
     test('every shape survives an empty day', () {
       for (final shape in DaySeriesShape.values) {
         expect(shape.plot(const [], today), isEmpty);

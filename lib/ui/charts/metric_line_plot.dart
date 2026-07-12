@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'chart_axis.dart';
+import 'chart_curve.dart';
 
 /// Port of the Kotlin `MetricLinePlot`: a line drawn against a normalized x
 /// axis, for series whose points are not evenly spaced in time (the intraday
@@ -113,13 +114,9 @@ class _MetricLinePlotPainter extends CustomPainter {
       baseline,
     );
 
-    final path = Path();
-    final first = _offsetFor(points.first, size);
-    path.moveTo(first.dx, first.dy);
-    for (final point in points.skip(1)) {
-      final offset = _offsetFor(point, size);
-      path.lineTo(offset.dx, offset.dy);
-    }
+    final offsets = [for (final point in points) _offsetFor(point, size)];
+    final first = offsets.first;
+    final path = smoothPath(offsets);
 
     // Fill under the line, then stroke it, so the stroke stays crisp on top.
     final fill = Path.from(path)

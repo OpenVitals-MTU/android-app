@@ -4,6 +4,7 @@ import '../../core/period/time_range.dart';
 import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
+import 'chart_curve.dart';
 
 /// A single line-chart point. [time] (an instant) is used for intraday (DAY)
 /// positioning; otherwise the [date] slot is used. Port of Kotlin
@@ -355,13 +356,15 @@ class _LinePainter extends CustomPainter {
       positioned.add(Offset(x, y));
     }
 
-    final linePaint = Paint()
-      ..color = line.color
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-    for (var index = 0; index < positioned.length - 1; index++) {
-      canvas.drawLine(positioned[index], positioned[index + 1], linePaint);
-    }
+    canvas.drawPath(
+      smoothPath(positioned),
+      Paint()
+        ..color = line.color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
     final pointPaint = Paint()..color = line.color;
     for (final point in positioned) {
       canvas.drawCircle(point, 3.5, pointPaint);

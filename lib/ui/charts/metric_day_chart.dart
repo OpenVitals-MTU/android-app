@@ -145,10 +145,16 @@ typedef DaySample = ({DateTime time, double value});
 
 /// How a day's readings become a line.
 ///
-/// The three shapes were each written two or three times across the features, as
-/// inline `List<MetricLinePlotPoint>` builders. They are properties of the DATA,
-/// not of the screen — a running total is drawn one way whether it is water or
-/// calories — so they belong here, named, where they can be tested once.
+/// A property of the DATA, not of the screen — a running total is drawn the same
+/// way whether it is water or calories — so it lives here, named, tested once,
+/// rather than as an inline point-builder in each of six features.
+///
+/// There used to be a third shape, `step`, which drew hydration as risers and flat
+/// stretches so that "nothing since nine" was legible as a flat line. The lines are
+/// now smoothed, and a curve through a step is just the cumulative curve — so the
+/// step is gone and hydration is cumulative like everything else. The cost, stated
+/// plainly: between two drinks the curve slopes gently upward through hours you
+/// drank nothing.
 enum DaySeriesShape {
   /// A running total: climbs from nothing at midnight, never falls.
   ///
@@ -157,14 +163,6 @@ enum DaySeriesShape {
   /// rather than a cliff, but only as far as NOW, because the rest of today has not
   /// happened yet.
   cumulative,
-
-  /// A running total that jumps.
-  ///
-  /// You do not sip water continuously from midnight: you drink nothing, then a
-  /// glass, then nothing. Drawn as a ramp, the flat stretches — the part that tells
-  /// you you have had nothing since nine — vanish into the slope. So each entry
-  /// contributes TWO points at the same instant: the total before it, and after.
-  step,
 
   /// The readings themselves, unanchored — weight, heart rate. A reading at 08:00
   /// is a fact about 08:00 and implies nothing about midnight.
@@ -187,23 +185,6 @@ enum DaySeriesShape {
               xFraction: axis.fractionOf(sample.time),
               value: sample.value,
             ),
-          MetricLinePlotPoint(
-            xFraction: axis.endFraction,
-            value: ordered.last.value,
-          ),
-        ],
-      DaySeriesShape.step => [
-          const MetricLinePlotPoint(xFraction: 0, value: 0),
-          for (final (index, sample) in ordered.indexed) ...[
-            MetricLinePlotPoint(
-              xFraction: axis.fractionOf(sample.time),
-              value: index == 0 ? 0.0 : ordered[index - 1].value,
-            ),
-            MetricLinePlotPoint(
-              xFraction: axis.fractionOf(sample.time),
-              value: sample.value,
-            ),
-          ],
           MetricLinePlotPoint(
             xFraction: axis.endFraction,
             value: ordered.last.value,

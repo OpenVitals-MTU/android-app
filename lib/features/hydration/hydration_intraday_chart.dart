@@ -44,8 +44,7 @@ class HydrationIntradayChartCard extends StatelessWidget {
     return MetricDayChart(
       axis: DayAxis(selectedDate, now: now),
       samples: samples,
-      // Water arrives in glasses, not in a trickle. See [DaySeriesShape.step].
-      shape: DaySeriesShape.step,
+      shape: DaySeriesShape.cumulative,
       // The goal holds the axis open on a thin day: without it a single 200 ml
       // glass would fill the chart and read like a good one.
       range: ChartRange(

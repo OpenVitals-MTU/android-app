@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'chart_curve.dart';
 
 /// A compact sparkline (mini trend line with baseline + point dots), ported
 /// from the Kotlin `MetricSparklineChart`. Draws a baseline, a poly-line
@@ -97,9 +98,15 @@ class _SparklinePainter extends CustomPainter {
         linePaint,
       );
     } else {
-      for (var index = 0; index < points.length - 1; index++) {
-        canvas.drawLine(points[index], points[index + 1], linePaint);
-      }
+      canvas.drawPath(
+        smoothPath(points),
+        Paint()
+          ..color = spec.accentColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = spec.lineStrokeWidth
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
     }
 
     for (final point in points) {
