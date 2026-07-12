@@ -20,6 +20,7 @@ import 'package:openvitals/domain/query/heart_period_data.dart';
 import 'package:openvitals/domain/query/vitals_period_data.dart';
 import 'package:openvitals/features/heart/presentation/heart_metric_cards.dart';
 import 'package:openvitals/core/presentation/metric_detail_sections.dart';
+import 'package:openvitals/features/vitals/application/heart_vitals_overview_view_model.dart';
 import 'package:openvitals/features/vitals/presentation/heart_vitals_overview_screen.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
