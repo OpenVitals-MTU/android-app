@@ -1339,14 +1339,6 @@ ActivityEntryUiState activityStateWithRouteImport(
         ? '30'
         : current.durationMinutesText;
   }
-  final calorieEstimate = (current.activeCaloriesText.trim().isEmpty &&
-          current.totalCaloriesText.trim().isEmpty)
-      ? activityCalorieEstimate(
-          activityType: selectedActivityType,
-          distanceMeters: routeImport.distanceMeters,
-          durationMinutesText: routeDurationMinutes,
-        )
-      : null;
   final importedActiveCaloriesText = (routeImport.activeCaloriesKcal != null &&
           routeImport.activeCaloriesKcal! > 0.0)
       ? toInputText(routeImport.activeCaloriesKcal!, 1)
@@ -1354,6 +1346,30 @@ ActivityEntryUiState activityStateWithRouteImport(
   final importedTotalCaloriesText = (routeImport.totalCaloriesKcal != null &&
           routeImport.totalCaloriesKcal! > 0.0)
       ? toInputText(routeImport.totalCaloriesKcal!, 1)
+      : null;
+  // The estimate fills in for a file that measured NO calories at all. It must
+  // never stand beside a number the file did measure.
+  //
+  // A FIT session records `total_calories` and has no active-calorie field, so
+  // active came back null — and the estimate then filled it, from METs and
+  // distance, with a number that had nothing to do with the file's total. An
+  // indoor run arrived as 226 active against its own measured 208 total, and the
+  // write was refused ("total cannot be lower than active"): a real activity, a
+  // real total, and an invented active that contradicted it. Every FIT file with
+  // no GPS failed this way, which is every treadmill run and every trainer ride.
+  //
+  // So: estimate both, or estimate neither. A measurement does not get a
+  // guess for a neighbour.
+  final fileMeasuredCalories =
+      importedActiveCaloriesText != null || importedTotalCaloriesText != null;
+  final calorieEstimate = (current.activeCaloriesText.trim().isEmpty &&
+          current.totalCaloriesText.trim().isEmpty &&
+          !fileMeasuredCalories)
+      ? activityCalorieEstimate(
+          activityType: selectedActivityType,
+          distanceMeters: routeImport.distanceMeters,
+          durationMinutesText: routeDurationMinutes,
+        )
       : null;
 
   return current.copyWith(

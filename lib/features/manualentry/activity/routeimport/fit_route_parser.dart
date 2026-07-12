@@ -56,7 +56,7 @@ class FitRouteParser {
     final metadata = RouteFileMetadata(
       name: summary.name,
       description: null,
-      type: _fitSportName(summary.sport),
+      type: _fitSportName(summary.sport, summary.subSport),
     );
 
     if (routePoints.length >= minRoutePoints) {
@@ -89,7 +89,7 @@ class FitRouteParser {
       durationSeconds: summary.durationSeconds,
       name: summary.name,
       description: null,
-      type: _fitSportName(summary.sport),
+      type: _fitSportName(summary.sport, summary.subSport),
       originalPointCount: routePoints.length,
     );
   }
@@ -102,7 +102,7 @@ class FitRouteParser {
     final metadata = RouteFileMetadata(
       name: summary.name,
       description: null,
-      type: _fitSportName(summary.sport),
+      type: _fitSportName(summary.sport, summary.subSport),
     );
     if (routePoints.length >= minRoutePoints) {
       return buildRouteImport(
@@ -174,7 +174,7 @@ class FitRouteParser {
       durationSeconds: durationSeconds,
       name: summary.name,
       description: null,
-      type: _fitSportName(summary.sport),
+      type: _fitSportName(summary.sport, summary.subSport),
       hasRecordedTimestamps: false,
       hasImportedTimeRange: false,
       originalPointCount: 0,
@@ -261,6 +261,7 @@ class _FitActivitySummary {
     this.activeCaloriesKcal,
     this.totalCaloriesKcal,
     this.sport,
+    this.subSport,
   });
 
   final int? fileType;
@@ -273,6 +274,7 @@ class _FitActivitySummary {
   final double? activeCaloriesKcal;
   final double? totalCaloriesKcal;
   final int? sport;
+  final int? subSport;
 
   _FitActivitySummary merge(_FitActivitySummary other) => _FitActivitySummary(
         fileType: fileType ?? other.fileType,
@@ -287,6 +289,7 @@ class _FitActivitySummary {
             _sumDouble(activeCaloriesKcal, other.activeCaloriesKcal),
         totalCaloriesKcal: _sumDouble(totalCaloriesKcal, other.totalCaloriesKcal),
         sport: sport ?? other.sport,
+        subSport: subSport ?? other.subSport,
       );
 
   _FitActivitySummary withFallback(_FitActivitySummary other) =>
@@ -302,6 +305,7 @@ class _FitActivitySummary {
         activeCaloriesKcal: activeCaloriesKcal ?? other.activeCaloriesKcal,
         totalCaloriesKcal: totalCaloriesKcal ?? other.totalCaloriesKcal,
         sport: sport ?? other.sport,
+        subSport: subSport ?? other.subSport,
       );
 }
 
@@ -368,6 +372,7 @@ class _FitSingleFileDecoder {
   int? _fileType;
   String? _metadataName;
   int? _sport;
+  int? _subSport;
   int? _lastTimestampRaw;
   DateTime? _firstRecordTime;
   DateTime? _lastRecordTime;
@@ -521,6 +526,13 @@ class _FitSingleFileDecoder {
             _sessionSummary.merge(_toFitActivitySummary(values, messageTimestamp));
         final sessionSport = _generic(values[_fitSessionSportFieldNumber]);
         if (_sport == null && sessionSport != null) _sport = sessionSport;
+        // Read HERE and not in _toFitActivitySummary, which serves the lap
+        // message too — a lap's field 6 is end_position_long, and reading a
+        // longitude as a sub-sport would name the activity at random.
+        final sessionSubSport = _generic(values[_fitSessionSubSportFieldNumber]);
+        if (_subSport == null && sessionSubSport != null) {
+          _subSport = sessionSubSport;
+        }
         break;
     }
   }
@@ -578,6 +590,7 @@ class _FitSingleFileDecoder {
             name: _metadataName,
             durationSeconds: _workoutDurationSeconds,
             sport: _sport,
+            subSport: _subSport,
           ),
         );
   }
@@ -905,7 +918,27 @@ DateTime _fitDateTimeInstant(int value) => DateTime.fromMillisecondsSinceEpoch(
 /// and step cadence are different record types, and FIT field 4 is just "cadence".
 bool _fitSportIsCycling(int? sport) => sport == 2 || sport == 21;
 
-String? _fitSportName(int? value) {
+/// What the file says this was, in the words the type inference reads.
+///
+/// The SUB-sport wins when it names the activity outright: a treadmill run is
+/// not a run that happens to be indoors, it is a different Health Connect
+/// exercise type, and the same goes for a trainer ride and a strength session.
+/// Sub-sports that merely qualify an outdoor sport ("street", "trail", "road")
+/// name nothing and leave the sport to speak.
+String? _fitSportName(int? sport, [int? subSport]) =>
+    _fitSubSportName(subSport) ?? _fitPlainSportName(sport);
+
+/// The sub-sports that ARE the activity. FIT `sub_sport` enum.
+String? _fitSubSportName(int? value) => switch (value) {
+      1 => 'treadmill',
+      // 5 spin, 6 indoor_cycling — a trainer and a spin bike, both stationary.
+      5 || 6 => 'indoor cycling',
+      14 => 'indoor rowing',
+      20 => 'strength training',
+      _ => null,
+    };
+
+String? _fitPlainSportName(int? value) {
   switch (value) {
     case 1:
       return 'running';
@@ -1011,6 +1044,13 @@ const int _fitWorkoutStepDurationValueFieldNumber = 2;
 const int _fitTimestampFieldNumber = 253;
 const int _fitStartTimeFieldNumber = 2;
 const int _fitSessionSportFieldNumber = 5;
+
+/// FIT session field 6, `sub_sport`: the field that knows the session was run on
+/// a TREADMILL rather than a street, and pedalled on a trainer rather than a
+/// road. The sport alone cannot say — an indoor ride and an Alpine descent are
+/// both sport 2 — and without it every indoor session imported as its outdoor
+/// twin.
+const int _fitSessionSubSportFieldNumber = 6;
 const int _fitTotalElapsedTimeFieldNumber = 7;
 const int _fitTotalTimerTimeFieldNumber = 8;
 const int _fitTotalDistanceFieldNumber = 9;

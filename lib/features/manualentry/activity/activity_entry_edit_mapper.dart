@@ -193,12 +193,49 @@ ActivityEntryType inferActivityType(
   RouteFileImport routeImport,
   ActivityEntryType currentType,
 ) {
-  final sourceText = [
-    if (routeImport.type != null) routeImport.type!,
+  // The file's DECLARED sport is asked first, and on its own.
+  //
+  // Everything used to be shovelled into one string — sport, activity name and
+  // FILE NAME — and matched by substring. So `Indoor_CyclingiSmoothRun.fit`
+  // imported a 27 km bike ride as a RUN: the exporter's name is in the file
+  // name, `run` is tested before `cycling`, and the FIT sport (which said
+  // cycling, and knows) was outvoted by a word in a file name. Reordering the
+  // tests would not fix it — any name can contain any word.
+  //
+  // A file that names no sport (GPX, KML) still falls back to the name and the
+  // file name, which is all it has.
+  final declared = routeImport.type?.toLowerCase().trim() ?? '';
+  final guessed = [
     if (routeImport.name != null) routeImport.name!,
     if (routeImport.fileName != null) routeImport.fileName!,
   ].join(' ').toLowerCase();
 
+  // ...but only when it actually NAMES something. FIT's `training` and `fitness
+  // equipment` are its generic buckets — the file saying "training" is the file
+  // saying it does not know — and there the name and file name are all there is:
+  // `Functional Strength Training.fit` is a strength session, and only its name
+  // says so.
+  final declaredType = declared.isEmpty ? null : _matchExerciseType(declared);
+  final declaredNamesIt =
+      declaredType != null && declaredType != ExerciseSessionType.otherWorkout;
+
+  final exerciseType = declaredNamesIt
+      ? declaredType
+      : (_matchExerciseType(guessed) ?? declaredType);
+
+  final requiresGpsRoute = routeImport.points.isNotEmpty;
+  return defaultActivityEntryTypes.firstWhereOrNull((t) =>
+          t.exerciseType == exerciseType &&
+          (!requiresGpsRoute || t.supportsGpsRoute)) ??
+      (!requiresGpsRoute || currentType.supportsGpsRoute
+          ? currentType
+          : defaultActivityEntryTypes
+              .firstWhere((t) => !requiresGpsRoute || t.supportsGpsRoute));
+}
+
+/// The Health Connect exercise type [sourceText] names, or null when it names
+/// none.
+int? _matchExerciseType(String sourceText) {
   int? exerciseType;
   if (containsAny(sourceText, ['treadmill'])) {
     exerciseType = ExerciseSessionType.runningTreadmill;
@@ -214,6 +251,12 @@ ActivityEntryType inferActivityType(
     exerciseType = ExerciseSessionType.hiking;
   } else if (containsAny(sourceText, ['run', 'running', 'jog'])) {
     exerciseType = ExerciseSessionType.running;
+    // Before the plain bike: a trainer ride is a different exercise type, and a
+    // stationary bike that imported as outdoor cycling would put a 27 km ride on
+    // a map it never touched.
+  } else if (containsAny(
+      sourceText, ['indoor cycling', 'stationary bike', 'spin'])) {
+    exerciseType = ExerciseSessionType.bikingStationary;
   } else if (containsAny(
       sourceText, ['bike', 'biking', 'bicycle', 'cycling', 'cycle', 'ride'])) {
     exerciseType = ExerciseSessionType.biking;
@@ -238,15 +281,7 @@ ActivityEntryType inferActivityType(
   } else if (containsAny(sourceText, ['training', 'workout', 'fitness'])) {
     exerciseType = ExerciseSessionType.otherWorkout;
   }
-
-  final requiresGpsRoute = routeImport.points.isNotEmpty;
-  return defaultActivityEntryTypes.firstWhereOrNull((t) =>
-          t.exerciseType == exerciseType &&
-          (!requiresGpsRoute || t.supportsGpsRoute)) ??
-      (!requiresGpsRoute || currentType.supportsGpsRoute
-          ? currentType
-          : defaultActivityEntryTypes
-              .firstWhere((t) => !requiresGpsRoute || t.supportsGpsRoute));
+  return exerciseType;
 }
 
 int _atLeast(int value, int min) => value < min ? min : value;

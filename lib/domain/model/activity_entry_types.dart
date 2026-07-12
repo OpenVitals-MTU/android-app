@@ -14,6 +14,7 @@ class ExerciseSessionType {
 
   static const int running = 56;
   static const int biking = 8;
+  static const int bikingStationary = 9;
   static const int walking = 79;
   static const int hiking = 37;
   static const int wheelchair = 82;
@@ -142,6 +143,18 @@ final List<ActivityEntryType> defaultActivityEntryTypes = <ActivityEntryType>[
     exerciseType: ExerciseSessionType.biking,
     label: 'Cycling',
     supportsElevation: true,
+  ),
+  // A trainer ride is not a ride that happens to be indoors: it has a distance
+  // and no route, and importing it as outdoor cycling would hang a 27 km ride on
+  // a map it never touched. FIT names it (`sub_sport` 5/6) and the app had
+  // nowhere to put it.
+  ActivityEntryType(
+    exerciseType: ExerciseSessionType.bikingStationary,
+    id: 'stationary_bike',
+    label: 'Stationary bike',
+    supportsGpsRoute: false,
+    supportsDistance: true,
+    recordingSensor: ActivityRecordingSensor.ble,
   ),
   ActivityEntryType(
     exerciseType: ExerciseSessionType.walking,
