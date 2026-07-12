@@ -16,9 +16,9 @@
 /// everything the join needs.
 library;
 
-import '../../domain/insights/caffeine_health_drink_catalog.dart';
-import '../../domain/model/nutrition_models.dart';
-import '../manualentry/hydration_drink_usage.dart';
+import '../insights/caffeine_health_drink_catalog.dart';
+import '../model/nutrition_models.dart';
+import 'hydration_drink_usage.dart';
 
 /// The carbs-only nutrition record OpenVitals writes alongside an activity.
 /// Never a drink, so it never belongs in the beverage history (Kotlin

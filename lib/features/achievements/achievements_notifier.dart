@@ -6,10 +6,6 @@ import '../../di/providers.dart';
 import '../../domain/model/activity_models.dart';
 import 'achievement_catalog.dart';
 
-/// The earliest date the legacy step history is scanned from, matching the
-/// Kotlin `LegacyActivityStartDate` (2009-01-01).
-final LocalDate _legacyActivityStartDate = LocalDate(2009, 1, 1);
-
 /// Aggregate activity statistics over the scanned window. Port of Kotlin
 /// `AchievementStats`.
 class AchievementStats {
@@ -107,16 +103,13 @@ class AchievementsNotifier extends Notifier<AchievementsState> {
 
   Future<void> load() async {
     final generation = ++_generation;
-    final end = LocalDate.now();
-    final start = _legacyActivityStartDate;
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final days = await ref.read(activityRepositoryProvider).loadDailySteps(
-            start,
-            end,
-          );
+      // How far back a lifetime badge counts is the use case's business; what
+      // the badges make of the history is this screen's.
+      final history = await ref.read(loadAchievementHistoryUseCaseProvider)();
       if (!ref.mounted || generation != _generation) return;
-      state = _evaluate(days, start, end);
+      state = _evaluate(history.days, history.start, history.end);
     } catch (error) {
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(

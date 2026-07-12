@@ -7,40 +7,24 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/hydration_repository.dart';
-import '../../data/repository/contract/nutrition_repository.dart';
 import '../../di/providers.dart';
 import '../../domain/model/caffeine_models.dart';
 import '../../domain/model/nutrition_models.dart';
-import 'hydration_drink_usage.dart';
+import '../../domain/usecase/load_frequent_hydration_drinks_use_case.dart';
+import '../../domain/usecase/save_hydration_entry_use_case.dart';
+
+// The write path's vocabulary — its errors, its outcome, its volume limits — is
+// the use case's; the screens and the quick-beverage home widget read it from
+// here.
+export '../../domain/usecase/save_hydration_entry_use_case.dart';
 
 part 'hydration_entry_notifier.freezed.dart';
-
-const double kMillilitersPerLiter = 1000.0;
-const double _maxHealthConnectHydrationLiters = 100.0;
-const double kMinHydrationContainerMilliliters = 1.0;
-const double kMaxHydrationContainerMilliliters =
-    _maxHealthConnectHydrationLiters * kMillilitersPerLiter;
 
 /// Kotlin `MaxCustomDrinkNutrientValue`.
 const double kMaxCustomDrinkNutrientValue = 10000.0;
 
-/// Kotlin `FullHydrationImpactMultiplier` / `DefaultPartialHydrationImpactPercent`.
-const double kFullHydrationImpactMultiplier = 1.0;
+/// Kotlin `DefaultPartialHydrationImpactPercent`.
 const int kDefaultPartialHydrationImpactPercent = 50;
-
-/// Port of the Kotlin `HydrationEntryError`.
-enum HydrationEntryError {
-  invalidAmount,
-  invalidCustomDrink,
-  missingWritePermission,
-  missingNutritionWritePermission,
-  writeFailed,
-}
-
-/// Port of the Kotlin `HydrationEntryNotice`.
-enum HydrationEntryNotice {
-  nonHydratingDrinkSaved,
-}
 
 /// Port of the Kotlin `HydrationContainerOption`.
 @freezed
@@ -104,24 +88,6 @@ abstract class HydrationEntryState with _$HydrationEntryState {
       {...hydrationWritePermissions, ...nutritionWritePermissions};
 }
 
-/// Whether [milliliters] is an acceptable hydration volume. Port of the Kotlin
-/// `isValidHydrationContainerMilliliters`.
-bool isValidHydrationContainerMilliliters(double milliliters) =>
-    milliliters >= kMinHydrationContainerMilliliters &&
-    milliliters <= kMaxHydrationContainerMilliliters &&
-    milliliters.isFinite;
-
-bool _isValidCustomDrinkHydrationMultiplier(double value) =>
-    value >= 0.0 && value <= 1.0 && value.isFinite;
-
-/// Whether [drink] can be logged at all. Port of the Kotlin
-/// `CustomHydrationDrink.isValidCustomHydrationDrink()`.
-bool isValidCustomHydrationDrink(CustomHydrationDrink drink) =>
-    drink.id.isNotEmpty &&
-    drink.name.isNotEmpty &&
-    isValidHydrationContainerMilliliters(drink.volumeMilliliters) &&
-    _isValidCustomDrinkHydrationMultiplier(drink.hydrationMultiplier);
-
 /// Port of the Kotlin `isValidCustomDrinkNutrientValue`.
 bool isValidCustomDrinkNutrientValue(double value) =>
     value > 0.0 && value <= kMaxCustomDrinkNutrientValue && value.isFinite;
@@ -155,7 +121,7 @@ CustomHydrationDrink? customHydrationDrinkFromInput(
   final name = input.name.trim();
   if (name.isEmpty) return null;
   if (!isValidHydrationContainerMilliliters(input.volumeMilliliters)) return null;
-  if (!_isValidCustomDrinkHydrationMultiplier(input.hydrationMultiplier)) {
+  if (!isValidCustomDrinkHydrationMultiplier(input.hydrationMultiplier)) {
     return null;
   }
   final valid = <NutritionNutrient, double>{
@@ -459,32 +425,23 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
     unawaited(refreshFrequentDrinkOptions());
   }
 
-  /// Re-derives the frequently-consumed drinks from the last
-  /// [kFrequentHydrationDrinkLookbackDays] of hydration + nutrition entries.
-  /// Port of the Kotlin `refreshFrequentDrinkOptions`; failures are swallowed,
-  /// as there (`runCatching`), because the ranking is a convenience.
+  /// Re-derives the frequently-consumed drinks from the recent hydration +
+  /// nutrition entries — see [LoadFrequentHydrationDrinksUseCase] for why both
+  /// halves are needed. Port of the Kotlin `refreshFrequentDrinkOptions`;
+  /// failures are swallowed, as there (`runCatching`), because the ranking is a
+  /// convenience and the previous list is still perfectly usable.
   Future<void> refreshFrequentDrinkOptions() async {
     if (state.customDrinkOptions.isEmpty) {
       state = state.copyWith(frequentDrinkOptions: const <CustomHydrationDrink>[]);
       return;
     }
-    final end = LocalDate.now();
-    final start = end.minusDays(kFrequentHydrationDrinkLookbackDays - 1);
     try {
-      final hydrationEntries = await ref
-          .read(hydrationRepositoryProvider)
-          .loadHydrationEntries(start, end);
-      final nutritionEntries = await ref
-          .read(nutritionRepositoryProvider)
-          .loadNutritionEntries(start, end);
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        frequentDrinkOptions: frequentHydrationDrinkOptions(
-          drinks: state.customDrinkOptions,
-          hydrationEntries: hydrationEntries,
-          nutritionEntries: nutritionEntries,
-        ),
+      final frequent =
+          await ref.read(loadFrequentHydrationDrinksUseCaseProvider)(
+        state.customDrinkOptions,
       );
+      if (!ref.mounted) return;
+      state = state.copyWith(frequentDrinkOptions: frequent);
     } catch (_) {
       // Best-effort ranking; leave the previous list in place.
     }
@@ -610,9 +567,10 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
       writeError: null,
     );
     try {
-      final outcome = await writeHydrationAndNutritionEntry(
-        hydrationRepository: ref.read(hydrationRepositoryProvider),
-        nutritionRepository: ref.read(nutritionRepositoryProvider),
+      // Both halves of the drink — the volume and its nutrients — are written by
+      // the use case; see [SaveHydrationEntryUseCase] for why they cannot be
+      // written apart.
+      final outcome = await ref.read(saveHydrationEntryUseCaseProvider)(
         rawLiters: rawLiters,
         hydrationMultiplier: hydrationMultiplier,
         drinkId: drinkId,
@@ -744,166 +702,4 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
         local.month == today.month &&
         local.day == today.day;
   }
-}
-
-/// The result of a hydration/nutrition write. Port of the Kotlin
-/// `HydrationDrinkLogOutcome`.
-sealed class HydrationDrinkLogOutcome {
-  const HydrationDrinkLogOutcome();
-}
-
-/// Successful hydration/nutrition write result (Kotlin `HydrationDrinkLogSuccess`).
-class HydrationDrinkLogSuccess extends HydrationDrinkLogOutcome {
-  const HydrationDrinkLogSuccess({
-    required this.effectiveLiters,
-    required this.entryTime,
-    required this.notice,
-    required this.wroteHydration,
-    required this.wroteNutrition,
-  });
-
-  final double effectiveLiters;
-  final DateTime entryTime;
-  final HydrationEntryNotice? notice;
-
-  /// Which records actually landed. A zero-multiplier drink (e.g. a black
-  /// coffee logged as non-hydrating) writes nutrition only — the quick-beverage
-  /// widget reports that as "Saved as nutrition".
-  final bool wroteHydration;
-  final bool wroteNutrition;
-}
-
-/// A rejected write (Kotlin `HydrationDrinkLogOutcome.Invalid`).
-class HydrationDrinkLogInvalid extends HydrationDrinkLogOutcome {
-  const HydrationDrinkLogInvalid(this.error);
-  final HydrationEntryError error;
-}
-
-/// Logs one saved drink at its own volume — the whole drink, nutrients included.
-/// Port of the Kotlin `logCustomHydrationDrinkEntry` (HydrationDrinkLogger).
-///
-/// Shared by the hydration entry screen and the quick-beverage home widget, so
-/// that a widget tap cannot silently drop the drink's caffeine (or any other
-/// nutrient): it goes through the very same write path.
-Future<HydrationDrinkLogOutcome> logCustomHydrationDrinkEntry({
-  required HydrationRepository hydrationRepository,
-  required NutritionRepository nutritionRepository,
-  required CustomHydrationDrink drink,
-  required bool canWriteHydration,
-  required bool canWriteNutrition,
-  DateTime? entryTime,
-}) async {
-  if (!isValidCustomHydrationDrink(drink)) {
-    return const HydrationDrinkLogInvalid(
-      HydrationEntryError.invalidCustomDrink,
-    );
-  }
-  return writeHydrationAndNutritionEntry(
-    hydrationRepository: hydrationRepository,
-    nutritionRepository: nutritionRepository,
-    rawLiters: drink.volumeMilliliters / kMillilitersPerLiter,
-    hydrationMultiplier: drink.hydrationMultiplier,
-    drinkId: drink.id,
-    nutritionName: drink.name,
-    nutrientValues: drink.nutrientValues,
-    requestedEntryTime: entryTime,
-    canWriteHydration: canWriteHydration,
-    canWriteNutrition: canWriteNutrition,
-  );
-}
-
-/// Port of the Kotlin `writeHydrationAndNutritionEntry` (HydrationDrinkLogger):
-/// writes (or updates) the hydration record and, when nutrient values are
-/// present, the associated nutrition record — validating permissions + volume.
-Future<HydrationDrinkLogOutcome> writeHydrationAndNutritionEntry({
-  required HydrationRepository hydrationRepository,
-  required NutritionRepository nutritionRepository,
-  required double rawLiters,
-  required double hydrationMultiplier,
-  String? drinkId,
-  String? nutritionName,
-  required Map<NutritionNutrient, double> nutrientValues,
-  DateTime? requestedEntryTime,
-  DateTime? fallbackEntryTime,
-  String? editRecordId,
-  required bool canWriteHydration,
-  required bool canWriteNutrition,
-}) async {
-  if (!_isValidCustomDrinkHydrationMultiplier(hydrationMultiplier)) {
-    return const HydrationDrinkLogInvalid(
-      HydrationEntryError.invalidCustomDrink,
-    );
-  }
-
-  final effectiveLiters = rawLiters * hydrationMultiplier;
-  final writesHydration = effectiveLiters > 0.0;
-  final writesNutrition = nutrientValues.isNotEmpty;
-
-  if (editRecordId != null && !writesHydration) {
-    return const HydrationDrinkLogInvalid(HydrationEntryError.invalidAmount);
-  }
-  if (writesHydration && !canWriteHydration) {
-    return const HydrationDrinkLogInvalid(
-      HydrationEntryError.missingWritePermission,
-    );
-  }
-  if (writesNutrition && !canWriteNutrition) {
-    return const HydrationDrinkLogInvalid(
-      HydrationEntryError.missingNutritionWritePermission,
-    );
-  }
-  if (writesHydration &&
-      effectiveLiters >
-          kMaxHydrationContainerMilliliters / kMillilitersPerLiter) {
-    return const HydrationDrinkLogInvalid(HydrationEntryError.invalidAmount);
-  }
-  if (!writesHydration && !writesNutrition) {
-    return const HydrationDrinkLogInvalid(
-      HydrationEntryError.invalidCustomDrink,
-    );
-  }
-
-  final now = DateTime.now();
-  DateTime coerce(DateTime t) => t.isAfter(now) ? now : t;
-  final entryTime = requestedEntryTime != null
-      ? coerce(requestedEntryTime)
-      : (fallbackEntryTime != null ? coerce(fallbackEntryTime) : now);
-
-  if (editRecordId == null) {
-    String? hydrationClientRecordId;
-    if (writesHydration) {
-      hydrationClientRecordId = await hydrationRepository.writeHydrationEntry(
-        HydrationWriteRequest(
-          time: entryTime,
-          volumeLiters: effectiveLiters,
-          drinkId: drinkId,
-        ),
-      );
-    }
-    if (writesNutrition) {
-      await nutritionRepository.writeNutritionEntry(
-        NutritionWriteRequest(
-          time: entryTime,
-          nutrientValues: nutrientValues,
-          name: nutritionName,
-          associatedHydrationClientRecordId: hydrationClientRecordId,
-        ),
-      );
-    }
-  } else {
-    await hydrationRepository.updateHydrationEntry(
-      editRecordId,
-      HydrationWriteRequest(time: entryTime, volumeLiters: effectiveLiters),
-    );
-  }
-
-  return HydrationDrinkLogSuccess(
-    effectiveLiters: effectiveLiters,
-    entryTime: entryTime,
-    notice: (!writesHydration && writesNutrition)
-        ? HydrationEntryNotice.nonHydratingDrinkSaved
-        : null,
-    wroteHydration: writesHydration,
-    wroteNutrition: writesNutrition,
-  );
 }

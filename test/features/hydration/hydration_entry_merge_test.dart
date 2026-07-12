@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/domain/model/nutrition_models.dart';
-import 'package:openvitals/features/hydration/hydration_entry_merge.dart';
+import 'package:openvitals/domain/hydration/hydration_entry_merge.dart';
 
 /// Unit cover for the hydration↔nutrition join — the port of the merge Kotlin's
 /// `HydrationViewModel.load()` performs. Health Connect stores a logged drink as

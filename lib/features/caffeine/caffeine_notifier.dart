@@ -86,7 +86,7 @@ class CaffeineNotifier extends Notifier<CaffeineState> {
 
   Future<void> load({RefreshMode refreshMode = RefreshMode.normal}) async {
     final generation = ++_generation;
-    final repo = ref.read(caffeineRepositoryProvider);
+    final loadCaffeine = ref.read(loadCaffeineUseCaseProvider);
     final prefs = ref.read(preferencesRepositoryProvider);
     final preferences = prefs.caffeinePreferences();
     final bodyProfile = prefs.bodyProfile();
@@ -94,13 +94,16 @@ class CaffeineNotifier extends Notifier<CaffeineState> {
     final today = LocalDate.now();
     final homePeriod = DatePeriod(today, today);
     final analyticsPeriod = state.analyticsRange.periodEnding(today);
-    final loadPeriod = _union(homePeriod, analyticsPeriod);
 
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final result =
-          await repo.loadCaffeineData(loadPeriod, refreshMode: refreshMode);
+      // One read over the union of the two windows — see [LoadCaffeineUseCase].
+      final result = await loadCaffeine(
+        homePeriod,
+        analyticsPeriod,
+        refreshMode: refreshMode,
+      );
       if (!ref.mounted || generation != _generation) return;
       final home = CaffeineInsightCalculator.build(
         entries: result.entries,
@@ -128,11 +131,6 @@ class CaffeineNotifier extends Notifier<CaffeineState> {
       );
     }
   }
-
-  DatePeriod _union(DatePeriod a, DatePeriod b) => DatePeriod(
-        a.start.isBefore(b.start) ? a.start : b.start,
-        a.end.isAfter(b.end) ? a.end : b.end,
-      );
 }
 
 /// The caffeine screen's state provider. A manually-declared [NotifierProvider]

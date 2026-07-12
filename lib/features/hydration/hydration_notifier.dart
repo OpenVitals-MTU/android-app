@@ -9,7 +9,7 @@ import '../../core/time/local_date.dart';
 import '../../di/providers.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../domain/model/refresh_mode.dart';
-import 'hydration_entry_merge.dart';
+import '../../domain/hydration/hydration_entry_merge.dart';
 
 part 'hydration_notifier.freezed.dart';
 
@@ -89,8 +89,12 @@ class HydrationNotifier extends Notifier<HydrationState> {
   }) async {
     final generation = ++_generation;
     final prefs = ref.read(preferencesRepositoryProvider);
-    final repo = ref.read(hydrationRepositoryProvider);
-    final goal = repo.hydrationDailyGoalLiters();
+    final loadHydrationPeriod = ref.read(loadHydrationPeriodUseCaseProvider);
+    // The daily goal is persisted configuration, not a health read, and it is
+    // applied to the state *before* the load starts — so a goal just changed in
+    // settings shows on the goal card at once, not a round-trip later.
+    final goal =
+        ref.read(hydrationRepositoryProvider).hydrationDailyGoalLiters();
 
     state = state.copyWith(
       selectedRange: selection.selectedRange,
@@ -107,27 +111,17 @@ class HydrationNotifier extends Notifier<HydrationState> {
     );
 
     try {
-      final data = await repo.loadHydrationPeriod(query, refreshMode: refreshMode);
-      // The drink's name and nutrients live on the paired NutritionRecord, not
-      // on the HydrationRecord — Kotlin's `HydrationViewModel.load()` joins the
-      // two here too. Without the nutrition read permission this is an empty
-      // list, and the entries simply stay unnamed.
-      final window = query.windows.current;
-      final nutritionEntries = await ref
-          .read(nutritionRepositoryProvider)
-          .loadNutritionEntries(window.start, window.end);
+      // The hydration/nutrition join that puts the drink names back onto the
+      // entries is domain work, and lives in the use case.
+      final result = await loadHydrationPeriod(query, refreshMode: refreshMode);
       if (!ref.mounted || generation != _generation) return;
-      final entries = mergeHydrationAndNutrition(
-        hydrationEntries: data.hydrationEntries,
-        nutritionEntries: nutritionEntries,
-      );
       state = state.copyWith(
         isLoading: false,
         error: null,
-        dailyHydration: data.dailyHydration,
-        entries: entries,
-        summary: _summarize(data.dailyHydration, goal),
-        drinkBreakdown: _drinkBreakdown(entries),
+        dailyHydration: result.dailyHydration,
+        entries: result.entries,
+        summary: _summarize(result.dailyHydration, goal),
+        drinkBreakdown: _drinkBreakdown(result.entries),
       );
     } catch (error) {
       if (!ref.mounted || generation != _generation) return;

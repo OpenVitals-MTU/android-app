@@ -10,6 +10,7 @@ import '../../../../di/providers.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import 'ble_gatt_connection.dart';
 import 'ble_uuids.dart';
+import '../../../../domain/port/ble_capability_probe.dart';
 
 /// Port of the Kotlin `BleSensorCoordinator` over `flutter_blue_plus`.
 ///
@@ -25,7 +26,7 @@ import 'ble_uuids.dart';
 /// latest value on subscribe ([metricsStream], [discoveredDevicesStream]).
 ///
 /// Runtime verification is deferred; scan/connect are device-dependent.
-class BleSensorCoordinator {
+class BleSensorCoordinator implements BleCapabilityProbe {
   BleSensorCoordinator(this._deviceRepository);
 
   final BleDeviceRepository _deviceRepository;
@@ -173,6 +174,7 @@ class BleSensorCoordinator {
 
   /// Connects to [address], enumerates its services and returns the capabilities
   /// they map to, then disconnects. Port of the Kotlin `discoverCapabilities`.
+  @override
   Future<Set<BleSensorCapability>> discoverCapabilities(String address) async {
     if (!await FlutterBluePlus.isSupported) return const {};
     final device = BluetoothDevice.fromId(address);

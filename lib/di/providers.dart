@@ -53,7 +53,32 @@ import '../data/repository/impl/vitals_repository_impl.dart';
 import '../domain/usecase/load_dashboard_day_use_case.dart';
 import '../features/imports/applehealth/apple_health_import_report_store.dart';
 import '../features/imports/applehealth/apple_health_import_service.dart';
+import '../domain/usecase/delete_activity_entry_use_case.dart';
+import '../domain/usecase/delete_body_measurement_entry_use_case.dart';
+import '../domain/usecase/discover_ble_device_capabilities_use_case.dart';
+import '../domain/usecase/save_body_measurement_use_case.dart';
+import '../domain/usecase/save_carbs_entry_use_case.dart';
+import '../domain/usecase/save_hydration_entry_use_case.dart';
+import '../domain/usecase/save_mindfulness_session_use_case.dart';
+import '../domain/usecase/save_vitals_measurement_use_case.dart';
+import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
+import '../domain/usecase/load_achievement_history_use_case.dart';
+import '../domain/usecase/load_activities_use_case.dart';
+import '../domain/usecase/load_activity_detail_use_case.dart';
+import '../domain/usecase/load_activity_metric_period_use_case.dart';
+import '../domain/usecase/load_body_energy_timeline_use_case.dart';
+import '../domain/usecase/load_body_period_use_case.dart';
+import '../domain/usecase/load_caffeine_use_case.dart';
+import '../domain/usecase/load_calories_use_case.dart';
+import '../domain/usecase/load_cardio_load_detail_use_case.dart';
+import '../domain/usecase/load_cycle_period_use_case.dart';
+import '../domain/usecase/load_frequent_hydration_drinks_use_case.dart';
 import '../domain/usecase/load_heart_period_use_case.dart';
+import '../domain/usecase/load_hydration_period_use_case.dart';
+import '../domain/usecase/load_mindfulness_period_use_case.dart';
+import '../domain/usecase/load_nutrition_period_use_case.dart';
+import '../domain/usecase/load_recovery_days_use_case.dart';
+import '../domain/usecase/load_sleep_detail_use_case.dart';
 import '../domain/usecase/load_sleep_period_use_case.dart';
 import '../features/activity/maps/offline_map_import_controller.dart';
 import '../features/activity/maps/offline_map_metadata_store.dart';
@@ -240,10 +265,144 @@ final loadHeartPeriodUseCaseProvider = Provider<LoadHeartPeriodUseCase>(
   ),
 );
 
+final loadActivityDetailUseCaseProvider = Provider<LoadActivityDetailUseCase>(
+  (ref) => LoadActivityDetailUseCase(
+    ref.watch(activityRepositoryProvider),
+    ref.watch(heartRepositoryProvider),
+  ),
+);
+
+final loadActivitiesUseCaseProvider = Provider<LoadActivitiesUseCase>(
+  (ref) => LoadActivitiesUseCase(
+    ref.watch(activityRepositoryProvider),
+    ref.watch(heartRepositoryProvider),
+  ),
+);
+
+final deleteActivityEntryUseCaseProvider = Provider<DeleteActivityEntryUseCase>(
+  (ref) => DeleteActivityEntryUseCase(ref.watch(activityRepositoryProvider)),
+);
+
+final loadActivityMetricPeriodUseCaseProvider =
+    Provider<LoadActivityMetricPeriodUseCase>(
+  (ref) => LoadActivityMetricPeriodUseCase(ref.watch(activityRepositoryProvider)),
+);
+
+final loadCaloriesUseCaseProvider = Provider<LoadCaloriesUseCase>(
+  (ref) => LoadCaloriesUseCase(
+    ref.watch(activityRepositoryProvider),
+    ref.watch(bodyRepositoryProvider),
+  ),
+);
+
+final loadCardioLoadDetailUseCaseProvider =
+    Provider<LoadCardioLoadDetailUseCase>(
+  (ref) => LoadCardioLoadDetailUseCase(
+    ref.watch(activityRepositoryProvider),
+    ref.watch(heartRepositoryProvider),
+  ),
+);
+
 final loadSleepPeriodUseCaseProvider = Provider<LoadSleepPeriodUseCase>(
   (ref) => LoadSleepPeriodUseCase(
     ref.watch(sleepRepositoryProvider),
     ref.watch(heartRepositoryProvider),
+  ),
+);
+
+final loadAchievementHistoryUseCaseProvider =
+    Provider<LoadAchievementHistoryUseCase>(
+  (ref) => LoadAchievementHistoryUseCase(ref.watch(activityRepositoryProvider)),
+);
+
+final loadBodyPeriodUseCaseProvider = Provider<LoadBodyPeriodUseCase>(
+  (ref) => LoadBodyPeriodUseCase(ref.watch(bodyRepositoryProvider)),
+);
+
+final deleteBodyMeasurementEntryUseCaseProvider =
+    Provider<DeleteBodyMeasurementEntryUseCase>(
+  (ref) => DeleteBodyMeasurementEntryUseCase(ref.watch(bodyRepositoryProvider)),
+);
+
+final loadBodyEnergyTimelineUseCaseProvider =
+    Provider<LoadBodyEnergyTimelineUseCase>(
+  (ref) =>
+      LoadBodyEnergyTimelineUseCase(ref.watch(bodyEnergyRepositoryProvider)),
+);
+
+final loadCaffeineUseCaseProvider = Provider<LoadCaffeineUseCase>(
+  (ref) => LoadCaffeineUseCase(ref.watch(caffeineRepositoryProvider)),
+);
+
+final loadCyclePeriodUseCaseProvider = Provider<LoadCyclePeriodUseCase>(
+  (ref) => LoadCyclePeriodUseCase(ref.watch(cycleRepositoryProvider)),
+);
+
+final loadHydrationPeriodUseCaseProvider = Provider<LoadHydrationPeriodUseCase>(
+  (ref) => LoadHydrationPeriodUseCase(
+    ref.watch(hydrationRepositoryProvider),
+    ref.watch(nutritionRepositoryProvider),
+  ),
+);
+
+final loadFrequentHydrationDrinksUseCaseProvider =
+    Provider<LoadFrequentHydrationDrinksUseCase>(
+  (ref) => LoadFrequentHydrationDrinksUseCase(
+    ref.watch(hydrationRepositoryProvider),
+    ref.watch(nutritionRepositoryProvider),
+  ),
+);
+
+final loadMindfulnessPeriodUseCaseProvider =
+    Provider<LoadMindfulnessPeriodUseCase>(
+  (ref) => LoadMindfulnessPeriodUseCase(ref.watch(mindfulnessRepositoryProvider)),
+);
+
+final loadNutritionPeriodUseCaseProvider = Provider<LoadNutritionPeriodUseCase>(
+  (ref) => LoadNutritionPeriodUseCase(ref.watch(nutritionRepositoryProvider)),
+);
+
+final loadRecoveryDaysUseCaseProvider = Provider<LoadRecoveryDaysUseCase>(
+  (ref) => LoadRecoveryDaysUseCase(ref.watch(sleepRepositoryProvider)),
+);
+
+final loadSleepDetailUseCaseProvider = Provider<LoadSleepDetailUseCase>(
+  (ref) => LoadSleepDetailUseCase(ref.watch(sleepRepositoryProvider)),
+);
+
+final discoverBleDeviceCapabilitiesUseCaseProvider =
+    Provider<DiscoverBleDeviceCapabilitiesUseCase>(
+  (ref) => DiscoverBleDeviceCapabilitiesUseCase(
+    ref.watch(bleSensorCoordinatorProvider),
+    ref.watch(bleDeviceRepositoryProvider),
+  ),
+);
+
+// ── Write use cases ───────────────────────────────────────────────────────
+
+final saveBodyMeasurementUseCaseProvider = Provider<SaveBodyMeasurementUseCase>(
+  (ref) => SaveBodyMeasurementUseCase(ref.watch(bodyRepositoryProvider)),
+);
+
+final saveVitalsMeasurementUseCaseProvider =
+    Provider<SaveVitalsMeasurementUseCase>(
+  (ref) => SaveVitalsMeasurementUseCase(ref.watch(vitalsRepositoryProvider)),
+);
+
+final saveCarbsEntryUseCaseProvider = Provider<SaveCarbsEntryUseCase>(
+  (ref) => SaveCarbsEntryUseCase(ref.watch(nutritionRepositoryProvider)),
+);
+
+final saveMindfulnessSessionUseCaseProvider =
+    Provider<SaveMindfulnessSessionUseCase>(
+  (ref) =>
+      SaveMindfulnessSessionUseCase(ref.watch(mindfulnessRepositoryProvider)),
+);
+
+final saveHydrationEntryUseCaseProvider = Provider<SaveHydrationEntryUseCase>(
+  (ref) => SaveHydrationEntryUseCase(
+    ref.watch(hydrationRepositoryProvider),
+    ref.watch(nutritionRepositoryProvider),
   ),
 );
 

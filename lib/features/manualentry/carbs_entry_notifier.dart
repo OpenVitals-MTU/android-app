@@ -103,9 +103,9 @@ class CarbsEntryNotifier extends Notifier<CarbsEntryState> {
       writeError: null,
     );
     try {
-      await ref.read(nutritionRepositoryProvider).writeCarbsEntry(
-            NutritionWriteRequest.carbs(DateTime.now(), carbsGrams),
-          );
+      await ref.read(saveCarbsEntryUseCaseProvider)(
+        NutritionWriteRequest.carbs(DateTime.now(), carbsGrams),
+      );
       if (!ref.mounted) return;
       state = state.copyWith(
         inputText: '',

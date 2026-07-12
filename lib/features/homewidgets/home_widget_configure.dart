@@ -11,7 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/app_providers.dart';
 import '../../ui/theme/app_theme.dart';
 import '../manualentry/hydration_catalog_widgets.dart';
-import '../manualentry/hydration_drink_usage.dart';
+import '../../domain/hydration/hydration_drink_usage.dart';
 import '../manualentry/hydration_entry_notifier.dart';
 import 'home_widget_beverage.dart';
 import 'home_widget_service.dart';

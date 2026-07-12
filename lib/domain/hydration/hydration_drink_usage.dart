@@ -1,4 +1,4 @@
-import '../../domain/model/nutrition_models.dart';
+import '../model/nutrition_models.dart';
 
 /// Port of the Kotlin `HydrationDrinkUsage`.
 ///

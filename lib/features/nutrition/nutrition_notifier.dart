@@ -86,7 +86,7 @@ class NutritionNotifier extends Notifier<NutritionState> {
   }) async {
     final generation = ++_generation;
     final prefs = ref.read(preferencesRepositoryProvider);
-    final repo = ref.read(nutritionRepositoryProvider);
+    final loadNutritionPeriod = ref.read(loadNutritionPeriodUseCaseProvider);
     final goal = prefs.dailyGoalFor(metric.dailyGoalKey);
 
     state = state.copyWith(
@@ -104,23 +104,17 @@ class NutritionNotifier extends Notifier<NutritionState> {
     );
 
     try {
-      final data = await repo.loadNutritionPeriod(query, refreshMode: refreshMode);
-      // Kotlin `NutritionPresentationMapper` also folds in the previous and
-      // baseline windows for the statistics section's comparison + baseline
-      // insight stats.
-      final windows = query.windows;
-      final previousMacros =
-          await repo.loadDailyMacros(windows.previous.start, windows.previous.end);
-      final baselineMacros =
-          await repo.loadDailyMacros(windows.baseline.start, windows.baseline.end);
+      // Three windows, not one: the statistics section needs the previous and
+      // baseline macros to compare against — see [LoadNutritionPeriodUseCase].
+      final result = await loadNutritionPeriod(query, refreshMode: refreshMode);
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(
         isLoading: false,
         error: null,
-        dailyMacros: data.dailyMacros,
-        previousDailyMacros: previousMacros,
-        baselineDailyMacros: baselineMacros,
-        entries: data.entries,
+        dailyMacros: result.dailyMacros,
+        previousDailyMacros: result.previousDailyMacros,
+        baselineDailyMacros: result.baselineDailyMacros,
+        entries: result.entries,
       );
     } catch (error) {
       if (!ref.mounted || generation != _generation) return;

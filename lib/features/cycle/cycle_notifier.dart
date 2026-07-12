@@ -51,7 +51,7 @@ class CycleNotifier extends Notifier<CycleMetricState> {
   }) async {
     final generation = ++_generation;
     final prefs = ref.read(preferencesRepositoryProvider);
-    final repo = ref.read(cycleRepositoryProvider);
+    final loadCyclePeriod = ref.read(loadCyclePeriodUseCaseProvider);
 
     state = state.copyWith(
       selectedRange: selection.selectedRange,
@@ -67,7 +67,7 @@ class CycleNotifier extends Notifier<CycleMetricState> {
     );
 
     try {
-      final result = await repo.loadCyclePeriod(query, refreshMode: refreshMode);
+      final result = await loadCyclePeriod(query, refreshMode: refreshMode);
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, result: result, error: null);
     } catch (error) {

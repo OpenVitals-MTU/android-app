@@ -46,14 +46,14 @@ class SleepDetailNotifier extends Notifier<SleepDetailState> {
     }
 
     final generation = ++_generation;
-    final repository = ref.read(sleepRepositoryProvider);
+    final loadSleepDetail = ref.read(loadSleepDetailUseCaseProvider);
     state = SleepDetailState(
       isLoading: true,
       session: state.session,
     );
 
     try {
-      final session = await repository.loadSleepSession(sleepId);
+      final session = await loadSleepDetail(sleepId);
       if (!ref.mounted || generation != _generation) return;
       state = SleepDetailState(
         isLoading: false,

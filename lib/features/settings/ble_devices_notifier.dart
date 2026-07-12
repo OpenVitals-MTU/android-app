@@ -188,15 +188,16 @@ class BleDevicesNotifier extends Notifier<BleDevicesUiState> {
       errorMessage: null,
     ));
     final generation = ++_discoverGeneration;
-    final discovered = await _coordinator.discoverCapabilities(device.address);
+    // Connecting to read the device's real capabilities, falling back to the
+    // advertised ones, and pricing them against the already-paired sensors is
+    // the use case's business — see [DiscoverBleDeviceCapabilitiesUseCase].
+    final discovery =
+        await ref.read(discoverBleDeviceCapabilitiesUseCaseProvider)(device);
     if (!ref.mounted || generation != _discoverGeneration) return;
-    final capabilities =
-        discovered.isNotEmpty ? discovered : device.suggestedCapabilities;
-    final conflicts = _repository.capabilityConflicts(capabilities);
     _setLocal(_local.copyWith(
-      discoveredCapabilities: capabilities,
-      addCapabilities: capabilities,
-      capabilityConflicts: conflicts,
+      discoveredCapabilities: discovery.capabilities,
+      addCapabilities: discovery.capabilities,
+      capabilityConflicts: discovery.conflicts,
       isDiscoveringCapabilities: false,
     ));
   }

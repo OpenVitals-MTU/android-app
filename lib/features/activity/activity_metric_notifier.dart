@@ -77,7 +77,8 @@ class ActivityMetricNotifier extends Notifier<ActivityMetricState> {
   }) async {
     final generation = ++_generation;
     final prefs = ref.read(preferencesRepositoryProvider);
-    final repo = ref.read(activityRepositoryProvider);
+    final loadActivityMetricPeriod =
+        ref.read(loadActivityMetricPeriodUseCaseProvider);
 
     state = state.copyWith(
       selectedRange: selection.selectedRange,
@@ -93,7 +94,7 @@ class ActivityMetricNotifier extends Notifier<ActivityMetricState> {
     );
 
     try {
-      final data = await repo.loadActivityPeriod(
+      final data = await loadActivityMetricPeriod(
         query,
         includeSteps: metric.usesDailySteps,
         includeNutrition: metric.usesNutrition,

@@ -6,7 +6,6 @@ import '../../core/period/period_selection.dart';
 import '../../core/period/time_range.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/time/local_date.dart';
-import '../../data/repository/contract/body_repository.dart';
 import '../../di/providers.dart';
 import '../../domain/model/body_models.dart';
 import '../../domain/model/refresh_mode.dart';
@@ -51,7 +50,7 @@ class BodyMetricNotifier extends Notifier<BodyMetricState> {
   }) async {
     final generation = ++_generation;
     final prefs = ref.read(preferencesRepositoryProvider);
-    final repository = ref.read(bodyRepositoryProvider);
+    final loadBodyPeriod = ref.read(loadBodyPeriodUseCaseProvider);
 
     state = state.copyWith(
       selectedRange: selection.selectedRange,
@@ -67,11 +66,7 @@ class BodyMetricNotifier extends Notifier<BodyMetricState> {
     );
 
     try {
-      final data = await repository.loadBodyPeriod(
-        query,
-        BodyPeriodMetric.all,
-        refreshMode: refreshMode,
-      );
+      final data = await loadBodyPeriod(query, refreshMode: refreshMode);
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, data: data, error: null);
     } catch (error) {
@@ -106,9 +101,7 @@ class BodyMetricNotifier extends Notifier<BodyMetricState> {
       error: null,
     );
     try {
-      await ref
-          .read(bodyRepositoryProvider)
-          .deleteBodyMeasurementEntry(type, entryId);
+      await ref.read(deleteBodyMeasurementEntryUseCaseProvider)(type, entryId);
       if (!ref.mounted) return;
       await load(
         PeriodSelection(state.selectedRange, state.selectedDate),

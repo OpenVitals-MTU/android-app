@@ -2,12 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../core/presentation/screen_error.dart';
-import '../../data/repository/contract/activity_repository.dart';
 import '../../di/providers.dart';
 import '../../domain/insights/activity_splits.dart';
-import '../../domain/model/activity_backfill.dart';
 import '../../domain/model/activity_models.dart';
-import '../../domain/model/exercise_session_metrics.dart';
 import '../../domain/model/heart_models.dart';
 import '../../state/app_providers.dart';
 
@@ -67,62 +64,37 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
     }
 
     final generation = ++_generation;
-    final repo = ref.read(activityRepositoryProvider);
-    final heartRepo = ref.read(heartRepositoryProvider);
+    final loadActivityDetail = ref.read(loadActivityDetailUseCaseProvider);
     final splitDistanceMeters = ref.read(activitySplitDistanceMetersProvider);
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final workout = await repo.loadWorkout(activityId);
+      // Reassembling the workout — which repositories to ask, in what order, and
+      // that Health Connect's own totals outrank the ones derived from samples —
+      // is domain knowledge, and lives in the use case. What stays here is the
+      // view's business: the generation guard, and turning a result into state.
+      final result = await loadActivityDetail(activityId);
       if (!ref.mounted || generation != _generation) return;
-      if (workout == null) {
+      if (result == null) {
         state = const ActivityDetailState(
           isLoading: false,
           error: ScreenErrorNotFound(),
         );
         return;
       }
-      final heartRateSamples = await heartRepo.loadHeartRateSamplesInstant(
-        workout.startTime,
-        workout.endTime,
-      );
-      if (!ref.mounted || generation != _generation) return;
-      final speedSamples = await _loadSpeedSamples(repo, workout);
-      if (!ref.mounted || generation != _generation) return;
-      final cadenceSamples = await _loadCadenceSamples(repo, workout);
-      if (!ref.mounted || generation != _generation) return;
-
-      // An ExerciseSessionRecord carries almost nothing: a watch writes the walk
-      // as a session and its steps, distance, calories and elevation as SEPARATE
-      // records over the same span. Read alone, the session has a duration and
-      // little else — which is how a recorded walk came to report "Steps: Not
-      // available" directly above a chart of its own step cadence. Aggregating
-      // the session's window is the only way to get those numbers back.
-      //
-      // Health Connect first (it is the authority), then the samples, which fill
-      // whatever is still missing — the averages, and a distance integrated from
-      // speed when the device wrote no DistanceRecord at all.
-      final sessionMetrics = await _loadWorkoutMetrics(repo, workout);
-      if (!ref.mounted || generation != _generation) return;
-
-      final backfilledWorkout = workout
-          .withSessionMetricsBackfilled(sessionMetrics)
-          .withSampleBackfilledMetrics(
-            heartRateSamples: heartRateSamples,
-            speedSamples: speedSamples,
-            cadenceSamples: cadenceSamples,
-          );
 
       state = ActivityDetailState(
         isLoading: false,
-        workout: backfilledWorkout,
-        heartRateSamples: heartRateSamples,
-        speedSamples: speedSamples,
-        cadenceSamples: cadenceSamples,
+        workout: result.workout,
+        heartRateSamples: result.heartRateSamples,
+        speedSamples: result.speedSamples,
+        cadenceSamples: result.cadenceSamples,
+        // Splits depend on a user preference, so they are cut here rather than in
+        // the use case: changing the split distance must re-cut an open screen.
         splits: computeActivitySplits(
-          workout: backfilledWorkout,
-          heartRateSamples: heartRateSamples,
-          speedSamples: speedSamples,
+          workout: result.workout,
+          heartRateSamples: result.heartRateSamples,
+          speedSamples: result.speedSamples,
           splitDistanceMeters: splitDistanceMeters,
         ),
       );
@@ -133,58 +105,6 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
         error:
             throwableToScreenError(error, fallback: 'Unable to load activity.'),
       );
-    }
-  }
-
-  /// Speed samples are a NICE-TO-HAVE: they only upgrade a treadmill run's
-  /// splits from estimated to integrated. The repository already returns an
-  /// empty list when the SPEED permission is missing; this also swallows a
-  /// failing read, because losing the splits card is not a reason to fail the
-  /// whole activity screen.
-  Future<List<SpeedSample>> _loadSpeedSamples(
-    ActivityRepository repo,
-    ExerciseData workout,
-  ) async {
-    try {
-      return await repo.loadSpeedSamples(workout.startTime, workout.endTime);
-    } catch (_) {
-      return const <SpeedSample>[];
-    }
-  }
-
-  /// The session-window aggregate. Every metric inside is already gated on its
-  /// own read permission, so a missing grant costs that one number; a failing
-  /// read costs all of them, and neither is a reason to fail the screen — the
-  /// workout itself loaded fine.
-  Future<ExerciseSessionMetrics> _loadWorkoutMetrics(
-    ActivityRepository repo,
-    ExerciseData workout,
-  ) async {
-    try {
-      return await repo.loadWorkoutMetrics(workout.startTime, workout.endTime);
-    } catch (_) {
-      return ExerciseSessionMetrics.none;
-    }
-  }
-
-  /// Cadence samples drive their own chart cards and nothing else, so — like the
-  /// speed read above — a failure costs a card, not the screen.
-  ///
-  /// Health Connect tags each sample with the record it came from, so a ride
-  /// yields cycling-kind samples and a run yields steps-kind ones; the screen
-  /// renders whichever kinds actually came back rather than guessing from the
-  /// exercise type.
-  Future<List<ActivityCadenceSample>> _loadCadenceSamples(
-    ActivityRepository repo,
-    ExerciseData workout,
-  ) async {
-    try {
-      return await repo.loadActivityCadenceSamples(
-        workout.startTime,
-        workout.endTime,
-      );
-    } catch (_) {
-      return const <ActivityCadenceSample>[];
     }
   }
 }

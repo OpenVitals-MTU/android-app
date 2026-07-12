@@ -188,12 +188,10 @@ class VitalsMeasurementEntryNotifier
       secondaryValue: secondaryValue,
     );
     try {
-      final repo = ref.read(vitalsRepositoryProvider);
-      if (editRecordId == null) {
-        await repo.writeVitalsMeasurementEntry(request);
-      } else {
-        await repo.updateVitalsMeasurementEntry(editRecordId!, request);
-      }
+      await ref.read(saveVitalsMeasurementUseCaseProvider)(
+        request,
+        editRecordId: editRecordId,
+      );
       if (!ref.mounted) return;
       state = state.copyWith(
         inputText: state.isEditMode ? state.inputText : '',

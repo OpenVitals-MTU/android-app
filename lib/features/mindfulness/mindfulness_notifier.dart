@@ -53,7 +53,8 @@ class MindfulnessNotifier extends Notifier<MindfulnessMetricState> {
   }) async {
     final generation = ++_generation;
     final prefs = ref.read(preferencesRepositoryProvider);
-    final repo = ref.read(mindfulnessRepositoryProvider);
+    final loadMindfulnessPeriod =
+        ref.read(loadMindfulnessPeriodUseCaseProvider);
 
     state = state.copyWith(
       selectedRange: selection.selectedRange,
@@ -69,10 +70,7 @@ class MindfulnessNotifier extends Notifier<MindfulnessMetricState> {
     );
 
     try {
-      final data = await repo.loadMindfulnessPeriod(
-        query,
-        refreshMode: refreshMode,
-      );
+      final data = await loadMindfulnessPeriod(query, refreshMode: refreshMode);
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, data: data, error: null);
     } catch (error) {

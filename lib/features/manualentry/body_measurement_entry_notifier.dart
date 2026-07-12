@@ -140,12 +140,10 @@ class BodyMeasurementEntryNotifier extends Notifier<BodyMeasurementEntryState> {
       value: canonicalValue,
     );
     try {
-      final repo = ref.read(bodyRepositoryProvider);
-      if (editRecordId == null) {
-        await repo.writeBodyMeasurementEntry(request);
-      } else {
-        await repo.updateBodyMeasurementEntry(editRecordId!, request);
-      }
+      await ref.read(saveBodyMeasurementUseCaseProvider)(
+        request,
+        editRecordId: editRecordId,
+      );
       if (!ref.mounted) return;
       state = state.copyWith(
         inputText: state.isEditMode ? state.inputText : '',

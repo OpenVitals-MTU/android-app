@@ -534,12 +534,10 @@ class MindfulnessEntryNotifier extends Notifier<MindfulnessEntryState> {
       endTime: end,
     );
     try {
-      final repo = ref.read(mindfulnessRepositoryProvider);
-      if (editRecordId == null) {
-        await repo.writeMindfulnessSessionEntry(request);
-      } else {
-        await repo.updateMindfulnessSessionEntry(editRecordId!, request);
-      }
+      await ref.read(saveMindfulnessSessionUseCaseProvider)(
+        request,
+        editRecordId: editRecordId,
+      );
       if (!ref.mounted) return;
       onSuccess();
     } catch (error) {

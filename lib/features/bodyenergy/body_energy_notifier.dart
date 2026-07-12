@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../core/period/time_range.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/body_energy_repository.dart';
@@ -45,7 +44,8 @@ class BodyEnergyNotifier extends Notifier<BodyEnergyState> {
   }) async {
     final clamped = date.coerceAtMost(LocalDate.now());
     final generation = ++_generation;
-    final repository = ref.read(bodyEnergyRepositoryProvider);
+    final loadBodyEnergyTimeline =
+        ref.read(loadBodyEnergyTimelineUseCaseProvider);
 
     state = state.copyWith(
       selectedDate: clamped,
@@ -54,13 +54,8 @@ class BodyEnergyNotifier extends Notifier<BodyEnergyState> {
     );
 
     try {
-      final result = await repository.loadTimeline(
-        BodyEnergyTimelineQuery(
-          period: DatePeriod(clamped, clamped),
-          range: TimeRange.day,
-          refreshMode: refreshMode,
-        ),
-      );
+      final result =
+          await loadBodyEnergyTimeline(clamped, refreshMode: refreshMode);
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, result: result, error: null);
     } catch (error) {

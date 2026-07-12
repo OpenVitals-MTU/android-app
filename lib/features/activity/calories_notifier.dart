@@ -43,8 +43,7 @@ class CaloriesNotifier extends Notifier<CaloriesState> {
   }) async {
     final generation = ++_generation;
     final prefs = ref.read(preferencesRepositoryProvider);
-    final activityRepo = ref.read(activityRepositoryProvider);
-    final bodyRepo = ref.read(bodyRepositoryProvider);
+    final loadCalories = ref.read(loadCaloriesUseCaseProvider);
 
     state = state.copyWith(
       selectedRange: selection.selectedRange,
@@ -60,20 +59,12 @@ class CaloriesNotifier extends Notifier<CaloriesState> {
     );
 
     try {
-      final results = await (
-        activityRepo.loadActivityPeriod(
-          query,
-          includeSteps: true,
-          includeNutrition: true,
-          refreshMode: refreshMode,
-        ),
-        bodyRepo.loadLatestBMR(),
-      ).wait;
+      final result = await loadCalories(query, refreshMode: refreshMode);
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(
         isLoading: false,
-        data: results.$1,
-        latestBmrKcal: results.$2,
+        data: result.data,
+        latestBmrKcal: result.latestBmrKcal,
         error: null,
       );
     } catch (error) {
