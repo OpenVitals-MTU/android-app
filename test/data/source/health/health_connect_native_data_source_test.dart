@@ -382,9 +382,15 @@ void main() {
       final source = _source(api);
       final flags = await source.resolveFeatureFlags();
       expect(flags.skinTemperatureAvailable, isTrue);
-      expect(flags.mindfulnessAvailable, isTrue);
       expect(flags.plannedExerciseAvailable, isFalse);
       expect(source.isSkinTemperatureAvailable(), isTrue);
+
+      // MINDFULNESS is the exception, and deliberately so: the device saying
+      // yes is no longer enough, because a device can say yes and still crash
+      // its own permission screen when asked to draw the row. The user has to
+      // say yes too. `_source` does not opt in, so it stays false here — see
+      // mindfulness_opt_in_test.dart for both halves of the gate.
+      expect(flags.mindfulnessAvailable, isFalse);
     });
 
     test('getFeatureStatus surfaces the tri-state per feature', () async {

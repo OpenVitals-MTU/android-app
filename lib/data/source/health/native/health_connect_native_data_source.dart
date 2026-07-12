@@ -44,7 +44,15 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   HealthConnectNativeDataSource({
     HealthConnectHostApi? hostApi,
     super.appPackageName,
+    this.mindfulnessIntegrationEnabled = _mindfulnessOffByDefault,
   }) : _api = hostApi ?? HealthConnectHostApi();
+
+  /// Whether the user has opted in to the Health Connect mindfulness
+  /// integration. **Off unless someone says otherwise**, deliberately — see
+  /// [refreshAvailability].
+  final bool Function() mindfulnessIntegrationEnabled;
+
+  static bool _mindfulnessOffByDefault() => false;
 
   final HealthConnectHostApi _api;
   // ── Time helpers (device-local day boundaries, as in the Kotlin readers) ──
@@ -200,9 +208,29 @@ Duration? _zoneOffset(int? seconds) =>
       available('READ_HEALTH_DATA_HISTORY'),
       available('READ_HEALTH_DATA_IN_BACKGROUND'),
     ]);
+    // MINDFULNESS IS GATED ON THE USER, NOT ONLY ON THE DEVICE.
+    //
+    // The device's own answer is not trustworthy here. Some Health Connect
+    // modules — the ones on de-Googled ROMs that do not take Play system
+    // updates — DEFINE the mindfulness permission and report the feature as
+    // available, while their permission UI has no category for it and throws
+    // `IllegalArgumentException: No Category for fitness permission type
+    // MINDFULNESS` the moment it is asked to draw a row for it. Requesting the
+    // permission then crashes the system Health Connect app, and the user
+    // cannot grant us ANY permission at all — the app is dead on that phone.
+    //
+    // There is no API that tells us the permission UI is broken, so we stop
+    // asking on the strength of the feature flag alone. Off by default; a user
+    // who wants Health Connect mindfulness turns it on and finds out
+    // immediately whether their device can face it.
+    //
+    // Folding it in HERE, rather than at the call sites, is what makes every
+    // consumer correct by construction: the permission getters, the feature
+    // gate, the repositories and the screens all already handle
+    // "this device has no mindfulness", and this is exactly that path.
     final flags = HealthConnectFeatureFlags(
       skinTemperatureAvailable: results[0],
-      mindfulnessAvailable: results[1],
+      mindfulnessAvailable: results[1] && mindfulnessIntegrationEnabled(),
       plannedExerciseAvailable: results[2],
       healthDataHistoryAvailable: results[3],
       backgroundReadAvailable: results[4],

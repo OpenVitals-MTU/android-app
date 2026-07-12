@@ -109,7 +109,11 @@ final bodyEnergyTimelineCacheStoreProvider =
 
 final healthDataSourceProvider = Provider<HealthDataSource>((ref) {
   if (defaultTargetPlatform == TargetPlatform.android) {
-    return HealthConnectNativeDataSource(appPackageName: openVitalsPackageName);
+    return HealthConnectNativeDataSource(
+      appPackageName: openVitalsPackageName,
+      mindfulnessIntegrationEnabled: () =>
+          ref.read(preferencesRepositoryProvider).healthConnectMindfulnessEnabled,
+    );
   }
   // iOS / other platforms have no native health bridge yet.
   return UnsupportedHealthDataSource(appPackageName: openVitalsPackageName);

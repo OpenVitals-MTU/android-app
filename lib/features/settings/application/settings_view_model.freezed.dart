@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SettingsState {
 
- UnitSystem get unitSystem; AppLanguage get appLanguage; AppThemeMode get appThemeMode; bool get dynamicColor; SleepRangeMode get sleepRangeMode; ActivityWeekMode get activityWeekMode; bool get showOpenVitalsCalculatedCalories; bool get healthConnectSyncEnabled; bool get appLockEnabled; double get hydrationDailyGoalLiters; int get highHeartRateThresholdBpm; int get lowHeartRateThresholdBpm;
+ UnitSystem get unitSystem; AppLanguage get appLanguage; AppThemeMode get appThemeMode; bool get dynamicColor; SleepRangeMode get sleepRangeMode; ActivityWeekMode get activityWeekMode; bool get showOpenVitalsCalculatedCalories; bool get healthConnectSyncEnabled; bool get healthConnectMindfulnessEnabled; bool get appLockEnabled; double get hydrationDailyGoalLiters; int get highHeartRateThresholdBpm; int get lowHeartRateThresholdBpm;
 /// Create a copy of SettingsState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $SettingsStateCopyWith<SettingsState> get copyWith => _$SettingsStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SettingsState&&(identical(other.unitSystem, unitSystem) || other.unitSystem == unitSystem)&&(identical(other.appLanguage, appLanguage) || other.appLanguage == appLanguage)&&(identical(other.appThemeMode, appThemeMode) || other.appThemeMode == appThemeMode)&&(identical(other.dynamicColor, dynamicColor) || other.dynamicColor == dynamicColor)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.activityWeekMode, activityWeekMode) || other.activityWeekMode == activityWeekMode)&&(identical(other.showOpenVitalsCalculatedCalories, showOpenVitalsCalculatedCalories) || other.showOpenVitalsCalculatedCalories == showOpenVitalsCalculatedCalories)&&(identical(other.healthConnectSyncEnabled, healthConnectSyncEnabled) || other.healthConnectSyncEnabled == healthConnectSyncEnabled)&&(identical(other.appLockEnabled, appLockEnabled) || other.appLockEnabled == appLockEnabled)&&(identical(other.hydrationDailyGoalLiters, hydrationDailyGoalLiters) || other.hydrationDailyGoalLiters == hydrationDailyGoalLiters)&&(identical(other.highHeartRateThresholdBpm, highHeartRateThresholdBpm) || other.highHeartRateThresholdBpm == highHeartRateThresholdBpm)&&(identical(other.lowHeartRateThresholdBpm, lowHeartRateThresholdBpm) || other.lowHeartRateThresholdBpm == lowHeartRateThresholdBpm));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SettingsState&&(identical(other.unitSystem, unitSystem) || other.unitSystem == unitSystem)&&(identical(other.appLanguage, appLanguage) || other.appLanguage == appLanguage)&&(identical(other.appThemeMode, appThemeMode) || other.appThemeMode == appThemeMode)&&(identical(other.dynamicColor, dynamicColor) || other.dynamicColor == dynamicColor)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.activityWeekMode, activityWeekMode) || other.activityWeekMode == activityWeekMode)&&(identical(other.showOpenVitalsCalculatedCalories, showOpenVitalsCalculatedCalories) || other.showOpenVitalsCalculatedCalories == showOpenVitalsCalculatedCalories)&&(identical(other.healthConnectSyncEnabled, healthConnectSyncEnabled) || other.healthConnectSyncEnabled == healthConnectSyncEnabled)&&(identical(other.healthConnectMindfulnessEnabled, healthConnectMindfulnessEnabled) || other.healthConnectMindfulnessEnabled == healthConnectMindfulnessEnabled)&&(identical(other.appLockEnabled, appLockEnabled) || other.appLockEnabled == appLockEnabled)&&(identical(other.hydrationDailyGoalLiters, hydrationDailyGoalLiters) || other.hydrationDailyGoalLiters == hydrationDailyGoalLiters)&&(identical(other.highHeartRateThresholdBpm, highHeartRateThresholdBpm) || other.highHeartRateThresholdBpm == highHeartRateThresholdBpm)&&(identical(other.lowHeartRateThresholdBpm, lowHeartRateThresholdBpm) || other.lowHeartRateThresholdBpm == lowHeartRateThresholdBpm));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,unitSystem,appLanguage,appThemeMode,dynamicColor,sleepRangeMode,activityWeekMode,showOpenVitalsCalculatedCalories,healthConnectSyncEnabled,appLockEnabled,hydrationDailyGoalLiters,highHeartRateThresholdBpm,lowHeartRateThresholdBpm);
+int get hashCode => Object.hash(runtimeType,unitSystem,appLanguage,appThemeMode,dynamicColor,sleepRangeMode,activityWeekMode,showOpenVitalsCalculatedCalories,healthConnectSyncEnabled,healthConnectMindfulnessEnabled,appLockEnabled,hydrationDailyGoalLiters,highHeartRateThresholdBpm,lowHeartRateThresholdBpm);
 
 @override
 String toString() {
-  return 'SettingsState(unitSystem: $unitSystem, appLanguage: $appLanguage, appThemeMode: $appThemeMode, dynamicColor: $dynamicColor, sleepRangeMode: $sleepRangeMode, activityWeekMode: $activityWeekMode, showOpenVitalsCalculatedCalories: $showOpenVitalsCalculatedCalories, healthConnectSyncEnabled: $healthConnectSyncEnabled, appLockEnabled: $appLockEnabled, hydrationDailyGoalLiters: $hydrationDailyGoalLiters, highHeartRateThresholdBpm: $highHeartRateThresholdBpm, lowHeartRateThresholdBpm: $lowHeartRateThresholdBpm)';
+  return 'SettingsState(unitSystem: $unitSystem, appLanguage: $appLanguage, appThemeMode: $appThemeMode, dynamicColor: $dynamicColor, sleepRangeMode: $sleepRangeMode, activityWeekMode: $activityWeekMode, showOpenVitalsCalculatedCalories: $showOpenVitalsCalculatedCalories, healthConnectSyncEnabled: $healthConnectSyncEnabled, healthConnectMindfulnessEnabled: $healthConnectMindfulnessEnabled, appLockEnabled: $appLockEnabled, hydrationDailyGoalLiters: $hydrationDailyGoalLiters, highHeartRateThresholdBpm: $highHeartRateThresholdBpm, lowHeartRateThresholdBpm: $lowHeartRateThresholdBpm)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $SettingsStateCopyWith<$Res>  {
   factory $SettingsStateCopyWith(SettingsState value, $Res Function(SettingsState) _then) = _$SettingsStateCopyWithImpl;
 @useResult
 $Res call({
- UnitSystem unitSystem, AppLanguage appLanguage, AppThemeMode appThemeMode, bool dynamicColor, SleepRangeMode sleepRangeMode, ActivityWeekMode activityWeekMode, bool showOpenVitalsCalculatedCalories, bool healthConnectSyncEnabled, bool appLockEnabled, double hydrationDailyGoalLiters, int highHeartRateThresholdBpm, int lowHeartRateThresholdBpm
+ UnitSystem unitSystem, AppLanguage appLanguage, AppThemeMode appThemeMode, bool dynamicColor, SleepRangeMode sleepRangeMode, ActivityWeekMode activityWeekMode, bool showOpenVitalsCalculatedCalories, bool healthConnectSyncEnabled, bool healthConnectMindfulnessEnabled, bool appLockEnabled, double hydrationDailyGoalLiters, int highHeartRateThresholdBpm, int lowHeartRateThresholdBpm
 });
 
 
@@ -62,7 +62,7 @@ class _$SettingsStateCopyWithImpl<$Res>
 
 /// Create a copy of SettingsState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? unitSystem = null,Object? appLanguage = null,Object? appThemeMode = null,Object? dynamicColor = null,Object? sleepRangeMode = null,Object? activityWeekMode = null,Object? showOpenVitalsCalculatedCalories = null,Object? healthConnectSyncEnabled = null,Object? appLockEnabled = null,Object? hydrationDailyGoalLiters = null,Object? highHeartRateThresholdBpm = null,Object? lowHeartRateThresholdBpm = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? unitSystem = null,Object? appLanguage = null,Object? appThemeMode = null,Object? dynamicColor = null,Object? sleepRangeMode = null,Object? activityWeekMode = null,Object? showOpenVitalsCalculatedCalories = null,Object? healthConnectSyncEnabled = null,Object? healthConnectMindfulnessEnabled = null,Object? appLockEnabled = null,Object? hydrationDailyGoalLiters = null,Object? highHeartRateThresholdBpm = null,Object? lowHeartRateThresholdBpm = null,}) {
   return _then(_self.copyWith(
 unitSystem: null == unitSystem ? _self.unitSystem : unitSystem // ignore: cast_nullable_to_non_nullable
 as UnitSystem,appLanguage: null == appLanguage ? _self.appLanguage : appLanguage // ignore: cast_nullable_to_non_nullable
@@ -72,6 +72,7 @@ as bool,sleepRangeMode: null == sleepRangeMode ? _self.sleepRangeMode : sleepRan
 as SleepRangeMode,activityWeekMode: null == activityWeekMode ? _self.activityWeekMode : activityWeekMode // ignore: cast_nullable_to_non_nullable
 as ActivityWeekMode,showOpenVitalsCalculatedCalories: null == showOpenVitalsCalculatedCalories ? _self.showOpenVitalsCalculatedCalories : showOpenVitalsCalculatedCalories // ignore: cast_nullable_to_non_nullable
 as bool,healthConnectSyncEnabled: null == healthConnectSyncEnabled ? _self.healthConnectSyncEnabled : healthConnectSyncEnabled // ignore: cast_nullable_to_non_nullable
+as bool,healthConnectMindfulnessEnabled: null == healthConnectMindfulnessEnabled ? _self.healthConnectMindfulnessEnabled : healthConnectMindfulnessEnabled // ignore: cast_nullable_to_non_nullable
 as bool,appLockEnabled: null == appLockEnabled ? _self.appLockEnabled : appLockEnabled // ignore: cast_nullable_to_non_nullable
 as bool,hydrationDailyGoalLiters: null == hydrationDailyGoalLiters ? _self.hydrationDailyGoalLiters : hydrationDailyGoalLiters // ignore: cast_nullable_to_non_nullable
 as double,highHeartRateThresholdBpm: null == highHeartRateThresholdBpm ? _self.highHeartRateThresholdBpm : highHeartRateThresholdBpm // ignore: cast_nullable_to_non_nullable
@@ -161,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( UnitSystem unitSystem,  AppLanguage appLanguage,  AppThemeMode appThemeMode,  bool dynamicColor,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  bool healthConnectSyncEnabled,  bool appLockEnabled,  double hydrationDailyGoalLiters,  int highHeartRateThresholdBpm,  int lowHeartRateThresholdBpm)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( UnitSystem unitSystem,  AppLanguage appLanguage,  AppThemeMode appThemeMode,  bool dynamicColor,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  bool healthConnectSyncEnabled,  bool healthConnectMindfulnessEnabled,  bool appLockEnabled,  double hydrationDailyGoalLiters,  int highHeartRateThresholdBpm,  int lowHeartRateThresholdBpm)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SettingsState() when $default != null:
-return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dynamicColor,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectSyncEnabled,_that.appLockEnabled,_that.hydrationDailyGoalLiters,_that.highHeartRateThresholdBpm,_that.lowHeartRateThresholdBpm);case _:
+return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dynamicColor,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectSyncEnabled,_that.healthConnectMindfulnessEnabled,_that.appLockEnabled,_that.hydrationDailyGoalLiters,_that.highHeartRateThresholdBpm,_that.lowHeartRateThresholdBpm);case _:
   return orElse();
 
 }
@@ -182,10 +183,10 @@ return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dyna
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( UnitSystem unitSystem,  AppLanguage appLanguage,  AppThemeMode appThemeMode,  bool dynamicColor,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  bool healthConnectSyncEnabled,  bool appLockEnabled,  double hydrationDailyGoalLiters,  int highHeartRateThresholdBpm,  int lowHeartRateThresholdBpm)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( UnitSystem unitSystem,  AppLanguage appLanguage,  AppThemeMode appThemeMode,  bool dynamicColor,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  bool healthConnectSyncEnabled,  bool healthConnectMindfulnessEnabled,  bool appLockEnabled,  double hydrationDailyGoalLiters,  int highHeartRateThresholdBpm,  int lowHeartRateThresholdBpm)  $default,) {final _that = this;
 switch (_that) {
 case _SettingsState():
-return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dynamicColor,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectSyncEnabled,_that.appLockEnabled,_that.hydrationDailyGoalLiters,_that.highHeartRateThresholdBpm,_that.lowHeartRateThresholdBpm);case _:
+return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dynamicColor,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectSyncEnabled,_that.healthConnectMindfulnessEnabled,_that.appLockEnabled,_that.hydrationDailyGoalLiters,_that.highHeartRateThresholdBpm,_that.lowHeartRateThresholdBpm);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +203,10 @@ return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dyna
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( UnitSystem unitSystem,  AppLanguage appLanguage,  AppThemeMode appThemeMode,  bool dynamicColor,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  bool healthConnectSyncEnabled,  bool appLockEnabled,  double hydrationDailyGoalLiters,  int highHeartRateThresholdBpm,  int lowHeartRateThresholdBpm)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( UnitSystem unitSystem,  AppLanguage appLanguage,  AppThemeMode appThemeMode,  bool dynamicColor,  SleepRangeMode sleepRangeMode,  ActivityWeekMode activityWeekMode,  bool showOpenVitalsCalculatedCalories,  bool healthConnectSyncEnabled,  bool healthConnectMindfulnessEnabled,  bool appLockEnabled,  double hydrationDailyGoalLiters,  int highHeartRateThresholdBpm,  int lowHeartRateThresholdBpm)?  $default,) {final _that = this;
 switch (_that) {
 case _SettingsState() when $default != null:
-return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dynamicColor,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectSyncEnabled,_that.appLockEnabled,_that.hydrationDailyGoalLiters,_that.highHeartRateThresholdBpm,_that.lowHeartRateThresholdBpm);case _:
+return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dynamicColor,_that.sleepRangeMode,_that.activityWeekMode,_that.showOpenVitalsCalculatedCalories,_that.healthConnectSyncEnabled,_that.healthConnectMindfulnessEnabled,_that.appLockEnabled,_that.hydrationDailyGoalLiters,_that.highHeartRateThresholdBpm,_that.lowHeartRateThresholdBpm);case _:
   return null;
 
 }
@@ -217,7 +218,7 @@ return $default(_that.unitSystem,_that.appLanguage,_that.appThemeMode,_that.dyna
 
 
 class _SettingsState implements SettingsState {
-  const _SettingsState({this.unitSystem = UnitSystem.metric, this.appLanguage = AppLanguage.system, this.appThemeMode = AppThemeMode.system, this.dynamicColor = false, this.sleepRangeMode = SleepRangeMode.evening18h, this.activityWeekMode = ActivityWeekMode.mondayToSunday, this.showOpenVitalsCalculatedCalories = false, this.healthConnectSyncEnabled = true, this.appLockEnabled = false, this.hydrationDailyGoalLiters = 2.0, this.highHeartRateThresholdBpm = 120, this.lowHeartRateThresholdBpm = 50});
+  const _SettingsState({this.unitSystem = UnitSystem.metric, this.appLanguage = AppLanguage.system, this.appThemeMode = AppThemeMode.system, this.dynamicColor = false, this.sleepRangeMode = SleepRangeMode.evening18h, this.activityWeekMode = ActivityWeekMode.mondayToSunday, this.showOpenVitalsCalculatedCalories = false, this.healthConnectSyncEnabled = true, this.healthConnectMindfulnessEnabled = false, this.appLockEnabled = false, this.hydrationDailyGoalLiters = 2.0, this.highHeartRateThresholdBpm = 120, this.lowHeartRateThresholdBpm = 50});
   
 
 @override@JsonKey() final  UnitSystem unitSystem;
@@ -228,6 +229,7 @@ class _SettingsState implements SettingsState {
 @override@JsonKey() final  ActivityWeekMode activityWeekMode;
 @override@JsonKey() final  bool showOpenVitalsCalculatedCalories;
 @override@JsonKey() final  bool healthConnectSyncEnabled;
+@override@JsonKey() final  bool healthConnectMindfulnessEnabled;
 @override@JsonKey() final  bool appLockEnabled;
 @override@JsonKey() final  double hydrationDailyGoalLiters;
 @override@JsonKey() final  int highHeartRateThresholdBpm;
@@ -243,16 +245,16 @@ _$SettingsStateCopyWith<_SettingsState> get copyWith => __$SettingsStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SettingsState&&(identical(other.unitSystem, unitSystem) || other.unitSystem == unitSystem)&&(identical(other.appLanguage, appLanguage) || other.appLanguage == appLanguage)&&(identical(other.appThemeMode, appThemeMode) || other.appThemeMode == appThemeMode)&&(identical(other.dynamicColor, dynamicColor) || other.dynamicColor == dynamicColor)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.activityWeekMode, activityWeekMode) || other.activityWeekMode == activityWeekMode)&&(identical(other.showOpenVitalsCalculatedCalories, showOpenVitalsCalculatedCalories) || other.showOpenVitalsCalculatedCalories == showOpenVitalsCalculatedCalories)&&(identical(other.healthConnectSyncEnabled, healthConnectSyncEnabled) || other.healthConnectSyncEnabled == healthConnectSyncEnabled)&&(identical(other.appLockEnabled, appLockEnabled) || other.appLockEnabled == appLockEnabled)&&(identical(other.hydrationDailyGoalLiters, hydrationDailyGoalLiters) || other.hydrationDailyGoalLiters == hydrationDailyGoalLiters)&&(identical(other.highHeartRateThresholdBpm, highHeartRateThresholdBpm) || other.highHeartRateThresholdBpm == highHeartRateThresholdBpm)&&(identical(other.lowHeartRateThresholdBpm, lowHeartRateThresholdBpm) || other.lowHeartRateThresholdBpm == lowHeartRateThresholdBpm));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SettingsState&&(identical(other.unitSystem, unitSystem) || other.unitSystem == unitSystem)&&(identical(other.appLanguage, appLanguage) || other.appLanguage == appLanguage)&&(identical(other.appThemeMode, appThemeMode) || other.appThemeMode == appThemeMode)&&(identical(other.dynamicColor, dynamicColor) || other.dynamicColor == dynamicColor)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.activityWeekMode, activityWeekMode) || other.activityWeekMode == activityWeekMode)&&(identical(other.showOpenVitalsCalculatedCalories, showOpenVitalsCalculatedCalories) || other.showOpenVitalsCalculatedCalories == showOpenVitalsCalculatedCalories)&&(identical(other.healthConnectSyncEnabled, healthConnectSyncEnabled) || other.healthConnectSyncEnabled == healthConnectSyncEnabled)&&(identical(other.healthConnectMindfulnessEnabled, healthConnectMindfulnessEnabled) || other.healthConnectMindfulnessEnabled == healthConnectMindfulnessEnabled)&&(identical(other.appLockEnabled, appLockEnabled) || other.appLockEnabled == appLockEnabled)&&(identical(other.hydrationDailyGoalLiters, hydrationDailyGoalLiters) || other.hydrationDailyGoalLiters == hydrationDailyGoalLiters)&&(identical(other.highHeartRateThresholdBpm, highHeartRateThresholdBpm) || other.highHeartRateThresholdBpm == highHeartRateThresholdBpm)&&(identical(other.lowHeartRateThresholdBpm, lowHeartRateThresholdBpm) || other.lowHeartRateThresholdBpm == lowHeartRateThresholdBpm));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,unitSystem,appLanguage,appThemeMode,dynamicColor,sleepRangeMode,activityWeekMode,showOpenVitalsCalculatedCalories,healthConnectSyncEnabled,appLockEnabled,hydrationDailyGoalLiters,highHeartRateThresholdBpm,lowHeartRateThresholdBpm);
+int get hashCode => Object.hash(runtimeType,unitSystem,appLanguage,appThemeMode,dynamicColor,sleepRangeMode,activityWeekMode,showOpenVitalsCalculatedCalories,healthConnectSyncEnabled,healthConnectMindfulnessEnabled,appLockEnabled,hydrationDailyGoalLiters,highHeartRateThresholdBpm,lowHeartRateThresholdBpm);
 
 @override
 String toString() {
-  return 'SettingsState(unitSystem: $unitSystem, appLanguage: $appLanguage, appThemeMode: $appThemeMode, dynamicColor: $dynamicColor, sleepRangeMode: $sleepRangeMode, activityWeekMode: $activityWeekMode, showOpenVitalsCalculatedCalories: $showOpenVitalsCalculatedCalories, healthConnectSyncEnabled: $healthConnectSyncEnabled, appLockEnabled: $appLockEnabled, hydrationDailyGoalLiters: $hydrationDailyGoalLiters, highHeartRateThresholdBpm: $highHeartRateThresholdBpm, lowHeartRateThresholdBpm: $lowHeartRateThresholdBpm)';
+  return 'SettingsState(unitSystem: $unitSystem, appLanguage: $appLanguage, appThemeMode: $appThemeMode, dynamicColor: $dynamicColor, sleepRangeMode: $sleepRangeMode, activityWeekMode: $activityWeekMode, showOpenVitalsCalculatedCalories: $showOpenVitalsCalculatedCalories, healthConnectSyncEnabled: $healthConnectSyncEnabled, healthConnectMindfulnessEnabled: $healthConnectMindfulnessEnabled, appLockEnabled: $appLockEnabled, hydrationDailyGoalLiters: $hydrationDailyGoalLiters, highHeartRateThresholdBpm: $highHeartRateThresholdBpm, lowHeartRateThresholdBpm: $lowHeartRateThresholdBpm)';
 }
 
 
@@ -263,7 +265,7 @@ abstract mixin class _$SettingsStateCopyWith<$Res> implements $SettingsStateCopy
   factory _$SettingsStateCopyWith(_SettingsState value, $Res Function(_SettingsState) _then) = __$SettingsStateCopyWithImpl;
 @override @useResult
 $Res call({
- UnitSystem unitSystem, AppLanguage appLanguage, AppThemeMode appThemeMode, bool dynamicColor, SleepRangeMode sleepRangeMode, ActivityWeekMode activityWeekMode, bool showOpenVitalsCalculatedCalories, bool healthConnectSyncEnabled, bool appLockEnabled, double hydrationDailyGoalLiters, int highHeartRateThresholdBpm, int lowHeartRateThresholdBpm
+ UnitSystem unitSystem, AppLanguage appLanguage, AppThemeMode appThemeMode, bool dynamicColor, SleepRangeMode sleepRangeMode, ActivityWeekMode activityWeekMode, bool showOpenVitalsCalculatedCalories, bool healthConnectSyncEnabled, bool healthConnectMindfulnessEnabled, bool appLockEnabled, double hydrationDailyGoalLiters, int highHeartRateThresholdBpm, int lowHeartRateThresholdBpm
 });
 
 
@@ -280,7 +282,7 @@ class __$SettingsStateCopyWithImpl<$Res>
 
 /// Create a copy of SettingsState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? unitSystem = null,Object? appLanguage = null,Object? appThemeMode = null,Object? dynamicColor = null,Object? sleepRangeMode = null,Object? activityWeekMode = null,Object? showOpenVitalsCalculatedCalories = null,Object? healthConnectSyncEnabled = null,Object? appLockEnabled = null,Object? hydrationDailyGoalLiters = null,Object? highHeartRateThresholdBpm = null,Object? lowHeartRateThresholdBpm = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? unitSystem = null,Object? appLanguage = null,Object? appThemeMode = null,Object? dynamicColor = null,Object? sleepRangeMode = null,Object? activityWeekMode = null,Object? showOpenVitalsCalculatedCalories = null,Object? healthConnectSyncEnabled = null,Object? healthConnectMindfulnessEnabled = null,Object? appLockEnabled = null,Object? hydrationDailyGoalLiters = null,Object? highHeartRateThresholdBpm = null,Object? lowHeartRateThresholdBpm = null,}) {
   return _then(_SettingsState(
 unitSystem: null == unitSystem ? _self.unitSystem : unitSystem // ignore: cast_nullable_to_non_nullable
 as UnitSystem,appLanguage: null == appLanguage ? _self.appLanguage : appLanguage // ignore: cast_nullable_to_non_nullable
@@ -290,6 +292,7 @@ as bool,sleepRangeMode: null == sleepRangeMode ? _self.sleepRangeMode : sleepRan
 as SleepRangeMode,activityWeekMode: null == activityWeekMode ? _self.activityWeekMode : activityWeekMode // ignore: cast_nullable_to_non_nullable
 as ActivityWeekMode,showOpenVitalsCalculatedCalories: null == showOpenVitalsCalculatedCalories ? _self.showOpenVitalsCalculatedCalories : showOpenVitalsCalculatedCalories // ignore: cast_nullable_to_non_nullable
 as bool,healthConnectSyncEnabled: null == healthConnectSyncEnabled ? _self.healthConnectSyncEnabled : healthConnectSyncEnabled // ignore: cast_nullable_to_non_nullable
+as bool,healthConnectMindfulnessEnabled: null == healthConnectMindfulnessEnabled ? _self.healthConnectMindfulnessEnabled : healthConnectMindfulnessEnabled // ignore: cast_nullable_to_non_nullable
 as bool,appLockEnabled: null == appLockEnabled ? _self.appLockEnabled : appLockEnabled // ignore: cast_nullable_to_non_nullable
 as bool,hydrationDailyGoalLiters: null == hydrationDailyGoalLiters ? _self.hydrationDailyGoalLiters : hydrationDailyGoalLiters // ignore: cast_nullable_to_non_nullable
 as double,highHeartRateThresholdBpm: null == highHeartRateThresholdBpm ? _self.highHeartRateThresholdBpm : highHeartRateThresholdBpm // ignore: cast_nullable_to_non_nullable

@@ -81,7 +81,9 @@ class PreferencesRepository {
         _showOpenVitalsCalculatedCalories =
             ValueNotifier(_readShowOpenVitalsCalculatedCalories(_prefs)),
         _healthConnectSyncEnabled =
-            ValueNotifier(_readHealthConnectSyncEnabled(_prefs)) {
+            ValueNotifier(_readHealthConnectSyncEnabled(_prefs)),
+        _healthConnectMindfulnessEnabled =
+            ValueNotifier(_readHealthConnectMindfulnessEnabled(_prefs)) {
     // Runs once per construction, before the body profile is read — it used to
     // hide inside that read, which made a write look like a read. It is a no-op
     // unless a legacy install has values to fold in.
@@ -109,6 +111,7 @@ class PreferencesRepository {
   final ValueNotifier<double> _activitySplitDistanceMeters;
   final ValueNotifier<bool> _showOpenVitalsCalculatedCalories;
   final ValueNotifier<bool> _healthConnectSyncEnabled;
+  final ValueNotifier<bool> _healthConnectMindfulnessEnabled;
   late final ValueNotifier<BodyEnergyCalibration> _bodyEnergyCalibration;
   late final ValueNotifier<CaffeinePreferences> _caffeinePreferences;
   late final ValueNotifier<BodyProfile> _bodyProfile;
@@ -128,6 +131,8 @@ class PreferencesRepository {
       _showOpenVitalsCalculatedCalories;
   ValueListenable<bool> get healthConnectSyncEnabledListenable =>
       _healthConnectSyncEnabled;
+  ValueListenable<bool> get healthConnectMindfulnessEnabledListenable =>
+      _healthConnectMindfulnessEnabled;
   ValueListenable<BodyEnergyCalibration> get bodyEnergyCalibrationListenable =>
       _bodyEnergyCalibration;
   ValueListenable<CaffeinePreferences> get caffeinePreferencesListenable =>
@@ -199,6 +204,21 @@ class PreferencesRepository {
   set healthConnectSyncEnabled(bool value) {
     _store.putBool(_keyHealthConnectSyncEnabled, value);
     _healthConnectSyncEnabled.value = value;
+  }
+
+  /// Whether to use Health Connect for mindfulness sessions.
+  ///
+  /// **Off by default, and that is not timidity.** A Health Connect module can
+  /// define the mindfulness permission and report the feature available while
+  /// its own permission screen cannot draw a row for it — it throws, the system
+  /// Health Connect app dies, and the user can then grant this app NOTHING. We
+  /// have no way to ask whether the permission UI works, so we do not ask for
+  /// the permission until a user tells us to.
+  bool get healthConnectMindfulnessEnabled =>
+      _healthConnectMindfulnessEnabled.value;
+  set healthConnectMindfulnessEnabled(bool value) {
+    _store.putBool(_keyHealthConnectMindfulnessEnabled, value);
+    _healthConnectMindfulnessEnabled.value = value;
   }
 
   int get healthConnectPermissionCancelCount =>
@@ -595,6 +615,9 @@ class PreferencesRepository {
   static bool _readHealthConnectSyncEnabled(SharedPreferences prefs) =>
       prefs.getBool(_keyHealthConnectSyncEnabled) ?? true;
 
+  static bool _readHealthConnectMindfulnessEnabled(SharedPreferences prefs) =>
+      prefs.getBool(_keyHealthConnectMindfulnessEnabled) ?? false;
+
   BodyEnergyCalibration _readBodyEnergyCalibration() => BodyEnergyCalibration(
         manualZoneThresholdsBpm: HeartZoneThresholds.fromPreferenceString(
           _prefs.getString(_keyBodyEnergyZoneThresholdsBpm),
@@ -641,6 +664,8 @@ class PreferencesRepository {
       'activity_split_distance_meters';
   static const String _keyShowOpenVitalsCalculatedCalories =
       'show_openvitals_calculated_calories';
+  static const String _keyHealthConnectMindfulnessEnabled =
+      'health_connect_mindfulness_enabled';
   static const String _keyHealthConnectSyncEnabled =
       'health_connect_sync_enabled';
   static const String _keyHealthConnectPermissionCancelCount =

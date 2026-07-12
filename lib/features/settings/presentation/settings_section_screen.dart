@@ -203,6 +203,12 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
           onChanged: notifier.setHealthConnectSyncEnabled,
         ),
         _SwitchCard(
+          title: l10n.settingsHealthConnectMindfulnessTitle,
+          body: l10n.settingsHealthConnectMindfulnessBody,
+          value: state.healthConnectMindfulnessEnabled,
+          onChanged: notifier.setHealthConnectMindfulnessEnabled,
+        ),
+        _SwitchCard(
           title: l10n.settingsAppLockTitle,
           body: l10n.settingsAppLockBody,
           value: state.appLockEnabled,

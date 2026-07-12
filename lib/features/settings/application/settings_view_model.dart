@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../ui/components/health_connect_gate.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../di/providers.dart';
 import '../../../domain/preferences/activity_week_mode.dart';
@@ -26,6 +27,7 @@ abstract class SettingsState with _$SettingsState {
     @Default(ActivityWeekMode.mondayToSunday) ActivityWeekMode activityWeekMode,
     @Default(false) bool showOpenVitalsCalculatedCalories,
     @Default(true) bool healthConnectSyncEnabled,
+    @Default(false) bool healthConnectMindfulnessEnabled,
     @Default(false) bool appLockEnabled,
     @Default(2.0) double hydrationDailyGoalLiters,
     @Default(120) int highHeartRateThresholdBpm,
@@ -53,6 +55,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
       activityWeekMode: prefs.activityWeekMode,
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
       healthConnectSyncEnabled: prefs.healthConnectSyncEnabled,
+      healthConnectMindfulnessEnabled: prefs.healthConnectMindfulnessEnabled,
       appLockEnabled: prefs.appLockEnabled,
       hydrationDailyGoalLiters: prefs.hydrationDailyGoalLiters,
       highHeartRateThresholdBpm: prefs.highHeartRateThresholdBpm,
@@ -98,6 +101,18 @@ class SettingsViewModel extends Notifier<SettingsState> {
   void setHealthConnectSyncEnabled(bool enabled) {
     _prefs.healthConnectSyncEnabled = enabled;
     state = state.copyWith(healthConnectSyncEnabled: enabled);
+  }
+
+  /// Turning this on or off changes which permissions the app declares an
+  /// interest in, so the resolved feature flags and the granted-permission set
+  /// are both stale the moment it flips. Invalidating the two providers the gate
+  /// reads makes the app re-resolve them; without it the mindfulness screens
+  /// would keep believing whatever they believed a second ago.
+  void setHealthConnectMindfulnessEnabled(bool enabled) {
+    _prefs.healthConnectMindfulnessEnabled = enabled;
+    state = state.copyWith(healthConnectMindfulnessEnabled: enabled);
+    ref.invalidate(healthConnectAvailabilityProvider);
+    ref.invalidate(grantedHealthPermissionsProvider);
   }
 
   void setAppLockEnabled(bool enabled) {

@@ -3386,5 +3386,13 @@
         "example": "0.25"
       }
     }
+  },
+  "settingsHealthConnectMindfulnessTitle": "Mindfulness in Health Connect",
+  "settingsHealthConnectMindfulnessBody": "Store mindfulness sessions in Health Connect. Off by default: some devices report support for it but cannot show the permission, and asking for it crashes the system Health Connect app. If Health Connect crashes when you turn this on, turn it back off — everything else keeps working.",
+  "@settingsHealthConnectMindfulnessTitle": {
+    "description": "Settings switch: use Health Connect for mindfulness sessions."
+  },
+  "@settingsHealthConnectMindfulnessBody": {
+    "description": "Explains why the Health Connect mindfulness integration is off by default."
   }
 }

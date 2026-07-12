@@ -1,3 +1,5 @@
+import '../data/prefs/preferences_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/result/result.dart';
 import '../data/repository/impl/health_repository_impl.dart';
 import '../data/source/health/health_data_source.dart';
@@ -23,8 +25,18 @@ import '../di/providers.dart';
 /// Use this from every isolate entrypoint. Do not construct
 /// [HealthConnectNativeDataSource] directly.
 Future<Result<HealthDataSource>> openBackgroundHealthAccess() async {
-  final dataSource =
-      HealthConnectNativeDataSource(appPackageName: openVitalsPackageName);
+  // The isolate must read the mindfulness opt-in the same way the app does. If
+  // it did not, the mindfulness reminder would resolve the feature as
+  // unavailable, read today's minutes as zero, decide the goal was never met,
+  // and nag forever — the silent-empty failure this whole file exists to
+  // prevent (AGENTS.md §1).
+  final prefs = await SharedPreferences.getInstance();
+  final preferences = PreferencesRepository(prefs);
+  final dataSource = HealthConnectNativeDataSource(
+    appPackageName: openVitalsPackageName,
+    mindfulnessIntegrationEnabled: () =>
+        preferences.healthConnectMindfulnessEnabled,
+  );
   final refreshed = await HealthRepositoryImpl(dataSource).refreshAvailability();
   return refreshed.map((_) => dataSource);
 }

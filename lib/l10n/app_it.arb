@@ -1674,5 +1674,7 @@
   "privacyPolicyBody1": "OpenVitals legge i dati da Health Connect per mostrare passi, allenamenti, sonno, frequenza cardiaca, peso, calorie, idratazione, nutrizione, consapevolezza e parametri vitali sul dispositivo. Le voci registrate esplicitamente, inclusi i percorsi GPX/KML/KMZ importati e i file FIT importati, vengono scritte in Health Connect.",
   "privacyPolicyBody2": "Questa app non carica i dati sanitari su un servizio cloud, non include pubblicità e non condivide dati con terze parti.",
   "privacyPolicyBody3": "OpenVitals non è un dispositivo medico e non diagnostica, tratta, cura né previene alcuna malattia o condizione medica. Non sostituisce il parere medico, la diagnosi o il trattamento di un professionista sanitario qualificato.",
-  "linkCouldNotOpen": "Impossibile aprire il link."
+  "linkCouldNotOpen": "Impossibile aprire il link.",
+  "settingsHealthConnectMindfulnessTitle": "Mindfulness in Health Connect",
+  "settingsHealthConnectMindfulnessBody": "Salva le sessioni di mindfulness in Health Connect. Disattivato per impostazione predefinita: alcuni dispositivi dichiarano di supportarlo ma non riescono a mostrare l'autorizzazione, e richiederla fa arrestare l'app di sistema Health Connect. Se Health Connect si arresta quando lo attivi, disattivalo di nuovo: tutto il resto continua a funzionare."
 }

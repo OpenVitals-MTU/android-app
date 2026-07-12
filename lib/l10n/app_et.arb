@@ -1674,5 +1674,7 @@
   "privacyPolicyBody1": "OpenVitals loeb andmeid Health Connectist, et näidata sinu seadmes samme, treeninguid, und, pulssi, kaalu, kaloreid, vedelikutarbimist, toitumist, teadvelolekut ja elunäitajaid. Kirjed, mida sa ise logid, sealhulgas imporditud GPX/KML/KMZ marsruudid ja imporditud FIT-failid, kirjutatakse Health Connectisse.",
   "privacyPolicyBody2": "See rakendus ei laadi sinu terviseandmeid pilveteenusesse, ei sisalda reklaame ega jaga andmeid kolmandate osapooltega.",
   "privacyPolicyBody3": "OpenVitals ei ole meditsiiniseade ega diagnoosi, ravi ega ennetab ühtegi haigust ega terviseseisundit. See ei asenda kvalifitseeritud tervishoiutöötaja meditsiinilist nõuannet, diagnoosi ega ravi.",
-  "linkCouldNotOpen": "Linki ei saanud avada."
+  "linkCouldNotOpen": "Linki ei saanud avada.",
+  "settingsHealthConnectMindfulnessTitle": "Teadvelolek Health Connectis",
+  "settingsHealthConnectMindfulnessBody": "Salvesta teadveloleku seansid Health Connecti. Vaikimisi valjas: moned seadmed vaidavad seda toetavat, kuid ei suuda luba kuvada, ja selle kusimine paneb susteemi Health Connecti rakenduse kokku jooksma. Kui Health Connect jookseb sisselulitamisel kokku, lulita see uuesti valja - koik muu toimib edasi."
 }
