@@ -197,18 +197,16 @@ internal class ActivityHealthReader(
 
   suspend fun readSpeedSamples(start: Instant, end: Instant): List<SpeedSampleMsg> =
     support.withLogging("readSpeedSamples[$start..$end]", emptyList()) {
-      support.client().readRecordsPaged(
-        recordType = SpeedRecord::class,
-        timeRangeFilter = TimeRangeFilter.between(start, end),
-        ascendingOrder = true,
-        pageSize = 500,
-      ).flatMap { record ->
+      support.client().readSeriesSamples(SpeedRecord::class, start, end) { record ->
         val source = record.metadata.dataOrigin.packageName
         record.samples.map { sample ->
-          SpeedSampleMsg(
-            timeEpochMs = sample.time.toEpochMilli(),
-            metersPerSecond = sample.speed.inMetersPerSecond,
-            source = source,
+          TimedSample(
+            sample.time,
+            SpeedSampleMsg(
+              timeEpochMs = sample.time.toEpochMilli(),
+              metersPerSecond = sample.speed.inMetersPerSecond,
+              source = source,
+            ),
           )
         }
       }
@@ -224,39 +222,36 @@ internal class ActivityHealthReader(
     end: Instant,
   ): List<ActivityCadenceSampleMsg> =
     support.withLogging("readActivityCadenceSamples[$start..$end]", emptyList()) {
-      val filter = TimeRangeFilter.between(start, end)
-      val cycling = support.client().readRecordsPaged(
-        recordType = CyclingPedalingCadenceRecord::class,
-        timeRangeFilter = filter,
-        ascendingOrder = true,
-        pageSize = 500,
-      ).flatMap { record ->
-        val source = record.metadata.dataOrigin.packageName
-        record.samples.map { sample ->
-          ActivityCadenceSampleMsg(
-            timeEpochMs = sample.time.toEpochMilli(),
-            rate = sample.revolutionsPerMinute,
-            isCycling = true,
-            source = source,
-          )
+      val cycling = support.client()
+        .readSeriesSamples(CyclingPedalingCadenceRecord::class, start, end) { record ->
+          val source = record.metadata.dataOrigin.packageName
+          record.samples.map { sample ->
+            TimedSample(
+              sample.time,
+              ActivityCadenceSampleMsg(
+                timeEpochMs = sample.time.toEpochMilli(),
+                rate = sample.revolutionsPerMinute,
+                isCycling = true,
+                source = source,
+              ),
+            )
+          }
         }
-      }
-      val steps = support.client().readRecordsPaged(
-        recordType = StepsCadenceRecord::class,
-        timeRangeFilter = filter,
-        ascendingOrder = true,
-        pageSize = 500,
-      ).flatMap { record ->
-        val source = record.metadata.dataOrigin.packageName
-        record.samples.map { sample ->
-          ActivityCadenceSampleMsg(
-            timeEpochMs = sample.time.toEpochMilli(),
-            rate = sample.rate,
-            isCycling = false,
-            source = source,
-          )
+      val steps = support.client()
+        .readSeriesSamples(StepsCadenceRecord::class, start, end) { record ->
+          val source = record.metadata.dataOrigin.packageName
+          record.samples.map { sample ->
+            TimedSample(
+              sample.time,
+              ActivityCadenceSampleMsg(
+                timeEpochMs = sample.time.toEpochMilli(),
+                rate = sample.rate,
+                isCycling = false,
+                source = source,
+              ),
+            )
+          }
         }
-      }
       (cycling + steps).sortedBy { it.timeEpochMs }
     }
 

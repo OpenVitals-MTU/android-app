@@ -13,10 +13,11 @@ import java.time.ZoneId
 /**
  * Ported from the native OpenVitals app (`healthconnect/HeartHealthReader.kt`).
  *
- * Returns Pigeon `*Msg` types. The adaptive raw-vs-aggregated decision for chart
- * samples stays on the Dart side (`shouldUseAggregatedHeartRateSamples`); this
- * reader exposes both the raw (chunked) and aggregate-bucket reads plus the
- * aggregate-based avg / daily summaries.
+ * Returns Pigeon `*Msg` types. Everything about how Health Connect *stores*
+ * heart rate — that a series record hides its samples behind its own boundary,
+ * and that aggregation is the way out when it does — is settled here. Dart asks
+ * for a window and gets the samples in it; it does not get a say in how they
+ * were found.
  */
 internal class HeartHealthReader(
   private val support: HealthConnectReaderSupport,
@@ -31,31 +32,55 @@ internal class HeartHealthReader(
       )[HeartRateRecord.BPM_AVG]
     }
 
+  /**
+   * Every heart-rate sample in `[start, end)`, however the writer grouped it.
+   *
+   * [readSeriesSamples] handles the record-boundary problem (see its docs). What
+   * is left here is the last resort for the case it cannot reach: a record so
+   * long that even the widened read misses it. Aggregation slices by TIME rather
+   * than by record, so it cannot be hidden the same way — it costs a resolution
+   * of one bucket instead of one beat, which is still a heart-rate trace where
+   * the alternative is a blank chart.
+   */
   suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSampleMsg> =
     support.withLogging("readRawHeartRateSamples[$start..$end]", emptyList()) {
-      var chunkStart = start
-      val accumulated = mutableListOf<HeartRateSampleMsg>()
-      while (chunkStart < end) {
-        val chunkEnd = minOf(chunkStart.plus(RawSampleChunk), end)
-        accumulated += support.client().readRecordsPaged(
-          recordType = HeartRateRecord::class,
-          timeRangeFilter = TimeRangeFilter.between(chunkStart, chunkEnd),
-          ascendingOrder = true,
-          pageSize = 500,
-        ).flatMap { record ->
+      val samples = support.client()
+        .readSeriesSamples(HeartRateRecord::class, start, end) { record ->
           val source = record.metadata.dataOrigin.packageName
           record.samples.map { sample ->
-            HeartRateSampleMsg(
-              timeEpochMs = sample.time.toEpochMilli(),
-              beatsPerMinute = sample.beatsPerMinute,
-              source = source,
+            TimedSample(
+              sample.time,
+              HeartRateSampleMsg(
+                timeEpochMs = sample.time.toEpochMilli(),
+                beatsPerMinute = sample.beatsPerMinute,
+                source = source,
+              ),
             )
           }
         }
-        chunkStart = chunkEnd
+      if (samples.isNotEmpty()) {
+        return@withLogging samples
       }
-      accumulated
+      readHeartRateAggregatedBuckets(start, end, aggregateBucket(start, end).toMillis())
+        .map { bucket ->
+          HeartRateSampleMsg(
+            timeEpochMs = bucket.startEpochMs,
+            beatsPerMinute = bucket.avgBpm,
+            // No single writer owns an aggregate: Health Connect merged it. The
+            // empty source is the same sentinel the Dart side already uses.
+            source = "",
+          )
+        }
     }
+
+  /**
+   * A bucket fine enough to read as a trace rather than a flat line, without
+   * asking Health Connect for thousands of slices on a long window.
+   */
+  private fun aggregateBucket(start: Instant, end: Instant): Duration {
+    val even = Duration.between(start, end).dividedBy(MaxAggregateBuckets)
+    return if (even > MinAggregateBucket) even else MinAggregateBucket
+  }
 
   suspend fun readHeartRateAggregatedBuckets(
     start: Instant,
@@ -171,6 +196,7 @@ internal class HeartHealthReader(
     }
 
   private companion object {
-    private val RawSampleChunk = Duration.ofHours(1)
+    private val MinAggregateBucket: Duration = Duration.ofSeconds(30)
+    private const val MaxAggregateBuckets = 240L
   }
 }

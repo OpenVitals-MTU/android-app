@@ -18,12 +18,6 @@ import '../../../core/stats/stats.dart';
 class HeartRepositoryImpl implements HeartRepository {
   HeartRepositoryImpl(this._dataSource);
 
-  /// Health Connect filters series records by their record boundary, not each nested
-  /// sample. Gadgetbridge can group roughly an hour of samples into one
-  /// HeartRateRecord, so a record that starts before a workout can still contain
-  /// samples from the start of that workout.
-  static const _heartRateSeriesLookback = Duration(hours: 1);
-
   final HealthDataSource _dataSource;
 
   @override
@@ -160,49 +154,14 @@ class HeartRepositoryImpl implements HeartRepository {
     if (!granted.contains(HcPermissions.readHeartRate)) return const [];
     if (!end.isAfter(start)) return const [];
 
-    // Health Connect filters series records by their record boundary, not each nested
-    // sample. Gadgetbridge can group roughly an hour of samples into one HeartRateRecord,
-    // so a record that starts before a workout can still contain samples from the start
-    // of that workout -- read back an hour, then filter to the window we actually want.
-    final raw = await _dataSource.readRawHeartRateSamples(
-      start.subtract(_heartRateSeriesLookback),
-      end,
-    );
-    final windowed = raw
-        .where((s) => !s.time.isBefore(start) && s.time.isBefore(end))
-        .toList()
-      ..sort((a, b) => a.time.compareTo(b.time));
-    if (windowed.isNotEmpty) return windowed.reducedForChart();
-
-    // Nothing survived. The raw read is bounded by RECORD boundaries, and the
-    // one-hour look-back above is only a heuristic against that: a device that
-    // groups its beats into long HeartRateRecords can hide every sample of a
-    // workout inside a record that began before the look-back reaches. Health
-    // Connect then hands back a record whose samples all sit outside the window,
-    // the filter correctly drops them, and an activity that DID have a heart rate
-    // reports "Not available" -- with the read having succeeded, so nothing looks
-    // wrong anywhere.
-    //
-    // Aggregation slices by TIME rather than by record, so it cannot be fooled the
-    // same way. Falling back to it costs one extra query on the activities that
-    // currently show nothing, and changes nothing for the ones that already work.
-    return _dataSource.readAggregatedHeartRateSamples(
-      start,
-      end,
-      _workoutHeartRateBucket(end.difference(start)),
-    );
-  }
-
-  /// A bucket fine enough to be a workout trace rather than a flat line, without
-  /// asking Health Connect for thousands of slices on a long ride.
-  ///
-  /// The 15-minute chart bucket is far too coarse here — a 36-minute session would
-  /// come back as two points.
-  static Duration _workoutHeartRateBucket(Duration window) {
-    const minBucket = Duration(seconds: 30);
-    const maxBuckets = 240;
-    final even = window ~/ maxBuckets;
-    return even > minBucket ? even : minBucket;
+    // Just the window. How Health Connect stores heart rate -- that a series
+    // record hides its samples behind its own boundary, and that aggregation is
+    // the way out when it does -- is settled natively, in HealthConnectSeries.kt,
+    // where the Health Connect SDK actually is. This used to guess at it from
+    // Dart, across a Pigeon channel, and got it wrong: an activity whose beats
+    // sat inside a longer record read as "Not available".
+    final samples = await _dataSource.readRawHeartRateSamples(start, end);
+    return samples.reducedForChart();
   }
 
   @override
