@@ -118,6 +118,19 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 unitFormatter: formatter,
               ),
             ),
+          // The climb. It comes from the route's altitudes rather than from a
+          // record of its own, because Health Connect has none — so an activity
+          // recorded without GPS, or with a GPS that dropped its altitude, shows
+          // the total it climbed and no profile. Decided at load time.
+          if (display.elevationSamples.isNotEmpty)
+            sectionPadded(
+              ActivityElevationChartCard(
+                samples: display.elevationSamples,
+                sessionStart: workout.startTime,
+                sessionEnd: workout.endTime,
+                unitFormatter: formatter,
+              ),
+            ),
           // One card per cadence kind that actually recorded something: a ride
           // yields cycling samples, a run yields step samples, and neither has to
           // be inferred from the exercise type. Which kinds those are is decided

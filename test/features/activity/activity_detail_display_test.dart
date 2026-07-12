@@ -13,6 +13,7 @@ final _start = DateTime(2026, 3, 2, 7);
 ExerciseData _workout({
   Duration duration = const Duration(minutes: 40),
   List<ExerciseSegmentData> segments = const <ExerciseSegmentData>[],
+  ExerciseRouteData route = const ExerciseRouteData(),
 }) =>
     ExerciseData(
       id: 'w1',
@@ -23,6 +24,24 @@ ExerciseData _workout({
       durationMs: duration.inMilliseconds,
       source: 'test',
       segments: segments,
+      route: route,
+    );
+
+/// A route whose points carry [altitudes] — null for a point the device gave no
+/// height for.
+ExerciseRouteData _route(List<double?> altitudes) => ExerciseRouteData(
+      status: ExerciseRouteStatus.data,
+      points: [
+        for (final (index, altitude) in altitudes.indexed)
+          ExerciseRoutePoint(
+            time: _start.add(Duration(minutes: index)),
+            latitude: 59.43 + index * 0.001,
+            longitude: 24.75,
+            altitudeMeters: altitude,
+            horizontalAccuracyMeters: null,
+            verticalAccuracyMeters: null,
+          ),
+      ],
     );
 
 ActivitySplit _split(int index, double meters, Duration elapsed) => ActivitySplit(
@@ -128,5 +147,72 @@ void main() {
     );
 
     expect(display.routeDistanceMeters, 0.0);
+  });
+
+  group('the elevation profile', () {
+    // Health Connect has no elevation SERIES. ElevationGainedRecord is one
+    // total for the session — it says you climbed 240 m, never where. The
+    // altitudes on the route are the only thing that knows the shape of a
+    // climb, so that is what the profile is drawn from.
+    test('comes from the route altitudes, oldest first', () {
+      final display = buildActivityDetailDisplay(
+        workout: _workout(route: _route([120.0, 145.5, 132.0])),
+        cadenceSamples: const [],
+        splits: const ActivitySplits.none(),
+      );
+
+      expect(display.elevationSamples, hasLength(3));
+      expect([for (final s in display.elevationSamples) s.meters],
+          [120.0, 145.5, 132.0]);
+      expect(
+        display.elevationSamples.first.time
+            .isBefore(display.elevationSamples.last.time),
+        isTrue,
+      );
+    });
+
+    test('skips the points the device gave no height for', () {
+      // A fix taken indoors, or under a poor sky, carries no altitude. Reading
+      // that as sea level would draw a cliff that never happened.
+      final display = buildActivityDetailDisplay(
+        workout: _workout(route: _route([120.0, null, 132.0])),
+        cadenceSamples: const [],
+        splits: const ActivitySplits.none(),
+      );
+
+      expect([for (final s in display.elevationSamples) s.meters], [120.0, 132.0]);
+    });
+
+    test('one height is not a profile', () {
+      final display = buildActivityDetailDisplay(
+        workout: _workout(route: _route([120.0, null, null])),
+        cadenceSamples: const [],
+        splits: const ActivitySplits.none(),
+      );
+
+      // A single point draws no line, and a card with no line is worse than no
+      // card. The screen renders nothing.
+      expect(display.elevationSamples, isEmpty);
+    });
+
+    test('a route with no altitude at all has no profile', () {
+      final display = buildActivityDetailDisplay(
+        workout: _workout(route: _route([null, null])),
+        cadenceSamples: const [],
+        splits: const ActivitySplits.none(),
+      );
+
+      expect(display.elevationSamples, isEmpty);
+    });
+
+    test('an activity with no route has no profile', () {
+      final display = buildActivityDetailDisplay(
+        workout: _workout(),
+        cadenceSamples: const [],
+        splits: const ActivitySplits.none(),
+      );
+
+      expect(display.elevationSamples, isEmpty);
+    });
   });
 }

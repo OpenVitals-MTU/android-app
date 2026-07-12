@@ -18,7 +18,17 @@ mixin _$ActivityDetailDisplay {
  List<ActivityCadenceKind> get cadenceKinds;/// The slowest and fastest split, in seconds per kilometre. Null when no
 /// split has a pace (which is what leaves the bars unpainted).
  double? get slowestSplitPaceSeconds; double? get fastestSplitPaceSeconds;/// The GPS route's length, in metres. Zero when there is no route.
- double get routeDistanceMeters;
+ double get routeDistanceMeters;/// The height profile of the session, oldest first.
+///
+/// It comes from the ROUTE, not from a record of its own: Health Connect
+/// has no elevation series. `ElevationGainedRecord` is a single total for
+/// the session — it says you climbed 240 m, never where. The altitude on
+/// each route point is the only thing in Health Connect that knows the
+/// shape of a climb, and we already read it.
+///
+/// Empty when the route has no altitude, or has only one point that does:
+/// a single height is not a profile.
+ List<ActivityElevationSample> get elevationSamples;
 /// Create a copy of ActivityDetailDisplay
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +39,16 @@ $ActivityDetailDisplayCopyWith<ActivityDetailDisplay> get copyWith => _$Activity
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityDetailDisplay&&(identical(other.pausedDurationMs, pausedDurationMs) || other.pausedDurationMs == pausedDurationMs)&&(identical(other.movingDurationMs, movingDurationMs) || other.movingDurationMs == movingDurationMs)&&const DeepCollectionEquality().equals(other.cadenceKinds, cadenceKinds)&&(identical(other.slowestSplitPaceSeconds, slowestSplitPaceSeconds) || other.slowestSplitPaceSeconds == slowestSplitPaceSeconds)&&(identical(other.fastestSplitPaceSeconds, fastestSplitPaceSeconds) || other.fastestSplitPaceSeconds == fastestSplitPaceSeconds)&&(identical(other.routeDistanceMeters, routeDistanceMeters) || other.routeDistanceMeters == routeDistanceMeters));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityDetailDisplay&&(identical(other.pausedDurationMs, pausedDurationMs) || other.pausedDurationMs == pausedDurationMs)&&(identical(other.movingDurationMs, movingDurationMs) || other.movingDurationMs == movingDurationMs)&&const DeepCollectionEquality().equals(other.cadenceKinds, cadenceKinds)&&(identical(other.slowestSplitPaceSeconds, slowestSplitPaceSeconds) || other.slowestSplitPaceSeconds == slowestSplitPaceSeconds)&&(identical(other.fastestSplitPaceSeconds, fastestSplitPaceSeconds) || other.fastestSplitPaceSeconds == fastestSplitPaceSeconds)&&(identical(other.routeDistanceMeters, routeDistanceMeters) || other.routeDistanceMeters == routeDistanceMeters)&&const DeepCollectionEquality().equals(other.elevationSamples, elevationSamples));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,pausedDurationMs,movingDurationMs,const DeepCollectionEquality().hash(cadenceKinds),slowestSplitPaceSeconds,fastestSplitPaceSeconds,routeDistanceMeters);
+int get hashCode => Object.hash(runtimeType,pausedDurationMs,movingDurationMs,const DeepCollectionEquality().hash(cadenceKinds),slowestSplitPaceSeconds,fastestSplitPaceSeconds,routeDistanceMeters,const DeepCollectionEquality().hash(elevationSamples));
 
 @override
 String toString() {
-  return 'ActivityDetailDisplay(pausedDurationMs: $pausedDurationMs, movingDurationMs: $movingDurationMs, cadenceKinds: $cadenceKinds, slowestSplitPaceSeconds: $slowestSplitPaceSeconds, fastestSplitPaceSeconds: $fastestSplitPaceSeconds, routeDistanceMeters: $routeDistanceMeters)';
+  return 'ActivityDetailDisplay(pausedDurationMs: $pausedDurationMs, movingDurationMs: $movingDurationMs, cadenceKinds: $cadenceKinds, slowestSplitPaceSeconds: $slowestSplitPaceSeconds, fastestSplitPaceSeconds: $fastestSplitPaceSeconds, routeDistanceMeters: $routeDistanceMeters, elevationSamples: $elevationSamples)';
 }
 
 
@@ -49,7 +59,7 @@ abstract mixin class $ActivityDetailDisplayCopyWith<$Res>  {
   factory $ActivityDetailDisplayCopyWith(ActivityDetailDisplay value, $Res Function(ActivityDetailDisplay) _then) = _$ActivityDetailDisplayCopyWithImpl;
 @useResult
 $Res call({
- int pausedDurationMs, int movingDurationMs, List<ActivityCadenceKind> cadenceKinds, double? slowestSplitPaceSeconds, double? fastestSplitPaceSeconds, double routeDistanceMeters
+ int pausedDurationMs, int movingDurationMs, List<ActivityCadenceKind> cadenceKinds, double? slowestSplitPaceSeconds, double? fastestSplitPaceSeconds, double routeDistanceMeters, List<ActivityElevationSample> elevationSamples
 });
 
 
@@ -66,7 +76,7 @@ class _$ActivityDetailDisplayCopyWithImpl<$Res>
 
 /// Create a copy of ActivityDetailDisplay
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? pausedDurationMs = null,Object? movingDurationMs = null,Object? cadenceKinds = null,Object? slowestSplitPaceSeconds = freezed,Object? fastestSplitPaceSeconds = freezed,Object? routeDistanceMeters = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? pausedDurationMs = null,Object? movingDurationMs = null,Object? cadenceKinds = null,Object? slowestSplitPaceSeconds = freezed,Object? fastestSplitPaceSeconds = freezed,Object? routeDistanceMeters = null,Object? elevationSamples = null,}) {
   return _then(_self.copyWith(
 pausedDurationMs: null == pausedDurationMs ? _self.pausedDurationMs : pausedDurationMs // ignore: cast_nullable_to_non_nullable
 as int,movingDurationMs: null == movingDurationMs ? _self.movingDurationMs : movingDurationMs // ignore: cast_nullable_to_non_nullable
@@ -74,7 +84,8 @@ as int,cadenceKinds: null == cadenceKinds ? _self.cadenceKinds : cadenceKinds //
 as List<ActivityCadenceKind>,slowestSplitPaceSeconds: freezed == slowestSplitPaceSeconds ? _self.slowestSplitPaceSeconds : slowestSplitPaceSeconds // ignore: cast_nullable_to_non_nullable
 as double?,fastestSplitPaceSeconds: freezed == fastestSplitPaceSeconds ? _self.fastestSplitPaceSeconds : fastestSplitPaceSeconds // ignore: cast_nullable_to_non_nullable
 as double?,routeDistanceMeters: null == routeDistanceMeters ? _self.routeDistanceMeters : routeDistanceMeters // ignore: cast_nullable_to_non_nullable
-as double,
+as double,elevationSamples: null == elevationSamples ? _self.elevationSamples : elevationSamples // ignore: cast_nullable_to_non_nullable
+as List<ActivityElevationSample>,
   ));
 }
 
@@ -159,10 +170,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int pausedDurationMs,  int movingDurationMs,  List<ActivityCadenceKind> cadenceKinds,  double? slowestSplitPaceSeconds,  double? fastestSplitPaceSeconds,  double routeDistanceMeters)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int pausedDurationMs,  int movingDurationMs,  List<ActivityCadenceKind> cadenceKinds,  double? slowestSplitPaceSeconds,  double? fastestSplitPaceSeconds,  double routeDistanceMeters,  List<ActivityElevationSample> elevationSamples)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ActivityDetailDisplay() when $default != null:
-return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds,_that.slowestSplitPaceSeconds,_that.fastestSplitPaceSeconds,_that.routeDistanceMeters);case _:
+return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds,_that.slowestSplitPaceSeconds,_that.fastestSplitPaceSeconds,_that.routeDistanceMeters,_that.elevationSamples);case _:
   return orElse();
 
 }
@@ -180,10 +191,10 @@ return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int pausedDurationMs,  int movingDurationMs,  List<ActivityCadenceKind> cadenceKinds,  double? slowestSplitPaceSeconds,  double? fastestSplitPaceSeconds,  double routeDistanceMeters)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int pausedDurationMs,  int movingDurationMs,  List<ActivityCadenceKind> cadenceKinds,  double? slowestSplitPaceSeconds,  double? fastestSplitPaceSeconds,  double routeDistanceMeters,  List<ActivityElevationSample> elevationSamples)  $default,) {final _that = this;
 switch (_that) {
 case _ActivityDetailDisplay():
-return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds,_that.slowestSplitPaceSeconds,_that.fastestSplitPaceSeconds,_that.routeDistanceMeters);case _:
+return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds,_that.slowestSplitPaceSeconds,_that.fastestSplitPaceSeconds,_that.routeDistanceMeters,_that.elevationSamples);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +211,10 @@ return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int pausedDurationMs,  int movingDurationMs,  List<ActivityCadenceKind> cadenceKinds,  double? slowestSplitPaceSeconds,  double? fastestSplitPaceSeconds,  double routeDistanceMeters)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int pausedDurationMs,  int movingDurationMs,  List<ActivityCadenceKind> cadenceKinds,  double? slowestSplitPaceSeconds,  double? fastestSplitPaceSeconds,  double routeDistanceMeters,  List<ActivityElevationSample> elevationSamples)?  $default,) {final _that = this;
 switch (_that) {
 case _ActivityDetailDisplay() when $default != null:
-return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds,_that.slowestSplitPaceSeconds,_that.fastestSplitPaceSeconds,_that.routeDistanceMeters);case _:
+return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds,_that.slowestSplitPaceSeconds,_that.fastestSplitPaceSeconds,_that.routeDistanceMeters,_that.elevationSamples);case _:
   return null;
 
 }
@@ -215,7 +226,7 @@ return $default(_that.pausedDurationMs,_that.movingDurationMs,_that.cadenceKinds
 
 
 class _ActivityDetailDisplay implements ActivityDetailDisplay {
-  const _ActivityDetailDisplay({required this.pausedDurationMs, required this.movingDurationMs, required final  List<ActivityCadenceKind> cadenceKinds, required this.slowestSplitPaceSeconds, required this.fastestSplitPaceSeconds, required this.routeDistanceMeters}): _cadenceKinds = cadenceKinds;
+  const _ActivityDetailDisplay({required this.pausedDurationMs, required this.movingDurationMs, required final  List<ActivityCadenceKind> cadenceKinds, required this.slowestSplitPaceSeconds, required this.fastestSplitPaceSeconds, required this.routeDistanceMeters, required final  List<ActivityElevationSample> elevationSamples}): _cadenceKinds = cadenceKinds,_elevationSamples = elevationSamples;
   
 
 @override final  int pausedDurationMs;
@@ -235,6 +246,33 @@ class _ActivityDetailDisplay implements ActivityDetailDisplay {
 @override final  double? fastestSplitPaceSeconds;
 /// The GPS route's length, in metres. Zero when there is no route.
 @override final  double routeDistanceMeters;
+/// The height profile of the session, oldest first.
+///
+/// It comes from the ROUTE, not from a record of its own: Health Connect
+/// has no elevation series. `ElevationGainedRecord` is a single total for
+/// the session — it says you climbed 240 m, never where. The altitude on
+/// each route point is the only thing in Health Connect that knows the
+/// shape of a climb, and we already read it.
+///
+/// Empty when the route has no altitude, or has only one point that does:
+/// a single height is not a profile.
+ final  List<ActivityElevationSample> _elevationSamples;
+/// The height profile of the session, oldest first.
+///
+/// It comes from the ROUTE, not from a record of its own: Health Connect
+/// has no elevation series. `ElevationGainedRecord` is a single total for
+/// the session — it says you climbed 240 m, never where. The altitude on
+/// each route point is the only thing in Health Connect that knows the
+/// shape of a climb, and we already read it.
+///
+/// Empty when the route has no altitude, or has only one point that does:
+/// a single height is not a profile.
+@override List<ActivityElevationSample> get elevationSamples {
+  if (_elevationSamples is EqualUnmodifiableListView) return _elevationSamples;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_elevationSamples);
+}
+
 
 /// Create a copy of ActivityDetailDisplay
 /// with the given fields replaced by the non-null parameter values.
@@ -246,16 +284,16 @@ _$ActivityDetailDisplayCopyWith<_ActivityDetailDisplay> get copyWith => __$Activ
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityDetailDisplay&&(identical(other.pausedDurationMs, pausedDurationMs) || other.pausedDurationMs == pausedDurationMs)&&(identical(other.movingDurationMs, movingDurationMs) || other.movingDurationMs == movingDurationMs)&&const DeepCollectionEquality().equals(other._cadenceKinds, _cadenceKinds)&&(identical(other.slowestSplitPaceSeconds, slowestSplitPaceSeconds) || other.slowestSplitPaceSeconds == slowestSplitPaceSeconds)&&(identical(other.fastestSplitPaceSeconds, fastestSplitPaceSeconds) || other.fastestSplitPaceSeconds == fastestSplitPaceSeconds)&&(identical(other.routeDistanceMeters, routeDistanceMeters) || other.routeDistanceMeters == routeDistanceMeters));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityDetailDisplay&&(identical(other.pausedDurationMs, pausedDurationMs) || other.pausedDurationMs == pausedDurationMs)&&(identical(other.movingDurationMs, movingDurationMs) || other.movingDurationMs == movingDurationMs)&&const DeepCollectionEquality().equals(other._cadenceKinds, _cadenceKinds)&&(identical(other.slowestSplitPaceSeconds, slowestSplitPaceSeconds) || other.slowestSplitPaceSeconds == slowestSplitPaceSeconds)&&(identical(other.fastestSplitPaceSeconds, fastestSplitPaceSeconds) || other.fastestSplitPaceSeconds == fastestSplitPaceSeconds)&&(identical(other.routeDistanceMeters, routeDistanceMeters) || other.routeDistanceMeters == routeDistanceMeters)&&const DeepCollectionEquality().equals(other._elevationSamples, _elevationSamples));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,pausedDurationMs,movingDurationMs,const DeepCollectionEquality().hash(_cadenceKinds),slowestSplitPaceSeconds,fastestSplitPaceSeconds,routeDistanceMeters);
+int get hashCode => Object.hash(runtimeType,pausedDurationMs,movingDurationMs,const DeepCollectionEquality().hash(_cadenceKinds),slowestSplitPaceSeconds,fastestSplitPaceSeconds,routeDistanceMeters,const DeepCollectionEquality().hash(_elevationSamples));
 
 @override
 String toString() {
-  return 'ActivityDetailDisplay(pausedDurationMs: $pausedDurationMs, movingDurationMs: $movingDurationMs, cadenceKinds: $cadenceKinds, slowestSplitPaceSeconds: $slowestSplitPaceSeconds, fastestSplitPaceSeconds: $fastestSplitPaceSeconds, routeDistanceMeters: $routeDistanceMeters)';
+  return 'ActivityDetailDisplay(pausedDurationMs: $pausedDurationMs, movingDurationMs: $movingDurationMs, cadenceKinds: $cadenceKinds, slowestSplitPaceSeconds: $slowestSplitPaceSeconds, fastestSplitPaceSeconds: $fastestSplitPaceSeconds, routeDistanceMeters: $routeDistanceMeters, elevationSamples: $elevationSamples)';
 }
 
 
@@ -266,7 +304,7 @@ abstract mixin class _$ActivityDetailDisplayCopyWith<$Res> implements $ActivityD
   factory _$ActivityDetailDisplayCopyWith(_ActivityDetailDisplay value, $Res Function(_ActivityDetailDisplay) _then) = __$ActivityDetailDisplayCopyWithImpl;
 @override @useResult
 $Res call({
- int pausedDurationMs, int movingDurationMs, List<ActivityCadenceKind> cadenceKinds, double? slowestSplitPaceSeconds, double? fastestSplitPaceSeconds, double routeDistanceMeters
+ int pausedDurationMs, int movingDurationMs, List<ActivityCadenceKind> cadenceKinds, double? slowestSplitPaceSeconds, double? fastestSplitPaceSeconds, double routeDistanceMeters, List<ActivityElevationSample> elevationSamples
 });
 
 
@@ -283,7 +321,7 @@ class __$ActivityDetailDisplayCopyWithImpl<$Res>
 
 /// Create a copy of ActivityDetailDisplay
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? pausedDurationMs = null,Object? movingDurationMs = null,Object? cadenceKinds = null,Object? slowestSplitPaceSeconds = freezed,Object? fastestSplitPaceSeconds = freezed,Object? routeDistanceMeters = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? pausedDurationMs = null,Object? movingDurationMs = null,Object? cadenceKinds = null,Object? slowestSplitPaceSeconds = freezed,Object? fastestSplitPaceSeconds = freezed,Object? routeDistanceMeters = null,Object? elevationSamples = null,}) {
   return _then(_ActivityDetailDisplay(
 pausedDurationMs: null == pausedDurationMs ? _self.pausedDurationMs : pausedDurationMs // ignore: cast_nullable_to_non_nullable
 as int,movingDurationMs: null == movingDurationMs ? _self.movingDurationMs : movingDurationMs // ignore: cast_nullable_to_non_nullable
@@ -291,7 +329,8 @@ as int,cadenceKinds: null == cadenceKinds ? _self._cadenceKinds : cadenceKinds /
 as List<ActivityCadenceKind>,slowestSplitPaceSeconds: freezed == slowestSplitPaceSeconds ? _self.slowestSplitPaceSeconds : slowestSplitPaceSeconds // ignore: cast_nullable_to_non_nullable
 as double?,fastestSplitPaceSeconds: freezed == fastestSplitPaceSeconds ? _self.fastestSplitPaceSeconds : fastestSplitPaceSeconds // ignore: cast_nullable_to_non_nullable
 as double?,routeDistanceMeters: null == routeDistanceMeters ? _self.routeDistanceMeters : routeDistanceMeters // ignore: cast_nullable_to_non_nullable
-as double,
+as double,elevationSamples: null == elevationSamples ? _self._elevationSamples : elevationSamples // ignore: cast_nullable_to_non_nullable
+as List<ActivityElevationSample>,
   ));
 }
 

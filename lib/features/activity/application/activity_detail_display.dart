@@ -7,6 +7,9 @@ import '../maps/route_geometry.dart';
 
 part 'activity_detail_display.freezed.dart';
 
+/// One point of the session's elevation profile.
+typedef ActivityElevationSample = ({DateTime time, double meters});
+
 /// The metric pace bars are scaled per KILOMETRE, whatever the user's units.
 /// The scale is a ratio between the activity's own splits, and a ratio does not
 /// care which unit its terms are in — but mixing the two would.
@@ -35,6 +38,18 @@ abstract class ActivityDetailDisplay with _$ActivityDetailDisplay {
 
     /// The GPS route's length, in metres. Zero when there is no route.
     required double routeDistanceMeters,
+
+    /// The height profile of the session, oldest first.
+    ///
+    /// It comes from the ROUTE, not from a record of its own: Health Connect
+    /// has no elevation series. `ElevationGainedRecord` is a single total for
+    /// the session — it says you climbed 240 m, never where. The altitude on
+    /// each route point is the only thing in Health Connect that knows the
+    /// shape of a climb, and we already read it.
+    ///
+    /// Empty when the route has no altitude, or has only one point that does:
+    /// a single height is not a profile.
+    required List<ActivityElevationSample> elevationSamples,
   }) = _ActivityDetailDisplay;
 }
 
@@ -65,5 +80,24 @@ ActivityDetailDisplay buildActivityDetailDisplay({
     routeDistanceMeters: workout.route.status == ExerciseRouteStatus.data
         ? routeTotalDistanceMeters(workout.route.points)
         : 0.0,
+    elevationSamples: _elevationProfile(workout.route),
   );
+}
+
+/// The session's height over time, from whichever route points carry an
+/// altitude.
+///
+/// A route may carry altitude on some points and not others — a fix taken
+/// indoors, a device that drops it under a poor sky — so the ones without are
+/// skipped rather than being read as sea level, which would draw a cliff.
+List<ActivityElevationSample> _elevationProfile(ExerciseRouteData route) {
+  if (route.status != ExerciseRouteStatus.data) {
+    return const <ActivityElevationSample>[];
+  }
+  final samples = <ActivityElevationSample>[
+    for (final point in route.points)
+      if (point.altitudeMeters case final meters?) (time: point.time, meters: meters),
+  ]..sort((a, b) => a.time.compareTo(b.time));
+  // One height is a fact, not a profile. Two is a line.
+  return samples.length > 1 ? samples : const <ActivityElevationSample>[];
 }
