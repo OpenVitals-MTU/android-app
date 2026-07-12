@@ -1,32 +1,39 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/usecase/load_recovery_days_use_case.dart';
+import 'recovery_detail_display.dart';
 
 // The scored day is the use case's shape; the two detail screens read it
-// straight off the state, so it stays visible from here.
+// straight off the display, so it stays visible from here.
 export '../../../domain/usecase/load_recovery_days_use_case.dart'
     show RecoveryDay, recoveryLookbackDays;
 
+part 'recovery_detail_view_model.freezed.dart';
+
 /// Port of the Kotlin `RecoveryUiState` (the sleep-score slice the two detail
 /// screens read; the stress slice lives in `RecoveryViewModel`).
-class RecoveryDetailState {
-  RecoveryDetailState({
-    this.isLoading = true,
-    LocalDate? selectedDate,
-    this.days = const <RecoveryDay>[],
-    this.error,
-  }) : selectedDate = selectedDate ?? LocalDate.now();
+///
+/// [display] is the selected day, picked out of [days] and scored, at load time
+/// — the screens render it and scan nothing.
+@freezed
+abstract class RecoveryDetailState with _$RecoveryDetailState {
+  const RecoveryDetailState._();
 
-  final bool isLoading;
-  final LocalDate selectedDate;
-  final List<RecoveryDay> days;
-  final ScreenError? error;
+  const factory RecoveryDetailState({
+    required LocalDate selectedDate,
+    @Default(true) bool isLoading,
+    @Default(<RecoveryDay>[]) List<RecoveryDay> days,
+    ScreenError? error,
+    RecoveryDetailDisplay? display,
+  }) = _RecoveryDetailState;
 
-  /// Kotlin `RecoveryUiState.today`.
+  /// Kotlin `RecoveryUiState.today`. The screens read [display] instead; this
+  /// stays as the state's own answer to "which day is this?".
   RecoveryDay get today {
     for (final day in days) {
       if (day.date == selectedDate) return day;
@@ -47,7 +54,11 @@ class RecoveryDetailViewModel extends Notifier<RecoveryDetailState> {
     Future.microtask(() {
       if (ref.mounted) load();
     });
-    return RecoveryDetailState();
+    final today = LocalDate.now();
+    return RecoveryDetailState(
+      selectedDate: today,
+      display: buildRecoveryDetailDisplay(const <RecoveryDay>[], today),
+    );
   }
 
   Future<void> load([LocalDate? date]) async {
@@ -58,29 +69,31 @@ class RecoveryDetailViewModel extends Notifier<RecoveryDetailState> {
       isLoading: true,
       selectedDate: today,
       days: state.days,
+      display: buildRecoveryDetailDisplay(state.days, today),
     );
 
-    try {
-      // The lookback window, and the scoring of each night against the ones
-      // around it, belong to the use case.
-      final days = (await loadRecoveryDays(today)).orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = RecoveryDetailState(
-        isLoading: false,
-        selectedDate: today,
-        days: days,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = RecoveryDetailState(
-        isLoading: false,
-        selectedDate: today,
-        days: state.days,
-        error: throwableToScreenError(
-          error,
-          fallback: 'Unable to load sleep data.',
-        ),
-      );
+    // The lookback window, and the scoring of each night against the ones
+    // around it, belong to the use case.
+    final result = await loadRecoveryDays(today);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = RecoveryDetailState(
+          isLoading: false,
+          selectedDate: today,
+          days: value,
+          display: buildRecoveryDetailDisplay(value, today),
+        );
+      case Err(:final failure):
+        // The days already on screen survive the failed reload, as they did
+        // when this bridged through `orThrow`.
+        state = RecoveryDetailState(
+          isLoading: false,
+          selectedDate: today,
+          days: state.days,
+          display: buildRecoveryDetailDisplay(state.days, today),
+          error: failure.toScreenError(fallback: 'Unable to load sleep data.'),
+        );
     }
   }
 }

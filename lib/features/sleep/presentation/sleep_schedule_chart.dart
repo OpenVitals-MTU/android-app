@@ -5,11 +5,10 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
-import '../../../domain/model/sleep_models.dart';
 import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
-import 'sleep_presentation.dart';
+import '../application/sleep_display.dart';
 import 'sleep_stage_chart.dart';
 
 /// Port of the Kotlin `SleepScheduleChart.kt`: a time-aligned, stage-coloured
@@ -29,46 +28,9 @@ const double _chartHeight = 232;
 /// each internally consistent; what is not allowed is a row that matches neither.
 const double _axisLabelWidth = 46;
 
-/// Kotlin `SleepScheduleDay`.
-@immutable
-class SleepScheduleDay {
-  const SleepScheduleDay({
-    required this.date,
-    required this.inBedStart,
-    required this.inBedEnd,
-    this.stages = const [],
-  });
-
-  final LocalDate date;
-  final DateTime? inBedStart;
-  final DateTime? inBedEnd;
-  final List<SleepStage> stages;
-}
-
-/// Kotlin `List<SleepOverviewDay>.toSleepScheduleDays()`.
-List<SleepScheduleDay> toSleepScheduleDays(
-  Map<LocalDate, List<SleepData>> sessionsByDate,
-) {
-  final days = <SleepScheduleDay>[];
-  final dates = sessionsByDate.keys.toList()..sort();
-  for (final date in dates) {
-    final sessions = sessionsByDate[date]!;
-    final stages = [
-      for (final session in sessions) ...session.stages,
-    ]..sort((a, b) => a.startTime.compareTo(b.startTime));
-    days.add(SleepScheduleDay(
-      date: date,
-      inBedStart: sessions.isEmpty
-          ? null
-          : sessions.map((s) => s.startTime).reduce((a, b) => a.isBefore(b) ? a : b),
-      inBedEnd: sessions.isEmpty
-          ? null
-          : sessions.map((s) => s.endTime).reduce((a, b) => a.isAfter(b) ? a : b),
-      stages: stages,
-    ));
-  }
-  return days;
-}
+/// [SleepScheduleDay] and `toSleepScheduleDays` live in `application/
+/// sleep_display.dart`: the nights arrive precomputed and this file only paints
+/// them.
 
 /// Kotlin `Instant.anchoredMinutes`: minutes since the 18:00 anchor, in [0, 1440).
 double anchoredMinutes(DateTime time) {

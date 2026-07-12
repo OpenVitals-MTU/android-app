@@ -7,6 +7,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/insights/sleep_score.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
+import 'package:openvitals/features/recovery/application/recovery_detail_display.dart';
 import 'package:openvitals/features/recovery/application/recovery_detail_view_model.dart';
 import 'package:openvitals/features/recovery/presentation/sleep_score_detail_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
@@ -50,12 +51,14 @@ RecoveryDetailState _state({SleepScoreEstimate estimate = _estimate}) {
     durationMs: const Duration(hours: 8).inMilliseconds,
     source: 'com.test.tracker',
   );
+  final days = [
+    RecoveryDay(date: today, sessions: [session], sleepScore: estimate),
+  ];
   return RecoveryDetailState(
     isLoading: false,
     selectedDate: today,
-    days: [
-      RecoveryDay(date: today, sessions: [session], sleepScore: estimate),
-    ],
+    days: days,
+    display: buildRecoveryDetailDisplay(days, today),
   );
 }
 
@@ -180,12 +183,14 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final today = LocalDate.now();
+    final days = [RecoveryDay(date: today)];
     await tester.pumpWidget(
       await _bootstrap(
         RecoveryDetailState(
           isLoading: false,
           selectedDate: today,
-          days: [RecoveryDay(date: today)],
+          days: days,
+          display: buildRecoveryDetailDisplay(days, today),
         ),
       ),
     );

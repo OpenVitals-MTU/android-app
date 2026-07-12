@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 mixin _$SleepState {
 
  LocalDate get selectedDate; TimeRange get selectedRange; SleepRangeMode get sleepRangeMode; WeekPeriodMode get weekPeriodMode; bool get isLoading;/// The sleep-hours goal, moved by the goal card's steppers.
- double get dailyGoalHours; ScreenError? get error; SleepPeriodLoadResult? get result;
+ double get dailyGoalHours; ScreenError? get error; SleepPeriodLoadResult? get result; SleepDisplay? get display;
 /// Create a copy of SleepState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +26,16 @@ $SleepStateCopyWith<SleepState> get copyWith => _$SleepStateCopyWithImpl<SleepSt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SleepState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.weekPeriodMode, weekPeriodMode) || other.weekPeriodMode == weekPeriodMode)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.dailyGoalHours, dailyGoalHours) || other.dailyGoalHours == dailyGoalHours)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SleepState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.weekPeriodMode, weekPeriodMode) || other.weekPeriodMode == weekPeriodMode)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.dailyGoalHours, dailyGoalHours) || other.dailyGoalHours == dailyGoalHours)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,sleepRangeMode,weekPeriodMode,isLoading,dailyGoalHours,error,result);
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,sleepRangeMode,weekPeriodMode,isLoading,dailyGoalHours,error,result,display);
 
 @override
 String toString() {
-  return 'SleepState(selectedDate: $selectedDate, selectedRange: $selectedRange, sleepRangeMode: $sleepRangeMode, weekPeriodMode: $weekPeriodMode, isLoading: $isLoading, dailyGoalHours: $dailyGoalHours, error: $error, result: $result)';
+  return 'SleepState(selectedDate: $selectedDate, selectedRange: $selectedRange, sleepRangeMode: $sleepRangeMode, weekPeriodMode: $weekPeriodMode, isLoading: $isLoading, dailyGoalHours: $dailyGoalHours, error: $error, result: $result, display: $display)';
 }
 
 
@@ -46,11 +46,11 @@ abstract mixin class $SleepStateCopyWith<$Res>  {
   factory $SleepStateCopyWith(SleepState value, $Res Function(SleepState) _then) = _$SleepStateCopyWithImpl;
 @useResult
 $Res call({
- LocalDate selectedDate, TimeRange selectedRange, SleepRangeMode sleepRangeMode, WeekPeriodMode weekPeriodMode, bool isLoading, double dailyGoalHours, ScreenError? error, SleepPeriodLoadResult? result
+ LocalDate selectedDate, TimeRange selectedRange, SleepRangeMode sleepRangeMode, WeekPeriodMode weekPeriodMode, bool isLoading, double dailyGoalHours, ScreenError? error, SleepPeriodLoadResult? result, SleepDisplay? display
 });
 
 
-
+$SleepDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -63,7 +63,7 @@ class _$SleepStateCopyWithImpl<$Res>
 
 /// Create a copy of SleepState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? sleepRangeMode = null,Object? weekPeriodMode = null,Object? isLoading = null,Object? dailyGoalHours = null,Object? error = freezed,Object? result = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? sleepRangeMode = null,Object? weekPeriodMode = null,Object? isLoading = null,Object? dailyGoalHours = null,Object? error = freezed,Object? result = freezed,Object? display = freezed,}) {
   return _then(_self.copyWith(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
@@ -73,10 +73,23 @@ as WeekPeriodMode,isLoading: null == isLoading ? _self.isLoading : isLoading // 
 as bool,dailyGoalHours: null == dailyGoalHours ? _self.dailyGoalHours : dailyGoalHours // ignore: cast_nullable_to_non_nullable
 as double,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,result: freezed == result ? _self.result : result // ignore: cast_nullable_to_non_nullable
-as SleepPeriodLoadResult?,
+as SleepPeriodLoadResult?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as SleepDisplay?,
   ));
 }
+/// Create a copy of SleepState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$SleepDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
 
+  return $SleepDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
+  });
+}
 }
 
 
@@ -158,10 +171,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  SleepRangeMode sleepRangeMode,  WeekPeriodMode weekPeriodMode,  bool isLoading,  double dailyGoalHours,  ScreenError? error,  SleepPeriodLoadResult? result)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  SleepRangeMode sleepRangeMode,  WeekPeriodMode weekPeriodMode,  bool isLoading,  double dailyGoalHours,  ScreenError? error,  SleepPeriodLoadResult? result,  SleepDisplay? display)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SleepState() when $default != null:
-return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_that.weekPeriodMode,_that.isLoading,_that.dailyGoalHours,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_that.weekPeriodMode,_that.isLoading,_that.dailyGoalHours,_that.error,_that.result,_that.display);case _:
   return orElse();
 
 }
@@ -179,10 +192,10 @@ return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  SleepRangeMode sleepRangeMode,  WeekPeriodMode weekPeriodMode,  bool isLoading,  double dailyGoalHours,  ScreenError? error,  SleepPeriodLoadResult? result)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  SleepRangeMode sleepRangeMode,  WeekPeriodMode weekPeriodMode,  bool isLoading,  double dailyGoalHours,  ScreenError? error,  SleepPeriodLoadResult? result,  SleepDisplay? display)  $default,) {final _that = this;
 switch (_that) {
 case _SleepState():
-return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_that.weekPeriodMode,_that.isLoading,_that.dailyGoalHours,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_that.weekPeriodMode,_that.isLoading,_that.dailyGoalHours,_that.error,_that.result,_that.display);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +212,10 @@ return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  SleepRangeMode sleepRangeMode,  WeekPeriodMode weekPeriodMode,  bool isLoading,  double dailyGoalHours,  ScreenError? error,  SleepPeriodLoadResult? result)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  SleepRangeMode sleepRangeMode,  WeekPeriodMode weekPeriodMode,  bool isLoading,  double dailyGoalHours,  ScreenError? error,  SleepPeriodLoadResult? result,  SleepDisplay? display)?  $default,) {final _that = this;
 switch (_that) {
 case _SleepState() when $default != null:
-return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_that.weekPeriodMode,_that.isLoading,_that.dailyGoalHours,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_that.weekPeriodMode,_that.isLoading,_that.dailyGoalHours,_that.error,_that.result,_that.display);case _:
   return null;
 
 }
@@ -214,7 +227,7 @@ return $default(_that.selectedDate,_that.selectedRange,_that.sleepRangeMode,_tha
 
 
 class _SleepState extends SleepState {
-  const _SleepState({required this.selectedDate, this.selectedRange = TimeRange.week, this.sleepRangeMode = SleepRangeMode.evening18h, this.weekPeriodMode = WeekPeriodMode.mondayToSunday, this.isLoading = true, this.dailyGoalHours = 8.0, this.error, this.result}): super._();
+  const _SleepState({required this.selectedDate, this.selectedRange = TimeRange.week, this.sleepRangeMode = SleepRangeMode.evening18h, this.weekPeriodMode = WeekPeriodMode.mondayToSunday, this.isLoading = true, this.dailyGoalHours = 8.0, this.error, this.result, this.display}): super._();
   
 
 @override final  LocalDate selectedDate;
@@ -226,6 +239,7 @@ class _SleepState extends SleepState {
 @override@JsonKey() final  double dailyGoalHours;
 @override final  ScreenError? error;
 @override final  SleepPeriodLoadResult? result;
+@override final  SleepDisplay? display;
 
 /// Create a copy of SleepState
 /// with the given fields replaced by the non-null parameter values.
@@ -237,16 +251,16 @@ _$SleepStateCopyWith<_SleepState> get copyWith => __$SleepStateCopyWithImpl<_Sle
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SleepState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.weekPeriodMode, weekPeriodMode) || other.weekPeriodMode == weekPeriodMode)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.dailyGoalHours, dailyGoalHours) || other.dailyGoalHours == dailyGoalHours)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SleepState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.sleepRangeMode, sleepRangeMode) || other.sleepRangeMode == sleepRangeMode)&&(identical(other.weekPeriodMode, weekPeriodMode) || other.weekPeriodMode == weekPeriodMode)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.dailyGoalHours, dailyGoalHours) || other.dailyGoalHours == dailyGoalHours)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,sleepRangeMode,weekPeriodMode,isLoading,dailyGoalHours,error,result);
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,sleepRangeMode,weekPeriodMode,isLoading,dailyGoalHours,error,result,display);
 
 @override
 String toString() {
-  return 'SleepState(selectedDate: $selectedDate, selectedRange: $selectedRange, sleepRangeMode: $sleepRangeMode, weekPeriodMode: $weekPeriodMode, isLoading: $isLoading, dailyGoalHours: $dailyGoalHours, error: $error, result: $result)';
+  return 'SleepState(selectedDate: $selectedDate, selectedRange: $selectedRange, sleepRangeMode: $sleepRangeMode, weekPeriodMode: $weekPeriodMode, isLoading: $isLoading, dailyGoalHours: $dailyGoalHours, error: $error, result: $result, display: $display)';
 }
 
 
@@ -257,11 +271,11 @@ abstract mixin class _$SleepStateCopyWith<$Res> implements $SleepStateCopyWith<$
   factory _$SleepStateCopyWith(_SleepState value, $Res Function(_SleepState) _then) = __$SleepStateCopyWithImpl;
 @override @useResult
 $Res call({
- LocalDate selectedDate, TimeRange selectedRange, SleepRangeMode sleepRangeMode, WeekPeriodMode weekPeriodMode, bool isLoading, double dailyGoalHours, ScreenError? error, SleepPeriodLoadResult? result
+ LocalDate selectedDate, TimeRange selectedRange, SleepRangeMode sleepRangeMode, WeekPeriodMode weekPeriodMode, bool isLoading, double dailyGoalHours, ScreenError? error, SleepPeriodLoadResult? result, SleepDisplay? display
 });
 
 
-
+@override $SleepDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -274,7 +288,7 @@ class __$SleepStateCopyWithImpl<$Res>
 
 /// Create a copy of SleepState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? sleepRangeMode = null,Object? weekPeriodMode = null,Object? isLoading = null,Object? dailyGoalHours = null,Object? error = freezed,Object? result = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? sleepRangeMode = null,Object? weekPeriodMode = null,Object? isLoading = null,Object? dailyGoalHours = null,Object? error = freezed,Object? result = freezed,Object? display = freezed,}) {
   return _then(_SleepState(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
@@ -284,11 +298,24 @@ as WeekPeriodMode,isLoading: null == isLoading ? _self.isLoading : isLoading // 
 as bool,dailyGoalHours: null == dailyGoalHours ? _self.dailyGoalHours : dailyGoalHours // ignore: cast_nullable_to_non_nullable
 as double,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,result: freezed == result ? _self.result : result // ignore: cast_nullable_to_non_nullable
-as SleepPeriodLoadResult?,
+as SleepPeriodLoadResult?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as SleepDisplay?,
   ));
 }
 
+/// Create a copy of SleepState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$SleepDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
 
+  return $SleepDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
+  });
+}
 }
 
 // dart format on

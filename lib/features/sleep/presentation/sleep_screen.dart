@@ -22,8 +22,8 @@ import '../../../ui/components/metric_detail_scaffold.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'sleep_cards.dart';
 import 'sleep_metric_sections.dart';
+import '../application/sleep_display.dart';
 import '../application/sleep_view_model.dart';
-import 'sleep_presentation.dart';
 import 'sleep_schedule_chart.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/section_padding.dart';
@@ -109,19 +109,13 @@ class _SleepContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final result = state.result;
-    if (result == null) {
+    final display = state.display;
+    if (result == null || display == null) {
       if (state.isLoading) return const SectionLoading();
       return const _SleepMessage('No sleep data for this period.');
     }
 
-    final display = buildSleepDisplay(
-      result: result,
-      selectedRange: state.selectedRange,
-      selectedDate: state.selectedDate,
-      sleepRangeMode: state.sleepRangeMode,
-      weekPeriodMode: state.weekPeriodMode,
-    );
-    final isDay = state.selectedRange == TimeRange.day;
+    final isDay = display.isDay;
 
     if (isDay && display.dailySummary == null) {
       if (state.isLoading) return const SectionLoading();
@@ -147,29 +141,16 @@ class _SleepContent extends StatelessWidget {
     bool isDay,
   ) {
     final l10n = AppLocalizations.of(context);
-    final goalProgress = sleepGoalProgress(
-      durationPoints: display.durationPoints,
-      period: period,
-      targetHours: state.dailyGoalHours,
-    );
     final selectedDay = daySelection.selectedDate;
-    final nights = sleepNights(display.durationPoints);
-    final averageHours = sleepAverageHours(nights);
     final summaryValue =
-        '${l10n.summaryAvgValue('${formatter.decimal(averageHours, 1)}h')} · '
-        '${l10n.summaryNights(formatter.count(nights.length))}';
+        '${l10n.summaryAvgValue('${formatter.decimal(display.averageHours, 1)}h')} · '
+        '${l10n.summaryNights(formatter.count(display.nights.length))}';
 
-    final scheduleDays = toSleepScheduleDays(display.sessionsByDate);
-    // Kotlin `useScheduleChart`: week/month only, and only once some night has
-    // a bedtime — the schedule axis is meaningless without one.
-    final useScheduleChart = (state.selectedRange == TimeRange.week ||
-            state.selectedRange == TimeRange.month) &&
-        scheduleDays.any((day) => day.inBedStart != null);
-
-    // The sessions of the pinned day, for SELECTED_DAY_ENTRIES.
+    // The sessions of the pinned day, for SELECTED_DAY_ENTRIES — one key out of
+    // the map the display built, newest night first.
     final daySessions = selectedDay == null
         ? const <SleepData>[]
-        : display.sessionsByDate[selectedDay] ?? const <SleepData>[];
+        : display.sortedSessionsByDate[selectedDay] ?? const <SleepData>[];
 
     final orderedSections = OrderedMetricDetailSections(
       sections: [
@@ -183,17 +164,13 @@ class _SleepContent extends StatelessWidget {
                 session: display.dailySummary!,
                 selectedDate: state.selectedDate,
                 formatter: formatter,
-                timeRangeText: _dayTimeRangeText(display.dailySessions),
-                // Only a single night can be opened. With two or more sessions
-                // `dailySummary` is a MERGED summary whose id belongs to no
-                // record, so there is nothing for the detail screen to load —
-                // Kotlin gated on `dailySessions.singleOrNull()` for exactly this.
-                onTap: display.dailySessions.length == 1
-                    ? () => onOpenSession(display.dailySessions.single.id)
-                    : null,
+                timeRangeText: display.dayTimeRangeText,
+                onTap: display.openableDailySessionId == null
+                    ? null
+                    : () => onOpenSession(display.openableDailySessionId!),
               )),
               sectionPadded(SleepStageShareCard(
-                summary: display.overviewSummary,
+                shares: display.stageShares,
                 formatter: formatter,
               )),
             ],
@@ -221,7 +198,7 @@ class _SleepContent extends StatelessWidget {
               // Kotlin prefers the schedule chart on week/month whenever at
               // least one night knows when you went to bed; otherwise there is
               // nothing to place on a clock axis and it falls back to durations.
-              if (useScheduleChart)
+              if (display.useScheduleChart)
                 sectionPadded(SleepScheduleStageChart(
                   title: l10n.metricSleep,
                   summaryText: '${periodTitle(
@@ -230,7 +207,7 @@ class _SleepContent extends StatelessWidget {
                     period,
                     weekPeriodMode: state.weekPeriodMode,
                   )} · $summaryValue',
-                  days: scheduleDays,
+                  days: display.scheduleDays,
                   selectedRange: state.selectedRange,
                   averageSchedule: display.overviewSummary.schedule,
                   selectedDate: selectedDay,
@@ -239,10 +216,7 @@ class _SleepContent extends StatelessWidget {
               else
                 sectionPadded(MetricBarChart(
                   title: l10n.metricSleep,
-                  values: [
-                    for (final point in display.durationPoints)
-                      PeriodChartValue(point.date, point.hours),
-                  ],
+                  values: display.chartValues,
                   selectedRange: state.selectedRange,
                   period: period,
                   accentColor: AppColors.sleep,
@@ -256,7 +230,7 @@ class _SleepContent extends StatelessWidget {
                   valueFormatter: (value) => '${formatter.decimal(value, 1)}h',
                 )),
               sectionPadded(SleepStageShareCard(
-                summary: display.overviewSummary,
+                shares: display.stageShares,
                 formatter: formatter,
               )),
             ],
@@ -280,7 +254,7 @@ class _SleepContent extends StatelessWidget {
           MetricDetailSectionId.dailyGoal,
           sectionPadded(DailyGoalCard(
             goal: sleepHoursDisplay(state.dailyGoalHours, formatter),
-            progress: goalProgress,
+            progress: display.goalProgress,
             icon: kSleepIcon,
             accentColor: AppColors.sleep,
             onDecreaseGoal: onDecreaseGoal,
@@ -291,21 +265,14 @@ class _SleepContent extends StatelessWidget {
           MetricDetailSectionId.statistics,
           SleepStatisticsSectionContent(
             display: display,
-            period: period,
             selectedRange: state.selectedRange,
             formatter: formatter,
-            goalProgress: goalProgress,
-            targetHours: state.dailyGoalHours,
           ),
         ),
         MetricDetailSection(
           MetricDetailSectionId.dataConfidence,
           visible: period.start != period.end,
-          SleepDataConfidenceSection(
-            sessions: isDay ? display.dailySessions : display.periodSessions,
-            durationPoints: display.durationPoints,
-            period: period,
-          ),
+          SleepDataConfidenceSection(confidence: display.dataConfidence),
         ),
         MetricDetailSection(
           MetricDetailSectionId.entries,
@@ -313,7 +280,9 @@ class _SleepContent extends StatelessWidget {
           visible: isDay ? display.dailySessions.length > 1 : true,
           SleepSessionsSection(
             title: l10n.sectionSleepSessions,
-            sessions: isDay ? display.dailySessions : display.periodSessions,
+            sessions: isDay
+                ? display.sortedDailySessions
+                : display.sortedPeriodSessions,
             formatter: formatter,
             onOpenSession: onOpenSession,
           ),
@@ -333,20 +302,6 @@ class _SleepContent extends StatelessWidget {
     );
   }
 }
-
-final DateFormat _timeFormat = DateFormat('HH:mm');
-
-String? _dayTimeRangeText(List<SleepData> sessions) {
-  if (sessions.isEmpty) return null;
-  final sorted = [...sessions]
-    ..sort((a, b) => a.startTime.compareTo(b.startTime));
-  return sorted
-      .map((s) =>
-          '${_timeFormat.format(s.startTime.toLocal())} - ${_timeFormat.format(s.endTime.toLocal())}')
-      .join(' | ');
-}
-
-
 
 class _SleepMessage extends StatelessWidget {
   const _SleepMessage(this.message);

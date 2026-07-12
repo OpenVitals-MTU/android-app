@@ -12,6 +12,7 @@ import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'sleep_cards.dart';
+import '../application/sleep_detail_display.dart';
 import '../application/sleep_detail_view_model.dart';
 import 'sleep_stage_chart.dart';
 import '../../../ui/components/section_padding.dart';
@@ -56,11 +57,10 @@ class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen> {
     if (state.isLoading) return const FullScreenLoading();
     final error = state.error;
     if (error != null) return ErrorMessage(_errorText(l10n, error));
-    final session = state.session;
-    if (session == null) return ErrorMessage(l10n.unknownError);
+    final display = state.display;
+    if (display == null) return ErrorMessage(l10n.unknownError);
 
-    final stages = [...session.stages]
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    final session = display.session;
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -69,21 +69,22 @@ class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: SleepSummaryCard(session: session, formatter: formatter),
         ),
-        sectionPadded(SleepStageBreakdownCard(session: session, formatter: formatter)),
+        sectionPadded(SleepStageBreakdownCard(display: display, formatter: formatter)),
         sectionPadded(SleepSessionDetailsCard(session: session)),
-        if (stages.isNotEmpty) ...[
+        if (display.hasStages) ...[
           sectionPadded(
             SleepSectionCard(
               title: l10n.detailStageEvents,
               child: Text(
-                l10n.summaryRecordedStages(formatter.count(stages.length)),
+                l10n.summaryRecordedStages(
+                    formatter.count(display.sortedStages.length)),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
             ),
           ),
-          for (final stage in stages)
+          for (final stage in display.sortedStages)
             sectionPadded(SleepStageEventRow(stage: stage, formatter: formatter)),
         ],
         const SizedBox(height: 16),
@@ -186,15 +187,16 @@ class SleepSummaryCard extends StatelessWidget {
 // ── Stage breakdown card ─────────────────────────────────────────────────────
 
 /// Port of the Kotlin `SleepStageBreakdownCard`: the per-lane stage timeline
-/// chart plus the per-stage totals (duration · share).
+/// chart plus the per-stage totals (duration · share), both precomputed by
+/// [buildSleepDetailDisplay].
 class SleepStageBreakdownCard extends StatelessWidget {
   const SleepStageBreakdownCard({
     super.key,
-    required this.session,
+    required this.display,
     required this.formatter,
   });
 
-  final SleepData session;
+  final SleepDetailDisplay display;
   final UnitFormatter formatter;
 
   @override
@@ -202,7 +204,7 @@ class SleepStageBreakdownCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    if (session.stages.isEmpty) {
+    if (!display.hasStages) {
       return SleepSectionCard(
         title: l10n.detailStages,
         child: Text(
@@ -213,46 +215,28 @@ class SleepStageBreakdownCard extends StatelessWidget {
       );
     }
 
-    final orderedStages = [...session.stages]
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
-    final stageTotalMs = orderedStages.fold<int>(
-      0,
-      (sum, stage) => sum + (stage.durationMs > 0 ? stage.durationMs : 0),
-    );
-    final totals = _stageTotals(orderedStages);
-
     return SleepSectionCard(
       title: l10n.detailStages,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SleepStagesLaneChart(
-            stages: orderedStages,
+            stages: display.sortedStages,
             formatter: formatter,
-            timelineStart: session.startTime,
-            timelineEnd: session.endTime,
+            timelineStart: display.session.startTime,
+            timelineEnd: display.session.endTime,
           ),
           const SizedBox(height: 12),
-          for (final total in totals)
+          for (final total in display.stageTotals)
             _DetailRow(
-              label: localizedSleepStageLabel(l10n, total.$1),
-              value: '${formatter.duration(total.$2)} · '
-                  '${formatter.decimal(stageTotalMs > 0 ? total.$2 * 100.0 / stageTotalMs : 0.0, 0)}%',
+              label: localizedSleepStageLabel(l10n, total.stageType),
+              value: '${formatter.duration(total.durationMs)} · '
+                  '${formatter.decimal(total.sharePercent, 0)}%',
             ),
         ],
       ),
     );
   }
-}
-
-List<(int, int)> _stageTotals(List<SleepStage> stages) {
-  final totals = <int, int>{};
-  for (final stage in stages) {
-    totals[stage.stageType] = (totals[stage.stageType] ?? 0) + stage.durationMs;
-  }
-  final entries = totals.entries.map((e) => (e.key, e.value)).toList()
-    ..sort((a, b) => b.$2.compareTo(a.$2));
-  return entries;
 }
 
 /// metadata as label/value rows.

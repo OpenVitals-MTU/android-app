@@ -1,21 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/sleep_models.dart';
+import 'sleep_detail_display.dart';
 
-/// The Riverpod port of the Kotlin `SleepDetailUiState` — one sleep session.
-class SleepDetailState {
-  const SleepDetailState({
-    this.isLoading = true,
-    this.session,
-    this.error,
-  });
+part 'sleep_detail_view_model.freezed.dart';
 
-  final bool isLoading;
-  final SleepData? session;
-  final ScreenError? error;
+/// The Riverpod port of the Kotlin `SleepDetailUiState` — one sleep session,
+/// with the stage order and per-stage totals the screen renders precomputed
+/// into [SleepDetailState.display].
+@freezed
+abstract class SleepDetailState with _$SleepDetailState {
+  const SleepDetailState._();
+
+  const factory SleepDetailState({
+    @Default(true) bool isLoading,
+    SleepData? session,
+    ScreenError? error,
+    SleepDetailDisplay? display,
+  }) = _SleepDetailState;
 }
 
 /// The Riverpod port of the Kotlin `SleepDetailViewModel`.
@@ -51,25 +57,26 @@ class SleepDetailViewModel extends Notifier<SleepDetailState> {
     state = SleepDetailState(
       isLoading: true,
       session: state.session,
+      display: state.display,
     );
 
-    try {
-      final session = (await loadSleepDetail(sleepId)).orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = SleepDetailState(
-        isLoading: false,
-        session: session,
-        error: session == null ? const ScreenErrorNotFound() : null,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = SleepDetailState(
-        isLoading: false,
-        error: throwableToScreenError(
-          error,
-          fallback: 'Unable to load the sleep session.',
-        ),
-      );
+    final result = await loadSleepDetail(sleepId);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = SleepDetailState(
+          isLoading: false,
+          session: value,
+          display: value == null ? null : buildSleepDetailDisplay(value),
+          error: value == null ? const ScreenErrorNotFound() : null,
+        );
+      case Err(:final failure):
+        state = SleepDetailState(
+          isLoading: false,
+          error: failure.toScreenError(
+            fallback: 'Unable to load the sleep session.',
+          ),
+        );
     }
   }
 }

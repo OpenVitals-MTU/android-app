@@ -12,14 +12,14 @@ import '../../../domain/insights/daily_goals.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/usecase/load_sleep_period_use_case.dart';
+import 'sleep_display.dart';
 
 part 'sleep_view_model.freezed.dart';
 
 /// The Riverpod port of the Kotlin `SleepUiState`, trimmed to the fields the
 /// period detail UI consumes: the selection the scaffold drives, the resolved
 /// sleep-window + week preference snapshot, the loaded [SleepPeriodLoadResult]
-/// payload, and loading/error flags. The heavier `SleepDisplayState` the Kotlin
-/// view-model precomputes is derived on demand by the screen from [result].
+/// payload, the precomputed [SleepDisplay], and loading/error flags.
 @freezed
 abstract class SleepState with _$SleepState {
   const SleepState._();
@@ -34,6 +34,7 @@ abstract class SleepState with _$SleepState {
     @Default(8.0) double dailyGoalHours,
     ScreenError? error,
     SleepPeriodLoadResult? result,
+    SleepDisplay? display,
   }) = _SleepState;
 }
 
@@ -43,6 +44,9 @@ abstract class SleepState with _$SleepState {
 /// [MetricDetailScaffold] drives every load through [load] (once on first frame,
 /// then on each selection change) and pull-to-refresh through [refresh]. A
 /// monotonic [_generation] guard drops stale results.
+///
+/// The Kotlin `SleepDisplayState` is built here, at load time — the screen
+/// renders [SleepState.display] and derives nothing.
 class SleepViewModel extends Notifier<SleepState> {
   int _generation = 0;
 
@@ -59,12 +63,20 @@ class SleepViewModel extends Notifier<SleepState> {
 
   /// Kotlin `SleepViewModel.increaseDailyGoal` / `decreaseDailyGoal`: step the
   /// target by a quarter hour, clamped to 1–14 h, and persist it.
+  ///
+  /// The goal is an input to the display — goal progress and the sleep-target
+  /// reading are read off it — so moving it rebuilds the display over the
+  /// period already loaded, without going back to the repository.
   void _nudgeDailyGoal(double delta) {
     const key = MetricDailyGoalKey.sleepHours;
     final next = key.normalize(state.dailyGoalHours + delta);
     if (next == state.dailyGoalHours) return;
     ref.read(preferencesRepositoryProvider).setDailyGoalFor(key, next);
-    state = state.copyWith(dailyGoalHours: next);
+    final result = state.result;
+    state = state.copyWith(
+      dailyGoalHours: next,
+      display: result == null ? null : _displayFor(result, next),
+    );
   }
 
   void increaseDailyGoal() =>
@@ -72,6 +84,16 @@ class SleepViewModel extends Notifier<SleepState> {
 
   void decreaseDailyGoal() =>
       _nudgeDailyGoal(-MetricDailyGoalKey.sleepHours.step);
+
+  SleepDisplay _displayFor(SleepPeriodLoadResult result, double goalHours) =>
+      buildSleepDisplay(
+        result: result,
+        selectedRange: state.selectedRange,
+        selectedDate: state.selectedDate,
+        sleepRangeMode: state.sleepRangeMode,
+        weekPeriodMode: state.weekPeriodMode,
+        dailyGoalHours: goalHours,
+      );
 
   /// Loads the sleep period for [selection] (the scaffold's current period).
   Future<void> load(
@@ -99,19 +121,22 @@ class SleepViewModel extends Notifier<SleepState> {
       weekPeriodMode: weekPeriodMode,
     );
 
-    try {
-      final result =
-          (await useCase(query, sleepRangeMode, refreshMode: refreshMode))
-              .orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(isLoading: false, result: result, error: null);
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error:
-            throwableToScreenError(error, fallback: 'Unable to load sleep.'),
-      );
+    final result =
+        await useCase(query, sleepRangeMode, refreshMode: refreshMode);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          result: value,
+          display: _displayFor(value, state.dailyGoalHours),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load sleep.'),
+        );
     }
   }
 

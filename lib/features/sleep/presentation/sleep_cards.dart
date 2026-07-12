@@ -8,7 +8,7 @@ import '../../../ui/components/metric_card.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
-import 'sleep_presentation.dart';
+import '../application/sleep_display.dart';
 import 'sleep_stage_chart.dart';
 
 String sleepStageLabel(int stageType) {
@@ -90,8 +90,6 @@ class SleepSessionTimelineCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final stages = [...session.stages]
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
     return OpenVitalsCard(
       onTap: onTap,
@@ -135,10 +133,10 @@ class SleepSessionTimelineCard extends StatelessWidget {
               timeRangeText ?? _sessionRangeText(locale, session),
               style: theme.textTheme.bodyMedium,
             ),
-            if (stages.isNotEmpty) ...[
+            if (session.stages.isNotEmpty) ...[
               const SizedBox(height: 16),
               SleepStagesLaneChart(
-                stages: stages,
+                stages: session.stages,
                 formatter: formatter,
                 timelineStart: session.startTime,
                 timelineEnd: session.endTime,
@@ -206,44 +204,38 @@ class MetricValueLikeRow extends StatelessWidget {
 }
 
 /// "Share of time in bed" stage breakdown, port of the Kotlin
-/// `SleepStageShareCard` / `SleepStageBreakdown`. Self-hides with no stage data.
+/// `SleepStageShareCard` / `SleepStageBreakdown`. Self-hides with no stage data
+/// — which is what an empty [shares] means; [sleepStageShares] weighed them.
 class SleepStageShareCard extends StatelessWidget {
   const SleepStageShareCard({
     super.key,
-    required this.summary,
+    required this.shares,
     required this.formatter,
   });
 
-  final SleepOverviewSummary summary;
+  final List<SleepStageShare> shares;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rows = <(int, int)>[
-      (SleepStage.stageAwake, summary.awakeDurationMs),
-      (SleepStage.stageRem, summary.remDurationMs),
-      (SleepStage.stageLight, summary.coreDurationMs),
-      (SleepStage.stageDeep, summary.deepDurationMs),
-    ].where((row) => row.$2 > 0).toList();
-    final totalMs = rows.fold<int>(0, (sum, row) => sum + row.$2);
-    if (totalMs <= 0) return const SizedBox.shrink();
+    if (shares.isEmpty) return const SizedBox.shrink();
 
     final trackColor = theme.colorScheme.surfaceContainerHighest;
     return SleepSectionCard(
       title: 'Share of time in bed',
       child: Column(
         children: [
-          for (final row in rows) ...[
+          for (var index = 0; index < shares.length; index++) ...[
             _StageRow(
-              label: sleepStageLabel(row.$1),
-              fraction: (row.$2 / totalMs).clamp(0.0, 1.0),
-              color: sleepStageColor(row.$1),
-              trailing:
-                  '${formatter.duration(row.$2)} (${((row.$2 / totalMs) * 100).round()}%)',
+              label: sleepStageLabel(shares[index].stageType),
+              fraction: shares[index].fraction,
+              color: sleepStageColor(shares[index].stageType),
+              trailing: '${formatter.duration(shares[index].durationMs)} '
+                  '(${shares[index].percent}%)',
               trackColor: trackColor,
             ),
-            if (row != rows.last) const SizedBox(height: 12),
+            if (index < shares.length - 1) const SizedBox(height: 12),
           ],
         ],
       ),
@@ -439,61 +431,6 @@ class _OverviewTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// The total / average / longest / nights statistics, a trimmed port of the
-/// Kotlin `sleepStatistics` insight-stat grid.
-class SleepStatisticsCard extends StatelessWidget {
-  const SleepStatisticsCard({
-    super.key,
-    required this.durationPoints,
-    required this.formatter,
-  });
-
-  final List<SleepDurationPoint> durationPoints;
-  final UnitFormatter formatter;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final nights = durationPoints.where((p) => p.hours > 0.0).toList();
-    final totalHours = nights.fold<double>(0, (sum, p) => sum + p.hours);
-    final averageHours = nights.isEmpty ? 0.0 : totalHours / nights.length;
-    final longestHours =
-        nights.isEmpty ? 0.0 : nights.map((p) => p.hours).reduce((a, b) => a > b ? a : b);
-
-    String hours(double value) => formatter.duration((value * 3600000).round());
-
-    return SleepSectionCard(
-      title: 'Statistics',
-      child: Column(
-        children: [
-          for (final row in [
-            ('Total', hours(totalHours)),
-            ('Daily average', hours(averageHours)),
-            ('Longest sleep', hours(longestHours)),
-            ('Nights logged', '${nights.length}'),
-          ])
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(row.$1, style: theme.textTheme.bodyMedium),
-                  Text(
-                    row.$2,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
       ),
     );
   }

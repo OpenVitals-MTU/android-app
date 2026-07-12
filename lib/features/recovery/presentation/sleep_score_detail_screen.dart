@@ -8,12 +8,14 @@ import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/sleep_score.dart';
+import '../../../domain/model/sleep_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../application/recovery_detail_display.dart';
 import '../application/recovery_detail_view_model.dart';
 
 const String _aasmSleepDurationUrl =
@@ -67,8 +69,8 @@ class _SleepScoreDetailScreenState
       );
     }
 
-    final day = state.today;
-    final estimate = day.sleepScore;
+    final display = state.display;
+    if (display == null) return const FullScreenLoading();
 
     return RefreshIndicator(
       onRefresh: () => ref.read(recoveryDetailProvider.notifier).load(),
@@ -81,7 +83,7 @@ class _SleepScoreDetailScreenState
             children: [
               _cardPad(
                 _SleepScoreSummaryCard(
-                  day: day,
+                  display: display,
                   formatter: formatter,
                 ),
               ),
@@ -96,8 +98,7 @@ class _SleepScoreDetailScreenState
               SectionHeader(l10n.sleepScoreDayNumbersTitle),
               _cardPad(
                 _SleepScoreNumbersCard(
-                  day: day,
-                  estimate: estimate,
+                  display: display,
                   formatter: formatter,
                 ),
               ),
@@ -118,16 +119,16 @@ Widget _cardPad(Widget child) => Padding(
     );
 
 class _SleepScoreSummaryCard extends StatelessWidget {
-  const _SleepScoreSummaryCard({required this.day, required this.formatter});
+  const _SleepScoreSummaryCard({required this.display, required this.formatter});
 
-  final RecoveryDay day;
+  final RecoveryDetailDisplay display;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final estimate = day.sleepScore;
+    final estimate = display.estimate;
 
     return _DetailCard(
       children: [
@@ -140,7 +141,7 @@ class _SleepScoreSummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _localizedDayTitle(context, day.date),
+                    _localizedDayTitle(context, display.day.date),
                     style: theme.textTheme.labelLarge
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
@@ -228,19 +229,18 @@ class _SleepScoreExplanationCard extends StatelessWidget {
 
 class _SleepScoreNumbersCard extends StatelessWidget {
   const _SleepScoreNumbersCard({
-    required this.day,
-    required this.estimate,
+    required this.display,
     required this.formatter,
   });
 
-  final RecoveryDay day;
-  final SleepScoreEstimate estimate;
+  final RecoveryDetailDisplay display;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    final estimate = display.estimate;
 
     return _DetailCard(
       children: [
@@ -313,7 +313,8 @@ class _SleepScoreNumbersCard extends StatelessWidget {
             ),
             _DetailMetric(
               l10n.recoverySleepSchedule,
-              DisplayValue(_sleepScheduleText(context, day), ''),
+              DisplayValue(
+                  _sleepScheduleText(context, display.mainSleepSession), ''),
             ),
           ],
         ),
@@ -547,9 +548,9 @@ String _localizedDayTitle(BuildContext context, LocalDate date) {
   ).format(DateTime(date.year, date.month, date.day));
 }
 
-/// Kotlin `sleepScheduleText`: the main session's start - end short times.
-String _sleepScheduleText(BuildContext context, RecoveryDay day) {
-  final session = day.mainSleepSession;
+/// Kotlin `sleepScheduleText`: the main session's start - end short times. The
+/// session arrives picked out by the display; only the formatting is left.
+String _sleepScheduleText(BuildContext context, SleepData? session) {
   if (session == null) return AppLocalizations.of(context).noData;
   final time = DateFormat.jm(Localizations.localeOf(context).toString());
   return '${time.format(session.startTime.toLocal())} - '
