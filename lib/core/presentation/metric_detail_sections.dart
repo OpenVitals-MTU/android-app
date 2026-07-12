@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/period/time_range.dart';
-import '../../core/time/local_date.dart';
+import '../period/time_range.dart';
+import '../time/local_date.dart';
 import '../../di/providers.dart';
 import '../../domain/preferences/metric_detail_section_id.dart';
 import '../../ui/components/widget_edit_controls.dart';

@@ -5,7 +5,7 @@ import '../../../di/providers.dart';
 import '../../../domain/preferences/activity_split_distance.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
-import '../../activity/activity_split_distance_label.dart';
+import '../../activity/presentation/activity_split_distance_label.dart';
 import 'settings_controls.dart';
 
 /// Picks the distance the activity detail screen cuts splits at when the

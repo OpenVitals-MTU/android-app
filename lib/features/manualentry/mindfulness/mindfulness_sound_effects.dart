@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../di/providers.dart';
 import '../../../domain/model/mindfulness_models.dart';
-import '../mindfulness_entry_notifier.dart';
+import '../application/mindfulness_entry_notifier.dart';
 import 'mindfulness_sound_player.dart';
 
 /// Plays the sounds the notifier asks for. Port of the Kotlin

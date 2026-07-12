@@ -5,7 +5,7 @@ import '../../../core/presentation/screen_error.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../domain/model/heart_models.dart';
-import 'activity_entry_types.dart';
+import '../../../domain/model/activity_entry_types.dart';
 import 'routeimport/route_file_parser.dart';
 
 part 'activity_entry_state.freezed.dart';

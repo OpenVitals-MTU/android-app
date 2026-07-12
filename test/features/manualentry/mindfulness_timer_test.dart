@@ -6,7 +6,7 @@ import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/mindfulness_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/mindfulness_models.dart';
-import 'package:openvitals/features/manualentry/mindfulness_entry_notifier.dart';
+import 'package:openvitals/features/manualentry/application/mindfulness_entry_notifier.dart';
 
 class _FakeMindfulnessRepository implements MindfulnessRepository {
   final List<MindfulnessSessionWriteRequest> writes = [];

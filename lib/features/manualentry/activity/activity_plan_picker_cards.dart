@@ -5,7 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_card.dart';
 import 'activity_entry_notifier.dart';
 import 'activity_entry_state.dart';
-import 'activity_entry_types.dart';
+import '../../../domain/model/activity_entry_types.dart';
 import 'activity_entry_ui_text.dart';
 import 'activity_training_plan_section.dart';
 

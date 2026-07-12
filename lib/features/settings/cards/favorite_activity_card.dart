@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../manualentry/activity/activity_entry_types.dart';
+import '../../../domain/model/activity_entry_types.dart';
 import 'settings_controls.dart';
 
 /// Holds the favorite-activity exercise type (`null` = "use latest") and writes

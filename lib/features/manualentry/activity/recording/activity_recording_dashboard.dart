@@ -9,7 +9,7 @@ import '../../../../domain/preferences/activity_recording_dashboard_layout.dart'
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_surface.dart';
 import '../../../../ui/components/widget_edit_controls.dart';
-import '../activity_entry_types.dart';
+import '../../../../domain/model/activity_entry_types.dart';
 import 'activity_recording.dart';
 import 'activity_recording_sensor_ui.dart';
 

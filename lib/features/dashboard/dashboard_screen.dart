@@ -26,7 +26,7 @@ import '../../ui/components/permission_callout.dart';
 import '../../ui/components/summary_ring_card.dart';
 import '../../ui/components/widget_edit_controls.dart';
 import '../../ui/theme/app_colors.dart';
-import '../activity/exercise_labels.dart';
+import '../activity/presentation/exercise_labels.dart';
 import 'dashboard_notifier.dart';
 import 'dashboard_summary_presentation.dart';
 import '../../ui/components/accent_icon_chip.dart';

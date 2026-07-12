@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_surface.dart';
 import 'activity_entry_state.dart';
-import 'activity_entry_types.dart';
+import '../../../domain/model/activity_entry_types.dart';
 import 'activity_entry_ui_text.dart';
 
 /// Port of the Kotlin `ActivityRepetitionInputs.kt`.

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/domain/model/caffeine_models.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
-import 'package:openvitals/features/manualentry/hydration_catalog.dart';
+import 'package:openvitals/features/manualentry/presentation/hydration_catalog.dart';
 
 CustomHydrationDrink _drink(
   String id, {

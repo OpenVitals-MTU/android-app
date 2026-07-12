@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-import '../activity_entry_types.dart';
+import '../../../../domain/model/activity_entry_types.dart';
 
 /// Platform-channel bridge to the recording hardware `sensors_plus` does not
 /// expose: the proximity sensor (push-up counting), the Android step detector

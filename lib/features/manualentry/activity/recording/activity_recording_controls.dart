@@ -4,7 +4,7 @@ import '../../../../core/presentation/display_value.dart';
 import '../../../../core/presentation/unit_formatter.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_surface.dart';
-import '../activity_entry_types.dart';
+import '../../../../domain/model/activity_entry_types.dart';
 import 'activity_recording.dart';
 import 'activity_recording_dashboard.dart';
 import 'activity_recording_sensor_ui.dart';

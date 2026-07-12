@@ -1,7 +1,7 @@
 import '../../../../core/presentation/unit_formatter.dart';
 import '../../../../domain/preferences/activity_recording_preferences.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../activity_entry_types.dart';
+import '../../../../domain/model/activity_entry_types.dart';
 import 'activity_recording.dart';
 import 'activity_recording_dashboard.dart' show formatRecordingElapsed;
 

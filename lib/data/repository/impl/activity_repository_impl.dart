@@ -1,7 +1,7 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
-import '../../../data/prefs/preferences_repository.dart';
+import '../../prefs/preferences_repository.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/exercise_session_metrics.dart';
 import '../../../domain/model/nutrition_models.dart';

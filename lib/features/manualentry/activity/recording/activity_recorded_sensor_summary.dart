@@ -5,7 +5,7 @@ import '../../../../domain/model/ble_sensor_models.dart';
 import '../../../../domain/model/heart_models.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_surface.dart';
-import '../../../activity/activity_heart_rate_chart_card.dart';
+import '../../../activity/presentation/activity_heart_rate_chart_card.dart';
 import '../../../../core/stats/stats.dart';
 
 /// Port of the Kotlin `ActivityRecordedSensorSummary` (in

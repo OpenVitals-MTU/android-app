@@ -7,7 +7,7 @@ import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_form.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_state.dart';
-import 'package:openvitals/features/manualentry/activity/activity_entry_types.dart';
+import 'package:openvitals/domain/model/activity_entry_types.dart';
 import 'package:openvitals/features/manualentry/activity/routeimport/activity_route_section.dart';
 import 'package:openvitals/features/manualentry/activity/routeimport/route_file_parser.dart';
 import 'package:openvitals/l10n/app_localizations.dart';

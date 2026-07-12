@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/features/activity/activity_metric_relevance.dart';
-import 'package:openvitals/features/manualentry/activity/activity_entry_types.dart';
+import 'package:openvitals/features/activity/presentation/activity_metric_relevance.dart';
+import 'package:openvitals/domain/model/activity_entry_types.dart';
 
 /// The relevance table behind the activity detail screen's metric rows.
 ///

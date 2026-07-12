@@ -3,7 +3,7 @@ import '../../../domain/model/activity_models.dart';
 import '../../../domain/preferences/unit_system.dart';
 import 'activity_entry_clock.dart';
 import 'activity_entry_state.dart';
-import 'activity_entry_types.dart';
+import '../../../domain/model/activity_entry_types.dart';
 import 'activity_entry_write_request_builder.dart';
 import 'routeimport/route_file_parser.dart';
 

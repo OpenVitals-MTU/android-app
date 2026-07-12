@@ -15,12 +15,12 @@ import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import '../../../../domain/preferences/activity_recording_dashboard_layout.dart';
 import '../../../../domain/preferences/activity_recording_preferences.dart';
-import '../../../../features/imports/applehealth/apple_health_import_foreground_controller.dart'
+import '../../../imports/applehealth/apple_health_import_foreground_controller.dart'
     show appleHealthImportOwnsForegroundService;
 import '../../../../l10n/app_localizations.dart';
 import '../../../../navigation/app_routes.dart';
 import '../../../../data/source/sensors/ble/ble_sensor_coordinator.dart';
-import '../activity_entry_types.dart';
+import '../../../../domain/model/activity_entry_types.dart';
 import '../repetition_recognizers.dart';
 import 'activity_recording.dart';
 import 'activity_recording_announcements.dart';

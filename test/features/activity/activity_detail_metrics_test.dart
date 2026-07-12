@@ -10,9 +10,9 @@ import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/exercise_session_metrics.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
-import 'package:openvitals/features/activity/activity_detail_screen.dart';
-import 'package:openvitals/features/activity/activity_session_metric_chart_cards.dart';
-import 'package:openvitals/features/manualentry/activity/activity_entry_types.dart';
+import 'package:openvitals/features/activity/presentation/activity_detail_screen.dart';
+import 'package:openvitals/features/activity/presentation/activity_session_metric_chart_cards.dart';
+import 'package:openvitals/domain/model/activity_entry_types.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// The activity detail screen's metric rows and session charts.

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../di/providers.dart';
 import '../../domain/preferences/unit_system.dart';
 import '../../domain/usecase/write_imported_activity_use_case.dart';
-import '../activity/activities_notifier.dart';
+import '../activity/application/activities_notifier.dart';
 import '../dashboard/dashboard_notifier.dart';
 import '../manualentry/activity/activity_entry_clock.dart';
 import '../manualentry/activity/activity_entry_notifier.dart';

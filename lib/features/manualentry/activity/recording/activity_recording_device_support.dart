@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../../domain/preferences/activity_recording_preferences.dart';
-import '../activity_entry_types.dart';
+import '../../../../domain/model/activity_entry_types.dart';
 import 'activity_recording.dart';
 import 'activity_recording_native_sensors.dart';
 

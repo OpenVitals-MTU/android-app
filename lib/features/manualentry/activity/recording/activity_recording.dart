@@ -7,7 +7,7 @@ import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import '../../../../domain/preferences/activity_recording_dashboard_layout.dart';
 import '../../../../domain/preferences/activity_recording_preferences.dart';
-import '../activity_entry_types.dart';
+import '../../../../domain/model/activity_entry_types.dart';
 import 'activity_recording_splits.dart';
 
 part 'activity_recording.freezed.dart';

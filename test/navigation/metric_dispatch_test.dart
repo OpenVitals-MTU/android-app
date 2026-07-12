@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvitals/features/activity/activities_screen.dart';
-import 'package:openvitals/features/activity/activity_metric_screen.dart';
-import 'package:openvitals/features/activity/calories_screen.dart';
-import 'package:openvitals/features/activity/cardio_load_detail_screen.dart';
+import 'package:openvitals/features/activity/presentation/activities_screen.dart';
+import 'package:openvitals/features/activity/presentation/activity_metric_screen.dart';
+import 'package:openvitals/features/activity/presentation/calories_screen.dart';
+import 'package:openvitals/features/activity/presentation/cardio_load_detail_screen.dart';
 import 'package:openvitals/features/body/body_screen.dart';
 import 'package:openvitals/features/caffeine/caffeine_screen.dart';
 import 'package:openvitals/features/cycle/cycle_screen.dart';

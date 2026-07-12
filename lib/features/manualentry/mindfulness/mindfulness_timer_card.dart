@@ -5,7 +5,7 @@ import '../../../domain/model/mindfulness_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../mindfulness_entry_notifier.dart';
+import '../application/mindfulness_entry_notifier.dart';
 
 /// The guided meditation timer. Port of the Kotlin `MindfulnessTimerCard`.
 ///

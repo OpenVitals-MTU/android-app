@@ -6,7 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/health_date_picker.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'activity_entry_state.dart';
-import 'activity_entry_types.dart';
+import '../../../domain/model/activity_entry_types.dart';
 import 'activity_entry_ui_text.dart';
 
 /// Port of the Kotlin `ActivityEntryFormFields.kt`.

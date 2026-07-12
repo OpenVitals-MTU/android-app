@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
-import '../../../data/prefs/preferences_repository.dart';
+import '../../prefs/preferences_repository.dart';
 import '../../../domain/dashboard/dashboard_aggregator.dart';
 import '../../../domain/insights/cardio_load.dart';
 import '../../../domain/insights/intensity_minutes.dart';

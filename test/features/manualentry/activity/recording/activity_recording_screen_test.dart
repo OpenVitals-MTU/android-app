@@ -8,7 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_state.dart';
-import 'package:openvitals/features/manualentry/activity/activity_entry_types.dart';
+import 'package:openvitals/domain/model/activity_entry_types.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recording.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recording_device_support.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recording_focus_mode.dart';

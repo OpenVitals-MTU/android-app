@@ -7,7 +7,7 @@ import '../../domain/model/caffeine_models.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../domain/preferences/unit_system.dart';
 import '../../l10n/app_localizations.dart';
-import '../manualentry/hydration_entry_notifier.dart';
+import '../manualentry/application/hydration_entry_notifier.dart';
 import 'home_widget_service.dart';
 
 /// The quick-beverage home widgets: drink ordering, labels, and the cached drink

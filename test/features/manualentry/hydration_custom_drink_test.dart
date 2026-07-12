@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/domain/model/caffeine_models.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
-import 'package:openvitals/features/manualentry/hydration_entry_notifier.dart';
+import 'package:openvitals/features/manualentry/application/hydration_entry_notifier.dart';
 
 void main() {
   group('customHydrationDrinkFromInput', () {

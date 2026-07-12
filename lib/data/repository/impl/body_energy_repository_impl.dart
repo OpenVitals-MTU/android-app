@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import '../../../core/time/local_date.dart';
-import '../../../data/prefs/preferences_repository.dart';
-import '../../../data/repository/body_energy_timeline_cache_store.dart';
+import '../../prefs/preferences_repository.dart';
+import '../body_energy_timeline_cache_store.dart';
 import '../../../domain/dashboard/dashboard_aggregator.dart';
 import '../../../domain/insights/body_energy_timeline.dart';
 import '../../../domain/model/health_connect_availability.dart';

@@ -9,8 +9,8 @@ import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
-import 'package:openvitals/features/activity/activity_detail_screen.dart';
-import 'package:openvitals/features/activity/activity_splits_card.dart';
+import 'package:openvitals/features/activity/presentation/activity_detail_screen.dart';
+import 'package:openvitals/features/activity/presentation/activity_splits_card.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// The splits card on the activity detail screen. The point of these tests is

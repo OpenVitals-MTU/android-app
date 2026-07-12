@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../l10n/app_localizations.dart';
-import '../manual_entry_form_scaffold.dart';
+import '../presentation/manual_entry_form_scaffold.dart';
 import 'activity_entry_state.dart';
 
 /// Port of the Kotlin `ActivityEntryUiText.kt`: the localized text for

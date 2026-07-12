@@ -8,7 +8,7 @@ import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/mindfulness_models.dart';
 import 'package:openvitals/features/manualentry/mindfulness/mindfulness_sound_player.dart';
-import 'package:openvitals/features/manualentry/mindfulness_entry_screen.dart';
+import 'package:openvitals/features/manualentry/presentation/mindfulness_entry_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 

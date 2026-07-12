@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
-import 'package:openvitals/features/activity/activity_heart_rate_chart_card.dart';
+import 'package:openvitals/features/activity/presentation/activity_heart_rate_chart_card.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recorded_sensor_summary.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/charts/metric_line_plot.dart';

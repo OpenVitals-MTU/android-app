@@ -10,7 +10,7 @@ import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_clock.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_notifier.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_state.dart';
-import 'package:openvitals/features/manualentry/activity/activity_entry_types.dart';
+import 'package:openvitals/domain/model/activity_entry_types.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_write_request_builder.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recording.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recording_draft_store.dart';
