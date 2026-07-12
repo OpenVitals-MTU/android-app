@@ -12,6 +12,13 @@ import 'package:openvitals/features/heart/presentation/heart_metric_cards.dart';
 /// are derived once, by a pure function — which is a function you can call from
 /// a unit test with a fixture, without a widget tree, a clock or a repository.
 
+RestingHeartRateSample _restingSample(int hour, int bpm) =>
+    RestingHeartRateSample(
+      time: DateTime.utc(2026, 3, 2, hour),
+      beatsPerMinute: bpm,
+      source: 'Test',
+    );
+
 HeartRateSample _sample(int hour, int bpm) => HeartRateSample(
       time: DateTime.utc(2026, 3, 2, hour),
       beatsPerMinute: bpm,
@@ -243,5 +250,37 @@ void main() {
     // The checks still exist — with nothing to check.
     expect(display.highHeartRateCheck.hasData, isFalse);
     expect(display.highHeartRateCheck.count, 0);
+  });
+
+  group('a day average never sits outside its own range', () {
+    // The average used to come from the provider's day aggregate while the low
+    // and the high came from the samples we had read — two different
+    // populations, printed side by side as if they were one. So the card could
+    // say "avg 70, low 50, high 60".
+    test('resting heart rate averages the samples it also ranges', () {
+      final display = _display(HeartPeriodLoadResult(
+        dayRestingSamples: [
+          _restingSample(8, 50),
+          _restingSample(9, 60),
+        ],
+        // The provider disagrees with its own samples. It loses.
+        dayRestingBpm: 70,
+      ));
+
+      final day = display.restingHeartRateDay!;
+      expect(day.stats.average, 55);
+      expect(day.stats.low, 50);
+      expect(day.stats.high, 60);
+      expect(day.stats.average, inInclusiveRange(day.stats.low, day.stats.high));
+    });
+
+    test('with no samples the provider aggregate is all there is', () {
+      final display = _display(const HeartPeriodLoadResult(dayRestingBpm: 70));
+
+      final day = display.restingHeartRateDay!;
+      expect(day.stats.average, 70);
+      expect(day.stats.low, 70);
+      expect(day.stats.high, 70);
+    });
   });
 }

@@ -349,8 +349,14 @@ RestingHeartRateDayDisplay? _restingHeartRateDay(HeartPeriodLoadResult result) {
   final samples = [...result.dayRestingSamples]
     ..sort((a, b) => a.time.compareTo(b.time));
   if (samples.isEmpty && result.dayRestingBpm == null) return null;
-  final restingBpm = result.dayRestingBpm ??
-      averageOrZero(samples.map((s) => s.beatsPerMinute.toDouble())).round();
+  // The average comes from the SAME samples as the low and the high. It used to
+  // come from the provider's own day aggregate while the range came from the
+  // samples we read — two different populations printed as one row, so the
+  // average could sit outside the range it was printed next to. The aggregate
+  // is still what we show when there are no samples to average.
+  final restingBpm = samples.isEmpty
+      ? result.dayRestingBpm!
+      : averageOrZero(samples.map((s) => s.beatsPerMinute.toDouble())).round();
   final low = samples.isEmpty
       ? restingBpm
       : samples.map((s) => s.beatsPerMinute).reduce((a, b) => a < b ? a : b);
@@ -424,8 +430,10 @@ HrvDayDisplay? _hrvDay(HeartPeriodLoadResult result) {
   final samples = [...result.dayHrvSamples]
     ..sort((a, b) => a.time.compareTo(b.time));
   if (samples.isEmpty && result.dayHrvMs == null) return null;
-  final hrvMs =
-      result.dayHrvMs ?? averageOrZero(samples.map((s) => s.rmssdMs));
+  // Same population for the average as for the range — see _restingHeartRateDay.
+  final hrvMs = samples.isEmpty
+      ? result.dayHrvMs!
+      : averageOrZero(samples.map((s) => s.rmssdMs));
   final ms = samples.map((s) => s.rmssdMs).toList();
   final low = samples.isEmpty ? hrvMs : minOf(ms)!;
   final high = samples.isEmpty ? hrvMs : maxOf(ms)!;
