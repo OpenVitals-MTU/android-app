@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
+import 'package:openvitals/domain/model/recording_method.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
 import 'package:openvitals/domain/preferences/sleep_range_mode.dart';
 import 'package:openvitals/domain/usecase/load_sleep_period_use_case.dart';
@@ -13,7 +14,12 @@ import 'package:openvitals/features/sleep/application/sleep_display.dart';
 /// it can be tested with no widget at all.
 
 /// One night, ending at 07:00 on [date] and running [hours] backwards from it.
-SleepData _night(LocalDate date, {double hours = 8, String? id}) {
+SleepData _night(
+  LocalDate date, {
+  double hours = 8,
+  String? id,
+  int? recordingMethod,
+}) {
   final end = DateTime(date.year, date.month, date.day, 7);
   final durationMs = (hours * 3600000).round();
   final start = end.subtract(Duration(milliseconds: durationMs));
@@ -23,6 +29,7 @@ SleepData _night(LocalDate date, {double hours = 8, String? id}) {
     endTime: end,
     durationMs: durationMs,
     source: 'test',
+    recordingMethod: recordingMethod,
     stages: [
       SleepStage(
         startTime: start,
@@ -194,5 +201,38 @@ void main() {
       ),
     );
     expect(wholeWeek.hrvInsight, isNotNull);
+  });
+
+  group('manual-entry confidence', () {
+    // Health Connect's RECORDING_METHOD_MANUAL_ENTRY is 3. This file used to
+    // compare against 1, which is ACTIVELY_RECORDED — so a night your watch
+    // recorded was reported to you as one you had typed in by hand, and a night
+    // you really did type in was never counted at all.
+    test('an actively-recorded night is not a manual entry', () {
+      final display = _display(
+        selectedDate: wednesday,
+        result: SleepPeriodLoadResult(
+          sessions: [
+            _night(wednesday,
+                recordingMethod: RecordingMethod.activelyRecorded),
+          ],
+        ),
+      );
+
+      expect(display.dataConfidence.manualEntryCount, 0);
+    });
+
+    test('a hand-typed night is', () {
+      final display = _display(
+        selectedDate: wednesday,
+        result: SleepPeriodLoadResult(
+          sessions: [
+            _night(wednesday, recordingMethod: RecordingMethod.manualEntry),
+          ],
+        ),
+      );
+
+      expect(display.dataConfidence.manualEntryCount, 1);
+    });
   });
 }

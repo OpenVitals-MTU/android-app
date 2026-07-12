@@ -17,13 +17,11 @@ import '../../../domain/insights/sleep_score.dart';
 import '../../../domain/model/sleep_daily_summary.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
+import '../../../domain/model/recording_method.dart';
 import '../../../domain/usecase/load_sleep_period_use_case.dart';
 import '../../../ui/charts/bar_chart.dart';
 
 part 'sleep_display.freezed.dart';
-
-/// Health Connect's `Metadata.RECORDING_METHOD_MANUAL_ENTRY`.
-const int kRecordingMethodManualEntry = 1;
 
 /// One night's sleep duration (hours) for the period chart. Port of the Kotlin
 /// `SleepDurationPoint`.
@@ -327,7 +325,7 @@ SleepDisplay buildSleepDisplay({
       valueKind: DataValueKind.measured,
       manualEntryCount: confidenceSessions
           .where((session) =>
-              session.recordingMethod == kRecordingMethodManualEntry)
+              session.recordingMethod == RecordingMethod.manualEntry)
           .length,
     ),
     sortedSessionsByDate: {

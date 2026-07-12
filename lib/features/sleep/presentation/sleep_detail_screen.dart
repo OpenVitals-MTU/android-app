@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../domain/model/recording_method.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/sleep_models.dart';
@@ -436,21 +437,15 @@ String? _zoneOffsetId(Duration? offset) {
   return '$sign$hours:$minutes';
 }
 
-// Health Connect `Metadata.RECORDING_METHOD_*` constants.
-const int _recordingMethodUnknown = 0;
-const int _recordingMethodActivelyRecorded = 1;
-const int _recordingMethodAutomaticallyRecorded = 2;
-const int _recordingMethodManualEntry = 3;
-
 String _recordingMethodLabel(AppLocalizations l10n, int? method) {
   switch (method) {
-    case _recordingMethodActivelyRecorded:
+    case RecordingMethod.activelyRecorded:
       return l10n.recordingActivelyRecorded;
-    case _recordingMethodAutomaticallyRecorded:
+    case RecordingMethod.automaticallyRecorded:
       return l10n.recordingAutomaticallyRecorded;
-    case _recordingMethodManualEntry:
+    case RecordingMethod.manualEntry:
       return l10n.recordingManualEntry;
-    case _recordingMethodUnknown:
+    case RecordingMethod.unknown:
       return l10n.recordingUnknown;
     default:
       return l10n.notAvailable;

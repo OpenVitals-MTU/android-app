@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../domain/model/recording_method.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/cardio_load.dart';
@@ -21,9 +22,6 @@ part 'activities_display.freezed.dart';
 
 /// The workout daily-goal key (Kotlin `MetricDailyGoalKey.WORKOUT_MINUTES`).
 const MetricDailyGoalKey activitiesGoalKey = MetricDailyGoalKey.workoutMinutes;
-
-/// Health Connect `Metadata.RECORDING_METHOD_MANUAL_ENTRY`.
-const int _recordingMethodManualEntry = 3;
 
 /// The period totals behind the five key-metric cards (Kotlin
 /// `ActivityOverviewTotals`).
@@ -243,7 +241,7 @@ ActivitiesDisplay buildActivitiesDisplay({
       workouts.length,
       sources: [for (final w in workouts) w.source],
       manualEntryCount: workouts
-          .where((w) => w.recordingMethod == _recordingMethodManualEntry)
+          .where((w) => w.recordingMethod == RecordingMethod.manualEntry)
           .length,
     ),
     workoutsByDay: workoutsByDay,
