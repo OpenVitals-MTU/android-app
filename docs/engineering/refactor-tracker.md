@@ -15,11 +15,11 @@ Legend: `—` not started · `~` in progress · `x` done · `n/a` not applicable
 | 0 | Foundations (Result, AppFailure, runCatching, CommandState, toScreenError) | x |
 | 1 | Rename Notifier→ViewModel + application/presentation layout everywhere | x |
 | 2 | Result through repositories + use-cases | x |
-| 3 | VMs on Result + CommandState; seam reversal templates (mindfulness, sleep, manual-entry) | ~ |
-| 4 | Seam reversal heavy features + freezed state conversions | — |
+| 3 | VMs on Result + CommandState; seam reversal templates (mindfulness, sleep, manual-entry) | x |
+| 4 | Seam reversal heavy features + freezed state conversions | ~ |
 | 5 | Vitals god-file split | — |
 | 6 | Layer hygiene (permissions→domain, BLE contract, widget→repo cleanup, background DI helper) | — |
-| 7 | DI split with barrel export | — |
+| 7 | DI split with barrel export | x |
 | 8 | Offline map import VM | — |
 | 9 | ActivityEntry VM | — |
 | 10 | Recording service/VM split | — |
@@ -40,17 +40,17 @@ freezed (Ph 4–5) · **VM test** = dedicated view-model unit test.
 | nutrition | x | x | — | — | x | — |
 | caffeine | x | x | — | — | x | — |
 | hydration | x | x | — | — | x | — |
-| sleep (incl. detail) | x | x | — | — | detail: — | — |
-| heart | x | x | — | — | x | — |
+| sleep (incl. detail) | x | x | x | x | x | x |
+| heart | x | x | x | x | x | x |
 | body | x | x | — | — | x | — |
 | bodyenergy | x | x | — | — | x | — |
 | vitals (Ph 5) | x | x | — | — | — | — |
 | activity (metrics + sections) | x | x | — | — | x | — |
-| manualentry (forms) | x | x | — | — | x | partial |
+| manualentry (forms) | x | x | x | n/a | x | x |
 | manualentry/activity entry (Ph 9) | x | x | — | — | — | — |
 | recording (Ph 10) | x | x | — | — | — | — |
 | dashboard | x | x | — | — | x | — |
-| recovery (incl. details) | x | x | — | — | detail: — | — |
+| recovery (incl. details) | x | x | detail: x | detail: x | x | x |
 | readiness (incl. training details) | x | x | — | — | x | — |
 | achievements | x | x | — | — | — | — |
 | onboarding | x | x | — | — | x | — |
