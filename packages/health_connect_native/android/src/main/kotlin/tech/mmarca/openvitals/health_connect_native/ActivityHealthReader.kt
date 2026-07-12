@@ -775,6 +775,14 @@ internal class ActivityHealthReader(
     device = metadata.device?.let {
       ExerciseDeviceDataMsg(type = it.type.toLong(), manufacturer = it.manufacturer, model = it.model)
     },
+    // The record's provenance. Zone offsets are the WRITER's, passed through as
+    // seconds rather than derived here — an activity recorded in another timezone
+    // is why Health Connect keeps them.
+    startZoneOffsetSeconds = startZoneOffset?.totalSeconds?.toLong(),
+    endZoneOffsetSeconds = endZoneOffset?.totalSeconds?.toLong(),
+    lastModifiedEpochMs = metadata.lastModifiedTime.toEpochMilli(),
+    clientRecordVersion = metadata.clientRecordVersion,
+    recordingMethod = metadata.recordingMethod.toLong(),
     segments = segments.map { s ->
       ExerciseSegmentMsg(
         startEpochMs = s.startTime.toEpochMilli(),

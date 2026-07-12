@@ -2655,7 +2655,12 @@ data class ExerciseDataMsg (
    * session was read through `readExerciseSessionsWithMetrics` with the
    * read-speed permission granted (or the provider recorded no speed samples).
    */
-  val averageSpeedMetersPerSecond: Double? = null
+  val averageSpeedMetersPerSecond: Double? = null,
+  val startZoneOffsetSeconds: Long? = null,
+  val endZoneOffsetSeconds: Long? = null,
+  val lastModifiedEpochMs: Long? = null,
+  val clientRecordVersion: Long? = null,
+  val recordingMethod: Long? = null
 )
  {
   companion object {
@@ -2676,7 +2681,12 @@ data class ExerciseDataMsg (
       val isOpenVitalsEntry = pigeonVar_list[13] as Boolean
       val totalDistanceMeters = pigeonVar_list[14] as Double?
       val averageSpeedMetersPerSecond = pigeonVar_list[15] as Double?
-      return ExerciseDataMsg(id, title, exerciseType, startEpochMs, endEpochMs, source, notes, clientRecordId, plannedExerciseSessionId, device, segments, laps, route, isOpenVitalsEntry, totalDistanceMeters, averageSpeedMetersPerSecond)
+      val startZoneOffsetSeconds = pigeonVar_list[16] as Long?
+      val endZoneOffsetSeconds = pigeonVar_list[17] as Long?
+      val lastModifiedEpochMs = pigeonVar_list[18] as Long?
+      val clientRecordVersion = pigeonVar_list[19] as Long?
+      val recordingMethod = pigeonVar_list[20] as Long?
+      return ExerciseDataMsg(id, title, exerciseType, startEpochMs, endEpochMs, source, notes, clientRecordId, plannedExerciseSessionId, device, segments, laps, route, isOpenVitalsEntry, totalDistanceMeters, averageSpeedMetersPerSecond, startZoneOffsetSeconds, endZoneOffsetSeconds, lastModifiedEpochMs, clientRecordVersion, recordingMethod)
     }
   }
   fun toList(): List<Any?> {
@@ -2697,6 +2707,11 @@ data class ExerciseDataMsg (
       isOpenVitalsEntry,
       totalDistanceMeters,
       averageSpeedMetersPerSecond,
+      startZoneOffsetSeconds,
+      endZoneOffsetSeconds,
+      lastModifiedEpochMs,
+      clientRecordVersion,
+      recordingMethod,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -2707,7 +2722,7 @@ data class ExerciseDataMsg (
       return true
     }
     val other = other as ExerciseDataMsg
-    return MessagesPigeonUtils.deepEquals(this.id, other.id) && MessagesPigeonUtils.deepEquals(this.title, other.title) && MessagesPigeonUtils.deepEquals(this.exerciseType, other.exerciseType) && MessagesPigeonUtils.deepEquals(this.startEpochMs, other.startEpochMs) && MessagesPigeonUtils.deepEquals(this.endEpochMs, other.endEpochMs) && MessagesPigeonUtils.deepEquals(this.source, other.source) && MessagesPigeonUtils.deepEquals(this.notes, other.notes) && MessagesPigeonUtils.deepEquals(this.clientRecordId, other.clientRecordId) && MessagesPigeonUtils.deepEquals(this.plannedExerciseSessionId, other.plannedExerciseSessionId) && MessagesPigeonUtils.deepEquals(this.device, other.device) && MessagesPigeonUtils.deepEquals(this.segments, other.segments) && MessagesPigeonUtils.deepEquals(this.laps, other.laps) && MessagesPigeonUtils.deepEquals(this.route, other.route) && MessagesPigeonUtils.deepEquals(this.isOpenVitalsEntry, other.isOpenVitalsEntry) && MessagesPigeonUtils.deepEquals(this.totalDistanceMeters, other.totalDistanceMeters) && MessagesPigeonUtils.deepEquals(this.averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond)
+    return MessagesPigeonUtils.deepEquals(this.id, other.id) && MessagesPigeonUtils.deepEquals(this.title, other.title) && MessagesPigeonUtils.deepEquals(this.exerciseType, other.exerciseType) && MessagesPigeonUtils.deepEquals(this.startEpochMs, other.startEpochMs) && MessagesPigeonUtils.deepEquals(this.endEpochMs, other.endEpochMs) && MessagesPigeonUtils.deepEquals(this.source, other.source) && MessagesPigeonUtils.deepEquals(this.notes, other.notes) && MessagesPigeonUtils.deepEquals(this.clientRecordId, other.clientRecordId) && MessagesPigeonUtils.deepEquals(this.plannedExerciseSessionId, other.plannedExerciseSessionId) && MessagesPigeonUtils.deepEquals(this.device, other.device) && MessagesPigeonUtils.deepEquals(this.segments, other.segments) && MessagesPigeonUtils.deepEquals(this.laps, other.laps) && MessagesPigeonUtils.deepEquals(this.route, other.route) && MessagesPigeonUtils.deepEquals(this.isOpenVitalsEntry, other.isOpenVitalsEntry) && MessagesPigeonUtils.deepEquals(this.totalDistanceMeters, other.totalDistanceMeters) && MessagesPigeonUtils.deepEquals(this.averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond) && MessagesPigeonUtils.deepEquals(this.startZoneOffsetSeconds, other.startZoneOffsetSeconds) && MessagesPigeonUtils.deepEquals(this.endZoneOffsetSeconds, other.endZoneOffsetSeconds) && MessagesPigeonUtils.deepEquals(this.lastModifiedEpochMs, other.lastModifiedEpochMs) && MessagesPigeonUtils.deepEquals(this.clientRecordVersion, other.clientRecordVersion) && MessagesPigeonUtils.deepEquals(this.recordingMethod, other.recordingMethod)
   }
 
   override fun hashCode(): Int {
@@ -2728,10 +2743,15 @@ data class ExerciseDataMsg (
     result = 31 * result + MessagesPigeonUtils.deepHash(this.isOpenVitalsEntry)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.totalDistanceMeters)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.averageSpeedMetersPerSecond)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.startZoneOffsetSeconds)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.endZoneOffsetSeconds)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.lastModifiedEpochMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.clientRecordVersion)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.recordingMethod)
     return result
   }
   override fun toString(): String {
-    return "ExerciseDataMsg(id=$id, title=$title, exerciseType=$exerciseType, startEpochMs=$startEpochMs, endEpochMs=$endEpochMs, source=$source, notes=$notes, clientRecordId=$clientRecordId, plannedExerciseSessionId=$plannedExerciseSessionId, device=$device, segments=$segments, laps=$laps, route=$route, isOpenVitalsEntry=$isOpenVitalsEntry, totalDistanceMeters=$totalDistanceMeters, averageSpeedMetersPerSecond=$averageSpeedMetersPerSecond)"
+    return "ExerciseDataMsg(id=$id, title=$title, exerciseType=$exerciseType, startEpochMs=$startEpochMs, endEpochMs=$endEpochMs, source=$source, notes=$notes, clientRecordId=$clientRecordId, plannedExerciseSessionId=$plannedExerciseSessionId, device=$device, segments=$segments, laps=$laps, route=$route, isOpenVitalsEntry=$isOpenVitalsEntry, totalDistanceMeters=$totalDistanceMeters, averageSpeedMetersPerSecond=$averageSpeedMetersPerSecond, startZoneOffsetSeconds=$startZoneOffsetSeconds, endZoneOffsetSeconds=$endZoneOffsetSeconds, lastModifiedEpochMs=$lastModifiedEpochMs, clientRecordVersion=$clientRecordVersion, recordingMethod=$recordingMethod)"
   }
 }
 

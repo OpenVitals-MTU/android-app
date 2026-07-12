@@ -10,6 +10,7 @@ ExerciseData _exercise({
   double? distanceMeters,
   int? heartRateBpm,
   int routePoints = 0,
+  DateTime? lastModifiedTime,
 }) {
   final startTime = DateTime.parse(start);
   final endTime = DateTime.parse(end);
@@ -23,6 +24,7 @@ ExerciseData _exercise({
     source: source,
     totalDistanceMeters: distanceMeters,
     averageHeartRateBpm: heartRateBpm,
+    lastModifiedTime: lastModifiedTime,
     route: ExerciseRouteData(
       status: routePoints > 0
           ? ExerciseRouteStatus.data
@@ -43,6 +45,8 @@ ExerciseData _exercise({
 }
 
 void main() {
+  _lastModifiedTieBreakTests();
+
   test('deduplicateExerciseSessions keeps richer overlapping same type session',
       () {
     final phone = _exercise(
@@ -84,5 +88,43 @@ void main() {
     final result = deduplicateExerciseSessions([morning, evening]);
 
     expect(result.map((session) => session.id).toList(), ['evening', 'morning']);
+  });
+}
+
+/// The last tie-break between two duplicates that are equally rich and equally
+/// long: keep whichever was edited most recently.
+///
+/// It never fired. `lastModifiedTime` was declared on the model, read here, and
+/// populated NOWHERE — the Pigeon message the record crosses on did not carry
+/// it, so every session's was null, both sides of the comparison collapsed to
+/// the epoch, and the tie resolved to whatever happened to come first in the
+/// list.
+void _lastModifiedTieBreakTests() {
+  test('the most recently edited of two identical duplicates wins', () {
+    final older = _exercise(
+      id: 'older',
+      source: 'com.watch',
+      start: '2026-07-12T09:00:00Z',
+      end: '2026-07-12T09:30:00Z',
+      lastModifiedTime: DateTime.utc(2026, 7, 12, 10),
+    );
+    final newer = _exercise(
+      id: 'newer',
+      source: 'com.watch',
+      start: '2026-07-12T09:00:00Z',
+      end: '2026-07-12T09:30:00Z',
+      lastModifiedTime: DateTime.utc(2026, 7, 12, 11),
+    );
+
+    // Same richness, same duration -- only lastModifiedTime can separate them,
+    // and it must, whichever order they arrive in.
+    expect(
+      deduplicateExerciseSessions([older, newer]).single.id,
+      'newer',
+    );
+    expect(
+      deduplicateExerciseSessions([newer, older]).single.id,
+      'newer',
+    );
   });
 }

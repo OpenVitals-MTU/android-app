@@ -297,6 +297,11 @@ ExerciseDataMsg _exerciseMsg({
   double? totalDistanceMeters,
   double? averageSpeedMetersPerSecond,
   List<ExerciseRoutePointMsg> routePoints = const [],
+  int? startZoneOffsetSeconds,
+  int? endZoneOffsetSeconds,
+  int? lastModifiedEpochMs,
+  int? clientRecordVersion,
+  int? recordingMethod,
 }) =>
     ExerciseDataMsg(
       id: 'ex-1',
@@ -320,6 +325,11 @@ ExerciseDataMsg _exerciseMsg({
       isOpenVitalsEntry: true,
       totalDistanceMeters: totalDistanceMeters,
       averageSpeedMetersPerSecond: averageSpeedMetersPerSecond,
+      startZoneOffsetSeconds: startZoneOffsetSeconds,
+      endZoneOffsetSeconds: endZoneOffsetSeconds,
+      lastModifiedEpochMs: lastModifiedEpochMs,
+      clientRecordVersion: clientRecordVersion,
+      recordingMethod: recordingMethod,
     );
 
 void main() {
@@ -772,6 +782,38 @@ void main() {
       expect(session.stages, hasLength(2));
       expect(session.stages.first.stageType, 4);
       expect(session.stages.last.stageType, 5);
+    });
+
+    test('an Exercise session carries the record provenance across the bridge',
+        () async {
+      // Not cosmetic, unlike the sleep rows. `recordingMethod` is how the
+      // activities screen counts manually-entered workouts, and
+      // `lastModifiedTime` is the final tie-break deciding WHICH of two duplicate
+      // sessions survives deduplication. Both were null for every session ever
+      // read, because ExerciseDataMsg did not carry them — so the manual count
+      // was always zero and the tie-break always a draw.
+      final api = FakeHostApi()
+        ..exerciseSessions = [
+          _exerciseMsg(
+            startZoneOffsetSeconds: -5 * 3600, // the writer's zone, not ours
+            endZoneOffsetSeconds: -5 * 3600,
+            lastModifiedEpochMs: _ms(2026, 1, 2, 10),
+            clientRecordVersion: 7,
+            recordingMethod: 3, // MANUAL_ENTRY
+          ),
+        ];
+
+      final sessions = await _source(api).readExerciseSessions(
+        DateTime.utc(2026, 1, 2),
+        DateTime.utc(2026, 1, 3),
+      );
+
+      final session = sessions.single;
+      expect(session.startZoneOffset, const Duration(hours: -5));
+      expect(session.endZoneOffset, const Duration(hours: -5));
+      expect(session.lastModifiedTime, isNotNull);
+      expect(session.clientRecordVersion, 7);
+      expect(session.recordingMethod, 3);
     });
 
     test('a Sleep session carries the record provenance the detail screen shows',

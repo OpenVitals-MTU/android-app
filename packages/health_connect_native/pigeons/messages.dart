@@ -620,6 +620,19 @@ class ExerciseDataMsg {
   /// read-speed permission granted (or the provider recorded no speed samples).
   final double? averageSpeedMetersPerSecond;
 
+  // The record's own provenance — the same block [SleepDataMsg] carries, and
+  // dropped from here for the same reason: nobody noticed a message could be
+  // missing a field. It is NOT cosmetic on an exercise session. `recordingMethod`
+  // is how the activities screen counts manually-entered workouts, and
+  // `lastModifiedTime` is the tie-breaker that decides WHICH of two duplicate
+  // sessions survives deduplication — with it always null, that comparison was
+  // always a draw.
+  final int? startZoneOffsetSeconds;
+  final int? endZoneOffsetSeconds;
+  final int? lastModifiedEpochMs;
+  final int? clientRecordVersion;
+  final int? recordingMethod;
+
   ExerciseDataMsg(
     this.id,
     this.title,
@@ -637,6 +650,11 @@ class ExerciseDataMsg {
     this.isOpenVitalsEntry,
     this.totalDistanceMeters,
     this.averageSpeedMetersPerSecond,
+    this.startZoneOffsetSeconds,
+    this.endZoneOffsetSeconds,
+    this.lastModifiedEpochMs,
+    this.clientRecordVersion,
+    this.recordingMethod,
   );
 }
 

@@ -3007,6 +3007,11 @@ class ExerciseDataMsg {
     required this.isOpenVitalsEntry,
     this.totalDistanceMeters,
     this.averageSpeedMetersPerSecond,
+    this.startZoneOffsetSeconds,
+    this.endZoneOffsetSeconds,
+    this.lastModifiedEpochMs,
+    this.clientRecordVersion,
+    this.recordingMethod,
   });
 
   String id;
@@ -3047,6 +3052,16 @@ class ExerciseDataMsg {
   /// read-speed permission granted (or the provider recorded no speed samples).
   double? averageSpeedMetersPerSecond;
 
+  int? startZoneOffsetSeconds;
+
+  int? endZoneOffsetSeconds;
+
+  int? lastModifiedEpochMs;
+
+  int? clientRecordVersion;
+
+  int? recordingMethod;
+
   List<Object?> _toList() {
     return <Object?>[
       id,
@@ -3065,6 +3080,11 @@ class ExerciseDataMsg {
       isOpenVitalsEntry,
       totalDistanceMeters,
       averageSpeedMetersPerSecond,
+      startZoneOffsetSeconds,
+      endZoneOffsetSeconds,
+      lastModifiedEpochMs,
+      clientRecordVersion,
+      recordingMethod,
     ];
   }
 
@@ -3090,6 +3110,11 @@ class ExerciseDataMsg {
       isOpenVitalsEntry: result[13]! as bool,
       totalDistanceMeters: result[14] as double?,
       averageSpeedMetersPerSecond: result[15] as double?,
+      startZoneOffsetSeconds: result[16] as int?,
+      endZoneOffsetSeconds: result[17] as int?,
+      lastModifiedEpochMs: result[18] as int?,
+      clientRecordVersion: result[19] as int?,
+      recordingMethod: result[20] as int?,
     );
   }
 
@@ -3102,7 +3127,7 @@ class ExerciseDataMsg {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(id, other.id) && _deepEquals(title, other.title) && _deepEquals(exerciseType, other.exerciseType) && _deepEquals(startEpochMs, other.startEpochMs) && _deepEquals(endEpochMs, other.endEpochMs) && _deepEquals(source, other.source) && _deepEquals(notes, other.notes) && _deepEquals(clientRecordId, other.clientRecordId) && _deepEquals(plannedExerciseSessionId, other.plannedExerciseSessionId) && _deepEquals(device, other.device) && _deepEquals(segments, other.segments) && _deepEquals(laps, other.laps) && _deepEquals(route, other.route) && _deepEquals(isOpenVitalsEntry, other.isOpenVitalsEntry) && _deepEquals(totalDistanceMeters, other.totalDistanceMeters) && _deepEquals(averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond);
+    return _deepEquals(id, other.id) && _deepEquals(title, other.title) && _deepEquals(exerciseType, other.exerciseType) && _deepEquals(startEpochMs, other.startEpochMs) && _deepEquals(endEpochMs, other.endEpochMs) && _deepEquals(source, other.source) && _deepEquals(notes, other.notes) && _deepEquals(clientRecordId, other.clientRecordId) && _deepEquals(plannedExerciseSessionId, other.plannedExerciseSessionId) && _deepEquals(device, other.device) && _deepEquals(segments, other.segments) && _deepEquals(laps, other.laps) && _deepEquals(route, other.route) && _deepEquals(isOpenVitalsEntry, other.isOpenVitalsEntry) && _deepEquals(totalDistanceMeters, other.totalDistanceMeters) && _deepEquals(averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond) && _deepEquals(startZoneOffsetSeconds, other.startZoneOffsetSeconds) && _deepEquals(endZoneOffsetSeconds, other.endZoneOffsetSeconds) && _deepEquals(lastModifiedEpochMs, other.lastModifiedEpochMs) && _deepEquals(clientRecordVersion, other.clientRecordVersion) && _deepEquals(recordingMethod, other.recordingMethod);
   }
 
   @override
@@ -3111,7 +3136,7 @@ class ExerciseDataMsg {
 
   @override
   String toString() {
-    return 'ExerciseDataMsg(id: $id, title: $title, exerciseType: $exerciseType, startEpochMs: $startEpochMs, endEpochMs: $endEpochMs, source: $source, notes: $notes, clientRecordId: $clientRecordId, plannedExerciseSessionId: $plannedExerciseSessionId, device: $device, segments: $segments, laps: $laps, route: $route, isOpenVitalsEntry: $isOpenVitalsEntry, totalDistanceMeters: $totalDistanceMeters, averageSpeedMetersPerSecond: $averageSpeedMetersPerSecond)';
+    return 'ExerciseDataMsg(id: $id, title: $title, exerciseType: $exerciseType, startEpochMs: $startEpochMs, endEpochMs: $endEpochMs, source: $source, notes: $notes, clientRecordId: $clientRecordId, plannedExerciseSessionId: $plannedExerciseSessionId, device: $device, segments: $segments, laps: $laps, route: $route, isOpenVitalsEntry: $isOpenVitalsEntry, totalDistanceMeters: $totalDistanceMeters, averageSpeedMetersPerSecond: $averageSpeedMetersPerSecond, startZoneOffsetSeconds: $startZoneOffsetSeconds, endZoneOffsetSeconds: $endZoneOffsetSeconds, lastModifiedEpochMs: $lastModifiedEpochMs, clientRecordVersion: $clientRecordVersion, recordingMethod: $recordingMethod)';
   }
 }
 

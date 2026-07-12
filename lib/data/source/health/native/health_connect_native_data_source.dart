@@ -484,6 +484,17 @@ Duration? _zoneOffset(int? seconds) =>
         notes: m.notes,
         clientRecordId: m.clientRecordId,
         plannedExerciseSessionId: m.plannedExerciseSessionId,
+        // The record's provenance. `recordingMethod` is how the activities screen
+        // counts manually-entered workouts, and `lastModifiedTime` decides which
+        // of two duplicate sessions survives deduplication — both were null for
+        // every session ever read, because the Pigeon message did not carry them.
+        startZoneOffset: _zoneOffset(m.startZoneOffsetSeconds),
+        endZoneOffset: _zoneOffset(m.endZoneOffsetSeconds),
+        lastModifiedTime: m.lastModifiedEpochMs == null
+            ? null
+            : _fromMs(m.lastModifiedEpochMs!),
+        clientRecordVersion: m.clientRecordVersion,
+        recordingMethod: m.recordingMethod,
         device: m.device == null
             ? null
             : ExerciseDeviceData(
