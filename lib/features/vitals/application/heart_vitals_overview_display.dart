@@ -438,10 +438,15 @@ SkinTemperatureOverview? _skinTemperature(
   ]..sort((a, b) => a.time.compareTo(b.time));
   final latest = vitals.latestSkinTemperature;
   if (latest == null) return null;
+  // The card reads the newest entry that actually CARRIES a delta — the same
+  // population the chart draws. It used to read the newest entry of the
+  // unfiltered list, so a reading that arrived without a delta blanked the card
+  // while the chart underneath it went on plotting the readings that had one.
+  final latestWithDelta = chartEntries.isEmpty ? null : chartEntries.last;
   return SkinTemperatureOverview(
     chartEntries: chartEntries,
-    latest: latest,
-    cardDeltaCelsius: latest.averageDeltaCelsius,
+    latest: latestWithDelta ?? latest,
+    cardDeltaCelsius: latestWithDelta?.averageDeltaCelsius,
     averageDeltaCelsius:
         averageOrZero(chartEntries.map((e) => e.averageDeltaCelsius!)),
     hasChart: _hasRenderableChartData(chartEntries, range, (e) => e.time),

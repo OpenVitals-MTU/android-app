@@ -323,15 +323,31 @@ void main() {
       expect(skin.latest.averageDeltaCelsius, 0.4);
     });
 
-    test('a delta-less newest entry blanks the card but keeps the chart', () {
+    test('a delta-less newest entry does not blank the card', () {
+      // This test used to assert the opposite — that the card blanked while the
+      // chart below it went on drawing. The card read the newest entry of the
+      // UNFILTERED list, so one reading arriving without a delta emptied it
+      // while its own chart still plotted the readings that had one. The card
+      // now reads the newest entry that actually carries a delta: the same
+      // population the chart draws.
       final display = _display(HeartPeriodLoadResult(
         skinTemperature: [_skin(8, 0.4), _skin(20, null)],
       ));
 
       final skin = display.skinTemperature!;
-      expect(skin.cardDeltaCelsius, isNull);
+      expect(skin.cardDeltaCelsius, 0.4);
       expect(skin.hasChart, isTrue);
       expect(skin.chartEntries.single.averageDeltaCelsius, 0.4);
+    });
+
+    test('a period with no delta anywhere shows nothing, card or chart', () {
+      final display = _display(HeartPeriodLoadResult(
+        skinTemperature: [_skin(8, null), _skin(20, null)],
+      ));
+
+      final skin = display.skinTemperature!;
+      expect(skin.cardDeltaCelsius, isNull);
+      expect(skin.chartEntries, isEmpty);
     });
 
     test('body temperature counts its readings and takes the latest', () {
