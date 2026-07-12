@@ -160,9 +160,7 @@ class HeartMetricNotifier extends Notifier<HeartMetricState> {
   ) async {
     if (entryId.isEmpty) return;
     try {
-      await ref
-          .read(vitalsRepositoryProvider)
-          .deleteVitalsMeasurementEntry(type, entryId);
+      await ref.read(deleteVitalsMeasurementEntryUseCaseProvider)(type, entryId);
       if (!ref.mounted) return;
       final result = state.result;
       if (result == null) return;

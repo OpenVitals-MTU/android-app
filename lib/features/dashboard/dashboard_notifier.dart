@@ -218,7 +218,7 @@ class DashboardNotifier extends Notifier<DashboardState> {
   Future<void> grantPermissions() async {
     final missing = state.unacknowledgedPermissions;
     if (missing.isNotEmpty) {
-      await ref.read(healthRepositoryProvider).requestPermissions(missing);
+      await ref.read(requestHealthPermissionsUseCaseProvider)(missing);
     }
     ref.invalidate(grantedHealthPermissionsProvider);
     ref.invalidate(healthConnectAvailabilityProvider);
@@ -233,18 +233,19 @@ class DashboardNotifier extends Notifier<DashboardState> {
     final generation = ++_generation;
 
     final prefs = ref.read(preferencesRepositoryProvider);
-    final repo = ref.read(healthRepositoryProvider);
     final useCase = ref.read(loadDashboardDayUseCaseProvider);
 
-    // Awaits the resolved availability rather than `repo.availability()`, whose
-    // cached value is still `notSupported` on the first load of a cold start.
-    // Reading it too early yields an empty granted set, which would surface the
-    // whole dashboard permission set as missing.
+    // Awaits the resolved availability rather than the cached value, which is
+    // still `notSupported` on the first load of a cold start. Reading it too
+    // early yields an empty granted set, which would surface the whole dashboard
+    // permission set as missing — which is also why the availability is handed
+    // to the permission check rather than re-resolved inside it.
     final availability = await ref.read(healthConnectAvailabilityProvider.future);
     if (!ref.mounted || generation != _generation) return;
-    final granted = availability == HealthConnectAvailability.available
-        ? await repo.grantedPermissions()
-        : const <String>{};
+    final minimumPermissionsGranted =
+        await ref.read(checkMinimumHealthPermissionsUseCaseProvider)(
+      availability,
+    );
     if (!ref.mounted || generation != _generation) return;
 
     final keepData = refreshMode == RefreshMode.force && state.data != null;
@@ -257,8 +258,7 @@ class DashboardNotifier extends Notifier<DashboardState> {
       activityWeekMode: prefs.activityWeekMode,
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
       healthConnectAvailability: availability,
-      minimumPermissionsGranted:
-          repo.minimumOnboardingPermissions.every(granted.contains),
+      minimumPermissionsGranted: minimumPermissionsGranted,
       loadingMetrics: const <DashboardMetric>{},
     );
 

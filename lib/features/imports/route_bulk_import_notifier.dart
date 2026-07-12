@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/providers.dart';
 import '../../domain/preferences/unit_system.dart';
+import '../../domain/usecase/write_imported_activity_use_case.dart';
 import '../activity/activities_notifier.dart';
 import '../dashboard/dashboard_notifier.dart';
 import '../manualentry/activity/activity_entry_clock.dart';
@@ -115,8 +116,10 @@ class RouteBulkImportNotifier extends Notifier<RouteBulkImportState> {
     if (handles.isEmpty || state.isImporting) return;
 
     final importer = ref.read(routeFileImporterProvider);
-    final repository = ref.read(activityRepositoryProvider);
+    final writeImportedActivity = ref.read(writeImportedActivityUseCaseProvider);
     final preferences = ref.read(preferencesRepositoryProvider);
+    final writePermissions =
+        ref.read(readActivityWritePermissionsUseCaseProvider)();
     final clock = ActivityEntryClock.system();
 
     final totalFiles = handles.length;
@@ -144,7 +147,7 @@ class RouteBulkImportNotifier extends Notifier<RouteBulkImportState> {
         final routeState = activityStateWithRouteImport(
           initialActivityEntryState(
             clock,
-            repository,
+            writePermissions,
             selectedActivityType: preferredActivityEntryType(
               preferences,
               requireGpsRoute: routeImport.points.isNotEmpty,
@@ -160,14 +163,10 @@ class RouteBulkImportNotifier extends Notifier<RouteBulkImportState> {
             'Imported route could not be converted into an activity.',
           );
         }
-        final hasPermission =
-            await repository.hasActivityWritePermissionForRequest(request);
-        if (!hasPermission) {
-          throw const RouteImportException(
-            'Activity import write permissions are missing.',
-          );
-        }
-        await repository.writeActivityEntry(request);
+        // Checks the permissions THIS record needs, then writes it — a file with
+        // a route needs more than a bare track does. See
+        // [WriteImportedActivityUseCase].
+        await writeImportedActivity(request);
         preferences.lastActivityExerciseType = request.exerciseType;
         importedFiles += 1;
       } catch (error) {
@@ -196,6 +195,9 @@ class RouteBulkImportNotifier extends Notifier<RouteBulkImportState> {
   }
 
   String _describeError(Object error) {
+    if (error is MissingActivityWritePermissionException) {
+      return 'Activity import write permissions are missing.';
+    }
     if (error is RouteImportException) return error.message;
     final message = error.toString();
     return message.isEmpty ? 'Route import failed.' : message;

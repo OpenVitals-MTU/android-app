@@ -61,30 +61,24 @@ class BodyMeasurementEntryNotifier extends Notifier<BodyMeasurementEntryState> {
   }
 
   Future<void> refreshPermission() async {
-    final repo = ref.read(bodyRepositoryProvider);
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
       writeError: null,
     );
-    try {
-      final canWrite = await repo.hasBodyWritePermission(type);
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isCheckingPermission: false,
-        writePermissions: repo.bodyWritePermissions(type),
-        canWrite: canWrite,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isCheckingPermission: false,
-        writePermissions: repo.bodyWritePermissions(type),
-        canWrite: false,
-        entryError: BodyMeasurementEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
-    }
+    // The probe reports a failure rather than throwing it, so the permissions it
+    // could not get a verdict for are still known here — see
+    // [WritePermissionStatus].
+    final status = await ref.read(checkBodyWritePermissionUseCaseProvider)(type);
+    if (!ref.mounted) return;
+    final error = status.error;
+    state = state.copyWith(
+      isCheckingPermission: false,
+      writePermissions: status.permissions,
+      canWrite: status.granted,
+      entryError: error == null ? null : BodyMeasurementEntryError.writeFailed,
+      writeError: error == null ? null : throwableToScreenError(error),
+    );
   }
 
   void updateInput(String text) {
@@ -170,13 +164,13 @@ class BodyMeasurementEntryNotifier extends Notifier<BodyMeasurementEntryState> {
     final recordId = editRecordId;
     if (recordId == null) return;
     try {
-      final entry =
-          await ref.read(bodyRepositoryProvider).loadBodyMeasurementEntry(
-                type,
-                recordId,
-              );
+      final entry = await ref.read(loadBodyMeasurementForEditUseCaseProvider)(
+        type,
+        recordId,
+      );
       if (!ref.mounted) return;
-      if (entry == null || !entry.isOpenVitalsEntry) {
+      // Null covers both "no such record" and "not ours to edit".
+      if (entry == null) {
         state = state.copyWith(
           entryError: BodyMeasurementEntryError.writeFailed,
           writeError: const ScreenErrorMessage(

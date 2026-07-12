@@ -2,10 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../data/prefs/preferences_repository.dart';
-import '../../data/repository/contract/health_repository.dart';
 import '../../di/providers.dart';
 import '../../domain/model/health_connect_availability.dart';
+import '../../domain/model/onboarding_permission_category.dart';
 import '../../ui/components/health_connect_gate.dart';
+
+// The rows onboarding offers are a domain description of what the app can ask
+// for; the screen renders them straight out of here.
+export '../../domain/model/onboarding_permission_category.dart';
 
 part 'onboarding_notifier.freezed.dart';
 
@@ -24,30 +28,6 @@ abstract class OnboardingState with _$OnboardingState {
   }) = _OnboardingState;
 }
 
-/// A grantable permission group shown as a row in onboarding. Port of the Kotlin
-/// `OnboardingPermissionCategory`. Title/description are resolved from [id] in
-/// the screen via `AppLocalizations` (the Kotlin `titleRes`/`descriptionRes`),
-/// so this class carries no user-facing strings.
-class OnboardingPermissionCategory {
-  const OnboardingPermissionCategory({
-    required this.id,
-    required this.permissions,
-    this.manualPermissions = const <String>{},
-    this.isRequired = false,
-    this.available = true,
-  });
-
-  final String id;
-  final Set<String> permissions;
-
-  /// The subset of [permissions] that can't be granted through the runtime
-  /// dialog and must be toggled manually in Health Connect settings (Kotlin
-  /// `OnboardingPermissionCategory.manualPermissions`, e.g. exercise routes).
-  final Set<String> manualPermissions;
-  final bool isRequired;
-  final bool available;
-}
-
 /// The Riverpod port of the Kotlin `OnboardingViewModel`.
 ///
 /// Manual [Notifier] (no codegen): [build] kicks off [checkState], which reads
@@ -64,99 +44,35 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
     return const OnboardingState();
   }
 
-  HealthRepository get _repo => ref.read(healthRepositoryProvider);
   PreferencesRepository get _prefs => ref.read(preferencesRepositoryProvider);
 
-  Set<String> get minimumOnboardingPermissions =>
-      _repo.minimumOnboardingPermissions;
+  /// The rows, the required minimum and the full offer — assembled from the
+  /// device's permission catalog, with the mindfulness row present only where
+  /// mindfulness exists (see [ReadOnboardingPermissionCatalogUseCase]).
+  OnboardingPermissionCatalog get _catalog =>
+      ref.read(readOnboardingPermissionCatalogUseCaseProvider)(
+        mindfulnessAvailable: state.mindfulnessAvailable,
+      );
 
-  Set<String> get onboardingPermissions => _repo.onboardingPermissions;
+  Set<String> get minimumOnboardingPermissions => _catalog.minimumPermissions;
+
+  Set<String> get onboardingPermissions => _catalog.allPermissions;
 
   /// The grantable permission groups, filtered to the non-empty ones (mirrors
   /// the Kotlin `permissionCategories.filter { it.permissions.isNotEmpty() }`).
-  List<OnboardingPermissionCategory> get permissionCategories {
-    final repo = _repo;
-    return <OnboardingPermissionCategory>[
-      OnboardingPermissionCategory(
-        id: 'activity_sleep',
-        permissions: repo.corePermissions,
-        isRequired: true,
-      ),
-      OnboardingPermissionCategory(
-        id: 'heart_recovery',
-        permissions: repo.heartPermissions,
-        isRequired: true,
-      ),
-      OnboardingPermissionCategory(
-        id: 'vitals',
-        permissions: repo.vitalsPermissions,
-        isRequired: true,
-      ),
-      OnboardingPermissionCategory(
-        id: 'body',
-        permissions: repo.bodyPermissions,
-      ),
-      OnboardingPermissionCategory(
-        id: 'activity_extras',
-        permissions: repo.activityExtrasPermissions,
-      ),
-      OnboardingPermissionCategory(
-        id: 'nutrition_hydration',
-        permissions: repo.nutritionHydrationPermissions,
-      ),
-      OnboardingPermissionCategory(
-        id: 'manual_entry_write',
-        permissions: repo.requestableWritePermissions,
-      ),
-      OnboardingPermissionCategory(
-        id: 'data_import_write',
-        permissions: repo.dataImportWritePermissions,
-      ),
-      OnboardingPermissionCategory(
-        id: 'mindfulness',
-        permissions: repo.mindfulnessPermissions,
-        available: state.mindfulnessAvailable,
-      ),
-      // Access past data (history) + access data in the background can be
-      // requested directly via the dialog; exercise-route access needs the
-      // "Always" toggle in Health Connect settings (opened via the fallback).
-      // Mirrors the Kotlin OnboardingViewModel's additionalDataAccess +
-      // routePermissions category, with routes flagged as manual-only.
-      OnboardingPermissionCategory(
-        id: 'additional_data_access',
-        permissions: {
-          ...repo.additionalDataAccessPermissions,
-          ...repo.routePermissions,
-        },
-        manualPermissions: repo.routePermissions,
-      ),
-      OnboardingPermissionCategory(
-        id: 'cycle_tracking',
-        permissions: repo.cyclePermissions,
-      ),
-    ].where((category) => category.permissions.isNotEmpty).toList();
-  }
+  List<OnboardingPermissionCategory> get permissionCategories =>
+      _catalog.categories;
 
   Future<void> checkState() async {
-    // Resolve availability from the platform (async plugin boundary) rather than
-    // reading the still-default cached value.
-    final availability = await _repo.refreshAvailability();
-    if (!ref.mounted) return;
-    if (availability != HealthConnectAvailability.available) {
-      if (!ref.mounted) return;
-      state = OnboardingState(
-        availability: availability,
-        isCheckingPermissions: false,
-      );
-      return;
-    }
-    final mindfulnessAvailable = _repo.isMindfulnessAvailable();
-    final granted = await _repo.grantedPermissions();
+    // Availability is resolved from the platform (async plugin boundary) rather
+    // than read from the still-default cache, and nothing else is asked of a
+    // device that has no Health Connect — see [CheckOnboardingStateUseCase].
+    final onboarding = await ref.read(checkOnboardingStateUseCaseProvider)();
     if (!ref.mounted) return;
     state = OnboardingState(
-      availability: availability,
-      grantedPermissions: granted,
-      mindfulnessAvailable: mindfulnessAvailable,
+      availability: onboarding.availability,
+      grantedPermissions: onboarding.grantedPermissions,
+      mindfulnessAvailable: onboarding.mindfulnessAvailable,
       isCheckingPermissions: false,
     );
   }
@@ -167,7 +83,7 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
   /// "Granted" without needing an app restart.
   Future<void> refreshGrantedPermissions() async {
     if (state.availability != HealthConnectAvailability.available) return;
-    final granted = await _repo.grantedPermissions();
+    final granted = await ref.read(loadGrantedHealthPermissionsUseCaseProvider)();
     if (!ref.mounted || granted == state.grantedPermissions) return;
     state = state.copyWith(grantedPermissions: granted);
     ref.invalidate(grantedHealthPermissionsProvider);
@@ -183,20 +99,20 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
   /// (mirrors the Kotlin "Open required Health Connect permissions" action).
   Future<void> requestPermissions(Set<String> permissions) async {
     if (permissions.isEmpty) return;
-    final before = _repo.availability() == HealthConnectAvailability.available
-        ? await _repo.grantedPermissions()
-        : const <String>{};
-    await _repo.requestPermissions(permissions);
-    final granted = await _repo.grantedPermissions();
+    // Whether the dialog achieved anything is not something it will say — see
+    // [GrantOnboardingPermissionsUseCase], which works it out by comparing the
+    // granted set on either side of the request.
+    final grant =
+        await ref.read(grantOnboardingPermissionsUseCaseProvider)(permissions);
     if (!ref.mounted) return;
-    state = state.copyWith(grantedPermissions: granted);
+    state = state.copyWith(grantedPermissions: grant.grantedPermissions);
     // Keep the shared gate providers fresh for screens shown after onboarding.
     ref.invalidate(grantedHealthPermissionsProvider);
 
-    final gainedAny =
-        permissions.any((p) => granted.contains(p) && !before.contains(p));
-    if (!gainedAny && !permissions.every(granted.contains)) {
-      await _repo.openHealthConnectSettings();
+    // Opened here rather than inside the use case so the new granted set is
+    // already published before the user disappears into Health Connect's UI.
+    if (grant.needsManualGrant) {
+      await ref.read(openHealthConnectSettingsUseCaseProvider)();
     }
   }
 

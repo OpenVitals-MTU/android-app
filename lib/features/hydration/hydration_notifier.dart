@@ -73,8 +73,8 @@ abstract class HydrationState with _$HydrationState {
 ///
 /// A manual [Notifier] (no codegen) matching the activity template: the owning
 /// [MetricDetailScaffold] drives every load through [load] and pull-to-refresh
-/// through [refresh]. Each pass loads the period totals + entries from the
-/// [HydrationRepository], reads the daily goal, and precomputes the period
+/// through [refresh]. Each pass loads the period totals + entries through
+/// [LoadHydrationPeriodUseCase], reads the daily goal, and precomputes the period
 /// summary + drink breakdown (Kotlin `HydrationPresentationMapper`). A monotonic
 /// [_generation] guard drops stale results.
 class HydrationNotifier extends Notifier<HydrationState> {
@@ -92,9 +92,9 @@ class HydrationNotifier extends Notifier<HydrationState> {
     final loadHydrationPeriod = ref.read(loadHydrationPeriodUseCaseProvider);
     // The daily goal is persisted configuration, not a health read, and it is
     // applied to the state *before* the load starts — so a goal just changed in
-    // settings shows on the goal card at once, not a round-trip later.
-    final goal =
-        ref.read(hydrationRepositoryProvider).hydrationDailyGoalLiters();
+    // settings shows on the goal card at once, not a round-trip later. That is
+    // why the read is synchronous (see [ReadHydrationDailyGoalUseCase]).
+    final goal = ref.read(readHydrationDailyGoalUseCaseProvider)();
 
     state = state.copyWith(
       selectedRange: selection.selectedRange,

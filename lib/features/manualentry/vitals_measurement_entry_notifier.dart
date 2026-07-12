@@ -99,30 +99,25 @@ class VitalsMeasurementEntryNotifier
   }
 
   Future<void> refreshPermission() async {
-    final repo = ref.read(vitalsRepositoryProvider);
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
       writeError: null,
     );
-    try {
-      final canWrite = await repo.hasVitalsWritePermission(type);
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isCheckingPermission: false,
-        writePermissions: repo.vitalsWritePermissions(type),
-        canWrite: canWrite,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isCheckingPermission: false,
-        writePermissions: repo.vitalsWritePermissions(type),
-        canWrite: false,
-        entryError: VitalsMeasurementEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
-    }
+    // The probe reports a failure rather than throwing it, so the permissions it
+    // could not get a verdict for are still known here — see
+    // [WritePermissionStatus].
+    final status =
+        await ref.read(checkVitalsWritePermissionUseCaseProvider)(type);
+    if (!ref.mounted) return;
+    final error = status.error;
+    state = state.copyWith(
+      isCheckingPermission: false,
+      writePermissions: status.permissions,
+      canWrite: status.granted,
+      entryError: error == null ? null : VitalsMeasurementEntryError.writeFailed,
+      writeError: error == null ? null : throwableToScreenError(error),
+    );
   }
 
   void updateInput(String text) {
@@ -220,13 +215,13 @@ class VitalsMeasurementEntryNotifier
     final recordId = editRecordId;
     if (recordId == null) return;
     try {
-      final entry =
-          await ref.read(vitalsRepositoryProvider).loadVitalsMeasurementEntry(
-                type,
-                recordId,
-              );
+      final entry = await ref.read(loadVitalsMeasurementForEditUseCaseProvider)(
+        type,
+        recordId,
+      );
       if (!ref.mounted) return;
-      if (entry == null || !entry.isOpenVitalsEntry) {
+      // Null covers both "no such record" and "not ours to edit".
+      if (entry == null) {
         state = state.copyWith(
           entryError: VitalsMeasurementEntryError.writeFailed,
           writeError: const ScreenErrorMessage(

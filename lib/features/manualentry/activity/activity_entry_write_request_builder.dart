@@ -1,5 +1,4 @@
 import '../../../core/time/local_date.dart';
-import '../../../data/repository/contract/activity_repository.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/preferences/unit_system.dart';
 import 'activity_entry_clock.dart';
@@ -365,9 +364,13 @@ class _ParsedRepetitionSet {
   return (start, end);
 }
 
+/// A blank form. [writePermissions] is the baseline set the form has to hold
+/// before it can save anything — passed in rather than read from a repository, so
+/// this stays a pure function of its inputs and callers that already have the set
+/// (or do not need it) are not forced to hand over a repository for it.
 ActivityEntryUiState initialActivityEntryState(
   ActivityEntryClock clock,
-  ActivityRepository repository, {
+  Set<String> writePermissions, {
   ActivityEntryType? selectedActivityType,
 }) {
   final now = _truncateToMinute(clock.nowInZone());
@@ -375,16 +378,16 @@ ActivityEntryUiState initialActivityEntryState(
     selectedActivityType: selectedActivityType ?? defaultActivityEntryTypes.first,
     startDateText: isoLocalDate(now),
     startTimeText: timeFormatterText(now),
-    writePermissions: repository.activityWritePermissions(),
+    writePermissions: writePermissions,
   );
 }
 
 ActivityEntryUiState clearedAfterSaveState(
   ActivityEntryClock clock,
-  ActivityRepository repository,
+  Set<String> writePermissions,
   ActivityEntryType selectedType,
 ) =>
-    initialActivityEntryState(clock, repository,
+    initialActivityEntryState(clock, writePermissions,
         selectedActivityType: selectedType);
 
 // ── Calorie estimation (ActivityEntryEditMapper.kt) ──────────────────────────

@@ -6,10 +6,10 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../core/presentation/screen_error.dart';
 import '../../core/time/local_date.dart';
-import '../../data/repository/contract/hydration_repository.dart';
 import '../../di/providers.dart';
 import '../../domain/model/caffeine_models.dart';
 import '../../domain/model/nutrition_models.dart';
+import '../../domain/usecase/edit_custom_hydration_drinks_use_case.dart';
 import '../../domain/usecase/load_frequent_hydration_drinks_use_case.dart';
 import '../../domain/usecase/save_hydration_entry_use_case.dart';
 
@@ -200,17 +200,16 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
 
   @override
   HydrationEntryState build() {
-    final repo = ref.read(hydrationRepositoryProvider);
-    final options = _containerOptions(repo);
-    final lastCustom = repo.lastCustomHydrationAmountMilliliters();
+    // Synchronous: the containers and the goal are configuration, and they are
+    // painted on the first frame — see [ReadHydrationEntrySettingsUseCase], which
+    // also drops any stored size the entry path would refuse to log.
+    final settings = ref.read(readHydrationEntrySettingsUseCaseProvider)();
+    final options = _containerOptions(settings.containerVolumeOverridesMilliliters);
     final initial = HydrationEntryState(
       containerOptions: options,
       selectedContainer: options.first,
-      dailyGoalLiters: repo.hydrationDailyGoalLiters(),
-      lastCustomAmountMilliliters:
-          (lastCustom != null && isValidHydrationContainerMilliliters(lastCustom))
-              ? lastCustom
-              : null,
+      dailyGoalLiters: ref.read(readHydrationDailyGoalUseCaseProvider)(),
+      lastCustomAmountMilliliters: settings.lastCustomAmountMilliliters,
       // Loaded below: the drink catalog lives in the drift-backed beverage
       // store, which seeds its presets on first read.
       customDrinkOptions: const <CustomHydrationDrink>[],
@@ -227,47 +226,30 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
   }
 
   Future<void> refreshPermission() async {
-    final hydrationRepo = ref.read(hydrationRepositoryProvider);
-    final nutritionRepo = ref.read(nutritionRepositoryProvider);
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
       writeError: null,
     );
-    try {
-      final canWriteHydration =
-          await hydrationRepo.hasHydrationWritePermission();
-      final canWriteNutrition =
-          await nutritionRepo.hasNutritionWritePermission();
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isCheckingPermission: false,
-        hydrationWritePermissions: hydrationRepo.hydrationWritePermissions,
-        nutritionWritePermissions: nutritionRepo.nutritionWritePermissions,
-        canWriteHydration: canWriteHydration,
-        canWriteNutrition: canWriteNutrition,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isCheckingPermission: false,
-        hydrationWritePermissions: hydrationRepo.hydrationWritePermissions,
-        nutritionWritePermissions: nutritionRepo.nutritionWritePermissions,
-        canWriteHydration: false,
-        canWriteNutrition: false,
-        entryError: HydrationEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
-    }
+    // A drink is two records with two permissions, and one failed probe sinks
+    // both verdicts — see [CheckHydrationWriteAccessUseCase].
+    final access = await ref.read(checkHydrationWriteAccessUseCaseProvider)();
+    if (!ref.mounted) return;
+    final error = access.error;
+    state = state.copyWith(
+      isCheckingPermission: false,
+      hydrationWritePermissions: access.hydrationPermissions,
+      nutritionWritePermissions: access.nutritionPermissions,
+      canWriteHydration: access.canWriteHydration,
+      canWriteNutrition: access.canWriteNutrition,
+      entryError: error == null ? null : HydrationEntryError.writeFailed,
+      writeError: error == null ? null : throwableToScreenError(error),
+    );
   }
 
   Future<void> refreshTodayHydration() async {
-    final today = LocalDate.now();
     try {
-      final entries = await ref
-          .read(hydrationRepositoryProvider)
-          .loadDailyHydration(today, today);
-      final liters = entries.fold<double>(0.0, (sum, e) => sum + e.liters);
+      final liters = await ref.read(loadTodayHydrationUseCaseProvider)();
       if (!ref.mounted) return;
       state = state.copyWith(todayHydrationLiters: liters);
     } catch (_) {
@@ -278,8 +260,7 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
   /// Re-reads the persisted daily goal (Kotlin `refreshDailyGoal`).
   void refreshDailyGoal() {
     state = state.copyWith(
-      dailyGoalLiters:
-          ref.read(hydrationRepositoryProvider).hydrationDailyGoalLiters(),
+      dailyGoalLiters: ref.read(readHydrationDailyGoalUseCaseProvider)(),
     );
   }
 
@@ -313,9 +294,10 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
     }
     final updated = container.copyWith(volumeMilliliters: milliliters);
     if (kDefaultHydrationContainers.any((it) => it.id == container.id)) {
-      ref
-          .read(hydrationRepositoryProvider)
-          .setHydrationContainerVolumeMilliliters(container.id, milliliters);
+      ref.read(saveHydrationContainerSizeUseCaseProvider)(
+        container.id,
+        milliliters,
+      );
     }
     state = state.copyWith(
       containerOptions: [
@@ -353,15 +335,17 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
       );
       return;
     }
-    await ref.read(hydrationRepositoryProvider).saveCustomHydrationDrink(drink);
+    await ref.read(editCustomHydrationDrinksUseCaseProvider)(
+      SaveCustomHydrationDrink(drink),
+    );
     await _refreshDrinkOptions();
   }
 
   /// Port of the Kotlin `deleteCustomDrink`.
   Future<void> deleteCustomDrink(CustomHydrationDrink drink) async {
-    await ref
-        .read(hydrationRepositoryProvider)
-        .deleteCustomHydrationDrink(drink.id);
+    await ref.read(editCustomHydrationDrinksUseCaseProvider)(
+      DeleteCustomHydrationDrink(drink.id),
+    );
     await _refreshDrinkOptions();
   }
 
@@ -378,9 +362,9 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
     if (from < 0 || target < 0) return;
     final updated = [...current];
     updated.insert(target.clamp(0, updated.length - 1), updated.removeAt(from));
-    unawaited(ref
-        .read(hydrationRepositoryProvider)
-        .reorderCustomHydrationDrinks([for (final it in updated) it.id]));
+    unawaited(ref.read(editCustomHydrationDrinksUseCaseProvider)(
+      ReorderCustomHydrationDrinks([for (final it in updated) it.id]),
+    ));
     state = state.copyWith(
       customDrinkOptions: updated,
       entryError: null,
@@ -395,9 +379,9 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
     String drinkId,
     CaffeineSourceCategory? category,
   ) async {
-    await ref
-        .read(hydrationRepositoryProvider)
-        .moveCustomHydrationDrinkToCategory(drinkId, category);
+    await ref.read(editCustomHydrationDrinksUseCaseProvider)(
+      RecategorizeCustomHydrationDrink(drinkId, category),
+    );
     await _refreshDrinkOptions();
   }
 
@@ -405,10 +389,10 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
   /// Port of the Kotlin `refreshDrinkOptions` (minus the frequent-drink pass,
   /// which the catalog carousel owns and is not ported yet).
   Future<void> _refreshDrinkOptions() async {
-    final loaded =
-        await ref.read(hydrationRepositoryProvider).customHydrationDrinks();
+    // Already filtered to the drinks that can actually be logged — see
+    // [LoadCustomHydrationDrinksUseCase].
+    final drinks = await ref.read(loadCustomHydrationDrinksUseCaseProvider)();
     if (!ref.mounted) return;
-    final drinks = loaded.where(isValidCustomHydrationDrink).toList();
     final drinkIds = {for (final drink in drinks) drink.id};
     state = state.copyWith(
       customDrinkOptions: drinks,
@@ -494,9 +478,7 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
       lastCustomAmountMilliliters: milliliters,
       entryNotice: null,
     );
-    ref
-        .read(hydrationRepositoryProvider)
-        .setLastCustomHydrationAmountMilliliters(milliliters);
+    ref.read(saveLastCustomHydrationAmountUseCaseProvider)(milliliters);
     await _saveHydrationEntry(rawLiters: milliliters / kMillilitersPerLiter);
   }
 
@@ -532,9 +514,7 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
       lastCustomAmountMilliliters: amount,
       entryNotice: null,
     );
-    ref
-        .read(hydrationRepositoryProvider)
-        .setLastCustomHydrationAmountMilliliters(amount);
+    ref.read(saveLastCustomHydrationAmountUseCaseProvider)(amount);
     await _saveHydrationEntry(
       rawLiters: amount / kMillilitersPerLiter,
       hydrationMultiplier: drink.hydrationMultiplier,
@@ -634,12 +614,12 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
     final recordId = editRecordId;
     if (recordId == null) return;
     try {
-      final entry =
-          await ref.read(hydrationRepositoryProvider).loadHydrationEntry(
-                recordId,
-              );
+      final entry = await ref.read(loadHydrationEntryForEditUseCaseProvider)(
+        recordId,
+      );
       if (!ref.mounted) return;
-      if (entry == null || !entry.isOpenVitalsEntry) {
+      // Null covers both "no such entry" and "not ours to edit".
+      if (entry == null) {
         state = state.copyWith(
           entryError: HydrationEntryError.writeFailed,
           writeError: const ScreenErrorMessage(
@@ -684,11 +664,15 @@ class HydrationEntryNotifier extends Notifier<HydrationEntryState> {
     }
   }
 
-  List<HydrationContainerOption> _containerOptions(HydrationRepository repo) {
-    final overrides = repo.hydrationContainerVolumeMilliliters();
+  /// The seven defaults, resized by whatever the user has persisted.
+  /// [overridesMilliliters] arrives already filtered to the sizes that can still
+  /// be logged.
+  List<HydrationContainerOption> _containerOptions(
+    Map<String, double> overridesMilliliters,
+  ) {
     return kDefaultHydrationContainers.map((option) {
-      final override = overrides[option.id];
-      if (override != null && isValidHydrationContainerMilliliters(override)) {
+      final override = overridesMilliliters[option.id];
+      if (override != null) {
         return option.copyWith(volumeMilliliters: override);
       }
       return option;

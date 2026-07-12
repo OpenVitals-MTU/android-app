@@ -417,34 +417,26 @@ class MindfulnessEntryNotifier extends Notifier<MindfulnessEntryState> {
   }
 
   Future<void> refreshPermission() async {
-    final repo = ref.read(mindfulnessRepositoryProvider);
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
       writeError: null,
     );
-    try {
-      final available = repo.isMindfulnessAvailable();
-      final canWrite = await repo.hasMindfulnessWritePermission();
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isCheckingPermission: false,
-        mindfulnessAvailable: available,
-        writePermissions: repo.mindfulnessWritePermissions,
-        canWrite: canWrite,
-        entryError: available ? null : MindfulnessEntryError.unavailable,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isCheckingPermission: false,
-        mindfulnessAvailable: false,
-        writePermissions: repo.mindfulnessWritePermissions,
-        canWrite: false,
-        entryError: MindfulnessEntryError.unavailable,
-        writeError: throwableToScreenError(error),
-      );
-    }
+    // A failed probe comes back as unavailable-with-an-error rather than as a
+    // throw, so an unsupported device and an unreachable one both report
+    // `unavailable` — never a missing permission. See
+    // [CheckMindfulnessWriteAccessUseCase].
+    final access = await ref.read(checkMindfulnessWriteAccessUseCaseProvider)();
+    if (!ref.mounted) return;
+    final error = access.error;
+    state = state.copyWith(
+      isCheckingPermission: false,
+      mindfulnessAvailable: access.available,
+      writePermissions: access.permissions,
+      canWrite: access.granted,
+      entryError: access.available ? null : MindfulnessEntryError.unavailable,
+      writeError: error == null ? null : throwableToScreenError(error),
+    );
   }
 
   void updateManualMinutes(String text) {
@@ -558,12 +550,12 @@ class MindfulnessEntryNotifier extends Notifier<MindfulnessEntryState> {
     final recordId = editRecordId;
     if (recordId == null) return;
     try {
-      final session =
-          await ref.read(mindfulnessRepositoryProvider).loadMindfulnessSession(
-                recordId,
-              );
+      final session = await ref.read(loadMindfulnessSessionForEditUseCaseProvider)(
+        recordId,
+      );
       if (!ref.mounted) return;
-      if (session == null || !session.isOpenVitalsEntry) {
+      // Null covers both "no such session" and "not ours to edit".
+      if (session == null) {
         state = state.copyWith(
           entryError: MindfulnessEntryError.writeFailed,
           writeError: const ScreenErrorMessage(

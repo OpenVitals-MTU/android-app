@@ -183,7 +183,7 @@ class ActivityEntryController {
     }
     return initialActivityEntryState(
       clock,
-      repository,
+      repository.activityWritePermissions(),
       selectedActivityType: _preferredActivityType(),
     ).copyWith(
       mode: editActivityId == null
@@ -396,7 +396,7 @@ class ActivityEntryController {
     activityRecorder?.clearPreparedRecording();
     _set(initialActivityEntryState(
       clock,
-      repository,
+      repository.activityWritePermissions(),
       selectedActivityType: _preferredActivityType(),
     ).copyWith(
       canWrite: _state.value.canWrite,
@@ -1077,7 +1077,8 @@ class ActivityEntryController {
           _rememberLastActivityType(request.exerciseType);
         }
         if (editRecordId == null) {
-          _set(clearedAfterSaveState(clock, repository, _preferredActivityType())
+          _set(clearedAfterSaveState(clock, repository.activityWritePermissions(),
+                  _preferredActivityType())
               .copyWith(saveCompleted: true));
           refreshPermission();
         } else {

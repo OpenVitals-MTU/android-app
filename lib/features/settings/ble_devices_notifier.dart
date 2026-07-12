@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/repository/contract/ble_device_repository.dart';
 import '../../di/providers.dart';
 import '../../domain/model/ble_sensor_models.dart';
+import '../../domain/usecase/edit_ble_device_registry_use_case.dart';
 import '../../data/source/sensors/ble/ble_sensor_coordinator.dart';
 
 /// Sentinel so [BleDevicesUiState.copyWith] can distinguish "leave unchanged"
@@ -118,7 +118,21 @@ class BleDevicesNotifier extends Notifier<BleDevicesUiState> {
 
   BleSensorCoordinator get _coordinator =>
       ref.read(bleSensorCoordinatorProvider);
-  BleDeviceRepository get _repository => ref.read(bleDeviceRepositoryProvider);
+
+  /// Every registry call below is synchronous, deliberately: the conflict map has
+  /// to land in the same frame as the checkbox that caused it. See
+  /// [ResolveBleCapabilityConflictsUseCase].
+  Map<BleSensorCapability, BleSensorDevice> _conflicts(
+    Set<BleSensorCapability> capabilities, {
+    String? excludingDeviceId,
+  }) =>
+      ref.read(resolveBleCapabilityConflictsUseCaseProvider)(
+        capabilities,
+        excludingDeviceId: excludingDeviceId,
+      );
+
+  void _edit(BleDeviceRegistryEdit edit) =>
+      ref.read(editBleDeviceRegistryUseCaseProvider)(edit);
 
   @override
   BleDevicesUiState build() {
@@ -137,7 +151,7 @@ class BleDevicesNotifier extends Notifier<BleDevicesUiState> {
     );
   }
 
-  void refresh() => _repository.refresh();
+  void refresh() => ref.read(refreshBleDeviceRegistryUseCaseProvider)();
 
   void openAddFlow() {
     _setLocal(_local.copyWith(
@@ -210,7 +224,7 @@ class BleDevicesNotifier extends Notifier<BleDevicesUiState> {
     if (!next.remove(capability)) next.add(capability);
     _setLocal(_local.copyWith(
       addCapabilities: next,
-      capabilityConflicts: _repository.capabilityConflicts(next),
+      capabilityConflicts: _conflicts(next),
     ));
   }
 
@@ -230,19 +244,22 @@ class BleDevicesNotifier extends Notifier<BleDevicesUiState> {
             ? (int.tryParse(s.addWheelCircumferenceMm) ??
                 BleSensorDevice.defaultWheelCircumferenceMm)
             : null;
-    _repository.addDevice(
+    _edit(PairBleDevice(
       displayName: s.addDisplayName,
       address: selected.address,
       bluetoothName: selected.name,
       capabilities: s.addCapabilities,
       wheelCircumferenceMm: wheelCircumference,
-    );
+    ));
     stopScan();
     closeAddFlow();
   }
 
   void openEditDevice(String deviceId) {
-    final matches = _repository.devices.where((d) => d.id == deviceId);
+    // The registry snapshot, not the streamed copy: the form must prefill from
+    // what is stored right now.
+    final devices = ref.read(readPairedBleDevicesUseCaseProvider)();
+    final matches = devices.where((d) => d.id == deviceId);
     if (matches.isEmpty) return;
     final device = matches.first;
     _setLocal(_local.copyWith(
@@ -252,7 +269,7 @@ class BleDevicesNotifier extends Notifier<BleDevicesUiState> {
       editEnabled: device.enabled,
       editWheelCircumferenceMm: device.wheelCircumferenceMm?.toString() ??
           BleSensorDevice.defaultWheelCircumferenceMm.toString(),
-      capabilityConflicts: _repository.capabilityConflicts(
+      capabilityConflicts: _conflicts(
         device.capabilities,
         excludingDeviceId: device.id,
       ),
@@ -276,7 +293,7 @@ class BleDevicesNotifier extends Notifier<BleDevicesUiState> {
     if (!next.remove(capability)) next.add(capability);
     _setLocal(_local.copyWith(
       editCapabilities: next,
-      capabilityConflicts: _repository.capabilityConflicts(
+      capabilityConflicts: _conflicts(
         next,
         excludingDeviceId: state.editingDeviceId,
       ),
@@ -302,23 +319,23 @@ class BleDevicesNotifier extends Notifier<BleDevicesUiState> {
             ? (int.tryParse(s.editWheelCircumferenceMm) ??
                 BleSensorDevice.defaultWheelCircumferenceMm)
             : null;
-    _repository.updateDevice(
+    _edit(UpdateBleDevice(
       deviceId: deviceId,
       displayName: s.editDisplayName,
       capabilities: s.editCapabilities,
       enabled: s.editEnabled,
       wheelCircumferenceMm: wheelCircumference,
-    );
+    ));
     closeEditDevice();
   }
 
   void removeDevice(String deviceId) {
-    _repository.removeDevice(deviceId);
+    _edit(ForgetBleDevice(deviceId));
     if (state.editingDeviceId == deviceId) closeEditDevice();
   }
 
   void setDeviceEnabled(String deviceId, bool enabled) =>
-      _repository.setDeviceEnabled(deviceId, enabled);
+      _edit(SetBleDeviceEnabled(deviceId, enabled));
 }
 
 final bleDevicesNotifierProvider =
