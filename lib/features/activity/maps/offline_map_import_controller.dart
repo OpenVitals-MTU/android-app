@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:mapsforge_flutter_mapfile/mapfile.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../core/result/app_failure.dart';
+import '../../../core/result/result.dart';
 import 'offline_map_metadata_store.dart';
 import 'offline_map_models.dart';
 
@@ -47,7 +49,35 @@ class OfflineMapImportController {
 
   /// Copies [source] into the maps directory and records it. [originalFileName]
   /// defaults to the source's basename and drives format detection.
-  Future<OfflineMapPack> importMap(
+  ///
+  /// A rejected pack (unsupported format, empty file, unreadable map) is an
+  /// [Err], not a throw: the caller is a view-model with a failure to render,
+  /// not a crash to report. The rejection reasons are written for a person, so
+  /// they are carried as the failure's message — an `ArgumentError`'s
+  /// `toString()` would prefix them with "Invalid argument(s)".
+  Future<Result<OfflineMapPack>> importMap(
+    File source, {
+    String? originalFileName,
+    void Function(OfflineMapImportProgress progress)? onProgress,
+  }) async {
+    try {
+      return Ok(await _importMap(
+        source,
+        originalFileName: originalFileName,
+        onProgress: onProgress,
+      ));
+    } catch (error, stackTrace) {
+      return Err(
+        UnexpectedFailure(
+          error is ArgumentError ? '${error.message}' : error.toString(),
+          cause: error,
+          stackTrace: stackTrace,
+        ),
+      );
+    }
+  }
+
+  Future<OfflineMapPack> _importMap(
     File source, {
     String? originalFileName,
     void Function(OfflineMapImportProgress progress)? onProgress,

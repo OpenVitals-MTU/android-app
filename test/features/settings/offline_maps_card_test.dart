@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/features/activity/maps/offline_map_import_controller.dart';
 import 'package:openvitals/features/activity/maps/offline_map_metadata_store.dart';
 import 'package:openvitals/features/activity/maps/offline_map_models.dart';
@@ -29,7 +30,7 @@ class _GatedImportController extends OfflineMapImportController {
   final Completer<void> gate = Completer<void>();
 
   @override
-  Future<OfflineMapPack> importMap(
+  Future<Result<OfflineMapPack>> importMap(
     File source, {
     String? originalFileName,
     void Function(OfflineMapImportProgress progress)? onProgress,
@@ -63,7 +64,7 @@ class _GatedImportController extends OfflineMapImportController {
         totalBytes: 2048,
       ),
     );
-    return pack;
+    return Ok(pack);
   }
 }
 

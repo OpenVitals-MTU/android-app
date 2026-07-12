@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/app_failure.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/features/activity/maps/offline_map_import_controller.dart';
 import 'package:openvitals/features/activity/maps/offline_map_metadata_store.dart';
 import 'package:openvitals/features/activity/maps/offline_map_models.dart';
@@ -38,7 +40,8 @@ void main() {
     final ctrl = controller();
     final progress = <OfflineMapImportProgress>[];
 
-    final pack = await ctrl.importMap(source, onProgress: progress.add);
+    final pack =
+        (await ctrl.importMap(source, onProgress: progress.add)).orThrow();
 
     expect(pack.format, OfflineMapPackFormat.pmtiles);
     expect(pack.displayName, 'estonia');
@@ -56,9 +59,16 @@ void main() {
   test('rejects unsupported file extensions', () async {
     final source = sourceFile('estonia.osm.pbf', const [1, 2, 3]);
 
+    final result = await controller().importMap(source);
+
+    expect(result, isA<Err<OfflineMapPack>>());
     expect(
-      () => controller().importMap(source),
-      throwsArgumentError,
+      (result as Err<OfflineMapPack>).failure,
+      isA<UnexpectedFailure>().having(
+        (failure) => failure.message,
+        'message',
+        contains('supported'),
+      ),
     );
   });
 
@@ -68,7 +78,7 @@ void main() {
     final source = sourceFile('broken.map', List.filled(4096, 0xAB));
     final ctrl = controller();
 
-    await expectLater(ctrl.importMap(source), throwsArgumentError);
+    expect(await ctrl.importMap(source), isA<Err<OfflineMapPack>>());
 
     expect(ctrl.state.value.mapPacks, isEmpty);
     expect(
@@ -80,9 +90,10 @@ void main() {
 
   test('deleteMap removes the file and its metadata entry', () async {
     final ctrl = controller();
-    final pack = await ctrl.importMap(
+    final pack = (await ctrl.importMap(
       sourceFile('city.pmtiles', List.filled(16, 1)),
-    );
+    ))
+        .orThrow();
     expect(File(pack.path).existsSync(), isTrue);
 
     await ctrl.deleteMap(pack.id);

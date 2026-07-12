@@ -5,6 +5,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../activity/maps/offline_map_import_controller.dart';
 import '../../activity/maps/offline_map_models.dart';
@@ -59,27 +60,20 @@ class OfflineMapsViewModel extends Notifier<OfflineMapsState> {
       import: const CommandState.running(),
       progress: const OfflineMapImportProgress(),
     );
-    try {
-      final pack = await controller.importMap(
-        file,
-        originalFileName: originalFileName,
-        onProgress: (progress) {
-          if (!ref.mounted || !state.isImporting) return;
-          state = state.copyWith(progress: progress);
-        },
-      );
-      if (!ref.mounted) return;
-      state = OfflineMapsState(import: CommandState.success(pack));
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = OfflineMapsState(
-        import: CommandState.failure(
-          throwableToScreenError(
-            error is ArgumentError ? '${error.message}' : error,
-          ),
-        ),
-      );
-    }
+    final result = await controller.importMap(
+      file,
+      originalFileName: originalFileName,
+      onProgress: (progress) {
+        if (!ref.mounted || !state.isImporting) return;
+        state = state.copyWith(progress: progress);
+      },
+    );
+    if (!ref.mounted) return;
+    state = switch (result) {
+      Ok(:final value) => OfflineMapsState(import: CommandState.success(value)),
+      Err(:final failure) =>
+        OfflineMapsState(import: CommandState.failure(failure.toScreenError())),
+    };
   }
 
   Future<void> deleteMap(String id) async {
