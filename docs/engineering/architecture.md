@@ -330,9 +330,11 @@ A `freezed` state class in the feature directory, holding: the selection the sca
 
 `TimeRange`, `DatePeriod`, `PeriodSelection`, `PeriodLoadQuery`, `PeriodWindows` from `lib/core/period/`. Load against the selected period query; do not invent navigation rules.
 
-### 3. Keep the notifier in charge of loading
+### 3. Keep the view-model in charge of loading
 
-The notifier: takes the `PeriodSelection` handed to it, builds a `PeriodLoadQuery`, calls the repository or use case, guards staleness with a `_generation` counter, checks `ref.mounted`, and maps a thrown error through `throwableToScreenError`. It does **not** own the period driver or the range preference — the scaffold does.
+The view-model: takes the `PeriodSelection` handed to it, builds a `PeriodLoadQuery`, calls the use case, guards staleness with a `_generation` counter, checks `ref.mounted`, then **switches on the returned `Result`** — `Ok` stores the payload *and its precomputed display model*, `Err` maps the `AppFailure` to a `ScreenError` with `failure.toScreenError(fallback: ...)`. It does **not** own the period driver or the range preference — the scaffold does.
+
+Repositories and use cases return `Result<T>` (`lib/core/result/`); they do not throw. Exceptions become failures in exactly one place, `runCatching` in the data layer. `orThrow()` is a **temporary migration bridge** for call sites not yet switched over — do not add new ones, and see `docs/engineering/refactor-tracker.md` for what is left.
 
 ### 4. Use `MetricDetailScaffold` as the shell
 
@@ -378,13 +380,17 @@ Prefer APIs that take a `DatePeriod` or a `PeriodLoadQuery` and return a feature
 
 Real seams in the current codebase. None of them blocks feature work.
 
-### 1. No notifier precomputes a display state
+### 1. The view-model precomputes the display state *(being reversed — migration in progress)*
 
-Every feature notifier holds the **raw** `*PeriodLoadResult` and the screen derives its display model on demand — `buildSleepDisplay(...)` is called from the sleep screen's content widget, not from `SleepViewModel`. The Kotlin ViewModels precompute a `SleepDisplayState` / `HeartDisplayState`; the port dropped that deliberately, on the grounds that the derivations are cheap, and the notifier doc comments say so.
+**The rule, now:** a view-model builds its feature's display model **at load time** and stores it on its state. Widgets render `state.display` and derive nothing — no sorting, no folding, no grouping, no unit conversion in a build path. Flutter's app-architecture guidance is explicit that logic does not live in widgets, and the Kotlin originals precomputed a `SleepDisplayState` / `HeartDisplayState` for the same reason. The port dropped that on the grounds that the derivations were cheap; they stopped being cheap (`activities_ordered_sections.dart` folded five metrics and bucketed a period on every rebuild of a scrolling screen).
 
-This is a systematic divergence, and it inverts the Kotlin playbook's "put expensive derived display values in the ViewModel state, not in composable getters".
+The shape, per feature — `lib/features/mindfulness/` is the reference:
 
-The rule that survives is the threshold, not the blanket: **if a derived value needs sorting, grouping, or scanning a list — or is recomputed on every rebuild of a scrolling screen — move it into the notifier's state.** Until then, deriving in the widget is the house style; do not half-migrate one feature.
+- `application/<x>_display.dart` — a `freezed` `<X>Display` plus a **pure** top-level `build<X>Display(data)`. No clock, no `ref`, no I/O: this is the unit-test seam (`test/features/mindfulness/mindfulness_display_test.dart`).
+- `application/<x>_view_model.dart` — calls it once per successful load, stores the result on the state's `display` field.
+- `presentation/` — renders it. A trivial O(1) getter on the state class is still fine; a loop is not.
+
+Migrated: mindfulness. Remaining: everything else, per `docs/engineering/refactor-tracker.md`. While a feature is unmigrated its screen still derives — that is a known state, not a licence to add more.
 
 ### 2. Period selection lives in the widget, not the notifier
 

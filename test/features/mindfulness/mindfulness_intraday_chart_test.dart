@@ -4,6 +4,7 @@ import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/mindfulness_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
+import 'package:openvitals/features/mindfulness/application/mindfulness_display.dart';
 import 'package:openvitals/features/mindfulness/presentation/mindfulness_intraday_chart.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/charts/metric_line_plot.dart';
@@ -61,10 +62,10 @@ void main() {
       tester,
       MindfulnessIntradayChartCard(
         selectedDate: day,
-        sessions: [
+        samples: cumulativeMindfulness([
           _session(dayStart.add(const Duration(hours: 6)),
               const Duration(minutes: 30)),
-        ],
+        ]),
         formatter: formatter,
         now: DateTime(2026, 3, 10),
       ),
@@ -80,7 +81,7 @@ void main() {
       tester,
       MindfulnessIntradayChartCard(
         selectedDate: day,
-        sessions: const [],
+        samples: const [],
         formatter: formatter,
         now: DateTime(2026, 3, 10),
       ),

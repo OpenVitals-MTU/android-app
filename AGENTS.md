@@ -45,11 +45,19 @@ Shared code lives in:
 
 One view-model per screen — a Riverpod `Notifier` / `AsyncNotifier` subclass named `<X>ViewModel` in `application/<x>_view_model.dart` — with state as a `freezed` class. (MVVM per the Flutter app-architecture guide; the Riverpod notifier IS the view-model, so nothing feature-side carries the Notifier suffix.) A view-model owns loading state, owns the selected range/anchor date, calls use-cases/repositories, and exposes UI-ready state. It must not carry large formatting blocks (that is `lib/core/presentation/`), must not re-implement period math, and must not mirror raw Health Connect record shapes when a cleaner UI model is warranted.
 
+**Derivation happens at load time, in the view-model** — never in a build path. A feature's `application/<x>_display.dart` holds a `freezed` `<X>Display` and a pure `build<X>Display(data)`; the view-model calls it on `Ok` and stores it on the state; the screen renders `state.display` and sorts/folds/groups nothing. `lib/features/mindfulness/` is the reference. (Migration in progress — `docs/engineering/refactor-tracker.md` says which features are done.)
+
 Dependencies come from providers, not constructors reaching into globals. After editing an annotated class (`freezed`, `json_serializable`, `riverpod`, `drift`), regenerate:
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
 ```
+
+### Errors
+
+Repositories and use cases return `Result<T>` (`lib/core/result/`) — `Ok` or `Err(AppFailure)`. They do **not** throw: exceptions become failures in exactly one place, `runCatching` in the data layer. A view-model switches on the `Result` and maps a failure to the UI's `ScreenError` with `failure.toScreenError(fallback: ...)`.
+
+`orThrow()` is a temporary bridge for call sites the migration has not reached. Do not add new ones.
 
 ### Repositories
 

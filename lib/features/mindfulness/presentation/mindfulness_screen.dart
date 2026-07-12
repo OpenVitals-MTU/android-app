@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +7,6 @@ import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/period_titles.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
-import '../../../core/time/local_date.dart';
 import '../../../domain/model/mindfulness_models.dart';
 import '../../../data/source/health/health_permissions.dart';
 import '../../../l10n/app_localizations.dart';
@@ -78,8 +75,8 @@ List<Widget> _content(
   DatePeriod period,
   WeekPeriodMode weekPeriodMode,
 ) {
-  final sessions = state.sessions;
-  if (sessions.isEmpty) {
+  final display = state.display;
+  if (display == null || display.sessionCount == 0) {
     if (state.isLoading && state.data == null) {
       return const [
         Padding(
@@ -104,11 +101,7 @@ List<Widget> _content(
   }
 
   final l10n = AppLocalizations.of(context);
-  final summary = _MindfulnessSummary.of(sessions);
-  final chartValues = _chartValues(sessions);
-  final total = formatter.minutes(summary.totalMinutes);
-  final sorted = [...sessions]
-    ..sort((a, b) => b.startTime.compareTo(a.startTime));
+  final total = formatter.minutes(display.totalMinutes);
 
   return [
     sectionPadded(
@@ -133,7 +126,7 @@ List<Widget> _content(
           Expanded(
             child: MetricCard(
               title: 'Sessions',
-              value: formatter.count(summary.sessionCount),
+              value: formatter.count(display.sessionCount),
               unit: 'total',
               icon: Icons.check_circle_outline,
               accentColor: AppColors.mindfulness,
@@ -150,12 +143,12 @@ List<Widget> _content(
       state.selectedRange == TimeRange.day
           ? MindfulnessIntradayChartCard(
               selectedDate: state.selectedDate,
-              sessions: sessions,
+              samples: display.cumulativeSamples,
               formatter: formatter,
             )
           : MetricBarChart(
               title: l10n.metricMindfulness,
-              values: chartValues,
+              values: display.chartValues,
               selectedRange: state.selectedRange,
               period: period,
               accentColor: AppColors.mindfulness,
@@ -167,66 +160,20 @@ List<Widget> _content(
     sectionPadded(
       _MindfulnessStatisticsCard(
         rows: [
-          ('Total', formatter.duration(summary.totalMs)),
-          ('Sessions', formatter.count(summary.sessionCount)),
-          ('Average duration', formatter.duration(summary.averageDurationMs)),
-          ('Longest session', formatter.duration(summary.longestSessionMs)),
+          ('Total', formatter.duration(display.totalMs)),
+          ('Sessions', formatter.count(display.sessionCount)),
+          ('Average duration', formatter.duration(display.averageDurationMs)),
+          ('Longest session', formatter.duration(display.longestSessionMs)),
         ],
       ),
     ),
     const SectionHeader('Sessions'),
-    for (final session in sorted)
+    for (final session in display.sortedSessions)
       sectionPadded(
         _MindfulnessSessionRow(session: session, formatter: formatter),
       ),
     sectionPadded(const MindfulnessReminderCard()),
   ];
-}
-
-List<PeriodChartValue> _chartValues(List<MindfulnessSession> sessions) {
-  final minutesByDate = <LocalDate, double>{};
-  for (final session in sessions) {
-    final date = instantToLocalDate(session.startTime);
-    final minutes = math.max(0, session.durationMs) / 60000.0;
-    minutesByDate.update(date, (value) => value + minutes,
-        ifAbsent: () => minutes);
-  }
-  return [
-    for (final entry in minutesByDate.entries)
-      PeriodChartValue(entry.key, entry.value),
-  ];
-}
-
-class _MindfulnessSummary {
-  const _MindfulnessSummary({
-    required this.totalMs,
-    required this.sessionCount,
-    required this.averageDurationMs,
-    required this.longestSessionMs,
-  });
-
-  factory _MindfulnessSummary.of(List<MindfulnessSession> sessions) {
-    final totalMs =
-        sessions.fold<int>(0, (sum, session) => sum + session.durationMs);
-    final longest = sessions.fold<int>(
-      0,
-      (m, session) => math.max(m, session.durationMs),
-    );
-    final count = sessions.length;
-    return _MindfulnessSummary(
-      totalMs: totalMs,
-      sessionCount: count,
-      averageDurationMs: count > 0 ? totalMs ~/ count : 0,
-      longestSessionMs: longest,
-    );
-  }
-
-  final int totalMs;
-  final int sessionCount;
-  final int averageDurationMs;
-  final int longestSessionMs;
-
-  int get totalMinutes => totalMs ~/ 60000;
 }
 
 class _MindfulnessSessionRow extends StatelessWidget {

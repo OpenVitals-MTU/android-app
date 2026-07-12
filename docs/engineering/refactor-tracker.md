@@ -14,8 +14,8 @@ Legend: `—` not started · `~` in progress · `x` done · `n/a` not applicable
 |---|-------|--------|
 | 0 | Foundations (Result, AppFailure, runCatching, CommandState, toScreenError) | x |
 | 1 | Rename Notifier→ViewModel + application/presentation layout everywhere | x |
-| 2 | Result through repositories + use-cases | — |
-| 3 | VMs on Result + CommandState; seam reversal templates (mindfulness, sleep, manual-entry) | — |
+| 2 | Result through repositories + use-cases | x |
+| 3 | VMs on Result + CommandState; seam reversal templates (mindfulness, sleep, manual-entry) | ~ |
 | 4 | Seam reversal heavy features + freezed state conversions | — |
 | 5 | Vitals god-file split | — |
 | 6 | Layer hygiene (permissions→domain, BLE contract, widget→repo cleanup, background DI helper) | — |
@@ -35,32 +35,32 @@ freezed (Ph 4–5) · **VM test** = dedicated view-model unit test.
 
 | Feature | Layout | Result | VM | Display | Freezed | VM test |
 |---|---|---|---|---|---|---|
-| mindfulness | x | — | — | — | x | — |
-| cycle | x | — | — | — | x | — |
-| nutrition | x | — | — | — | x | — |
-| caffeine | x | — | — | — | x | — |
-| hydration | x | — | — | — | x | — |
-| sleep (incl. detail) | x | — | — | — | detail: — | — |
-| heart | x | — | — | — | x | — |
-| body | x | — | — | — | x | — |
-| bodyenergy | x | — | — | — | x | — |
-| vitals (Ph 5) | x | — | — | — | — | — |
-| activity (metrics + sections) | x | — | — | — | x | — |
-| manualentry (forms) | x | — | — | — | x | partial |
-| manualentry/activity entry (Ph 9) | x | — | — | — | — | — |
-| recording (Ph 10) | x | — | — | — | — | — |
-| dashboard | x | — | — | — | x | — |
-| recovery (incl. details) | x | — | — | — | detail: — | — |
-| readiness (incl. training details) | x | — | — | — | x | — |
-| achievements | x | — | — | — | — | — |
-| onboarding | x | — | — | — | x | — |
-| settings (+ 11 cards) | x | — | — | — | ble: — | partial |
-| imports (route + applehealth) | x | — | — | — | — | — |
-| homewidgets (Ph 6 helper) | — | — | n/a | n/a | n/a | — |
+| mindfulness | x | x | x | x | x | x |
+| cycle | x | x | — | — | x | — |
+| nutrition | x | x | — | — | x | — |
+| caffeine | x | x | — | — | x | — |
+| hydration | x | x | — | — | x | — |
+| sleep (incl. detail) | x | x | — | — | detail: — | — |
+| heart | x | x | — | — | x | — |
+| body | x | x | — | — | x | — |
+| bodyenergy | x | x | — | — | x | — |
+| vitals (Ph 5) | x | x | — | — | — | — |
+| activity (metrics + sections) | x | x | — | — | x | — |
+| manualentry (forms) | x | x | — | — | x | partial |
+| manualentry/activity entry (Ph 9) | x | x | — | — | — | — |
+| recording (Ph 10) | x | x | — | — | — | — |
+| dashboard | x | x | — | — | x | — |
+| recovery (incl. details) | x | x | — | — | detail: — | — |
+| readiness (incl. training details) | x | x | — | — | x | — |
+| achievements | x | x | — | — | — | — |
+| onboarding | x | x | — | — | x | — |
+| settings (+ 11 cards) | x | x | — | — | ble: — | partial |
+| imports (route + applehealth) | x | x | — | — | — | — |
+| homewidgets (Ph 6 helper) | n/a | x | n/a | n/a | n/a | — |
 
 ## Cross-cutting items
 
-- [ ] `orThrow()` call sites: introduced Ph 2, must be zero by Ph 11
+- [ ] `orThrow()` call sites: 100 in lib/ after Ph 2; must be zero by Ph 11
 - [ ] `throwableToScreenError` call sites (~28 files): deleted by Ph 11
 - [ ] Hand-written states → freezed: Achievements, RecoveryDetail,
       RouteBulkImport, HydrationReminderSettings, MindfulnessReminderSettings,
