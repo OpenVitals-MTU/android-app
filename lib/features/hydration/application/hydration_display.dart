@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/time/local_date.dart';
+import '../../../core/period/time_range.dart';
 import '../../../domain/hydration/hydration_entry_merge.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../ui/charts/bar_chart.dart';
@@ -15,6 +17,11 @@ abstract class HydrationSummary with _$HydrationSummary {
     @Default(0.0) double totalLiters,
     @Default(0) int trackedDays,
     @Default(0) int loggedDays,
+
+    /// Days of the period that have actually happened — the whole period, or
+    /// the part of it up to today. The denominator a person means when they ask
+    /// "how did I do this week".
+    @Default(0) int elapsedDays,
     @Default(0.0) double averageLiters,
     @Default(0.0) double bestDayLiters,
     @Default(0) int goalMetDays,
@@ -73,8 +80,14 @@ HydrationDisplay buildHydrationDisplay(
   List<DailyHydration> dailyHydration,
   List<HydrationEntry> entries, {
   required double dailyGoalLiters,
+  required DatePeriod period,
+  required LocalDate today,
 }) {
-  final summary = _summarize(dailyHydration, dailyGoalLiters);
+  final summary = _summarize(
+    dailyHydration,
+    dailyGoalLiters,
+    elapsedDays: _elapsedDays(period, today),
+  );
   final breakdown = _drinkBreakdown(entries);
   final topSlices = breakdown.take(6).toList();
   var maxLiters = 0.0;
@@ -93,8 +106,12 @@ HydrationDisplay buildHydrationDisplay(
     drinkBreakdown: breakdown,
     topDrinkSlices: topSlices,
     maxDrinkLiters: maxLiters,
-    goalProgress: dailyGoalLiters > 0.0
-        ? (summary.averageLiters / dailyGoalLiters).clamp(0.0, 1.0)
+    // How much of the period you actually met the goal on — NOT the average of
+    // the days you happened to log. Dividing by tracked days meant that logging
+    // one day and hitting the goal filled the bar completely, so the bar
+    // rewarded you for logging less. See docs/engineering/refactor-tracker.md.
+    goalProgress: summary.elapsedDays > 0
+        ? (summary.goalMetDays / summary.elapsedDays).clamp(0.0, 1.0)
         : 0.0,
     entriesNewestFirst: [...entries]
       ..sort((a, b) => b.startTime.compareTo(a.startTime)),
@@ -102,7 +119,20 @@ HydrationDisplay buildHydrationDisplay(
 }
 
 /// Port of the Kotlin `List<DailyHydration>.summaryForGoal`.
-HydrationSummary _summarize(List<DailyHydration> days, double goalLiters) {
+/// Days of [period] that have happened. A goal you have not had the chance to
+/// miss yet must not count against you, so a period running past today is cut
+/// at today.
+int _elapsedDays(DatePeriod period, LocalDate today) {
+  final end = period.end.isAfter(today) ? today : period.end;
+  if (end.isBefore(period.start)) return 0;
+  return (end.epochDay - period.start.epochDay) + 1;
+}
+
+HydrationSummary _summarize(
+  List<DailyHydration> days,
+  double goalLiters, {
+  required int elapsedDays,
+}) {
   final sorted = [...days]..sort((a, b) => a.date.compareTo(b.date));
   final totalLiters = sorted.fold<double>(0.0, (sum, day) => sum + day.liters);
   final trackedDays = sorted.where((day) => day.liters > 0.0).length;
@@ -137,6 +167,7 @@ HydrationSummary _summarize(List<DailyHydration> days, double goalLiters) {
     totalLiters: totalLiters,
     trackedDays: trackedDays,
     loggedDays: sorted.length,
+    elapsedDays: elapsedDays,
     averageLiters: trackedDays > 0 ? totalLiters / trackedDays : 0.0,
     bestDayLiters: bestDay,
     goalMetDays: goalMetDays,

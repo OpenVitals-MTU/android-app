@@ -14,7 +14,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$HydrationSummary {
 
- double get totalLiters; int get trackedDays; int get loggedDays; double get averageLiters; double get bestDayLiters; int get goalMetDays; int get goalSuccessRatePercent; int get currentGoalStreakDays; int get longestGoalStreakDays;
+ double get totalLiters; int get trackedDays; int get loggedDays;/// Days of the period that have actually happened — the whole period, or
+/// the part of it up to today. The denominator a person means when they ask
+/// "how did I do this week".
+ int get elapsedDays; double get averageLiters; double get bestDayLiters; int get goalMetDays; int get goalSuccessRatePercent; int get currentGoalStreakDays; int get longestGoalStreakDays;
 /// Create a copy of HydrationSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +28,16 @@ $HydrationSummaryCopyWith<HydrationSummary> get copyWith => _$HydrationSummaryCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is HydrationSummary&&(identical(other.totalLiters, totalLiters) || other.totalLiters == totalLiters)&&(identical(other.trackedDays, trackedDays) || other.trackedDays == trackedDays)&&(identical(other.loggedDays, loggedDays) || other.loggedDays == loggedDays)&&(identical(other.averageLiters, averageLiters) || other.averageLiters == averageLiters)&&(identical(other.bestDayLiters, bestDayLiters) || other.bestDayLiters == bestDayLiters)&&(identical(other.goalMetDays, goalMetDays) || other.goalMetDays == goalMetDays)&&(identical(other.goalSuccessRatePercent, goalSuccessRatePercent) || other.goalSuccessRatePercent == goalSuccessRatePercent)&&(identical(other.currentGoalStreakDays, currentGoalStreakDays) || other.currentGoalStreakDays == currentGoalStreakDays)&&(identical(other.longestGoalStreakDays, longestGoalStreakDays) || other.longestGoalStreakDays == longestGoalStreakDays));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HydrationSummary&&(identical(other.totalLiters, totalLiters) || other.totalLiters == totalLiters)&&(identical(other.trackedDays, trackedDays) || other.trackedDays == trackedDays)&&(identical(other.loggedDays, loggedDays) || other.loggedDays == loggedDays)&&(identical(other.elapsedDays, elapsedDays) || other.elapsedDays == elapsedDays)&&(identical(other.averageLiters, averageLiters) || other.averageLiters == averageLiters)&&(identical(other.bestDayLiters, bestDayLiters) || other.bestDayLiters == bestDayLiters)&&(identical(other.goalMetDays, goalMetDays) || other.goalMetDays == goalMetDays)&&(identical(other.goalSuccessRatePercent, goalSuccessRatePercent) || other.goalSuccessRatePercent == goalSuccessRatePercent)&&(identical(other.currentGoalStreakDays, currentGoalStreakDays) || other.currentGoalStreakDays == currentGoalStreakDays)&&(identical(other.longestGoalStreakDays, longestGoalStreakDays) || other.longestGoalStreakDays == longestGoalStreakDays));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,totalLiters,trackedDays,loggedDays,averageLiters,bestDayLiters,goalMetDays,goalSuccessRatePercent,currentGoalStreakDays,longestGoalStreakDays);
+int get hashCode => Object.hash(runtimeType,totalLiters,trackedDays,loggedDays,elapsedDays,averageLiters,bestDayLiters,goalMetDays,goalSuccessRatePercent,currentGoalStreakDays,longestGoalStreakDays);
 
 @override
 String toString() {
-  return 'HydrationSummary(totalLiters: $totalLiters, trackedDays: $trackedDays, loggedDays: $loggedDays, averageLiters: $averageLiters, bestDayLiters: $bestDayLiters, goalMetDays: $goalMetDays, goalSuccessRatePercent: $goalSuccessRatePercent, currentGoalStreakDays: $currentGoalStreakDays, longestGoalStreakDays: $longestGoalStreakDays)';
+  return 'HydrationSummary(totalLiters: $totalLiters, trackedDays: $trackedDays, loggedDays: $loggedDays, elapsedDays: $elapsedDays, averageLiters: $averageLiters, bestDayLiters: $bestDayLiters, goalMetDays: $goalMetDays, goalSuccessRatePercent: $goalSuccessRatePercent, currentGoalStreakDays: $currentGoalStreakDays, longestGoalStreakDays: $longestGoalStreakDays)';
 }
 
 
@@ -45,7 +48,7 @@ abstract mixin class $HydrationSummaryCopyWith<$Res>  {
   factory $HydrationSummaryCopyWith(HydrationSummary value, $Res Function(HydrationSummary) _then) = _$HydrationSummaryCopyWithImpl;
 @useResult
 $Res call({
- double totalLiters, int trackedDays, int loggedDays, double averageLiters, double bestDayLiters, int goalMetDays, int goalSuccessRatePercent, int currentGoalStreakDays, int longestGoalStreakDays
+ double totalLiters, int trackedDays, int loggedDays, int elapsedDays, double averageLiters, double bestDayLiters, int goalMetDays, int goalSuccessRatePercent, int currentGoalStreakDays, int longestGoalStreakDays
 });
 
 
@@ -62,11 +65,12 @@ class _$HydrationSummaryCopyWithImpl<$Res>
 
 /// Create a copy of HydrationSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? totalLiters = null,Object? trackedDays = null,Object? loggedDays = null,Object? averageLiters = null,Object? bestDayLiters = null,Object? goalMetDays = null,Object? goalSuccessRatePercent = null,Object? currentGoalStreakDays = null,Object? longestGoalStreakDays = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? totalLiters = null,Object? trackedDays = null,Object? loggedDays = null,Object? elapsedDays = null,Object? averageLiters = null,Object? bestDayLiters = null,Object? goalMetDays = null,Object? goalSuccessRatePercent = null,Object? currentGoalStreakDays = null,Object? longestGoalStreakDays = null,}) {
   return _then(_self.copyWith(
 totalLiters: null == totalLiters ? _self.totalLiters : totalLiters // ignore: cast_nullable_to_non_nullable
 as double,trackedDays: null == trackedDays ? _self.trackedDays : trackedDays // ignore: cast_nullable_to_non_nullable
 as int,loggedDays: null == loggedDays ? _self.loggedDays : loggedDays // ignore: cast_nullable_to_non_nullable
+as int,elapsedDays: null == elapsedDays ? _self.elapsedDays : elapsedDays // ignore: cast_nullable_to_non_nullable
 as int,averageLiters: null == averageLiters ? _self.averageLiters : averageLiters // ignore: cast_nullable_to_non_nullable
 as double,bestDayLiters: null == bestDayLiters ? _self.bestDayLiters : bestDayLiters // ignore: cast_nullable_to_non_nullable
 as double,goalMetDays: null == goalMetDays ? _self.goalMetDays : goalMetDays // ignore: cast_nullable_to_non_nullable
@@ -158,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( double totalLiters,  int trackedDays,  int loggedDays,  double averageLiters,  double bestDayLiters,  int goalMetDays,  int goalSuccessRatePercent,  int currentGoalStreakDays,  int longestGoalStreakDays)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( double totalLiters,  int trackedDays,  int loggedDays,  int elapsedDays,  double averageLiters,  double bestDayLiters,  int goalMetDays,  int goalSuccessRatePercent,  int currentGoalStreakDays,  int longestGoalStreakDays)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HydrationSummary() when $default != null:
-return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.averageLiters,_that.bestDayLiters,_that.goalMetDays,_that.goalSuccessRatePercent,_that.currentGoalStreakDays,_that.longestGoalStreakDays);case _:
+return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.elapsedDays,_that.averageLiters,_that.bestDayLiters,_that.goalMetDays,_that.goalSuccessRatePercent,_that.currentGoalStreakDays,_that.longestGoalStreakDays);case _:
   return orElse();
 
 }
@@ -179,10 +183,10 @@ return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.avera
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double totalLiters,  int trackedDays,  int loggedDays,  double averageLiters,  double bestDayLiters,  int goalMetDays,  int goalSuccessRatePercent,  int currentGoalStreakDays,  int longestGoalStreakDays)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( double totalLiters,  int trackedDays,  int loggedDays,  int elapsedDays,  double averageLiters,  double bestDayLiters,  int goalMetDays,  int goalSuccessRatePercent,  int currentGoalStreakDays,  int longestGoalStreakDays)  $default,) {final _that = this;
 switch (_that) {
 case _HydrationSummary():
-return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.averageLiters,_that.bestDayLiters,_that.goalMetDays,_that.goalSuccessRatePercent,_that.currentGoalStreakDays,_that.longestGoalStreakDays);case _:
+return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.elapsedDays,_that.averageLiters,_that.bestDayLiters,_that.goalMetDays,_that.goalSuccessRatePercent,_that.currentGoalStreakDays,_that.longestGoalStreakDays);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +203,10 @@ return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.avera
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( double totalLiters,  int trackedDays,  int loggedDays,  double averageLiters,  double bestDayLiters,  int goalMetDays,  int goalSuccessRatePercent,  int currentGoalStreakDays,  int longestGoalStreakDays)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( double totalLiters,  int trackedDays,  int loggedDays,  int elapsedDays,  double averageLiters,  double bestDayLiters,  int goalMetDays,  int goalSuccessRatePercent,  int currentGoalStreakDays,  int longestGoalStreakDays)?  $default,) {final _that = this;
 switch (_that) {
 case _HydrationSummary() when $default != null:
-return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.averageLiters,_that.bestDayLiters,_that.goalMetDays,_that.goalSuccessRatePercent,_that.currentGoalStreakDays,_that.longestGoalStreakDays);case _:
+return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.elapsedDays,_that.averageLiters,_that.bestDayLiters,_that.goalMetDays,_that.goalSuccessRatePercent,_that.currentGoalStreakDays,_that.longestGoalStreakDays);case _:
   return null;
 
 }
@@ -214,12 +218,16 @@ return $default(_that.totalLiters,_that.trackedDays,_that.loggedDays,_that.avera
 
 
 class _HydrationSummary implements HydrationSummary {
-  const _HydrationSummary({this.totalLiters = 0.0, this.trackedDays = 0, this.loggedDays = 0, this.averageLiters = 0.0, this.bestDayLiters = 0.0, this.goalMetDays = 0, this.goalSuccessRatePercent = 0, this.currentGoalStreakDays = 0, this.longestGoalStreakDays = 0});
+  const _HydrationSummary({this.totalLiters = 0.0, this.trackedDays = 0, this.loggedDays = 0, this.elapsedDays = 0, this.averageLiters = 0.0, this.bestDayLiters = 0.0, this.goalMetDays = 0, this.goalSuccessRatePercent = 0, this.currentGoalStreakDays = 0, this.longestGoalStreakDays = 0});
   
 
 @override@JsonKey() final  double totalLiters;
 @override@JsonKey() final  int trackedDays;
 @override@JsonKey() final  int loggedDays;
+/// Days of the period that have actually happened — the whole period, or
+/// the part of it up to today. The denominator a person means when they ask
+/// "how did I do this week".
+@override@JsonKey() final  int elapsedDays;
 @override@JsonKey() final  double averageLiters;
 @override@JsonKey() final  double bestDayLiters;
 @override@JsonKey() final  int goalMetDays;
@@ -237,16 +245,16 @@ _$HydrationSummaryCopyWith<_HydrationSummary> get copyWith => __$HydrationSummar
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HydrationSummary&&(identical(other.totalLiters, totalLiters) || other.totalLiters == totalLiters)&&(identical(other.trackedDays, trackedDays) || other.trackedDays == trackedDays)&&(identical(other.loggedDays, loggedDays) || other.loggedDays == loggedDays)&&(identical(other.averageLiters, averageLiters) || other.averageLiters == averageLiters)&&(identical(other.bestDayLiters, bestDayLiters) || other.bestDayLiters == bestDayLiters)&&(identical(other.goalMetDays, goalMetDays) || other.goalMetDays == goalMetDays)&&(identical(other.goalSuccessRatePercent, goalSuccessRatePercent) || other.goalSuccessRatePercent == goalSuccessRatePercent)&&(identical(other.currentGoalStreakDays, currentGoalStreakDays) || other.currentGoalStreakDays == currentGoalStreakDays)&&(identical(other.longestGoalStreakDays, longestGoalStreakDays) || other.longestGoalStreakDays == longestGoalStreakDays));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HydrationSummary&&(identical(other.totalLiters, totalLiters) || other.totalLiters == totalLiters)&&(identical(other.trackedDays, trackedDays) || other.trackedDays == trackedDays)&&(identical(other.loggedDays, loggedDays) || other.loggedDays == loggedDays)&&(identical(other.elapsedDays, elapsedDays) || other.elapsedDays == elapsedDays)&&(identical(other.averageLiters, averageLiters) || other.averageLiters == averageLiters)&&(identical(other.bestDayLiters, bestDayLiters) || other.bestDayLiters == bestDayLiters)&&(identical(other.goalMetDays, goalMetDays) || other.goalMetDays == goalMetDays)&&(identical(other.goalSuccessRatePercent, goalSuccessRatePercent) || other.goalSuccessRatePercent == goalSuccessRatePercent)&&(identical(other.currentGoalStreakDays, currentGoalStreakDays) || other.currentGoalStreakDays == currentGoalStreakDays)&&(identical(other.longestGoalStreakDays, longestGoalStreakDays) || other.longestGoalStreakDays == longestGoalStreakDays));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,totalLiters,trackedDays,loggedDays,averageLiters,bestDayLiters,goalMetDays,goalSuccessRatePercent,currentGoalStreakDays,longestGoalStreakDays);
+int get hashCode => Object.hash(runtimeType,totalLiters,trackedDays,loggedDays,elapsedDays,averageLiters,bestDayLiters,goalMetDays,goalSuccessRatePercent,currentGoalStreakDays,longestGoalStreakDays);
 
 @override
 String toString() {
-  return 'HydrationSummary(totalLiters: $totalLiters, trackedDays: $trackedDays, loggedDays: $loggedDays, averageLiters: $averageLiters, bestDayLiters: $bestDayLiters, goalMetDays: $goalMetDays, goalSuccessRatePercent: $goalSuccessRatePercent, currentGoalStreakDays: $currentGoalStreakDays, longestGoalStreakDays: $longestGoalStreakDays)';
+  return 'HydrationSummary(totalLiters: $totalLiters, trackedDays: $trackedDays, loggedDays: $loggedDays, elapsedDays: $elapsedDays, averageLiters: $averageLiters, bestDayLiters: $bestDayLiters, goalMetDays: $goalMetDays, goalSuccessRatePercent: $goalSuccessRatePercent, currentGoalStreakDays: $currentGoalStreakDays, longestGoalStreakDays: $longestGoalStreakDays)';
 }
 
 
@@ -257,7 +265,7 @@ abstract mixin class _$HydrationSummaryCopyWith<$Res> implements $HydrationSumma
   factory _$HydrationSummaryCopyWith(_HydrationSummary value, $Res Function(_HydrationSummary) _then) = __$HydrationSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- double totalLiters, int trackedDays, int loggedDays, double averageLiters, double bestDayLiters, int goalMetDays, int goalSuccessRatePercent, int currentGoalStreakDays, int longestGoalStreakDays
+ double totalLiters, int trackedDays, int loggedDays, int elapsedDays, double averageLiters, double bestDayLiters, int goalMetDays, int goalSuccessRatePercent, int currentGoalStreakDays, int longestGoalStreakDays
 });
 
 
@@ -274,11 +282,12 @@ class __$HydrationSummaryCopyWithImpl<$Res>
 
 /// Create a copy of HydrationSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? totalLiters = null,Object? trackedDays = null,Object? loggedDays = null,Object? averageLiters = null,Object? bestDayLiters = null,Object? goalMetDays = null,Object? goalSuccessRatePercent = null,Object? currentGoalStreakDays = null,Object? longestGoalStreakDays = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? totalLiters = null,Object? trackedDays = null,Object? loggedDays = null,Object? elapsedDays = null,Object? averageLiters = null,Object? bestDayLiters = null,Object? goalMetDays = null,Object? goalSuccessRatePercent = null,Object? currentGoalStreakDays = null,Object? longestGoalStreakDays = null,}) {
   return _then(_HydrationSummary(
 totalLiters: null == totalLiters ? _self.totalLiters : totalLiters // ignore: cast_nullable_to_non_nullable
 as double,trackedDays: null == trackedDays ? _self.trackedDays : trackedDays // ignore: cast_nullable_to_non_nullable
 as int,loggedDays: null == loggedDays ? _self.loggedDays : loggedDays // ignore: cast_nullable_to_non_nullable
+as int,elapsedDays: null == elapsedDays ? _self.elapsedDays : elapsedDays // ignore: cast_nullable_to_non_nullable
 as int,averageLiters: null == averageLiters ? _self.averageLiters : averageLiters // ignore: cast_nullable_to_non_nullable
 as double,bestDayLiters: null == bestDayLiters ? _self.bestDayLiters : bestDayLiters // ignore: cast_nullable_to_non_nullable
 as double,goalMetDays: null == goalMetDays ? _self.goalMetDays : goalMetDays // ignore: cast_nullable_to_non_nullable

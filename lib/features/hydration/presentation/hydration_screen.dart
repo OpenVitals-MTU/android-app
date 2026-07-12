@@ -231,7 +231,7 @@ class _HydrationGoalCard extends StatelessWidget {
                     children: [
                       Text('Daily goal', style: theme.textTheme.titleSmall),
                       Text(
-                        '${summary.goalMetDays} of ${summary.trackedDays} days met',
+                        '${summary.goalMetDays} of ${summary.elapsedDays} days met',
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: scheme.onSurfaceVariant),
                       ),

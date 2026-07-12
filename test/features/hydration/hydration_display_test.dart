@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/features/hydration/application/hydration_display.dart';
@@ -20,16 +21,32 @@ HydrationEntry _drink(
       displayName: displayName,
     );
 
+/// The week of Mon 2 Mar 2026, seen from a point well after it ended — so the
+/// whole 7 days count as elapsed.
+final _week = DatePeriod(LocalDate(2026, 3, 2), LocalDate(2026, 3, 8));
+final _afterTheWeek = LocalDate(2026, 3, 20);
+
+HydrationDisplay _display(
+  List<DailyHydration> days,
+  List<HydrationEntry> entries, {
+  double dailyGoalLiters = 2.0,
+  DatePeriod? period,
+  LocalDate? today,
+}) =>
+    buildHydrationDisplay(
+      days,
+      entries,
+      dailyGoalLiters: dailyGoalLiters,
+      period: period ?? _week,
+      today: today ?? _afterTheWeek,
+    );
+
 void main() {
   final monday = LocalDate(2026, 3, 2);
   final morning = DateTime(2026, 3, 2, 8);
 
   test('an empty period derives zeroes, not nulls', () {
-    final display = buildHydrationDisplay(
-      const [],
-      const [],
-      dailyGoalLiters: 2.0,
-    );
+    final display = _display(const [], const []);
 
     expect(display.hasData, isFalse);
     expect(display.summary.totalLiters, 0.0);
@@ -44,10 +61,10 @@ void main() {
   });
 
   test('the summary folds totals, tracked days and the best day', () {
-    final display = buildHydrationDisplay(
+    final display = _display(
       [
         DailyHydration(date: monday, liters: 2.5),
-        DailyHydration(date: monday.plusDays(1), liters: 0.0),
+      DailyHydration(date: monday.plusDays(1), liters: 0.0),
         DailyHydration(date: monday.plusDays(2), liters: 1.5),
       ],
       const [],
@@ -68,10 +85,10 @@ void main() {
   });
 
   test('the goal streak is the trailing one, the longest is the best one', () {
-    final display = buildHydrationDisplay(
+    final display = _display(
       [
         DailyHydration(date: monday, liters: 2.2),
-        DailyHydration(date: monday.plusDays(1), liters: 2.4),
+      DailyHydration(date: monday.plusDays(1), liters: 2.4),
         // A missed day breaks the streak…
         DailyHydration(date: monday.plusDays(2), liters: 0.5),
         // …and the trailing streak starts over.
@@ -86,7 +103,7 @@ void main() {
   });
 
   test('the drink breakdown sums by name, biggest first, and scales itself', () {
-    final display = buildHydrationDisplay(
+    final display = _display(
       [DailyHydration(date: monday, liters: 1.3)],
       [
         _drink(morning, 0.3, displayName: 'Green tea'),
@@ -115,7 +132,7 @@ void main() {
   });
 
   test('the day curve accumulates, in time order, skipping empty drinks', () {
-    final display = buildHydrationDisplay(
+    final display = _display(
       [DailyHydration(date: monday, liters: 0.8)],
       [
         _drink(morning.add(const Duration(hours: 5)), 0.5),
@@ -131,7 +148,7 @@ void main() {
   });
 
   test('the entry list is newest first', () {
-    final display = buildHydrationDisplay(
+    final display = _display(
       const [],
       [
         _drink(morning, 0.3),
@@ -145,19 +162,67 @@ void main() {
     expect(display.entriesNewestFirst.last.startTime, morning);
   });
 
-  test('goal progress is the daily average against the goal, clamped', () {
-    final display = buildHydrationDisplay(
+  test('a single day over the goal is one day of seven, not a full bar', () {
+    // This test used to assert goalProgress == 1.0 here, because progress was
+    // the average of the LOGGED days over the goal. One day at 3L of a 2L goal
+    // filled the bar. That was the bug; the assertion moved with it.
+    final display = _display(
       [DailyHydration(date: monday, liters: 3.0)],
       const [],
       dailyGoalLiters: 2.0,
     );
-    expect(display.goalProgress, 1.0);
+    expect(display.goalProgress, closeTo(1 / 7, 0.001));
 
-    final zeroGoal = buildHydrationDisplay(
+    // A goal of zero cannot be met, and cannot divide.
+    final zeroGoal = _display(
       [DailyHydration(date: monday, liters: 3.0)],
       const [],
       dailyGoalLiters: 0.0,
     );
     expect(zeroGoal.goalProgress, 0.0);
+  });
+
+  group('the goal bar measures the period, not the days you logged', () {
+    // It used to divide the average of the days you LOGGED by the goal. So a
+    // week in which you logged Monday, hit your goal, and never opened the app
+    // again showed a full bar and "1 of 1 days met" — the bar rewarded you for
+    // logging less. It now measures the days that actually happened.
+    test('one logged day in a seven-day week does not fill the bar', () {
+      final display = _display(
+        [DailyHydration(date: monday, liters: 2.5)],
+        const [],
+      );
+
+      expect(display.summary.goalMetDays, 1);
+      expect(display.summary.elapsedDays, 7);
+      expect(display.goalProgress, closeTo(1 / 7, 0.001));
+    });
+
+    test('meeting the goal every day of the week fills it', () {
+      final display = _display(
+        [
+          for (var i = 0; i < 7; i++)
+            DailyHydration(date: monday.plusDays(i), liters: 2.5),
+        ],
+        const [],
+      );
+
+      expect(display.goalProgress, 1.0);
+    });
+
+    test('a goal you have not had the chance to miss yet does not count', () {
+      // Wednesday of the current week: three days have happened, not seven.
+      final display = _display(
+        [
+          DailyHydration(date: monday, liters: 2.5),
+          DailyHydration(date: monday.plusDays(1), liters: 2.5),
+        ],
+        const [],
+        today: LocalDate(2026, 3, 4),
+      );
+
+      expect(display.summary.elapsedDays, 3);
+      expect(display.goalProgress, closeTo(2 / 3, 0.001));
+    });
   });
 }

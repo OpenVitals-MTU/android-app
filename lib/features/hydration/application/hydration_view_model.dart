@@ -95,6 +95,8 @@ class HydrationViewModel extends Notifier<HydrationState> {
             value.dailyHydration,
             value.entries,
             dailyGoalLiters: goal,
+            period: query.windows.current,
+            today: LocalDate.now(),
           ),
         );
       case Err(:final failure):
