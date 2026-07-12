@@ -181,8 +181,16 @@ class _SleepContent extends StatelessWidget {
             children: [
               sectionPadded(SleepSessionTimelineCard(
                 session: display.dailySummary!,
+                selectedDate: state.selectedDate,
                 formatter: formatter,
                 timeRangeText: _dayTimeRangeText(display.dailySessions),
+                // Only a single night can be opened. With two or more sessions
+                // `dailySummary` is a MERGED summary whose id belongs to no
+                // record, so there is nothing for the detail screen to load —
+                // Kotlin gated on `dailySessions.singleOrNull()` for exactly this.
+                onTap: display.dailySessions.length == 1
+                    ? () => onOpenSession(display.dailySessions.single.id)
+                    : null,
               )),
               sectionPadded(SleepStageShareCard(
                 summary: display.overviewSummary,

@@ -1,32 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/presentation/unit_formatter.dart';
+import '../../core/time/local_date.dart';
+import '../../l10n/app_localizations.dart';
+import '../../ui/components/metric_card.dart';
 import '../../domain/model/sleep_models.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'sleep_presentation.dart';
-
-/// The stage accent colours, ported from the Kotlin `stageColor(...)`.
-Color sleepStageColor(int stageType) {
-  switch (stageType) {
-    case SleepStage.stageAwake:
-      return const Color(0xFFF48FB1);
-    case SleepStage.stageLight:
-      return const Color(0xFF8AB4F8);
-    case SleepStage.stageDeep:
-      return const Color(0xFF8E63CE);
-    case SleepStage.stageRem:
-      return const Color(0xFFB3E5FC);
-    case SleepStage.stageAwakeInBed:
-      return const Color(0xFFF8A6C6);
-    case SleepStage.stageSleeping:
-      return const Color(0xFF7EA7F5);
-    case SleepStage.stageOutOfBed:
-      return const Color(0xFFEF9A9A);
-    default:
-      return const Color(0xFF90A4AE);
-  }
-}
+import 'sleep_stage_chart.dart';
 
 String sleepStageLabel(int stageType) {
   switch (stageType) {
@@ -73,74 +56,117 @@ class SleepSectionCard extends StatelessWidget {
   }
 }
 
-/// The single-night stage timeline (hypnogram-style stacked segments), a trimmed
-/// port of the Kotlin `SleepSessionTimelineCard`.
+/// The night's hypnogram, port of the Kotlin `SleepSessionTimelineCard`: the
+/// duration and its source, the time range, and the stage lane chart.
+///
+/// The Flutter port had shrunk this to a flat proportional bar — every stage
+/// squeezed edge-to-edge in reading order, telling you the SHARES a second time
+/// and the SHAPE of the night not at all. Kotlin drew (and this draws) one lane
+/// per stage, positioned on the real clock, so a night reads as the descent into
+/// deep sleep and the climb back out that it actually was.
+///
+/// [onTap] opens the session's detail screen — the whole card is the target, as
+/// in Kotlin, so tapping the chart itself works. It is null when the day holds
+/// more than one session: [session] is then a MERGED summary with no id of its
+/// own, and there is no single night to open.
 class SleepSessionTimelineCard extends StatelessWidget {
   const SleepSessionTimelineCard({
     super.key,
     required this.session,
+    required this.selectedDate,
     required this.formatter,
     this.timeRangeText,
+    this.onTap,
   });
 
   final SleepData session;
+  final LocalDate selectedDate;
   final UnitFormatter formatter;
   final String? timeRangeText;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
     final stages = [...session.stages]
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
-    final totalMs = stages.fold<int>(
-      0,
-      (sum, stage) => sum + (stage.durationMs > 0 ? stage.durationMs : 0),
-    );
 
-    return SleepSectionCard(
-      title: 'Sleep',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          MetricValueLikeRow(
-            value: formatter.duration(session.durationMs),
-            label: timeRangeText,
-          ),
-          const SizedBox(height: 12),
-          if (totalMs > 0)
-            ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(6)),
-              child: SizedBox(
-                height: 16,
-                child: Row(
-                  // stretch, NOT the default centre: a Row hands its children LOOSE
-                  // cross-axis constraints, and a childless ColoredBox collapses to
-                  // zero height under those. Expanded makes the WIDTH tight and says
-                  // nothing about the height — so every stage band was painted 0px
-                  // tall and the night's hypnogram was an empty 16px strip.
-                  //
-                  // Same trap as the "share of time in bed" bars below, one card up.
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final stage in stages)
-                      if (stage.durationMs > 0)
-                        Expanded(
-                          flex: stage.durationMs,
-                          child: ColoredBox(
-                            color: sleepStageColor(stage.stageType),
-                          ),
-                        ),
-                  ],
+    return OpenVitalsCard(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        formatter.duration(session.durationMs),
+                        style: theme.textTheme.headlineMedium
+                            ?.copyWith(color: AppColors.sleep),
+                      ),
+                      Text(
+                        selectedDate == LocalDate.now()
+                            ? l10n.summarySleepEndingToday
+                            : l10n.summarySleepEndingOn(
+                                DateFormat.yMMMd(locale).format(
+                                  DateTime(selectedDate.year,
+                                      selectedDate.month, selectedDate.day),
+                                ),
+                              ),
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            )
-          else
-            Text(
-              'No stage data for this night.',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                SourceChip(source: session.source),
+              ],
             ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              timeRangeText ?? _sessionRangeText(locale, session),
+              style: theme.textTheme.bodyMedium,
+            ),
+            if (stages.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              SleepStagesLaneChart(
+                stages: stages,
+                formatter: formatter,
+                timelineStart: session.startTime,
+                timelineEnd: session.endTime,
+                // The lane totals are listed again in the "share of time in bed"
+                // card right below, so the lanes here carry names only.
+                showInlineLabels: false,
+              ),
+            ],
+            if (onTap != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    l10n.actionDetails,
+                    style: theme.textTheme.labelLarge
+                        ?.copyWith(color: theme.colorScheme.primary),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: theme.colorScheme.primary,
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -471,4 +497,12 @@ class SleepStatisticsCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The card's own start-end range, used when the day view does not hand one in
+/// (it does when several sessions are merged). Kotlin `singleSessionTimeRangeText`.
+String _sessionRangeText(String locale, SleepData session) {
+  final time = DateFormat.jm(locale);
+  return '${time.format(session.startTime.toLocal())} - '
+      '${time.format(session.endTime.toLocal())}';
 }

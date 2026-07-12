@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
+import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/features/sleep/sleep_cards.dart';
+import 'package:openvitals/features/sleep/sleep_stage_chart.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
+import 'package:openvitals/ui/components/ov_card.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
 import 'package:openvitals/features/sleep/sleep_presentation.dart';
 
@@ -99,13 +103,15 @@ void main() {
   });
 }
 
-/// The night's hypnogram — the "Sleep" card's stage timeline — had the SAME bug
-/// as the share bars one card below it, and it read as "the daily graph is
-/// missing": the card showed 3h 27m and 01:09–04:36 and then a blank 16px strip.
+/// The night's card must draw a real HYPNOGRAM — one lane per stage, positioned
+/// on the clock — not a flat proportional bar.
 ///
-/// A Row hands its children LOOSE cross-axis constraints under the default centre
-/// alignment. Expanded makes the WIDTH tight and says nothing about the height, so
-/// every childless ColoredBox band collapsed to zero height.
+/// The port had reduced it to a single 16px strip of stages laid end to end.
+/// That bar restated the shares the card below it already gives you and threw
+/// away the only thing the chart is for: the SHAPE of the night. (It was also,
+/// for a while, painted zero pixels tall — a Row hands its children loose
+/// cross-axis constraints and a childless ColoredBox collapses under them — but
+/// fixing the height only revealed that the whole chart was the wrong one.)
 void _timelineTests() {
   SleepStage stage(int type, DateTime from, Duration length) => SleepStage(
         startTime: from,
@@ -113,56 +119,82 @@ void _timelineTests() {
         stageType: type,
       );
 
-  testWidgets('the night timeline paints its stage bands with real height',
-      (tester) async {
-    final start = DateTime.utc(2026, 7, 12, 1, 9);
-    final session = SleepData(
-      id: 's1',
-      startTime: start,
-      endTime: start.add(const Duration(hours: 3, minutes: 27)),
-      durationMs: const Duration(hours: 3, minutes: 27).inMilliseconds,
-      source: 'test',
-      stages: [
-        stage(SleepStage.stageLight, start, const Duration(minutes: 106)),
-        stage(SleepStage.stageDeep, start.add(const Duration(minutes: 106)),
-            const Duration(minutes: 53)),
-        stage(SleepStage.stageRem, start.add(const Duration(minutes: 159)),
-            const Duration(minutes: 48)),
-      ],
-    );
+  final start = DateTime.utc(2026, 7, 12, 1, 9);
+  final session = SleepData(
+    id: 's1',
+    startTime: start,
+    endTime: start.add(const Duration(hours: 3, minutes: 27)),
+    durationMs: const Duration(hours: 3, minutes: 27).inMilliseconds,
+    source: 'test',
+    stages: [
+      stage(SleepStage.stageLight, start, const Duration(minutes: 106)),
+      stage(SleepStage.stageDeep, start.add(const Duration(minutes: 106)),
+          const Duration(minutes: 53)),
+      stage(SleepStage.stageRem, start.add(const Duration(minutes: 159)),
+          const Duration(minutes: 48)),
+    ],
+  );
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: SizedBox(
-            width: 400,
-            child: SleepSessionTimelineCard(
-              session: session,
-              formatter: UnitFormatter(
-                unitSystemProvider: () => UnitSystem.metric,
+  Widget host({VoidCallback? onTap}) => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 400,
+              child: SleepSessionTimelineCard(
+                session: session,
+                selectedDate: LocalDate(2026, 7, 12),
+                formatter: UnitFormatter(
+                  unitSystemProvider: () => UnitSystem.metric,
+                ),
+                timeRangeText: '01:09 - 04:36',
+                onTap: onTap,
               ),
-              timeRangeText: '01:09 - 04:36',
             ),
           ),
         ),
-      ),
-    ));
+      );
 
-    // Scoped to the rounded strip: the card's own surface is a ColoredBox too.
-    final bands = find.descendant(
-      of: find.byType(ClipRRect),
-      matching: find.byType(ColoredBox),
+  testWidgets('the night is drawn as a lane chart, not a flat bar',
+      (tester) async {
+    await tester.pumpWidget(host());
+
+    final chart = find.byType(SleepStagesLaneChart);
+    expect(chart, findsOneWidget,
+        reason: 'the day card must draw the hypnogram, not a proportional strip');
+    // A lane per stage present, each one tall enough to read: the whole point of
+    // the chart is that Deep sits below Light, at the time it happened.
+    expect(tester.getSize(chart).height, greaterThan(100));
+    expect(find.text('Deep'), findsOneWidget);
+    expect(find.text('Light'), findsOneWidget);
+    expect(find.text('REM'), findsOneWidget);
+  });
+
+  testWidgets('tapping the card opens that night, and it says so',
+      (tester) async {
+    var opened = false;
+    await tester.pumpWidget(host(onTap: () => opened = true));
+
+    expect(find.text('Details'), findsOneWidget,
+        reason: 'the affordance must be visible, as it was in Kotlin');
+
+    await tester.tap(find.byType(SleepStagesLaneChart));
+    await tester.pumpAndSettle();
+    expect(opened, isTrue,
+        reason: 'tapping the hypnogram itself must open the detail screen');
+  });
+
+  testWidgets('a merged night offers no detail to open', (tester) async {
+    // Two sessions in a day are shown as ONE merged summary whose id belongs to
+    // no record. There is no single night to open, so the card must not pretend
+    // there is.
+    await tester.pumpWidget(host());
+
+    expect(find.text('Details'), findsNothing);
+    expect(
+      tester.widget<OpenVitalsCard>(find.byType(OpenVitalsCard).first).onTap,
+      isNull,
     );
-    expect(bands, findsNWidgets(3), reason: 'three stages -> three bands');
-    for (var i = 0; i < 3; i++) {
-      final size = tester.getSize(bands.at(i));
-      expect(size.height, greaterThan(0),
-          reason: 'a stage band was painted zero pixels tall');
-      expect(size.width, greaterThan(0));
-    }
-    // Light (106 min) must be visibly wider than REM (48 min).
-    final widths = [for (var i = 0; i < 3; i++) tester.getSize(bands.at(i)).width]
-      ..sort();
-    expect(widths.last, greaterThan(widths.first));
   });
 }

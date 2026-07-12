@@ -7,6 +7,7 @@ import 'package:openvitals/data/repository/contract/sleep_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
 import 'package:openvitals/features/sleep/sleep_detail_screen.dart';
+import 'package:openvitals/features/sleep/sleep_stage_chart.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// A fake [SleepRepository] serving one canned session by id.
