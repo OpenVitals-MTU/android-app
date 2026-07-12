@@ -45,6 +45,10 @@ Shared code lives in:
 
 One view-model per screen — a Riverpod `Notifier` / `AsyncNotifier` subclass named `<X>ViewModel` in `application/<x>_view_model.dart` — with state as a `freezed` class. (MVVM per the Flutter app-architecture guide; the Riverpod notifier IS the view-model, so nothing feature-side carries the Notifier suffix.) A view-model owns loading state, owns the selected range/anchor date, calls use-cases/repositories, and exposes UI-ready state. It must not carry large formatting blocks (that is `lib/core/presentation/`), must not re-implement period math, and must not mirror raw Health Connect record shapes when a cleaner UI model is warranted.
 
+The one exception to `freezed`: when the whole state **is** a single already-immutable value, `Notifier<int?>` / `Notifier<double>` / `Notifier<SomeValueObject>` is the state. A freezed wrapper around it would add a field and no information. Three settings card view-models are like this; everything else is freezed.
+
+**A widget never holds a repository** — not even to read a synchronous constant off one. If a screen needs a permission set for its `HealthConnectGate`, it watches a provider (`mindfulnessWritePermissionsProvider` and friends in `lib/di/data_providers.dart`), not `ref.watch(mindfulnessRepositoryProvider)`.
+
 **Derivation happens at load time, in the view-model** — never in a build path. A feature's `application/<x>_display.dart` holds a `freezed` `<X>Display` and a pure `build<X>Display(data)`; the view-model calls it on `Ok` and stores it on the state; the screen renders `state.display` and sorts/folds/groups nothing. `lib/features/mindfulness/` is the reference. (Migration in progress — `docs/engineering/refactor-tracker.md` says which features are done.)
 
 Dependencies come from providers, not constructors reaching into globals. After editing an annotated class (`freezed`, `json_serializable`, `riverpod`, `drift`), regenerate:

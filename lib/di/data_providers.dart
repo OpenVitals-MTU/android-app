@@ -1,3 +1,5 @@
+import '../domain/model/vitals_models.dart';
+import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
 import '../data/repository/contract/ble_sensor_repository.dart';
@@ -239,3 +241,39 @@ final bleDevicesProvider = StreamProvider<List<BleSensorDevice>>((ref) async* {
   yield repository.devices;
   yield* repository.devicesStream;
 });
+
+// ── Permission sets ───────────────────────────────────────────────────────
+//
+// The write-permission sets a screen hands to `HealthConnectGate`. They are
+// synchronous, cached, device-filtered constants — but they still come OUT of
+// a repository, and a widget must not hold a repository. It watches one of
+// these instead.
+
+final mindfulnessWritePermissionsProvider = Provider<Set<String>>(
+  (ref) => ref.watch(mindfulnessRepositoryProvider).mindfulnessWritePermissions,
+);
+
+final nutritionWritePermissionsProvider = Provider<Set<String>>(
+  (ref) => ref.watch(nutritionRepositoryProvider).nutritionWritePermissions,
+);
+
+final bodyWritePermissionsProvider =
+    Provider.family<Set<String>, BodyMeasurementType>(
+  (ref, type) => ref.watch(bodyRepositoryProvider).bodyWritePermissions(type),
+);
+
+final vitalsWritePermissionsProvider =
+    Provider.family<Set<String>, VitalsMeasurementType>(
+  (ref, type) => ref.watch(vitalsRepositoryProvider).vitalsWritePermissions(type),
+);
+
+/// Every permission OpenVitals manages, and whether the device can store a
+/// mindfulness session at all — what the add-entry picker needs to decide which
+/// tiles it may offer.
+final managedHealthPermissionsProvider = Provider<Set<String>>(
+  (ref) => ref.watch(healthRepositoryProvider).managedPermissions,
+);
+
+final mindfulnessAvailableProvider = Provider<bool>(
+  (ref) => ref.watch(healthRepositoryProvider).isMindfulnessAvailable(),
+);

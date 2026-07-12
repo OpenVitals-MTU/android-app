@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../application/manual_entry_widgets_view_model.dart';
 import '../../../core/presentation/reorder.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/body_models.dart';
@@ -39,9 +40,9 @@ class ManualEntryScreen extends ConsumerWidget {
     final state = ref.watch(manualEntryWidgetsProvider);
     final notifier = ref.read(manualEntryWidgetsProvider.notifier);
     final supported = supportedManualEntryWidgets(
-      ref.watch(healthRepositoryProvider).managedPermissions,
+      ref.watch(managedHealthPermissionsProvider),
       mindfulnessAvailable:
-          ref.watch(healthRepositoryProvider).isMindfulnessAvailable(),
+          ref.watch(mindfulnessAvailableProvider),
     );
 
     final visible = [
@@ -197,51 +198,6 @@ Set<String> _writePermissionsFor(ManualEntryWidgetId id) => switch (id) {
         {HcPermissions.writeBodyTemperature},
     };
 
-/// Edit state + the visible widget order for the add-entry hub. As in the Kotlin
-/// `ManualEntryViewModel`, the persisted order *is* the visible set: removing a
-/// widget drops it from the list, adding appends it.
-class ManualEntryWidgetsState {
-  const ManualEntryWidgetsState({required this.visible, this.editing = false});
-
-  final List<ManualEntryWidgetId> visible;
-  final bool editing;
-}
-
-class ManualEntryWidgetsViewModel extends Notifier<ManualEntryWidgetsState> {
-  @override
-  ManualEntryWidgetsState build() => ManualEntryWidgetsState(
-        visible: _widgetIdsFromStored(
-          ref.read(preferencesRepositoryProvider).manualEntryWidgetOrder(),
-        ),
-      );
-
-  void toggleEditing() =>
-      state = ManualEntryWidgetsState(
-        visible: state.visible,
-        editing: !state.editing,
-      );
-
-  void remove(ManualEntryWidgetId id) =>
-      setOrder([for (final it in state.visible) if (it != id) it]);
-
-  void add(ManualEntryWidgetId id) {
-    if (state.visible.contains(id)) return;
-    setOrder([...state.visible, id]);
-  }
-
-  void setOrder(List<ManualEntryWidgetId> visible) {
-    ref
-        .read(preferencesRepositoryProvider)
-        .setManualEntryWidgetOrder([for (final id in visible) id.storageName]);
-    state = ManualEntryWidgetsState(visible: visible, editing: state.editing);
-  }
-}
-
-final manualEntryWidgetsProvider =
-    NotifierProvider<ManualEntryWidgetsViewModel, ManualEntryWidgetsState>(
-  ManualEntryWidgetsViewModel.new,
-);
-
 class _ManualEntryTile extends StatelessWidget {
   const _ManualEntryTile({required this.spec, this.onTap});
 
@@ -278,48 +234,6 @@ class _ManualEntryTile extends StatelessWidget {
 
 /// Port of the Kotlin `ManualEntryWidgetId` enum. The `storageName` matches the
 /// Kotlin enum-constant name persisted in the widget-order preference.
-enum ManualEntryWidgetId {
-  hydration('HYDRATION'),
-  carbs('CARBS'),
-  activity('ACTIVITY'),
-  mindfulness('MINDFULNESS'),
-  weight('WEIGHT'),
-  height('HEIGHT'),
-  bodyFat('BODY_FAT'),
-  bloodPressure('BLOOD_PRESSURE'),
-  spo2('SPO2'),
-  respiratoryRate('RESPIRATORY_RATE'),
-  bodyTemperature('BODY_TEMPERATURE');
-
-  const ManualEntryWidgetId(this.storageName);
-
-  final String storageName;
-
-  static ManualEntryWidgetId? fromStorage(String value) {
-    for (final id in values) {
-      if (id.storageName == value) return id;
-    }
-    return null;
-  }
-}
-
-/// The default order (Kotlin `DefaultManualEntryWidgetIds`).
-const List<ManualEntryWidgetId> _defaultWidgetIds = ManualEntryWidgetId.values;
-
-/// Resolves the stored order into widget ids, falling back to the default set.
-/// Port of the Kotlin `manualEntryWidgetIdsFromStored`.
-List<ManualEntryWidgetId> _widgetIdsFromStored(List<String>? stored) {
-  if (stored == null) return _defaultWidgetIds;
-  if (stored.isEmpty) return const <ManualEntryWidgetId>[];
-  final parsed = <ManualEntryWidgetId>[];
-  final seen = <ManualEntryWidgetId>{};
-  for (final raw in stored) {
-    final id = ManualEntryWidgetId.fromStorage(raw);
-    if (id != null && seen.add(id)) parsed.add(id);
-  }
-  return parsed.isEmpty ? _defaultWidgetIds : parsed;
-}
-
 class _ManualEntryWidgetSpec {
   const _ManualEntryWidgetSpec({
     required this.title,

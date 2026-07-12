@@ -88,7 +88,7 @@ class _BodyMeasurementEntryScreenState
     });
 
     final writePermissions =
-        ref.watch(bodyRepositoryProvider).bodyWritePermissions(_type);
+        ref.watch(bodyWritePermissionsProvider(_type));
 
     return Scaffold(
       appBar: AppBar(title: Text(bodyMeasurementTitle(_type, l10n))),

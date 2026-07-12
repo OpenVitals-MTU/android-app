@@ -71,7 +71,7 @@ class _MindfulnessEntryScreenState
     });
 
     final writePermissions =
-        ref.watch(mindfulnessRepositoryProvider).mindfulnessWritePermissions;
+        ref.watch(mindfulnessWritePermissionsProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.screenMindfulnessEntry)),

@@ -100,7 +100,7 @@ class _VitalsMeasurementEntryScreenState
     });
 
     final writePermissions =
-        ref.watch(vitalsRepositoryProvider).vitalsWritePermissions(_type);
+        ref.watch(vitalsWritePermissionsProvider(_type));
 
     return Scaffold(
       appBar: AppBar(title: Text(vitalsMeasurementTitle(_type, l10n))),

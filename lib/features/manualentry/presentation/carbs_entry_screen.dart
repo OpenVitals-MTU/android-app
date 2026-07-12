@@ -56,7 +56,7 @@ class _CarbsEntryScreenState extends ConsumerState<CarbsEntryScreen>
     });
 
     final writePermissions =
-        ref.watch(nutritionRepositoryProvider).nutritionWritePermissions;
+        ref.watch(nutritionWritePermissionsProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.screenCarbsEntry)),
