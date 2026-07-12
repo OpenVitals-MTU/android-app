@@ -173,6 +173,10 @@ dev_dependencies:
   # from assets/icon/openvitals_icon.png. Pure-Dart generator (no platform SDK
   # needed): run `dart run flutter_launcher_icons` to (re)generate.
   flutter_launcher_icons: ^0.14.4
+  # Parses the Pigeon contract and the freezed domain factories as SOURCE, so the
+  # contract test can compare the two field sets (test/contract/). Already present
+  # transitively via build_runner; declared here because we import it directly.
+  analyzer: ^12.1.0
 
 # Launcher-icon generation config (consumed by `dart run flutter_launcher_icons`).
 # Source icon is the 512x512 Play Store icon copied from the Kotlin app's
