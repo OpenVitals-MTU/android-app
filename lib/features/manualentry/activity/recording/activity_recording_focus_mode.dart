@@ -11,6 +11,15 @@ import 'activity_recording_dashboard.dart';
 /// Port of the Kotlin `ActivityRecordingFocusMode.kt`: the full-screen,
 /// glanceable view you switch to mid-activity.
 
+/// Whether focus mode is available at all for what is being recorded.
+///
+/// Top-level, and not a method on the screen, because the HOST has to answer the
+/// same question: it hides its app bar for focus mode, and if the two ever
+/// disagreed you would get a screen with no app bar and no exit button on it.
+bool canUseRecordingFocusMode(ActivityRecordingState state) =>
+    state.isActive &&
+    state.recordingKind != ActivityRecordingKind.repetition;
+
 /// Kotlin `TwentyFourHourClockFormatter`.
 String formatFocusModeClock(DateTime now) =>
     '${now.hour.toString().padLeft(2, '0')}:'

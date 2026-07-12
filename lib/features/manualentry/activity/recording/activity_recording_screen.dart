@@ -39,6 +39,8 @@ class ActivityRecordingScreen extends ConsumerStatefulWidget {
     required this.onEndRepetitionSet,
     required this.onStartNextRepetitionSet,
     required this.onFinishRecording,
+    required this.isFocusMode,
+    required this.onFocusModeChanged,
     this.appThemeMode = AppThemeMode.system,
   });
 
@@ -58,6 +60,13 @@ class ActivityRecordingScreen extends ConsumerStatefulWidget {
   final VoidCallback onStartNextRepetitionSet;
   final VoidCallback onFinishRecording;
 
+  /// Focus mode is owned by the host, not by this screen, because the host has
+  /// to react to it too: it drops its app bar so focus mode gets the whole
+  /// display. Kotlin published the same flag upwards
+  /// (`isRecordingFocusMode` in `ActivityEntryScreen.kt`).
+  final bool isFocusMode;
+  final ValueChanged<bool> onFocusModeChanged;
+
   /// Kotlin threads `appThemeMode` in so the outdoor theme can decide between
   /// its light and dark high-contrast schemes.
   final AppThemeMode appThemeMode;
@@ -75,7 +84,6 @@ class _ActivityRecordingScreenState
   Timer? _ticker;
 
   bool _isEditingDashboard = false;
-  bool _isFocusMode = false;
   bool _isOutdoorMode = false;
   String? _dashboardEditTypeId;
 
@@ -138,14 +146,10 @@ class _ActivityRecordingScreenState
     );
   }
 
-  bool get _canUseFocusMode =>
-      widget.state.isActive &&
-      widget.state.recordingKind != ActivityRecordingKind.repetition;
-
   /// Kotlin only allows editing while a GPS recording is idle or paused: the
   /// grid must not shuffle under your thumb mid-run.
   bool get _canEditDashboard =>
-      !_isFocusMode &&
+      !widget.isFocusMode &&
       widget.state.recordingKind == ActivityRecordingKind.gpsRoute &&
       (widget.state.status == ActivityRecordingStatus.idle ||
           widget.state.status == ActivityRecordingStatus.paused);
@@ -156,21 +160,24 @@ class _ActivityRecordingScreenState
 
     // Kotlin resets the edit toggle when recording resumes, when focus mode is
     // entered, and when the activity type changes.
-    if (state.status == ActivityRecordingStatus.recording || _isFocusMode) {
+    if (state.status == ActivityRecordingStatus.recording ||
+        widget.isFocusMode) {
       _isEditingDashboard = false;
     }
     if (_dashboardEditTypeId != state.activityTypeId) {
       _dashboardEditTypeId = state.activityTypeId;
       _isEditingDashboard = false;
     }
-    if (_isFocusMode && !_canUseFocusMode) _isFocusMode = false;
 
     final movingTime = state.movingDuration(_now);
     final totalTime = state.recordingKind == ActivityRecordingKind.repetition
         ? movingTime + state.restDuration(_now)
         : state.elapsedDuration(_now);
 
-    final showFocusMode = _isFocusMode && _canUseFocusMode;
+    // Derived, never stored: the host gates on exactly the same function, so the
+    // two cannot drift into disagreeing about whether the app bar is showing.
+    final showFocusMode =
+        widget.isFocusMode && canUseRecordingFocusMode(state);
 
     // Kotlin wraps everything in `ActivityRecordingTheme` and recolors/hides
     // the system bars through `ActivityRecordingSystemBars` at this level, so
@@ -190,7 +197,7 @@ class _ActivityRecordingScreenState
             ? PopScope(
                 canPop: false,
                 onPopInvokedWithResult: (didPop, _) {
-                  if (!didPop) setState(() => _isFocusMode = false);
+                  if (!didPop) widget.onFocusModeChanged(false);
                 },
                 child: ActivityRecordingFocusMode(
                   state: state,
@@ -204,7 +211,7 @@ class _ActivityRecordingScreenState
                   appThemeMode: widget.appThemeMode,
                   onPauseRecording: widget.onPauseRecording,
                   onResumeRecording: widget.onResumeRecording,
-                  onExitFocusMode: () => setState(() => _isFocusMode = false),
+                  onExitFocusMode: () => widget.onFocusModeChanged(false),
                 ),
               )
             // A Builder so `Theme.of` inside resolves against the outdoor
@@ -351,7 +358,7 @@ class _ActivityRecordingScreenState
           state: widget.state,
           onPauseRecording: widget.onPauseRecording,
           onResumeRecording: widget.onResumeRecording,
-          onEnterFocusMode: () => setState(() => _isFocusMode = true),
+          onEnterFocusMode: () => widget.onFocusModeChanged(true),
           onFinishRecording: widget.onFinishRecording,
         ),
       ];
@@ -383,7 +390,7 @@ class _ActivityRecordingScreenState
         onStartRecording: () => widget.onStartRecording(idleFix.initialFix),
         onPauseRecording: widget.onPauseRecording,
         onResumeRecording: widget.onResumeRecording,
-        onEnterFocusMode: () => setState(() => _isFocusMode = true),
+        onEnterFocusMode: () => widget.onFocusModeChanged(true),
         onFinishRecording: widget.onFinishRecording,
         onAddLap: widget.onAddLap,
         onAddMarker: widget.onAddMarker,

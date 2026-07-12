@@ -14,6 +14,7 @@ import '../activity/activity_entry_providers.dart';
 import '../activity/activity_entry_source_card.dart';
 import '../activity/activity_entry_state.dart';
 import '../activity/recording/activity_recording_device_support.dart';
+import '../activity/recording/activity_recording_focus_mode.dart';
 import '../activity/recording/activity_recording_screen.dart';
 import '../activity/recording/activity_recording_setup_screen.dart';
 import '../activity/activity_plan_picker_cards.dart';
@@ -168,25 +169,77 @@ class _ActivityEntryScreenState extends ConsumerState<ActivityEntryScreen>
     _controller.reportActivityRecognitionPermissionNeeded();
   }
 
+  /// Owned here, not by the recording screen, because the app bar below turns on
+  /// it: focus mode takes the whole display.
+  bool _isRecordingFocusMode = false;
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final formatter = ref.watch(unitFormatterProvider);
 
     return ValueListenableBuilder<ActivityEntryUiState>(
       valueListenable: _controller.uiState,
       builder: (context, state, _) {
-        return Scaffold(
-          appBar: AppBar(title: Text(l10n.manualEntryActivityTitle)),
-          body: SafeArea(child: _body(state, formatter)),
+        final recorder = _controller.activityRecorder;
+        if (state.mode != ActivityEntryFormMode.recording || recorder == null) {
+          return _scaffold(child: _scrollableForm(_content(state, formatter)));
+        }
+        // The recording state has to be in scope for the APP BAR, not just the
+        // body: focus mode hides it, and focus mode ends by itself when the
+        // recording does. Listening to it only around the body would leave a
+        // finished recording sitting on a screen with no app bar.
+        return ValueListenableBuilder<ActivityRecordingState>(
+          valueListenable: recorder.state,
+          builder: (context, recordingState, _) {
+            final showFocusMode = _isRecordingFocusMode &&
+                canUseRecordingFocusMode(recordingState);
+            final content = _ActivityEntryRecordingContent(
+              controller: _controller,
+              state: state,
+              recordingState: recordingState,
+              unitFormatter: formatter,
+              isFocusMode: _isRecordingFocusMode,
+              onFocusModeChanged: (value) =>
+                  setState(() => _isRecordingFocusMode = value),
+              onRequestLocationPermission: _requestLocationPermission,
+              onRequestActivityRecognitionPermission:
+                  _requestActivityRecognitionPermission,
+              onRequestWritePermission: _requestWritePermission,
+            );
+            return _scaffold(
+              showAppBar: !showFocusMode,
+              // The setup card is a card like any other and keeps the padded
+              // scroll view.
+              child: isRecordingDashboardVisible(recordingState)
+                  ? content
+                  : _scrollableForm(content),
+            );
+          },
         );
       },
     );
   }
 
+  /// Focus mode drops the app bar.
+  ///
+  /// Its two exits — the corner button and the Android back gesture (the
+  /// [PopScope] in the recording screen) — already do what the app bar's Back
+  /// arrow did, so the bar was a third way to do the same thing. It cost a
+  /// toolbar of height on the one screen read at arm's length, mid-ride, where
+  /// every row of the dashboard that fits without scrolling is worth having.
+  Widget _scaffold({required Widget child, bool showAppBar = true}) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: showAppBar
+          ? AppBar(title: Text(l10n.manualEntryActivityTitle))
+          : null,
+      body: SafeArea(child: child),
+    );
+  }
+
   /// The live recording dashboard REPLACES the screen — Kotlin swaps the form out
   /// for `ActivityEntryRecordingContent` at `fillMaxSize` — so it is the one thing
-  /// here that must NOT go inside the form's scroll view.
+  /// here that must NOT go inside the form's scroll view (see [build]).
   ///
   /// It lays out with [Expanded] (which a scrollable's unbounded height forbids)
   /// and it scrolls itself, so being a ListView child forced it to be boxed at a
@@ -195,32 +248,6 @@ class _ActivityEntryScreenState extends ConsumerState<ActivityEntryScreen>
   /// them glaring once outdoor mode paints the background pure black.
   ///
   /// Everything else on this screen is a card and still belongs in the scroll view.
-  Widget _body(ActivityEntryUiState state, UnitFormatter formatter) {
-    final recorder = _controller.activityRecorder;
-    if (state.mode != ActivityEntryFormMode.recording || recorder == null) {
-      return _scrollableForm(_content(state, formatter));
-    }
-    return ValueListenableBuilder<ActivityRecordingState>(
-      valueListenable: recorder.state,
-      builder: (context, recordingState, _) {
-        final content = _ActivityEntryRecordingContent(
-          controller: _controller,
-          state: state,
-          recordingState: recordingState,
-          unitFormatter: formatter,
-          onRequestLocationPermission: _requestLocationPermission,
-          onRequestActivityRecognitionPermission:
-              _requestActivityRecognitionPermission,
-          onRequestWritePermission: _requestWritePermission,
-        );
-        // The setup card is a card like any other and keeps the padded scroll view.
-        return isRecordingDashboardVisible(recordingState)
-            ? content
-            : _scrollableForm(content);
-      },
-    );
-  }
-
   Widget _scrollableForm(Widget child) => ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
@@ -314,6 +341,8 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
     required this.state,
     required this.recordingState,
     required this.unitFormatter,
+    required this.isFocusMode,
+    required this.onFocusModeChanged,
     required this.onRequestLocationPermission,
     required this.onRequestActivityRecognitionPermission,
     required this.onRequestWritePermission,
@@ -323,6 +352,8 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
   final ActivityEntryUiState state;
   final ActivityRecordingState recordingState;
   final UnitFormatter unitFormatter;
+  final bool isFocusMode;
+  final ValueChanged<bool> onFocusModeChanged;
   final VoidCallback onRequestLocationPermission;
   final VoidCallback onRequestActivityRecognitionPermission;
   final VoidCallback onRequestWritePermission;
@@ -376,6 +407,8 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
     return ActivityRecordingScreen(
       state: recordingState,
       unitFormatter: unitFormatter,
+      isFocusMode: isFocusMode,
+      onFocusModeChanged: onFocusModeChanged,
       onStartRecording: (initialFix) =>
           controller.startGpsRecording(initialFix: initialFix),
       onPauseRecording: controller.pauseGpsRecording,

@@ -256,22 +256,13 @@ void main() {
   });
 
   group('recording screen', () {
+    // Through the host, because focus mode is the HOST's state now: the real one
+    // (ActivityEntryScreen) owns it so it can drop its app bar for it. Driving
+    // the screen directly here would test a shape the app does not have.
     Widget screen(ActivityRecordingState state, {VoidCallback? onFinish}) =>
-        ActivityRecordingScreen(
+        _RecordingHost(
           state: state,
           unitFormatter: formatter(),
-          onStartRecording: (_) {},
-          onPauseRecording: () {},
-          onResumeRecording: () {},
-          onAddLap: () {},
-          onAddMarker: () {},
-          onUpdateMarker: (_) {},
-          onDeleteMarker: (_) {},
-          onUpdateDashboardLayout: (_) {},
-          onChooseSource: () {},
-          onAdjustRepetitionCount: (_) {},
-          onEndRepetitionSet: () {},
-          onStartNextRepetitionSet: () {},
           onFinishRecording: onFinish ?? () {},
         );
 
@@ -600,4 +591,51 @@ class _FakeDeviceSupport implements ActivityRecordingDeviceSupport {
 
   @override
   Future<Position?> lastKnownPosition() async => _latest;
+}
+
+/// Stands in for `ActivityEntryScreen`, which owns focus mode so that it can
+/// drop its app bar while focus mode is on.
+///
+/// The screen under test only *reports* the toggle; something above it has to
+/// hold the answer. Keeping that here means the Focus tests exercise the same
+/// ownership the app has, rather than a self-contained version of it that no
+/// longer exists.
+class _RecordingHost extends StatefulWidget {
+  const _RecordingHost({
+    required this.state,
+    required this.unitFormatter,
+    required this.onFinishRecording,
+  });
+
+  final ActivityRecordingState state;
+  final UnitFormatter unitFormatter;
+  final VoidCallback onFinishRecording;
+
+  @override
+  State<_RecordingHost> createState() => _RecordingHostState();
+}
+
+class _RecordingHostState extends State<_RecordingHost> {
+  bool _isFocusMode = false;
+
+  @override
+  Widget build(BuildContext context) => ActivityRecordingScreen(
+        state: widget.state,
+        unitFormatter: widget.unitFormatter,
+        isFocusMode: _isFocusMode,
+        onFocusModeChanged: (value) => setState(() => _isFocusMode = value),
+        onStartRecording: (_) {},
+        onPauseRecording: () {},
+        onResumeRecording: () {},
+        onAddLap: () {},
+        onAddMarker: () {},
+        onUpdateMarker: (_) {},
+        onDeleteMarker: (_) {},
+        onUpdateDashboardLayout: (_) {},
+        onChooseSource: () {},
+        onAdjustRepetitionCount: (_) {},
+        onEndRepetitionSet: () {},
+        onStartNextRepetitionSet: () {},
+        onFinishRecording: widget.onFinishRecording,
+      );
 }

@@ -354,6 +354,47 @@ void main() {
       expect(dashboardHeight, closeTo(screenHeight - appBarHeight, 1.0));
     });
 
+    testWidgets('focus mode takes the whole screen, app bar and all',
+        (tester) async {
+      // Focus mode is read at arm's length, mid-ride. It already carries its own
+      // exit button, and the Android back gesture still leaves it, so the app
+      // bar's Back arrow was a third way to do the same thing -- and it cost a
+      // toolbar of height that could have been another row of metrics.
+      await pumpScreen(
+        tester,
+        mode: ActivityEntryMode.record,
+        recorder: _FakeRecordingController()
+          ..state.value = ActivityRecordingState(
+            activityTypeId: 'treadmill',
+            recordingKind: ActivityRecordingKind.timed,
+            status: ActivityRecordingStatus.recording,
+            startTime: DateTime.now().toUtc(),
+          ),
+      );
+
+      expect(find.byType(AppBar), findsOneWidget);
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+
+      await tester.tap(find.text('Focus'));
+      await tester.pump();
+
+      expect(find.byTooltip('Exit focus mode'), findsOneWidget);
+      expect(find.byType(AppBar), findsNothing,
+          reason: 'the app bar -- and its redundant Back arrow -- must go');
+      // And the height it was using goes to the dashboard, not to a gap.
+      expect(
+        tester.getSize(find.byType(ActivityRecordingScreen)).height,
+        closeTo(screenHeight, 1.0),
+      );
+
+      // Leaving focus mode brings it back: this is the only way out of the
+      // screen once the bar is gone, so it had better return.
+      await tester.tap(find.byTooltip('Exit focus mode'));
+      await tester.pump();
+      expect(find.byType(AppBar), findsOneWidget);
+    });
+
     testWidgets('is not inside the form scroll view', (tester) async {
       await pumpScreen(
         tester,
