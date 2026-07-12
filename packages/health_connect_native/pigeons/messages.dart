@@ -686,6 +686,15 @@ class ExerciseSessionMetricsMsg {
   /// `WheelchairPushesRecord.COUNT_TOTAL`.
   final int? wheelchairPushes;
 
+  /// `PowerRecord.POWER_AVG`, in watts.
+  ///
+  /// The last of these to be wired up, and the app had every OTHER piece of it
+  /// already: it asks Health Connect for READ_POWER, tells you so during
+  /// onboarding, writes `PowerRecord` from BLE sensors, and renders an "Average
+  /// power" row on the activity screen. It just never read it back, so that row
+  /// said "Not available" on every ride anyone ever recorded with a power meter.
+  final double? averagePowerWatts;
+
   ExerciseSessionMetricsMsg(
     this.totalDistanceMeters,
     this.averageSpeedMetersPerSecond,
@@ -695,6 +704,7 @@ class ExerciseSessionMetricsMsg {
     this.elevationGainedMeters,
     this.floorsClimbed,
     this.wheelchairPushes,
+    this.averagePowerWatts,
   );
 }
 

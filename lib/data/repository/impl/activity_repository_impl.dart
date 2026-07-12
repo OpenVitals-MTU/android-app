@@ -185,6 +185,8 @@ class ActivityRepositoryImpl implements ActivityRepository {
         ExerciseSessionMetric.floors,
       if (granted.contains(HcPermissions.readWheelchairPushes))
         ExerciseSessionMetric.wheelchairPushes,
+      if (granted.contains(HcPermissions.readPower))
+        ExerciseSessionMetric.power,
     };
     if (wanted.isEmpty) return ExerciseSessionMetrics.none;
     return _dataSource.readExerciseSessionMetrics(start, end, wanted);

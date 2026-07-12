@@ -21,6 +21,7 @@ class ExerciseSessionMetrics {
     this.elevationGainedMeters,
     this.floorsClimbed,
     this.wheelchairPushes,
+    this.averagePowerWatts,
   });
 
   /// Nothing was asked for, or nothing could be read.
@@ -34,6 +35,7 @@ class ExerciseSessionMetrics {
   final double? elevationGainedMeters;
   final int? floorsClimbed;
   final int? wheelchairPushes;
+  final double? averagePowerWatts;
 
   bool get isEmpty =>
       totalDistanceMeters == null &&
@@ -43,14 +45,15 @@ class ExerciseSessionMetrics {
       activeCaloriesKcal == null &&
       elevationGainedMeters == null &&
       floorsClimbed == null &&
-      wheelchairPushes == null;
+      wheelchairPushes == null &&
+      averagePowerWatts == null;
 
   @override
   String toString() => 'ExerciseSessionMetrics(distance: $totalDistanceMeters, '
       'speed: $averageSpeedMetersPerSecond, steps: $steps, '
       'totalKcal: $totalCaloriesKcal, activeKcal: $activeCaloriesKcal, '
       'elevation: $elevationGainedMeters, floors: $floorsClimbed, '
-      'pushes: $wheelchairPushes)';
+      'pushes: $wheelchairPushes, power: $averagePowerWatts)';
 }
 
 /// One aggregate the native side can compute over a session window.
@@ -67,7 +70,8 @@ enum ExerciseSessionMetric {
   activeCalories('activeCalories'),
   elevation('elevation'),
   floors('floors'),
-  wheelchairPushes('wheelchairPushes');
+  wheelchairPushes('wheelchairPushes'),
+  power('power');
 
   const ExerciseSessionMetric(this.wireName);
 

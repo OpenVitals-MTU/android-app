@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:health_connect_native/health_connect_native.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
+import 'package:openvitals/domain/model/exercise_session_metrics.dart';
 import 'package:openvitals/domain/model/body_models.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/health_connect_feature_status.dart';
@@ -236,6 +237,33 @@ class FakeHostApi extends HealthConnectHostApi {
 
   /// The include-flags the last `readExerciseSessionsWithMetrics` was made with.
   ({bool includeDistance, bool includeSpeed})? lastMetricsQuery;
+
+  /// The wire names the last `readExerciseSessionMetrics` asked for, and what to
+  /// hand back. The native reader only reports a metric that was ASKED for, so
+  /// the wire names are the contract — a name Dart sends that Kotlin's
+  /// SESSION_METRICS table does not know is silently skipped there.
+  List<String>? lastSessionMetricNames;
+  ExerciseSessionMetricsMsg sessionMetrics = ExerciseSessionMetricsMsg(
+    totalDistanceMeters: null,
+    averageSpeedMetersPerSecond: null,
+    steps: null,
+    totalCaloriesKcal: null,
+    activeCaloriesKcal: null,
+    elevationGainedMeters: null,
+    floorsClimbed: null,
+    wheelchairPushes: null,
+    averagePowerWatts: null,
+  );
+
+  @override
+  Future<ExerciseSessionMetricsMsg> readExerciseSessionMetrics(
+    int startEpochMs,
+    int endEpochMs,
+    List<String> metrics,
+  ) async {
+    lastSessionMetricNames = metrics;
+    return sessionMetrics;
+  }
 
   @override
   Future<List<ExerciseDataMsg>> readExerciseSessionsWithMetrics(
@@ -782,6 +810,41 @@ void main() {
       expect(session.stages, hasLength(2));
       expect(session.stages.first.stageType, 4);
       expect(session.stages.last.stageType, 5);
+    });
+
+    test('session metrics carry average power, asked for by wire name',
+        () async {
+      // Power was the last metric nobody wired up, and the app had every OTHER
+      // piece of it: it asks Health Connect for READ_POWER, tells you so during
+      // onboarding, writes PowerRecord from BLE sensors, and has an "Average
+      // power" row. It just never READ power back — and because that row only
+      // earns its place by HAVING a value, it never appeared at all. Not "Not
+      // available": absent.
+      final api = FakeHostApi()
+        ..sessionMetrics = ExerciseSessionMetricsMsg(
+          totalDistanceMeters: null,
+          averageSpeedMetersPerSecond: null,
+          steps: null,
+          totalCaloriesKcal: null,
+          activeCaloriesKcal: null,
+          elevationGainedMeters: null,
+          floorsClimbed: null,
+          wheelchairPushes: null,
+          averagePowerWatts: 214.5,
+        );
+
+      final metrics = await _source(api).readExerciseSessionMetrics(
+        DateTime.utc(2026, 1, 2, 8),
+        DateTime.utc(2026, 1, 2, 9),
+        {ExerciseSessionMetric.power},
+      );
+
+      expect(metrics.averagePowerWatts, 214.5);
+      // The wire name IS the contract: Kotlin's SESSION_METRICS table skips a
+      // name it does not know rather than throwing, so a typo here would degrade
+      // to a permanently-null metric instead of a failure. Which is exactly how
+      // power went missing.
+      expect(api.lastSessionMetricNames, ['power']);
     });
 
     test('an Exercise session carries the record provenance across the bridge',

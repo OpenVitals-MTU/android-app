@@ -2778,7 +2778,17 @@ data class ExerciseSessionMetricsMsg (
   /** `FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL`. */
   val floorsClimbed: Long? = null,
   /** `WheelchairPushesRecord.COUNT_TOTAL`. */
-  val wheelchairPushes: Long? = null
+  val wheelchairPushes: Long? = null,
+  /**
+   * `PowerRecord.POWER_AVG`, in watts.
+   *
+   * The last of these to be wired up, and the app had every OTHER piece of it
+   * already: it asks Health Connect for READ_POWER, tells you so during
+   * onboarding, writes `PowerRecord` from BLE sensors, and renders an "Average
+   * power" row on the activity screen. It just never read it back, so that row
+   * said "Not available" on every ride anyone ever recorded with a power meter.
+   */
+  val averagePowerWatts: Double? = null
 )
  {
   companion object {
@@ -2791,7 +2801,8 @@ data class ExerciseSessionMetricsMsg (
       val elevationGainedMeters = pigeonVar_list[5] as Double?
       val floorsClimbed = pigeonVar_list[6] as Long?
       val wheelchairPushes = pigeonVar_list[7] as Long?
-      return ExerciseSessionMetricsMsg(totalDistanceMeters, averageSpeedMetersPerSecond, steps, totalCaloriesKcal, activeCaloriesKcal, elevationGainedMeters, floorsClimbed, wheelchairPushes)
+      val averagePowerWatts = pigeonVar_list[8] as Double?
+      return ExerciseSessionMetricsMsg(totalDistanceMeters, averageSpeedMetersPerSecond, steps, totalCaloriesKcal, activeCaloriesKcal, elevationGainedMeters, floorsClimbed, wheelchairPushes, averagePowerWatts)
     }
   }
   fun toList(): List<Any?> {
@@ -2804,6 +2815,7 @@ data class ExerciseSessionMetricsMsg (
       elevationGainedMeters,
       floorsClimbed,
       wheelchairPushes,
+      averagePowerWatts,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -2814,7 +2826,7 @@ data class ExerciseSessionMetricsMsg (
       return true
     }
     val other = other as ExerciseSessionMetricsMsg
-    return MessagesPigeonUtils.deepEquals(this.totalDistanceMeters, other.totalDistanceMeters) && MessagesPigeonUtils.deepEquals(this.averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond) && MessagesPigeonUtils.deepEquals(this.steps, other.steps) && MessagesPigeonUtils.deepEquals(this.totalCaloriesKcal, other.totalCaloriesKcal) && MessagesPigeonUtils.deepEquals(this.activeCaloriesKcal, other.activeCaloriesKcal) && MessagesPigeonUtils.deepEquals(this.elevationGainedMeters, other.elevationGainedMeters) && MessagesPigeonUtils.deepEquals(this.floorsClimbed, other.floorsClimbed) && MessagesPigeonUtils.deepEquals(this.wheelchairPushes, other.wheelchairPushes)
+    return MessagesPigeonUtils.deepEquals(this.totalDistanceMeters, other.totalDistanceMeters) && MessagesPigeonUtils.deepEquals(this.averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond) && MessagesPigeonUtils.deepEquals(this.steps, other.steps) && MessagesPigeonUtils.deepEquals(this.totalCaloriesKcal, other.totalCaloriesKcal) && MessagesPigeonUtils.deepEquals(this.activeCaloriesKcal, other.activeCaloriesKcal) && MessagesPigeonUtils.deepEquals(this.elevationGainedMeters, other.elevationGainedMeters) && MessagesPigeonUtils.deepEquals(this.floorsClimbed, other.floorsClimbed) && MessagesPigeonUtils.deepEquals(this.wheelchairPushes, other.wheelchairPushes) && MessagesPigeonUtils.deepEquals(this.averagePowerWatts, other.averagePowerWatts)
   }
 
   override fun hashCode(): Int {
@@ -2827,10 +2839,11 @@ data class ExerciseSessionMetricsMsg (
     result = 31 * result + MessagesPigeonUtils.deepHash(this.elevationGainedMeters)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.floorsClimbed)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.wheelchairPushes)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.averagePowerWatts)
     return result
   }
   override fun toString(): String {
-    return "ExerciseSessionMetricsMsg(totalDistanceMeters=$totalDistanceMeters, averageSpeedMetersPerSecond=$averageSpeedMetersPerSecond, steps=$steps, totalCaloriesKcal=$totalCaloriesKcal, activeCaloriesKcal=$activeCaloriesKcal, elevationGainedMeters=$elevationGainedMeters, floorsClimbed=$floorsClimbed, wheelchairPushes=$wheelchairPushes)"
+    return "ExerciseSessionMetricsMsg(totalDistanceMeters=$totalDistanceMeters, averageSpeedMetersPerSecond=$averageSpeedMetersPerSecond, steps=$steps, totalCaloriesKcal=$totalCaloriesKcal, activeCaloriesKcal=$activeCaloriesKcal, elevationGainedMeters=$elevationGainedMeters, floorsClimbed=$floorsClimbed, wheelchairPushes=$wheelchairPushes, averagePowerWatts=$averagePowerWatts)"
   }
 }
 

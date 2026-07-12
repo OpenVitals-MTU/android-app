@@ -701,6 +701,7 @@ Duration? _zoneOffset(int? seconds) =>
         elevationGainedMeters: m.elevationGainedMeters,
         floorsClimbed: m.floorsClimbed,
         wheelchairPushes: m.wheelchairPushes,
+        averagePowerWatts: m.averagePowerWatts,
       ),
     );
     return read ?? ExerciseSessionMetrics.none;

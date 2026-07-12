@@ -68,6 +68,10 @@ extension ActivityBackfill on ExerciseData {
           wheelchairPushes,
           metrics.wheelchairPushes,
         ),
+        averagePowerWatts: _backfilledByDouble(
+          averagePowerWatts,
+          metrics.averagePowerWatts,
+        ),
       );
 
   ExerciseData withSampleBackfilledMetrics({

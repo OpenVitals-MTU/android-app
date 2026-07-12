@@ -192,6 +192,7 @@ internal class ActivityHealthReader(
           read(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)?.inMeters,
         floorsClimbed = read(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)?.toLong(),
         wheelchairPushes = read(WheelchairPushesRecord.COUNT_TOTAL),
+        averagePowerWatts = read(PowerRecord.POWER_AVG)?.inWatts,
       )
     }
 
@@ -904,4 +905,5 @@ private val SESSION_METRICS: Map<String, AggregateMetric<*>> = mapOf(
   "elevation" to ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
   "floors" to FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
   "wheelchairPushes" to WheelchairPushesRecord.COUNT_TOTAL,
+  "power" to PowerRecord.POWER_AVG,
 )

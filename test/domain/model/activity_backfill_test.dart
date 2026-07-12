@@ -246,6 +246,7 @@ void main() {
         elevationGainedMeters: 48.0,
         floorsClimbed: 3,
         wheelchairPushes: 0,
+        averagePowerWatts: 214.5,
       ),
     );
 
@@ -256,6 +257,10 @@ void main() {
     expect(result.activeCaloriesKcal ?? 0.0, closeTo(210.0, 0.001));
     expect(result.elevationGainedMeters ?? 0.0, closeTo(48.0, 0.001));
     expect(result.floorsClimbed, 3);
+    // Power reaches the workout at all. It never used to: nothing read it, so
+    // the "Average power" row — which only earns its place by HAVING a value —
+    // simply never appeared, on any ride, for anyone with a power meter.
+    expect(result.averagePowerWatts ?? 0.0, closeTo(214.5, 0.001));
     // A zero total is an empty summary, not a measurement — the same rule the
     // route backfill applies. Nobody wants "Wheelchair pushes: 0" on a walk.
     expect(result.wheelchairPushes, isNull);

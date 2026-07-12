@@ -3153,6 +3153,7 @@ class ExerciseSessionMetricsMsg {
     this.elevationGainedMeters,
     this.floorsClimbed,
     this.wheelchairPushes,
+    this.averagePowerWatts,
   });
 
   /// `DistanceRecord.DISTANCE_TOTAL`.
@@ -3179,6 +3180,15 @@ class ExerciseSessionMetricsMsg {
   /// `WheelchairPushesRecord.COUNT_TOTAL`.
   int? wheelchairPushes;
 
+  /// `PowerRecord.POWER_AVG`, in watts.
+  ///
+  /// The last of these to be wired up, and the app had every OTHER piece of it
+  /// already: it asks Health Connect for READ_POWER, tells you so during
+  /// onboarding, writes `PowerRecord` from BLE sensors, and renders an "Average
+  /// power" row on the activity screen. It just never read it back, so that row
+  /// said "Not available" on every ride anyone ever recorded with a power meter.
+  double? averagePowerWatts;
+
   List<Object?> _toList() {
     return <Object?>[
       totalDistanceMeters,
@@ -3189,6 +3199,7 @@ class ExerciseSessionMetricsMsg {
       elevationGainedMeters,
       floorsClimbed,
       wheelchairPushes,
+      averagePowerWatts,
     ];
   }
 
@@ -3206,6 +3217,7 @@ class ExerciseSessionMetricsMsg {
       elevationGainedMeters: result[5] as double?,
       floorsClimbed: result[6] as int?,
       wheelchairPushes: result[7] as int?,
+      averagePowerWatts: result[8] as double?,
     );
   }
 
@@ -3218,7 +3230,7 @@ class ExerciseSessionMetricsMsg {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(totalDistanceMeters, other.totalDistanceMeters) && _deepEquals(averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond) && _deepEquals(steps, other.steps) && _deepEquals(totalCaloriesKcal, other.totalCaloriesKcal) && _deepEquals(activeCaloriesKcal, other.activeCaloriesKcal) && _deepEquals(elevationGainedMeters, other.elevationGainedMeters) && _deepEquals(floorsClimbed, other.floorsClimbed) && _deepEquals(wheelchairPushes, other.wheelchairPushes);
+    return _deepEquals(totalDistanceMeters, other.totalDistanceMeters) && _deepEquals(averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond) && _deepEquals(steps, other.steps) && _deepEquals(totalCaloriesKcal, other.totalCaloriesKcal) && _deepEquals(activeCaloriesKcal, other.activeCaloriesKcal) && _deepEquals(elevationGainedMeters, other.elevationGainedMeters) && _deepEquals(floorsClimbed, other.floorsClimbed) && _deepEquals(wheelchairPushes, other.wheelchairPushes) && _deepEquals(averagePowerWatts, other.averagePowerWatts);
   }
 
   @override
@@ -3227,7 +3239,7 @@ class ExerciseSessionMetricsMsg {
 
   @override
   String toString() {
-    return 'ExerciseSessionMetricsMsg(totalDistanceMeters: $totalDistanceMeters, averageSpeedMetersPerSecond: $averageSpeedMetersPerSecond, steps: $steps, totalCaloriesKcal: $totalCaloriesKcal, activeCaloriesKcal: $activeCaloriesKcal, elevationGainedMeters: $elevationGainedMeters, floorsClimbed: $floorsClimbed, wheelchairPushes: $wheelchairPushes)';
+    return 'ExerciseSessionMetricsMsg(totalDistanceMeters: $totalDistanceMeters, averageSpeedMetersPerSecond: $averageSpeedMetersPerSecond, steps: $steps, totalCaloriesKcal: $totalCaloriesKcal, activeCaloriesKcal: $activeCaloriesKcal, elevationGainedMeters: $elevationGainedMeters, floorsClimbed: $floorsClimbed, wheelchairPushes: $wheelchairPushes, averagePowerWatts: $averagePowerWatts)';
   }
 }
 

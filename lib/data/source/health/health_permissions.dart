@@ -24,6 +24,7 @@ abstract final class HcPermissions {
   static final String readSteps = _read('STEPS');
   static final String readDistance = _read('DISTANCE');
   static final String readSpeed = _read('SPEED');
+  static final String readPower = _read('POWER');
   static final String readExercise = _read('EXERCISE');
   static final String readSleep = _read('SLEEP');
   static final String readHeartRate = _read('HEART_RATE');
