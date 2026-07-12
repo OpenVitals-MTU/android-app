@@ -8,8 +8,9 @@ import '../../domain/insights/metric_interpretations.dart';
 import '../../domain/model/body_models.dart';
 import '../../domain/query/body_period_data.dart';
 import '../../l10n/app_localizations.dart';
+import '../../ui/charts/chart_axis.dart';
 import '../../ui/charts/day_axis.dart';
-import '../../ui/charts/metric_line_plot.dart';
+import '../../ui/charts/metric_day_chart.dart';
 import '../../ui/charts/period_chart.dart';
 import '../../ui/components/metric_card.dart';
 import '../../ui/components/metric_interpretation_card.dart';
@@ -504,97 +505,36 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
   final LocalDate selectedDate;
   final BodyMetricData metricData;
 
-  /// Injectable clock: today's x axis ends at "now", past days at midnight.
+  /// Injectable clock: today's series stops at "now", a past day's runs to midnight.
   final DateTime? now;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final locale = Localizations.localeOf(context).toLanguageTag();
 
-    // Shared, and it also honours the injected clock — `isToday` used to ask
-    // `LocalDate.now()` directly, so a test could pin `now` and still be told the
-    // day was over. See [DayAxis].
-    final axis = DayAxis(selectedDate, now: now);
-    final isToday = axis.isToday;
-    final dayStart = axis.start;
+    final samples = [
+      for (final (time, value) in metricData.dayValues) (time: time, value: value),
+    ]..sort((a, b) => a.time.compareTo(b.time));
+    final latest = samples.isEmpty ? null : samples.last.value;
 
-    final points = [...metricData.dayValues]
-      ..sort((a, b) => a.$1.compareTo(b.$1));
-    final latest = points.isEmpty ? null : points.last.$2;
-    final minValue = points.isEmpty
-        ? 0.0
-        : points.map((p) => p.$2).reduce((a, b) => a < b ? a : b);
-    final maxValue = points.isEmpty
-        ? 1.0
-        : points.map((p) => p.$2).reduce((a, b) => a > b ? a : b);
-    final span = maxValue - minValue;
-    final padding =
-        (span > 0.0 ? span : (maxValue.abs() < 1.0 ? 1.0 : maxValue.abs())) *
-            0.08;
-    final unclampedMin = minValue - padding;
-    final axisMin = unclampedMin < 0.0 ? 0.0 : unclampedMin;
-    final axisMax = maxValue + padding;
-
-    return OpenVitalsCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              latest?.let((v) => metricData.format(v).text) ?? l10n.noData,
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(color: metricData.color),
-            ),
-            Text(
-              isToday
-                  ? l10n.summaryToday(metricData.title)
-                  : l10n.summaryOnDate(
-                      metricData.title,
-                      DateFormat.yMMMd(locale).format(dayStart),
-                    ),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 16),
-            if (points.isEmpty)
-              Text(
-                isToday
-                    ? l10n.summaryEmptyToday(l10n.screenBody)
-                    : l10n.summaryEmptyDay(l10n.screenBody),
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              )
-            else ...[
-              MetricLinePlot(
-                points: [
-                  for (final (time, value) in points)
-                    MetricLinePlotPoint(
-                      xFraction: axis.fractionOf(time),
-                      value: value,
-                    ),
-                ],
-                minValue: axisMin,
-                maxValue: axisMax,
-                accentColor: metricData.color,
-                valueFormatter: (value) => metricData.format(value).text,
-              ),
-              const SizedBox(height: 8),
-              DayAxisLabels(axis: axis),
-              const SizedBox(height: 12),
-              Text(
-                l10n.summaryLastUpdate(
-                  DateFormat.jm(locale).format(points.last.$1.toLocal()),
-                ),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ],
-          ],
-        ),
+    return MetricDayChart(
+      axis: DayAxis(selectedDate, now: now),
+      samples: samples,
+      // A weight at 08:00 is a fact about 08:00; it says nothing about midnight.
+      shape: DaySeriesShape.raw,
+      // Weight moves in kilos around 70, not around zero — an axis from 0 would
+      // draw every day as the same flat line. Pad the span, but never dip below
+      // zero, since none of these metrics can.
+      range: ChartRange.padded(
+        [for (final sample in samples) sample.value],
+        floor: 0,
       ),
+      accentColor: metricData.color,
+      metricName: metricData.title,
+      emptyLabel: l10n.screenBody,
+      headlineText:
+          latest == null ? l10n.noData : metricData.format(latest).text,
+      valueFormatter: (value) => metricData.format(value).text,
     );
   }
 }

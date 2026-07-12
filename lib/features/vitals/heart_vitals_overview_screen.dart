@@ -368,6 +368,7 @@ class _HeartSection extends StatelessWidget {
     final maxBpm = _max(bpm).round();
     return HeartTimelineCard(
       date: state.selectedDate,
+      metricName: AppLocalizations.of(context).metricAverageHeartRate,
       points: [
         for (final s in result.daySamples)
           (s.time, s.beatsPerMinute.toDouble()),

@@ -7,8 +7,9 @@ import '../../core/time/local_date.dart';
 import '../../domain/model/heart_models.dart';
 import '../../domain/model/vitals_models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../ui/charts/chart_axis.dart';
 import '../../ui/charts/day_axis.dart';
-import '../../ui/charts/metric_line_plot.dart';
+import '../../ui/charts/metric_day_chart.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 
@@ -385,6 +386,7 @@ class HeartTimelineCard extends StatelessWidget {
   const HeartTimelineCard({
     super.key,
     required this.date,
+    required this.metricName,
     required this.points,
     required this.averageText,
     required this.rangeText,
@@ -394,6 +396,9 @@ class HeartTimelineCard extends StatelessWidget {
   });
 
   final LocalDate date;
+
+  /// Heart rate, resting heart rate or HRV — the card serves all three.
+  final String metricName;
 
   /// Instant → value samples, in any order.
   final List<(DateTime, double)> points;
@@ -412,72 +417,59 @@ class HeartTimelineCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
 
-    final sorted = [...points]..sort((a, b) => a.$1.compareTo(b.$1));
-    final values = sorted.map((p) => p.$2).toList();
+    final samples = [
+      for (final (time, value) in points) (time: time, value: value),
+    ]..sort((a, b) => a.time.compareTo(b.time));
+    final values = [for (final sample in samples) sample.value];
     final min = values.reduce((a, b) => a < b ? a : b);
     final max = values.reduce((a, b) => a > b ? a : b);
-    // The fifth hand-rolled copy of "where does this instant sit in the day". This
-    // one had the maths right — it scaled by the whole day, not the elapsed part —
-    // but it drew its hour row without the y-axis inset, so the labels sat left of
-    // the plot they describe. Both problems are the same problem: the knowledge was
-    // not in one place. See [DayAxis].
-    final axis = DayAxis(date);
     final timeFormat = DateFormat.jm(locale);
 
-    return OpenVitalsCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child:
-                      _TimelineStat(label: l10n.summaryAverage, value: averageText),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _TimelineStat(label: l10n.summaryRange, value: rangeText),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _TimelineStat(
-                    label: l10n.summarySamples,
-                    value: '${sorted.length}',
-                  ),
-                ),
-              ],
+    // Same day card as hydration, body and the rest — it just says something else
+    // above and below the plot. Which is what the header and footer slots are for:
+    // the fifth copy of the day maths lived here, and the hour row underneath was
+    // drawn without the y-axis inset. Neither is possible now. See [MetricDayChart].
+    return MetricDayChart(
+      axis: DayAxis(date),
+      samples: samples,
+      // A heart rate at 08:00 is a fact about 08:00; nothing accumulates.
+      shape: DaySeriesShape.raw,
+      range: ChartRange(minValue ?? (min - 5), maxValue ?? (max + 5)),
+      accentColor: AppColors.heart,
+      metricName: metricName,
+      emptyLabel: metricName,
+      valueFormatter: valueFormatter,
+      drawPoints: true,
+      pointRadius: 3,
+      // Statistics, not a headline: the useful thing about a day of heart rate is
+      // its spread, not its last reading.
+      header: Row(
+        children: [
+          Expanded(
+            child: _TimelineStat(label: l10n.summaryAverage, value: averageText),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _TimelineStat(label: l10n.summaryRange, value: rangeText),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _TimelineStat(
+              label: l10n.summarySamples,
+              value: '${samples.length}',
             ),
-            const SizedBox(height: 16),
-            MetricLinePlot(
-              points: [
-                for (final (time, value) in sorted)
-                  MetricLinePlotPoint(
-                    xFraction: axis.fractionOf(time),
-                    value: value,
-                  ),
-              ],
-              minValue: minValue ?? (min - 5),
-              maxValue: maxValue ?? (max + 5),
-              accentColor: AppColors.heart,
-              valueFormatter: valueFormatter,
-              drawPoints: true,
-              pointRadius: 3,
-            ),
-            const SizedBox(height: 8),
-            DayAxisLabels(axis: axis),
-            const SizedBox(height: 12),
-            Text(
-              l10n.summaryRecorded(
-                timeFormat.format(sorted.first.$1.toLocal()),
-                timeFormat.format(sorted.last.$1.toLocal()),
-              ),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ],
+          ),
+        ],
+      ),
+      // The recording window, not the last update: a monitor that stopped at noon
+      // is the story here.
+      footer: Text(
+        l10n.summaryRecorded(
+          timeFormat.format(samples.first.time.toLocal()),
+          timeFormat.format(samples.last.time.toLocal()),
         ),
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
       ),
     );
   }

@@ -10,8 +10,9 @@ import '../../core/time/local_date.dart';
 import '../../domain/insights/metric_interpretations.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../ui/charts/chart_axis.dart';
 import '../../ui/charts/day_axis.dart';
-import '../../ui/charts/metric_line_plot.dart';
+import '../../ui/charts/metric_day_chart.dart';
 import '../../ui/charts/period_chart.dart';
 import '../../ui/components/metric_card.dart';
 import '../../ui/components/metric_interpretation_card.dart';
@@ -124,8 +125,7 @@ List<({DateTime time, double value})> cumulativeNutritionPoints(
   return points;
 }
 
-/// Kotlin `NutritionIntradayChartCard`: the day's cumulative intake curve,
-/// anchored at midnight and running to "now" on today (else to midnight).
+/// The day's cumulative intake curve for one nutrient.
 class NutritionIntradayChartCard extends StatelessWidget {
   const NutritionIntradayChartCard({
     super.key,
@@ -144,85 +144,23 @@ class NutritionIntradayChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final color = nutrientColor(series.nutrient);
-    final title = nutrientTitle(series.nutrient, l10n);
     DisplayValue format(double value) =>
         nutrientDisplayValue(series.nutrient, value, formatter);
 
-    // Shared, because this maths was written five times over and four of them
-    // plotted the point at the wrong hour. See [DayAxis].
-    final axis = DayAxis(day, now: now());
-    final isToday = axis.isToday;
-    final dayStart = axis.start;
+    final samples = cumulativeNutritionPoints(entries, series.nutrient);
+    final total = samples.isEmpty ? 0.0 : samples.last.value;
 
-    final points = cumulativeNutritionPoints(entries, series.nutrient);
-    final total = points.isEmpty ? 0.0 : points.last.value;
-
-    return OpenVitalsCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              format(total).text,
-              style: theme.textTheme.headlineMedium?.copyWith(color: color),
-            ),
-            Text(
-              isToday
-                  ? l10n.summaryToday(title)
-                  : l10n.summaryOnDate(
-                      title,
-                      DateFormat.yMMMd().format(dayStart),
-                    ),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 16),
-            if (points.isEmpty)
-              Text(
-                isToday
-                    ? l10n.summaryEmptyToday(l10n.screenNutrition)
-                    : l10n.summaryEmptyDay(l10n.screenNutrition),
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              )
-            else ...[
-              MetricLinePlot(
-                // Bracketed: zero at midnight, and the total held forward to the
-                // end of the axis.
-                points: [
-                  const MetricLinePlotPoint(xFraction: 0, value: 0),
-                  for (final point in points)
-                    MetricLinePlotPoint(
-                      xFraction: axis.fractionOf(point.time),
-                      value: point.value,
-                    ),
-                  // To now, not to the right edge: the rest of today has not been
-                  // eaten yet.
-                  MetricLinePlotPoint(xFraction: axis.endFraction, value: total),
-                ],
-                minValue: 0,
-                maxValue: math.max(total, 1),
-                accentColor: color,
-                valueFormatter: (value) => format(value).text,
-              ),
-              const SizedBox(height: 8),
-              DayAxisLabels(axis: axis),
-              const SizedBox(height: 12),
-              Text(
-                l10n.summaryLastUpdate(
-                  DateFormat.jm().format(points.last.time),
-                ),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ],
-          ],
-        ),
-      ),
+    return MetricDayChart(
+      axis: DayAxis(day, now: now()),
+      samples: samples,
+      shape: DaySeriesShape.cumulative,
+      range: ChartRange(0, math.max(total, 1)),
+      accentColor: nutrientColor(series.nutrient),
+      metricName: nutrientTitle(series.nutrient, l10n),
+      emptyLabel: l10n.screenNutrition,
+      headlineText: format(total).text,
+      valueFormatter: (value) => format(value).text,
     );
   }
 }

@@ -18,6 +18,51 @@ const double kChartYAxisWidth = 56;
 /// Gap between the Y-axis label column and the plot (Kotlin `ChartAxisGap`).
 const double kChartAxisGap = 8;
 
+/// The total left inset of a plot that draws a Y axis — what an X-axis row
+/// underneath must start at to line up with it. [DayAxisLabels] applies this
+/// itself; [ChartXAxisWithYAxis] applies it to anything else.
+///
+/// Charts that reserve their gutter on the RIGHT instead (the sleep schedule
+/// chart, whose painter writes its stage labels there) are a deliberate
+/// exception, not an oversight: their plot starts at the left edge.
+const double kChartPlotInset = kChartYAxisWidth + kChartAxisGap;
+
+/// The y bounds of a plot.
+///
+/// Not just a pair: the *rule* for choosing bounds was written twice — the body
+/// day chart pads by 8% of the span, the session trace cards by 10% — and both are
+/// this idea. A flat series has no span to take a percentage of, so it falls back
+/// to the magnitude of the value itself, and a series that never goes negative
+/// keeps its floor at zero rather than dipping below it.
+@immutable
+class ChartRange {
+  const ChartRange(this.min, this.max);
+
+  /// Bounds that clear the data by [fraction] of its span, top and bottom.
+  factory ChartRange.padded(
+    Iterable<double> values, {
+    double fraction = 0.08,
+    double? floor,
+  }) {
+    if (values.isEmpty) return const ChartRange(0, 1);
+    final min = values.reduce(math.min);
+    final max = values.reduce(math.max);
+    final span = max - min;
+    // A flat line has no span; pad against how big the value is instead, so a
+    // steady 70 kg does not get a hairline axis around it.
+    final basis = span > 0 ? span : (max.abs() < 1 ? 1.0 : max.abs());
+    final padding = basis * fraction;
+    final low = min - padding;
+    return ChartRange(
+      floor != null && low < floor ? floor : low,
+      max + padding,
+    );
+  }
+
+  final double min;
+  final double max;
+}
+
 /// Whether the chart supports tap-to-select of an individual day. Mirrors the
 /// Kotlin `TimeRange.supportsChartDaySelection()`.
 extension TimeRangeChartSelection on TimeRange {

@@ -136,6 +136,7 @@ class HeartMetricContentView extends StatelessWidget {
         intradayChart: samples.length > 1
             ? sectionPadded(HeartTimelineCard(
                 date: state.selectedDate,
+                metricName: l10n.metricAverageHeartRate,
                 points: [
                   for (final s in samples) (s.time, s.beatsPerMinute.toDouble())
                 ],
@@ -313,6 +314,7 @@ class HeartMetricContentView extends StatelessWidget {
         intradayChart: daySamples.length > 1
             ? sectionPadded(HeartTimelineCard(
                 date: state.selectedDate,
+                metricName: l10n.metricRestingHeartRate,
                 points: [
                   for (final s in daySamples)
                     (s.time, s.beatsPerMinute.toDouble())
@@ -496,6 +498,7 @@ class HeartMetricContentView extends StatelessWidget {
         intradayChart: daySamples.length > 1
             ? sectionPadded(HeartTimelineCard(
                 date: state.selectedDate,
+                metricName: l10n.metricHrv,
                 points: [for (final s in daySamples) (s.time, s.rmssdMs)],
                 averageText: formatter.hrv(hrvMs).text,
                 rangeText:
