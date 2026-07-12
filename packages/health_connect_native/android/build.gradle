@@ -30,6 +30,18 @@ android {
         minSdk = 26
     }
 
+    sourceSets {
+        test {
+            // ONE fixture, shared. test/fixtures/health_connect/golden.json is
+            // generated from the real Health Connect export and committed at the
+            // repo root; Tier D (Dart) reads it from there, and this puts the SAME
+            // file on the Kotlin test classpath rather than copying it. Two copies
+            // of a fixture drift, and a drifted fixture is a test suite that is
+            // green about the wrong data.
+            resources.srcDirs += "$rootDir/../test/fixtures/health_connect"
+        }
+    }
+
     testOptions {
         unitTests {
             // The readers log through android.util.Log, which is an unimplemented
@@ -82,4 +94,8 @@ dependencies {
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2"
     testImplementation "com.google.truth:truth:1.4.4"
+    // Reads the shared fixture. org.json is on the android.jar stub, which
+    // returnDefaultValues turns into a no-op that silently returns null for every
+    // field -- a JSON parser that parses nothing. Gson is a real one.
+    testImplementation "com.google.code.gson:gson:2.11.0"
 }
