@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
@@ -21,14 +22,15 @@ const Duration kMindfulnessTimerTick = Duration(seconds: 1);
 const int kMindfulnessBellPreviewMillis = 1500;
 const int kMindfulnessBackgroundPreviewMillis = 2000;
 
-/// Port of the Kotlin `MindfulnessEntryError`.
+/// Why the form refuses to save. Validation and gating only — a write that was
+/// attempted and *failed* is not one of these; it lives in
+/// [MindfulnessEntryState.save] as a [CommandFailure], carrying the real error.
 enum MindfulnessEntryError {
   invalidTimer,
   invalidManualEntry,
   timerTooShort,
   missingWritePermission,
   unavailable,
-  writeFailed,
 }
 
 /// A request to ring a bell. The [id] increments on every emission so the screen
@@ -70,7 +72,7 @@ abstract class MindfulnessEntryState with _$MindfulnessEntryState {
     @Default(false) bool canWrite,
     @Default(true) bool mindfulnessAvailable,
     @Default(true) bool isCheckingPermission,
-    @Default(false) bool isSavingEntry,
+    @Default(CommandState<void>.idle()) CommandState<void> save,
     @Default(false) bool isTimerRunning,
     @Default(false) bool isTimerPaused,
     @Default(false) bool timerCompleted,
@@ -78,14 +80,28 @@ abstract class MindfulnessEntryState with _$MindfulnessEntryState {
     @Default(0) int totalSeconds,
     String? editRecordId,
     DateTime? editStartTime,
-    @Default(false) bool saveCompleted,
     MindfulnessEntryError? entryError,
-    ScreenError? writeError,
+
+    /// The edit prefill could not be read — a different thing from a save that
+    /// failed, and it blocks the form before the user has done anything.
+    ScreenError? prefillError,
     MindfulnessBellEvent? bellEvent,
     MindfulnessBackgroundEvent? backgroundEvent,
   }) = _MindfulnessEntryState;
 
   bool get isEditMode => editRecordId != null;
+
+  bool get isSavingEntry => save is CommandRunning<void>;
+
+  /// The error the form should be showing, if any: a failed prefill outranks a
+  /// failed write, because it means the form was never trustworthy to begin
+  /// with.
+  ScreenError? get blockingError =>
+      prefillError ??
+      switch (save) {
+        CommandFailure<void>(:final error) => error,
+        _ => null,
+      };
 
   /// The timer's fields may only be edited while it is idle — the Kotlin
   /// `canUpdateTimerFields`.
@@ -156,7 +172,10 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
   /// Port of the Kotlin `updateTimerFields`: silently ignored unless idle.
   void _updateTimerFields(MindfulnessEntryState Function() update) {
     if (!state.canEditTimer) return;
-    state = update().copyWith(entryError: null, writeError: null);
+    state = update().copyWith(
+      entryError: null,
+      save: const CommandState.idle(),
+    );
   }
 
   void updateDurationMinutes(String text) {
@@ -183,7 +202,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     state = state.copyWith(
       bellSound: sound,
       entryError: null,
-      writeError: null,
       bellEvent: MindfulnessBellEvent(
         _bellEventId,
         sound,
@@ -198,7 +216,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     state = state.copyWith(
       backgroundSound: sound,
       entryError: null,
-      writeError: null,
       // "None" is silence, not a preview.
       backgroundEvent: sound == MindfulnessBackgroundSound.none
           ? null
@@ -218,7 +235,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     if (config == null) {
       state = state.copyWith(
         entryError: MindfulnessEntryError.invalidTimer,
-        writeError: null,
       );
       return;
     }
@@ -239,7 +255,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       isTimerPaused: false,
       timerCompleted: false,
       entryError: null,
-      writeError: null,
     );
     _runTimer(config);
   }
@@ -260,7 +275,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       isTimerPaused: true,
       timerCompleted: false,
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -270,7 +284,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     if (config == null || state.remainingSeconds <= 0) {
       state = state.copyWith(
         entryError: MindfulnessEntryError.invalidTimer,
-        writeError: null,
       );
       return;
     }
@@ -281,7 +294,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       isTimerPaused: false,
       timerCompleted: false,
       entryError: null,
-      writeError: null,
     );
     _runTimer(config);
   }
@@ -300,7 +312,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       remainingSeconds: duration * 60,
       totalSeconds: duration * 60,
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -313,7 +324,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     if (end.difference(start).inMinutes < _minSessionMinutes) {
       state = state.copyWith(
         entryError: MindfulnessEntryError.timerTooShort,
-        writeError: null,
       );
       return;
     }
@@ -323,14 +333,12 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       onSuccess: () {
         final duration = parsePositiveMinutes(state.durationMinutesText) ?? 0;
         state = state.copyWith(
-          isSavingEntry: false,
           isTimerPaused: false,
           timerCompleted: false,
           remainingSeconds: duration * 60,
           totalSeconds: duration * 60,
-          saveCompleted: true,
+          save: const CommandState.success(null),
           entryError: null,
-          writeError: null,
         );
         _completedStart = null;
         _completedEnd = null;
@@ -421,7 +429,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
-      writeError: null,
     );
     // A failed probe comes back as unavailable-with-an-error rather than as a
     // throw, so an unsupported device and an unreachable one both report
@@ -436,16 +443,19 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       writePermissions: access.permissions,
       canWrite: access.granted,
       entryError: access.available ? null : MindfulnessEntryError.unavailable,
-      writeError: error == null ? null : throwableToScreenError(error),
+      // A probe that could not answer is surfaced where a failed write is:
+      // either way the form cannot promise the save will land.
+      save: error == null
+          ? const CommandState.idle()
+          : CommandState.failure(throwableToScreenError(error)),
     );
   }
 
   void updateManualMinutes(String text) {
     state = state.copyWith(
       manualMinutesText: text,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -453,9 +463,8 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     final minutes = parsePositiveMinutes(state.manualMinutesText);
     state = state.copyWith(
       editStartTime: _coerceAtLatestSessionStart(time, minutes),
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -467,7 +476,6 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
         minutes > _maxSessionMinutes) {
       state = state.copyWith(
         entryError: MindfulnessEntryError.invalidManualEntry,
-        writeError: null,
       );
       return;
     }
@@ -482,12 +490,10 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       end: end,
       onSuccess: () {
         state = state.copyWith(
-          isSavingEntry: false,
           // An edit keeps the value on screen; a new entry clears the field.
           manualMinutesText: state.isEditMode ? state.manualMinutesText : '',
-          saveCompleted: true,
+          save: const CommandState.success(null),
           entryError: null,
-          writeError: null,
         );
       },
     );
@@ -504,87 +510,80 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     if (!state.mindfulnessAvailable) {
       state = state.copyWith(
         entryError: MindfulnessEntryError.unavailable,
-        writeError: null,
       );
       return;
     }
     if (!state.canWrite) {
       state = state.copyWith(
         entryError: MindfulnessEntryError.missingWritePermission,
-        writeError: null,
       );
       return;
     }
 
     state = state.copyWith(
-      isSavingEntry: true,
+      save: const CommandState.running(),
       entryError: null,
-      writeError: null,
     );
     final request = MindfulnessSessionWriteRequest(
       title: _defaultSessionTitle,
       startTime: start,
       endTime: end,
     );
-    try {
-      (await ref.read(saveMindfulnessSessionUseCaseProvider)(
-        request,
-        editRecordId: editRecordId,
-      ))
-          .orThrow();
-      if (!ref.mounted) return;
-      onSuccess();
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isSavingEntry: false,
-        entryError: MindfulnessEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
+    final result = await ref.read(saveMindfulnessSessionUseCaseProvider)(
+      request,
+      editRecordId: editRecordId,
+    );
+    if (!ref.mounted) return;
+    switch (result) {
+      case Ok():
+        onSuccess();
+      case Err(:final failure):
+        state = state.copyWith(
+          save: CommandState.failure(failure.toScreenError()),
+          entryError: null,
+        );
     }
   }
 
+  /// The screen consumed the success (it showed the toast and left), so the
+  /// command returns to rest — otherwise re-entering the route would fire it
+  /// again.
   void onSaveCompletedHandled() {
-    state = state.copyWith(saveCompleted: false);
+    state = state.copyWith(save: const CommandState.idle());
   }
 
+  /// Prefills the form from the session being edited. A failure here is a
+  /// *read* failure — the form has nothing to correct — so it lands on
+  /// [MindfulnessEntryState.prefillError], not on the save command.
   Future<void> _loadEditEntry() async {
     final recordId = editRecordId;
     if (recordId == null) return;
-    try {
-      final session =
-          (await ref.read(loadMindfulnessSessionForEditUseCaseProvider)(
-        recordId,
-      ))
-              .orThrow();
-      if (!ref.mounted) return;
-      // Null covers both "no such session" and "not ours to edit".
-      if (session == null) {
+    final result =
+        await ref.read(loadMindfulnessSessionForEditUseCaseProvider)(recordId);
+    if (!ref.mounted) return;
+    switch (result) {
+      case Ok(:final value):
+        // Null covers both "no such session" and "not ours to edit".
+        if (value == null) {
+          state = state.copyWith(
+            prefillError: const ScreenErrorMessage(
+              'Only OpenVitals entries can be edited.',
+            ),
+          );
+          return;
+        }
+        final rawMinutes =
+            value.endTime.difference(value.startTime).inMinutes;
+        final minutes = rawMinutes
+            .clamp(_minSessionMinutes, _maxSessionMinutes);
         state = state.copyWith(
-          entryError: MindfulnessEntryError.writeFailed,
-          writeError: const ScreenErrorMessage(
-            'Only OpenVitals entries can be edited.',
-          ),
+          manualMinutesText: minutes.toString(),
+          editStartTime: _coerceAtLatestSessionStart(value.startTime, minutes),
+          entryError: null,
+          prefillError: null,
         );
-        return;
-      }
-      final rawMinutes =
-          session.endTime.difference(session.startTime).inMinutes;
-      final minutes = rawMinutes
-          .clamp(_minSessionMinutes, _maxSessionMinutes);
-      state = state.copyWith(
-        manualMinutesText: minutes.toString(),
-        editStartTime:
-            _coerceAtLatestSessionStart(session.startTime, minutes),
-        entryError: null,
-        writeError: null,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        entryError: MindfulnessEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
+      case Err(:final failure):
+        state = state.copyWith(prefillError: failure.toScreenError());
     }
   }
 

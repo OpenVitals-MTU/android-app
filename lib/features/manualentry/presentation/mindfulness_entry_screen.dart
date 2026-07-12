@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/presentation/screen_error.dart';
+import '../../../core/presentation/command_state.dart';
 import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/health_connect_gate.dart';
@@ -55,8 +55,10 @@ class _MindfulnessEntryScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    ref.listen(_provider.select((s) => s.saveCompleted), (previous, next) {
-      if (next) {
+    ref.listen(_provider.select((s) => s.save), (previous, next) {
+      // The success is consumed exactly once, then the command is put back to
+      // rest — otherwise returning to this route would replay the toast.
+      if (next is CommandSuccess<void>) {
         ref.read(_provider.notifier).onSaveCompletedHandled();
         onManualEntrySaved(context, 'Mindfulness session saved');
       }
@@ -179,11 +181,11 @@ class _MindfulnessEntryForm extends ConsumerWidget {
                         ? l10n.actionSave
                         : l10n.mindfulnessEntryAddMinutes),
                   ),
-                  if (state.entryError != null)
+                  if (_errorText(state, l10n) case final message?)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: Text(
-                        _errorText(state.entryError!, state.writeError, l10n),
+                        message,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: theme.colorScheme.error),
                       ),
@@ -197,26 +199,25 @@ class _MindfulnessEntryForm extends ConsumerWidget {
     );
   }
 
-  String _errorText(
-    MindfulnessEntryError error,
-    ScreenError? writeError,
-    AppLocalizations l10n,
-  ) {
-    switch (error) {
-      case MindfulnessEntryError.invalidTimer:
-        return l10n.mindfulnessEntryInvalidTimer;
-      case MindfulnessEntryError.invalidManualEntry:
-        return l10n.mindfulnessEntryInvalidManual;
-      case MindfulnessEntryError.timerTooShort:
-        return l10n.mindfulnessEntryTimerTooShort;
-      case MindfulnessEntryError.missingWritePermission:
-        return l10n.mindfulnessEntryPermissionNeeded;
-      case MindfulnessEntryError.unavailable:
-        return l10n.mindfulnessEntryUnavailable;
-      case MindfulnessEntryError.writeFailed:
-        return l10n.mindfulnessEntryWriteFailed(
-          screenErrorText(writeError, l10n),
-        );
+  /// The one message the form shows: why it refuses to save, or — failing
+  /// that — why the last attempt to save (or to read the entry being edited)
+  /// did not land.
+  String? _errorText(MindfulnessEntryState state, AppLocalizations l10n) {
+    final entryError = state.entryError;
+    if (entryError != null) {
+      return switch (entryError) {
+        MindfulnessEntryError.invalidTimer => l10n.mindfulnessEntryInvalidTimer,
+        MindfulnessEntryError.invalidManualEntry =>
+          l10n.mindfulnessEntryInvalidManual,
+        MindfulnessEntryError.timerTooShort =>
+          l10n.mindfulnessEntryTimerTooShort,
+        MindfulnessEntryError.missingWritePermission =>
+          l10n.mindfulnessEntryPermissionNeeded,
+        MindfulnessEntryError.unavailable => l10n.mindfulnessEntryUnavailable,
+      };
     }
+    final blocking = state.blockingError;
+    if (blocking == null) return null;
+    return l10n.mindfulnessEntryWriteFailed(screenErrorText(blocking, l10n));
   }
 }

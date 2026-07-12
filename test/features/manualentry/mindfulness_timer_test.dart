@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/result/result.dart';
+import 'package:openvitals/core/presentation/command_state.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/mindfulness_repository.dart';
 import 'package:openvitals/di/providers.dart';
@@ -313,7 +314,7 @@ void main() {
         written.endTime.difference(written.startTime).inMinutes,
         1,
       );
-      expect(state().saveCompleted, isTrue);
+      expect(state().save, isA<CommandSuccess<void>>());
       // Rewound, ready for the next session.
       expect(state().remainingSeconds, 60);
     });
