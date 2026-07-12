@@ -17,7 +17,7 @@ The recording flow supports:
 - Start, pause, resume, finish, and discard.
 - A persistent recording notification.
 - A configurable recording dashboard.
-- Focus mode for a cleaner in-recording view.
+- Focus mode: a full-screen, glanceable view with no app bar, exited with its own corner button or the system back gesture.
 - A high-contrast outdoor mode for better readability in bright conditions.
 - Keep-screen-on support when enabled.
 - Offline route maps when map packs have been imported.

@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.0.3 - 2026-07-12
+
+### English
+
+- Show an activity's heart rate again, and stop its splits falling back to estimates. Health Connect groups heart rate, speed and cadence into records holding many samples, and filters them by the record's own boundary - so a workout sitting inside a longer record was invisible, and the activity reported "Not available" for a heart rate it had recorded the whole time.
+- Fix the blank sleep graphs: the night's stage timeline and the "share of time in bed" bars drew their coloured bands with no height at all, beside durations and percentages that were right.
+- Restore the strip in the weekly activities view that shows which days you trained.
+- Fix beverages logged from a home-screen widget being silently dropped, and the widget buttons doing nothing at all.
+- Stop cutting a strength session into distance splits. A phone on a bench drifts a couple of hundred metres on GPS, and a lifting session was being sliced into laps at a 30:29 min/km pace.
+- Focus mode now fills the screen. Its app bar's Back arrow only repeated what focus mode's own exit button and the system back gesture already do, and the height it took now goes to the metrics.
+
+### Espanol
+
+- Vuelve a mostrar la frecuencia cardiaca de una actividad y evita que sus segmentos caigan en estimaciones. Health Connect agrupa frecuencia cardiaca, velocidad y cadencia en registros con muchas muestras y los filtra por el limite del propio registro, asi que un entrenamiento contenido en un registro mas largo era invisible y la actividad daba "No disponible" para una frecuencia que si habia registrado.
+- Corrige los graficos de sueno en blanco: la linea de fases de la noche y las barras de "reparto del tiempo en cama" dibujaban sus bandas sin altura alguna, junto a duraciones y porcentajes correctos.
+- Restaura la tira de la vista semanal de actividades que indica que dias entrenaste.
+- Corrige la perdida silenciosa de bebidas registradas desde un widget de la pantalla de inicio, y los botones del widget que no hacian nada.
+- Deja de dividir una sesion de fuerza en segmentos de distancia. Un movil sobre un banco acumula un par de cientos de metros de deriva GPS, y una sesion de pesas acababa troceada en vueltas a 30:29 min/km.
+- El modo enfoque ocupa ahora toda la pantalla. La flecha Atras de su barra solo repetia lo que ya hacen su propio boton de salida y el gesto atras del sistema, y ese espacio pasa a las metricas.
+
+### Deutsch
+
+- Zeigt die Herzfrequenz einer Aktivitaet wieder an und verhindert, dass ihre Abschnitte auf Schaetzungen zurueckfallen. Health Connect fasst Herzfrequenz, Geschwindigkeit und Trittfrequenz in Datensaetzen mit vielen Messwerten zusammen und filtert nach der Grenze des Datensatzes selbst - ein Training innerhalb eines laengeren Datensatzes war damit unsichtbar, und die Aktivitaet meldete "Nicht verfuegbar" fuer eine Herzfrequenz, die sie durchgehend aufgezeichnet hatte.
+- Korrigiert die leeren Schlaf-Diagramme: die Phasen-Zeitleiste der Nacht und die Balken "Anteil der Zeit im Bett" zeichneten ihre farbigen Baender voellig ohne Hoehe, neben korrekten Dauern und Prozentwerten.
+- Stellt in der Wochenansicht der Aktivitaeten die Leiste wieder her, die zeigt, an welchen Tagen du trainiert hast.
+- Korrigiert, dass ueber ein Startbildschirm-Widget erfasste Getraenke stillschweigend verloren gingen und die Widget-Schaltflaechen gar nichts taten.
+- Schneidet eine Krafteinheit nicht mehr in Distanz-Abschnitte. Ein Handy auf der Bank sammelt ein paar hundert Meter GPS-Drift, und eine Hanteleinheit wurde in Runden mit 30:29 min/km zerlegt.
+- Der Fokusmodus fuellt jetzt den ganzen Bildschirm. Der Zurueck-Pfeil seiner Leiste wiederholte nur, was der eigene Beenden-Button und die System-Zurueck-Geste ohnehin tun; die frei gewordene Hoehe geht an die Messwerte.
+
+### Italiano
+
+- Mostra di nuovo la frequenza cardiaca di un'attivita ed evita che i suoi segmenti ripieghino su delle stime. Health Connect raggruppa frequenza cardiaca, velocita e cadenza in record con molti campioni e li filtra in base al confine del record stesso, quindi un allenamento contenuto in un record piu lungo era invisibile e l'attivita dava "Non disponibile" per una frequenza che aveva registrato per tutto il tempo.
+- Corregge i grafici del sonno vuoti: la linea temporale delle fasi della notte e le barre "quota di tempo a letto" disegnavano le loro bande colorate senza alcuna altezza, accanto a durate e percentuali corrette.
+- Ripristina nella vista settimanale delle attivita la striscia che mostra in quali giorni ti sei allenato.
+- Corregge la perdita silenziosa delle bevande registrate da un widget della schermata home, e i pulsanti del widget che non facevano nulla.
+- Smette di tagliare una sessione di forza in segmenti di distanza. Un telefono appoggiato a una panca accumula un paio di centinaia di metri di deriva GPS, e una sessione con i pesi finiva divisa in giri a 30:29 min/km.
+- La modalita focus ora occupa tutto lo schermo. La freccia Indietro della sua barra ripeteva solo cio che gia fanno il suo pulsante di uscita e il gesto indietro di sistema, e quell'altezza va ora alle metriche.
+
 ## 2.0.2 - 2026-07-12
 
 ### English
