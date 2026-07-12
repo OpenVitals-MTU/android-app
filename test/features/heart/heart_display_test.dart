@@ -283,4 +283,33 @@ void main() {
       expect(day.stats.high, 70);
     });
   });
+
+  test('respiratory rate reports ONE average, the one under its chart', () {
+    // Two readings on day one, one on day two. The mean of the daily means (12)
+    // and the mean of every reading (11.33) are different numbers, and the
+    // screen used to print both — the chart summary said one, the
+    // interpretation card said the other, and neither said which.
+    final display = _display(HeartPeriodLoadResult(
+      respiratoryRate: [
+        RespiratoryRateEntry(
+          time: DateTime.utc(2026, 3, 2, 8),
+          breathsPerMinute: 10,
+          source: 'Test',
+        ),
+        RespiratoryRateEntry(
+          time: DateTime.utc(2026, 3, 2, 20),
+          breathsPerMinute: 12,
+          source: 'Test',
+        ),
+        RespiratoryRateEntry(
+          time: DateTime.utc(2026, 3, 3, 8),
+          breathsPerMinute: 13,
+          source: 'Test',
+        ),
+      ],
+    ));
+
+    // (11 + 13) / 2 — the mean of the two days, not of the three readings.
+    expect(display.respiratoryRate!.periodAverage, closeTo(12.0, 1e-9));
+  });
 }

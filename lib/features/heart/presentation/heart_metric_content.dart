@@ -838,7 +838,7 @@ class HeartMetricContentView extends StatelessWidget {
         accentColor: metric.accentColor,
       ),
       contextInsight: respiratoryRateContextCardContent(
-        respiratoryRate.entriesAverage,
+        respiratoryRate.periodAverage,
         metric.accentColor,
       ),
       statistics: respiratoryRateStatisticsContent(

@@ -191,17 +191,23 @@ NutritionDisplay buildNutritionDisplay({
       dailyMacros.fold<double>(0.0, (sum, day) => sum + day.carbsGrams),
       dailyMacros.fold<double>(0.0, (sum, day) => sum + day.fatGrams),
     ),
+    // The count of days this NUTRIENT was actually tracked, not the count of
+    // meals logged. A protein screen over a period with thirty meals and no
+    // protein data was reporting thirty readings. It happened to be harmless —
+    // the sparse-data warning fires on tracked days independently, so the
+    // warning still appeared — but the number was a lie, and the next person to
+    // read sampleCount would have believed it.
     metricConfidence: dataConfidence(
       period,
       metricTrackedDates,
-      entries.isNotEmpty ? entries.length : metricTrackedDates.length,
+      metricTrackedDates.length,
       sources: sources,
       valueKind: DataValueKind.aggregated,
     ),
     overviewConfidence: dataConfidence(
       period,
       overviewTrackedDates,
-      entries.isNotEmpty ? entries.length : overviewTrackedDates.length,
+      overviewTrackedDates.length,
       sources: sources,
       valueKind: DataValueKind.aggregated,
     ),

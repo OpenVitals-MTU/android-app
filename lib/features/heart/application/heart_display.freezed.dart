@@ -3986,7 +3986,7 @@ $HeartStatsCopyWith<$Res> get stats {
 /// @nodoc
 mixin _$RespiratoryRateDisplay {
 
- List<RespiratoryRateEntry> get entries; List<RespiratoryRateDaySummary> get daySummariesNewestFirst; double get periodAverage; double get entriesAverage; HeartStats get stats;
+ List<RespiratoryRateEntry> get entries; List<RespiratoryRateDaySummary> get daySummariesNewestFirst; double get periodAverage; HeartStats get stats;
 /// Create a copy of RespiratoryRateDisplay
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3997,16 +3997,16 @@ $RespiratoryRateDisplayCopyWith<RespiratoryRateDisplay> get copyWith => _$Respir
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RespiratoryRateDisplay&&const DeepCollectionEquality().equals(other.entries, entries)&&const DeepCollectionEquality().equals(other.daySummariesNewestFirst, daySummariesNewestFirst)&&(identical(other.periodAverage, periodAverage) || other.periodAverage == periodAverage)&&(identical(other.entriesAverage, entriesAverage) || other.entriesAverage == entriesAverage)&&(identical(other.stats, stats) || other.stats == stats));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RespiratoryRateDisplay&&const DeepCollectionEquality().equals(other.entries, entries)&&const DeepCollectionEquality().equals(other.daySummariesNewestFirst, daySummariesNewestFirst)&&(identical(other.periodAverage, periodAverage) || other.periodAverage == periodAverage)&&(identical(other.stats, stats) || other.stats == stats));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(entries),const DeepCollectionEquality().hash(daySummariesNewestFirst),periodAverage,entriesAverage,stats);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(entries),const DeepCollectionEquality().hash(daySummariesNewestFirst),periodAverage,stats);
 
 @override
 String toString() {
-  return 'RespiratoryRateDisplay(entries: $entries, daySummariesNewestFirst: $daySummariesNewestFirst, periodAverage: $periodAverage, entriesAverage: $entriesAverage, stats: $stats)';
+  return 'RespiratoryRateDisplay(entries: $entries, daySummariesNewestFirst: $daySummariesNewestFirst, periodAverage: $periodAverage, stats: $stats)';
 }
 
 
@@ -4017,7 +4017,7 @@ abstract mixin class $RespiratoryRateDisplayCopyWith<$Res>  {
   factory $RespiratoryRateDisplayCopyWith(RespiratoryRateDisplay value, $Res Function(RespiratoryRateDisplay) _then) = _$RespiratoryRateDisplayCopyWithImpl;
 @useResult
 $Res call({
- List<RespiratoryRateEntry> entries, List<RespiratoryRateDaySummary> daySummariesNewestFirst, double periodAverage, double entriesAverage, HeartStats stats
+ List<RespiratoryRateEntry> entries, List<RespiratoryRateDaySummary> daySummariesNewestFirst, double periodAverage, HeartStats stats
 });
 
 
@@ -4034,12 +4034,11 @@ class _$RespiratoryRateDisplayCopyWithImpl<$Res>
 
 /// Create a copy of RespiratoryRateDisplay
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? entries = null,Object? daySummariesNewestFirst = null,Object? periodAverage = null,Object? entriesAverage = null,Object? stats = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? entries = null,Object? daySummariesNewestFirst = null,Object? periodAverage = null,Object? stats = null,}) {
   return _then(_self.copyWith(
 entries: null == entries ? _self.entries : entries // ignore: cast_nullable_to_non_nullable
 as List<RespiratoryRateEntry>,daySummariesNewestFirst: null == daySummariesNewestFirst ? _self.daySummariesNewestFirst : daySummariesNewestFirst // ignore: cast_nullable_to_non_nullable
 as List<RespiratoryRateDaySummary>,periodAverage: null == periodAverage ? _self.periodAverage : periodAverage // ignore: cast_nullable_to_non_nullable
-as double,entriesAverage: null == entriesAverage ? _self.entriesAverage : entriesAverage // ignore: cast_nullable_to_non_nullable
 as double,stats: null == stats ? _self.stats : stats // ignore: cast_nullable_to_non_nullable
 as HeartStats,
   ));
@@ -4135,10 +4134,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<RespiratoryRateEntry> entries,  List<RespiratoryRateDaySummary> daySummariesNewestFirst,  double periodAverage,  double entriesAverage,  HeartStats stats)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<RespiratoryRateEntry> entries,  List<RespiratoryRateDaySummary> daySummariesNewestFirst,  double periodAverage,  HeartStats stats)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RespiratoryRateDisplay() when $default != null:
-return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,_that.entriesAverage,_that.stats);case _:
+return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,_that.stats);case _:
   return orElse();
 
 }
@@ -4156,10 +4155,10 @@ return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<RespiratoryRateEntry> entries,  List<RespiratoryRateDaySummary> daySummariesNewestFirst,  double periodAverage,  double entriesAverage,  HeartStats stats)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<RespiratoryRateEntry> entries,  List<RespiratoryRateDaySummary> daySummariesNewestFirst,  double periodAverage,  HeartStats stats)  $default,) {final _that = this;
 switch (_that) {
 case _RespiratoryRateDisplay():
-return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,_that.entriesAverage,_that.stats);case _:
+return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,_that.stats);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4176,10 +4175,10 @@ return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<RespiratoryRateEntry> entries,  List<RespiratoryRateDaySummary> daySummariesNewestFirst,  double periodAverage,  double entriesAverage,  HeartStats stats)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<RespiratoryRateEntry> entries,  List<RespiratoryRateDaySummary> daySummariesNewestFirst,  double periodAverage,  HeartStats stats)?  $default,) {final _that = this;
 switch (_that) {
 case _RespiratoryRateDisplay() when $default != null:
-return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,_that.entriesAverage,_that.stats);case _:
+return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,_that.stats);case _:
   return null;
 
 }
@@ -4191,7 +4190,7 @@ return $default(_that.entries,_that.daySummariesNewestFirst,_that.periodAverage,
 
 
 class _RespiratoryRateDisplay implements RespiratoryRateDisplay {
-  const _RespiratoryRateDisplay({required final  List<RespiratoryRateEntry> entries, required final  List<RespiratoryRateDaySummary> daySummariesNewestFirst, required this.periodAverage, required this.entriesAverage, required this.stats}): _entries = entries,_daySummariesNewestFirst = daySummariesNewestFirst;
+  const _RespiratoryRateDisplay({required final  List<RespiratoryRateEntry> entries, required final  List<RespiratoryRateDaySummary> daySummariesNewestFirst, required this.periodAverage, required this.stats}): _entries = entries,_daySummariesNewestFirst = daySummariesNewestFirst;
   
 
  final  List<RespiratoryRateEntry> _entries;
@@ -4209,7 +4208,6 @@ class _RespiratoryRateDisplay implements RespiratoryRateDisplay {
 }
 
 @override final  double periodAverage;
-@override final  double entriesAverage;
 @override final  HeartStats stats;
 
 /// Create a copy of RespiratoryRateDisplay
@@ -4222,16 +4220,16 @@ _$RespiratoryRateDisplayCopyWith<_RespiratoryRateDisplay> get copyWith => __$Res
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RespiratoryRateDisplay&&const DeepCollectionEquality().equals(other._entries, _entries)&&const DeepCollectionEquality().equals(other._daySummariesNewestFirst, _daySummariesNewestFirst)&&(identical(other.periodAverage, periodAverage) || other.periodAverage == periodAverage)&&(identical(other.entriesAverage, entriesAverage) || other.entriesAverage == entriesAverage)&&(identical(other.stats, stats) || other.stats == stats));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RespiratoryRateDisplay&&const DeepCollectionEquality().equals(other._entries, _entries)&&const DeepCollectionEquality().equals(other._daySummariesNewestFirst, _daySummariesNewestFirst)&&(identical(other.periodAverage, periodAverage) || other.periodAverage == periodAverage)&&(identical(other.stats, stats) || other.stats == stats));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_entries),const DeepCollectionEquality().hash(_daySummariesNewestFirst),periodAverage,entriesAverage,stats);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_entries),const DeepCollectionEquality().hash(_daySummariesNewestFirst),periodAverage,stats);
 
 @override
 String toString() {
-  return 'RespiratoryRateDisplay(entries: $entries, daySummariesNewestFirst: $daySummariesNewestFirst, periodAverage: $periodAverage, entriesAverage: $entriesAverage, stats: $stats)';
+  return 'RespiratoryRateDisplay(entries: $entries, daySummariesNewestFirst: $daySummariesNewestFirst, periodAverage: $periodAverage, stats: $stats)';
 }
 
 
@@ -4242,7 +4240,7 @@ abstract mixin class _$RespiratoryRateDisplayCopyWith<$Res> implements $Respirat
   factory _$RespiratoryRateDisplayCopyWith(_RespiratoryRateDisplay value, $Res Function(_RespiratoryRateDisplay) _then) = __$RespiratoryRateDisplayCopyWithImpl;
 @override @useResult
 $Res call({
- List<RespiratoryRateEntry> entries, List<RespiratoryRateDaySummary> daySummariesNewestFirst, double periodAverage, double entriesAverage, HeartStats stats
+ List<RespiratoryRateEntry> entries, List<RespiratoryRateDaySummary> daySummariesNewestFirst, double periodAverage, HeartStats stats
 });
 
 
@@ -4259,12 +4257,11 @@ class __$RespiratoryRateDisplayCopyWithImpl<$Res>
 
 /// Create a copy of RespiratoryRateDisplay
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? entries = null,Object? daySummariesNewestFirst = null,Object? periodAverage = null,Object? entriesAverage = null,Object? stats = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? entries = null,Object? daySummariesNewestFirst = null,Object? periodAverage = null,Object? stats = null,}) {
   return _then(_RespiratoryRateDisplay(
 entries: null == entries ? _self._entries : entries // ignore: cast_nullable_to_non_nullable
 as List<RespiratoryRateEntry>,daySummariesNewestFirst: null == daySummariesNewestFirst ? _self._daySummariesNewestFirst : daySummariesNewestFirst // ignore: cast_nullable_to_non_nullable
 as List<RespiratoryRateDaySummary>,periodAverage: null == periodAverage ? _self.periodAverage : periodAverage // ignore: cast_nullable_to_non_nullable
-as double,entriesAverage: null == entriesAverage ? _self.entriesAverage : entriesAverage // ignore: cast_nullable_to_non_nullable
 as double,stats: null == stats ? _self.stats : stats // ignore: cast_nullable_to_non_nullable
 as HeartStats,
   ));

@@ -196,7 +196,6 @@ abstract class RespiratoryRateDisplay with _$RespiratoryRateDisplay {
     required List<RespiratoryRateEntry> entries,
     required List<RespiratoryRateDaySummary> daySummariesNewestFirst,
     required double periodAverage,
-    required double entriesAverage,
     required HeartStats stats,
   }) = _RespiratoryRateDisplay;
 }
@@ -580,8 +579,12 @@ RespiratoryRateDisplay? _respiratoryRate(HeartPeriodLoadResult result) {
   return RespiratoryRateDisplay(
     entries: entries,
     daySummariesNewestFirst: daySummaries,
+    // ONE average. The chart plots a point per day, so the number under it is
+    // the mean of those days — and the interpretation card now reads the same
+    // one. It used to read the mean of every raw reading instead, so a period
+    // sampled unevenly showed the user two different "average respiratory
+    // rates" on a single screen, and never said which was which.
     periodAverage: averageOrZero(daySummaries.map((summary) => summary.average)),
-    entriesAverage: averageOrZero(entries.map((e) => e.breathsPerMinute)),
     stats: _vitalStats<RespiratoryRateEntry>(
       entries: entries,
       previousEntries: result.previousRespiratoryRate,
