@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,8 +20,8 @@ import 'package:openvitals/features/manualentry/activity/routeimport/route_file_
 const _allWrite = {'write-exercise'};
 
 /// Returns a canned two-point route, or throws for the flagged file name.
-class _FakeRouteFileImporter implements RouteFileImporter {
-  _FakeRouteFileImporter({this.failFileName});
+class FakeRouteFileImporter implements RouteFileImporter {
+  FakeRouteFileImporter({this.failFileName});
 
   final String? failFileName;
 
@@ -62,11 +63,16 @@ class _FakeRouteFileImporter implements RouteFileImporter {
 /// [WriteImportedActivityUseCase] can produce: a refused permission (an `Err`
 /// carrying [MissingActivityWritePermissionException] as its cause) and a failed
 /// write.
-class _FakeActivityRepository implements ActivityRepository {
-  _FakeActivityRepository({this.granted = true, this.writeFailure});
+class FakeActivityRepository implements ActivityRepository {
+  FakeActivityRepository({this.granted = true, this.writeFailure, this.events});
 
   final bool granted;
   final AppFailure? writeFailure;
+
+  /// Shared log with the file sources, when a test wants to see the ORDER of
+  /// reads against writes rather than just the outcome.
+  final List<String>? events;
+
   final List<ActivityWriteRequest> writes = [];
 
   @override
@@ -86,6 +92,7 @@ class _FakeActivityRepository implements ActivityRepository {
 
   @override
   Future<Result<String>> writeActivityEntry(ActivityWriteRequest request) async {
+    events?.add('write');
     final failure = writeFailure;
     if (failure != null) return Err(failure);
     writes.add(request);
@@ -97,14 +104,15 @@ class _FakeActivityRepository implements ActivityRepository {
       throw UnimplementedError('${invocation.memberName} not stubbed');
 }
 
-ActivityRouteFileHandle _handle(String name) => ActivityRouteFileHandle(
+/// A file whose bytes are already in hand — the single-pick shape.
+ActivityRouteFileSource _handle(String name) => ActivityRouteFileSource.ofBytes(
       bytes: Uint8List.fromList([1, 2, 3]),
       fileName: name,
     );
 
 Future<ProviderContainer> _container({
-  required _FakeActivityRepository repository,
-  _FakeRouteFileImporter? importer,
+  required FakeActivityRepository repository,
+  FakeRouteFileImporter? importer,
 }) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final prefs = await SharedPreferences.getInstance();
@@ -113,7 +121,7 @@ Future<ProviderContainer> _container({
       sharedPreferencesProvider.overrideWithValue(prefs),
       activityRepositoryProvider.overrideWithValue(repository),
       routeFileImporterProvider
-          .overrideWithValue(importer ?? _FakeRouteFileImporter()),
+          .overrideWithValue(importer ?? FakeRouteFileImporter()),
     ],
   );
   addTearDown(container.dispose);
@@ -124,7 +132,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('imports every file and reports the counts', () async {
-    final repository = _FakeActivityRepository();
+    final repository = FakeActivityRepository();
     final container = await _container(repository: repository);
 
     await container
@@ -146,7 +154,7 @@ void main() {
   });
 
   test('progress counts the files as they land', () async {
-    final container = await _container(repository: _FakeActivityRepository());
+    final container = await _container(repository: FakeActivityRepository());
     final progress = <RouteBulkImportProgress>[];
     container.listen(
       routeBulkImportProvider,
@@ -180,7 +188,7 @@ void main() {
   });
 
   test('a refused write permission fails one file, not the batch', () async {
-    final repository = _FakeActivityRepository(granted: false);
+    final repository = FakeActivityRepository(granted: false);
     final container = await _container(repository: repository);
 
     await container
@@ -197,7 +205,7 @@ void main() {
 
   test('a failed write surfaces the failure message', () async {
     final container = await _container(
-      repository: _FakeActivityRepository(
+      repository: FakeActivityRepository(
         writeFailure: const UnexpectedFailure('Health Connect said no'),
       ),
     );
@@ -212,10 +220,10 @@ void main() {
   });
 
   test('a malformed file is tolerated and its parse error reported', () async {
-    final repository = _FakeActivityRepository();
+    final repository = FakeActivityRepository();
     final container = await _container(
       repository: repository,
-      importer: _FakeRouteFileImporter(failFileName: 'bad.gpx'),
+      importer: FakeRouteFileImporter(failFileName: 'bad.gpx'),
     );
 
     await container.read(routeBulkImportProvider.notifier).importRouteFiles(
@@ -230,8 +238,54 @@ void main() {
     expect(state.error, 'bad file');
   });
 
+  test('opens one file at a time, as it reaches them', () async {
+    // The memory contract of a FOLDER import. A folder of four hundred FIT files
+    // must never be read into memory to be imported: each file is opened when
+    // its turn comes and dropped when it is done. If this ever regresses to
+    // reading the batch upfront, a big folder OOMs before the first import.
+    final events = <String>[];
+    final repository = FakeActivityRepository(events: events);
+    final container = await _container(repository: repository);
+    ActivityRouteFileSource source(String name) => ActivityRouteFileSource(
+          fileName: name,
+          read: () async {
+            events.add('read:$name');
+            return Uint8List.fromList([1, 2, 3]);
+          },
+        );
+
+    await container
+        .read(routeBulkImportProvider.notifier)
+        .importRouteFiles([source('a.fit'), source('b.fit')], UnitSystem.metric);
+
+    // Interleaved, not batched: b is not even opened until a is written.
+    expect(events, ['read:a.fit', 'write', 'read:b.fit', 'write']);
+  });
+
+  test('a file that cannot be opened fails that file, not the batch', () async {
+    // A folder scanned a minute ago can name a file that has since been moved.
+    final repository = FakeActivityRepository();
+    final container = await _container(repository: repository);
+
+    await container.read(routeBulkImportProvider.notifier).importRouteFiles(
+      [
+        ActivityRouteFileSource(
+          fileName: 'gone.fit',
+          read: () async => throw const FileSystemException('no such file'),
+        ),
+        _handle('here.fit'),
+      ],
+      UnitSystem.metric,
+    );
+
+    final state = container.read(routeBulkImportProvider);
+    expect(repository.writes.length, 1);
+    expect(state.result?.importedFiles, 1);
+    expect(state.result?.failedFiles, 1);
+  });
+
   test('an empty pick does nothing', () async {
-    final container = await _container(repository: _FakeActivityRepository());
+    final container = await _container(repository: FakeActivityRepository());
 
     await container
         .read(routeBulkImportProvider.notifier)

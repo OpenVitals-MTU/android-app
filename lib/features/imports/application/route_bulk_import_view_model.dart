@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -15,6 +17,33 @@ import '../../manualentry/activity/activity_entry_write_request_builder.dart';
 import '../../manualentry/activity/routeimport/route_file_parser.dart';
 
 part 'route_bulk_import_view_model.freezed.dart';
+
+/// One file waiting its turn in a bulk import — opened only when the importer
+/// reaches it.
+///
+/// The batch used to arrive as [ActivityRouteFileHandle]s, which carry BYTES, so
+/// the caller had to read every file in the batch before the first one was
+/// written. Picking four GPX tracks that way costs nothing. Pointing the
+/// importer at a folder of four hundred FIT files would have held all four
+/// hundred in memory at once and died before importing one. A source is a name
+/// and a way to GET the bytes, so the importer holds one file's worth at a time.
+class ActivityRouteFileSource {
+  const ActivityRouteFileSource({required this.fileName, required this.read});
+
+  /// Bytes already in hand — a single pick, a test fixture. Reading is a no-op.
+  factory ActivityRouteFileSource.ofBytes({
+    required Uint8List bytes,
+    String? fileName,
+  }) =>
+      ActivityRouteFileSource(fileName: fileName, read: () async => bytes);
+
+  final String? fileName;
+
+  /// Opens the file. May throw, and the importer treats that as one failed file:
+  /// a folder scanned a minute ago can name a file that has since been moved,
+  /// and one unreadable file must not kill the batch.
+  final Future<Uint8List> Function() read;
+}
 
 /// Per-file progress of a bulk route import. Port of the Kotlin
 /// `RouteBulkImportProgress`.
@@ -73,10 +102,10 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
   RouteBulkImportState build() => const RouteBulkImportState();
 
   Future<void> importRouteFiles(
-    List<ActivityRouteFileHandle> handles,
+    List<ActivityRouteFileSource> files,
     UnitSystem unitSystem,
   ) async {
-    if (handles.isEmpty || state.isImporting) return;
+    if (files.isEmpty || state.isImporting) return;
 
     final importer = ref.read(routeFileImporterProvider);
     final writeImportedActivity = ref.read(writeImportedActivityUseCaseProvider);
@@ -85,7 +114,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         ref.read(readActivityWritePermissionsUseCaseProvider)();
     final clock = ActivityEntryClock.system();
 
-    final totalFiles = handles.length;
+    final totalFiles = files.length;
     var importedFiles = 0;
     var failedFiles = 0;
     String? lastError;
@@ -95,7 +124,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
       progress: RouteBulkImportProgress(totalFiles: totalFiles),
     );
 
-    for (var index = 0; index < handles.length; index++) {
+    for (var index = 0; index < files.length; index++) {
       state = state.copyWith(
         progress: RouteBulkImportProgress(
           totalFiles: totalFiles,
@@ -106,7 +135,16 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
       );
 
       try {
-        final routeImport = await importer.import(handles[index]);
+        // Opened HERE, one file at a time — see [ActivityRouteFileSource]. The
+        // bytes go out of scope with the iteration, so a folder of four hundred
+        // files costs the heap one file, not four hundred.
+        final file = files[index];
+        final routeImport = await importer.import(
+          ActivityRouteFileHandle(
+            bytes: await file.read(),
+            fileName: file.fileName,
+          ),
+        );
         final routeState = activityStateWithRouteImport(
           initialActivityEntryState(
             clock,
@@ -141,7 +179,8 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         }
       } catch (error) {
         // The route parser still throws (it is not a repository), so a malformed
-        // file lands here.
+        // file lands here — and so does one that could not be OPENED, which a
+        // folder import can hit when a file moves between the scan and its turn.
         failedFiles += 1;
         lastError = _describeError(error);
       }

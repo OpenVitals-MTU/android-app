@@ -92,10 +92,12 @@ class RouteImportViewModel extends Notifier<RouteImportState> {
   void stageSingleImport(ActivityRouteFileHandle handle) =>
       ref.read(pendingRouteImportProvider.notifier).set(handle);
 
-  /// Writes every picked file straight through, no review step.
-  Future<void> importRouteFiles(List<ActivityRouteFileHandle> handles) =>
+  /// Writes every picked file straight through, no review step. The files are
+  /// opened one at a time as the importer reaches them — see
+  /// [ActivityRouteFileSource].
+  Future<void> importRouteFiles(List<ActivityRouteFileSource> files) =>
       ref.read(routeBulkImportProvider.notifier).importRouteFiles(
-            handles,
+            files,
             ref.read(unitSystemProvider),
           );
 

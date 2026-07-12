@@ -195,13 +195,14 @@ class RouteImportCard extends ConsumerWidget {
   Future<void> _importBulk(RouteImportViewModel notifier) async {
     final files = await _pickMultiple();
     if (files.isEmpty) return;
-    final handles = <ActivityRouteFileHandle>[];
-    for (final file in files) {
-      handles.add(
-        ActivityRouteFileHandle(bytes: await file.readAsBytes(), fileName: file.name),
-      );
-    }
-    await notifier.importRouteFiles(handles);
+    // Handed over as sources, not bytes: every picked file used to be READ here,
+    // all of them, before the first one was written. An XFile is a path, so
+    // deferring the read to the importer costs nothing and bounds the heap at
+    // one file however many were picked.
+    await notifier.importRouteFiles([
+      for (final file in files)
+        ActivityRouteFileSource(fileName: file.name, read: file.readAsBytes),
+    ]);
   }
 
   Future<XFile?> _pickSingle() {

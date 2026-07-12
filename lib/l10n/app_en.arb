@@ -2500,6 +2500,19 @@
   "settingsFitImportTitle": "FIT Importer",
   "settingsFitImportBody": "Import FIT activity, course, or workout files, review detected details, and choose whether to save them to Health Connect.",
   "settingsFitImportAction": "Import FIT file",
+  "settingsFitImportFolderAction": "Import a folder of FIT files",
+  "settingsFitImportFolderScanning": "Looking for FIT files…",
+  "settingsFitImportFolderEmpty": "That folder has no FIT files in it.",
+  "settingsFitImportFolderTruncated": "That folder is very large: only the first {arg0} FIT files were imported.",
+  "@settingsFitImportFolderTruncated": {
+    "description": "Shown when the picked folder held more FIT files than one import will take. {arg0} is the number of files that were imported.",
+    "placeholders": {
+      "arg0": {
+        "type": "int",
+        "example": "2000"
+      }
+    }
+  },
   "settingsOfflineMapsTitle": "Offline maps",
   "settingsOfflineMapsBody": "Import PMTiles or Mapsforge .map/.maps packs for fully offline activity maps. Protomaps-compatible PMTiles basemaps and Mapsforge maps are supported.",
   "settingsOfflineMapsEmpty": "No offline maps imported yet.",

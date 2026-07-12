@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -16,6 +17,7 @@ import android.location.altitude.AltitudeConverter
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -67,6 +69,51 @@ class MainActivity : FlutterFragmentActivity() {
 
     /** The route file the app was opened with, until Dart takes it. */
     private var pendingRouteImportUri: Uri? = null
+
+    /**
+     * Scanning a folder walks the document tree with one `ContentResolver` query
+     * per directory. A Garmin card with a thousand rides would ANR on the
+     * platform thread, so the walk (and every file read it later serves) runs
+     * here and answers on the main handler.
+     */
+    private val importExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    private var pendingFolderResult: MethodChannel.Result? = null
+
+    /** Extensions the in-flight folder pick is scanning for, e.g. `[".fit"]`. */
+    private var pendingFolderExtensions: List<String> = emptyList()
+
+    /**
+     * The folder picker.
+     *
+     * Registered as a field: `registerForActivityResult` must be called before
+     * the activity is STARTED, which a field initializer satisfies and a lazy
+     * call from the channel handler would not.
+     *
+     * `OpenDocumentTree` hands back a **tree URI**, and that URI — not a
+     * filesystem path — is the thing that grants access. `file_picker` offers a
+     * folder pick too, but it converts the tree URI into a `/storage/emulated/0`
+     * path and throws the URI away; under scoped storage the app cannot open a
+     * non-media file at a raw path like that, so those paths read as
+     * `FileNotFoundException` for exactly the `.fit` files we want. Keeping the
+     * URI and walking it with [DocumentsContract] is what makes this work without
+     * asking for All-files access, a permission a health app has no business
+     * holding.
+     */
+    private val pickFolder =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
+            val result = pendingFolderResult
+            val extensions = pendingFolderExtensions
+            pendingFolderResult = null
+            pendingFolderExtensions = emptyList()
+            when {
+                result == null -> Unit
+                // The user backed out. Null, not an error: cancelling is a normal
+                // thing to do and the card must go quiet, not red.
+                treeUri == null -> result.success(null)
+                else -> scanFolder(treeUri, extensions, result)
+            }
+        }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -158,8 +205,150 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+        // Folder import: pick a directory once, then import every activity file
+        // inside it. `pickFolder` returns the file LIST (names + document URIs)
+        // and never the bytes; Dart calls `readFile` per file, when it reaches
+        // it. That is deliberate — a folder can hold hundreds of megabytes, and
+        // neither the channel nor the heap should ever carry more than one file.
+        MethodChannel(messenger, FOLDER_IMPORT_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "pickFolder" -> {
+                    if (pendingFolderResult != null) {
+                        // The picker is already up. Answering twice on one
+                        // Result crashes the engine.
+                        result.error("busy", "A folder pick is already in progress.", null)
+                    } else {
+                        pendingFolderResult = result
+                        pendingFolderExtensions = call.argument<List<String>>("extensions")
+                            ?.map { if (it.startsWith(".")) it.lowercase() else ".${it.lowercase()}" }
+                            ?: ROUTE_IMPORT_EXTENSIONS
+                        runCatching { pickFolder.launch(null) }.onFailure { error ->
+                            pendingFolderResult = null
+                            result.error("pick_failed", error.message, null)
+                        }
+                    }
+                }
+                "readFile" -> {
+                    val uri = call.argument<String>("uri")
+                    if (uri == null) {
+                        result.error("bad_argument", "readFile needs a uri.", null)
+                    } else {
+                        readDocument(Uri.parse(uri), result)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
         // Cold start: the launching intent is already set on the activity.
         capturePendingRouteImport(intent)
+    }
+
+    /**
+     * Walks the picked tree and lists every file whose name ends in one of
+     * [extensions], deepest folders included.
+     *
+     * Recursive because a watch export is not flat: Garmin buries its rides in
+     * `GARMIN/ACTIVITY`, and a user who picks the card's root and is told it
+     * holds no FIT files would be right to call that broken. The depth and count
+     * caps are there so picking the root of a 64 GB card cannot walk forever;
+     * hitting the file cap is reported as [truncated] rather than silently
+     * dropping the tail, because an import that quietly skips half a folder is
+     * worse than one that says it did.
+     */
+    private fun scanFolder(
+        treeUri: Uri,
+        extensions: List<String>,
+        result: MethodChannel.Result,
+    ) {
+        importExecutor.execute {
+            val files = mutableListOf<Map<String, Any?>>()
+            var truncated = false
+            try {
+                // Breadth-first, so the folder the user actually picked is listed
+                // before whatever is buried under it.
+                val queue = ArrayDeque<Pair<String, Int>>()
+                queue.add(DocumentsContract.getTreeDocumentId(treeUri) to 0)
+                while (queue.isNotEmpty() && !truncated) {
+                    val (documentId, depth) = queue.removeFirst()
+                    val children = DocumentsContract.buildChildDocumentsUriUsingTree(
+                        treeUri,
+                        documentId,
+                    )
+                    contentResolver.query(
+                        children,
+                        arrayOf(
+                            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                            DocumentsContract.Document.COLUMN_MIME_TYPE,
+                        ),
+                        null,
+                        null,
+                        null,
+                    )?.use { cursor ->
+                        while (cursor.moveToNext()) {
+                            val childId = cursor.getString(0) ?: continue
+                            val name = cursor.getString(1) ?: continue
+                            val isDirectory =
+                                cursor.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR
+                            if (isDirectory) {
+                                if (depth < MAX_FOLDER_DEPTH) queue.add(childId to depth + 1)
+                                continue
+                            }
+                            if (extensions.none { name.endsWith(it, ignoreCase = true) }) continue
+                            if (files.size >= MAX_FOLDER_FILES) {
+                                truncated = true
+                                return@use
+                            }
+                            files.add(
+                                mapOf(
+                                    "uri" to DocumentsContract
+                                        .buildDocumentUriUsingTree(treeUri, childId)
+                                        .toString(),
+                                    "name" to name,
+                                ),
+                            )
+                        }
+                    }
+                }
+            } catch (error: Exception) {
+                mainHandler.post {
+                    result.error("scan_failed", error.message, null)
+                }
+                return@execute
+            }
+            // Name order: a watch names its files by timestamp, so this is the
+            // order the rides were ridden in, and the import reads like a diary
+            // rather than a shuffle.
+            files.sortBy { it["name"] as String }
+            mainHandler.post {
+                result.success(mapOf("files" to files, "truncated" to truncated))
+            }
+        }
+    }
+
+    /**
+     * Streams one document's bytes to Dart. One file at a time is the whole
+     * contract: the Dart importer calls this when it reaches a file and drops the
+     * bytes when it is done, so a thousand-file folder never costs more than the
+     * biggest single file in it.
+     */
+    private fun readDocument(uri: Uri, result: MethodChannel.Result) {
+        importExecutor.execute {
+            try {
+                val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                mainHandler.post {
+                    if (bytes == null) {
+                        result.error("unreadable", "Could not open $uri.", null)
+                    } else {
+                        result.success(bytes)
+                    }
+                }
+            } catch (error: Exception) {
+                mainHandler.post {
+                    result.error("unreadable", error.message, null)
+                }
+            }
+        }
     }
 
     /**
@@ -286,6 +475,7 @@ class MainActivity : FlutterFragmentActivity() {
     }.getOrNull()
 
     override fun onDestroy() {
+        importExecutor.shutdown()
         altitudeExecutor.shutdown()
         super.onDestroy()
     }
@@ -417,6 +607,7 @@ class MainActivity : FlutterFragmentActivity() {
         const val PROXIMITY_CHANNEL = "tech.mmarca.openvitals/recording_sensors/proximity"
         const val STEP_DETECTOR_CHANNEL = "tech.mmarca.openvitals/recording_sensors/step_detector"
         const val ROUTE_IMPORT_CHANNEL = "tech.mmarca.openvitals/route_import"
+        const val FOLDER_IMPORT_CHANNEL = "tech.mmarca.openvitals/folder_import"
         const val LEGACY_MIGRATION_CHANNEL = "tech.mmarca.openvitals/legacy_migration"
         const val ACTIVITY_RECOGNITION_REQUEST_CODE = 4031
 
@@ -425,6 +616,14 @@ class MainActivity : FlutterFragmentActivity() {
 
         /** The Kotlin `PreferencesRepository.PREFS_FILE`. */
         const val LEGACY_PREFS_NAME = "openvitals_prefs"
+
+        /**
+         * Guards against a pick of the storage root: a walk that deep, or a list
+         * that long, is a mis-pick rather than an import, and neither the walk
+         * nor the batch that follows should run for an hour because of it.
+         */
+        const val MAX_FOLDER_DEPTH = 8
+        const val MAX_FOLDER_FILES = 2000
 
         /** The route formats the activity-entry form can parse (no TCX). */
         val ROUTE_IMPORT_EXTENSIONS = listOf(".gpx", ".kml", ".kmz", ".fit")
