@@ -5,6 +5,7 @@ import 'package:xml/xml.dart';
 
 import '../../../../core/geo/geo_distance.dart';
 import '../../../../domain/model/activity_models.dart';
+import '../../../../domain/model/ble_sensor_models.dart';
 import 'fit_route_parser.dart';
 import 'gpx_kml_route_parser.dart';
 
@@ -38,6 +39,7 @@ class RouteFileImport {
     this.name,
     this.description,
     this.type,
+    this.bleSamples = const BleRecordingSampleBuffer(),
     this.hasRecordedTimestamps = true,
     this.hasImportedTimeRange = true,
     int? originalPointCount,
@@ -49,6 +51,18 @@ class RouteFileImport {
   final double elevationGainedMeters;
   final double? activeCaloriesKcal;
   final double? totalCaloriesKcal;
+
+  /// The per-second series the file recorded: heart rate, cadence, speed.
+  ///
+  /// A FIT import used to arrive with a route and NOTHING else -- the parser read
+  /// only lat/long/altitude off each `record` message and threw away the heart rate,
+  /// the cadence and the speed sitting beside them. So an imported activity had no
+  /// graphs at all, and an indoor ride (no GPS) had nothing whatsoever.
+  ///
+  /// Named for the BLE recorder because it is the same series and the same write
+  /// path; the source is the file, not a sensor.
+  final BleRecordingSampleBuffer bleSamples;
+
   final DateTime startTime;
   final DateTime endTime;
   final int? durationSeconds;
@@ -69,9 +83,11 @@ class RouteFileImport {
     DateTime? endTime,
     int? durationSeconds,
     int? originalPointCount,
+    BleRecordingSampleBuffer? bleSamples,
   }) =>
       RouteFileImport(
         fileName: fileName,
+        bleSamples: bleSamples ?? this.bleSamples,
         points: points ?? this.points,
         distanceMeters: distanceMeters ?? this.distanceMeters,
         elevationGainedMeters:

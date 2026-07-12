@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../../../../domain/model/activity_models.dart';
+import '../../../../domain/model/ble_sensor_models.dart';
 import 'route_file_parser.dart';
 
 /// Hand-port of the Kotlin `FitRouteParser` (Garmin FIT decoder). Ported byte
@@ -13,6 +14,9 @@ class FitRouteParser {
 
   static RouteFileImport parse(Uint8List fitBytes, {String? fileName}) {
     final result = _FitDecoder(fitBytes).decode();
+    final samples = result.samples.resolve(
+      isCycling: _fitSportIsCycling(result.summary.sport),
+    );
     final sorted = [...result.points]..sort((a, b) => a.time.compareTo(b.time));
     final seen = <int>{};
     final routePoints = <ExerciseRoutePoint>[];
@@ -21,11 +25,13 @@ class FitRouteParser {
     }
     switch (result.summary.fileType) {
       case _fitFileTypeCourse:
+        // A course is a planned route: it has no recorded series to carry.
         return _parseCourse(fileName, routePoints, result.summary);
       case _fitFileTypeWorkout:
         return _parseWorkout(fileName, result.summary);
       default:
-        return _parseActivity(fileName, routePoints, result.summary);
+        return _parseActivity(fileName, routePoints, result.summary)
+            .copyWith(bleSamples: samples);
     }
   }
 
@@ -177,17 +183,69 @@ class FitRouteParser {
 }
 
 class _FitDecodeResult {
-  const _FitDecodeResult(this.points, this.summary);
+  const _FitDecodeResult(this.points, this.summary, this.samples);
 
   final List<ExerciseRoutePoint> points;
   final _FitActivitySummary summary;
+  final _FitSamples samples;
+}
+
+/// The per-record series, before the sport is known.
+///
+/// FIT field 4 is just "cadence" -- it does not say whether those are pedal strokes
+/// or footfalls, and Health Connect keeps the two in different record types. Only
+/// the session's sport can decide, and the session is parsed after the records, so
+/// the kind is resolved last.
+class _FitSamples {
+  const _FitSamples(this.heartRate, this.speed, this.cadence);
+
+  const _FitSamples.empty()
+      : heartRate = const [],
+        speed = const [],
+        cadence = const [];
+
+  final List<BleHeartRateSample> heartRate;
+  final List<BleSpeedSample> speed;
+  final List<(DateTime, int)> cadence;
+
+  _FitSamples merge(_FitSamples other) => _FitSamples(
+        [...heartRate, ...other.heartRate],
+        [...speed, ...other.speed],
+        [...cadence, ...other.cadence],
+      );
+
+  BleRecordingSampleBuffer resolve({required bool isCycling}) =>
+      BleRecordingSampleBuffer(
+        heartRateSamples: heartRate,
+        speedSamples: [
+          for (final s in speed) s.copyWith(isRunning: !isCycling),
+        ],
+        cyclingCadenceSamples: [
+          if (isCycling)
+            for (final (time, rpm) in cadence)
+              BleCyclingCadenceSample(time: time, rpm: rpm),
+        ],
+        stepsCadenceSamples: [
+          if (!isCycling)
+            for (final (time, rate) in cadence)
+              // FIT reports running cadence as STRIDES per minute -- one leg. Health
+              // Connect wants steps. A runner at 90 spm is taking 180 steps.
+              BleStepsCadenceSample(time: time, stepsPerMinute: rate * 2),
+        ],
+      );
 }
 
 class _FitFileDecodeResult {
-  const _FitFileDecodeResult(this.points, this.summary, this.nextOffset);
+  const _FitFileDecodeResult(
+    this.points,
+    this.summary,
+    this.samples,
+    this.nextOffset,
+  );
 
   final List<ExerciseRoutePoint> points;
   final _FitActivitySummary summary;
+  final _FitSamples samples;
   final int nextOffset;
 }
 
@@ -277,6 +335,7 @@ class _FitDecoder {
   _FitDecodeResult decode() {
     final points = <ExerciseRoutePoint>[];
     var summary = const _FitActivitySummary();
+    var samples = const _FitSamples.empty();
     var offset = 0;
     var decodedAnyFile = false;
 
@@ -290,10 +349,11 @@ class _FitDecoder {
       final result = _FitSingleFileDecoder(fileBytes, offset).decode();
       points.addAll(result.points);
       summary = summary.merge(result.summary);
+      samples = samples.merge(result.samples);
       decodedAnyFile = true;
       offset = result.nextOffset;
     }
-    return _FitDecodeResult(points, summary);
+    return _FitDecodeResult(points, summary, samples);
   }
 }
 
@@ -340,6 +400,7 @@ class _FitSingleFileDecoder {
     return _FitFileDecodeResult(
       _points,
       _fitSummary(),
+      samples,
       next > fileBytes.length ? fileBytes.length : next,
     );
   }
@@ -529,12 +590,58 @@ class _FitSingleFileDecoder {
     _addRecordPoint(values, timestamp);
   }
 
+  /// Heart rate, cadence and speed, straight off the `record` message.
+  ///
+  /// FIT stores speed as an integer of millimetres per second (scale 1000), and
+  /// `enhanced_speed` is the same thing with more headroom, so it wins when present.
+  /// Heart rate and cadence are plain bytes. A zero cadence is a real reading --
+  /// you stopped pedalling -- but a zero heart rate is not, so only the latter is
+  /// dropped.
+  void _addSamples(Map<int, int> values, DateTime timestamp) {
+    final bpm = values[_fitRecordHeartRateFieldNumber];
+    if (bpm != null && bpm > 0 && bpm < 300) {
+      _heartRateSamples.add(
+        BleHeartRateSample(time: timestamp, beatsPerMinute: bpm),
+      );
+    }
+
+    final cadence = values[_fitRecordCadenceFieldNumber];
+    if (cadence != null && cadence >= 0 && cadence < 250) {
+      _cadenceSamples.add((timestamp, cadence));
+    }
+
+    final speedRaw = values[_fitRecordEnhancedSpeedFieldNumber] ??
+        values[_fitRecordSpeedFieldNumber];
+    if (speedRaw != null && speedRaw > 0) {
+      _speedSamples.add(
+        BleSpeedSample(
+          time: timestamp,
+          metersPerSecond: speedRaw / _fitSpeedScale,
+          // Set from the session's sport once it is known -- see [sampleBuffer].
+          isRunning: false,
+        ),
+      );
+    }
+  }
+
+  final List<BleHeartRateSample> _heartRateSamples = [];
+  final List<BleSpeedSample> _speedSamples = [];
+  final List<(DateTime, int)> _cadenceSamples = [];
+
+  _FitSamples get samples =>
+      _FitSamples(_heartRateSamples, _speedSamples, _cadenceSamples);
+
   void _addRecordPointRaw(Map<int, int> values, int? timestampRaw) {
     if (timestampRaw == null) return;
     _addRecordPoint(values, _fitDateTimeInstant(timestampRaw));
   }
 
   void _addRecordPoint(Map<int, int> values, DateTime timestamp) {
+    // BEFORE the GPS guard, deliberately. A record without a position still carries
+    // a heart rate and a cadence -- an indoor trainer session has nothing else --
+    // and the old early-return threw all of it away.
+    _addSamples(values, timestamp);
+
     final latRaw = values[_fitRecordPositionLatFieldNumber];
     if (latRaw == null) return;
     final latitude = _fitSemicirclesToDegrees(latRaw);
@@ -792,6 +899,12 @@ DateTime _fitDateTimeInstant(int value) => DateTime.fromMillisecondsSinceEpoch(
       isUtc: true,
     );
 
+/// FIT sport 2 and 21 are cycling; everything else is on foot or in the water.
+///
+/// It decides which Health Connect record the cadence goes into: pedalling cadence
+/// and step cadence are different record types, and FIT field 4 is just "cadence".
+bool _fitSportIsCycling(int? sport) => sport == 2 || sport == 21;
+
 String? _fitSportName(int? value) {
   switch (value) {
     case 1:
@@ -903,6 +1016,14 @@ const int _fitTotalTimerTimeFieldNumber = 8;
 const int _fitTotalDistanceFieldNumber = 9;
 const int _fitTotalCaloriesFieldNumber = 11;
 const int _fitTotalAscentFieldNumber = 21;
+// FIT `record` message fields. The parser read only the first three, so a FIT
+// import arrived with a route and nothing else: no heart rate, no cadence, no
+// speed, and therefore not a single graph on the activity. An indoor ride --
+// no GPS at all -- arrived with nothing whatsoever.
+const int _fitRecordHeartRateFieldNumber = 3;
+const int _fitRecordCadenceFieldNumber = 4;
+const int _fitRecordSpeedFieldNumber = 6;
+const int _fitRecordEnhancedSpeedFieldNumber = 73;
 const int _fitRecordPositionLatFieldNumber = 0;
 const int _fitRecordPositionLongFieldNumber = 1;
 const int _fitRecordAltitudeFieldNumber = 2;
@@ -938,6 +1059,8 @@ const double _fitAltitudeScale = 5.0;
 const double _fitAltitudeOffsetMeters = 500.0;
 const double _fitTimeScale = 1000.0;
 const double _fitDistanceScale = 100.0;
+/// FIT stores speed as an integer of millimetres per second.
+const double _fitSpeedScale = 1000.0;
 const int _fitWorkoutDurationTypeTime = 0;
 const int _fitWorkoutDurationTypeRepeatUntilTime = 7;
 const int _fitWorkoutDurationTypeRepetitionTime = 28;

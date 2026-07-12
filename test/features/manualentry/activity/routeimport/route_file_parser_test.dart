@@ -137,6 +137,104 @@ void main() {
       expect(result.activeCaloriesKcal, isNull);
     });
 
+    test('a FIT activity brings its heart rate, cadence and speed', () {
+      // An imported activity had NO GRAPHS AT ALL. The parser read only lat/long/
+      // altitude off each `record` message and threw away the heart rate, the
+      // cadence and the speed sitting right beside them -- so the file arrived with
+      // a route and nothing to plot.
+      final result = RouteFileParser.parseFile(
+        _fitActivityBytes(
+          sport: 2, // cycling
+          points: [
+            _FitTestPoint(
+              time: DateTime.utc(2026, 5, 26, 8, 30),
+              latitude: 59.0000,
+              longitude: 24.0000,
+              altitudeMeters: 10.0,
+              heartRateBpm: 132,
+              cadence: 88,
+              speedMetersPerSecond: 6.4,
+            ),
+            _FitTestPoint(
+              time: DateTime.utc(2026, 5, 26, 8, 31),
+              latitude: 59.0010,
+              longitude: 24.0020,
+              altitudeMeters: 22.0,
+              heartRateBpm: 141,
+              cadence: 92,
+              speedMetersPerSecond: 7.1,
+            ),
+          ],
+        ),
+        fileName: 'ride.fit',
+      );
+
+      expect(result.bleSamples.heartRateSamples.map((s) => s.beatsPerMinute),
+          [132, 141]);
+      expect(result.bleSamples.speedSamples.map((s) => s.metersPerSecond),
+          [closeTo(6.4, 0.001), closeTo(7.1, 0.001)]);
+
+      // Cycling, so the cadence is PEDALLING cadence. Health Connect keeps step and
+      // pedal cadence in different record types and FIT field 4 says only "cadence"
+      // -- the sport is the only thing that can decide, and it is parsed after the
+      // records, so the kind is resolved last.
+      expect(result.bleSamples.cyclingCadenceSamples.map((s) => s.rpm), [88, 92]);
+      expect(result.bleSamples.stepsCadenceSamples, isEmpty);
+    });
+
+    test('a RUNNING FIT file doubles the cadence into steps', () {
+      // FIT reports running cadence as STRIDES per minute -- one leg. Health Connect
+      // wants steps. A runner at 90 spm is taking 180 steps.
+      final result = RouteFileParser.parseFile(
+        _fitActivityBytes(
+          sport: 1, // running
+          points: [
+            _FitTestPoint(
+              time: DateTime.utc(2026, 5, 26, 8, 30),
+              latitude: 59.0000,
+              longitude: 24.0000,
+              altitudeMeters: 10.0,
+              cadence: 90,
+            ),
+          ],
+          sessionTime: DateTime.utc(2026, 5, 26, 8, 30),
+          elapsedSeconds: 600,
+        ),
+        fileName: 'run.fit',
+      );
+
+      expect(result.bleSamples.stepsCadenceSamples.single.stepsPerMinute, 180);
+      expect(result.bleSamples.cyclingCadenceSamples, isEmpty);
+    });
+
+    test('an INDOOR FIT file with no GPS still brings its heart rate', () {
+      // The old parser bailed out of the whole record the moment it found no
+      // latitude -- so a turbo-trainer session, which has no GPS at all, arrived
+      // with literally nothing. The heart rate is read BEFORE the position guard now.
+      final result = RouteFileParser.parseFile(
+        _fitActivityBytes(
+          sport: 2,
+          points: [
+            _FitTestPoint(
+              time: DateTime.utc(2026, 5, 26, 8, 30),
+              latitude: 0.0, // no fix
+              longitude: 0.0,
+              altitudeMeters: 0.0,
+              heartRateBpm: 128,
+              cadence: 85,
+            ),
+          ],
+          sessionTime: DateTime.utc(2026, 5, 26, 8, 30),
+          elapsedSeconds: 1800,
+        ),
+        fileName: 'trainer.fit',
+      );
+
+      expect(result.points, isEmpty, reason: 'no usable GPS, as expected');
+      expect(result.bleSamples.heartRateSamples.single.beatsPerMinute, 128);
+      expect(result.bleSamples.cyclingCadenceSamples.single.rpm, 85);
+    });
+
     test('parseFile imports FIT activity and ignores unusable one point route',
         () {
       final result = RouteFileParser.parseFile(
@@ -362,12 +460,21 @@ class _FitTestPoint {
     required this.latitude,
     required this.longitude,
     required this.altitudeMeters,
+    this.heartRateBpm,
+    this.cadence,
+    this.speedMetersPerSecond,
   });
 
   final DateTime time;
   final double latitude;
   final double longitude;
   final double altitudeMeters;
+
+  /// FIT `record` fields 3, 4 and 6. The parser read none of them, so a FIT import
+  /// arrived with a route and not one graph.
+  final int? heartRateBpm;
+  final int? cadence;
+  final double? speedMetersPerSecond;
 
   int get altitudeRaw => ((altitudeMeters + 500.0) * 5.0).round();
 }
@@ -516,6 +623,9 @@ Uint8List _fitActivityBytes({
       _FitField(0, 4, 133),
       _FitField(1, 4, 133),
       _FitField(2, 2, 132),
+      _FitField(3, 1, 2), // heart_rate, uint8
+      _FitField(4, 1, 2), // cadence, uint8
+      _FitField(6, 2, 132), // speed, uint16, mm/s
     ],
   );
   for (final point in points) {
@@ -524,6 +634,13 @@ Uint8List _fitActivityBytes({
     data.writeInt32(_semicircles(point.latitude));
     data.writeInt32(_semicircles(point.longitude));
     data.writeUInt16(point.altitudeRaw);
+    data.write(point.heartRateBpm ?? 0xFF);
+    data.write(point.cadence ?? 0xFF);
+    data.writeNullableUInt16(
+      point.speedMetersPerSecond == null
+          ? null
+          : (point.speedMetersPerSecond! * 1000.0).round(),
+    );
   }
 
   return _wrapFitFile(data.toBytes());

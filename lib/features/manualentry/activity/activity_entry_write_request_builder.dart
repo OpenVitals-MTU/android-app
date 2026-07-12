@@ -1,3 +1,4 @@
+import '../../../domain/model/ble_sensor_models.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/preferences/unit_system.dart';
@@ -152,7 +153,14 @@ ActivityWriteRequest? buildWriteRequest(
     elevationGainedMeters: elevationMeters,
     activeCaloriesKcal: activeCalories,
     totalCaloriesKcal: totalCalories,
-    bleSamples: state.recordedBleSamples,
+    // A live recording fills `recordedBleSamples` from the paired sensors. An
+    // IMPORT fills nothing -- which is why an imported activity had no graphs at
+    // all: the file's heart rate, cadence and speed were parsed (now) but had
+    // nowhere to go, and the same write path that carries a BLE session's series
+    // was sitting right here unused.
+    bleSamples: state.recordedBleSamples.isEmpty()
+        ? (state.importedRoute?.bleSamples ?? const BleRecordingSampleBuffer())
+        : state.recordedBleSamples,
   );
 }
 
