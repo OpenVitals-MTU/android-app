@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/health_repository.dart';
 
 /// Puts the Health Connect permission dialog in front of the user.
@@ -14,6 +15,6 @@ class RequestHealthPermissionsUseCase {
   final HealthRepository _healthRepository;
 
   /// Whether the request completed (not whether anything was granted).
-  Future<bool> call(Set<String> permissions) =>
+  Future<Result<bool>> call(Set<String> permissions) =>
       _healthRepository.requestPermissions(permissions);
 }

@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/health_repository.dart';
 import '../model/health_connect_availability.dart';
 
@@ -31,21 +32,26 @@ class CheckOnboardingStateUseCase {
 
   final HealthRepository _healthRepository;
 
-  Future<OnboardingHealthState> call() async {
-    final availability = await _healthRepository.refreshAvailability();
-    if (availability != HealthConnectAvailability.available) {
-      return OnboardingHealthState(
-        availability: availability,
-        grantedPermissions: const <String>{},
-        mindfulnessAvailable: false,
-      );
-    }
-    final mindfulnessAvailable = _healthRepository.isMindfulnessAvailable();
-    final granted = await _healthRepository.grantedPermissions();
-    return OnboardingHealthState(
-      availability: availability,
-      grantedPermissions: granted,
-      mindfulnessAvailable: mindfulnessAvailable,
-    );
+  Future<Result<OnboardingHealthState>> call() async {
+    final refreshed = await _healthRepository.refreshAvailability();
+    // STRICT throughout: every answer here is content — onboarding cannot
+    // draw a row without all of them — so the first failure sinks the load,
+    // exactly as the pre-Result throwing flow did.
+    return refreshed.flatMap((availability) async {
+      if (availability != HealthConnectAvailability.available) {
+        return Ok(OnboardingHealthState(
+          availability: availability,
+          grantedPermissions: const <String>{},
+          mindfulnessAvailable: false,
+        ));
+      }
+      final mindfulnessAvailable = _healthRepository.isMindfulnessAvailable();
+      final granted = await _healthRepository.grantedPermissions();
+      return granted.map((granted) => OnboardingHealthState(
+            availability: availability,
+            grantedPermissions: granted,
+            mindfulnessAvailable: mindfulnessAvailable,
+          ));
+    });
   }
 }

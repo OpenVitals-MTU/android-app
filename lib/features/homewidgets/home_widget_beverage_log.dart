@@ -200,7 +200,7 @@ class QuickBeverageWidgetLogger {
       // whose cachedAvailability starts at `notSupported` — and the repositories
       // report no granted permissions while it does, so the write below would be
       // refused as "missing permission" and the tap would do nothing.
-      await health.refreshAvailability();
+      (await health.refreshAvailability()).orThrow();
       // Kotlin remembers the tapped volume as the last custom amount, so the
       // entry screen opens on it next time.
       hydrationRepository

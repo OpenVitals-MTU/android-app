@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import '../../core/presentation/unit_formatter.dart';
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../domain/insights/daily_goals.dart';
 import '../../domain/insights/daily_readiness.dart';
@@ -71,7 +72,7 @@ class HomeWidgetRefresher {
   /// the two paths that reach here — the background alarm isolate, and the modal
   /// configure launch, which never mounts the gate — do not.
   Future<DashboardData> _loadToday() async {
-    await health.refreshAvailability();
+    (await health.refreshAvailability()).orThrow();
     return loadDashboardDay(_todayQuery());
   }
 

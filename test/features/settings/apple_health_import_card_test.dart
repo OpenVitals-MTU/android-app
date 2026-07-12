@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/apple_health_import_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
@@ -26,16 +27,17 @@ import 'package:openvitals/ui/components/health_connect_gate.dart';
 
 class _FakeRepository implements AppleHealthImportRepository {
   @override
-  Future<Set<String>> findMatchingImportedClientRecordIds(
+  Future<Result<Set<String>>> findMatchingImportedClientRecordIds(
     String recordType,
     DateTime start,
     DateTime end,
     Set<String> wantedIds,
   ) async =>
-      const {};
+      const Ok({});
 
   @override
-  Future<void> insertImportedRecords(List<ImportRecord> records) async {}
+  Future<Result<void>> insertImportedRecords(List<ImportRecord> records) async =>
+      const Ok(null);
 
   @override
   bool isMindfulnessAvailable() => true;

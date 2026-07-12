@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../di/providers.dart';
@@ -218,7 +219,8 @@ class DashboardViewModel extends Notifier<DashboardState> {
   Future<void> grantPermissions() async {
     final missing = state.unacknowledgedPermissions;
     if (missing.isNotEmpty) {
-      await ref.read(requestHealthPermissionsUseCaseProvider)(missing);
+      (await ref.read(requestHealthPermissionsUseCaseProvider)(missing))
+          .orThrow();
     }
     ref.invalidate(grantedHealthPermissionsProvider);
     ref.invalidate(healthConnectAvailabilityProvider);
@@ -243,9 +245,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final availability = await ref.read(healthConnectAvailabilityProvider.future);
     if (!ref.mounted || generation != _generation) return;
     final minimumPermissionsGranted =
-        await ref.read(checkMinimumHealthPermissionsUseCaseProvider)(
+        (await ref.read(checkMinimumHealthPermissionsUseCaseProvider)(
       availability,
-    );
+    ))
+            .orThrow();
     if (!ref.mounted || generation != _generation) return;
 
     final keepData = refreshMode == RefreshMode.force && state.data != null;

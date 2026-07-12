@@ -437,9 +437,9 @@ class _FakeHealthRepository implements HealthRepository {
   final List<Set<String>> requested = [];
 
   @override
-  Future<bool> requestPermissions(Set<String> permissions) async {
+  Future<Result<bool>> requestPermissions(Set<String> permissions) async {
     requested.add(permissions);
-    return false;
+    return const Ok(false);
   }
 
   @override

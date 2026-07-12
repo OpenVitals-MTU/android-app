@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/result/result.dart';
 import '../../di/providers.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -20,8 +21,10 @@ class DataSourceEducationItem extends ConsumerWidget {
       child: Align(
         alignment: AlignmentDirectional.centerStart,
         child: TextButton.icon(
-          onPressed: () =>
-              ref.read(healthRepositoryProvider).openHealthConnectSettings(),
+          onPressed: () async => (await ref
+                  .read(healthRepositoryProvider)
+                  .openHealthConnectSettings())
+              .orThrow(),
           icon: const Icon(Icons.info_outline, size: 18),
           label: Text(l10n.healthConnectDataSourceManage),
         ),

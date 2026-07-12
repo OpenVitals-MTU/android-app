@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/result/result.dart';
 import '../../../../di/providers.dart';
 import '../../../../domain/model/health_connect_availability.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -175,7 +176,8 @@ class RouteImportCard extends ConsumerWidget {
     WidgetRef ref,
     Set<String> permissions,
   ) async {
-    await ref.read(healthRepositoryProvider).requestPermissions(permissions);
+    (await ref.read(healthRepositoryProvider).requestPermissions(permissions))
+        .orThrow();
     ref.invalidate(grantedHealthPermissionsProvider);
     ref.invalidate(healthConnectAvailabilityProvider);
   }

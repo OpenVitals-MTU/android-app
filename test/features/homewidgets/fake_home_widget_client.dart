@@ -1,3 +1,4 @@
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/health_repository.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/features/homewidgets/home_widget_service.dart';
@@ -61,9 +62,9 @@ class FakeHealthRepository implements HealthRepository {
   int refreshCalls = 0;
 
   @override
-  Future<HealthConnectAvailability> refreshAvailability() async {
+  Future<Result<HealthConnectAvailability>> refreshAvailability() async {
     refreshCalls++;
-    return resolved;
+    return Ok(resolved);
   }
 
   @override

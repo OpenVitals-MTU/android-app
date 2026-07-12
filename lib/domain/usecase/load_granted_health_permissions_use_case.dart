@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/health_repository.dart';
 
 /// The permissions Health Connect currently reports as granted.
@@ -11,5 +12,5 @@ class LoadGrantedHealthPermissionsUseCase {
 
   final HealthRepository _healthRepository;
 
-  Future<Set<String>> call() => _healthRepository.grantedPermissions();
+  Future<Result<Set<String>>> call() => _healthRepository.grantedPermissions();
 }

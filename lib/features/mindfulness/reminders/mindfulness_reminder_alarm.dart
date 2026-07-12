@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/reminders/alarm_manager_reminder_scheduler.dart';
 import '../../../core/reminders/local_notifications_reminder_device.dart';
 import '../../../core/reminders/reminder_notifications.dart';
+import '../../../core/result/result.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../data/repository/impl/health_repository_impl.dart';
 import '../../../data/repository/impl/mindfulness_repository_impl.dart';
@@ -57,7 +58,7 @@ Future<MindfulnessReminderController>
   // zero — the goal never counts as met, and the reminder keeps nagging instead
   // of rolling to tomorrow. The app gets this for free from `HealthConnectGate`;
   // this isolate has no widget tree.
-  await HealthRepositoryImpl(dataSource).refreshAvailability();
+  (await HealthRepositoryImpl(dataSource).refreshAvailability()).orThrow();
   final repository = MindfulnessRepositoryImpl(dataSource);
 
   return MindfulnessReminderController(

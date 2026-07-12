@@ -93,7 +93,8 @@ class _FakeHealth implements HealthRepository {
   HealthConnectAvailability availability() =>
       HealthConnectAvailability.available;
   @override
-  Future<Set<String>> grantedPermissions() async => const {'read-heart-rate'};
+  Future<Result<Set<String>>> grantedPermissions() async =>
+      const Ok({'read-heart-rate'});
   @override
   dynamic noSuchMethod(Invocation i) =>
       throw UnimplementedError('${i.memberName}');

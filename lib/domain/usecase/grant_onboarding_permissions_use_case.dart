@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/health_repository.dart';
 import '../model/health_connect_availability.dart';
 
@@ -35,20 +36,27 @@ class GrantOnboardingPermissionsUseCase {
 
   final HealthRepository _healthRepository;
 
-  Future<HealthPermissionGrant> call(Set<String> permissions) async {
-    final before =
+  Future<Result<HealthPermissionGrant>> call(Set<String> permissions) async {
+    // STRICT: the verdict is a before/after diff, so it is wrong with half the
+    // evidence — any failed step sinks the grant, as the throwing flow did.
+    final beforeRead =
         _healthRepository.availability() == HealthConnectAvailability.available
             ? await _healthRepository.grantedPermissions()
-            : const <String>{};
-    await _healthRepository.requestPermissions(permissions);
-    final granted = await _healthRepository.grantedPermissions();
-
-    final gainedAny = permissions
-        .any((permission) =>
-            granted.contains(permission) && !before.contains(permission));
-    return HealthPermissionGrant(
-      grantedPermissions: granted,
-      needsManualGrant: !gainedAny && !permissions.every(granted.contains),
-    );
+            : const Ok(<String>{});
+    return beforeRead.flatMap((before) async {
+      final requested = await _healthRepository.requestPermissions(permissions);
+      return requested.flatMap((_) async {
+        final grantedRead = await _healthRepository.grantedPermissions();
+        return grantedRead.map((granted) {
+          final gainedAny = permissions
+              .any((permission) =>
+                  granted.contains(permission) && !before.contains(permission));
+          return HealthPermissionGrant(
+            grantedPermissions: granted,
+            needsManualGrant: !gainedAny && !permissions.every(granted.contains),
+          );
+        });
+      });
+    });
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/external_link.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/health_connect_availability.dart';
 import '../../../l10n/app_localizations.dart';
@@ -253,7 +254,8 @@ class _OnboardingContent extends ConsumerWidget {
     if (requestable.isNotEmpty) {
       await notifier.requestPermissions(requestable);
     } else if (manual.isNotEmpty) {
-      await ref.read(healthRepositoryProvider).openHealthConnectSettings();
+      (await ref.read(healthRepositoryProvider).openHealthConnectSettings())
+          .orThrow();
     }
   }
 }

@@ -1,6 +1,11 @@
+import '../../../core/result/result.dart';
 import '../../../domain/model/apple_health_import_records.dart';
 
 /// Port of the Kotlin `AppleHealthImportRepository` contract.
+///
+/// Fallible operations return [Result]; the synchronous availability probe
+/// ([isMindfulnessAvailable]) reads cached state and cannot fail, so it stays
+/// bare.
 ///
 /// The Kotlin version takes AndroidX `Record` / `KClass<out Record>` types; the
 /// Dart importer produces pure-Dart [ImportRecord]s and identifies a record
@@ -14,9 +19,9 @@ import '../../../domain/model/apple_health_import_records.dart';
 abstract interface class AppleHealthImportRepository {
   bool isMindfulnessAvailable();
 
-  Future<void> insertImportedRecords(List<ImportRecord> records);
+  Future<Result<void>> insertImportedRecords(List<ImportRecord> records);
 
-  Future<Set<String>> findMatchingImportedClientRecordIds(
+  Future<Result<Set<String>>> findMatchingImportedClientRecordIds(
     String recordType,
     DateTime start,
     DateTime end,

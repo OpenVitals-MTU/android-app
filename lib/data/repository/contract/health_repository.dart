@@ -1,3 +1,4 @@
+import '../../../core/result/result.dart';
 import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/permission_grant_mode.dart';
 
@@ -6,6 +7,11 @@ import '../../../domain/model/permission_grant_mode.dart';
 /// The stable permission API the feature/state layers depend on. Permissions
 /// are AndroidX Health Connect permission strings (see
 /// `lib/health/health_permissions.dart`).
+///
+/// Fallible operations (the ones that cross the async platform boundary)
+/// return [Result]; the synchronous probes — [availability], the permission-set
+/// getters, [grantModeFor], [isMindfulnessAvailable] — read cached state and
+/// cannot fail, so they stay bare.
 ///
 /// Note: the Kotlin `permissionContract()` returns an Android
 /// `ActivityResultContract`; the Dart `health` package instead requests
@@ -22,17 +28,17 @@ abstract interface class HealthRepository {
   /// The Kotlin `HealthConnectManager.availability()` was synchronous; the
   /// platform SDK-status check crosses an async plugin boundary here, so callers
   /// that need a fresh value must await this.
-  Future<HealthConnectAvailability> refreshAvailability();
+  Future<Result<HealthConnectAvailability>> refreshAvailability();
 
   /// Requests OS authorization for [permissions]; returns whether the request
   /// completed successfully. Replaces the Kotlin `permissionContract()`.
-  Future<bool> requestPermissions(Set<String> permissions);
+  Future<Result<bool>> requestPermissions(Set<String> permissions);
 
   /// Opens the Health Connect page for this app so the user can manually grant
   /// permissions the runtime dialog reports as non-requestable (planned
   /// exercise, exercise routes, background/history access). Returns whether a
   /// page was launched.
-  Future<bool> openHealthConnectSettings();
+  Future<Result<bool>> openHealthConnectSettings();
 
   Set<String> get phase1Permissions;
   Set<String> get minimumOnboardingPermissions;
@@ -65,7 +71,7 @@ abstract interface class HealthRepository {
 
   bool isMindfulnessAvailable();
 
-  Future<Set<String>> grantedPermissions();
+  Future<Result<Set<String>>> grantedPermissions();
 
-  Future<Set<String>> missingPhase1();
+  Future<Result<Set<String>>> missingPhase1();
 }

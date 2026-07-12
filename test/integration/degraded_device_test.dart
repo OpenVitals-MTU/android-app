@@ -30,7 +30,8 @@ void main() {
     final h = await bootContainer(sdkStatus: 1);
 
     final availability =
-        await h.container.read(healthRepositoryProvider).refreshAvailability();
+        (await h.container.read(healthRepositoryProvider).refreshAvailability())
+            .orThrow();
 
     expect(availability, HealthConnectAvailability.notSupported);
   });
@@ -42,7 +43,8 @@ void main() {
     final h = await bootContainer(sdkStatus: 2);
 
     final availability =
-        await h.container.read(healthRepositoryProvider).refreshAvailability();
+        (await h.container.read(healthRepositoryProvider).refreshAvailability())
+            .orThrow();
 
     // The remedy differs: "update Health Connect" vs "install it". Collapsing the
     // two would send the user somewhere useless.
@@ -96,7 +98,8 @@ void main() {
     final h = await bootContainer();
 
     final granted =
-        await h.container.read(healthRepositoryProvider).grantedPermissions();
+        (await h.container.read(healthRepositoryProvider).grantedPermissions())
+            .orThrow();
 
     expect(granted, isNotEmpty);
     expect(granted, contains(HcPermissions.readSleep));

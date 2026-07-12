@@ -24,6 +24,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import '../../../core/result/result.dart';
 import '../../../data/repository/contract/apple_health_import_repository.dart';
 import 'apple_health_import_categories.dart';
 import 'apple_health_import_checkpoint_store.dart';
@@ -563,12 +564,14 @@ class AppleHealthImportService {
             .reduce((a, b) => a.isAfter(b) ? a : b)
             .add(const Duration(seconds: 1));
         try {
-          final matched = await _repository.findMatchingImportedClientRecordIds(
+          final matched =
+              (await _repository.findMatchingImportedClientRecordIds(
             entry.key,
             start,
             end,
             wantedIds,
-          );
+          ))
+                  .orThrow();
           result.addAll(matched);
         } catch (error) {
           importLogs.add(_errorLog(
@@ -591,8 +594,9 @@ class AppleHealthImportService {
   ) async {
     if (records.isEmpty) return const _InsertionResult();
     try {
-      await _repository
-          .insertImportedRecords(records.map((it) => it.record).toList());
+      (await _repository
+              .insertImportedRecords(records.map((it) => it.record).toList()))
+          .orThrow();
       for (final converted in records) {
         _stat(typeStats, converted.appleType).imported += 1;
       }
@@ -609,7 +613,7 @@ class AppleHealthImportService {
     var failed = 0;
     for (final converted in records) {
       try {
-        await _repository.insertImportedRecords([converted.record]);
+        (await _repository.insertImportedRecords([converted.record])).orThrow();
         _stat(typeStats, converted.appleType).imported += 1;
         imported += 1;
       } catch (error) {

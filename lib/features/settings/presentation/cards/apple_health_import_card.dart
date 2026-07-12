@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../../core/result/result.dart';
 import '../../../../di/providers.dart';
 import '../../../../domain/model/health_connect_availability.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -420,7 +421,10 @@ class AppleHealthImportCard extends ConsumerWidget {
     final repo = ref.read(healthRepositoryProvider);
     // Fire the request, then refresh the granted set (mirrors the Kotlin
     // permission launcher callback invalidating the granted permissions).
-    repo.requestPermissions(missing).whenComplete(
+    repo
+        .requestPermissions(missing)
+        .then((requested) => requested.orThrow())
+        .whenComplete(
           () => ref.invalidate(grantedHealthPermissionsProvider),
         );
   }

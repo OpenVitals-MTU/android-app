@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/result/result.dart';
 import '../../../../di/providers.dart';
 import '../../../../domain/model/health_connect_availability.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -287,9 +288,9 @@ class _PermissionCategoryTile extends ConsumerWidget {
   }) async {
     final repo = ref.read(healthRepositoryProvider);
     if (requestable.isNotEmpty) {
-      await repo.requestPermissions(requestable);
+      (await repo.requestPermissions(requestable)).orThrow();
     } else if (manual.isNotEmpty) {
-      await repo.openHealthConnectSettings();
+      (await repo.openHealthConnectSettings()).orThrow();
     }
     ref.invalidate(grantedHealthPermissionsProvider);
   }

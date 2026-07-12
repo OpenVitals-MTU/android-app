@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/apple_health_import_repository.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_checkpoint_store.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_models.dart';
@@ -33,26 +34,27 @@ class FakeAppleHealthImportRepository implements AppleHealthImportRepository {
   bool isMindfulnessAvailable() => mindfulnessAvailable;
 
   @override
-  Future<void> insertImportedRecords(List<ImportRecord> records) async {
+  Future<Result<void>> insertImportedRecords(List<ImportRecord> records) async {
     insertedBatches.add(records);
     for (final record in records) {
       insertedClientRecordIds.add(record.clientRecordId);
     }
+    return const Ok(null);
   }
 
   @override
-  Future<Set<String>> findMatchingImportedClientRecordIds(
+  Future<Result<Set<String>>> findMatchingImportedClientRecordIds(
     String recordType,
     DateTime start,
     DateTime end,
     Set<String> wantedIds,
   ) async {
     queried.add((recordType: recordType, wantedIds: wantedIds));
-    if (matcher != null) return matcher!(recordType, wantedIds);
+    if (matcher != null) return Ok(matcher!(recordType, wantedIds));
     if (matchAgainstInserted) {
-      return wantedIds.intersection(insertedClientRecordIds);
+      return Ok(wantedIds.intersection(insertedClientRecordIds));
     }
-    return const {};
+    return const Ok({});
   }
 }
 

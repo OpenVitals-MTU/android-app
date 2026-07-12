@@ -238,7 +238,8 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
       if (_health.availability() != HealthConnectAvailability.available) {
         return 0;
       }
-      final granted = (await _health.grantedPermissions()).toList()..sort();
+      final granted = (await _health.grantedPermissions()).orThrow().toList()
+        ..sort();
       return granted.join(',').hashCode;
     } catch (_) {
       return 0;

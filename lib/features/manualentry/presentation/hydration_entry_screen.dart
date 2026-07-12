@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../l10n/app_localizations.dart';
@@ -258,9 +259,10 @@ class _HydrationEntryForm extends ConsumerWidget {
     WidgetRef ref,
     HydrationEntryState state,
   ) async {
-    await ref
-        .read(healthRepositoryProvider)
-        .requestPermissions(state.writePermissions);
+    (await ref
+            .read(healthRepositoryProvider)
+            .requestPermissions(state.writePermissions))
+        .orThrow();
     await ref.read(provider.notifier).refreshPermission();
   }
 

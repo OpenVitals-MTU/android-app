@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/result/result.dart';
 import '../../di/providers.dart';
 import '../../domain/model/health_connect_availability.dart';
 import 'loading_state.dart';
@@ -16,13 +17,15 @@ import 'ov_card.dart';
 /// defaults makes every consumer require permissions the device cannot grant.
 final healthConnectAvailabilityProvider =
     FutureProvider<HealthConnectAvailability>((ref) async {
-  return ref.watch(healthRepositoryProvider).refreshAvailability();
+  return (await ref.watch(healthRepositoryProvider).refreshAvailability())
+      .orThrow();
 });
 
 /// The set of currently granted health permissions. Overridable in tests.
 final grantedHealthPermissionsProvider =
     FutureProvider<Set<String>>((ref) async {
-  return ref.watch(healthRepositoryProvider).grantedPermissions();
+  return (await ref.watch(healthRepositoryProvider).grantedPermissions())
+      .orThrow();
 });
 
 /// Whether background Health Connect sync is enabled (a user preference).
@@ -151,7 +154,10 @@ class HealthConnectGate extends ConsumerWidget {
       return;
     }
     if (requiredPermissions.isNotEmpty) {
-      await ref.read(healthRepositoryProvider).requestPermissions(requiredPermissions);
+      (await ref
+              .read(healthRepositoryProvider)
+              .requestPermissions(requiredPermissions))
+          .orThrow();
     }
     ref.invalidate(grantedHealthPermissionsProvider);
     ref.invalidate(healthConnectAvailabilityProvider);

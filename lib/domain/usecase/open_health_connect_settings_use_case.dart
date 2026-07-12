@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/health_repository.dart';
 
 /// Opens this app's page in Health Connect.
@@ -12,5 +13,5 @@ class OpenHealthConnectSettingsUseCase {
   final HealthRepository _healthRepository;
 
   /// Whether a page was actually launched.
-  Future<bool> call() => _healthRepository.openHealthConnectSettings();
+  Future<Result<bool>> call() => _healthRepository.openHealthConnectSettings();
 }

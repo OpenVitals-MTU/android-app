@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/health_repository.dart';
 import '../model/health_connect_availability.dart';
 
@@ -16,10 +17,11 @@ class CheckMinimumHealthPermissionsUseCase {
 
   final HealthRepository _healthRepository;
 
-  Future<bool> call(HealthConnectAvailability availability) async {
+  Future<Result<bool>> call(HealthConnectAvailability availability) async {
     final granted = availability == HealthConnectAvailability.available
         ? await _healthRepository.grantedPermissions()
-        : const <String>{};
-    return _healthRepository.minimumOnboardingPermissions.every(granted.contains);
+        : const Ok(<String>{});
+    return granted.map((granted) =>
+        _healthRepository.minimumOnboardingPermissions.every(granted.contains));
   }
 }

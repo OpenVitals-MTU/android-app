@@ -1,10 +1,18 @@
+import '../../../core/result/result.dart';
 import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/permission_grant_mode.dart';
 import '../../source/health/health_data_source.dart';
 import '../contract/health_repository.dart';
+import 'run_catching.dart';
 
 /// Port of the Kotlin `HealthRepositoryImpl` — a thin facade over the
 /// [HealthDataSource] permission taxonomy.
+///
+/// Public methods convert exceptions to failures via [runCatching] at the
+/// boundary; the data source itself already resolves platform errors into
+/// fallbacks (`notSupported`, `false`, the empty set), and that internal
+/// handling is untouched — a failure `Result` here is the exceptional case,
+/// not the degraded one.
 class HealthRepositoryImpl implements HealthRepository {
   HealthRepositoryImpl(this._dataSource);
 
@@ -14,22 +22,23 @@ class HealthRepositoryImpl implements HealthRepository {
   HealthConnectAvailability availability() => _dataSource.cachedAvailability;
 
   @override
-  Future<HealthConnectAvailability> refreshAvailability() async {
-    final availability = await _dataSource.availability();
-    if (availability == HealthConnectAvailability.available) {
-      await _dataSource.resolveFeatureFlags();
-      await _dataSource.resolveSupportedPermissions();
-    }
-    return availability;
-  }
+  Future<Result<HealthConnectAvailability>> refreshAvailability() =>
+      runCatching(() async {
+        final availability = await _dataSource.availability();
+        if (availability == HealthConnectAvailability.available) {
+          await _dataSource.resolveFeatureFlags();
+          await _dataSource.resolveSupportedPermissions();
+        }
+        return availability;
+      });
 
   @override
-  Future<bool> requestPermissions(Set<String> permissions) =>
-      _dataSource.requestPermissions(permissions);
+  Future<Result<bool>> requestPermissions(Set<String> permissions) =>
+      runCatching(() => _dataSource.requestPermissions(permissions));
 
   @override
-  Future<bool> openHealthConnectSettings() =>
-      _dataSource.openHealthConnectSettings();
+  Future<Result<bool>> openHealthConnectSettings() =>
+      runCatching(() => _dataSource.openHealthConnectSettings());
 
   @override
   Set<String> get phase1Permissions =>
@@ -142,11 +151,13 @@ class HealthRepositoryImpl implements HealthRepository {
   bool isMindfulnessAvailable() => _dataSource.isMindfulnessSessionAvailable();
 
   @override
-  Future<Set<String>> grantedPermissions() => _dataSource.grantedPermissions();
+  Future<Result<Set<String>>> grantedPermissions() =>
+      runCatching(() => _dataSource.grantedPermissions());
 
   @override
-  Future<Set<String>> missingPhase1() async {
-    final granted = await _dataSource.grantedPermissions();
-    return phase1Permissions.difference(granted);
-  }
+  Future<Result<Set<String>>> missingPhase1() =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedPermissions();
+        return phase1Permissions.difference(granted);
+      });
 }

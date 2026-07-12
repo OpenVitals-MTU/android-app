@@ -26,7 +26,8 @@ void main() {
       final h = await bootContainer();
 
       expect(
-        await h.container.read(healthRepositoryProvider).refreshAvailability(),
+        (await h.container.read(healthRepositoryProvider).refreshAvailability())
+            .orThrow(),
         HealthConnectAvailability.available,
       );
     });
@@ -35,7 +36,8 @@ void main() {
       final h = await bootContainer();
 
       final granted =
-          await h.container.read(healthRepositoryProvider).grantedPermissions();
+          (await h.container.read(healthRepositoryProvider).grantedPermissions())
+              .orThrow();
 
       // resolveSupportedPermissions() diffs what the app wants against what the
       // provider grants. Getting it wrong left onboarding stuck at 9/11.

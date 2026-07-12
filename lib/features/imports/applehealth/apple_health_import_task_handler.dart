@@ -30,6 +30,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/result/result.dart';
 import '../../../data/repository/impl/apple_health_import_repository_impl.dart';
 import '../../../data/repository/impl/health_repository_impl.dart';
 import '../../../di/providers.dart' show openVitalsPackageName;
@@ -116,8 +117,9 @@ class AppleHealthImportTaskHandler extends TaskHandler {
           // so without this the import writes nothing and still reports success.
           // The app gets this for free from `HealthConnectGate`; this isolate
           // has no widget tree.
-          resolveHealthAccess: () =>
-              HealthRepositoryImpl(dataSource).refreshAvailability(),
+          resolveHealthAccess: () async =>
+              (await HealthRepositoryImpl(dataSource).refreshAvailability())
+                  .orThrow(),
           stagedFile: File(stagedPath),
           sourceKey: sourceKey,
           selectedCategories: selectedCategories,

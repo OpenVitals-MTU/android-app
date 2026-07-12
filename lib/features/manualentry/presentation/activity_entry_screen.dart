@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
@@ -112,9 +113,10 @@ class _ActivityEntryScreenState extends ConsumerState<ActivityEntryScreen>
   /// on the Health Connect write permission, and only runs once it is granted.
   Future<void> _onSourceAction(ActivityEntrySourceAction action) async {
     if (!_controller.value.canWrite) {
-      await ref
-          .read(healthRepositoryProvider)
-          .requestPermissions(_controller.value.writePermissions);
+      (await ref
+              .read(healthRepositoryProvider)
+              .requestPermissions(_controller.value.writePermissions))
+          .orThrow();
       _controller.refreshPermission();
       if (!mounted || !_controller.value.canWrite) return;
     }
@@ -141,9 +143,10 @@ class _ActivityEntryScreenState extends ConsumerState<ActivityEntryScreen>
   }
 
   Future<void> _requestWritePermission() async {
-    await ref
-        .read(healthRepositoryProvider)
-        .requestPermissions(_controller.value.writePermissions);
+    (await ref
+            .read(healthRepositoryProvider)
+            .requestPermissions(_controller.value.writePermissions))
+        .orThrow();
     _controller.refreshPermission();
   }
 

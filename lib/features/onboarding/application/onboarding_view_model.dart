@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/result/result.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/health_connect_availability.dart';
@@ -67,7 +68,8 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     // Availability is resolved from the platform (async plugin boundary) rather
     // than read from the still-default cache, and nothing else is asked of a
     // device that has no Health Connect — see [CheckOnboardingStateUseCase].
-    final onboarding = await ref.read(checkOnboardingStateUseCaseProvider)();
+    final onboarding =
+        (await ref.read(checkOnboardingStateUseCaseProvider)()).orThrow();
     if (!ref.mounted) return;
     state = OnboardingState(
       availability: onboarding.availability,
@@ -83,7 +85,9 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
   /// "Granted" without needing an app restart.
   Future<void> refreshGrantedPermissions() async {
     if (state.availability != HealthConnectAvailability.available) return;
-    final granted = await ref.read(loadGrantedHealthPermissionsUseCaseProvider)();
+    final granted =
+        (await ref.read(loadGrantedHealthPermissionsUseCaseProvider)())
+            .orThrow();
     if (!ref.mounted || granted == state.grantedPermissions) return;
     state = state.copyWith(grantedPermissions: granted);
     ref.invalidate(grantedHealthPermissionsProvider);
@@ -103,7 +107,8 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     // [GrantOnboardingPermissionsUseCase], which works it out by comparing the
     // granted set on either side of the request.
     final grant =
-        await ref.read(grantOnboardingPermissionsUseCaseProvider)(permissions);
+        (await ref.read(grantOnboardingPermissionsUseCaseProvider)(permissions))
+            .orThrow();
     if (!ref.mounted) return;
     state = state.copyWith(grantedPermissions: grant.grantedPermissions);
     // Keep the shared gate providers fresh for screens shown after onboarding.
@@ -112,7 +117,7 @@ class OnboardingViewModel extends Notifier<OnboardingState> {
     // Opened here rather than inside the use case so the new granted set is
     // already published before the user disappears into Health Connect's UI.
     if (grant.needsManualGrant) {
-      await ref.read(openHealthConnectSettingsUseCaseProvider)();
+      (await ref.read(openHealthConnectSettingsUseCaseProvider)()).orThrow();
     }
   }
 
