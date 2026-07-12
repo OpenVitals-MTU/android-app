@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/measurement_input.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
@@ -13,11 +14,13 @@ const double _maxWeightKg = 1000.0;
 const double _maxHeightCm = 300.0;
 const double _maxBodyFatPercent = 100.0;
 
-/// Port of the Kotlin `BodyMeasurementEntryError`.
+/// Why the form refuses to save. Validation and gating only — a write that was
+/// attempted and *failed* is not one of these; it lives in
+/// [BodyMeasurementEntryState.save] as a [CommandFailure], carrying the real
+/// error.
 enum BodyMeasurementEntryError {
   invalidValue,
   missingWritePermission,
-  writeFailed,
 }
 
 /// Riverpod port of the Kotlin `BodyMeasurementEntryUiState`.
@@ -31,15 +34,29 @@ abstract class BodyMeasurementEntryState with _$BodyMeasurementEntryState {
     @Default(<String>{}) Set<String> writePermissions,
     @Default(false) bool canWrite,
     @Default(true) bool isCheckingPermission,
-    @Default(false) bool isSavingEntry,
+    @Default(CommandState<void>.idle()) CommandState<void> save,
     String? editRecordId,
     DateTime? editTime,
-    @Default(false) bool saveCompleted,
     BodyMeasurementEntryError? entryError,
-    ScreenError? writeError,
+
+    /// The edit prefill could not be read — a different thing from a save that
+    /// failed, and it blocks the form before the user has done anything.
+    ScreenError? prefillError,
   }) = _BodyMeasurementEntryState;
 
   bool get isEditMode => editRecordId != null;
+
+  bool get isSavingEntry => save is CommandRunning<void>;
+
+  /// The error the form should be showing, if any: a failed prefill outranks a
+  /// failed write, because it means the form was never trustworthy to begin
+  /// with.
+  ScreenError? get blockingError =>
+      prefillError ??
+      switch (save) {
+        CommandFailure<void>(:final error) => error,
+        _ => null,
+      };
 }
 
 /// Riverpod port of the Kotlin `BodyMeasurementEntryViewModel`. One instance per
@@ -65,7 +82,6 @@ class BodyMeasurementEntryViewModel extends Notifier<BodyMeasurementEntryState> 
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
-      writeError: null,
     );
     // The probe reports a failure rather than throwing it, so the permissions it
     // could not get a verdict for are still known here — see
@@ -77,17 +93,19 @@ class BodyMeasurementEntryViewModel extends Notifier<BodyMeasurementEntryState> 
       isCheckingPermission: false,
       writePermissions: status.permissions,
       canWrite: status.granted,
-      entryError: error == null ? null : BodyMeasurementEntryError.writeFailed,
-      writeError: error == null ? null : throwableToScreenError(error),
+      // A probe that could not answer is surfaced where a failed write is:
+      // either way the form cannot promise the save will land.
+      save: error == null
+          ? const CommandState.idle()
+          : CommandState.failure(throwableToScreenError(error)),
     );
   }
 
   void updateInput(String text) {
     state = state.copyWith(
       inputText: text,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -95,9 +113,8 @@ class BodyMeasurementEntryViewModel extends Notifier<BodyMeasurementEntryState> 
     final now = DateTime.now();
     state = state.copyWith(
       editTime: time.isAfter(now) ? now : time,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -107,22 +124,19 @@ class BodyMeasurementEntryViewModel extends Notifier<BodyMeasurementEntryState> 
     if (!state.canWrite) {
       state = state.copyWith(
         entryError: BodyMeasurementEntryError.missingWritePermission,
-        writeError: null,
       );
       return;
     }
     if (canonicalValue == null || !_isValidFor(canonicalValue, type)) {
       state = state.copyWith(
         entryError: BodyMeasurementEntryError.invalidValue,
-        writeError: null,
       );
       return;
     }
 
     state = state.copyWith(
-      isSavingEntry: true,
+      save: const CommandState.running(),
       entryError: null,
-      writeError: null,
     );
     final now = DateTime.now();
     final editTime = state.editTime;
@@ -134,68 +148,64 @@ class BodyMeasurementEntryViewModel extends Notifier<BodyMeasurementEntryState> 
       time: time,
       value: canonicalValue,
     );
-    try {
-      (await ref.read(saveBodyMeasurementUseCaseProvider)(
-        request,
-        editRecordId: editRecordId,
-      ))
-          .orThrow();
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        inputText: state.isEditMode ? state.inputText : '',
-        isSavingEntry: false,
-        saveCompleted: true,
-        entryError: null,
-        writeError: null,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isSavingEntry: false,
-        entryError: BodyMeasurementEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
+    final result = await ref.read(saveBodyMeasurementUseCaseProvider)(
+      request,
+      editRecordId: editRecordId,
+    );
+    if (!ref.mounted) return;
+    switch (result) {
+      case Ok():
+        state = state.copyWith(
+          inputText: state.isEditMode ? state.inputText : '',
+          save: const CommandState.success(null),
+          entryError: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          save: CommandState.failure(failure.toScreenError()),
+          entryError: null,
+        );
     }
   }
 
+  /// The screen consumed the success (it showed the toast and left), so the
+  /// command returns to rest — otherwise re-entering the route would fire it
+  /// again.
   void onSaveCompletedHandled() {
-    state = state.copyWith(saveCompleted: false);
+    state = state.copyWith(save: const CommandState.idle());
   }
 
+  /// Prefills the form from the record being edited. A failure here is a *read*
+  /// failure — the form has nothing to correct — so it lands on
+  /// [BodyMeasurementEntryState.prefillError], not on the save command.
   Future<void> _loadEditEntry() async {
     final recordId = editRecordId;
     if (recordId == null) return;
-    try {
-      final entry =
-          (await ref.read(loadBodyMeasurementForEditUseCaseProvider)(
-        type,
-        recordId,
-      ))
-              .orThrow();
-      if (!ref.mounted) return;
-      // Null covers both "no such record" and "not ours to edit".
-      if (entry == null) {
+    final result = await ref.read(loadBodyMeasurementForEditUseCaseProvider)(
+      type,
+      recordId,
+    );
+    if (!ref.mounted) return;
+    switch (result) {
+      case Ok(:final value):
+        // Null covers both "no such record" and "not ours to edit".
+        if (value == null) {
+          state = state.copyWith(
+            prefillError: const ScreenErrorMessage(
+              'Only OpenVitals entries can be edited.',
+            ),
+          );
+          return;
+        }
+        final now = DateTime.now();
         state = state.copyWith(
-          entryError: BodyMeasurementEntryError.writeFailed,
-          writeError: const ScreenErrorMessage(
-            'Only OpenVitals entries can be edited.',
-          ),
+          inputText: _toDisplayInput(value.value, type),
+          editTime: value.time.isAfter(now) ? now : value.time,
+          entryError: null,
+          prefillError: null,
         );
-        return;
-      }
-      final now = DateTime.now();
-      state = state.copyWith(
-        inputText: _toDisplayInput(entry.value, type),
-        editTime: entry.time.isAfter(now) ? now : entry.time,
-        entryError: null,
-        writeError: null,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        entryError: BodyMeasurementEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
+      case Err(:final failure):
+        state = state.copyWith(prefillError: failure.toScreenError());
     }
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/presentation/screen_error.dart';
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/measurement_input.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../di/providers.dart';
@@ -78,8 +78,10 @@ class _VitalsMeasurementEntryScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    ref.listen(_provider.select((s) => s.saveCompleted), (previous, next) {
-      if (next) {
+    ref.listen(_provider.select((s) => s.save), (previous, next) {
+      // The success is consumed exactly once, then the command is put back to
+      // rest — otherwise returning to this route would replay the toast.
+      if (next is CommandSuccess<void>) {
         ref.read(_provider.notifier).onSaveCompletedHandled();
         onManualEntrySaved(context, 'Measurement saved');
       }
@@ -230,11 +232,11 @@ class _VitalsEntryForm extends ConsumerWidget {
                         ? l10n.actionSave
                         : l10n.vitalsEntryAddSelected(title)),
                   ),
-                  if (state.entryError != null)
+                  if (_errorText(state, title, l10n) case final message?)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: Text(
-                        _errorText(state.entryError!, state.writeError, title, l10n),
+                        message,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: theme.colorScheme.error),
                       ),
@@ -266,20 +268,25 @@ class _VitalsEntryForm extends ConsumerWidget {
         ),
       );
 
-  String _errorText(
-    VitalsMeasurementEntryError error,
-    ScreenError? writeError,
+  /// The one message the form shows: why it refuses to save, or — failing that
+  /// — why the last attempt to save (or to read the record being edited) did
+  /// not land.
+  String? _errorText(
+    VitalsMeasurementEntryState state,
     String title,
     AppLocalizations l10n,
   ) {
-    switch (error) {
-      case VitalsMeasurementEntryError.invalidValue:
-        return l10n.vitalsEntryInvalidValue;
-      case VitalsMeasurementEntryError.missingWritePermission:
-        return l10n.vitalsEntryPermissionNeeded(title);
-      case VitalsMeasurementEntryError.writeFailed:
-        return l10n.vitalsEntryWriteFailed(screenErrorText(writeError, l10n));
+    final entryError = state.entryError;
+    if (entryError != null) {
+      return switch (entryError) {
+        VitalsMeasurementEntryError.invalidValue => l10n.vitalsEntryInvalidValue,
+        VitalsMeasurementEntryError.missingWritePermission =>
+          l10n.vitalsEntryPermissionNeeded(title),
+      };
     }
+    final blocking = state.blockingError;
+    if (blocking == null) return null;
+    return l10n.vitalsEntryWriteFailed(screenErrorText(blocking, l10n));
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
@@ -12,26 +13,36 @@ part 'carbs_entry_view_model.freezed.dart';
 /// `MaxCarbsGrams`).
 const double kMaxCarbsGrams = 10000.0;
 
-/// Port of the Kotlin `CarbsEntryError`.
+/// Why the form refuses to save. Validation and gating only — a write that was
+/// attempted and *failed* is not one of these; it lives in
+/// [CarbsEntryState.save] as a [CommandFailure], carrying the real error.
 enum CarbsEntryError {
   invalidValue,
   missingWritePermission,
-  writeFailed,
 }
 
 /// Riverpod port of the Kotlin `CarbsEntryUiState`.
 @freezed
 abstract class CarbsEntryState with _$CarbsEntryState {
+  const CarbsEntryState._();
+
   const factory CarbsEntryState({
     @Default('') String inputText,
     @Default(<String>{}) Set<String> writePermissions,
     @Default(false) bool canWrite,
     @Default(true) bool isCheckingPermission,
-    @Default(false) bool isSavingEntry,
-    @Default(false) bool saveCompleted,
+    @Default(CommandState<void>.idle()) CommandState<void> save,
     CarbsEntryError? entryError,
-    ScreenError? writeError,
   }) = _CarbsEntryState;
+
+  bool get isSavingEntry => save is CommandRunning<void>;
+
+  /// The error the form is stuck on: the last write (or permission probe) that
+  /// did not land. There is no prefill here — a carbs entry is never edited.
+  ScreenError? get blockingError => switch (save) {
+        CommandFailure<void>(:final error) => error,
+        _ => null,
+      };
 }
 
 /// Riverpod port of the Kotlin `CarbsEntryViewModel`.
@@ -48,7 +59,6 @@ class CarbsEntryViewModel extends Notifier<CarbsEntryState> {
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
-      writeError: null,
     );
     // The probe reports a failure rather than throwing it, so the permissions it
     // could not get a verdict for are still known here — see
@@ -60,17 +70,19 @@ class CarbsEntryViewModel extends Notifier<CarbsEntryState> {
       isCheckingPermission: false,
       writePermissions: status.permissions,
       canWrite: status.granted,
-      entryError: error == null ? null : CarbsEntryError.writeFailed,
-      writeError: error == null ? null : throwableToScreenError(error),
+      // A probe that could not answer is surfaced where a failed write is:
+      // either way the form cannot promise the save will land.
+      save: error == null
+          ? const CommandState.idle()
+          : CommandState.failure(throwableToScreenError(error)),
     );
   }
 
   void updateInput(String text) {
     state = state.copyWith(
       inputText: text,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -80,48 +92,44 @@ class CarbsEntryViewModel extends Notifier<CarbsEntryState> {
     if (!state.canWrite) {
       state = state.copyWith(
         entryError: CarbsEntryError.missingWritePermission,
-        writeError: null,
       );
       return;
     }
     if (carbsGrams == null || !_isValidCarbsGrams(carbsGrams)) {
       state = state.copyWith(
         entryError: CarbsEntryError.invalidValue,
-        writeError: null,
       );
       return;
     }
 
     state = state.copyWith(
-      isSavingEntry: true,
+      save: const CommandState.running(),
       entryError: null,
-      writeError: null,
     );
-    try {
-      (await ref.read(saveCarbsEntryUseCaseProvider)(
-        NutritionWriteRequest.carbs(DateTime.now(), carbsGrams),
-      ))
-          .orThrow();
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        inputText: '',
-        isSavingEntry: false,
-        saveCompleted: true,
-        entryError: null,
-        writeError: null,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isSavingEntry: false,
-        entryError: CarbsEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
+    final result = await ref.read(saveCarbsEntryUseCaseProvider)(
+      NutritionWriteRequest.carbs(DateTime.now(), carbsGrams),
+    );
+    if (!ref.mounted) return;
+    switch (result) {
+      case Ok():
+        state = state.copyWith(
+          inputText: '',
+          save: const CommandState.success(null),
+          entryError: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          save: CommandState.failure(failure.toScreenError()),
+          entryError: null,
+        );
     }
   }
 
+  /// The screen consumed the success (it showed the toast and left), so the
+  /// command returns to rest — otherwise re-entering the route would fire it
+  /// again.
   void onSaveCompletedHandled() {
-    state = state.copyWith(saveCompleted: false);
+    state = state.copyWith(save: const CommandState.idle());
   }
 
   bool _isValidCarbsGrams(double value) =>

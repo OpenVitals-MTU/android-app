@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/presentation/screen_error.dart';
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
@@ -96,8 +96,10 @@ class _HydrationEntryScreenState extends ConsumerState<HydrationEntryScreen>
         (previous, next) => _maybeOpenInitialLogDrink(next));
     // The catalog may already be loaded when this screen rebuilds.
     _maybeOpenInitialLogDrink(ref.read(_provider).customDrinkOptions);
-    ref.listen(_provider.select((s) => s.saveCompleted), (previous, next) {
-      if (!next) return;
+    ref.listen(_provider.select((s) => s.save), (previous, next) {
+      // The success is consumed exactly once, then the command is put back to
+      // rest — otherwise returning to this route would replay the toast.
+      if (next is! CommandSuccess<void>) return;
       final notifier = ref.read(_provider.notifier);
       notifier.onSaveCompletedHandled();
       // Editing an existing record is a one-shot, so it returns. Logging a new
@@ -237,11 +239,11 @@ class _HydrationEntryForm extends ConsumerWidget {
                       label: Text(l10n.hydrationNewDrinkAction),
                     ),
                   ],
-                  if (state.entryError != null)
+                  if (_errorText(state, l10n) case final message?)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: Text(
-                        _errorText(state.entryError!, state.writeError, l10n),
+                        message,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: theme.colorScheme.error),
                       ),
@@ -315,22 +317,29 @@ class _HydrationEntryForm extends ConsumerWidget {
     );
   }
 
-  String _errorText(
-    HydrationEntryError error,
-    ScreenError? writeError,
-    AppLocalizations l10n,
-  ) {
-    switch (error) {
-      case HydrationEntryError.invalidAmount:
-        return l10n.hydrationInvalidAmount;
-      case HydrationEntryError.invalidCustomDrink:
-        return l10n.hydrationCustomDrinkInvalid;
-      case HydrationEntryError.missingWritePermission:
-        return l10n.hydrationTrackerPermissionNeeded;
-      case HydrationEntryError.missingNutritionWritePermission:
-        return l10n.hydrationNutritionPermissionNeeded;
-      case HydrationEntryError.writeFailed:
-        return l10n.hydrationWriteFailed(screenErrorText(writeError, l10n));
+  /// The one message the form shows: why the drink was refused, or — failing
+  /// that — why the last attempt to log it (or to read the entry being edited)
+  /// did not land.
+  String? _errorText(HydrationEntryState state, AppLocalizations l10n) {
+    final blocking = state.blockingError;
+    final entryError = state.entryError;
+    if (entryError != null) {
+      return switch (entryError) {
+        HydrationEntryError.invalidAmount => l10n.hydrationInvalidAmount,
+        HydrationEntryError.invalidCustomDrink =>
+          l10n.hydrationCustomDrinkInvalid,
+        HydrationEntryError.missingWritePermission =>
+          l10n.hydrationTrackerPermissionNeeded,
+        HydrationEntryError.missingNutritionWritePermission =>
+          l10n.hydrationNutritionPermissionNeeded,
+        // This form never raises writeFailed any more — an attempted write that
+        // failed is a CommandFailure on `save`. The member survives because the
+        // enum is the use case's, and the quick-beverage widget still maps it.
+        HydrationEntryError.writeFailed =>
+          l10n.hydrationWriteFailed(screenErrorText(blocking, l10n)),
+      };
     }
+    if (blocking == null) return null;
+    return l10n.hydrationWriteFailed(screenErrorText(blocking, l10n));
   }
 }

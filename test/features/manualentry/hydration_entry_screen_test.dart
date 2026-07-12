@@ -113,6 +113,13 @@ class _FakeHydrationRepository implements HydrationRepository {
   ) async =>
       Ok(hydrationEntries);
 
+  /// The edit prefill reads the entry back by id. A read failure now blocks the
+  /// form on its own surface (`prefillError`), so it can no longer hide behind
+  /// the save's error — which is why this has to answer.
+  @override
+  Future<Result<HydrationEntry?>> loadHydrationEntry(String id) async =>
+      Ok(hydrationEntries.where((it) => it.id == id).firstOrNull);
+
   @override
   Future<Result<String>> writeHydrationEntry(
     HydrationWriteRequest request,

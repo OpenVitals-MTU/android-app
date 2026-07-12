@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/presentation/screen_error.dart';
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/measurement_input.dart';
 import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -44,8 +44,10 @@ class _CarbsEntryScreenState extends ConsumerState<CarbsEntryScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    ref.listen(_provider.select((s) => s.saveCompleted), (previous, next) {
-      if (next) {
+    ref.listen(_provider.select((s) => s.save), (previous, next) {
+      // The success is consumed exactly once, then the command is put back to
+      // rest — otherwise returning to this route would replay the toast.
+      if (next is CommandSuccess<void>) {
         ref.read(_provider.notifier).onSaveCompletedHandled();
         // Kotlin just navigates back; the confirmation snackbar is a Flutter
         // addition and has no ARB key (the catalogs are generated from Kotlin).
@@ -141,11 +143,11 @@ class _CarbsEntryForm extends ConsumerWidget {
                     icon: const Icon(Icons.add, size: 18),
                     label: Text(l10n.carbsEntryAdd),
                   ),
-                  if (state.entryError != null)
+                  if (_errorText(state, l10n) case final message?)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: Text(
-                        _errorText(state.entryError!, state.writeError, l10n),
+                        message,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: theme.colorScheme.error),
                       ),
@@ -159,18 +161,19 @@ class _CarbsEntryForm extends ConsumerWidget {
     );
   }
 
-  String _errorText(
-    CarbsEntryError error,
-    ScreenError? writeError,
-    AppLocalizations l10n,
-  ) {
-    switch (error) {
-      case CarbsEntryError.invalidValue:
-        return l10n.carbsEntryInvalidValue;
-      case CarbsEntryError.missingWritePermission:
-        return l10n.carbsEntryPermissionNeeded;
-      case CarbsEntryError.writeFailed:
-        return l10n.carbsEntryWriteFailed(screenErrorText(writeError, l10n));
+  /// The one message the form shows: why it refuses to save, or — failing that
+  /// — why the last attempt to save did not land.
+  String? _errorText(CarbsEntryState state, AppLocalizations l10n) {
+    final entryError = state.entryError;
+    if (entryError != null) {
+      return switch (entryError) {
+        CarbsEntryError.invalidValue => l10n.carbsEntryInvalidValue,
+        CarbsEntryError.missingWritePermission =>
+          l10n.carbsEntryPermissionNeeded,
+      };
     }
+    final blocking = state.blockingError;
+    if (blocking == null) return null;
+    return l10n.carbsEntryWriteFailed(screenErrorText(blocking, l10n));
   }
 }

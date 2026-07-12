@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/measurement_input.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
@@ -17,11 +18,13 @@ const double _maxPercent = 100.0;
 const double _maxRespiratoryRate = 1000.0;
 const double _maxBodyTemperatureCelsius = 100.0;
 
-/// Port of the Kotlin `VitalsMeasurementEntryError`.
+/// Why the form refuses to save. Validation and gating only — a write that was
+/// attempted and *failed* is not one of these; it lives in
+/// [VitalsMeasurementEntryState.save] as a [CommandFailure], carrying the real
+/// error.
 enum VitalsMeasurementEntryError {
   invalidValue,
   missingWritePermission,
-  writeFailed,
 }
 
 /// Riverpod port of the Kotlin `VitalsMeasurementEntryUiState`.
@@ -36,15 +39,29 @@ abstract class VitalsMeasurementEntryState with _$VitalsMeasurementEntryState {
     @Default(<String>{}) Set<String> writePermissions,
     @Default(false) bool canWrite,
     @Default(true) bool isCheckingPermission,
-    @Default(false) bool isSavingEntry,
+    @Default(CommandState<void>.idle()) CommandState<void> save,
     String? editRecordId,
     DateTime? editTime,
-    @Default(false) bool saveCompleted,
     VitalsMeasurementEntryError? entryError,
-    ScreenError? writeError,
+
+    /// The edit prefill could not be read — a different thing from a save that
+    /// failed, and it blocks the form before the user has done anything.
+    ScreenError? prefillError,
   }) = _VitalsMeasurementEntryState;
 
   bool get isEditMode => editRecordId != null;
+
+  bool get isSavingEntry => save is CommandRunning<void>;
+
+  /// The error the form should be showing, if any: a failed prefill outranks a
+  /// failed write, because it means the form was never trustworthy to begin
+  /// with.
+  ScreenError? get blockingError =>
+      prefillError ??
+      switch (save) {
+        CommandFailure<void>(:final error) => error,
+        _ => null,
+      };
 }
 
 /// Parses a raw vitals field (comma-tolerant). Port of the Kotlin
@@ -103,7 +120,6 @@ class VitalsMeasurementEntryViewModel
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
-      writeError: null,
     );
     // The probe reports a failure rather than throwing it, so the permissions it
     // could not get a verdict for are still known here — see
@@ -116,26 +132,27 @@ class VitalsMeasurementEntryViewModel
       isCheckingPermission: false,
       writePermissions: status.permissions,
       canWrite: status.granted,
-      entryError: error == null ? null : VitalsMeasurementEntryError.writeFailed,
-      writeError: error == null ? null : throwableToScreenError(error),
+      // A probe that could not answer is surfaced where a failed write is:
+      // either way the form cannot promise the save will land.
+      save: error == null
+          ? const CommandState.idle()
+          : CommandState.failure(throwableToScreenError(error)),
     );
   }
 
   void updateInput(String text) {
     state = state.copyWith(
       inputText: text,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryError: null,
-      writeError: null,
     );
   }
 
   void updateSecondaryInput(String text) {
     state = state.copyWith(
       secondaryInputText: text,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -143,9 +160,8 @@ class VitalsMeasurementEntryViewModel
     final now = DateTime.now();
     state = state.copyWith(
       editTime: time.isAfter(now) ? now : time,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -155,22 +171,19 @@ class VitalsMeasurementEntryViewModel
     if (!state.canWrite) {
       state = state.copyWith(
         entryError: VitalsMeasurementEntryError.missingWritePermission,
-        writeError: null,
       );
       return;
     }
     if (!isValidVitalsValue(type, value, secondaryValue)) {
       state = state.copyWith(
         entryError: VitalsMeasurementEntryError.invalidValue,
-        writeError: null,
       );
       return;
     }
 
     state = state.copyWith(
-      isSavingEntry: true,
+      save: const CommandState.running(),
       entryError: null,
-      writeError: null,
     );
     final now = DateTime.now();
     final editTime = state.editTime;
@@ -183,72 +196,69 @@ class VitalsMeasurementEntryViewModel
       value: value!,
       secondaryValue: secondaryValue,
     );
-    try {
-      (await ref.read(saveVitalsMeasurementUseCaseProvider)(
-        request,
-        editRecordId: editRecordId,
-      ))
-          .orThrow();
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        inputText: state.isEditMode ? state.inputText : '',
-        secondaryInputText:
-            state.isEditMode ? state.secondaryInputText : '',
-        isSavingEntry: false,
-        saveCompleted: true,
-        entryError: null,
-        writeError: null,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isSavingEntry: false,
-        entryError: VitalsMeasurementEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
+    final result = await ref.read(saveVitalsMeasurementUseCaseProvider)(
+      request,
+      editRecordId: editRecordId,
+    );
+    if (!ref.mounted) return;
+    switch (result) {
+      case Ok():
+        state = state.copyWith(
+          inputText: state.isEditMode ? state.inputText : '',
+          secondaryInputText:
+              state.isEditMode ? state.secondaryInputText : '',
+          save: const CommandState.success(null),
+          entryError: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          save: CommandState.failure(failure.toScreenError()),
+          entryError: null,
+        );
     }
   }
 
+  /// The screen consumed the success (it showed the toast and left), so the
+  /// command returns to rest — otherwise re-entering the route would fire it
+  /// again.
   void onSaveCompletedHandled() {
-    state = state.copyWith(saveCompleted: false);
+    state = state.copyWith(save: const CommandState.idle());
   }
 
+  /// Prefills the form from the record being edited. A failure here is a *read*
+  /// failure — the form has nothing to correct — so it lands on
+  /// [VitalsMeasurementEntryState.prefillError], not on the save command.
   Future<void> _loadEditEntry() async {
     final recordId = editRecordId;
     if (recordId == null) return;
-    try {
-      final entry = (await ref.read(loadVitalsMeasurementForEditUseCaseProvider)(
-        type,
-        recordId,
-      ))
-          .orThrow();
-      if (!ref.mounted) return;
-      // Null covers both "no such record" and "not ours to edit".
-      if (entry == null) {
+    final result = await ref.read(loadVitalsMeasurementForEditUseCaseProvider)(
+      type,
+      recordId,
+    );
+    if (!ref.mounted) return;
+    switch (result) {
+      case Ok(:final value):
+        // Null covers both "no such record" and "not ours to edit".
+        if (value == null) {
+          state = state.copyWith(
+            prefillError: const ScreenErrorMessage(
+              'Only OpenVitals entries can be edited.',
+            ),
+          );
+          return;
+        }
+        final now = DateTime.now();
         state = state.copyWith(
-          entryError: VitalsMeasurementEntryError.writeFailed,
-          writeError: const ScreenErrorMessage(
-            'Only OpenVitals entries can be edited.',
-          ),
+          inputText: _toDisplayInput(value.value, type),
+          secondaryInputText: value.secondaryValue == null
+              ? ''
+              : _trimInput(value.secondaryValue!),
+          editTime: value.time.isAfter(now) ? now : value.time,
+          entryError: null,
+          prefillError: null,
         );
-        return;
-      }
-      final now = DateTime.now();
-      state = state.copyWith(
-        inputText: _toDisplayInput(entry.value, type),
-        secondaryInputText: entry.secondaryValue == null
-            ? ''
-            : _trimInput(entry.secondaryValue!),
-        editTime: entry.time.isAfter(now) ? now : entry.time,
-        entryError: null,
-        writeError: null,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        entryError: VitalsMeasurementEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
+      case Err(:final failure):
+        state = state.copyWith(prefillError: failure.toScreenError());
     }
   }
 

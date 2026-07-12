@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
@@ -65,7 +66,7 @@ abstract class HydrationEntryState with _$HydrationEntryState {
     @Default(false) bool canWriteNutrition,
     @Default(0.0) double todayHydrationLiters,
     @Default(2.0) double dailyGoalLiters,
-    @Default(false) bool isSavingEntry,
+    @Default(CommandState<void>.idle()) CommandState<void> save,
     @Default(kDefaultHydrationContainers)
     List<HydrationContainerOption> containerOptions,
     required HydrationContainerOption selectedContainer,
@@ -77,13 +78,27 @@ abstract class HydrationEntryState with _$HydrationEntryState {
     List<CustomHydrationDrink> frequentDrinkOptions,
     String? editRecordId,
     DateTime? editTime,
-    @Default(false) bool saveCompleted,
     HydrationEntryNotice? entryNotice,
     HydrationEntryError? entryError,
-    ScreenError? writeError,
+
+    /// The edit prefill could not be read — a different thing from a save that
+    /// failed, and it blocks the form before the user has done anything.
+    ScreenError? prefillError,
   }) = _HydrationEntryState;
 
   bool get isEditMode => editRecordId != null;
+
+  bool get isSavingEntry => save is CommandRunning<void>;
+
+  /// The error the form should be showing, if any: a failed prefill outranks a
+  /// failed write, because it means the form was never trustworthy to begin
+  /// with.
+  ScreenError? get blockingError =>
+      prefillError ??
+      switch (save) {
+        CommandFailure<void>(:final error) => error,
+        _ => null,
+      };
 
   Set<String> get writePermissions =>
       {...hydrationWritePermissions, ...nutritionWritePermissions};
@@ -230,7 +245,6 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     state = state.copyWith(
       isCheckingPermission: true,
       entryError: null,
-      writeError: null,
     );
     // A drink is two records with two permissions, and one failed probe sinks
     // both verdicts — see [CheckHydrationWriteAccessUseCase].
@@ -243,8 +257,11 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       nutritionWritePermissions: access.nutritionPermissions,
       canWriteHydration: access.canWriteHydration,
       canWriteNutrition: access.canWriteNutrition,
-      entryError: error == null ? null : HydrationEntryError.writeFailed,
-      writeError: error == null ? null : throwableToScreenError(error),
+      // A probe that could not answer is surfaced where a failed write is:
+      // either way the form cannot promise the drink will land.
+      save: error == null
+          ? const CommandState.idle()
+          : CommandState.failure(throwableToScreenError(error)),
     );
   }
 
@@ -269,10 +286,9 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
   void selectContainer(HydrationContainerOption container) {
     state = state.copyWith(
       selectedContainer: container,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryNotice: null,
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -290,7 +306,6 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       state = state.copyWith(
         entryError: HydrationEntryError.invalidAmount,
         entryNotice: null,
-        writeError: null,
       );
       return;
     }
@@ -307,10 +322,9 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
           if (option.id == container.id) updated else option,
       ],
       selectedContainer: updated,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryNotice: null,
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -333,7 +347,6 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       state = state.copyWith(
         entryError: HydrationEntryError.invalidCustomDrink,
         entryNotice: null,
-        writeError: null,
       );
       return;
     }
@@ -375,8 +388,7 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       customDrinkOptions: updated,
       entryError: null,
       entryNotice: null,
-      writeError: null,
-      saveCompleted: false,
+      save: const CommandState.idle(),
     );
   }
 
@@ -411,8 +423,7 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       ],
       entryError: null,
       entryNotice: null,
-      writeError: null,
-      saveCompleted: false,
+      save: const CommandState.idle(),
     );
     unawaited(refreshFrequentDrinkOptions());
   }
@@ -444,10 +455,9 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     final now = DateTime.now();
     state = state.copyWith(
       editTime: time.isAfter(now) ? now : time,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryNotice: null,
       entryError: null,
-      writeError: null,
     );
   }
 
@@ -465,10 +475,9 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     }
     state = state.copyWith(
       selectedContainer: container,
-      saveCompleted: false,
+      save: const CommandState.idle(),
       entryNotice: null,
       entryError: null,
-      writeError: null,
     );
     await _saveHydrationEntry(rawLiters: container.volumeLiters);
   }
@@ -479,7 +488,6 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       state = state.copyWith(
         entryError: HydrationEntryError.invalidAmount,
         entryNotice: null,
-        writeError: null,
       );
       return;
     }
@@ -504,7 +512,6 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       state = state.copyWith(
         entryError: HydrationEntryError.invalidCustomDrink,
         entryNotice: null,
-        writeError: null,
       );
       return;
     }
@@ -512,7 +519,6 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       state = state.copyWith(
         entryError: HydrationEntryError.invalidAmount,
         entryNotice: null,
-        writeError: null,
       );
       return;
     }
@@ -534,8 +540,11 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     );
   }
 
+  /// The screen consumed the success (it showed the toast, and left if it was
+  /// editing), so the command returns to rest — otherwise re-entering the route
+  /// would fire it again.
   void onSaveCompletedHandled() {
-    state = state.copyWith(saveCompleted: false);
+    state = state.copyWith(save: const CommandState.idle());
   }
 
   Future<void> _saveHydrationEntry({
@@ -549,12 +558,13 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
   }) async {
     final current = state;
     state = state.copyWith(
-      isSavingEntry: true,
-      saveCompleted: false,
+      save: const CommandState.running(),
       entryNotice: null,
       entryError: null,
-      writeError: null,
     );
+    // [SaveHydrationEntryUseCase] answers a *rejected* write with an outcome and
+    // a write that failed mid-flight with a throw — so unlike the other entry
+    // forms, this one still catches: the failure is not a `Result` to switch on.
     try {
       // Both halves of the drink — the volume and its nutrients — are written by
       // the use case; see [SaveHydrationEntryUseCase] for why they cannot be
@@ -573,25 +583,24 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       );
       if (!ref.mounted) return;
       if (outcome is HydrationDrinkLogInvalid) {
+        // The use case refused to write: a validation verdict, not a failure —
+        // so the command goes back to rest and the form says why.
         state = state.copyWith(
-          isSavingEntry: false,
+          save: const CommandState.idle(),
           entryError: outcome.error,
           entryNotice: null,
-          writeError: null,
         );
         return;
       }
       final success = outcome as HydrationDrinkLogSuccess;
       state = state.copyWith(
-        isSavingEntry: false,
         todayHydrationLiters:
             (current.isEditMode || !_isToday(success.entryTime))
                 ? state.todayHydrationLiters
                 : state.todayHydrationLiters + success.effectiveLiters,
-        saveCompleted: true,
+        save: const CommandState.success(null),
         entryNotice: success.notice,
         entryError: null,
-        writeError: null,
       );
       // "Saving a hydration entry can automatically hide an active hydration
       // reminder" (the Kotlin reminders doc). The state above is already
@@ -601,10 +610,9 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     } catch (error) {
       if (!ref.mounted) return;
       state = state.copyWith(
-        isSavingEntry: false,
-        entryError: HydrationEntryError.writeFailed,
+        save: CommandState.failure(throwableToScreenError(error)),
+        entryError: null,
         entryNotice: null,
-        writeError: throwableToScreenError(error),
       );
     }
   }
@@ -619,58 +627,55 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     }
   }
 
+  /// Prefills the form from the entry being edited. A failure here is a *read*
+  /// failure — the form has nothing to correct — so it lands on
+  /// [HydrationEntryState.prefillError], not on the save command.
   Future<void> _loadEditEntry() async {
     final recordId = editRecordId;
     if (recordId == null) return;
-    try {
-      final entry = (await ref.read(loadHydrationEntryForEditUseCaseProvider)(
-        recordId,
-      ))
-          .orThrow();
-      if (!ref.mounted) return;
-      // Null covers both "no such entry" and "not ours to edit".
-      if (entry == null) {
-        state = state.copyWith(
-          entryError: HydrationEntryError.writeFailed,
-          writeError: const ScreenErrorMessage(
-            'Only OpenVitals entries can be edited.',
-          ),
+    final result =
+        await ref.read(loadHydrationEntryForEditUseCaseProvider)(recordId);
+    if (!ref.mounted) return;
+    switch (result) {
+      case Ok(:final value):
+        // Null covers both "no such entry" and "not ours to edit".
+        if (value == null) {
+          state = state.copyWith(
+            prefillError: const ScreenErrorMessage(
+              'Only OpenVitals entries can be edited.',
+            ),
+          );
+          return;
+        }
+        final existingOptions = state.containerOptions;
+        final match = existingOptions.where(
+          (o) => (o.volumeLiters - value.liters).abs() < 0.0001,
         );
-        return;
-      }
-      final existingOptions = state.containerOptions;
-      final match = existingOptions.where(
-        (o) => (o.volumeLiters - entry.liters).abs() < 0.0001,
-      );
-      final option = match.isNotEmpty
-          ? match.first
-          : HydrationContainerOption(
-              id: 'current_entry',
-              volumeMilliliters: entry.liters * kMillilitersPerLiter,
-            );
-      final options = <HydrationContainerOption>[
-        option,
-        ...existingOptions,
-      ];
-      final seen = <String>{};
-      final deduped = <HydrationContainerOption>[];
-      for (final o in options) {
-        if (seen.add(o.id)) deduped.add(o);
-      }
-      final now = DateTime.now();
-      state = state.copyWith(
-        containerOptions: deduped,
-        selectedContainer: option,
-        editTime: entry.startTime.isAfter(now) ? now : entry.startTime,
-        entryError: null,
-        writeError: null,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        entryError: HydrationEntryError.writeFailed,
-        writeError: throwableToScreenError(error),
-      );
+        final option = match.isNotEmpty
+            ? match.first
+            : HydrationContainerOption(
+                id: 'current_entry',
+                volumeMilliliters: value.liters * kMillilitersPerLiter,
+              );
+        final options = <HydrationContainerOption>[
+          option,
+          ...existingOptions,
+        ];
+        final seen = <String>{};
+        final deduped = <HydrationContainerOption>[];
+        for (final o in options) {
+          if (seen.add(o.id)) deduped.add(o);
+        }
+        final now = DateTime.now();
+        state = state.copyWith(
+          containerOptions: deduped,
+          selectedContainer: option,
+          editTime: value.startTime.isAfter(now) ? now : value.startTime,
+          entryError: null,
+          prefillError: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(prefillError: failure.toScreenError());
     }
   }
 

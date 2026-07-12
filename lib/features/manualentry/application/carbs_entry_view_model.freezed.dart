@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CarbsEntryState {
 
- String get inputText; Set<String> get writePermissions; bool get canWrite; bool get isCheckingPermission; bool get isSavingEntry; bool get saveCompleted; CarbsEntryError? get entryError; ScreenError? get writeError;
+ String get inputText; Set<String> get writePermissions; bool get canWrite; bool get isCheckingPermission; CommandState<void> get save; CarbsEntryError? get entryError;
 /// Create a copy of CarbsEntryState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $CarbsEntryStateCopyWith<CarbsEntryState> get copyWith => _$CarbsEntryStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CarbsEntryState&&(identical(other.inputText, inputText) || other.inputText == inputText)&&const DeepCollectionEquality().equals(other.writePermissions, writePermissions)&&(identical(other.canWrite, canWrite) || other.canWrite == canWrite)&&(identical(other.isCheckingPermission, isCheckingPermission) || other.isCheckingPermission == isCheckingPermission)&&(identical(other.isSavingEntry, isSavingEntry) || other.isSavingEntry == isSavingEntry)&&(identical(other.saveCompleted, saveCompleted) || other.saveCompleted == saveCompleted)&&(identical(other.entryError, entryError) || other.entryError == entryError)&&(identical(other.writeError, writeError) || other.writeError == writeError));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CarbsEntryState&&(identical(other.inputText, inputText) || other.inputText == inputText)&&const DeepCollectionEquality().equals(other.writePermissions, writePermissions)&&(identical(other.canWrite, canWrite) || other.canWrite == canWrite)&&(identical(other.isCheckingPermission, isCheckingPermission) || other.isCheckingPermission == isCheckingPermission)&&(identical(other.save, save) || other.save == save)&&(identical(other.entryError, entryError) || other.entryError == entryError));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,inputText,const DeepCollectionEquality().hash(writePermissions),canWrite,isCheckingPermission,isSavingEntry,saveCompleted,entryError,writeError);
+int get hashCode => Object.hash(runtimeType,inputText,const DeepCollectionEquality().hash(writePermissions),canWrite,isCheckingPermission,save,entryError);
 
 @override
 String toString() {
-  return 'CarbsEntryState(inputText: $inputText, writePermissions: $writePermissions, canWrite: $canWrite, isCheckingPermission: $isCheckingPermission, isSavingEntry: $isSavingEntry, saveCompleted: $saveCompleted, entryError: $entryError, writeError: $writeError)';
+  return 'CarbsEntryState(inputText: $inputText, writePermissions: $writePermissions, canWrite: $canWrite, isCheckingPermission: $isCheckingPermission, save: $save, entryError: $entryError)';
 }
 
 
@@ -45,11 +45,11 @@ abstract mixin class $CarbsEntryStateCopyWith<$Res>  {
   factory $CarbsEntryStateCopyWith(CarbsEntryState value, $Res Function(CarbsEntryState) _then) = _$CarbsEntryStateCopyWithImpl;
 @useResult
 $Res call({
- String inputText, Set<String> writePermissions, bool canWrite, bool isCheckingPermission, bool isSavingEntry, bool saveCompleted, CarbsEntryError? entryError, ScreenError? writeError
+ String inputText, Set<String> writePermissions, bool canWrite, bool isCheckingPermission, CommandState<void> save, CarbsEntryError? entryError
 });
 
 
-
+$CommandStateCopyWith<void, $Res> get save;
 
 }
 /// @nodoc
@@ -62,20 +62,27 @@ class _$CarbsEntryStateCopyWithImpl<$Res>
 
 /// Create a copy of CarbsEntryState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? inputText = null,Object? writePermissions = null,Object? canWrite = null,Object? isCheckingPermission = null,Object? isSavingEntry = null,Object? saveCompleted = null,Object? entryError = freezed,Object? writeError = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? inputText = null,Object? writePermissions = null,Object? canWrite = null,Object? isCheckingPermission = null,Object? save = null,Object? entryError = freezed,}) {
   return _then(_self.copyWith(
 inputText: null == inputText ? _self.inputText : inputText // ignore: cast_nullable_to_non_nullable
 as String,writePermissions: null == writePermissions ? _self.writePermissions : writePermissions // ignore: cast_nullable_to_non_nullable
 as Set<String>,canWrite: null == canWrite ? _self.canWrite : canWrite // ignore: cast_nullable_to_non_nullable
 as bool,isCheckingPermission: null == isCheckingPermission ? _self.isCheckingPermission : isCheckingPermission // ignore: cast_nullable_to_non_nullable
-as bool,isSavingEntry: null == isSavingEntry ? _self.isSavingEntry : isSavingEntry // ignore: cast_nullable_to_non_nullable
-as bool,saveCompleted: null == saveCompleted ? _self.saveCompleted : saveCompleted // ignore: cast_nullable_to_non_nullable
-as bool,entryError: freezed == entryError ? _self.entryError : entryError // ignore: cast_nullable_to_non_nullable
-as CarbsEntryError?,writeError: freezed == writeError ? _self.writeError : writeError // ignore: cast_nullable_to_non_nullable
-as ScreenError?,
+as bool,save: null == save ? _self.save : save // ignore: cast_nullable_to_non_nullable
+as CommandState<void>,entryError: freezed == entryError ? _self.entryError : entryError // ignore: cast_nullable_to_non_nullable
+as CarbsEntryError?,
   ));
 }
-
+/// Create a copy of CarbsEntryState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CommandStateCopyWith<void, $Res> get save {
+  
+  return $CommandStateCopyWith<void, $Res>(_self.save, (value) {
+    return _then(_self.copyWith(save: value));
+  });
+}
 }
 
 
@@ -157,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String inputText,  Set<String> writePermissions,  bool canWrite,  bool isCheckingPermission,  bool isSavingEntry,  bool saveCompleted,  CarbsEntryError? entryError,  ScreenError? writeError)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String inputText,  Set<String> writePermissions,  bool canWrite,  bool isCheckingPermission,  CommandState<void> save,  CarbsEntryError? entryError)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CarbsEntryState() when $default != null:
-return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCheckingPermission,_that.isSavingEntry,_that.saveCompleted,_that.entryError,_that.writeError);case _:
+return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCheckingPermission,_that.save,_that.entryError);case _:
   return orElse();
 
 }
@@ -178,10 +185,10 @@ return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCh
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String inputText,  Set<String> writePermissions,  bool canWrite,  bool isCheckingPermission,  bool isSavingEntry,  bool saveCompleted,  CarbsEntryError? entryError,  ScreenError? writeError)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String inputText,  Set<String> writePermissions,  bool canWrite,  bool isCheckingPermission,  CommandState<void> save,  CarbsEntryError? entryError)  $default,) {final _that = this;
 switch (_that) {
 case _CarbsEntryState():
-return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCheckingPermission,_that.isSavingEntry,_that.saveCompleted,_that.entryError,_that.writeError);case _:
+return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCheckingPermission,_that.save,_that.entryError);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +205,10 @@ return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCh
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String inputText,  Set<String> writePermissions,  bool canWrite,  bool isCheckingPermission,  bool isSavingEntry,  bool saveCompleted,  CarbsEntryError? entryError,  ScreenError? writeError)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String inputText,  Set<String> writePermissions,  bool canWrite,  bool isCheckingPermission,  CommandState<void> save,  CarbsEntryError? entryError)?  $default,) {final _that = this;
 switch (_that) {
 case _CarbsEntryState() when $default != null:
-return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCheckingPermission,_that.isSavingEntry,_that.saveCompleted,_that.entryError,_that.writeError);case _:
+return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCheckingPermission,_that.save,_that.entryError);case _:
   return null;
 
 }
@@ -212,8 +219,8 @@ return $default(_that.inputText,_that.writePermissions,_that.canWrite,_that.isCh
 /// @nodoc
 
 
-class _CarbsEntryState implements CarbsEntryState {
-  const _CarbsEntryState({this.inputText = '', final  Set<String> writePermissions = const <String>{}, this.canWrite = false, this.isCheckingPermission = true, this.isSavingEntry = false, this.saveCompleted = false, this.entryError, this.writeError}): _writePermissions = writePermissions;
+class _CarbsEntryState extends CarbsEntryState {
+  const _CarbsEntryState({this.inputText = '', final  Set<String> writePermissions = const <String>{}, this.canWrite = false, this.isCheckingPermission = true, this.save = const CommandState<void>.idle(), this.entryError}): _writePermissions = writePermissions,super._();
   
 
 @override@JsonKey() final  String inputText;
@@ -226,10 +233,8 @@ class _CarbsEntryState implements CarbsEntryState {
 
 @override@JsonKey() final  bool canWrite;
 @override@JsonKey() final  bool isCheckingPermission;
-@override@JsonKey() final  bool isSavingEntry;
-@override@JsonKey() final  bool saveCompleted;
+@override@JsonKey() final  CommandState<void> save;
 @override final  CarbsEntryError? entryError;
-@override final  ScreenError? writeError;
 
 /// Create a copy of CarbsEntryState
 /// with the given fields replaced by the non-null parameter values.
@@ -241,16 +246,16 @@ _$CarbsEntryStateCopyWith<_CarbsEntryState> get copyWith => __$CarbsEntryStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CarbsEntryState&&(identical(other.inputText, inputText) || other.inputText == inputText)&&const DeepCollectionEquality().equals(other._writePermissions, _writePermissions)&&(identical(other.canWrite, canWrite) || other.canWrite == canWrite)&&(identical(other.isCheckingPermission, isCheckingPermission) || other.isCheckingPermission == isCheckingPermission)&&(identical(other.isSavingEntry, isSavingEntry) || other.isSavingEntry == isSavingEntry)&&(identical(other.saveCompleted, saveCompleted) || other.saveCompleted == saveCompleted)&&(identical(other.entryError, entryError) || other.entryError == entryError)&&(identical(other.writeError, writeError) || other.writeError == writeError));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CarbsEntryState&&(identical(other.inputText, inputText) || other.inputText == inputText)&&const DeepCollectionEquality().equals(other._writePermissions, _writePermissions)&&(identical(other.canWrite, canWrite) || other.canWrite == canWrite)&&(identical(other.isCheckingPermission, isCheckingPermission) || other.isCheckingPermission == isCheckingPermission)&&(identical(other.save, save) || other.save == save)&&(identical(other.entryError, entryError) || other.entryError == entryError));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,inputText,const DeepCollectionEquality().hash(_writePermissions),canWrite,isCheckingPermission,isSavingEntry,saveCompleted,entryError,writeError);
+int get hashCode => Object.hash(runtimeType,inputText,const DeepCollectionEquality().hash(_writePermissions),canWrite,isCheckingPermission,save,entryError);
 
 @override
 String toString() {
-  return 'CarbsEntryState(inputText: $inputText, writePermissions: $writePermissions, canWrite: $canWrite, isCheckingPermission: $isCheckingPermission, isSavingEntry: $isSavingEntry, saveCompleted: $saveCompleted, entryError: $entryError, writeError: $writeError)';
+  return 'CarbsEntryState(inputText: $inputText, writePermissions: $writePermissions, canWrite: $canWrite, isCheckingPermission: $isCheckingPermission, save: $save, entryError: $entryError)';
 }
 
 
@@ -261,11 +266,11 @@ abstract mixin class _$CarbsEntryStateCopyWith<$Res> implements $CarbsEntryState
   factory _$CarbsEntryStateCopyWith(_CarbsEntryState value, $Res Function(_CarbsEntryState) _then) = __$CarbsEntryStateCopyWithImpl;
 @override @useResult
 $Res call({
- String inputText, Set<String> writePermissions, bool canWrite, bool isCheckingPermission, bool isSavingEntry, bool saveCompleted, CarbsEntryError? entryError, ScreenError? writeError
+ String inputText, Set<String> writePermissions, bool canWrite, bool isCheckingPermission, CommandState<void> save, CarbsEntryError? entryError
 });
 
 
-
+@override $CommandStateCopyWith<void, $Res> get save;
 
 }
 /// @nodoc
@@ -278,21 +283,28 @@ class __$CarbsEntryStateCopyWithImpl<$Res>
 
 /// Create a copy of CarbsEntryState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? inputText = null,Object? writePermissions = null,Object? canWrite = null,Object? isCheckingPermission = null,Object? isSavingEntry = null,Object? saveCompleted = null,Object? entryError = freezed,Object? writeError = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? inputText = null,Object? writePermissions = null,Object? canWrite = null,Object? isCheckingPermission = null,Object? save = null,Object? entryError = freezed,}) {
   return _then(_CarbsEntryState(
 inputText: null == inputText ? _self.inputText : inputText // ignore: cast_nullable_to_non_nullable
 as String,writePermissions: null == writePermissions ? _self._writePermissions : writePermissions // ignore: cast_nullable_to_non_nullable
 as Set<String>,canWrite: null == canWrite ? _self.canWrite : canWrite // ignore: cast_nullable_to_non_nullable
 as bool,isCheckingPermission: null == isCheckingPermission ? _self.isCheckingPermission : isCheckingPermission // ignore: cast_nullable_to_non_nullable
-as bool,isSavingEntry: null == isSavingEntry ? _self.isSavingEntry : isSavingEntry // ignore: cast_nullable_to_non_nullable
-as bool,saveCompleted: null == saveCompleted ? _self.saveCompleted : saveCompleted // ignore: cast_nullable_to_non_nullable
-as bool,entryError: freezed == entryError ? _self.entryError : entryError // ignore: cast_nullable_to_non_nullable
-as CarbsEntryError?,writeError: freezed == writeError ? _self.writeError : writeError // ignore: cast_nullable_to_non_nullable
-as ScreenError?,
+as bool,save: null == save ? _self.save : save // ignore: cast_nullable_to_non_nullable
+as CommandState<void>,entryError: freezed == entryError ? _self.entryError : entryError // ignore: cast_nullable_to_non_nullable
+as CarbsEntryError?,
   ));
 }
 
-
+/// Create a copy of CarbsEntryState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CommandStateCopyWith<void, $Res> get save {
+  
+  return $CommandStateCopyWith<void, $Res>(_self.save, (value) {
+    return _then(_self.copyWith(save: value));
+  });
+}
 }
 
 // dart format on

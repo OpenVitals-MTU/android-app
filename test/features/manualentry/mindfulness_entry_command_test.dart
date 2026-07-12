@@ -63,7 +63,7 @@ void main() {
     addTearDown(container.dispose);
     provider = NotifierProvider<MindfulnessEntryViewModel,
         MindfulnessEntryState>(MindfulnessEntryViewModel.new);
-    container.listen(provider, (_, __) {});
+    container.listen(provider, (_, _) {});
     // The permission probe runs in a microtask off build().
     await Future<void>.delayed(Duration.zero);
   }
