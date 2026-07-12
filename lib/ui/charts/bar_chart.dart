@@ -255,7 +255,12 @@ class _BarChartPainter extends CustomPainter {
       if (value <= 0.0) continue;
 
       final fraction = (value / maxValue).clamp(0.0, 1.0);
-      final labelLayout = _measureLabel(valueFormatter(value), barWidth);
+      final labelLayout = layoutBarLabel(
+        text: valueFormatter(value),
+        style: labelStyle,
+        maxWidth: slotWidth - 2.0,
+        textDirection: textDirection,
+      );
       final minLabelHeight =
           labelLayout != null ? labelLayout.height + 4.0 : minVisibleHeight;
       final barHeight = (size.height * fraction)
@@ -289,43 +294,10 @@ class _BarChartPainter extends CustomPainter {
     return 1;
   }
 
-  _BarLabelLayout? _measureLabel(String text, double width) {
-    if (text.trim().isEmpty) return null;
-    const horizontalPadding = 2.0;
-    final maxWidth = width - horizontalPadding * 2.0;
-    final split = _splitLabel(text);
-    final lines = split ?? [text.trim()];
-    final painters = <TextPainter>[];
-    for (final line in lines) {
-      final painter = TextPainter(
-        text: TextSpan(text: line, style: labelStyle),
-        maxLines: 1,
-        textDirection: textDirection,
-      )..layout();
-      if (painter.width > maxWidth) return null;
-      painters.add(painter);
-    }
-    const lineGap = 1.0;
-    final height = painters.fold<double>(0, (sum, p) => sum + p.height) +
-        lineGap * (painters.length - 1).clamp(0, painters.length);
-    final labelWidth =
-        painters.fold<double>(0, (maxW, p) => p.width > maxW ? p.width : maxW);
-    return _BarLabelLayout(painters, labelWidth, height);
-  }
-
-  List<String>? _splitLabel(String text) {
-    final trimmed = text.trim();
-    final splitIndex = trimmed.lastIndexOf(' ');
-    if (splitIndex <= 0 || splitIndex >= trimmed.length - 1) return null;
-    return [
-      trimmed.substring(0, splitIndex),
-      trimmed.substring(splitIndex + 1),
-    ];
-  }
 
   void _drawLabel(
     Canvas canvas,
-    _BarLabelLayout layout,
+    BarLabelLayout layout,
     double left,
     double top,
     double width,
@@ -344,10 +316,79 @@ class _BarChartPainter extends CustomPainter {
   bool shouldRepaint(covariant _BarChartPainter oldDelegate) => true;
 }
 
-class _BarLabelLayout {
-  const _BarLabelLayout(this.lines, this.width, this.height);
+@visibleForTesting
+class BarLabelLayout {
+  const BarLabelLayout(this.lines, this.width, this.height);
 
   final List<TextPainter> lines;
   final double width;
   final double height;
+}
+
+/// The value label drawn on a bar, laid out to fit the space a bar actually has.
+///
+/// It used to be measured against the BAR width and simply dropped when it did
+/// not fit — so a day over 10,000 steps lost its number entirely, because
+/// "21,104" is one character wider than "9,785" and that one character was the
+/// difference between fitting and vanishing. The chart said nothing at all
+/// about its own biggest day.
+///
+/// Two changes stop that. The label may use the whole SLOT (a bar has a gap
+/// either side of it, and a label centred over its own bar cannot reach its
+/// neighbour's), and if it still does not fit it is stepped down a point at a
+/// time rather than abandoned. Only a label that cannot be read at the smallest
+/// size we are willing to draw is dropped.
+@visibleForTesting
+BarLabelLayout? layoutBarLabel({
+  required String text,
+  required TextStyle style,
+  required double maxWidth,
+  required TextDirection textDirection,
+}) {
+  if (text.trim().isEmpty || maxWidth <= 0) return null;
+  final lines = splitBarLabel(text) ?? [text.trim()];
+
+  final baseSize = style.fontSize ?? 11.0;
+  for (var size = baseSize; size >= _minBarLabelFontSize; size -= 1.0) {
+    final scaled = style.copyWith(fontSize: size);
+    final painters = <TextPainter>[];
+    var fits = true;
+    for (final line in lines) {
+      final painter = TextPainter(
+        text: TextSpan(text: line, style: scaled),
+        maxLines: 1,
+        textDirection: textDirection,
+      )..layout();
+      if (painter.width > maxWidth) {
+        fits = false;
+        break;
+      }
+      painters.add(painter);
+    }
+    if (!fits) continue;
+
+    const lineGap = 1.0;
+    final height = painters.fold<double>(0, (sum, p) => sum + p.height) +
+        lineGap * (painters.length - 1).clamp(0, painters.length);
+    final width =
+        painters.fold<double>(0, (maxW, p) => p.width > maxW ? p.width : maxW);
+    return BarLabelLayout(painters, width, height);
+  }
+  return null;
+}
+
+/// Below this the number is not worth drawing.
+const double _minBarLabelFontSize = 8.0;
+
+/// Splits "21,104 steps" into its number and its unit, so the unit can go on a
+/// second line instead of squeezing the number off the bar.
+@visibleForTesting
+List<String>? splitBarLabel(String text) {
+  final trimmed = text.trim();
+  final splitIndex = trimmed.lastIndexOf(' ');
+  if (splitIndex <= 0 || splitIndex >= trimmed.length - 1) return null;
+  return [
+    trimmed.substring(0, splitIndex),
+    trimmed.substring(splitIndex + 1),
+  ];
 }
