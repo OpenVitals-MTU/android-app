@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/local/open_vitals_database.dart';
 import 'package:openvitals/data/repository/contract/hydration_repository.dart';
 import 'package:openvitals/data/repository/impl/hydration_repository_impl.dart';
@@ -38,7 +39,7 @@ void main() {
   });
 
   test('the drink catalog is seeded from the CaffeineHealth presets', () async {
-    final drinks = await repository.customHydrationDrinks();
+    final drinks = (await repository.customHydrationDrinks()).orThrow();
 
     // Two waters plus every catalog item that has a serving size and is not a
     // supplement — the Kotlin `BeverageEntity.preloadedDefaults()` rule.
@@ -54,7 +55,7 @@ void main() {
   });
 
   test('seeded drinks are marked preloaded and carry their category', () async {
-    final drinks = await repository.customHydrationDrinks();
+    final drinks = (await repository.customHydrationDrinks()).orThrow();
     final coffee = drinks.firstWhere((drink) => drink.name == 'Drip coffee');
 
     expect(coffee.isPreloaded, isTrue);
@@ -67,7 +68,7 @@ void main() {
 
   test('supplements and servingless items are excluded from the seed',
       () async {
-    final drinks = await repository.customHydrationDrinks();
+    final drinks = (await repository.customHydrationDrinks()).orThrow();
     final ids = {for (final drink in drinks) drink.id};
 
     for (final item in CaffeineHealthDrinkCatalog.items) {
@@ -88,7 +89,7 @@ void main() {
       ),
     );
 
-    final drinks = await repository.customHydrationDrinks();
+    final drinks = (await repository.customHydrationDrinks()).orThrow();
     final mine = drinks.firstWhere((drink) => drink.id == 'mine');
     expect(mine.name, 'My smoothie');
     expect(mine.isPreloaded, isFalse);
@@ -109,14 +110,14 @@ void main() {
       'mine',
       CaffeineSourceCategory.other,
     );
-    var drinks = await repository.customHydrationDrinks();
+    var drinks = (await repository.customHydrationDrinks()).orThrow();
     expect(
       drinks.firstWhere((drink) => drink.id == 'mine').category,
       CaffeineSourceCategory.other,
     );
 
     await repository.deleteCustomHydrationDrink('mine');
-    drinks = await repository.customHydrationDrinks();
+    drinks = (await repository.customHydrationDrinks()).orThrow();
     expect(drinks.any((drink) => drink.id == 'mine'), isFalse);
   });
 

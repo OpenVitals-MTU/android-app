@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
@@ -24,19 +25,24 @@ class LoadFrequentHydrationDrinksUseCase {
   final HydrationRepository _hydrationRepository;
   final NutritionRepository _nutritionRepository;
 
-  Future<List<CustomHydrationDrink>> call(
+  Future<Result<List<CustomHydrationDrink>>> call(
     List<CustomHydrationDrink> drinks,
   ) async {
     final end = LocalDate.now();
     final start = end.minusDays(kFrequentHydrationDrinkLookbackDays - 1);
-    final hydrationEntries =
-        await _hydrationRepository.loadHydrationEntries(start, end);
-    final nutritionEntries =
-        await _nutritionRepository.loadNutritionEntries(start, end);
-    return frequentHydrationDrinkOptions(
-      drinks: drinks,
-      hydrationEntries: hydrationEntries,
-      nutritionEntries: nutritionEntries,
-    );
+    // Both halves are evidence, so either read failing fails the ranking —
+    // the callers already treat it as best-effort.
+    final loaded = await _hydrationRepository.loadHydrationEntries(start, end);
+    return loaded.flatMap((hydrationEntries) async {
+      final nutrition =
+          await _nutritionRepository.loadNutritionEntries(start, end);
+      return nutrition.map(
+        (nutritionEntries) => frequentHydrationDrinkOptions(
+          drinks: drinks,
+          hydrationEntries: hydrationEntries,
+          nutritionEntries: nutritionEntries,
+        ),
+      );
+    });
   }
 }

@@ -1,5 +1,6 @@
 import '../../../core/reminders/reminder_controller.dart';
 import '../../../core/reminders/reminder_schedule.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../data/repository/contract/hydration_repository.dart';
@@ -76,7 +77,8 @@ class HydrationReminderController {
     final target = preferences.hydrationDailyGoalLiters;
     final today = LocalDate.now();
     try {
-      final daily = await repository.loadDailyHydration(today, today);
+      final daily =
+          (await repository.loadDailyHydration(today, today)).orThrow();
       final current = daily.fold<double>(0.0, (sum, day) => sum + day.liters);
       return ReminderGoalProgress(current: current, target: target);
     } catch (_) {

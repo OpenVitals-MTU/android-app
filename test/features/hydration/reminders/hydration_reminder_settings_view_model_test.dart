@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/reminders/reminder_controller.dart';
 import 'package:openvitals/core/reminders/reminder_notifications.dart';
 import 'package:openvitals/core/time/local_date.dart';
@@ -15,11 +16,11 @@ import 'package:openvitals/features/hydration/reminders/hydration_reminder_setti
 
 class _FakeHydrationRepository implements HydrationRepository {
   @override
-  Future<List<DailyHydration>> loadDailyHydration(
+  Future<Result<List<DailyHydration>>> loadDailyHydration(
     LocalDate start,
     LocalDate end,
   ) async =>
-      const <DailyHydration>[];
+      const Ok(<DailyHydration>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

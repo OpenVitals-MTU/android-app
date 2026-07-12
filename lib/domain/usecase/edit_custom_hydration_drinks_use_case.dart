@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 import '../model/caffeine_models.dart';
 import '../model/nutrition_models.dart';
@@ -54,7 +55,7 @@ class EditCustomHydrationDrinksUseCase {
 
   final HydrationRepository _hydrationRepository;
 
-  Future<void> call(CustomHydrationDrinkEdit edit) => switch (edit) {
+  Future<Result<void>> call(CustomHydrationDrinkEdit edit) => switch (edit) {
         SaveCustomHydrationDrink(:final drink) =>
           _hydrationRepository.saveCustomHydrationDrink(drink),
         DeleteCustomHydrationDrink(:final drinkId) =>

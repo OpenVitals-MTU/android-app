@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 
@@ -13,9 +14,11 @@ class LoadTodayHydrationUseCase {
 
   final HydrationRepository _hydrationRepository;
 
-  Future<double> call() async {
+  Future<Result<double>> call() async {
     final today = LocalDate.now();
-    final days = await _hydrationRepository.loadDailyHydration(today, today);
-    return days.fold<double>(0.0, (sum, day) => sum + day.liters);
+    final loaded = await _hydrationRepository.loadDailyHydration(today, today);
+    return loaded.map(
+      (days) => days.fold<double>(0.0, (sum, day) => sum + day.liters),
+    );
   }
 }

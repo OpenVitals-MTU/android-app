@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/hydration_repository.dart';
 import 'package:openvitals/data/repository/contract/nutrition_repository.dart';
@@ -43,62 +44,73 @@ class _FakeHydrationRepository implements HydrationRepository {
       lastCustomAmount = milliliters;
 
   @override
-  Future<List<CustomHydrationDrink>> customHydrationDrinks() async =>
-      List<CustomHydrationDrink>.of(drinks);
+  Future<Result<List<CustomHydrationDrink>>> customHydrationDrinks() async =>
+      Ok(List<CustomHydrationDrink>.of(drinks));
 
   @override
-  Future<void> saveCustomHydrationDrink(CustomHydrationDrink drink) async {
+  Future<Result<void>> saveCustomHydrationDrink(
+    CustomHydrationDrink drink,
+  ) async {
     final index = drinks.indexWhere((it) => it.id == drink.id);
     if (index >= 0) {
       drinks[index] = drink;
     } else {
       drinks.add(drink);
     }
+    return const Ok(null);
   }
 
   @override
-  Future<void> deleteCustomHydrationDrink(String drinkId) async =>
-      drinks.removeWhere((it) => it.id == drinkId);
+  Future<Result<void>> deleteCustomHydrationDrink(String drinkId) async {
+    drinks.removeWhere((it) => it.id == drinkId);
+    return const Ok(null);
+  }
 
   @override
-  Future<void> reorderCustomHydrationDrinks(List<String> drinkIds) async {
+  Future<Result<void>> reorderCustomHydrationDrinks(
+    List<String> drinkIds,
+  ) async {
     lastReorder = drinkIds;
     drinks.sort((a, b) => drinkIds.indexOf(a.id).compareTo(drinkIds.indexOf(b.id)));
+    return const Ok(null);
   }
 
   @override
-  Future<void> moveCustomHydrationDrinkToCategory(
+  Future<Result<void>> moveCustomHydrationDrinkToCategory(
     String drinkId,
     CaffeineSourceCategory? category,
   ) async {
     final index = drinks.indexWhere((it) => it.id == drinkId);
     if (index >= 0) drinks[index] = drinks[index].copyWith(category: category);
+    return const Ok(null);
   }
 
   @override
-  Future<bool> hasHydrationWritePermission() async => true;
+  Future<Result<bool>> hasHydrationWritePermission() async => const Ok(true);
 
   @override
-  Future<List<DailyHydration>> loadDailyHydration(
+  Future<Result<List<DailyHydration>>> loadDailyHydration(
     LocalDate start,
     LocalDate end,
   ) async =>
-      const <DailyHydration>[];
+      const Ok(<DailyHydration>[]);
 
   /// Entries the frequent-drink ranking reads back.
   List<HydrationEntry> hydrationEntries = const <HydrationEntry>[];
 
   @override
-  Future<List<HydrationEntry>> loadHydrationEntries(
+  Future<Result<List<HydrationEntry>>> loadHydrationEntries(
     LocalDate start,
     LocalDate end,
   ) async =>
-      hydrationEntries;
+      Ok(hydrationEntries);
 
   @override
-  Future<String> writeHydrationEntry(HydrationWriteRequest request) async {
+  Future<Result<String>> writeHydrationEntry(
+    HydrationWriteRequest request,
+  ) async {
     writes.add(request);
-    return 'hydration-id';
+    return const Ok('hydration-id');
   }
 
   @override
@@ -112,21 +124,23 @@ class _FakeNutritionRepository implements NutritionRepository {
   Set<String> get nutritionWritePermissions => {HcPermissions.writeNutrition};
 
   @override
-  Future<bool> hasNutritionWritePermission() async => true;
+  Future<Result<bool>> hasNutritionWritePermission() async => const Ok(true);
 
   List<NutritionEntry> nutritionEntries = const <NutritionEntry>[];
 
   @override
-  Future<List<NutritionEntry>> loadNutritionEntries(
+  Future<Result<List<NutritionEntry>>> loadNutritionEntries(
     LocalDate start,
     LocalDate end,
   ) async =>
-      nutritionEntries;
+      Ok(nutritionEntries);
 
   @override
-  Future<String> writeNutritionEntry(NutritionWriteRequest request) async {
+  Future<Result<String>> writeNutritionEntry(
+    NutritionWriteRequest request,
+  ) async {
     writes.add(request);
-    return 'nutrition-id';
+    return const Ok('nutrition-id');
   }
 
   @override

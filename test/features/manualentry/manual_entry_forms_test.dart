@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/body_repository.dart';
 import 'package:openvitals/data/repository/contract/hydration_repository.dart';
@@ -93,24 +94,26 @@ class _FakeHydrationRepository implements HydrationRepository {
   void setLastCustomHydrationAmountMilliliters(double milliliters) {}
 
   @override
-  Future<List<CustomHydrationDrink>> customHydrationDrinks() async =>
-      const <CustomHydrationDrink>[];
+  Future<Result<List<CustomHydrationDrink>>> customHydrationDrinks() async =>
+      const Ok(<CustomHydrationDrink>[]);
 
   @override
-  Future<bool> hasHydrationWritePermission() async => true;
+  Future<Result<bool>> hasHydrationWritePermission() async => const Ok(true);
 
   @override
-  Future<List<DailyHydration>> loadDailyHydration(
+  Future<Result<List<DailyHydration>>> loadDailyHydration(
     LocalDate start,
     LocalDate end,
   ) async =>
-      const <DailyHydration>[];
+      const Ok(<DailyHydration>[]);
 
   @override
-  Future<String> writeHydrationEntry(HydrationWriteRequest request) async {
+  Future<Result<String>> writeHydrationEntry(
+    HydrationWriteRequest request,
+  ) async {
     written = request;
     writeCount += 1;
-    return 'hydration-id';
+    return const Ok('hydration-id');
   }
 
   @override
@@ -126,23 +129,25 @@ class _FakeNutritionRepository implements NutritionRepository {
   Set<String> get nutritionWritePermissions => {HcPermissions.writeNutrition};
 
   @override
-  Future<bool> hasNutritionWritePermission() async {
+  Future<Result<bool>> hasNutritionWritePermission() async {
     permissionChecks++;
-    return true;
+    return const Ok(true);
   }
 
   @override
-  Future<String> writeCarbsEntry(NutritionWriteRequest request) async {
+  Future<Result<String>> writeCarbsEntry(NutritionWriteRequest request) async {
     written = request;
     writeCount += 1;
-    return 'carbs-id';
+    return const Ok('carbs-id');
   }
 
   @override
-  Future<String> writeNutritionEntry(NutritionWriteRequest request) async {
+  Future<Result<String>> writeNutritionEntry(
+    NutritionWriteRequest request,
+  ) async {
     written = request;
     writeCount += 1;
-    return 'nutrition-id';
+    return const Ok('nutrition-id');
   }
 
   @override

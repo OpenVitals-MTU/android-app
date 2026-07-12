@@ -1,30 +1,38 @@
 import '../../../core/period/period_load_query.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/nutrition_period_data.dart';
 
 /// Port of the Kotlin `NutritionRepository` contract.
+///
+/// Fallible operations return [Result]; the synchronous probe
+/// ([nutritionWritePermissions]) reads cached state and cannot fail, so it
+/// stays bare.
 abstract interface class NutritionRepository {
   Set<String> get nutritionWritePermissions;
 
-  Future<NutritionPeriodData> loadNutritionPeriod(
+  Future<Result<NutritionPeriodData>> loadNutritionPeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   });
 
-  Future<List<DailyMacros>> loadDailyMacros(LocalDate start, LocalDate end);
-
-  Future<List<NutritionEntry>> loadNutritionEntries(
+  Future<Result<List<DailyMacros>>> loadDailyMacros(
     LocalDate start,
     LocalDate end,
   );
 
-  Future<bool> hasNutritionWritePermission();
+  Future<Result<List<NutritionEntry>>> loadNutritionEntries(
+    LocalDate start,
+    LocalDate end,
+  );
 
-  Future<String> writeCarbsEntry(NutritionWriteRequest request);
+  Future<Result<bool>> hasNutritionWritePermission();
 
-  Future<String> writeNutritionEntry(NutritionWriteRequest request);
+  Future<Result<String>> writeCarbsEntry(NutritionWriteRequest request);
 
-  Future<void> deleteNutritionEntry(String id);
+  Future<Result<String>> writeNutritionEntry(NutritionWriteRequest request);
+
+  Future<Result<void>> deleteNutritionEntry(String id);
 }

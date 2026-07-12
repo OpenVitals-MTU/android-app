@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/hydration_repository.dart';
 import 'package:openvitals/data/repository/contract/nutrition_repository.dart';
@@ -54,12 +55,13 @@ class _FakeHydrationRepository implements HydrationRepository {
   final List<CustomHydrationDrink> drinks;
 
   @override
-  Future<List<CustomHydrationDrink>> customHydrationDrinks() async => drinks;
+  Future<Result<List<CustomHydrationDrink>>> customHydrationDrinks() async =>
+      Ok(drinks);
 
   /// The frequency ranking is a nicety: Health Connect being unreadable must
   /// still leave a usable picker (Kotlin's `runCatching { … }.getOrDefault`).
   @override
-  Future<List<HydrationEntry>> loadHydrationEntries(
+  Future<Result<List<HydrationEntry>>> loadHydrationEntries(
     LocalDate start,
     LocalDate end,
   ) async =>
@@ -71,11 +73,11 @@ class _FakeHydrationRepository implements HydrationRepository {
 
 class _FakeNutritionRepository implements NutritionRepository {
   @override
-  Future<List<NutritionEntry>> loadNutritionEntries(
+  Future<Result<List<NutritionEntry>>> loadNutritionEntries(
     LocalDate start,
     LocalDate end,
   ) async =>
-      const <NutritionEntry>[];
+      const Ok(<NutritionEntry>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/time/local_date.dart';
@@ -38,14 +39,14 @@ class _FakeHydrationRepository implements HydrationRepository {
   double hydrationDailyGoalLiters() => 2.0;
 
   @override
-  Future<HydrationPeriodData> loadHydrationPeriod(
+  Future<Result<HydrationPeriodData>> loadHydrationPeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      HydrationPeriodData(
+      Ok(HydrationPeriodData(
         dailyHydration: dailyHydration,
         hydrationEntries: entries,
-      );
+      ));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -58,11 +59,11 @@ class _FakeNutritionRepository implements NutritionRepository {
   final List<NutritionEntry> entries;
 
   @override
-  Future<List<NutritionEntry>> loadNutritionEntries(
+  Future<Result<List<NutritionEntry>>> loadNutritionEntries(
     LocalDate start,
     LocalDate end,
   ) async =>
-      entries;
+      Ok(entries);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

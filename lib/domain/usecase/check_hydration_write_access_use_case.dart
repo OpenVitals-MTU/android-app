@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
 
@@ -46,25 +47,27 @@ class CheckHydrationWriteAccessUseCase {
   Future<HydrationEntryWriteAccess> call() async {
     final hydrationPermissions = _hydrationRepository.hydrationWritePermissions;
     final nutritionPermissions = _nutritionRepository.nutritionWritePermissions;
-    try {
-      final canWriteHydration =
-          await _hydrationRepository.hasHydrationWritePermission();
-      final canWriteNutrition =
-          await _nutritionRepository.hasNutritionWritePermission();
-      return HydrationEntryWriteAccess(
-        hydrationPermissions: hydrationPermissions,
-        nutritionPermissions: nutritionPermissions,
-        canWriteHydration: canWriteHydration,
-        canWriteNutrition: canWriteNutrition,
-      );
-    } catch (error) {
-      return HydrationEntryWriteAccess(
-        hydrationPermissions: hydrationPermissions,
-        nutritionPermissions: nutritionPermissions,
-        canWriteHydration: false,
-        canWriteNutrition: false,
-        error: error,
-      );
-    }
+
+    HydrationEntryWriteAccess failed(Object error) => HydrationEntryWriteAccess(
+          hydrationPermissions: hydrationPermissions,
+          nutritionPermissions: nutritionPermissions,
+          canWriteHydration: false,
+          canWriteNutrition: false,
+          error: error,
+        );
+
+    return switch (await _hydrationRepository.hasHydrationWritePermission()) {
+      Err(:final failure) => failed(failure.cause ?? failure),
+      Ok(value: final canWriteHydration) => switch (
+            await _nutritionRepository.hasNutritionWritePermission()) {
+          Err(:final failure) => failed(failure.cause ?? failure),
+          Ok(value: final canWriteNutrition) => HydrationEntryWriteAccess(
+              hydrationPermissions: hydrationPermissions,
+              nutritionPermissions: nutritionPermissions,
+              canWriteHydration: canWriteHydration,
+              canWriteNutrition: canWriteNutrition,
+            ),
+        },
+    };
   }
 }

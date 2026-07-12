@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../core/period/time_range.dart';
 import '../../../di/providers.dart';
@@ -99,11 +100,12 @@ class CaffeineViewModel extends Notifier<CaffeineState> {
 
     try {
       // One read over the union of the two windows — see [LoadCaffeineUseCase].
-      final result = await loadCaffeine(
+      final result = (await loadCaffeine(
         homePeriod,
         analyticsPeriod,
         refreshMode: refreshMode,
-      );
+      ))
+          .orThrow();
       if (!ref.mounted || generation != _generation) return;
       final home = CaffeineInsightCalculator.build(
         entries: result.entries,

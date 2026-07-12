@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/cycle_repository.dart';
 import '../model/refresh_mode.dart';
 import '../query/cycle_period_data.dart';
@@ -15,7 +16,7 @@ class LoadCyclePeriodUseCase {
 
   final CycleRepository _cycleRepository;
 
-  Future<CyclePeriodData> call(
+  Future<Result<CyclePeriodData>> call(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>

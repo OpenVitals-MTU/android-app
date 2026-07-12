@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
 import '../model/nutrition_models.dart';
 import '../model/refresh_mode.dart';
@@ -32,28 +33,36 @@ class LoadNutritionPeriodUseCase {
 
   final NutritionRepository _nutritionRepository;
 
-  Future<NutritionPeriodLoadResult> call(
+  Future<Result<NutritionPeriodLoadResult>> call(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final data = await _nutritionRepository.loadNutritionPeriod(
+    final loaded = await _nutritionRepository.loadNutritionPeriod(
       query,
       refreshMode: refreshMode,
     );
-    final windows = query.windows;
-    final previousMacros = await _nutritionRepository.loadDailyMacros(
-      windows.previous.start,
-      windows.previous.end,
-    );
-    final baselineMacros = await _nutritionRepository.loadDailyMacros(
-      windows.baseline.start,
-      windows.baseline.end,
-    );
-    return NutritionPeriodLoadResult(
-      dailyMacros: data.dailyMacros,
-      previousDailyMacros: previousMacros,
-      baselineDailyMacros: baselineMacros,
-      entries: data.entries,
-    );
+    return loaded.flatMap((data) async {
+      // The comparison windows are enrichment: a failed secondary read keeps
+      // its window empty rather than sinking the period that did load.
+      final windows = query.windows;
+      final previousMacros = (await _nutritionRepository.loadDailyMacros(
+            windows.previous.start,
+            windows.previous.end,
+          ))
+              .getOrNull() ??
+          const <DailyMacros>[];
+      final baselineMacros = (await _nutritionRepository.loadDailyMacros(
+            windows.baseline.start,
+            windows.baseline.end,
+          ))
+              .getOrNull() ??
+          const <DailyMacros>[];
+      return Ok(NutritionPeriodLoadResult(
+        dailyMacros: data.dailyMacros,
+        previousDailyMacros: previousMacros,
+        baselineDailyMacros: baselineMacros,
+        entries: data.entries,
+      ));
+    });
   }
 }

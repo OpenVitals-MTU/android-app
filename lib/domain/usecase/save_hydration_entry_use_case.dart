@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
 import '../model/nutrition_models.dart';
@@ -173,29 +174,33 @@ class SaveHydrationEntryUseCase {
     if (editRecordId == null) {
       String? hydrationClientRecordId;
       if (writesHydration) {
-        hydrationClientRecordId = await _hydrationRepository.writeHydrationEntry(
+        hydrationClientRecordId =
+            (await _hydrationRepository.writeHydrationEntry(
           HydrationWriteRequest(
             time: entryTime,
             volumeLiters: effectiveLiters,
             drinkId: drinkId,
           ),
-        );
+        ))
+                .orThrow();
       }
       if (writesNutrition) {
-        await _nutritionRepository.writeNutritionEntry(
+        (await _nutritionRepository.writeNutritionEntry(
           NutritionWriteRequest(
             time: entryTime,
             nutrientValues: nutrientValues,
             name: nutritionName,
             associatedHydrationClientRecordId: hydrationClientRecordId,
           ),
-        );
+        ))
+            .orThrow();
       }
     } else {
-      await _hydrationRepository.updateHydrationEntry(
+      (await _hydrationRepository.updateHydrationEntry(
         editRecordId,
         HydrationWriteRequest(time: entryTime, volumeLiters: effectiveLiters),
-      );
+      ))
+          .orThrow();
     }
 
     return HydrationDrinkLogSuccess(

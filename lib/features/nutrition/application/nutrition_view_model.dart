@@ -5,6 +5,7 @@ import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/nutrition_models.dart';
@@ -106,7 +107,9 @@ class NutritionViewModel extends Notifier<NutritionState> {
     try {
       // Three windows, not one: the statistics section needs the previous and
       // baseline macros to compare against — see [LoadNutritionPeriodUseCase].
-      final result = await loadNutritionPeriod(query, refreshMode: refreshMode);
+      final result =
+          (await loadNutritionPeriod(query, refreshMode: refreshMode))
+              .orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(
         isLoading: false,

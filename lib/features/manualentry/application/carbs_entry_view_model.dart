@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/nutrition_models.dart';
 
@@ -97,9 +98,10 @@ class CarbsEntryViewModel extends Notifier<CarbsEntryState> {
       writeError: null,
     );
     try {
-      await ref.read(saveCarbsEntryUseCaseProvider)(
+      (await ref.read(saveCarbsEntryUseCaseProvider)(
         NutritionWriteRequest.carbs(DateTime.now(), carbsGrams),
-      );
+      ))
+          .orThrow();
       if (!ref.mounted) return;
       state = state.copyWith(
         inputText: '',

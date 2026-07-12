@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
 import '../hydration/hydration_entry_merge.dart';
@@ -40,25 +41,31 @@ class LoadHydrationPeriodUseCase {
   final HydrationRepository _hydrationRepository;
   final NutritionRepository _nutritionRepository;
 
-  Future<HydrationPeriodLoadResult> call(
+  Future<Result<HydrationPeriodLoadResult>> call(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final data = await _hydrationRepository.loadHydrationPeriod(
+    final loaded = await _hydrationRepository.loadHydrationPeriod(
       query,
       refreshMode: refreshMode,
     );
-    final window = query.windows.current;
-    final nutritionEntries = await _nutritionRepository.loadNutritionEntries(
-      window.start,
-      window.end,
-    );
-    return HydrationPeriodLoadResult(
-      dailyHydration: data.dailyHydration,
-      entries: mergeHydrationAndNutrition(
-        hydrationEntries: data.hydrationEntries,
-        nutritionEntries: nutritionEntries,
-      ),
-    );
+    return loaded.flatMap((data) async {
+      // The nutrition read only names the drinks: a failed read degrades the
+      // same way a missing permission does — unnamed entries, intact chart.
+      final window = query.windows.current;
+      final nutritionEntries = (await _nutritionRepository.loadNutritionEntries(
+            window.start,
+            window.end,
+          ))
+              .getOrNull() ??
+          const <NutritionEntry>[];
+      return Ok(HydrationPeriodLoadResult(
+        dailyHydration: data.dailyHydration,
+        entries: mergeHydrationAndNutrition(
+          hydrationEntries: data.hydrationEntries,
+          nutritionEntries: nutritionEntries,
+        ),
+      ));
+    });
   }
 }

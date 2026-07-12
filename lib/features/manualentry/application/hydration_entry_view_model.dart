@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/caffeine_models.dart';
@@ -249,7 +250,8 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
 
   Future<void> refreshTodayHydration() async {
     try {
-      final liters = await ref.read(loadTodayHydrationUseCaseProvider)();
+      final liters =
+          (await ref.read(loadTodayHydrationUseCaseProvider)()).orThrow();
       if (!ref.mounted) return;
       state = state.copyWith(todayHydrationLiters: liters);
     } catch (_) {
@@ -335,17 +337,19 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       );
       return;
     }
-    await ref.read(editCustomHydrationDrinksUseCaseProvider)(
+    (await ref.read(editCustomHydrationDrinksUseCaseProvider)(
       SaveCustomHydrationDrink(drink),
-    );
+    ))
+        .orThrow();
     await _refreshDrinkOptions();
   }
 
   /// Port of the Kotlin `deleteCustomDrink`.
   Future<void> deleteCustomDrink(CustomHydrationDrink drink) async {
-    await ref.read(editCustomHydrationDrinksUseCaseProvider)(
+    (await ref.read(editCustomHydrationDrinksUseCaseProvider)(
       DeleteCustomHydrationDrink(drink.id),
-    );
+    ))
+        .orThrow();
     await _refreshDrinkOptions();
   }
 
@@ -362,9 +366,11 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     if (from < 0 || target < 0) return;
     final updated = [...current];
     updated.insert(target.clamp(0, updated.length - 1), updated.removeAt(from));
-    unawaited(ref.read(editCustomHydrationDrinksUseCaseProvider)(
-      ReorderCustomHydrationDrinks([for (final it in updated) it.id]),
-    ));
+    unawaited(ref
+        .read(editCustomHydrationDrinksUseCaseProvider)(
+          ReorderCustomHydrationDrinks([for (final it in updated) it.id]),
+        )
+        .then((result) => result.orThrow()));
     state = state.copyWith(
       customDrinkOptions: updated,
       entryError: null,
@@ -379,9 +385,10 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     String drinkId,
     CaffeineSourceCategory? category,
   ) async {
-    await ref.read(editCustomHydrationDrinksUseCaseProvider)(
+    (await ref.read(editCustomHydrationDrinksUseCaseProvider)(
       RecategorizeCustomHydrationDrink(drinkId, category),
-    );
+    ))
+        .orThrow();
     await _refreshDrinkOptions();
   }
 
@@ -391,7 +398,8 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
   Future<void> _refreshDrinkOptions() async {
     // Already filtered to the drinks that can actually be logged — see
     // [LoadCustomHydrationDrinksUseCase].
-    final drinks = await ref.read(loadCustomHydrationDrinksUseCaseProvider)();
+    final drinks =
+        (await ref.read(loadCustomHydrationDrinksUseCaseProvider)()).orThrow();
     if (!ref.mounted) return;
     final drinkIds = {for (final drink in drinks) drink.id};
     state = state.copyWith(
@@ -421,9 +429,10 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     }
     try {
       final frequent =
-          await ref.read(loadFrequentHydrationDrinksUseCaseProvider)(
+          (await ref.read(loadFrequentHydrationDrinksUseCaseProvider)(
         state.customDrinkOptions,
-      );
+      ))
+              .orThrow();
       if (!ref.mounted) return;
       state = state.copyWith(frequentDrinkOptions: frequent);
     } catch (_) {
@@ -614,9 +623,10 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     final recordId = editRecordId;
     if (recordId == null) return;
     try {
-      final entry = await ref.read(loadHydrationEntryForEditUseCaseProvider)(
+      final entry = (await ref.read(loadHydrationEntryForEditUseCaseProvider)(
         recordId,
-      );
+      ))
+          .orThrow();
       if (!ref.mounted) return;
       // Null covers both "no such entry" and "not ours to edit".
       if (entry == null) {

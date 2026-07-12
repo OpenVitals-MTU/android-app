@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 import '../model/nutrition_models.dart';
 import 'save_hydration_entry_use_case.dart';
@@ -15,8 +16,10 @@ class LoadCustomHydrationDrinksUseCase {
 
   final HydrationRepository _hydrationRepository;
 
-  Future<List<CustomHydrationDrink>> call() async {
+  Future<Result<List<CustomHydrationDrink>>> call() async {
     final drinks = await _hydrationRepository.customHydrationDrinks();
-    return drinks.where(isValidCustomHydrationDrink).toList();
+    return drinks.map(
+      (catalog) => catalog.where(isValidCustomHydrationDrink).toList(),
+    );
   }
 }

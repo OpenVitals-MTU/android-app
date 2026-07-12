@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/hydration_repository.dart';
 import 'package:openvitals/data/repository/contract/nutrition_repository.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
@@ -36,12 +37,14 @@ class _FakeHydrationRepository implements HydrationRepository {
   final List<double> lastCustomAmounts = [];
 
   @override
-  Future<bool> hasHydrationWritePermission() async => canWrite;
+  Future<Result<bool>> hasHydrationWritePermission() async => Ok(canWrite);
 
   @override
-  Future<String> writeHydrationEntry(HydrationWriteRequest request) async {
+  Future<Result<String>> writeHydrationEntry(
+    HydrationWriteRequest request,
+  ) async {
     writes.add(request);
-    return 'openvitals_hydration_1_drink_${request.drinkId}_uuid';
+    return Ok('openvitals_hydration_1_drink_${request.drinkId}_uuid');
   }
 
   @override
@@ -59,12 +62,14 @@ class _FakeNutritionRepository implements NutritionRepository {
   final List<NutritionWriteRequest> writes = [];
 
   @override
-  Future<bool> hasNutritionWritePermission() async => canWrite;
+  Future<Result<bool>> hasNutritionWritePermission() async => Ok(canWrite);
 
   @override
-  Future<String> writeNutritionEntry(NutritionWriteRequest request) async {
+  Future<Result<String>> writeNutritionEntry(
+    NutritionWriteRequest request,
+  ) async {
     writes.add(request);
-    return 'nutrition_1';
+    return const Ok('nutrition_1');
   }
 
   @override
@@ -74,7 +79,9 @@ class _FakeNutritionRepository implements NutritionRepository {
 /// A hydration repository whose write blows up — Health Connect is gone.
 class _ThrowingHydrationRepository extends _FakeHydrationRepository {
   @override
-  Future<String> writeHydrationEntry(HydrationWriteRequest request) async =>
+  Future<Result<String>> writeHydrationEntry(
+    HydrationWriteRequest request,
+  ) async =>
       throw StateError('Health Connect is unavailable');
 }
 

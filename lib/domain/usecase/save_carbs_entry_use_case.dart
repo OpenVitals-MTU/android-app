@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
 import '../model/nutrition_models.dart';
 
@@ -12,7 +13,8 @@ class SaveCarbsEntryUseCase {
 
   final NutritionRepository _nutritionRepository;
 
-  Future<void> call(NutritionWriteRequest request) async {
-    await _nutritionRepository.writeCarbsEntry(request);
+  Future<Result<void>> call(NutritionWriteRequest request) async {
+    final written = await _nutritionRepository.writeCarbsEntry(request);
+    return written.map((_) {});
   }
 }

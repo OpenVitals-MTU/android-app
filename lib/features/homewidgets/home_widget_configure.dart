@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app.dart';
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../di/providers.dart';
 import '../../domain/model/dashboard_query.dart';
@@ -305,6 +306,7 @@ class _HomeQuickBeverageWidgetConfigureScreenState
   Future<List<CustomHydrationDrink>> _loadDrinks() async {
     final hydration = ref.read(hydrationRepositoryProvider);
     final drinks = (await hydration.customHydrationDrinks())
+        .orThrow()
         .where(isValidCustomHydrationDrink)
         .toList();
     if (drinks.isEmpty) return const <CustomHydrationDrink>[];
@@ -315,10 +317,12 @@ class _HomeQuickBeverageWidgetConfigureScreenState
       final start = end.minusDays(kFrequentHydrationDrinkLookbackDays - 1);
       frequent = frequentHydrationDrinkOptions(
         drinks: drinks,
-        hydrationEntries: await hydration.loadHydrationEntries(start, end),
-        nutritionEntries: await ref
-            .read(nutritionRepositoryProvider)
-            .loadNutritionEntries(start, end),
+        hydrationEntries:
+            (await hydration.loadHydrationEntries(start, end)).orThrow(),
+        nutritionEntries: (await ref
+                .read(nutritionRepositoryProvider)
+                .loadNutritionEntries(start, end))
+            .orThrow(),
       );
     } catch (error) {
       debugPrint('Quick beverage frequent drinks unavailable: $error');

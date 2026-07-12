@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/reminders/reminder_controller.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
@@ -17,12 +18,12 @@ class _FakeHydrationRepository implements HydrationRepository {
   final bool throwsOnLoad;
 
   @override
-  Future<List<DailyHydration>> loadDailyHydration(
+  Future<Result<List<DailyHydration>>> loadDailyHydration(
     LocalDate start,
     LocalDate end,
   ) async {
     if (throwsOnLoad) throw StateError('health connect unavailable');
-    return [DailyHydration(date: LocalDate.now(), liters: litersToday)];
+    return Ok([DailyHydration(date: LocalDate.now(), liters: litersToday)]);
   }
 
   @override

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/period/time_range.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/caffeine_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/caffeine_models.dart';
@@ -23,18 +24,18 @@ class _FakeCaffeineRepository implements CaffeineRepository {
   final List<CaffeineEntry> entries;
 
   @override
-  Future<CaffeinePeriodData> loadCaffeineData(
+  Future<Result<CaffeinePeriodData>> loadCaffeineData(
     DatePeriod period, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      CaffeinePeriodData(entries: entries);
+      Ok(CaffeinePeriodData(entries: entries));
 
   @override
-  Future<CaffeinePeriodData> loadCaffeinePeriod(
+  Future<Result<CaffeinePeriodData>> loadCaffeinePeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      CaffeinePeriodData(entries: entries);
+      Ok(CaffeinePeriodData(entries: entries));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

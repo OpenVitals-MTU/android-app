@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
 import '../model/write_permission_status.dart';
 
@@ -16,13 +17,13 @@ class CheckNutritionWritePermissionUseCase {
 
   Future<WritePermissionStatus> call() async {
     final permissions = _nutritionRepository.nutritionWritePermissions;
-    try {
-      return WritePermissionStatus(
-        permissions: permissions,
-        granted: await _nutritionRepository.hasNutritionWritePermission(),
-      );
-    } catch (error) {
-      return WritePermissionStatus.failed(permissions, error);
-    }
+    return switch (await _nutritionRepository.hasNutritionWritePermission()) {
+      Ok(:final value) => WritePermissionStatus(
+          permissions: permissions,
+          granted: value,
+        ),
+      Err(:final failure) =>
+        WritePermissionStatus.failed(permissions, failure.cause ?? failure),
+    };
   }
 }

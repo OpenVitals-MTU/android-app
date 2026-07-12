@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/time/local_date.dart';
@@ -26,17 +27,19 @@ class _FakeCycleRepository implements CycleRepository {
   Set<String> get phase4Permissions => const <String>{};
 
   @override
-  Future<Set<String>> missingPermissions() async => const <String>{};
+  Future<Result<Set<String>>> missingPermissions() async =>
+      const Ok(<String>{});
 
   @override
-  Future<CyclePeriodData> loadCyclePeriod(
+  Future<Result<CyclePeriodData>> loadCyclePeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      CyclePeriodData(data: data, missingPermissions: const <String>{});
+      Ok(CyclePeriodData(data: data, missingPermissions: const <String>{}));
 
   @override
-  Future<CycleData> loadCycleData(LocalDate start, LocalDate end) async => data;
+  Future<Result<CycleData>> loadCycleData(LocalDate start, LocalDate end) async =>
+      Ok(data);
 }
 
 Future<Widget> _bootstrap({

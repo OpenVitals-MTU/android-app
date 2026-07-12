@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/time/local_date.dart';
@@ -35,17 +36,20 @@ class _FakeNutritionRepository implements NutritionRepository {
   final List<NutritionEntry> entries;
 
   @override
-  Future<NutritionPeriodData> loadNutritionPeriod(
+  Future<Result<NutritionPeriodData>> loadNutritionPeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      NutritionPeriodData(dailyMacros: dailyMacros, entries: entries);
+      Ok(NutritionPeriodData(dailyMacros: dailyMacros, entries: entries));
 
   // The notifier folds in the previous + baseline windows for the statistics
   // section; those windows are empty in these tests.
   @override
-  Future<List<DailyMacros>> loadDailyMacros(LocalDate start, LocalDate end) async =>
-      const <DailyMacros>[];
+  Future<Result<List<DailyMacros>>> loadDailyMacros(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const Ok(<DailyMacros>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

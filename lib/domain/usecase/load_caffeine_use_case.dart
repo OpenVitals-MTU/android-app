@@ -1,4 +1,5 @@
 import '../../core/period/time_range.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/caffeine_repository.dart';
 import '../model/caffeine_models.dart';
 import '../model/refresh_mode.dart';
@@ -16,7 +17,7 @@ class LoadCaffeineUseCase {
 
   final CaffeineRepository _caffeineRepository;
 
-  Future<CaffeinePeriodData> call(
+  Future<Result<CaffeinePeriodData>> call(
     DatePeriod homePeriod,
     DatePeriod analyticsPeriod, {
     RefreshMode refreshMode = RefreshMode.normal,

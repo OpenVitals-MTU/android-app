@@ -1,4 +1,5 @@
 import '../../../core/period/period_load_query.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/cycle_models.dart';
 import '../../../domain/model/refresh_mode.dart';
@@ -8,8 +9,13 @@ import '../../source/health/health_permissions.dart';
 import '../contract/cycle_repository.dart';
 import 'repository_time.dart';
 import 'health_connect_gating.dart';
+import 'run_catching.dart';
 
 /// Port of the Kotlin `CycleRepositoryImpl`.
+///
+/// Public methods convert exceptions to failures via [runCatching] at the
+/// boundary; the private `_raw` bodies keep the original throwing flow so
+/// internal composition stays plain awaits.
 class CycleRepositoryImpl implements CycleRepository {
   CycleRepositoryImpl(this._dataSource);
 
@@ -20,24 +26,31 @@ class CycleRepositoryImpl implements CycleRepository {
       _dataSource.permissionService.phase4Permissions;
 
   @override
-  Future<Set<String>> missingPermissions() async {
+  Future<Result<Set<String>>> missingPermissions() =>
+      runCatching(_missingPermissionsRaw);
+
+  Future<Set<String>> _missingPermissionsRaw() async {
     final granted = await _dataSource.grantedIfAvailable();
     return phase4Permissions.difference(granted);
   }
 
   @override
-  Future<CyclePeriodData> loadCyclePeriod(
+  Future<Result<CyclePeriodData>> loadCyclePeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
-    final current = query.windows.current;
-    final data = await loadCycleData(current.start, current.end);
-    final missing = await missingPermissions();
-    return CyclePeriodData(data: data, missingPermissions: missing);
-  }
+  }) =>
+      runCatching(() async {
+        final current = query.windows.current;
+        final data = await _loadCycleDataRaw(current.start, current.end);
+        final missing = await _missingPermissionsRaw();
+        return CyclePeriodData(data: data, missingPermissions: missing);
+      });
 
   @override
-  Future<CycleData> loadCycleData(LocalDate start, LocalDate end) async {
+  Future<Result<CycleData>> loadCycleData(LocalDate start, LocalDate end) =>
+      runCatching(() => _loadCycleDataRaw(start, end));
+
+  Future<CycleData> _loadCycleDataRaw(LocalDate start, LocalDate end) async {
     final granted = await _dataSource.grantedIfAvailable();
     final s = localDayStart(start);
     final e = localDayEnd(end);

@@ -6,6 +6,7 @@ import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/presentation/unit_formatter.dart';
+import '../../core/result/result.dart';
 import '../../data/prefs/preferences_repository.dart';
 import '../../data/repository/contract/hydration_repository.dart';
 import '../../data/repository/contract/nutrition_repository.dart';
@@ -208,8 +209,10 @@ class QuickBeverageWidgetLogger {
         hydrationRepository: hydrationRepository,
         nutritionRepository: nutritionRepository,
         drink: drink,
-        canWriteHydration: await hydrationRepository.hasHydrationWritePermission(),
-        canWriteNutrition: await nutritionRepository.hasNutritionWritePermission(),
+        canWriteHydration:
+            (await hydrationRepository.hasHydrationWritePermission()).orThrow(),
+        canWriteNutrition:
+            (await nutritionRepository.hasNutritionWritePermission()).orThrow(),
       );
       switch (outcome) {
         case HydrationDrinkLogInvalid(:final error):
