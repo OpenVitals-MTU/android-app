@@ -358,6 +358,21 @@ class HealthDataSource {
   ) async =>
       const <HeartRateSample>[];
 
+  /// Heart rate averaged into [bucket]-sized slices of `[start, end)`.
+  ///
+  /// The important difference from [readRawHeartRateSamples]: Health Connect
+  /// filters series records by the RECORD's own boundary, so a raw read cannot
+  /// see inside a `HeartRateRecord` that began outside the window — a device that
+  /// groups an hour of beats into one record can hide every sample of a workout
+  /// that started mid-record. Aggregation slices by TIME instead, so it cannot
+  /// miss them.
+  Future<List<HeartRateSample>> readAggregatedHeartRateSamples(
+    DateTime start,
+    DateTime end,
+    Duration bucket,
+  ) async =>
+      const <HeartRateSample>[];
+
   Future<List<HeartRateSummary>> readDailyHeartRateSummaries(
     LocalDate start,
     LocalDate end,

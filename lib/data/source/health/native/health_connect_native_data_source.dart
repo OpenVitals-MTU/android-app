@@ -1299,6 +1299,25 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   }
 
   @override
+  Future<List<HeartRateSample>> readAggregatedHeartRateSamples(
+    DateTime start,
+    DateTime end,
+    Duration bucket,
+  ) =>
+      _readList(
+        'readAggregatedHeartRateSamples',
+        () => _api.readHeartRateAggregatedBuckets(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+          bucket.inMilliseconds,
+        ),
+        (b) => heartRateSampleFromAggregateBucket(
+          startTime: _fromMs(b.startEpochMs),
+          avgBpm: b.avgBpm,
+        ),
+      );
+
+  @override
   Future<List<HeartRateSample>> readRawHeartRateSamples(
     DateTime start,
     DateTime end,

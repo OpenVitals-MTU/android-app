@@ -172,7 +172,37 @@ class HeartRepositoryImpl implements HeartRepository {
         .where((s) => !s.time.isBefore(start) && s.time.isBefore(end))
         .toList()
       ..sort((a, b) => a.time.compareTo(b.time));
-    return windowed.reducedForChart();
+    if (windowed.isNotEmpty) return windowed.reducedForChart();
+
+    // Nothing survived. The raw read is bounded by RECORD boundaries, and the
+    // one-hour look-back above is only a heuristic against that: a device that
+    // groups its beats into long HeartRateRecords can hide every sample of a
+    // workout inside a record that began before the look-back reaches. Health
+    // Connect then hands back a record whose samples all sit outside the window,
+    // the filter correctly drops them, and an activity that DID have a heart rate
+    // reports "Not available" -- with the read having succeeded, so nothing looks
+    // wrong anywhere.
+    //
+    // Aggregation slices by TIME rather than by record, so it cannot be fooled the
+    // same way. Falling back to it costs one extra query on the activities that
+    // currently show nothing, and changes nothing for the ones that already work.
+    return _dataSource.readAggregatedHeartRateSamples(
+      start,
+      end,
+      _workoutHeartRateBucket(end.difference(start)),
+    );
+  }
+
+  /// A bucket fine enough to be a workout trace rather than a flat line, without
+  /// asking Health Connect for thousands of slices on a long ride.
+  ///
+  /// The 15-minute chart bucket is far too coarse here — a 36-minute session would
+  /// come back as two points.
+  static Duration _workoutHeartRateBucket(Duration window) {
+    const minBucket = Duration(seconds: 30);
+    const maxBuckets = 240;
+    final even = window ~/ maxBuckets;
+    return even > minBucket ? even : minBucket;
   }
 
   @override

@@ -19,6 +19,11 @@ class _CaptureDataSource extends HealthDataSource {
   DateTime? capturedRawEnd;
   bool aggregatedReadCalled = false;
 
+  /// What the TIME-SLICED fallback returns, when the record-bounded raw read
+  /// finds nothing.
+  List<HeartRateSample> aggregated = const <HeartRateSample>[];
+  Duration? capturedBucket;
+
   @override
   HealthConnectAvailability get cachedAvailability =>
       HealthConnectAvailability.available;
@@ -43,6 +48,16 @@ class _CaptureDataSource extends HealthDataSource {
   ) async {
     aggregatedReadCalled = true;
     return const [];
+  }
+
+  @override
+  Future<List<HeartRateSample>> readAggregatedHeartRateSamples(
+    DateTime start,
+    DateTime end,
+    Duration bucket,
+  ) async {
+    capturedBucket = bucket;
+    return aggregated;
   }
 }
 
@@ -93,6 +108,59 @@ void main() {
         isFalse,
         reason: 'the aggregating read re-applies the record-boundary filter',
       );
+    });
+
+
+    test(
+      'falls back to the time-sliced read when the raw read is record-blind',
+      () async {
+        // The bug, caught on a real 36-minute strength session. The raw read
+        // SUCCEEDED and Health Connect returned records -- but every sample in
+        // them sat outside the session, because Health Connect filters series
+        // records by the RECORD's boundary and the enclosing record began before
+        // the one-hour look-back could reach it. The filter correctly dropped them
+        // all, and an activity that DID have a heart rate reported "Not
+        // available", with nothing anywhere looking broken.
+        //
+        // Aggregation slices by TIME, not by record, so it cannot be fooled the
+        // same way.
+        final source = _CaptureDataSource(
+          // The raw read returns samples, but all of them precede the workout.
+          [
+            _sample(start.subtract(const Duration(minutes: 50)), 61),
+            _sample(start.subtract(const Duration(minutes: 20)), 63),
+          ],
+        )..aggregated = [
+            _sample(start.add(const Duration(minutes: 10)), 120),
+            _sample(start.add(const Duration(minutes: 30)), 131),
+          ];
+
+        final samples =
+            await HeartRepositoryImpl(source).loadHeartRateSamplesInstant(
+          start,
+          end,
+        );
+
+        expect(samples, hasLength(2));
+        expect(samples.map((s) => s.beatsPerMinute), [120, 131]);
+        // Fine enough to be a trace: the 15-minute chart bucket would render a
+        // one-hour workout as four points.
+        expect(source.capturedBucket, lessThanOrEqualTo(const Duration(minutes: 1)));
+      },
+    );
+
+    test('the fallback is NOT used when the raw read already found samples',
+        () async {
+      final source = _CaptureDataSource([
+        _sample(start.add(const Duration(minutes: 5)), 140),
+      ])..aggregated = [_sample(start, 99)];
+
+      final samples =
+          await HeartRepositoryImpl(source).loadHeartRateSamplesInstant(start, end);
+
+      expect(samples.map((s) => s.beatsPerMinute), [140]);
+      expect(source.capturedBucket, isNull,
+          reason: 'the extra query must only happen when raw finds nothing');
     });
 
     test('returns empty for an inverted or empty window', () async {
