@@ -13,7 +13,7 @@ import 'package:openvitals/features/imports/applehealth/apple_health_import_back
 import 'package:openvitals/features/imports/applehealth/apple_health_import_error_formatter.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_foreground_controller.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_models.dart';
-import 'package:openvitals/features/imports/applehealth/apple_health_import_records.dart';
+import 'package:openvitals/domain/model/apple_health_import_records.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_checkpoint_store.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_notifier.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_service.dart';

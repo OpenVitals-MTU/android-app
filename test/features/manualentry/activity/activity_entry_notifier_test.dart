@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
-import 'package:openvitals/data/repository/impl/repository_exceptions.dart';
+import 'package:openvitals/data/repository/contract/repository_exceptions.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';

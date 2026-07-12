@@ -20,7 +20,7 @@ import '../../domain/model/sleep_models.dart';
 import '../../domain/model/sleep_session_merging.dart';
 import '../../domain/model/vitals_models.dart';
 import '../../domain/preferences/sleep_range_mode.dart';
-import '../../features/imports/applehealth/apple_health_import_records.dart';
+import '../../domain/model/apple_health_import_records.dart';
 import '../health_data_source.dart';
 import '../health_permissions.dart';
 import 'health_record_json.dart';

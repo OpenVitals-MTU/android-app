@@ -4,7 +4,7 @@ library;
 
 import 'dart:math' as math;
 
-import 'apple_health_import_records.dart';
+import '../../../domain/model/apple_health_import_records.dart';
 
 /// An instant plus its wall-clock offset, mirroring the Kotlin `AppleDateTime`.
 class AppleDateTime {

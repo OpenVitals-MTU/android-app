@@ -10,7 +10,7 @@ import '../../../domain/query/activity_period_data.dart';
 import '../../../health/health_data_source.dart';
 import '../../../health/health_permissions.dart';
 import '../contract/activity_repository.dart';
-import 'repository_exceptions.dart';
+import '../contract/repository_exceptions.dart';
 import 'repository_time.dart';
 import 'health_connect_gating.dart';
 

@@ -8,7 +8,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import 'apple_health_import_models.dart';
-import 'apple_health_import_records.dart';
+import '../../../domain/model/apple_health_import_records.dart';
 import 'apple_health_import_types.dart';
 
 class AppleInterval {

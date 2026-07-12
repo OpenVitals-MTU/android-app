@@ -2,7 +2,7 @@
 /// `AppleHealthImportCategoryMappings.kt`.
 library;
 
-import 'apple_health_import_records.dart';
+import '../../../domain/model/apple_health_import_records.dart';
 import 'apple_health_import_types.dart';
 
 SleepStageType? mapSleepStageType(String? value) {

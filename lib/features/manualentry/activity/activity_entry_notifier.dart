@@ -5,7 +5,7 @@ import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../data/repository/contract/activity_repository.dart';
 import '../../../data/repository/contract/heart_repository.dart';
-import '../../../data/repository/impl/repository_exceptions.dart';
+import '../../../data/repository/contract/repository_exceptions.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/preferences/activity_recording_dashboard_layout.dart';

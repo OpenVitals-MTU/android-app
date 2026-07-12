@@ -1,4 +1,4 @@
-import '../../../features/imports/applehealth/apple_health_import_records.dart';
+import '../../../domain/model/apple_health_import_records.dart';
 
 /// Port of the Kotlin `AppleHealthImportRepository` contract.
 ///

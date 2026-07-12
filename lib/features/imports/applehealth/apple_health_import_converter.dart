@@ -12,7 +12,7 @@ import '../../../core/geo/geo_distance.dart';
 import 'apple_health_import_category_mappings.dart';
 import 'apple_health_import_conversion_support.dart';
 import 'apple_health_import_models.dart';
-import 'apple_health_import_records.dart';
+import '../../../domain/model/apple_health_import_records.dart';
 import 'apple_health_import_types.dart';
 import 'apple_health_import_unit_converters.dart';
 

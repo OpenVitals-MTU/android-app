@@ -7,7 +7,7 @@ import '../../../domain/query/body_period_data.dart';
 import '../../../health/health_data_source.dart';
 import '../../../health/health_permissions.dart';
 import '../contract/body_repository.dart';
-import 'repository_exceptions.dart';
+import '../contract/repository_exceptions.dart';
 import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `BodyRepositoryImpl`.

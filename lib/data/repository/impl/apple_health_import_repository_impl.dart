@@ -1,4 +1,4 @@
-import '../../../features/imports/applehealth/apple_health_import_records.dart';
+import '../../../domain/model/apple_health_import_records.dart';
 import '../../../health/health_data_source.dart';
 import '../contract/apple_health_import_repository.dart';
 

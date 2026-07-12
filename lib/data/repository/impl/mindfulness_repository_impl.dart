@@ -5,7 +5,7 @@ import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/mindfulness_period_data.dart';
 import '../../../health/health_data_source.dart';
 import '../contract/mindfulness_repository.dart';
-import 'repository_exceptions.dart';
+import '../contract/repository_exceptions.dart';
 import 'repository_time.dart';
 import 'health_connect_gating.dart';
 

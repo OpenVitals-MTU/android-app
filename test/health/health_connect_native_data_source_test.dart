@@ -9,7 +9,7 @@ import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/health_connect_feature_status.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/domain/model/vitals_models.dart';
-import 'package:openvitals/features/imports/applehealth/apple_health_import_records.dart';
+import 'package:openvitals/domain/model/apple_health_import_records.dart';
 import 'package:openvitals/health/native/health_connect_native_data_source.dart';
 
 const _appPackage = 'tech.mmarca.openvitals';

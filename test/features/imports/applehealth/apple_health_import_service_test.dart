@@ -7,7 +7,7 @@ import 'package:openvitals/data/repository/contract/apple_health_import_reposito
 import 'package:openvitals/features/imports/applehealth/apple_health_import_checkpoint_store.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_models.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_parser.dart';
-import 'package:openvitals/features/imports/applehealth/apple_health_import_records.dart';
+import 'package:openvitals/domain/model/apple_health_import_records.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_service.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_xml_support.dart';
 
