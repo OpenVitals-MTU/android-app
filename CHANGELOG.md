@@ -1,5 +1,62 @@
 # Changelog
 
+## 2.0.4 - 2026-07-12
+
+### English
+
+- Fix the sleep card calling your watch's recordings "hand-typed", while never counting the nights you really did type in. It was checking Health Connect's recording-method label against the wrong value.
+- Fix the hydration goal bar filling up from a single logged day. It measured the average of the days you logged against your goal, so logging once and hitting it showed a full bar. It now counts the days you met your goal against the days that have actually happened.
+- Fix a day's heart rate printing an average outside its own low and high. The average came from Health Connect's summary of the day while the range came from the individual readings; all three now come from the readings.
+- Fix the skin-temperature card going blank while its own chart carried on drawing. A reading without a temperature difference emptied the card while the chart below it plotted the readings that had one.
+- Fix respiratory rate showing two different averages on one screen - the average of your days under the chart, the average of every reading on the card below it.
+- Fix an Apple Health import failing on permissions with no way forward: the "grant permission" button could never appear, because a permission failure was never reported as one.
+- Fix the dashboard, onboarding and the activity form spinning forever after a failed permission check. The error was thrown where nothing was listening, so the spinner never stopped.
+- Rebuild the app on Flutter's app-architecture guidelines. Every screen now works out what to show once, when its data loads, instead of recalculating charts and totals on every redraw while you scroll.
+
+### Espanol
+
+- Corrige que la tarjeta de sueno llamara "escritas a mano" a las noches grabadas por tu reloj, sin contar nunca las que si escribiste tu. Comparaba la etiqueta de Health Connect con el valor equivocado.
+- Corrige que la barra del objetivo de hidratacion se llenara con un solo dia registrado. Medía el promedio de los dias registrados frente a tu objetivo, asi que registrar una vez y cumplirlo llenaba la barra. Ahora cuenta los dias en que cumpliste el objetivo frente a los dias que han pasado de verdad.
+- Corrige que un dia de frecuencia cardiaca mostrara un promedio fuera de su propio minimo y maximo. El promedio venia del resumen de Health Connect y el rango de las lecturas; los tres salen ahora de las lecturas.
+- Corrige que la tarjeta de temperatura de la piel quedara vacia mientras su propio grafico seguia dibujando.
+- Corrige que la frecuencia respiratoria mostrara dos promedios distintos en la misma pantalla.
+- Corrige una importacion de Apple Health que fallaba por permisos sin ofrecer solucion: el boton de conceder permiso no podia aparecer nunca.
+- Corrige que el panel, la introduccion y el formulario de actividad se quedaran girando para siempre tras una comprobacion de permisos fallida.
+- Reconstruye la app segun las guias de arquitectura de Flutter. Cada pantalla calcula lo que muestra una sola vez, al cargar, en lugar de recalcular graficos y totales en cada redibujado.
+
+### Deutsch
+
+- Behebt, dass die Schlafkarte die Aufzeichnungen deiner Uhr als "handgetippt" bezeichnete und die Naechte, die du wirklich getippt hast, nie zaehlte. Sie verglich die Aufzeichnungsart von Health Connect mit dem falschen Wert.
+- Behebt, dass sich der Balken fuer das Trinkziel schon mit einem einzigen erfassten Tag fuellte. Er mass den Durchschnitt der erfassten Tage gegen dein Ziel; jetzt zaehlt er die Tage, an denen du dein Ziel erreicht hast, gegen die Tage, die tatsaechlich vergangen sind.
+- Behebt, dass ein Tag einen Herzfrequenz-Durchschnitt ausserhalb seines eigenen Minimums und Maximums anzeigen konnte.
+- Behebt, dass die Karte fuer die Hauttemperatur leer blieb, waehrend ihr eigenes Diagramm weiter zeichnete.
+- Behebt, dass die Atemfrequenz zwei verschiedene Durchschnitte auf einem Bildschirm zeigte.
+- Behebt einen Apple-Health-Import, der an Berechtigungen scheiterte, ohne einen Ausweg zu bieten: die Schaltflaeche zum Erteilen der Berechtigung konnte nie erscheinen.
+- Behebt, dass Uebersicht, Einrichtung und das Aktivitaetsformular nach einer fehlgeschlagenen Berechtigungspruefung endlos luden.
+- Baut die App nach den Architektur-Richtlinien von Flutter neu auf. Jeder Bildschirm berechnet einmal beim Laden, was er anzeigt, statt Diagramme und Summen bei jedem Neuzeichnen neu zu berechnen.
+
+### Italiano
+
+- Corregge la scheda del sonno che chiamava "inserite a mano" le notti registrate dal tuo orologio, senza mai contare quelle che avevi davvero inserito tu.
+- Corregge la barra dell'obiettivo di idratazione che si riempiva con un solo giorno registrato. Ora conta i giorni in cui hai raggiunto l'obiettivo sui giorni realmente trascorsi.
+- Corregge un giorno di frequenza cardiaca che mostrava una media fuori dal proprio minimo e massimo.
+- Corregge la scheda della temperatura cutanea che restava vuota mentre il suo stesso grafico continuava a disegnare.
+- Corregge la frequenza respiratoria che mostrava due medie diverse sulla stessa schermata.
+- Corregge un'importazione da Apple Health che falliva per i permessi senza offrire una via d'uscita.
+- Corregge la dashboard, l'introduzione e il modulo attivita che caricavano all'infinito dopo un controllo dei permessi fallito.
+- Ricostruisce l'app secondo le linee guida di architettura di Flutter: ogni schermata calcola una volta sola, al caricamento, cio che deve mostrare.
+
+### Eesti
+
+- Parandab unekaardi, mis nimetas su kella salvestatud oid "kasitsi sisestatuks" ega lugenud kunagi neid oid, mille tegelikult ise sisestasid.
+- Parandab veetarbimise eesmargiriba, mis taitus uheainsa markitud paevaga. Nuud loeb see eesmargi taitmise paevi tegelikult moodunud paevade suhtes.
+- Parandab paeva pulsi, mis vois naidata keskmist valjaspool oma miinimumi ja maksimumi.
+- Parandab nahatemperatuuri kaardi, mis jai tuhjaks, kuigi selle enda graafik joonistas edasi.
+- Parandab hingamissageduse, mis naitas uhel ekraanil kahte erinevat keskmist.
+- Parandab Apple Healthi impordi, mis ebaonnestus oiguste tottu ilma valjapaasuta.
+- Parandab tooluua, sissejuhatuse ja tegevusvormi, mis laadisid loputult parast ebaonnestunud oiguste kontrolli.
+- Ehitab rakenduse umber Flutteri arhitektuurijuhiste jargi: iga ekraan arvutab kuvatava uks kord laadimisel.
+
 ## 2.0.3 - 2026-07-12
 
 ### English
