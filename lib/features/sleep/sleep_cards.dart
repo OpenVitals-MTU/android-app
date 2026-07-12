@@ -246,9 +246,21 @@ class _StageRow extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(child: ColoredBox(color: trackColor)),
-                  FractionallySizedBox(
-                    widthFactor: fraction,
-                    child: ColoredBox(color: color),
+                  // Positioned.fill, not a bare child: a non-positioned Stack child
+                  // gets LOOSE constraints, and a childless ColoredBox collapses to
+                  // zero height under them — so the fill was painted 0px tall and
+                  // every bar rendered as an empty grey track, while the durations
+                  // and percentages beside it were perfectly correct.
+                  //
+                  // centerLeft, because FractionallySizedBox centres by default: the
+                  // bar has to grow from the left edge, as Kotlin's
+                  // `fillMaxWidth(fraction).fillMaxHeight()` Box did.
+                  Positioned.fill(
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: fraction,
+                      child: ColoredBox(color: color),
+                    ),
                   ),
                 ],
               ),
