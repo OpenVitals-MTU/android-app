@@ -67,6 +67,6 @@ freezed (Ph 4–5) · **VM test** = dedicated view-model unit test.
       AppleHealthImport, BleDevices, SleepDetail, HeartVitalsOverview
 - [ ] `health_permissions.dart` → `lib/domain/health/` (Ph 6)
 - [ ] BLE repository contract (Ph 6)
-- [ ] `lib/bootstrap/background_container.dart` + 5 isolate entrypoints (Ph 6)
+- [ ] `lib/bootstrap/background_health_access.dart` + 5 isolate entrypoints (Ph 6)
 - [ ] DI barrel split (Ph 7)
 - [ ] architecture.md Known Seams §1 rewrite (first commit of Ph 3)

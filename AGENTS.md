@@ -61,7 +61,7 @@ Repositories and use cases return `Result<T>` (`lib/core/result/`) — `Ok` or `
 
 ### Repositories
 
-The boundary over Health Connect is deliberately narrow. `lib/health/health_data_source.dart` is the only thing that knows about the native bridge; the repositories in `lib/data/repository/contract/` are the only thing features may call. Do not import `package:health_connect_native` or `lib/health/native/` from a feature.
+The boundary over Health Connect is deliberately narrow. `lib/data/source/health/health_data_source.dart` is the only thing that knows about the native bridge; the repositories in `lib/data/repository/contract/` are the only thing features may call. Do not import `package:health_connect_native` or `lib/data/source/health/native/` from a feature.
 
 When adding capability, extend the feature-oriented repository API; do not widen `HealthRepository` into a grab bag.
 
@@ -73,13 +73,17 @@ Health Connect-backed destinations go through the shared gate, `lib/ui/component
 
 These are not style preferences. Each one is a bug that shipped.
 
-### 1. Hand-built `HealthDataSource` must resolve availability first
+### 1. A background isolate gets its `HealthDataSource` from `openBackgroundHealthAccess()`
 
-Any code that constructs a `HealthDataSource` **outside the widget tree** MUST `await HealthRepositoryImpl(dataSource).refreshAvailability()` before any read or write.
+**Never construct `HealthConnectNativeDataSource` yourself.** Call `openBackgroundHealthAccess()` (`lib/bootstrap/background_health_access.dart`): it builds the data source *and* resolves its availability, and returns a `Result`.
 
-`HealthDataSource.cachedAvailability` starts at `notSupported`, and every repository gates on it: without that call, **every permission reads as missing and every read returns empty — with no error**. Screens get this for free because `HealthConnectGate` mounts it; background isolates do not.
+`HealthDataSource.cachedAvailability` starts at `notSupported`, and every repository gates on it: without `refreshAvailability()`, **every permission reads as missing and every read returns empty — with no error**. Screens get this for free because `HealthConnectGate` mounts it; background isolates do not.
 
-This has caused four separate bugs: `lib/features/homewidgets/home_widget_refresher.dart` (widgets showed "grant permission"), `lib/features/homewidgets/home_widget_beverage_log.dart` (one-tap logging silently did nothing), and both reminder alarms (`lib/features/hydration/reminders/hydration_reminder_alarm.dart`, `lib/features/mindfulness/reminders/mindfulness_reminder_alarm.dart` — today's intake always read as 0). If a background feature "does nothing", check this **first**, before the platform, the permissions, or the plugin.
+This has caused four separate bugs: home widgets showed "grant permission" to users who had granted everything, one-tap logging silently wrote nothing, and both reminder alarms read today's intake as 0 — so the goal never counted as met and they nagged forever. The rule used to be "remember to call `refreshAvailability()` first"; four bugs is enough evidence that remembering does not work, so now there is only one way to get a data source in an isolate and it does the call for you.
+
+If a background feature "does nothing", check this **first**, before the platform, the permissions, or the plugin.
+
+(The one deliberate exception is `apple_health_import_task_handler.dart`, which resolves access at a point the import job chooses — its throw is what aborts a run that would otherwise write nothing and report success.)
 
 ### 2. Storage is metric; imperial is a UI-boundary concern
 
@@ -110,7 +114,7 @@ Outside the widget tree (background isolates, foreground services), there is no 
 
 ### 5. Gate on device support, not on the pinned client
 
-The app pins `connect-client` 1.2.0-alpha04, which is *ahead* of what most installed Health Connect providers implement. Feature availability must be resolved at runtime through `getFeatureStatus` and permissions filtered through `filterSupportedPermissions` (see `lib/health/health_permissions.dart`). Requesting a permission the provider does not support throws.
+The app pins `connect-client` 1.2.0-alpha04, which is *ahead* of what most installed Health Connect providers implement. Feature availability must be resolved at runtime through `getFeatureStatus` and permissions filtered through `filterSupportedPermissions` (see `lib/domain/health/health_permissions.dart`). Requesting a permission the provider does not support throws.
 
 ### 6. Home-screen widgets are render-only
 
@@ -124,10 +128,10 @@ After adding any Android-side plugin, build the APK once: some plugins fail only
 
 ## Do Not Copy These Patterns
 
-- ad hoc `Future`/`setState` loading inside a `StatefulWidget` for new feature work — use a notifier
+- ad hoc `Future`/`setState` loading inside a `StatefulWidget` for new feature work — use a view-model
 - a new navigator/router abstraction per feature — routes go in `lib/navigation/`
 - a new screen-specific period helper when `lib/core/period/` already has one
-- giant abstract base notifiers
+- giant abstract base view-models
 - a universal chart abstraction that hides metric semantics
 - Health Connect availability/permission UI outside `health_connect_gate.dart`
 - `Platform.isAndroid` branches inside features — platform differences belong behind `HealthDataSource`

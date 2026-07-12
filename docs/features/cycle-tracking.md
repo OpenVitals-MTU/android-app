@@ -3,7 +3,7 @@
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
 > **Implementation:** `lib/features/cycle/`, `lib/data/repository/contract/cycle_repository.dart` (+ `impl/cycle_repository_impl.dart`).
-> **Navigation:** `/metric/CYCLE`; cycle permissions in the app's Health Connect permission set (`lib/health/health_permissions.dart`).
+> **Navigation:** `/metric/CYCLE`; cycle permissions in the app's Health Connect permission set (`lib/domain/health/health_permissions.dart`).
 > **Related:** [Feature map](feature-map.md), [Onboarding and permissions](onboarding-and-permissions.md), [Privacy](../app/privacy.md).
 
 Cycle tracking reads supported Health Connect cycle records and presents them in dashboard and period detail views when permissions are granted.

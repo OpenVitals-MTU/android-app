@@ -4,7 +4,7 @@
 
 This document describes the architecture of the OpenVitals Flutter app as it exists today, plus the direction new work should follow.
 
-This app is a 1:1 port of the Kotlin OpenVitals app, which it replaced in place on this repository (the Kotlin sources survive only in git history, at `23c14d0`). The port keeps the Kotlin app's *architectural principles* — feature-first packages, a shared period shell, permission-aware feature repositories, proportional abstractions — but it does not keep its *mechanics*. Compose is Flutter widgets, ViewModels are Riverpod notifiers, Hilt is Riverpod providers, Room is drift, Navigation Compose is go_router. Where the port deliberately diverged from the Kotlin design, this document says so instead of pretending it didn't.
+This app is a 1:1 port of the Kotlin OpenVitals app, which it replaced in place on this repository (the Kotlin sources survive only in git history, at `23c14d0`). The port keeps the Kotlin app's *architectural principles* — feature-first packages, a shared period shell, permission-aware feature repositories, proportional abstractions — but it does not keep its *mechanics*. Compose is Flutter widgets, ViewModels are Riverpod `Notifier` subclasses, Hilt is Riverpod providers, Room is drift, Navigation Compose is go_router. Where the port deliberately diverged from the Kotlin design, this document says so instead of pretending it didn't.
 
 The goal is unchanged: keep boundaries clear enough that a new metric can be added without copying screen scaffolding, period math, or Health Connect plumbing.
 
@@ -15,8 +15,8 @@ For the day-to-day rules and the invariants that have already been broken once, 
 - App id: `tech.mmarca.openvitals` (unchanged from the Kotlin app — same Codeberg repo, same Play listing)
 - Project shape: one Flutter app (`lib/`) plus one first-party plugin, [`packages/health_connect_native`](../../packages/health_connect_native), which owns the Pigeon bridge to Health Connect. There is no other module.
 - Dependency wiring: Riverpod. [`lib/di/providers.dart`](../../lib/di/providers.dart) is the object graph (data source, repositories, use cases, reminders, widgets, maps); [`lib/state/app_providers.dart`](../../lib/state/app_providers.dart) holds the app-shell preference providers.
-- UI stack: Flutter + Material 3 + `MaterialApp.router` ([`lib/app.dart`](../../lib/app.dart)) + go_router ([`lib/navigation/app_router.dart`](../../lib/navigation/app_router.dart)) + Riverpod `Notifier`s + `freezed` state classes
-- Health data backend: Health Connect, behind [`lib/health/health_data_source.dart`](../../lib/health/health_data_source.dart) — the `HealthConnectManager` analogue
+- UI stack: Flutter + Material 3 + `MaterialApp.router` ([`lib/app.dart`](../../lib/app.dart)) + go_router ([`lib/navigation/app_router.dart`](../../lib/navigation/app_router.dart)) + Riverpod `Notifier` view-models + `freezed` state classes
+- Health data backend: Health Connect, behind [`lib/data/source/health/health_data_source.dart`](../../lib/data/source/health/health_data_source.dart) — the `HealthConnectManager` analogue
 - App-local domain code: pure models, insight calculations, queries, use cases and preference enums under [`lib/domain/`](../../lib/domain)
 - Shared period shell: in place, in [`lib/core/period/`](../../lib/core/period) and [`lib/ui/components/metric_detail_scaffold.dart`](../../lib/ui/components/metric_detail_scaffold.dart), and used by every metric detail/list screen
 - Feature repositories: split into `contract/` and `impl/` under [`lib/data/repository/`](../../lib/data/repository) for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, vitals, BLE devices, and Apple Health import
@@ -73,21 +73,22 @@ The canonical interaction model for metric screens:
 
 It is implemented by the primitives in [`lib/core/period/`](../../lib/core/period) — `TimeRange` and `DatePeriod` (both in `time_range.dart`), `PeriodSelection`, `PeriodSelectionDriver`, `PeriodLoadQuery`, `PeriodWindows`, `PeriodRangePreferenceKey`, and the calculation/title helpers — and by `MetricDetailScaffold`.
 
-### 4. Notifiers own screen state and orchestration — but not period selection
+### 4. View-models own screen state and orchestration — but not period selection
 
-Screens stay thin. A feature notifier is responsible for:
+Screens stay thin, and they derive nothing. A feature view-model is responsible for:
 
 - triggering loads and refreshes
-- combining repository / use-case calls
-- dropping stale results (every notifier keeps a monotonic `_generation` guard)
+- combining use-case calls and switching on their `Result`
+- **precomputing the display model** at load time (`build<X>Display`, see Known Seams §1)
+- dropping stale results (every view-model keeps a monotonic `_generation` guard)
 - feature-owned preferences (e.g. the sleep-hours goal, the heart-rate thresholds)
 - exposing UI-ready state
 
-**Divergence from the Kotlin design, and it is load-bearing.** In Kotlin, the ViewModel owns the `PeriodSelectionDriver` and the `PeriodRangePreferenceKey` persistence, and `MetricDetailScaffold` is a stateless composable that receives `selectedRange`/`selectedDate` and calls back. Here it is inverted: `MetricDetailScaffold` is a `ConsumerStatefulWidget` that **owns** the `PeriodSelectionDriver`, seeds it from the persisted range for its `rangePreferenceKey`, writes range changes back, and pushes a `PeriodSelection` down through `onSelectionChanged`. The notifier receives that selection and loads against it.
+**Divergence from the Kotlin design, and it is load-bearing.** In Kotlin, the ViewModel owns the `PeriodSelectionDriver` and the `PeriodRangePreferenceKey` persistence, and `MetricDetailScaffold` is a stateless composable that receives `selectedRange`/`selectedDate` and calls back. Here it is inverted: `MetricDetailScaffold` is a `ConsumerStatefulWidget` that **owns** the `PeriodSelectionDriver`, seeds it from the persisted range for its `rangePreferenceKey`, writes range changes back, and pushes a `PeriodSelection` down through `onSelectionChanged`. The view-model receives that selection and loads against it.
 
-`PeriodSelectionDriver` is referenced by exactly two files: its own, and the scaffold. Do not reintroduce a per-notifier driver — you would end up with two sources of truth for the selected period.
+`PeriodSelectionDriver` is referenced by exactly two files: its own, and the scaffold. Do not reintroduce a per-view-model driver — you would end up with two sources of truth for the selected period.
 
-The practical consequence: **period-navigation behaviour is tested through the scaffold widget, not through a notifier unit test.** A notifier test drives `load(PeriodSelection(...))` directly.
+The practical consequence: **period-navigation behaviour is tested through the scaffold widget, not through a view-model unit test.** A view-model test drives `load(PeriodSelection(...))` directly.
 
 ### 5. Repositories are feature-facing and permission-aware
 
@@ -151,7 +152,7 @@ Riverpod replaces Hilt. There is no annotation processor and no generated compon
 - **`lib/state/app_providers.dart`** — app-shell preference providers (`appThemeModeProvider`, `unitSystemProvider`, `unitFormatterProvider`, `appLanguageProvider`, `weekPeriodModeProvider`, …). These bridge `PreferencesRepository`'s `ValueListenable`s into Riverpod, so a settings change rebuilds every watcher.
 - **`sharedPreferencesProvider` is the one provider that must be overridden at startup.** It throws by default. `main()` supplies it.
 
-**The override-in-tests seam.** This is the direct replacement for Hilt's `@TestInstallIn`, and it is the reason repositories have a `contract/` type at all: a test wraps the widget or notifier in a `ProviderScope` (or builds a `ProviderContainer`) and overrides exactly the providers it needs:
+**The override-in-tests seam.** This is the direct replacement for Hilt's `@TestInstallIn`, and it is the reason repositories have a `contract/` type at all: a test wraps the widget or view-model in a `ProviderScope` (or builds a `ProviderContainer`) and overrides exactly the providers it needs:
 
 ```dart
 ProviderScope(
@@ -180,10 +181,10 @@ Responsibilities: availability checks, permission queries, record and aggregate 
 
 Current files:
 
-- [`lib/health/health_data_source.dart`](../../lib/health/health_data_source.dart) — the low-level facade
-- [`lib/health/native/health_connect_native_data_source.dart`](../../lib/health/native/health_connect_native_data_source.dart) — the Android implementation over the Pigeon bridge
-- [`lib/health/unsupported_health_data_source.dart`](../../lib/health/unsupported_health_data_source.dart) — the non-Android fallback
-- [`lib/health/health_permissions.dart`](../../lib/health/health_permissions.dart) — `HcPermissions`, `HealthConnectFeatureFlags`, `HealthPermissionService`
+- [`lib/data/source/health/health_data_source.dart`](../../lib/data/source/health/health_data_source.dart) — the low-level facade
+- [`lib/data/source/health/native/health_connect_native_data_source.dart`](../../lib/data/source/health/native/health_connect_native_data_source.dart) — the Android implementation over the Pigeon bridge
+- [`lib/data/source/health/unsupported_health_data_source.dart`](../../lib/data/source/health/unsupported_health_data_source.dart) — the non-Android fallback
+- [`lib/domain/health/health_permissions.dart`](../../lib/domain/health/health_permissions.dart) — `HcPermissions`, `HealthConnectFeatureFlags`, `HealthPermissionService`
 - [`lib/data/repository/contract/`](../../lib/data/repository/contract) — `HealthRepository`, `ActivityRepository`, `SleepRepository`, `HeartRepository`, `BodyRepository`, `BodyEnergyRepository`, `CaffeineRepository`, `HydrationRepository`, `NutritionRepository`, `MindfulnessRepository`, `CycleRepository`, `VitalsRepository`, `BleDeviceRepository`, `AppleHealthImportRepository`
 - [`lib/data/repository/impl/`](../../lib/data/repository/impl) — the implementations
 - [`lib/data/repository/dashboard/dashboard_data_loader.dart`](../../lib/data/repository/dashboard/dashboard_data_loader.dart) — the dashboard read orchestrator
@@ -192,11 +193,11 @@ Current files:
 
 Current boundary shape:
 
-- `HealthDataSource` is the only thing that knows about the native bridge. **A feature must never import `package:health_connect_native` or `lib/health/native/`.**
+- `HealthDataSource` is the only thing that knows about the native bridge. **A feature must never import `package:health_connect_native` or `lib/data/source/health/native/`.**
 - It is a plain base class, not an `abstract interface class`, and every method has a safe empty default (`[]` / `null` / `0`). That is what makes it subclassable in a test that only cares about two reads. It is also a trap: an un-overridden read makes a screen look permanently empty rather than failing.
 - `HealthRepository` is intentionally narrow: availability, permission state, and the app-level permission contract. It is not a data grab bag.
 - Feature repositories are thin, permission-aware facades over `HealthDataSource`.
-- Manual-entry notifiers write through the same feature repositories, so write permission and write behaviour stay below the route.
+- Manual-entry view-models write through the same feature repositories, so write permission and write behaviour stay below the route.
 
 **The availability invariant.** `HealthDataSource.cachedAvailability` starts at `notSupported`, and every repository gates on it. Any code that builds a `HealthDataSource` **outside the widget tree** must `await HealthRepositoryImpl(dataSource).refreshAvailability()` before any read or write, or every permission reads as missing and every read returns empty, silently. Screens get this for free because `HealthConnectGate` mounts it; background isolates do not. This has already caused four shipped bugs. See AGENTS.md §1 — it is the single most expensive thing in this codebase to relearn.
 
@@ -231,8 +232,8 @@ Current files:
 Important current details:
 
 - `TimeRange`, `DatePeriod`, `PeriodSelection`, `PeriodSelectionDriver`, `PeriodLoadQuery`, `PeriodWindows`, `PeriodRangePreferenceKey` and the period title/calculation helpers all live in `lib/core/period/`. (`DatePeriod` is declared in `time_range.dart`, not in a file of its own.)
-- `PeriodRangePreferenceKey` persists the last selected `TimeRange` per screen — and it is `MetricDetailScaffold`, not the notifier, that reads and writes it.
-- `lib/core/presentation/` is a Flutter-side layer with no Kotlin counterpart in the old doc: repository-free formatters and UI models that several features share. Pure formatting belongs here, not in a notifier.
+- `PeriodRangePreferenceKey` persists the last selected `TimeRange` per screen — and it is `MetricDetailScaffold`, not the view-model, that reads and writes it.
+- `lib/core/presentation/` is a Flutter-side layer with no Kotlin counterpart in the old doc: repository-free formatters and UI models that several features share. Pure formatting belongs here, not in a view-model.
 - Metric detail screens have **user-orderable sections**: `MetricDetailSectionId` ([`lib/domain/preferences/metric_detail_section_id.dart`](../../lib/domain/preferences/metric_detail_section_id.dart)) plus `OrderedMetricDetailSections` and the `metricDetailSectionOrderProvider` / `metricDetailSectionEditProvider` in [`lib/core/presentation/metric_detail_sections.dart`](../../lib/core/presentation/metric_detail_sections.dart). A detail screen declares its sections and the shared layer renders them in the user's order, with an edit mode toggled from the app bar.
 
 ### Feature layer
@@ -264,10 +265,10 @@ Current files:
 
 - [`lib/features/dashboard/application/dashboard_view_model.dart`](../../lib/features/dashboard/application/dashboard_view_model.dart)
 - [`lib/features/dashboard/presentation/dashboard_screen.dart`](../../lib/features/dashboard/presentation/dashboard_screen.dart)
-- [`lib/features/dashboard/presentation/dashboard_summary_presentation.dart`](../../lib/features/dashboard/presentation/dashboard_summary_presentation.dart)
+- [`lib/features/dashboard/application/dashboard_display.dart`](../../lib/features/dashboard/application/dashboard_display.dart)
 - [`lib/data/repository/dashboard/dashboard_data_loader.dart`](../../lib/data/repository/dashboard/dashboard_data_loader.dart)
 
-`DashboardDataLoader` assembles `DashboardData` for the visible metrics only; each metric read is permission-gated and individually error-guarded, so one failing metric does not blank the screen. The notifier loads in two passes — a fast pass for `dashboardQuickMetrics`, then a background pass merged in — mirroring the Kotlin quick/background split.
+`DashboardDataLoader` assembles `DashboardData` for the visible metrics only; each metric read is permission-gated and individually error-guarded, so one failing metric does not blank the screen. The view-model loads in two passes — a fast pass for `dashboardQuickMetrics`, then a background pass merged in — mirroring the Kotlin quick/background split.
 
 The dashboard is read-only and must stay summary-first. It is not a second copy of detail-screen logic.
 

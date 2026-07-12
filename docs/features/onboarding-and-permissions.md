@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/onboarding/`, `lib/health/` (`health_data_source.dart`, `health_permissions.dart`), `lib/ui/components/health_connect_gate.dart`, `lib/features/settings/`.
+> **Implementation:** `lib/features/onboarding/`, `lib/data/source/health/` (`health_data_source.dart`), `lib/domain/health/health_permissions.dart`, `lib/ui/components/health_connect_gate.dart`, `lib/features/settings/`.
 > **Navigation:** `/onboarding` (the start destination until onboarding is completed), `/settings/health_connect`.
 > **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Health Connect](../app/health-connect.md).
 
