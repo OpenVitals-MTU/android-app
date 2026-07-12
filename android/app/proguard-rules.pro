@@ -31,7 +31,26 @@
     *;
 }
 
+# ── Enums reflected on by name ───────────────────────────────────────────────
+#
+# audioplayers (`enumValueOf`) and flutter_foreground_task
+# (`NotificationPermission.valueOf`) resolve enum constants from strings. Both
+# survive in the shipped APK today, but only because the AGP default file happens
+# to keep them. Stating it here makes that deliberate rather than accidental --
+# the same "it works until it doesn't" gap that killed the Glance callback.
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
 # ── Health Connect (carried over from the Kotlin app's rules) ─────────────────
+#
+# Worth knowing: this is INSURANCE, not a fix. In the shipped v2.0.2 APK zero
+# androidx.health.connect classes survived under their original names -- they were
+# fully obfuscated -- and Health Connect still worked, because its record-type map
+# keys off string literals ("Steps", "SleepSession", ...), not class names. The
+# rule matches the Kotlin app's and costs ~330 KB of dex. Kept for parity; drop it
+# if size ever matters.
 -keep class androidx.health.connect.** { *; }
 
 # ── Kotlin coroutines (carried over) ──────────────────────────────────────────
