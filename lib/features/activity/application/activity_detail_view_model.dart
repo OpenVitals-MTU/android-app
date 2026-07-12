@@ -104,6 +104,9 @@ class ActivityDetailViewModel extends Notifier<ActivityDetailState> {
           display: buildActivityDetailDisplay(
             workout: value.workout,
             cadenceSamples: value.cadenceSamples,
+            // Whether speed was RECORDED decides whether it has to be rebuilt
+            // from the splits, so the display needs the trace, not just a flag.
+            speedSamples: value.speedSamples,
             splits: splits,
           ),
         );

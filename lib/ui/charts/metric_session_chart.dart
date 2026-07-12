@@ -31,6 +31,8 @@ class MetricSessionChart extends StatelessWidget {
     required this.accentColor,
     required this.valueFormatter,
     required this.countText,
+    this.countLabel,
+    this.averageOverride,
     this.chartHeight = 180,
   });
 
@@ -45,6 +47,20 @@ class MetricSessionChart extends StatelessWidget {
 
   /// The sample count, formatted — the caller owns number formatting.
   final String countText;
+
+  /// What [countText] counts. Defaults to "samples", which is what a recorded
+  /// trace has; a trace stepped one value per split counts splits.
+  final String? countLabel;
+
+  /// The average to STATE, for a trace whose points are not evenly spaced in
+  /// time and whose arithmetic mean would therefore misreport it.
+  ///
+  /// Five 1 km splits and a 200 m limp home are six equal terms in a mean — but
+  /// average speed over equal DISTANCES is the harmonic mean of their speeds,
+  /// not the arithmetic one, and over unequal ones it is neither. Only the
+  /// caller holds the distances and the times, so only the caller can say. A
+  /// recorded trace leaves this null and the mean of its samples is the truth.
+  final double? averageOverride;
 
   final double chartHeight;
 
@@ -64,7 +80,8 @@ class MetricSessionChart extends StatelessWidget {
     final values = [for (final sample in ordered) sample.value];
     final min = values.reduce(math.min);
     final max = values.reduce(math.max);
-    final average = values.reduce((a, b) => a + b) / values.length;
+    final average =
+        averageOverride ?? values.reduce((a, b) => a + b) / values.length;
     final drawPoints = ordered.length <= _maxVisiblePoints;
 
     return OpenVitalsCard(
@@ -87,7 +104,7 @@ class MetricSessionChart extends StatelessWidget {
                   label: l10n.summaryRange,
                   value: '${valueFormatter(min)}-${valueFormatter(max)}',
                 ),
-                (label: l10n.summarySamples, value: countText),
+                (label: countLabel ?? l10n.summarySamples, value: countText),
               ],
             ),
             MetricLinePlot(

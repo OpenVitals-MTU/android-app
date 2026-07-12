@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 
 import '../application/activity_detail_display.dart';
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../domain/insights/activity_splits.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/metric_session_chart.dart';
 import '../../../ui/charts/session_axis.dart';
 import '../../../ui/theme/app_colors.dart';
+import 'activity_split_distance_label.dart';
 
 /// The speed and cadence traces recorded during a session, on the same axis as the
 /// heart-rate card.
@@ -47,6 +49,77 @@ class ActivitySpeedChartCard extends StatelessWidget {
       unitFormatter: unitFormatter,
       accentColor: AppColors.distance,
       valueFormatter: (value) => unitFormatter.speed(value).text,
+    );
+  }
+}
+
+/// Speed over the session for a device that recorded none — rebuilt from the
+/// splits, which know how far each segment went and how long it took.
+///
+/// This is the watch that writes a route and a distance but no `SpeedRecord`,
+/// which is most of them: the shape of the run is in the data, and until now
+/// only the splits table showed it. The trace STEPS, one flat run per split,
+/// because that is the resolution the numbers have — a split's speed is an
+/// average over its window, not a reading at an instant.
+///
+/// The title says where it came from ("every 1 km", "per lap") and the stat row
+/// counts SPLITS rather than samples, because there are no samples here. The
+/// [ActivitySplitSpeedTrace] states its own average: the chart's own mean would
+/// weigh a 200 m limp home equally with a 1 km split and quietly report a
+/// faster session than happened.
+class ActivitySplitSpeedChartCard extends StatelessWidget {
+  const ActivitySplitSpeedChartCard({
+    super.key,
+    required this.trace,
+    required this.source,
+    required this.splitDistanceMeters,
+    required this.sessionStart,
+    required this.sessionEnd,
+    required this.unitFormatter,
+  });
+
+  final ActivitySplitSpeedTrace trace;
+  final SplitSource source;
+  final double splitDistanceMeters;
+  final DateTime sessionStart;
+  final DateTime sessionEnd;
+  final UnitFormatter unitFormatter;
+
+  @override
+  Widget build(BuildContext context) {
+    if (trace.samples.isEmpty) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context);
+    // `estimated` never reaches here (it is flat by construction, so the display
+    // builds no trace for it), and neither does `speedSamples` (that source
+    // exists only when speed WAS recorded, and the recorded card wins).
+    final (title, countLabel) = switch (source) {
+      SplitSource.deviceLaps => (
+          l10n.activitySpeedPerLapTitle,
+          l10n.activitySpeedLapsLabel,
+        ),
+      _ => (
+          l10n.activitySpeedPerSplitTitle(
+            splitDistanceLabel(l10n, unitFormatter, splitDistanceMeters),
+          ),
+          l10n.activitySpeedSplitsLabel,
+        ),
+    };
+
+    return _sessionTrace(
+      title: title,
+      samples: [
+        for (final sample in trace.samples)
+          (time: sample.time, value: sample.metersPerSecond),
+      ],
+      sessionStart: sessionStart,
+      sessionEnd: sessionEnd,
+      unitFormatter: unitFormatter,
+      accentColor: AppColors.distance,
+      valueFormatter: (value) => unitFormatter.speed(value).text,
+      countText: unitFormatter.count(trace.splitCount),
+      countLabel: countLabel,
+      averageOverride: trace.averageMetersPerSecond,
     );
   }
 }
@@ -162,6 +235,9 @@ MetricSessionChart _sessionTrace({
   required Color accentColor,
   required String Function(double value) valueFormatter,
   bool floorAtZero = true,
+  String? countText,
+  String? countLabel,
+  double? averageOverride,
 }) {
   final values = [for (final sample in samples) sample.value];
   final min = values.reduce(math.min);
@@ -186,6 +262,11 @@ MetricSessionChart _sessionTrace({
     ),
     accentColor: accentColor,
     valueFormatter: valueFormatter,
-    countText: unitFormatter.count(samples.length),
+    // A recorded trace counts its samples; a trace stepped per split says so
+    // itself, because "12 samples" for six splits would be counting the corners
+    // of the steps.
+    countText: countText ?? unitFormatter.count(samples.length),
+    countLabel: countLabel,
+    averageOverride: averageOverride,
   );
 }

@@ -3339,6 +3339,19 @@
       }
     }
   },
+  "activitySpeedPerSplitTitle": "Speed · every {distance}",
+  "@activitySpeedPerSplitTitle": {
+    "description": "Header of the speed chart when the device recorded no speed and the trace is rebuilt from the splits, one flat step per split. {distance} is an already-formatted distance such as '1 km' or '1 mi'.",
+    "placeholders": {
+      "distance": {
+        "type": "String",
+        "example": "1 km"
+      }
+    }
+  },
+  "activitySpeedPerLapTitle": "Speed · per lap",
+  "activitySpeedSplitsLabel": "Splits",
+  "activitySpeedLapsLabel": "Laps",
   "activitySplitsEstimatedTitle": "Splits · estimated",
   "activitySplitsEstimatedBody": "This activity has no per-time distance data, so every split shows the activity's average pace.",
   "activitySplitsHeaderSplit": "Split",

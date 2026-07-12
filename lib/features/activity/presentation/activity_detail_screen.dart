@@ -117,6 +117,22 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 sessionEnd: workout.endTime,
                 unitFormatter: formatter,
               ),
+            )
+          // No SpeedRecord — which is most watches. The splits know how far each
+          // segment went and how long it took, so speed is rebuilt from them and
+          // drawn as a step, one flat run per split. The two are exclusive by
+          // construction: the display builds no trace when speed was recorded.
+          else if (display.splitSpeedTrace case final trace?)
+            sectionPadded(
+              ActivitySplitSpeedChartCard(
+                trace: trace,
+                source: state.splits.source,
+                splitDistanceMeters:
+                    ref.watch(activitySplitDistanceMetersProvider),
+                sessionStart: workout.startTime,
+                sessionEnd: workout.endTime,
+                unitFormatter: formatter,
+              ),
             ),
           // The climb. It comes from the route's altitudes rather than from a
           // record of its own, because Health Connect has none — so an activity
