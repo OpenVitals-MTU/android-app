@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -25,6 +24,10 @@ import '../../domain/preferences/unit_system.dart';
 import 'device_locale.dart';
 import 'prefs_codec.dart';
 import 'prefs_migrations.dart';
+import 'prefs_store.dart';
+import 'stores/activity_recording_prefs_store.dart';
+import 'stores/caffeine_store.dart';
+import 'stores/hydration_store.dart';
 
 /// Port of the Kotlin `PreferencesRepository` over `shared_preferences`.
 ///
@@ -36,6 +39,16 @@ import 'prefs_migrations.dart';
 /// Note: SharedPreferences updates its in-memory cache synchronously, so the
 /// void setters here fire the async platform write without awaiting while
 /// remaining immediately readable (matching the Kotlin `apply()` semantics).
+/// The write primitives themselves live in [PrefsStore], which this class
+/// **holds as a private field rather than extending**: inheriting them would
+/// re-export `putString`, `remove` and the raw store on the repository's own
+/// public API, and letting a caller write an arbitrary key past the facade
+/// would undo the point of having one.
+///
+/// The three biggest key groups have their own stores ([CaffeineStore],
+/// [ActivityRecordingPrefsStore], [HydrationStore]), each owning its keys; the
+/// repository keeps the reactive notifiers and the public API every caller
+/// already uses, and delegates the storage.
 ///
 /// The string codec lives in `prefs_codec.dart`, the one-shot read migration in
 /// `prefs_migrations.dart` and the locale-derived unit-system default in
@@ -53,7 +66,11 @@ class PreferencesRepository {
       PreferencesRepository._(prefs, localeName ?? Platform.localeName);
 
   PreferencesRepository._(this._prefs, String localeName)
-      : _unitSystem = ValueNotifier(_readUnitSystem(_prefs, localeName)),
+      : _store = PrefsStore(_prefs),
+        _caffeine = CaffeineStore(_prefs),
+        _activityRecording = ActivityRecordingPrefsStore(_prefs),
+        _hydration = HydrationStore(_prefs),
+        _unitSystem = ValueNotifier(_readUnitSystem(_prefs, localeName)),
         _appLanguage = ValueNotifier(_readAppLanguage(_prefs)),
         _appThemeMode = ValueNotifier(_readAppThemeMode(_prefs)),
         _dynamicColor = ValueNotifier(_readDynamicColor(_prefs)),
@@ -70,11 +87,18 @@ class PreferencesRepository {
     // unless a legacy install has values to fold in.
     migrateLegacyBodyProfileValues(_prefs);
     _bodyEnergyCalibration = ValueNotifier(_readBodyEnergyCalibration());
-    _caffeinePreferences = ValueNotifier(_readCaffeinePreferences());
+    _caffeinePreferences = ValueNotifier(_caffeine.read());
     _bodyProfile = ValueNotifier(_readBodyProfile());
   }
 
   final SharedPreferences _prefs;
+
+  /// The storage primitives for the keys this class still owns itself. Private
+  /// on purpose — callers get preferences, not a key-value store.
+  final PrefsStore _store;
+  final CaffeineStore _caffeine;
+  final ActivityRecordingPrefsStore _activityRecording;
+  final HydrationStore _hydration;
 
   final ValueNotifier<UnitSystem> _unitSystem;
   final ValueNotifier<AppLanguage> _appLanguage;
@@ -112,41 +136,41 @@ class PreferencesRepository {
   // endregion
 
   bool get onboardingDone => _prefs.getBool(_keyOnboardingDone) ?? false;
-  set onboardingDone(bool value) => _putBool(_keyOnboardingDone, value);
+  set onboardingDone(bool value) => _store.putBool(_keyOnboardingDone, value);
 
   UnitSystem get unitSystem => _unitSystem.value;
   set unitSystem(UnitSystem value) {
-    _putString(_keyUnitSystem, value.name);
+    _store.putString(_keyUnitSystem, value.name);
     _unitSystem.value = value;
   }
 
   AppLanguage get appLanguage => _appLanguage.value;
   set appLanguage(AppLanguage value) {
-    _putString(_keyAppLanguage, value.name);
+    _store.putString(_keyAppLanguage, value.name);
     _appLanguage.value = value;
   }
 
   AppThemeMode get appThemeMode => _appThemeMode.value;
   set appThemeMode(AppThemeMode value) {
-    _putString(_keyAppThemeMode, value.name);
+    _store.putString(_keyAppThemeMode, value.name);
     _appThemeMode.value = value;
   }
 
   bool get dynamicColor => _dynamicColor.value;
   set dynamicColor(bool value) {
-    _putBool(_keyDynamicColor, value);
+    _store.putBool(_keyDynamicColor, value);
     _dynamicColor.value = value;
   }
 
   SleepRangeMode get sleepRangeMode => _sleepRangeMode.value;
   set sleepRangeMode(SleepRangeMode value) {
-    _putString(_keySleepRangeMode, value.name);
+    _store.putString(_keySleepRangeMode, value.name);
     _sleepRangeMode.value = value;
   }
 
   ActivityWeekMode get activityWeekMode => _activityWeekMode.value;
   set activityWeekMode(ActivityWeekMode value) {
-    _putString(_keyActivityWeekMode, value.name);
+    _store.putString(_keyActivityWeekMode, value.name);
     _activityWeekMode.value = value;
   }
 
@@ -158,7 +182,7 @@ class PreferencesRepository {
   double get activitySplitDistanceMeters => _activitySplitDistanceMeters.value;
   set activitySplitDistanceMeters(double value) {
     final normalized = ActivitySplitDistance.normalize(value);
-    _putDouble(_keyActivitySplitDistanceMeters, normalized);
+    _store.putDouble(_keyActivitySplitDistanceMeters, normalized);
     _activitySplitDistanceMeters.value = normalized;
   }
 
@@ -167,19 +191,19 @@ class PreferencesRepository {
   bool get showOpenVitalsCalculatedCalories =>
       _showOpenVitalsCalculatedCalories.value;
   set showOpenVitalsCalculatedCalories(bool value) {
-    _putBool(_keyShowOpenVitalsCalculatedCalories, value);
+    _store.putBool(_keyShowOpenVitalsCalculatedCalories, value);
     _showOpenVitalsCalculatedCalories.value = value;
   }
 
   bool get healthConnectSyncEnabled => _healthConnectSyncEnabled.value;
   set healthConnectSyncEnabled(bool value) {
-    _putBool(_keyHealthConnectSyncEnabled, value);
+    _store.putBool(_keyHealthConnectSyncEnabled, value);
     _healthConnectSyncEnabled.value = value;
   }
 
   int get healthConnectPermissionCancelCount =>
       _prefs.getInt(_keyHealthConnectPermissionCancelCount) ?? 0;
-  set healthConnectPermissionCancelCount(int value) => _putInt(
+  set healthConnectPermissionCancelCount(int value) => _store.putInt(
         _keyHealthConnectPermissionCancelCount,
         value < 0 ? 0 : value,
       );
@@ -188,63 +212,58 @@ class PreferencesRepository {
       _prefs.getString(_keyAcceptedPrivacyPolicyVersion);
   set acceptedPrivacyPolicyVersion(String? value) {
     if (value == null) {
-      _remove(_keyAcceptedPrivacyPolicyVersion);
+      _store.remove(_keyAcceptedPrivacyPolicyVersion);
     } else {
-      _putString(_keyAcceptedPrivacyPolicyVersion, value);
+      _store.putString(_keyAcceptedPrivacyPolicyVersion, value);
     }
   }
 
   int get privacyPolicyAcceptedAtMillis =>
       _prefs.getInt(_keyPrivacyPolicyAcceptedAt) ?? 0;
   set privacyPolicyAcceptedAtMillis(int value) =>
-      _putInt(_keyPrivacyPolicyAcceptedAt, value);
+      _store.putInt(_keyPrivacyPolicyAcceptedAt, value);
 
   bool get appLockEnabled => _prefs.getBool(_keyAppLockEnabled) ?? false;
-  set appLockEnabled(bool value) => _putBool(_keyAppLockEnabled, value);
+  set appLockEnabled(bool value) => _store.putBool(_keyAppLockEnabled, value);
 
   int? get lastActivityExerciseType {
-    final value = _prefs.getInt(_keyLastActivityExerciseType) ??
-        _missingExerciseType;
+    final value =
+        _prefs.getInt(_keyLastActivityExerciseType) ?? _missingExerciseType;
     return value != _missingExerciseType ? value : null;
   }
 
   set lastActivityExerciseType(int? value) {
     if (value == null) {
-      _remove(_keyLastActivityExerciseType);
+      _store.remove(_keyLastActivityExerciseType);
     } else {
-      _putInt(_keyLastActivityExerciseType, value);
+      _store.putInt(_keyLastActivityExerciseType, value);
     }
   }
 
   int? get favoriteActivityExerciseType {
-    final value = _prefs.getInt(_keyFavoriteActivityExerciseType) ??
-        _missingExerciseType;
+    final value =
+        _prefs.getInt(_keyFavoriteActivityExerciseType) ?? _missingExerciseType;
     return value != _missingExerciseType ? value : null;
   }
 
   set favoriteActivityExerciseType(int? value) {
     if (value == null) {
-      _remove(_keyFavoriteActivityExerciseType);
+      _store.remove(_keyFavoriteActivityExerciseType);
     } else {
-      _putInt(_keyFavoriteActivityExerciseType, value);
+      _store.putInt(_keyFavoriteActivityExerciseType, value);
     }
   }
 
-  double get hydrationDailyGoalLiters =>
-      _prefs.getDouble(_keyHydrationDailyGoalLiters) ??
-      _defaultHydrationDailyGoalLiters;
-  set hydrationDailyGoalLiters(double value) => _putDouble(
-        _keyHydrationDailyGoalLiters,
-        value
-            .clamp(_minHydrationDailyGoalLiters, _maxHydrationDailyGoalLiters)
-            .toDouble(),
-      );
+  /// Clamped on write and NOT on read — see [HydrationStore].
+  double get hydrationDailyGoalLiters => _hydration.readDailyGoalLiters();
+  set hydrationDailyGoalLiters(double value) =>
+      _hydration.writeDailyGoalLiters(value);
 
   int get highHeartRateThresholdBpm =>
       (_prefs.getInt(_keyHighHeartRateThresholdBpm) ??
               defaultHighHeartRateThresholdBpm)
           .clamp(minHighHeartRateThresholdBpm, maxHighHeartRateThresholdBpm);
-  set highHeartRateThresholdBpm(int value) => _putInt(
+  set highHeartRateThresholdBpm(int value) => _store.putInt(
         _keyHighHeartRateThresholdBpm,
         value.clamp(minHighHeartRateThresholdBpm, maxHighHeartRateThresholdBpm),
       );
@@ -253,7 +272,7 @@ class PreferencesRepository {
       (_prefs.getInt(_keyLowHeartRateThresholdBpm) ??
               defaultLowHeartRateThresholdBpm)
           .clamp(minLowHeartRateThresholdBpm, maxLowHeartRateThresholdBpm);
-  set lowHeartRateThresholdBpm(int value) => _putInt(
+  set lowHeartRateThresholdBpm(int value) => _store.putInt(
         _keyLowHeartRateThresholdBpm,
         value.clamp(minLowHeartRateThresholdBpm, maxLowHeartRateThresholdBpm),
       );
@@ -261,19 +280,22 @@ class PreferencesRepository {
   int get lastPromptedPermissionSetVersion =>
       _prefs.getInt(_keyLastPromptedPermissionSetVersion) ?? 0;
   set lastPromptedPermissionSetVersion(int value) =>
-      _putInt(_keyLastPromptedPermissionSetVersion, value);
+      _store.putInt(_keyLastPromptedPermissionSetVersion, value);
 
   BodyEnergyCalibration bodyEnergyCalibration() => _bodyEnergyCalibration.value;
 
   void setBodyEnergyCalibration(BodyEnergyCalibration calibration) {
     final normalized = calibration.normalized();
-    _putBool(_keyBodyEnergyUseManualZones, normalized.useManualZones);
-    _putBool(_keyBodyEnergySetupCompleted, normalized.setupCompleted);
+    _store.putBool(_keyBodyEnergyUseManualZones, normalized.useManualZones);
+    _store.putBool(_keyBodyEnergySetupCompleted, normalized.setupCompleted);
     final zones = normalized.manualZoneThresholdsBpm;
     if (zones != null) {
-      _putString(_keyBodyEnergyZoneThresholdsBpm, zones.toPreferenceString());
+      _store.putString(
+        _keyBodyEnergyZoneThresholdsBpm,
+        zones.toPreferenceString(),
+      );
     } else {
-      _remove(_keyBodyEnergyZoneThresholdsBpm);
+      _store.remove(_keyBodyEnergyZoneThresholdsBpm);
     }
     _bodyEnergyCalibration.value = normalized;
   }
@@ -282,10 +304,13 @@ class PreferencesRepository {
 
   void setBodyProfile(BodyProfile profile) {
     final normalized = profile.normalized();
-    _putOrRemoveInt(keyBodyProfileBirthYear, normalized.birthYear);
-    _putOrRemoveDouble(keyBodyProfileWeightKg, normalized.weightKg);
-    _putOrRemoveInt(keyBodyProfileRestingHrBpm, normalized.restingHeartRateBpm);
-    _putOrRemoveInt(keyBodyProfileMaxHrBpm, normalized.maxHeartRateBpm);
+    _store.putOrRemoveInt(keyBodyProfileBirthYear, normalized.birthYear);
+    _store.putOrRemoveDouble(keyBodyProfileWeightKg, normalized.weightKg);
+    _store.putOrRemoveInt(
+      keyBodyProfileRestingHrBpm,
+      normalized.restingHeartRateBpm,
+    );
+    _store.putOrRemoveInt(keyBodyProfileMaxHrBpm, normalized.maxHeartRateBpm);
     _bodyProfile.value = normalized;
   }
 
@@ -293,20 +318,7 @@ class PreferencesRepository {
 
   void setCaffeinePreferences(CaffeinePreferences preferences) {
     final normalized = preferences.normalized();
-    _putBool(_keyCaffeineProfileCompleted, normalized.profileCompleted);
-    _putInt(_keyCaffeineHalfLifeMinutes, normalized.halfLifeMinutes);
-    _putInt(_keyCaffeineAbsorptionMinutes, normalized.absorptionMinutes);
-    _putInt(_keyCaffeineSleepThresholdMg, normalized.sleepThresholdMg);
-    _putString(_keyCaffeineBedtime, normalized.bedtime.toString());
-    _putString(_keyCaffeineSleepSensitivity, normalized.sleepSensitivity.name);
-    _putBool(_keyCaffeineSmoker, normalized.smoker);
-    _putString(_keyCaffeineAlcoholUse, normalized.alcoholUse.name);
-    _putString(_keyCaffeineHabituation, normalized.caffeineHabituation.name);
-    _putBool(_keyCaffeineLiverImpairment, normalized.liverImpairment);
-    _putBool(_keyCaffeineMedicationInteraction, normalized.medicationInteraction);
-    _putString(_keyCaffeineCyp1a2Genotype, normalized.cyp1a2Genotype.name);
-    _putString(_keyCaffeineAhrGenotype, normalized.ahrGenotype.name);
-    _putString(_keyCaffeineHormonalStatus, normalized.hormonalStatus.name);
+    _caffeine.write(normalized);
     _caffeinePreferences.value = normalized;
   }
 
@@ -315,171 +327,55 @@ class PreferencesRepository {
       key.defaultRange;
 
   void setTimeRangeFor(PeriodRangePreferenceKey key, TimeRange range) =>
-      _putString(key.storageKey, range.name);
+      _store.putString(key.storageKey, range.name);
 
   double dailyGoalFor(MetricDailyGoalKey key) => key.normalize(
         _prefs.getDouble(key.storageKey) ?? key.defaultValue,
       );
 
   void setDailyGoalFor(MetricDailyGoalKey key, double value) =>
-      _putDouble(key.storageKey, key.normalize(value));
+      _store.putDouble(key.storageKey, key.normalize(value));
 
-  HydrationReminderConfig hydrationReminderConfig() => HydrationReminderConfig(
-        enabled: _prefs.getBool(_keyHydrationRemindersEnabled) ?? false,
-        intervalMinutes: _prefs.getInt(_keyHydrationReminderIntervalMinutes) ??
-            HydrationReminderConfig.defaultIntervalMinutes,
-        activeStartTime: toReminderTimeOrDefault(
-          _prefs.getString(_keyHydrationReminderActiveStartTime),
-          HydrationReminderConfig.defaultActiveStartTime,
-        ),
-        activeEndTime: toReminderTimeOrDefault(
-          _prefs.getString(_keyHydrationReminderActiveEndTime),
-          HydrationReminderConfig.defaultActiveEndTime,
-        ),
-      ).normalized();
+  // region Hydration (stored by HydrationStore).
+  HydrationReminderConfig hydrationReminderConfig() =>
+      _hydration.readReminderConfig();
 
-  void setHydrationReminderConfig(HydrationReminderConfig config) {
-    final normalized = config.normalized();
-    _putBool(_keyHydrationRemindersEnabled, normalized.enabled);
-    _putInt(_keyHydrationReminderIntervalMinutes, normalized.intervalMinutes);
-    _putString(
-      _keyHydrationReminderActiveStartTime,
-      normalized.activeStartTime.toString(),
-    );
-    _putString(
-      _keyHydrationReminderActiveEndTime,
-      normalized.activeEndTime.toString(),
-    );
-  }
+  void setHydrationReminderConfig(HydrationReminderConfig config) =>
+      _hydration.writeReminderConfig(config);
 
-  Map<String, double> hydrationContainerVolumeMilliliters() {
-    final result = <String, double>{};
-    for (final entry
-        in _prefs.getStringList(_keyHydrationContainerVolumeMilliliters) ??
-            const <String>[]) {
-      final separatorIndex = entry.indexOf(valuePairSeparator);
-      if (separatorIndex <= 0 || separatorIndex == entry.length - 1) continue;
-      final key = entry.substring(0, separatorIndex);
-      final value = double.tryParse(entry.substring(separatorIndex + 1));
-      if (value != null && value > 0.0 && value.isFinite) {
-        result[key] = value;
-      }
-    }
-    return result;
-  }
+  Map<String, double> hydrationContainerVolumeMilliliters() =>
+      _hydration.readContainerVolumeMilliliters();
 
   void setHydrationContainerVolumeMilliliters(
     String containerId,
     double milliliters,
-  ) {
-    if (containerId.isEmpty || milliliters <= 0.0 || !milliliters.isFinite) {
-      return;
-    }
-    final values = hydrationContainerVolumeMilliliters();
-    values[containerId] = milliliters;
-    _putStringList(
-      _keyHydrationContainerVolumeMilliliters,
-      values.entries
-          .map((e) => '${e.key}$valuePairSeparator${e.value}')
-          .toSet()
-          .toList(),
-    );
-  }
+  ) =>
+      _hydration.writeContainerVolumeMilliliters(containerId, milliliters);
 
-  double? lastCustomHydrationAmountMilliliters() {
-    final milliliters =
-        _prefs.getDouble(_keyLastCustomHydrationAmountMilliliters) ??
-            _missingHydrationAmountMilliliters;
-    if (milliliters != _missingHydrationAmountMilliliters &&
-        milliliters > 0.0 &&
-        milliliters.isFinite) {
-      return milliliters;
-    }
-    return null;
-  }
+  double? lastCustomHydrationAmountMilliliters() =>
+      _hydration.readLastCustomAmountMilliliters();
 
-  void setLastCustomHydrationAmountMilliliters(double milliliters) {
-    if (milliliters <= 0.0 || !milliliters.isFinite) return;
-    _putDouble(_keyLastCustomHydrationAmountMilliliters, milliliters);
-  }
+  void setLastCustomHydrationAmountMilliliters(double milliliters) =>
+      _hydration.writeLastCustomAmountMilliliters(milliliters);
 
-  List<CustomHydrationDrink> customHydrationDrinks() {
-    final drinks =
-        (_prefs.getStringList(_keyCustomHydrationDrinks) ?? const <String>[])
-            .map(toCustomHydrationDrink)
-            .whereType<CustomHydrationDrink>()
-            .toList();
-    if (drinks.isEmpty) return const <CustomHydrationDrink>[];
+  List<CustomHydrationDrink> customHydrationDrinks() =>
+      _hydration.readCustomDrinks();
 
-    final drinksById = <String, CustomHydrationDrink>{
-      for (final drink in drinks) drink.id: drink,
-    };
-    final orderedIds = <String>[];
-    for (final id in _customHydrationDrinkOrder()) {
-      if (drinksById.containsKey(id) && !orderedIds.contains(id)) {
-        orderedIds.add(id);
-      }
-    }
-    final orderedDrinks =
-        orderedIds.map((id) => drinksById[id]).whereType<CustomHydrationDrink>();
-    final orderedIdSet = orderedIds.toSet();
-    final missingOrderDrinks = drinks
-        .where((drink) => !orderedIdSet.contains(drink.id))
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    return [...orderedDrinks, ...missingOrderDrinks];
-  }
+  void saveCustomHydrationDrink(CustomHydrationDrink drink) =>
+      _hydration.saveCustomDrink(drink);
 
-  void saveCustomHydrationDrink(CustomHydrationDrink drink) {
-    final normalized = normalizedCustomHydrationDrink(drink);
-    if (normalized == null) return;
-    final current = customHydrationDrinks();
-    bool matches(CustomHydrationDrink d) =>
-        d.id == normalized.id ||
-        d.name.toLowerCase() == normalized.name.toLowerCase();
-    final existingIndex = current.indexWhere(matches);
-    final values = current.where((d) => !matches(d)).toList();
-    if (existingIndex >= 0) {
-      values.insert(existingIndex.clamp(0, values.length), normalized);
-    } else {
-      values.add(normalized);
-    }
-    final trimmed = values.length > _maxCustomHydrationDrinks
-        ? values.sublist(values.length - _maxCustomHydrationDrinks)
-        : values;
-    _persistCustomHydrationDrinks(trimmed);
-  }
+  void deleteCustomHydrationDrink(String drinkId) =>
+      _hydration.deleteCustomDrink(drinkId);
 
-  void deleteCustomHydrationDrink(String drinkId) {
-    if (drinkId.isEmpty) return;
-    _persistCustomHydrationDrinks(
-      customHydrationDrinks().where((d) => d.id != drinkId).toList(),
-    );
-  }
-
-  void reorderCustomHydrationDrinks(List<String> drinkIds) {
-    final current = customHydrationDrinks();
-    final drinksById = <String, CustomHydrationDrink>{
-      for (final drink in current) drink.id: drink,
-    };
-    final orderedIds = <String>[];
-    for (final id in drinkIds) {
-      if (drinksById.containsKey(id) && !orderedIds.contains(id)) {
-        orderedIds.add(id);
-      }
-    }
-    final orderedDrinks =
-        orderedIds.map((id) => drinksById[id]).whereType<CustomHydrationDrink>();
-    final orderedIdSet = orderedIds.toSet();
-    final remaining = current.where((d) => !orderedIdSet.contains(d.id));
-    _persistCustomHydrationDrinks([...orderedDrinks, ...remaining]);
-  }
+  void reorderCustomHydrationDrinks(List<String> drinkIds) =>
+      _hydration.reorderCustomDrinks(drinkIds);
 
   bool hasMigratedHydrationBeveragesToRoom() =>
-      _prefs.getBool(_keyHydrationBeveragesRoomMigrated) ?? false;
+      _hydration.hasMigratedBeveragesToRoom();
 
   void setMigratedHydrationBeveragesToRoom() =>
-      _putBool(_keyHydrationBeveragesRoomMigrated, true);
+      _hydration.setMigratedBeveragesToRoom();
+  // endregion
 
   MindfulnessReminderConfig mindfulnessReminderConfig() =>
       MindfulnessReminderConfig(
@@ -492,8 +388,8 @@ class PreferencesRepository {
 
   void setMindfulnessReminderConfig(MindfulnessReminderConfig config) {
     final normalized = config.normalized();
-    _putBool(_keyMindfulnessRemindersEnabled, normalized.enabled);
-    _putString(
+    _store.putBool(_keyMindfulnessRemindersEnabled, normalized.enabled);
+    _store.putString(
       _keyMindfulnessReminderTime,
       normalized.reminderTime.toString(),
     );
@@ -539,24 +435,31 @@ class PreferencesRepository {
     } else {
       interval = null;
     }
-    _putInt(_keyMindfulnessTimerDurationMinutes, duration);
-    _putInt(_keyMindfulnessTimerIntervalMinutes, interval ?? 0);
-    _putString(_keyMindfulnessTimerBellSound, config.bellSound.storageName);
-    _putString(
+    _store.putInt(_keyMindfulnessTimerDurationMinutes, duration);
+    _store.putInt(_keyMindfulnessTimerIntervalMinutes, interval ?? 0);
+    _store.putString(
+      _keyMindfulnessTimerBellSound,
+      config.bellSound.storageName,
+    );
+    _store.putString(
       _keyMindfulnessTimerBackgroundSound,
       config.backgroundSound.storageName,
     );
   }
 
-  List<String>? dashboardWidgetOrder() => _readOrderList(_keyDashboardWidgetOrder);
+  List<String>? dashboardWidgetOrder() =>
+      _store.readOrderList(_keyDashboardWidgetOrder);
 
-  void setDashboardWidgetOrder(List<String> widgetIds) =>
-      _putString(_keyDashboardWidgetOrder, widgetIds.join(valueSeparator));
+  void setDashboardWidgetOrder(List<String> widgetIds) => _store.putString(
+        _keyDashboardWidgetOrder,
+        widgetIds.join(valueSeparator),
+      );
 
-  List<String>? dashboardRingOrder() => _readOrderList(_keyDashboardRingOrder);
+  List<String>? dashboardRingOrder() =>
+      _store.readOrderList(_keyDashboardRingOrder);
 
   void setDashboardRingOrder(List<String> ringIds) =>
-      _putString(_keyDashboardRingOrder, ringIds.join(valueSeparator));
+      _store.putString(_keyDashboardRingOrder, ringIds.join(valueSeparator));
 
   /// The dashboard metric tiles the user has hidden (keyed by tile title).
   Set<String> dashboardHiddenWidgets() =>
@@ -564,18 +467,20 @@ class PreferencesRepository {
           .toSet();
 
   void setDashboardHiddenWidgets(Set<String> widgetIds) =>
-      _putStringList(_keyDashboardHiddenWidgets, widgetIds.toList());
+      _store.putStringList(_keyDashboardHiddenWidgets, widgetIds.toList());
 
   List<String>? manualEntryWidgetOrder() =>
-      _readOrderList(_keyManualEntryWidgetOrder);
+      _store.readOrderList(_keyManualEntryWidgetOrder);
 
-  void setManualEntryWidgetOrder(List<String> widgetIds) =>
-      _putString(_keyManualEntryWidgetOrder, widgetIds.join(valueSeparator));
+  void setManualEntryWidgetOrder(List<String> widgetIds) => _store.putString(
+        _keyManualEntryWidgetOrder,
+        widgetIds.join(valueSeparator),
+      );
 
   List<String>? metricDetailSectionOrder() =>
-      _readOrderList(_keyMetricDetailSectionOrder);
+      _store.readOrderList(_keyMetricDetailSectionOrder);
 
-  void setMetricDetailSectionOrder(List<String> sectionIds) => _putString(
+  void setMetricDetailSectionOrder(List<String> sectionIds) => _store.putString(
         _keyMetricDetailSectionOrder,
         sectionIds.join(valueSeparator),
       );
@@ -584,7 +489,7 @@ class PreferencesRepository {
       (_prefs.getStringList(_keyAcknowledgedPermissions) ?? const <String>[])
           .toSet();
 
-  void acknowledgePermissions(Set<String> permissions) => _putStringList(
+  void acknowledgePermissions(Set<String> permissions) => _store.putStringList(
         _keyAcknowledgedPermissions,
         {...acknowledgedPermissions(), ...permissions}.toList(),
       );
@@ -602,151 +507,32 @@ class PreferencesRepository {
     Set<String> permissions,
   ) {
     if (permissions.isEmpty) return;
-    _putStringList(
+    _store.putStringList(
       _acknowledgedFeatureKey(featureName),
       {...acknowledgedPermissionsFor(featureName), ...permissions}.toList(),
     );
   }
 
-  // region Activity recording preferences.
-  ActivityRecordingPreferences activityRecordingPreferences() {
-    int? nullableIfSentinel(String key, int defaultValue, int sentinel) {
-      final value = _prefs.getInt(key) ?? defaultValue;
-      return value == sentinel ? null : value;
-    }
+  // region Activity recording preferences (stored by
+  // ActivityRecordingPrefsStore).
+  ActivityRecordingPreferences activityRecordingPreferences() =>
+      _activityRecording.read();
 
-    return ActivityRecordingPreferences(
-      autoIdleEnabled: _prefs.getBool(_keyActivityRecordingAutoIdleEnabled) ??
-          ActivityRecordingPreferences.defaultAutoIdleEnabled,
-      autoIdleTimeoutSeconds:
-          _prefs.getInt(_keyActivityRecordingAutoIdleTimeoutSeconds) ??
-              ActivityRecordingPreferences.defaultAutoIdleTimeoutSeconds,
-      keepScreenOnDuringRecording:
-          _prefs.getBool(_keyActivityRecordingKeepScreenOn) ??
-              ActivityRecordingPreferences.defaultKeepScreenOnDuringRecording,
-      requiredGpsAccuracyMeters:
-          _prefs.getInt(_keyActivityRecordingRequiredGpsAccuracyMeters) ??
-              ActivityRecordingPreferences.defaultRequiredGpsAccuracyMeters,
-      routeGapMeters: nullableIfSentinel(
-        _keyActivityRecordingRouteGapMeters,
-        ActivityRecordingPreferences.defaultRouteGapMeters,
-        _routeGapOff,
-      ),
-      barometerClimbEnabled:
-          _prefs.getBool(_keyActivityRecordingBarometerClimbEnabled) ??
-              ActivityRecordingPreferences.defaultBarometerClimbEnabled,
-      recordingDistanceIntervalMeters: nullableIfSentinel(
-        _keyActivityRecordingDistanceIntervalMeters,
-        ActivityRecordingPreferences.defaultRecordingDistanceIntervalMeters ??
-            _recordingIntervalOff,
-        _recordingIntervalOff,
-      ),
-      recordingTimeIntervalMillis:
-          _prefs.getInt(_keyActivityRecordingTimeIntervalMillis) ??
-              ActivityRecordingPreferences.defaultRecordingTimeIntervalMillis,
-      voiceAnnouncementsEnabled:
-          _prefs.getBool(_keyActivityRecordingVoiceEnabled) ??
-              ActivityRecordingPreferences.defaultVoiceAnnouncementsEnabled,
-      voiceAnnouncementTimeIntervalMinutes: nullableIfSentinel(
-        _keyActivityRecordingVoiceTimeIntervalMinutes,
-        ActivityRecordingPreferences.defaultVoiceAnnouncementTimeIntervalMinutes,
-        _recordingIntervalOff,
-      ),
-      voiceAnnouncementDistanceIntervalMeters: nullableIfSentinel(
-        _keyActivityRecordingVoiceDistanceIntervalMeters,
-        ActivityRecordingPreferences
-            .defaultVoiceAnnouncementDistanceIntervalMeters,
-        _recordingIntervalOff,
-      ),
-      voiceIdleAnnouncementsEnabled:
-          _prefs.getBool(_keyActivityRecordingVoiceIdleEnabled) ??
-              ActivityRecordingPreferences.defaultVoiceIdleAnnouncementsEnabled,
-      voiceLapAnnouncementsEnabled:
-          _prefs.getBool(_keyActivityRecordingVoiceLapEnabled) ??
-              ActivityRecordingPreferences.defaultVoiceLapAnnouncementsEnabled,
-      restTimerBellEnabled:
-          _prefs.getBool(_keyActivityRecordingRestTimerBellEnabled) ??
-              ActivityRecordingPreferences.defaultRestTimerBellEnabled,
-    ).normalized();
-  }
-
-  void setActivityRecordingPreferences(ActivityRecordingPreferences preferences) {
-    final normalized = preferences.normalized();
-    _putBool(_keyActivityRecordingAutoIdleEnabled, normalized.autoIdleEnabled);
-    _putInt(
-      _keyActivityRecordingAutoIdleTimeoutSeconds,
-      normalized.autoIdleTimeoutSeconds,
-    );
-    _putBool(
-      _keyActivityRecordingKeepScreenOn,
-      normalized.keepScreenOnDuringRecording,
-    );
-    _putInt(
-      _keyActivityRecordingRequiredGpsAccuracyMeters,
-      normalized.requiredGpsAccuracyMeters,
-    );
-    _putInt(
-      _keyActivityRecordingRouteGapMeters,
-      normalized.routeGapMeters ?? _routeGapOff,
-    );
-    _putBool(
-      _keyActivityRecordingBarometerClimbEnabled,
-      normalized.barometerClimbEnabled,
-    );
-    _putInt(
-      _keyActivityRecordingDistanceIntervalMeters,
-      normalized.recordingDistanceIntervalMeters ?? _recordingIntervalOff,
-    );
-    _putInt(
-      _keyActivityRecordingTimeIntervalMillis,
-      normalized.recordingTimeIntervalMillis,
-    );
-    _putBool(
-      _keyActivityRecordingVoiceEnabled,
-      normalized.voiceAnnouncementsEnabled,
-    );
-    _putInt(
-      _keyActivityRecordingVoiceTimeIntervalMinutes,
-      normalized.voiceAnnouncementTimeIntervalMinutes ?? _recordingIntervalOff,
-    );
-    _putInt(
-      _keyActivityRecordingVoiceDistanceIntervalMeters,
-      normalized.voiceAnnouncementDistanceIntervalMeters ?? _recordingIntervalOff,
-    );
-    _putBool(
-      _keyActivityRecordingVoiceIdleEnabled,
-      normalized.voiceIdleAnnouncementsEnabled,
-    );
-    _putBool(
-      _keyActivityRecordingVoiceLapEnabled,
-      normalized.voiceLapAnnouncementsEnabled,
-    );
-    _putBool(
-      _keyActivityRecordingRestTimerBellEnabled,
-      normalized.restTimerBellEnabled,
-    );
-  }
+  void setActivityRecordingPreferences(
+    ActivityRecordingPreferences preferences,
+  ) =>
+      _activityRecording.write(preferences);
 
   ActivityRecordingDashboardLayout activityRecordingDashboardLayout(
     String activityTypeId,
-  ) {
-    final raw =
-        _prefs.getString(_activityRecordingDashboardLayoutKey(activityTypeId));
-    if (raw == null) return ActivityRecordingDashboardLayout();
-    return layoutFromPreferenceString(raw) ??
-        ActivityRecordingDashboardLayout();
-  }
+  ) =>
+      _activityRecording.readDashboardLayout(activityTypeId);
 
   void setActivityRecordingDashboardLayout(
     String activityTypeId,
     ActivityRecordingDashboardLayout layout,
-  ) {
-    if (activityTypeId.trim().isEmpty) return;
-    _putString(
-      _activityRecordingDashboardLayoutKey(activityTypeId),
-      layoutToPreferenceString(layout),
-    );
-  }
+  ) =>
+      _activityRecording.writeDashboardLayout(activityTypeId, layout);
   // endregion
 
   /// Disposes the reactive [ValueNotifier]s.
@@ -765,7 +551,9 @@ class PreferencesRepository {
     _bodyProfile.dispose();
   }
 
-  // region Reads used to seed the reactive notifiers.
+  // region Reads used to seed the reactive notifiers. The `prefs` these static
+  // helpers take is the constructor's parameter, not a field: they run while the
+  // fields are still being initialized.
   static UnitSystem _readUnitSystem(
     SharedPreferences prefs,
     String localeName,
@@ -816,136 +604,18 @@ class PreferencesRepository {
       ).normalized();
 
   BodyProfile _readBodyProfile() => BodyProfile(
-        birthYear: _intOrNull(keyBodyProfileBirthYear),
-        weightKg: _doubleOrNull(keyBodyProfileWeightKg),
-        restingHeartRateBpm: _intOrNull(keyBodyProfileRestingHrBpm),
-        maxHeartRateBpm: _intOrNull(keyBodyProfileMaxHrBpm),
-      ).normalized();
-
-  CaffeinePreferences _readCaffeinePreferences() => CaffeinePreferences(
-        profileCompleted: _prefs.getBool(_keyCaffeineProfileCompleted) ?? false,
-        halfLifeMinutes: _prefs.getInt(_keyCaffeineHalfLifeMinutes) ??
-            CaffeinePreferences.defaultHalfLifeMinutes,
-        absorptionMinutes: _prefs.getInt(_keyCaffeineAbsorptionMinutes) ??
-            CaffeinePreferences.defaultAbsorptionMinutes,
-        sleepThresholdMg: _prefs.getInt(_keyCaffeineSleepThresholdMg) ??
-            CaffeinePreferences.defaultSleepThresholdMg,
-        bedtime: toReminderTimeOrDefault(
-          _prefs.getString(_keyCaffeineBedtime),
-          CaffeinePreferences.defaultBedtime,
-        ),
-        sleepSensitivity: enumByName(
-              CaffeineSleepSensitivity.values,
-              _prefs.getString(_keyCaffeineSleepSensitivity),
-            ) ??
-            CaffeineSleepSensitivity.normal,
-        smoker: _prefs.getBool(_keyCaffeineSmoker) ?? false,
-        alcoholUse: enumByName(
-              CaffeineAlcoholUse.values,
-              _prefs.getString(_keyCaffeineAlcoholUse),
-            ) ??
-            CaffeineAlcoholUse.none,
-        caffeineHabituation: enumByName(
-              CaffeineHabituation.values,
-              _prefs.getString(_keyCaffeineHabituation),
-            ) ??
-            CaffeineHabituation.moderate,
-        liverImpairment: _prefs.getBool(_keyCaffeineLiverImpairment) ?? false,
-        medicationInteraction:
-            _prefs.getBool(_keyCaffeineMedicationInteraction) ?? false,
-        cyp1a2Genotype: enumByName(
-              CaffeineGenotype.values,
-              _prefs.getString(_keyCaffeineCyp1a2Genotype),
-            ) ??
-            CaffeineGenotype.unknown,
-        ahrGenotype: enumByName(
-              CaffeineGenotype.values,
-              _prefs.getString(_keyCaffeineAhrGenotype),
-            ) ??
-            CaffeineGenotype.unknown,
-        hormonalStatus: enumByName(
-              CaffeineHormonalStatus.values,
-              _prefs.getString(_keyCaffeineHormonalStatus),
-            ) ??
-            CaffeineHormonalStatus.none,
+        birthYear: _store.intOrNull(keyBodyProfileBirthYear),
+        weightKg: _store.doubleOrNull(keyBodyProfileWeightKg),
+        restingHeartRateBpm: _store.intOrNull(keyBodyProfileRestingHrBpm),
+        maxHeartRateBpm: _store.intOrNull(keyBodyProfileMaxHrBpm),
       ).normalized();
   // endregion
-
-  // region Custom hydration drink storage (the codec itself is in
-  // prefs_codec.dart).
-  List<String> _customHydrationDrinkOrder() =>
-      (_prefs.getString(_keyCustomHydrationDrinkOrder)?.split(valueSeparator) ??
-              const <String>[])
-          .map(decodePreferenceValue)
-          .where((it) => it.isNotEmpty)
-          .toList();
-
-  void _persistCustomHydrationDrinks(List<CustomHydrationDrink> drinks) {
-    _putStringList(
-      _keyCustomHydrationDrinks,
-      drinks.map(customHydrationDrinkToPreferenceString).toSet().toList(),
-    );
-    _putString(
-      _keyCustomHydrationDrinkOrder,
-      drinks
-          .map((drink) => encodePreferenceValue(drink.id))
-          .join(valueSeparator),
-    );
-  }
-  // endregion
-
-  // region Small helpers.
-  List<String>? _readOrderList(String key) => _prefs
-      .getString(key)
-      ?.split(valueSeparator)
-      .where((it) => it.isNotEmpty)
-      .toList();
 
   String _acknowledgedFeatureKey(String featureName) =>
       '$_keyAcknowledgedFeaturePrefix$featureName';
 
-  String _activityRecordingDashboardLayoutKey(String activityTypeId) =>
-      '$_keyActivityRecordingDashboardLayoutPrefix$activityTypeId';
-
-  int? _intOrNull(String key) => _prefs.containsKey(key) ? _prefs.getInt(key) : null;
-
-  double? _doubleOrNull(String key) =>
-      _prefs.containsKey(key) ? _prefs.getDouble(key) : null;
-
-  void _putOrRemoveInt(String key, int? value) {
-    if (value != null) {
-      _putInt(key, value);
-    } else {
-      _remove(key);
-    }
-  }
-
-  void _putOrRemoveDouble(String key, double? value) {
-    if (value != null) {
-      _putDouble(key, value);
-    } else {
-      _remove(key);
-    }
-  }
-
-  void _putString(String key, String value) =>
-      unawaited(_prefs.setString(key, value));
-
-  void _putBool(String key, bool value) =>
-      unawaited(_prefs.setBool(key, value));
-
-  void _putInt(String key, int value) => unawaited(_prefs.setInt(key, value));
-
-  void _putDouble(String key, double value) =>
-      unawaited(_prefs.setDouble(key, value));
-
-  void _putStringList(String key, List<String> value) =>
-      unawaited(_prefs.setStringList(key, value));
-
-  void _remove(String key) => unawaited(_prefs.remove(key));
-  // endregion
-
-  // region Keys and constants (verbatim from the Kotlin companion object).
+  // region Keys and constants (verbatim from the Kotlin companion object). The
+  // caffeine, activity recording and hydration keys moved to their stores.
   static const String prefsFile = 'openvitals_prefs';
   static const String currentPrivacyPolicyVersion = '1.0';
   static const int defaultHighHeartRateThresholdBpm = 120;
@@ -969,38 +639,6 @@ class PreferencesRepository {
   static const String _keyActivityWeekMode = 'activity_week_mode';
   static const String _keyActivitySplitDistanceMeters =
       'activity_split_distance_meters';
-  static const String _keyActivityRecordingAutoIdleEnabled =
-      'activity_recording_auto_idle_enabled';
-  static const String _keyActivityRecordingAutoIdleTimeoutSeconds =
-      'activity_recording_auto_idle_timeout_seconds';
-  static const String _keyActivityRecordingKeepScreenOn =
-      'activity_recording_keep_screen_on';
-  static const String _keyActivityRecordingRequiredGpsAccuracyMeters =
-      'activity_recording_required_gps_accuracy_meters';
-  static const String _keyActivityRecordingRouteGapMeters =
-      'activity_recording_route_gap_meters';
-  static const String _keyActivityRecordingBarometerClimbEnabled =
-      'activity_recording_barometer_climb_enabled';
-  static const String _keyActivityRecordingDistanceIntervalMeters =
-      'activity_recording_distance_interval_meters';
-  static const String _keyActivityRecordingTimeIntervalMillis =
-      'activity_recording_time_interval_millis';
-  static const String _keyActivityRecordingVoiceEnabled =
-      'activity_recording_voice_enabled';
-  static const String _keyActivityRecordingVoiceTimeIntervalMinutes =
-      'activity_recording_voice_time_interval_minutes';
-  static const String _keyActivityRecordingVoiceDistanceIntervalMeters =
-      'activity_recording_voice_distance_interval_meters';
-  static const String _keyActivityRecordingVoiceIdleEnabled =
-      'activity_recording_voice_idle_enabled';
-  static const String _keyActivityRecordingVoiceLapEnabled =
-      'activity_recording_voice_lap_enabled';
-  static const String _keyActivityRecordingRestTimerBellEnabled =
-      'activity_recording_rest_timer_bell_enabled';
-  static const String _keyActivityRecordingDashboardLayoutPrefix =
-      'activity_recording_dashboard_layout_';
-  static const int _routeGapOff = 0;
-  static const int _recordingIntervalOff = 0;
   static const String _keyShowOpenVitalsCalculatedCalories =
       'show_openvitals_calculated_calories';
   static const String _keyHealthConnectSyncEnabled =
@@ -1021,25 +659,6 @@ class PreferencesRepository {
   static const String _keyManualEntryWidgetOrder = 'manual_entry_widget_order';
   static const String _keyMetricDetailSectionOrder =
       'metric_detail_section_order';
-  static const String _keyHydrationDailyGoalLiters =
-      'hydration_daily_goal_liters';
-  static const String _keyHydrationContainerVolumeMilliliters =
-      'hydration_container_volume_milliliters';
-  static const String _keyLastCustomHydrationAmountMilliliters =
-      'last_custom_hydration_amount_milliliters';
-  static const String _keyCustomHydrationDrinks = 'custom_hydration_drinks';
-  static const String _keyCustomHydrationDrinkOrder =
-      'custom_hydration_drink_order';
-  static const String _keyHydrationBeveragesRoomMigrated =
-      'hydration_beverages_room_migrated';
-  static const String _keyHydrationRemindersEnabled =
-      'hydration_reminders_enabled';
-  static const String _keyHydrationReminderIntervalMinutes =
-      'hydration_reminder_interval_minutes';
-  static const String _keyHydrationReminderActiveStartTime =
-      'hydration_reminder_active_start_time';
-  static const String _keyHydrationReminderActiveEndTime =
-      'hydration_reminder_active_end_time';
   static const String _keyHighHeartRateThresholdBpm =
       'high_heart_rate_threshold_bpm';
   static const String _keyLowHeartRateThresholdBpm =
@@ -1053,25 +672,6 @@ class PreferencesRepository {
       'body_energy_use_manual_zones';
   static const String _keyBodyEnergySetupCompleted =
       'body_energy_setup_completed';
-  static const String _keyCaffeineProfileCompleted =
-      'caffeine_profile_completed';
-  static const String _keyCaffeineHalfLifeMinutes = 'caffeine_half_life_minutes';
-  static const String _keyCaffeineAbsorptionMinutes =
-      'caffeine_absorption_minutes';
-  static const String _keyCaffeineSleepThresholdMg =
-      'caffeine_sleep_threshold_mg';
-  static const String _keyCaffeineBedtime = 'caffeine_bedtime';
-  static const String _keyCaffeineSleepSensitivity =
-      'caffeine_sleep_sensitivity';
-  static const String _keyCaffeineSmoker = 'caffeine_smoker';
-  static const String _keyCaffeineAlcoholUse = 'caffeine_alcohol_use';
-  static const String _keyCaffeineHabituation = 'caffeine_habituation';
-  static const String _keyCaffeineLiverImpairment = 'caffeine_liver_impairment';
-  static const String _keyCaffeineMedicationInteraction =
-      'caffeine_medication_interaction';
-  static const String _keyCaffeineCyp1a2Genotype = 'caffeine_cyp1a2_genotype';
-  static const String _keyCaffeineAhrGenotype = 'caffeine_ahr_genotype';
-  static const String _keyCaffeineHormonalStatus = 'caffeine_hormonal_status';
   static const String _keyMindfulnessTimerDurationMinutes =
       'mindfulness_timer_duration_minutes';
   static const String _keyMindfulnessTimerIntervalMinutes =
@@ -1087,14 +687,9 @@ class PreferencesRepository {
   // The separators and the percent-encoding of stored values live in
   // prefs_codec.dart, which is where they are actually applied.
 
-  static const double _defaultHydrationDailyGoalLiters = 2.0;
-  static const double _minHydrationDailyGoalLiters = 0.25;
-  static const double _maxHydrationDailyGoalLiters = 10.0;
   static const int _defaultMindfulnessTimerDurationMinutes = 10;
   static const int _minMindfulnessTimerMinutes = 1;
   static const int _maxMindfulnessTimerMinutes = 24 * 60;
   static const int _missingExerciseType = -2147483648; // Int.MIN_VALUE
-  static const double _missingHydrationAmountMilliliters = -1.0;
-  static const int _maxCustomHydrationDrinks = 25;
   // endregion
 }
