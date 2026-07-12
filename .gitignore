@@ -79,6 +79,7 @@ Error in OpenVitals *.txt
 # before this line existed (see the commit that removes them).
 **/build/
 /captures/
+test_objects/
 
 # Design-system reference bundle (React/TS UI kit). Kept on disk as a design
 # reference, but not versioned in the app repo -- the Kotlin repo gitignored it too.
