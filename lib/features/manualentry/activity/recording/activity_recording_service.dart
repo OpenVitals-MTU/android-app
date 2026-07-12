@@ -36,12 +36,19 @@ import 'activity_recording_task_handler.dart';
 /// posts its own ongoing notification) and voice announcements ([flutter_tts])
 /// onto the pure [ActivityRecordingState] model.
 ///
+/// This is the PLATFORM side of the recording feature: everything the OS talks
+/// to lives here — the foreground-task lifecycle, the notification-button
+/// callbacks, the GPS/BLE/motion streams and the draft-store writes — and it
+/// stays imperative (a [ValueListenable] of [ActivityRecordingState]) on
+/// purpose. `ActivityRecordingViewModel` is the SCREEN side, and sits on top of
+/// this; nothing in this file may be reshaped for the screen's convenience.
+///
 /// The pure state transitions (distance/pace/elevation accumulation, pause /
 /// rest / repetition bookkeeping, snapshot building) are shared with the tested
 /// model helpers. The device I/O is best-effort and intentionally deferred from
 /// unit testing — only compile-cleanliness is required here.
-class ActivityRecordingControllerImpl implements ActivityRecordingController {
-  ActivityRecordingControllerImpl({
+class ActivityRecordingService implements ActivityRecordingController {
+  ActivityRecordingService({
     required this.preferencesRepository,
     required this.bleSensorCoordinator,
     required this.recordingStore,

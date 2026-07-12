@@ -6,10 +6,10 @@ import '../../../state/app_providers.dart';
 import 'activity_entry_clock.dart';
 import 'activity_entry_view_model.dart';
 import 'recording/activity_recording.dart';
-import 'recording/activity_recording_controller.dart';
 import 'recording/activity_recording_device_support.dart';
 import 'recording/activity_recording_draft_store.dart';
 import 'recording/activity_recording_serialization.dart';
+import 'recording/activity_recording_service.dart';
 
 /// DI graph for the activity manual-entry / recording feature (Phase 6d),
 /// replacing the Hilt bindings for `ActivityRecordingStore`,
@@ -24,19 +24,27 @@ final activityRecordingStoreProvider = Provider<ActivityRecordingStore>(
 final activityRecordingDraftStoreProvider =
     Provider<ActivityRecordingDraftStore>((ref) => ActivityRecordingDraftStore());
 
-/// The device-bound recording controller (GPS / sensors / foreground service).
-final activityRecordingControllerProvider =
-    Provider<ActivityRecordingController>((ref) {
-  final controller = ActivityRecordingControllerImpl(
+/// The device-bound recording service (GPS / sensors / foreground service).
+/// The PLATFORM side: `ActivityRecordingViewModel` is the screen's.
+final activityRecordingServiceProvider =
+    Provider<ActivityRecordingService>((ref) {
+  final service = ActivityRecordingService(
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
     bleSensorCoordinator: ref.watch(bleSensorCoordinatorProvider),
     recordingStore: ref.watch(activityRecordingStoreProvider),
     unitFormatter: ref.watch(unitFormatterProvider),
     deviceSupport: ref.watch(activityRecordingDeviceSupportProvider),
   );
-  ref.onDispose(controller.dispose);
-  return controller;
+  ref.onDispose(service.dispose);
+  return service;
 });
+
+/// The recorder as its consumers see it. Overriding THIS is how a test (and,
+/// once it moves over, the view-model) swaps the device out.
+final activityRecordingControllerProvider =
+    Provider<ActivityRecordingController>(
+  (ref) => ref.watch(activityRecordingServiceProvider),
+);
 
 final routeFileImporterProvider = Provider<RouteFileImporter>(
   (ref) => const DefaultRouteFileImporter(),

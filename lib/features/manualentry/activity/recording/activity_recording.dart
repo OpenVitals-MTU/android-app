@@ -17,8 +17,8 @@ part 'activity_recording.freezed.dart';
 /// [ActivityRecordingSnapshot]) plus the pure state/location extensions from
 /// `ActivityRecordingStateExtensions.kt` and `ActivityRecordingLocationSupport.kt`.
 ///
-/// The device-bound controller (GPS/sensors/foreground service) lives in
-/// `activity_recording_controller.dart`; here only the [ActivityRecordingController]
+/// The device-bound service (GPS/sensors/foreground service) lives in
+/// `activity_recording_service.dart`; here only the [ActivityRecordingController]
 /// interface it implements is declared, so the notifier can depend on it without
 /// pulling in any plugin.
 
@@ -320,8 +320,10 @@ class ActivityRecordingInitialFix {
   final int? timeMillis;
 }
 
-/// The interface the activity-entry notifier depends on. Implemented by the
-/// device-bound `ActivityRecordingControllerImpl` (deferred runtime).
+/// The recorder as its consumers see it: implemented by the device-bound
+/// `ActivityRecordingService` (deferred runtime), consumed by
+/// `ActivityRecordingViewModel` and the activity-entry notifier, and faked
+/// wholesale in tests. Nothing above this line may reach for the plugins.
 abstract interface class ActivityRecordingController {
   ValueListenable<ActivityRecordingState> get state;
 
