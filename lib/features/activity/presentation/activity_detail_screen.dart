@@ -12,7 +12,7 @@ import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../application/activity_detail_notifier.dart';
+import '../application/activity_detail_view_model.dart';
 import 'activity_heart_rate_chart_card.dart';
 import 'activity_metric_relevance.dart';
 import '../../../domain/insights/activity_metrics.dart';
@@ -28,7 +28,7 @@ final DateFormat _dateTimeFormat = DateFormat('EEE d MMM yyyy · HH:mm');
 /// Single-activity detail pushed over the shell (`/activity_detail/:activityId`),
 /// ported from the Kotlin `ActivityDetailScreen` + `ActivityDetailCards`.
 ///
-/// Each screen instance owns an auto-dispose [ActivityDetailNotifier] bound to
+/// Each screen instance owns an auto-dispose [ActivityDetailViewModel] bound to
 /// its [activityId], so stacked detail routes stay independent.
 class ActivityDetailScreen extends ConsumerStatefulWidget {
   const ActivityDetailScreen({super.key, required this.activityId});
@@ -41,10 +41,10 @@ class ActivityDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
-  late final NotifierProvider<ActivityDetailNotifier, ActivityDetailState>
-      _provider = NotifierProvider.autoDispose<ActivityDetailNotifier,
+  late final NotifierProvider<ActivityDetailViewModel, ActivityDetailState>
+      _provider = NotifierProvider.autoDispose<ActivityDetailViewModel,
           ActivityDetailState>(
-    () => ActivityDetailNotifier(widget.activityId),
+    () => ActivityDetailViewModel(widget.activityId),
   );
 
   @override

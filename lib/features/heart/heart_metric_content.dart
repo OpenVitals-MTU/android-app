@@ -20,7 +20,7 @@ import '../../ui/components/paginated_entry_list.dart';
 import '../../ui/theme/app_colors.dart';
 import 'heart_metric.dart';
 import 'heart_metric_cards.dart';
-import 'heart_metric_notifier.dart';
+import 'heart_metric_view_model.dart';
 import 'heart_metric_ordered_sections.dart';
 import 'heart_metric_shared_sections.dart';
 import '../../core/stats/stats.dart';

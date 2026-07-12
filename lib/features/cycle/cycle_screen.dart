@@ -16,7 +16,7 @@ import '../../ui/components/metric_card.dart';
 import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
-import 'cycle_notifier.dart';
+import 'cycle_view_model.dart';
 import '../../ui/components/section_padding.dart';
 
 /// Menstrual-cycle read-detail screen, ported from the Kotlin `CycleScreen` +

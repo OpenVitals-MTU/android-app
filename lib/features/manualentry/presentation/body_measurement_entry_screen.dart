@@ -12,7 +12,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../application/body_measurement_entry_notifier.dart';
+import '../application/body_measurement_entry_view_model.dart';
 import 'manual_entry_form_scaffold.dart';
 import 'manual_entry_timestamp_fields.dart';
 
@@ -48,10 +48,10 @@ class _BodyMeasurementEntryScreenState
       BodyMeasurementType.fromStorage(widget.bodyMeasurementType) ??
           BodyMeasurementType.weight;
 
-  late final NotifierProvider<BodyMeasurementEntryNotifier,
+  late final NotifierProvider<BodyMeasurementEntryViewModel,
       BodyMeasurementEntryState> _provider = NotifierProvider.autoDispose<
-      BodyMeasurementEntryNotifier, BodyMeasurementEntryState>(
-    () => BodyMeasurementEntryNotifier(
+      BodyMeasurementEntryViewModel, BodyMeasurementEntryState>(
+    () => BodyMeasurementEntryViewModel(
       _type,
       editRecordId: widget.bodyEntryId,
       imperial: ref.read(unitSystemProvider) == UnitSystem.imperial,
@@ -110,7 +110,7 @@ class _BodyEntryForm extends ConsumerWidget {
   });
 
   final BodyMeasurementType type;
-  final NotifierProvider<BodyMeasurementEntryNotifier,
+  final NotifierProvider<BodyMeasurementEntryViewModel,
       BodyMeasurementEntryState> provider;
   final TextEditingController controller;
 

@@ -5,7 +5,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
-import 'package:openvitals/features/sleep/sleep_notifier.dart';
+import 'package:openvitals/features/sleep/sleep_view_model.dart';
 
 import '../support/boot_container.dart';
 
@@ -73,13 +73,13 @@ void main() {
       granted: {HcPermissions.readSleep}
     );
 
-    h.container.listen(sleepNotifierProvider, (_, _) {});
-    await h.container.read(sleepNotifierProvider.notifier).load(
+    h.container.listen(sleepProvider, (_, _) {});
+    await h.container.read(sleepProvider.notifier).load(
           PeriodSelection(TimeRange.day, LocalDate(2025, 6, 23)),
         );
     await pumpEventQueue();
 
-    final state = h.container.read(sleepNotifierProvider);
+    final state = h.container.read(sleepProvider);
     expect(state.isLoading, isFalse);
     expect(state.error, isNull,
         reason: 'The sleep screen ERRORED because the user had not granted the '

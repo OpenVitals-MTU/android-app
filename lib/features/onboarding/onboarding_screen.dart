@@ -9,7 +9,7 @@ import '../../state/app_providers.dart';
 import '../../ui/components/app_language_dropdown.dart';
 import '../../ui/components/loading_state.dart';
 import '../../ui/components/ov_card.dart';
-import 'onboarding_notifier.dart';
+import 'onboarding_view_model.dart';
 
 // File-private constants, mirroring the Kotlin `OnboardingScreen.kt` HC_PACKAGE
 // / PLAY_STORE_URL pair used by the "needs provider update" install action.
@@ -23,7 +23,7 @@ const _playStoreUrl =
 /// Port of the Kotlin `OnboardingScreen`: a Health Connect availability check,
 /// a one-tap "grant all" of the required (minimum) permissions, per-category
 /// grant rows, and a Continue action that persists the onboarding-complete pref
-/// (via [OnboardingNotifier.completeOnboarding]) before invoking
+/// (via [OnboardingViewModel.completeOnboarding]) before invoking
 /// [onOnboardingComplete] so the app routes on to the dashboard.
 ///
 /// All copy is localized one-to-one from the Kotlin `strings.xml` onboarding_*
@@ -57,14 +57,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     // dialog), re-check what's granted so category rows update to "Granted"
     // without an app restart.
     if (lifecycleState == AppLifecycleState.resumed) {
-      ref.read(onboardingNotifierProvider.notifier).refreshGrantedPermissions();
+      ref.read(onboardingProvider.notifier).refreshGrantedPermissions();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(onboardingNotifierProvider);
-    final notifier = ref.read(onboardingNotifierProvider.notifier);
+    final state = ref.watch(onboardingProvider);
+    final notifier = ref.read(onboardingProvider.notifier);
 
     if (state.isCheckingPermissions) {
       return const Scaffold(body: FullScreenLoading());
@@ -96,7 +96,7 @@ class _OnboardingContent extends ConsumerWidget {
   });
 
   final OnboardingState state;
-  final OnboardingNotifier notifier;
+  final OnboardingViewModel notifier;
   final VoidCallback onComplete;
 
   @override

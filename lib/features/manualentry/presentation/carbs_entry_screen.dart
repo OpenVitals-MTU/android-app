@@ -9,7 +9,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../application/carbs_entry_notifier.dart';
+import '../application/carbs_entry_view_model.dart';
 import 'manual_entry_form_scaffold.dart';
 
 /// Carbs manual-entry screen pushed over the shell (`/manual_entry/carbs`).
@@ -25,9 +25,9 @@ class CarbsEntryScreen extends ConsumerStatefulWidget {
 
 class _CarbsEntryScreenState extends ConsumerState<CarbsEntryScreen>
     with RefreshPermissionOnResume {
-  late final NotifierProvider<CarbsEntryNotifier, CarbsEntryState> _provider =
-      NotifierProvider.autoDispose<CarbsEntryNotifier, CarbsEntryState>(
-    CarbsEntryNotifier.new,
+  late final NotifierProvider<CarbsEntryViewModel, CarbsEntryState> _provider =
+      NotifierProvider.autoDispose<CarbsEntryViewModel, CarbsEntryState>(
+    CarbsEntryViewModel.new,
   );
 
   final TextEditingController _controller = TextEditingController();
@@ -69,7 +69,7 @@ class _CarbsEntryScreenState extends ConsumerState<CarbsEntryScreen>
 class _CarbsEntryForm extends ConsumerWidget {
   const _CarbsEntryForm({required this.provider, required this.controller});
 
-  final NotifierProvider<CarbsEntryNotifier, CarbsEntryState> provider;
+  final NotifierProvider<CarbsEntryViewModel, CarbsEntryState> provider;
   final TextEditingController controller;
 
   @override

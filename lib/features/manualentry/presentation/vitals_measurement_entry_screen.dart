@@ -14,7 +14,7 @@ import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'manual_entry_form_scaffold.dart';
 import 'manual_entry_timestamp_fields.dart';
-import '../application/vitals_measurement_entry_notifier.dart';
+import '../application/vitals_measurement_entry_view_model.dart';
 
 const Color _oxygenColor = Color(0xFF00897B);
 const Color _respiratoryColor = Color(0xFF5E97F6);
@@ -58,10 +58,10 @@ class _VitalsMeasurementEntryScreenState
       VitalsMeasurementType.fromStorage(widget.vitalsMeasurementType) ??
           VitalsMeasurementType.bloodPressure;
 
-  late final NotifierProvider<VitalsMeasurementEntryNotifier,
+  late final NotifierProvider<VitalsMeasurementEntryViewModel,
       VitalsMeasurementEntryState> _provider = NotifierProvider.autoDispose<
-      VitalsMeasurementEntryNotifier, VitalsMeasurementEntryState>(
-    () => VitalsMeasurementEntryNotifier(
+      VitalsMeasurementEntryViewModel, VitalsMeasurementEntryState>(
+    () => VitalsMeasurementEntryViewModel(
       _type,
       editRecordId: widget.vitalsEntryId,
       imperial: ref.read(unitSystemProvider) == UnitSystem.imperial,
@@ -124,7 +124,7 @@ class _VitalsEntryForm extends ConsumerWidget {
   });
 
   final VitalsMeasurementType type;
-  final NotifierProvider<VitalsMeasurementEntryNotifier,
+  final NotifierProvider<VitalsMeasurementEntryViewModel,
       VitalsMeasurementEntryState> provider;
   final TextEditingController controller;
   final TextEditingController secondaryController;

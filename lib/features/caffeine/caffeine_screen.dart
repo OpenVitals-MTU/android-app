@@ -11,7 +11,7 @@ import '../../ui/components/health_connect_gate.dart';
 import '../../ui/components/loading_state.dart';
 import '../../ui/components/metric_card.dart';
 import '../../ui/components/ov_card.dart';
-import 'caffeine_notifier.dart';
+import 'caffeine_view_model.dart';
 import '../../ui/components/section_padding.dart';
 
 /// The caffeine analytics screen, ported from the Kotlin `CaffeineScreen`.
@@ -27,8 +27,8 @@ class CaffeineScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(caffeineNotifierProvider);
-    final notifier = ref.read(caffeineNotifierProvider.notifier);
+    final state = ref.watch(caffeineProvider);
+    final notifier = ref.read(caffeineProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
 
     return Scaffold(
@@ -57,7 +57,7 @@ class CaffeineScreen extends ConsumerWidget {
 List<Widget> _content(
   BuildContext context,
   CaffeineState state,
-  CaffeineNotifier notifier,
+  CaffeineViewModel notifier,
   UnitFormatter formatter,
 ) {
   final error = _resolveError(state.error);

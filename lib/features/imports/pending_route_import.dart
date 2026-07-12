@@ -8,7 +8,7 @@ import '../manualentry/activity/activity_entry_notifier.dart';
 /// card sets the pending handle then navigates to the activity-entry route, and
 /// [ActivityEntryScreen] consumes it once on open (calling
 /// `ActivityEntryController.importRouteFile`) and clears it.
-class PendingRouteImportNotifier extends Notifier<ActivityRouteFileHandle?> {
+class PendingRouteImportViewModel extends Notifier<ActivityRouteFileHandle?> {
   @override
   ActivityRouteFileHandle? build() => null;
 
@@ -27,6 +27,6 @@ class PendingRouteImportNotifier extends Notifier<ActivityRouteFileHandle?> {
 }
 
 final pendingRouteImportProvider =
-    NotifierProvider<PendingRouteImportNotifier, ActivityRouteFileHandle?>(
-  PendingRouteImportNotifier.new,
+    NotifierProvider<PendingRouteImportViewModel, ActivityRouteFileHandle?>(
+  PendingRouteImportViewModel.new,
 );

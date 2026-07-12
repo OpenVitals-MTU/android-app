@@ -6,7 +6,7 @@ import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/mindfulness_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/mindfulness_models.dart';
-import 'package:openvitals/features/manualentry/application/mindfulness_entry_notifier.dart';
+import 'package:openvitals/features/manualentry/application/mindfulness_entry_view_model.dart';
 
 class _FakeMindfulnessRepository implements MindfulnessRepository {
   final List<MindfulnessSessionWriteRequest> writes = [];
@@ -43,7 +43,7 @@ void main() {
   late _FakeMindfulnessRepository repo;
   late PreferencesRepository prefs;
   late ProviderContainer container;
-  late NotifierProvider<MindfulnessEntryNotifier, MindfulnessEntryState> provider;
+  late NotifierProvider<MindfulnessEntryViewModel, MindfulnessEntryState> provider;
 
   Future<void> setUpWith({MindfulnessTimerConfig? config}) async {
     repo = _FakeMindfulnessRepository();
@@ -51,8 +51,8 @@ void main() {
     prefs = PreferencesRepository(await SharedPreferences.getInstance());
     if (config != null) prefs.setMindfulnessTimerConfig(config);
 
-    provider = NotifierProvider<MindfulnessEntryNotifier, MindfulnessEntryState>(
-      () => MindfulnessEntryNotifier(tick: _fastTick),
+    provider = NotifierProvider<MindfulnessEntryViewModel, MindfulnessEntryState>(
+      () => MindfulnessEntryViewModel(tick: _fastTick),
     );
     container = ProviderContainer(
       overrides: [
@@ -63,7 +63,7 @@ void main() {
     addTearDown(container.dispose);
   }
 
-  MindfulnessEntryNotifier notifier() => container.read(provider.notifier);
+  MindfulnessEntryViewModel notifier() => container.read(provider.notifier);
   MindfulnessEntryState state() => container.read(provider);
 
   /// Lets the build microtask (permission + edit load) settle.

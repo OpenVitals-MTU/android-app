@@ -14,7 +14,7 @@ import '../../ui/components/loading_state.dart';
 import '../../ui/components/metric_card.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
-import 'recovery_detail_notifier.dart';
+import 'recovery_detail_view_model.dart';
 
 const String _aasmSleepDurationUrl =
     'https://aasm.org/advocacy/position-statements/adult-sleep-duration-health-advisory/';
@@ -42,7 +42,7 @@ class _SleepScoreDetailScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(recoveryDetailNotifierProvider);
+    final state = ref.watch(recoveryDetailProvider);
     final formatter = ref.watch(unitFormatterProvider);
 
     return Scaffold(
@@ -71,7 +71,7 @@ class _SleepScoreDetailScreenState
     final estimate = day.sleepScore;
 
     return RefreshIndicator(
-      onRefresh: () => ref.read(recoveryDetailNotifierProvider.notifier).load(),
+      onRefresh: () => ref.read(recoveryDetailProvider.notifier).load(),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

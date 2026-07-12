@@ -12,7 +12,7 @@ import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import 'activity_metric.dart';
-import '../application/calories_notifier.dart';
+import '../application/calories_view_model.dart';
 
 /// Calories overview pushed over the shell (`/calories`), ported from the Kotlin
 /// `CaloriesScreen`. Shows calories burned and active calories over the selected
@@ -22,8 +22,8 @@ class CaloriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(caloriesNotifierProvider);
-    final notifier = ref.read(caloriesNotifierProvider.notifier);
+    final state = ref.watch(caloriesProvider);
+    final notifier = ref.read(caloriesProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
     final weekMode = ref.watch(weekPeriodModeProvider);
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);

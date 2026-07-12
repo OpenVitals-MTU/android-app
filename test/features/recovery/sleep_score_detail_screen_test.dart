@@ -7,13 +7,13 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/insights/sleep_score.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
-import 'package:openvitals/features/recovery/recovery_detail_notifier.dart';
+import 'package:openvitals/features/recovery/recovery_detail_view_model.dart';
 import 'package:openvitals/features/recovery/sleep_score_detail_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// Serves a fixed [RecoveryDetailState] so the cards render deterministic
 /// numbers (the estimate is constructed directly, not recomputed).
-class _FixedRecoveryDetailNotifier extends RecoveryDetailNotifier {
+class _FixedRecoveryDetailNotifier extends RecoveryDetailViewModel {
   _FixedRecoveryDetailNotifier(this._fixed);
 
   final RecoveryDetailState _fixed;
@@ -65,7 +65,7 @@ Future<Widget> _bootstrap(RecoveryDetailState state) async {
   return ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
-      recoveryDetailNotifierProvider
+      recoveryDetailProvider
           .overrideWith(() => _FixedRecoveryDetailNotifier(state)),
     ],
     child: MaterialApp(

@@ -210,7 +210,7 @@ final Map<String, List<Enum>> _enumValuedKeys = {
 /// `dashboard_widget_order` is the only one. Kotlin persisted a list of
 /// `DashboardWidgetId` *enum names* (`STEPS,DISTANCE,…`); the Dart dashboard
 /// persists a list of tile **titles** (`Steps`, `Distance`, `Body Energy`, …) —
-/// see `DashboardNotifier.setTileOrder`, which stores what
+/// see `DashboardViewModel.setTileOrder`, which stores what
 /// `applyDashboardTileLayout` matches on `tile.title`. The two vocabularies do
 /// not overlap, and Dart splits Kotlin's `STEPS`/`WEEKLY_CARDIO_LOAD` out into a
 /// separate ring order (`dashboard_ring_order`) besides.

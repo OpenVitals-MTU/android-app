@@ -11,7 +11,7 @@ import '../../ui/components/health_connect_gate.dart';
 import '../../ui/components/metric_detail_scaffold.dart';
 import 'heart_metric.dart';
 import 'heart_metric_content.dart';
-import 'heart_metric_notifier.dart';
+import 'heart_metric_view_model.dart';
 
 /// The shared period-detail screen for the ten heart + vitals metrics, ported
 /// from the Kotlin `HeartMetricScreen`. Each route-facing screen (`HeartRate

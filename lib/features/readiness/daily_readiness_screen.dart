@@ -14,7 +14,7 @@ import '../../ui/components/loading_state.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/components/period_navigator.dart';
 import '../../ui/theme/app_colors.dart';
-import 'daily_readiness_notifier.dart';
+import 'daily_readiness_view_model.dart';
 
 /// Daily-readiness overview pushed over the shell (`/daily_readiness`). Port of
 /// the Kotlin `DailyReadinessScreen` + `DailyReadinessPanel`: the overall /
@@ -25,8 +25,8 @@ class DailyReadinessScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(dailyReadinessNotifierProvider);
-    final notifier = ref.read(dailyReadinessNotifierProvider.notifier);
+    final state = ref.watch(dailyReadinessProvider);
+    final notifier = ref.read(dailyReadinessProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Daily readiness')),

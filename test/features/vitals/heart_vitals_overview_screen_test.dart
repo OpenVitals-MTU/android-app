@@ -317,13 +317,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // Defaults to the persisted HEART range (week).
-    expect(container.read(heartVitalsOverviewNotifierProvider).selectedRange,
+    expect(container.read(heartVitalsOverviewProvider).selectedRange,
         TimeRange.week);
 
     await tester.tap(find.text('Month'));
     await tester.pumpAndSettle();
 
-    expect(container.read(heartVitalsOverviewNotifierProvider).selectedRange,
+    expect(container.read(heartVitalsOverviewProvider).selectedRange,
         TimeRange.month);
     expect(heartRepo.queries.map((q) => q.range), contains(TimeRange.month));
   });

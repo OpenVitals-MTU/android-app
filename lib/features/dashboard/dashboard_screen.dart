@@ -27,7 +27,7 @@ import '../../ui/components/summary_ring_card.dart';
 import '../../ui/components/widget_edit_controls.dart';
 import '../../ui/theme/app_colors.dart';
 import '../activity/presentation/exercise_labels.dart';
-import 'dashboard_notifier.dart';
+import 'dashboard_view_model.dart';
 import 'dashboard_summary_presentation.dart';
 import '../../ui/components/accent_icon_chip.dart';
 
@@ -39,7 +39,7 @@ import '../../ui/components/accent_icon_chip.dart';
 /// Weekly cardio), a Log / Start quick-action row, a paged carousel of
 /// [MetricStatCard] stat tiles with dot indicators, and a today's-activities
 /// section. Data comes from one aggregated [DashboardData] via
-/// [dashboardNotifierProvider], wrapped in the [HealthConnectGate]. Refresh
+/// [dashboardProvider], wrapped in the [HealthConnectGate]. Refresh
 /// failures that leave data on screen surface as a transient SnackBar (the
 /// Kotlin toast behaviour). The top bar (title + Mindfulness/Achievements/
 /// Settings actions) is provided by the adaptive scaffold.
@@ -48,15 +48,15 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(dashboardNotifierProvider);
-    final notifier = ref.read(dashboardNotifierProvider.notifier);
+    final state = ref.watch(dashboardProvider);
+    final notifier = ref.read(dashboardProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
 
     ref.listen<ScreenError?>(
-      dashboardNotifierProvider.select((s) => s.error),
+      dashboardProvider.select((s) => s.error),
       (previous, next) {
         if (next == null) return;
-        if (ref.read(dashboardNotifierProvider).data == null) return;
+        if (ref.read(dashboardProvider).data == null) return;
         ScaffoldMessenger.maybeOf(context)
             ?.showSnackBar(SnackBar(content: Text(_errorText(next))));
         notifier.clearError();
@@ -91,7 +91,7 @@ class _DashboardBody extends ConsumerStatefulWidget {
 
   final DashboardState state;
   final UnitFormatter formatter;
-  final DashboardNotifier notifier;
+  final DashboardViewModel notifier;
 
   @override
   ConsumerState<_DashboardBody> createState() => _DashboardBodyState();

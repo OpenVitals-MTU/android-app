@@ -16,7 +16,7 @@ const double _poundsPerKilogram = 2.2046226218;
 /// The current [BodyProfile] from preferences, kept in sync with the
 /// repository's listenable. Reactive: the provider re-runs (re-seeding the card
 /// draft) whenever the profile is saved. Self-contained to this card so it does
-/// not depend on `settings_notifier.dart`.
+/// not depend on `settings_view_model.dart`.
 final bodyProfileCardProvider = Provider<BodyProfile>((ref) {
   final repo = ref.watch(preferencesRepositoryProvider);
   final listenable = repo.bodyProfileListenable;

@@ -38,7 +38,7 @@ import '../../../ui/components/period_comparison_stat.dart';
 import '../../../ui/components/personal_baseline_stat.dart';
 import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../application/activities_notifier.dart';
+import '../application/activities_view_model.dart';
 import 'exercise_labels.dart';
 import '../../../ui/components/section_padding.dart';
 import '../../../ui/components/accent_icon_chip.dart';
@@ -68,7 +68,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final formatter = ref.watch(unitFormatterProvider);
-    final notifier = ref.read(activitiesNotifierProvider.notifier);
+    final notifier = ref.read(activitiesProvider.notifier);
     final weekPeriodMode = ref.watch(weekPeriodModeProvider);
 
     final workouts = state.workouts;
@@ -187,7 +187,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
     WidgetRef ref,
     AppLocalizations l10n,
     UnitFormatter formatter,
-    ActivitiesNotifier notifier,
+    ActivitiesViewModel notifier,
     List<ActivityOverviewDay> sortedDays,
     WeekPeriodMode weekPeriodMode,
   ) {
@@ -357,7 +357,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
   Widget _selectedDayEntries(
     BuildContext context,
     WidgetRef ref,
-    ActivitiesNotifier notifier,
+    ActivitiesViewModel notifier,
     UnitFormatter formatter,
     LocalDate selectedDay,
   ) {

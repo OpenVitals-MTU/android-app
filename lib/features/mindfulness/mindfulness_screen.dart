@@ -22,7 +22,7 @@ import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'mindfulness_intraday_chart.dart';
-import 'mindfulness_notifier.dart';
+import 'mindfulness_view_model.dart';
 import 'reminders/mindfulness_reminder_card.dart';
 import '../../ui/components/section_padding.dart';
 

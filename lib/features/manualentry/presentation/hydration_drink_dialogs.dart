@@ -6,7 +6,7 @@ import '../../../domain/model/caffeine_models.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../nutrition/nutrition_formatting.dart';
-import '../application/hydration_entry_notifier.dart';
+import '../application/hydration_entry_view_model.dart';
 import 'manual_entry_timestamp_fields.dart';
 
 /// Formats a double as a compact string (trailing zeros trimmed). Used for

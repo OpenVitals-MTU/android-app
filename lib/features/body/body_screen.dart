@@ -20,7 +20,7 @@ import '../../ui/components/metric_card.dart';
 import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/components/paginated_entry_list.dart';
 import '../../ui/theme/app_colors.dart';
-import 'body_metric_notifier.dart';
+import 'body_metric_view_model.dart';
 import 'body_overview_sections.dart';
 import 'body_summary.dart';
 import '../../ui/components/loading_state.dart';
@@ -39,8 +39,8 @@ class BodyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(bodyMetricNotifierProvider);
-    final notifier = ref.read(bodyMetricNotifierProvider.notifier);
+    final state = ref.watch(bodyMetricProvider);
+    final notifier = ref.read(bodyMetricProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
     final weekMode = ref.watch(weekPeriodModeProvider);
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);
@@ -271,7 +271,7 @@ class _BodyOverviewContent extends ConsumerWidget {
         AppRoutes.bodyMeasurementEntryEditLocation(type.storageName, id),
       ),
       onDelete: () => ref
-          .read(bodyMetricNotifierProvider.notifier)
+          .read(bodyMetricProvider.notifier)
           .deleteBodyMeasurementEntry(type, id),
     );
   }

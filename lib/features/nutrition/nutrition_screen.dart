@@ -20,7 +20,7 @@ import '../../ui/theme/app_colors.dart';
 import '../../data/source/health/health_permissions.dart';
 import 'nutrition_formatting.dart';
 import 'nutrition_metric.dart';
-import 'nutrition_notifier.dart';
+import 'nutrition_view_model.dart';
 import 'nutrition_sections.dart';
 
 /// The nutrition overview / nutrient-breakdown screen, ported from the Kotlin

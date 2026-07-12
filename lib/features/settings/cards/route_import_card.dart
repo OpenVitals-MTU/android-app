@@ -13,7 +13,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../imports/pending_route_import.dart';
-import '../../imports/route_bulk_import_notifier.dart';
+import '../../imports/route_bulk_import_view_model.dart';
 import '../../manualentry/activity/activity_entry_notifier.dart';
 import '../../manualentry/activity/routeimport/activity_route_import_types.dart';
 

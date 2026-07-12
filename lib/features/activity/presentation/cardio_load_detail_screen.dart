@@ -9,7 +9,7 @@ import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../application/cardio_load_detail_notifier.dart';
+import '../application/cardio_load_detail_view_model.dart';
 import '../../../ui/components/section_padding.dart';
 
 /// Cardio-load detail pushed over the shell (`/activity/cardio_load`), ported
@@ -20,8 +20,8 @@ class CardioLoadDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(cardioLoadNotifierProvider);
-    final notifier = ref.read(cardioLoadNotifierProvider.notifier);
+    final state = ref.watch(cardioLoadProvider);
+    final notifier = ref.read(cardioLoadProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
 
     return Scaffold(
@@ -33,7 +33,7 @@ class CardioLoadDetailScreen extends ConsumerWidget {
   Widget _body(
     CardioLoadState state,
     UnitFormatter formatter,
-    CardioLoadNotifier notifier,
+    CardioLoadViewModel notifier,
   ) {
     if (state.isLoading && state.estimate == CardioLoadEstimate.noData) {
       return const FullScreenLoading();

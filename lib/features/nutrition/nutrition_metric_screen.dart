@@ -26,7 +26,7 @@ import '../../ui/components/personal_baseline_stat.dart';
 import '../../data/source/health/health_permissions.dart';
 import 'nutrition_formatting.dart';
 import 'nutrition_metric.dart';
-import 'nutrition_notifier.dart';
+import 'nutrition_view_model.dart';
 import 'nutrition_sections.dart';
 
 /// The shared period-detail screen for the four keyed nutrition metrics

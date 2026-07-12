@@ -207,7 +207,7 @@ class ManualEntryWidgetsState {
   final bool editing;
 }
 
-class ManualEntryWidgetsNotifier extends Notifier<ManualEntryWidgetsState> {
+class ManualEntryWidgetsViewModel extends Notifier<ManualEntryWidgetsState> {
   @override
   ManualEntryWidgetsState build() => ManualEntryWidgetsState(
         visible: _widgetIdsFromStored(
@@ -238,8 +238,8 @@ class ManualEntryWidgetsNotifier extends Notifier<ManualEntryWidgetsState> {
 }
 
 final manualEntryWidgetsProvider =
-    NotifierProvider<ManualEntryWidgetsNotifier, ManualEntryWidgetsState>(
-  ManualEntryWidgetsNotifier.new,
+    NotifierProvider<ManualEntryWidgetsViewModel, ManualEntryWidgetsState>(
+  ManualEntryWidgetsViewModel.new,
 );
 
 class _ManualEntryTile extends StatelessWidget {

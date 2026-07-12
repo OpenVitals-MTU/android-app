@@ -13,7 +13,7 @@ import '../../ui/components/ov_card.dart';
 import '../../ui/components/period_navigator.dart';
 import '../settings/cards/body_energy_calibration_card.dart';
 import 'body_energy_display.dart';
-import 'body_energy_notifier.dart';
+import 'body_energy_view_model.dart';
 import 'body_energy_timeline_chart.dart';
 
 /// Body-energy timeline detail pushed over the shell
@@ -39,15 +39,15 @@ class _BodyEnergyDetailsScreenState
     super.initState();
     final date = parseIsoLocalDate(widget.date);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(bodyEnergyNotifierProvider.notifier).load(date);
+      if (mounted) ref.read(bodyEnergyProvider.notifier).load(date);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(bodyEnergyNotifierProvider);
-    final notifier = ref.read(bodyEnergyNotifierProvider.notifier);
+    final state = ref.watch(bodyEnergyProvider);
+    final notifier = ref.read(bodyEnergyProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.screenBodyEnergy)),

@@ -12,7 +12,7 @@ import '../../state/app_providers.dart';
 import '../../ui/theme/app_theme.dart';
 import '../manualentry/presentation/hydration_catalog_widgets.dart';
 import '../../domain/hydration/hydration_drink_usage.dart';
-import '../manualentry/application/hydration_entry_notifier.dart';
+import '../manualentry/application/hydration_entry_view_model.dart';
 import 'home_widget_beverage.dart';
 import 'home_widget_service.dart';
 import 'home_widget_snapshots.dart';

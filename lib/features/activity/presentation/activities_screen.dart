@@ -11,7 +11,7 @@ import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../application/activities_notifier.dart';
+import '../application/activities_view_model.dart';
 import 'activities_ordered_sections.dart';
 
 /// The aggregate `/activity` screen (also the `/metric/WORKOUT` dispatch target):
@@ -25,8 +25,8 @@ class ActivitiesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(activitiesNotifierProvider);
-    final notifier = ref.read(activitiesNotifierProvider.notifier);
+    final state = ref.watch(activitiesProvider);
+    final notifier = ref.read(activitiesProvider.notifier);
     final weekMode = ref.watch(weekPeriodModeProvider);
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);
     final isEditingSections = ref.watch(metricDetailSectionEditProvider);

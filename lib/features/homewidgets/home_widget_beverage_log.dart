@@ -18,7 +18,7 @@ import '../../data/source/health/health_data_source.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../data/source/health/native/health_connect_native_data_source.dart';
 import '../../l10n/app_localizations.dart';
-import '../manualentry/application/hydration_entry_notifier.dart';
+import '../manualentry/application/hydration_entry_view_model.dart';
 import 'home_widget_beverage.dart';
 import 'home_widget_refresher.dart';
 import 'home_widget_service.dart';

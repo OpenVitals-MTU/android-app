@@ -12,7 +12,7 @@ import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'hydration_catalog_widgets.dart';
 import 'hydration_drink_dialogs.dart';
-import '../application/hydration_entry_notifier.dart';
+import '../application/hydration_entry_view_model.dart';
 import 'manual_entry_form_scaffold.dart';
 import 'manual_entry_timestamp_fields.dart';
 
@@ -48,10 +48,10 @@ class _HydrationEntryScreenState extends ConsumerState<HydrationEntryScreen>
   @override
   void refreshPermission() => ref.read(_provider.notifier).refreshPermission();
 
-  late final NotifierProvider<HydrationEntryNotifier, HydrationEntryState>
-      _provider = NotifierProvider.autoDispose<HydrationEntryNotifier,
+  late final NotifierProvider<HydrationEntryViewModel, HydrationEntryState>
+      _provider = NotifierProvider.autoDispose<HydrationEntryViewModel,
           HydrationEntryState>(
-    () => HydrationEntryNotifier(editRecordId: widget.hydrationEntryId),
+    () => HydrationEntryViewModel(editRecordId: widget.hydrationEntryId),
   );
 
   /// Guards the deep link against re-firing, as the Kotlin
@@ -119,7 +119,7 @@ class _HydrationEntryScreenState extends ConsumerState<HydrationEntryScreen>
 class _HydrationEntryForm extends ConsumerWidget {
   const _HydrationEntryForm({required this.provider});
 
-  final NotifierProvider<HydrationEntryNotifier, HydrationEntryState> provider;
+  final NotifierProvider<HydrationEntryViewModel, HydrationEntryState> provider;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -278,7 +278,7 @@ class _HydrationEntryForm extends ConsumerWidget {
 
   Future<void> _createDrink(
     BuildContext context,
-    HydrationEntryNotifier notifier,
+    HydrationEntryViewModel notifier,
     UnitFormatter formatter,
   ) async {
     final input = await showCustomDrinkDialog(context, formatter);
@@ -287,7 +287,7 @@ class _HydrationEntryForm extends ConsumerWidget {
 
   Future<void> _editDrink(
     BuildContext context,
-    HydrationEntryNotifier notifier,
+    HydrationEntryViewModel notifier,
     UnitFormatter formatter,
     CustomHydrationDrink drink,
   ) async {
@@ -300,7 +300,7 @@ class _HydrationEntryForm extends ConsumerWidget {
 
   Future<void> _logDrink(
     BuildContext context,
-    HydrationEntryNotifier notifier,
+    HydrationEntryViewModel notifier,
     UnitFormatter formatter,
     CustomHydrationDrink drink,
   ) async {

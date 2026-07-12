@@ -6,7 +6,7 @@ import '../model/activity_entry_types.dart';
 /// Port of the Kotlin `ActivityMetrics.kt` — derived figures a workout does not
 /// store, computed the same way everywhere they are shown.
 ///
-/// These lived as private helpers in `activities_notifier.dart` until the detail
+/// These lived as private helpers in `activities_view_model.dart` until the detail
 /// screen needed them too. One definition, so the "Moving time" a workout reports
 /// in the list can never disagree with the one on its own detail page.
 

@@ -22,7 +22,7 @@ import 'cards/fit_import_card.dart';
 import 'cards/permission_categories_card.dart';
 import 'cards/route_import_card.dart';
 import 'offline_maps_card.dart';
-import 'settings_notifier.dart';
+import 'settings_view_model.dart';
 import 'settings_section.dart';
 
 /// A settings sub-section pushed over the shell, ported from the Kotlin

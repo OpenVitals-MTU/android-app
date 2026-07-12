@@ -6,7 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/reminder_toggle_tile.dart';
 import '../../../ui/theme/app_colors.dart';
-import 'hydration_reminder_settings_notifier.dart';
+import 'hydration_reminder_settings_view_model.dart';
 
 /// The hydration reminder settings card on the hydration detail screen. Port of
 /// the Kotlin `HydrationReminderCard`.

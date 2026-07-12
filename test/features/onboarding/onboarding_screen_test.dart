@@ -7,7 +7,7 @@ import 'package:openvitals/data/repository/impl/health_repository_impl.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/preferences/app_language.dart';
-import 'package:openvitals/features/onboarding/onboarding_notifier.dart';
+import 'package:openvitals/features/onboarding/onboarding_view_model.dart';
 import 'package:openvitals/features/onboarding/onboarding_screen.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
@@ -255,7 +255,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    final notifier = container.read(onboardingNotifierProvider.notifier);
+    final notifier = container.read(onboardingProvider.notifier);
     final categories = notifier.permissionCategories;
 
     // One-to-one with the Kotlin OnboardingViewModel.permissionCategories order.

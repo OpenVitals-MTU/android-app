@@ -5,7 +5,7 @@ import '../../../domain/model/mindfulness_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../application/mindfulness_entry_notifier.dart';
+import '../application/mindfulness_entry_view_model.dart';
 
 /// The guided meditation timer. Port of the Kotlin `MindfulnessTimerCard`.
 ///
@@ -16,7 +16,7 @@ import '../application/mindfulness_entry_notifier.dart';
 class MindfulnessTimerCard extends ConsumerStatefulWidget {
   const MindfulnessTimerCard({super.key, required this.provider});
 
-  final NotifierProvider<MindfulnessEntryNotifier, MindfulnessEntryState>
+  final NotifierProvider<MindfulnessEntryViewModel, MindfulnessEntryState>
       provider;
 
   @override

@@ -12,7 +12,7 @@ import '../../ui/components/metric_card.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'sleep_cards.dart';
-import 'sleep_detail_notifier.dart';
+import 'sleep_detail_view_model.dart';
 import 'sleep_stage_chart.dart';
 import '../../ui/components/section_padding.dart';
 
@@ -30,9 +30,9 @@ class SleepDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen> {
-  late final NotifierProvider<SleepDetailNotifier, SleepDetailState> _provider =
-      NotifierProvider.autoDispose<SleepDetailNotifier, SleepDetailState>(
-    () => SleepDetailNotifier(widget.sleepId),
+  late final NotifierProvider<SleepDetailViewModel, SleepDetailState> _provider =
+      NotifierProvider.autoDispose<SleepDetailViewModel, SleepDetailState>(
+    () => SleepDetailViewModel(widget.sleepId),
   );
 
   @override

@@ -8,7 +8,7 @@ import '../../core/time/local_date.dart';
 import '../../state/app_providers.dart';
 import '../../ui/components/ov_card.dart';
 import 'achievement_catalog.dart';
-import 'achievements_notifier.dart';
+import 'achievements_view_model.dart';
 import '../../ui/components/section_padding.dart';
 
 /// Achievements badge grid, ported from the Kotlin `AchievementsScreen` +

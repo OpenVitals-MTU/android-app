@@ -6,7 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/reminder_toggle_tile.dart';
 import '../../../ui/theme/app_colors.dart';
-import 'mindfulness_reminder_settings_notifier.dart';
+import 'mindfulness_reminder_settings_view_model.dart';
 
 /// The mindfulness reminder settings card. Port of the Kotlin
 /// `MindfulnessReminderCard`.

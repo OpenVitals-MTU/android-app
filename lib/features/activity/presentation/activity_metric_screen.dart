@@ -24,7 +24,7 @@ import 'activity_daily_entries.dart';
 import 'activity_intraday_chart_card.dart';
 import 'activity_metric.dart';
 import 'activity_metric_display.dart';
-import '../application/activity_metric_notifier.dart';
+import '../application/activity_metric_view_model.dart';
 import '../../../ui/components/section_padding.dart';
 
 /// The shared period-detail screen for the seven movement metrics, a port of the

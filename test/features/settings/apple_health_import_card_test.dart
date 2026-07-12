@@ -15,7 +15,7 @@ import 'package:openvitals/features/imports/applehealth/apple_health_import_fore
 import 'package:openvitals/features/imports/applehealth/apple_health_import_models.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_checkpoint_store.dart';
-import 'package:openvitals/features/imports/applehealth/apple_health_import_notifier.dart';
+import 'package:openvitals/features/imports/applehealth/apple_health_import_view_model.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_service.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_staging_store.dart';
 import 'package:openvitals/features/settings/cards/apple_health_import_card.dart';

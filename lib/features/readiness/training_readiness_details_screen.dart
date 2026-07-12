@@ -15,12 +15,12 @@ import '../../ui/components/loading_state.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/components/period_navigator.dart';
 import '../../ui/theme/app_colors.dart';
-import 'daily_readiness_notifier.dart';
+import 'daily_readiness_view_model.dart';
 
 /// Loads the [DailyReadinessInsight] for an arbitrary [LocalDate] (keyed by
 /// date so navigating days does not disturb the shared
-/// [dailyReadinessNotifierProvider] that backs the daily-readiness dashboard).
-/// Mirrors the load performed by [DailyReadinessNotifier.load].
+/// [dailyReadinessProvider] that backs the daily-readiness dashboard).
+/// Mirrors the load performed by [DailyReadinessViewModel.load].
 final trainingReadinessInsightProvider =
     FutureProvider.autoDispose.family<DailyReadinessInsight, LocalDate>(
   (ref, date) async {

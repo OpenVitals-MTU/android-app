@@ -19,7 +19,7 @@ import '../../ui/components/paginated_entry_list.dart';
 import '../../ui/theme/app_colors.dart';
 import '../../data/source/health/health_permissions.dart';
 import 'hydration_intraday_chart.dart';
-import 'hydration_notifier.dart';
+import 'hydration_view_model.dart';
 import 'reminders/hydration_reminder_card.dart';
 import '../../ui/components/section_padding.dart';
 
@@ -34,8 +34,8 @@ class HydrationScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(hydrationNotifierProvider);
-    final notifier = ref.read(hydrationNotifierProvider.notifier);
+    final state = ref.watch(hydrationProvider);
+    final notifier = ref.read(hydrationProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
     final weekMode = ref.watch(weekPeriodModeProvider);
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);

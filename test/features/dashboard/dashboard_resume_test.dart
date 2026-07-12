@@ -9,7 +9,7 @@ import 'package:openvitals/domain/model/dashboard_data.dart';
 import 'package:openvitals/domain/model/dashboard_query.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/usecase/load_dashboard_day_use_case.dart';
-import 'package:openvitals/features/dashboard/dashboard_notifier.dart';
+import 'package:openvitals/features/dashboard/dashboard_view_model.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 
@@ -59,7 +59,7 @@ Future<(ProviderContainer, _RecordingUseCase)> _boot() async {
   );
   addTearDown(container.dispose);
   // Keep the notifier alive and let its initial load settle.
-  container.listen(dashboardNotifierProvider, (_, _) {});
+  container.listen(dashboardProvider, (_, _) {});
   await pumpEventQueue();
   useCase.loadedDates.clear();
   return (container, useCase);
@@ -71,19 +71,19 @@ void main() {
 
   test('resumeCurrentDay reloads today by default', () async {
     final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardNotifierProvider.notifier);
+    final notifier = container.read(dashboardProvider.notifier);
 
     notifier.resumeCurrentDay();
     await pumpEventQueue();
 
     expect(useCase.loadedDates, isNotEmpty);
     expect(useCase.loadedDates.every((d) => d == today), isTrue);
-    expect(container.read(dashboardNotifierProvider).selectedDate, today);
+    expect(container.read(dashboardProvider).selectedDate, today);
   });
 
   test('resumeCurrentDay honours a day the user pinned in the past', () async {
     final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardNotifierProvider.notifier);
+    final notifier = container.read(dashboardProvider.notifier);
 
     notifier.previousDay();
     await pumpEventQueue();
@@ -95,13 +95,13 @@ void main() {
     // Refreshed in place — never yanked forward to today.
     expect(useCase.loadedDates, isNotEmpty);
     expect(useCase.loadedDates.every((d) => d == yesterday), isTrue);
-    expect(container.read(dashboardNotifierProvider).selectedDate, yesterday);
+    expect(container.read(dashboardProvider).selectedDate, yesterday);
   });
 
   test('selectDate on a past day pins it; selecting today clears the pin',
       () async {
     final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardNotifierProvider.notifier);
+    final notifier = container.read(dashboardProvider.notifier);
 
     notifier.selectDate(today.minusDays(3));
     await pumpEventQueue();
@@ -123,7 +123,7 @@ void main() {
 
   test('nextDay onto a still-past day keeps the pin', () async {
     final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardNotifierProvider.notifier);
+    final notifier = container.read(dashboardProvider.notifier);
 
     notifier.previousDay();
     await pumpEventQueue();
@@ -143,13 +143,13 @@ void main() {
 
   test('nextDay back onto today clears the pin', () async {
     final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardNotifierProvider.notifier);
+    final notifier = container.read(dashboardProvider.notifier);
 
     notifier.previousDay();
     await pumpEventQueue();
     notifier.nextDay();
     await pumpEventQueue();
-    expect(container.read(dashboardNotifierProvider).selectedDate, today);
+    expect(container.read(dashboardProvider).selectedDate, today);
     useCase.loadedDates.clear();
 
     notifier.resumeCurrentDay();

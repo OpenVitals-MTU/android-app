@@ -5,14 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/model/ble_sensor_models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../data/source/sensors/ble/ble_scan_permission.dart';
-import 'ble_devices_notifier.dart';
+import 'ble_devices_view_model.dart';
 
 /// The Sensors settings screen: list paired BLE sensors (enable / edit / remove)
 /// and add new ones through a scan → capability-discovery → pair flow.
 ///
 /// Port of the Kotlin `BleDevicesSettingsScreen` + `BleDevicesViewModel`. The
 /// scan/connect stack is device-dependent; this screen drives the ported
-/// [BleDevicesNotifier] over `flutter_blue_plus`.
+/// [BleDevicesViewModel] over `flutter_blue_plus`.
 class BleDevicesScreen extends ConsumerStatefulWidget {
   const BleDevicesScreen({super.key});
 
@@ -21,13 +21,13 @@ class BleDevicesScreen extends ConsumerStatefulWidget {
 }
 
 class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
-  late final BleDevicesNotifier _notifier;
+  late final BleDevicesViewModel _notifier;
 
   @override
   void initState() {
     super.initState();
     // Capture the (long-lived) notifier now: `ref` is unsafe in dispose().
-    _notifier = ref.read(bleDevicesNotifierProvider.notifier);
+    _notifier = ref.read(bleDevicesViewModelProvider.notifier);
     // Kotlin `DisposableEffect(Unit) { refresh() }`.
     WidgetsBinding.instance.addPostFrameCallback((_) => _notifier.refresh());
   }
@@ -69,7 +69,7 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final devices = ref.watch(
-      bleDevicesNotifierProvider.select((s) => s.devices),
+      bleDevicesViewModelProvider.select((s) => s.devices),
     );
 
     return Scaffold(
@@ -236,7 +236,7 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
   @override
   void initState() {
     super.initState();
-    final state = ref.read(bleDevicesNotifierProvider);
+    final state = ref.read(bleDevicesViewModelProvider);
     _nameController.text = state.addDisplayName;
     _wheelController.text = state.addWheelCircumferenceMm;
   }
@@ -252,8 +252,8 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final notifier = ref.read(bleDevicesNotifierProvider.notifier);
-    final state = ref.watch(bleDevicesNotifierProvider);
+    final notifier = ref.read(bleDevicesViewModelProvider.notifier);
+    final state = ref.watch(bleDevicesViewModelProvider);
 
     // Keep the display-name field in sync when selecting a device sets it,
     // without clobbering the user's own edits.
@@ -412,7 +412,7 @@ class _EditDeviceDialogState extends ConsumerState<_EditDeviceDialog> {
   @override
   void initState() {
     super.initState();
-    final state = ref.read(bleDevicesNotifierProvider);
+    final state = ref.read(bleDevicesViewModelProvider);
     _nameController.text = state.editDisplayName;
     _wheelController.text = state.editWheelCircumferenceMm;
   }
@@ -428,8 +428,8 @@ class _EditDeviceDialogState extends ConsumerState<_EditDeviceDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final notifier = ref.read(bleDevicesNotifierProvider.notifier);
-    final state = ref.watch(bleDevicesNotifierProvider);
+    final notifier = ref.read(bleDevicesViewModelProvider.notifier);
+    final state = ref.watch(bleDevicesViewModelProvider);
 
     return AlertDialog(
       title: Text(l10n.settingsSensorsEditDevice),
@@ -497,7 +497,7 @@ class _EditDeviceDialogState extends ConsumerState<_EditDeviceDialog> {
         TextButton(
           onPressed: () {
             notifier.saveEditedDevice();
-            if (ref.read(bleDevicesNotifierProvider).editingDeviceId == null) {
+            if (ref.read(bleDevicesViewModelProvider).editingDeviceId == null) {
               Navigator.of(context).pop();
             }
           },

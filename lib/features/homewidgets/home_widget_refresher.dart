@@ -26,7 +26,7 @@ import 'home_widget_snapshots.dart';
 /// data on `onUpdate` (through a Hilt entry point) and renders it. Here the data
 /// lives in Dart, so one load fans out to all the widgets — which is also why the
 /// refresher, not the widget, decides *when* data is stale (see
-/// `home_widget_alarm.dart` for the periodic path and `DashboardNotifier._publish`
+/// `home_widget_alarm.dart` for the periodic path and `DashboardViewModel._publish`
 /// for the foreground one).
 ///
 /// Nothing here may throw: it runs fire-and-forget from the UI and from an alarm

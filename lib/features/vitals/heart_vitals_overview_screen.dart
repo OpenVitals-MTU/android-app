@@ -92,7 +92,7 @@ class HeartVitalsOverviewState {
 /// owning [MetricDetailScaffold] drives every load through [load] and
 /// pull-to-refresh through [refresh]. A monotonic [_generation] guard drops
 /// stale results. It always issues the combined heart + vitals load.
-class HeartVitalsOverviewNotifier extends Notifier<HeartVitalsOverviewState> {
+class HeartVitalsOverviewViewModel extends Notifier<HeartVitalsOverviewState> {
   int _generation = 0;
 
   @override
@@ -145,9 +145,9 @@ class HeartVitalsOverviewNotifier extends Notifier<HeartVitalsOverviewState> {
       );
 }
 
-final heartVitalsOverviewNotifierProvider =
-    NotifierProvider<HeartVitalsOverviewNotifier, HeartVitalsOverviewState>(
-        HeartVitalsOverviewNotifier.new);
+final heartVitalsOverviewProvider =
+    NotifierProvider<HeartVitalsOverviewViewModel, HeartVitalsOverviewState>(
+        HeartVitalsOverviewViewModel.new);
 
 /// The combined heart & vitals overview (`/heart_vitals`), a port of the Kotlin
 /// `HeartVitalsOverviewScreen` + `VitalsOverviewContent`: one range-driven
@@ -162,8 +162,8 @@ class HeartVitalsOverviewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(heartVitalsOverviewNotifierProvider);
-    final notifier = ref.read(heartVitalsOverviewNotifierProvider.notifier);
+    final state = ref.watch(heartVitalsOverviewProvider);
+    final notifier = ref.read(heartVitalsOverviewProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
     final weekMode = ref.watch(weekPeriodModeProvider);
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);

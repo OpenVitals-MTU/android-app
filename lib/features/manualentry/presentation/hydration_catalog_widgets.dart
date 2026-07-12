@@ -8,7 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'hydration_catalog.dart';
 import 'hydration_drink_dialogs.dart';
-import '../application/hydration_entry_notifier.dart';
+import '../application/hydration_entry_view_model.dart';
 
 /// Kotlin `HydrationCatalogRowHeight`.
 const double _rowHeight = 76;

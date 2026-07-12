@@ -17,7 +17,7 @@ import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../imports/applehealth/apple_health_import_models.dart';
 import '../../imports/applehealth/apple_health_import_notification.dart';
-import '../../imports/applehealth/apple_health_import_notifier.dart';
+import '../../imports/applehealth/apple_health_import_view_model.dart';
 import '../../imports/applehealth/apple_health_import_staging_store.dart';
 
 /// The Kotlin `AppleHealthExportMimeTypes` (application/zip, application/xml,
@@ -32,7 +32,7 @@ const List<String> kAppleHealthExportMimeTypes = <String>[
 
 /// Settings "Apple Health import" card — a faithful port of the Kotlin
 /// `AppleHealthImportCard` (`SettingsCards.kt`). Drives the already-DI-wired
-/// [appleHealthImportNotifierProvider]: pick an export, analyze it, choose
+/// [appleHealthImportProvider]: pick an export, analyze it, choose
 /// categories, import the selected set, and copy/save the shareable report.
 class AppleHealthImportCard extends ConsumerWidget {
   const AppleHealthImportCard({
@@ -57,8 +57,8 @@ class AppleHealthImportCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(appleHealthImportNotifierProvider);
-    final notifier = ref.read(appleHealthImportNotifierProvider.notifier);
+    final state = ref.watch(appleHealthImportProvider);
+    final notifier = ref.read(appleHealthImportProvider.notifier);
 
     final availability = ref.watch(healthConnectAvailabilityProvider).value;
     final granted =
@@ -389,7 +389,7 @@ class AppleHealthImportCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _pickAndAnalyze(AppleHealthImportNotifier notifier) async {
+  Future<void> _pickAndAnalyze(AppleHealthImportViewModel notifier) async {
     final source = await _pickSource();
     if (source == null) return;
     await notifier.analyze(source);
@@ -440,7 +440,7 @@ class AppleHealthImportCard extends ConsumerWidget {
   Future<void> _saveReport(
     BuildContext context,
     AppLocalizations l10n,
-    AppleHealthImportNotifier notifier,
+    AppleHealthImportViewModel notifier,
   ) async {
     final content = notifier.reportTextForSave;
     const suggestedName = 'openvitals-apple-health-import-report.txt';

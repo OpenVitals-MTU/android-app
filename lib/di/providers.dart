@@ -711,7 +711,7 @@ final homeWidgetServiceProvider = Provider<HomeWidgetService>(
 );
 
 /// Pushes today's data to every placed home-screen widget. Foreground path: the
-/// dashboard hands its merged data straight over (see `DashboardNotifier`); the
+/// dashboard hands its merged data straight over (see `DashboardViewModel`); the
 /// periodic path runs in the alarm isolate, which builds its own graph.
 final homeWidgetRefresherProvider = Provider<HomeWidgetRefresher>((ref) {
   final preferences = ref.watch(preferencesRepositoryProvider);

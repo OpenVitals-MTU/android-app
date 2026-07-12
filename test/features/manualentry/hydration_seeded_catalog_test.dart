@@ -12,7 +12,7 @@ import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/insights/caffeine_health_drink_catalog.dart';
 import 'package:openvitals/domain/model/caffeine_models.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
-import 'package:openvitals/features/manualentry/application/hydration_entry_notifier.dart';
+import 'package:openvitals/features/manualentry/application/hydration_entry_view_model.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
 
 /// Exercises the real drift-backed [BeverageStore], not a fake: the seeded
@@ -130,8 +130,8 @@ void main() {
     addTearDown(container.dispose);
 
     final provider =
-        NotifierProvider<HydrationEntryNotifier, HydrationEntryState>(
-      HydrationEntryNotifier.new,
+        NotifierProvider<HydrationEntryViewModel, HydrationEntryState>(
+      HydrationEntryViewModel.new,
     );
     container.read(provider);
     // Let the build's async catalog load finish.

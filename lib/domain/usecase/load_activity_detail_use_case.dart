@@ -45,7 +45,7 @@ class ActivityDetailLoadResult {
 /// missing permission costs one card, never the screen. The workout itself does
 /// not degrade — without it there is nothing to show.
 ///
-/// This orchestration used to live in `ActivityDetailNotifier`, which made a
+/// This orchestration used to live in `ActivityDetailViewModel`, which made a
 /// view-model responsible for knowing that Health Connect outranks the samples.
 class LoadActivityDetailUseCase {
   const LoadActivityDetailUseCase(this._activityRepository, this._heartRepository);

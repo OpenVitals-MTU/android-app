@@ -11,7 +11,7 @@ import 'settings_controls.dart';
 /// through [PreferencesRepository]. Backs [ActivityRecordingPreferencesCard]
 /// only, so it stays out of the shared `SettingsState` (mirroring how the
 /// offline-maps / BLE cards keep their own providers).
-class ActivityRecordingPreferencesNotifier
+class ActivityRecordingPreferencesViewModel
     extends Notifier<ActivityRecordingPreferences> {
   PreferencesRepository get _prefs => ref.read(preferencesRepositoryProvider);
 
@@ -26,8 +26,8 @@ class ActivityRecordingPreferencesNotifier
 }
 
 final activityRecordingPreferencesProvider = NotifierProvider<
-    ActivityRecordingPreferencesNotifier, ActivityRecordingPreferences>(
-  ActivityRecordingPreferencesNotifier.new,
+    ActivityRecordingPreferencesViewModel, ActivityRecordingPreferences>(
+  ActivityRecordingPreferencesViewModel.new,
 );
 
 /// Live GPS/recording tuning card, a 1:1 port of the Kotlin

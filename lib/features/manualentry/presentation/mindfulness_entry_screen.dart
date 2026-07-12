@@ -11,7 +11,7 @@ import 'manual_entry_form_scaffold.dart';
 import 'manual_entry_timestamp_fields.dart';
 import '../mindfulness/mindfulness_sound_effects.dart';
 import '../mindfulness/mindfulness_timer_card.dart';
-import '../application/mindfulness_entry_notifier.dart';
+import '../application/mindfulness_entry_view_model.dart';
 
 /// Mindfulness manual-entry screen pushed over the shell. Handles both the
 /// new-entry route and the edit route (which carries a [mindfulnessEntryId]).
@@ -39,11 +39,11 @@ class _MindfulnessEntryScreenState
   final TextEditingController _controller = TextEditingController();
   bool _syncedFromState = false;
 
-  late final NotifierProvider<MindfulnessEntryNotifier, MindfulnessEntryState>
+  late final NotifierProvider<MindfulnessEntryViewModel, MindfulnessEntryState>
       _provider =
-      NotifierProvider.autoDispose<MindfulnessEntryNotifier,
+      NotifierProvider.autoDispose<MindfulnessEntryViewModel,
           MindfulnessEntryState>(
-    () => MindfulnessEntryNotifier(editRecordId: widget.mindfulnessEntryId),
+    () => MindfulnessEntryViewModel(editRecordId: widget.mindfulnessEntryId),
   );
 
   @override
@@ -93,7 +93,7 @@ class _MindfulnessEntryForm extends ConsumerWidget {
     required this.controller,
   });
 
-  final NotifierProvider<MindfulnessEntryNotifier, MindfulnessEntryState>
+  final NotifierProvider<MindfulnessEntryViewModel, MindfulnessEntryState>
       provider;
   final TextEditingController controller;
 

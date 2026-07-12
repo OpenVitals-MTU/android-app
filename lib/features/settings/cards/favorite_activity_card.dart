@@ -10,7 +10,7 @@ import 'settings_controls.dart';
 /// Holds the favorite-activity exercise type (`null` = "use latest") and writes
 /// changes back through [PreferencesRepository]. Backs [FavoriteActivityCard]
 /// only, so it stays out of the shared `SettingsState`.
-class FavoriteActivityNotifier extends Notifier<int?> {
+class FavoriteActivityViewModel extends Notifier<int?> {
   PreferencesRepository get _prefs => ref.read(preferencesRepositoryProvider);
 
   @override
@@ -23,8 +23,8 @@ class FavoriteActivityNotifier extends Notifier<int?> {
 }
 
 final favoriteActivityExerciseTypeProvider =
-    NotifierProvider<FavoriteActivityNotifier, int?>(
-  FavoriteActivityNotifier.new,
+    NotifierProvider<FavoriteActivityViewModel, int?>(
+  FavoriteActivityViewModel.new,
 );
 
 /// The default-activity picker card, a 1:1 port of the Kotlin

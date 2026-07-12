@@ -22,7 +22,7 @@ import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/theme/app_colors.dart';
 import 'sleep_cards.dart';
 import 'sleep_metric_sections.dart';
-import 'sleep_notifier.dart';
+import 'sleep_view_model.dart';
 import 'sleep_presentation.dart';
 import 'sleep_schedule_chart.dart';
 import '../../ui/components/loading_state.dart';
@@ -40,8 +40,8 @@ class SleepScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(sleepNotifierProvider);
-    final notifier = ref.read(sleepNotifierProvider.notifier);
+    final state = ref.watch(sleepProvider);
+    final notifier = ref.read(sleepProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
     final weekMode = ref.watch(weekPeriodModeProvider);
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);

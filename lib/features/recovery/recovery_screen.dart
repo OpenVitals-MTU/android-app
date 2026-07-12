@@ -12,7 +12,7 @@ import '../../ui/components/loading_state.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/components/period_navigator.dart';
 import '../../ui/theme/app_colors.dart';
-import 'recovery_notifier.dart';
+import 'recovery_view_model.dart';
 
 /// Stress-tracking (physiological stress) detail pushed over the shell
 /// (`/daily_readiness/stress/:stressDate`). The Flutter port's recovery feature:
@@ -36,14 +36,14 @@ class _StressDetailsScreenState extends ConsumerState<StressDetailsScreen> {
     super.initState();
     final date = _parseIsoLocalDate(widget.date);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(recoveryNotifierProvider.notifier).load(date);
+      if (mounted) ref.read(recoveryProvider.notifier).load(date);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(recoveryNotifierProvider);
-    final notifier = ref.read(recoveryNotifierProvider.notifier);
+    final state = ref.watch(recoveryProvider);
+    final notifier = ref.read(recoveryProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Stress')),
