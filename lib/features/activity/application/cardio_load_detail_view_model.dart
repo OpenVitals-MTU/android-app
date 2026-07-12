@@ -46,28 +46,26 @@ class CardioLoadViewModel extends Notifier<CardioLoadState> {
 
     state = state.copyWith(isLoading: true, error: null, date: today);
 
-    try {
-      // The 30-day baseline window, the four reads it spans and the scoring of
-      // today's slice against them are domain knowledge, and live in the use
-      // case. What stays here is the generation guard and the state mapping.
-      final result = (await loadCardioLoadDetail(today)).orThrow();
-      if (!ref.mounted || generation != _generation) return;
-
-      state = state.copyWith(
-        isLoading: false,
-        estimate: result.estimate,
-        steps: result.steps,
-        activeCaloriesKcal: result.activeCaloriesKcal,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(
-          error,
-          fallback: 'Unable to load cardio load.',
-        ),
-      );
+    // The 30-day baseline window, the four reads it spans and the scoring of
+    // today's slice against them are domain knowledge, and live in the use
+    // case. What stays here is the generation guard and the state mapping.
+    final result = await loadCardioLoadDetail(today);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          estimate: value.estimate,
+          steps: value.steps,
+          activeCaloriesKcal: value.activeCaloriesKcal,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(
+            fallback: 'Unable to load cardio load.',
+          ),
+        );
     }
   }
 }

@@ -21,11 +21,20 @@ class ActivitySplitsCard extends StatelessWidget {
     required this.splits,
     required this.formatter,
     required this.splitDistanceMeters,
+    required this.slowestPaceSeconds,
+    required this.fastestPaceSeconds,
   });
 
   final ActivitySplits splits;
   final UnitFormatter formatter;
   final double splitDistanceMeters;
+
+  /// The activity's slowest and fastest split, in seconds per kilometre — the
+  /// bar scale, folded at load time by the view-model. A ratio between splits,
+  /// so the unit it is expressed in cancels out; the numbers the row PRINTS are
+  /// still formatted in the user's own units.
+  final double? slowestPaceSeconds;
+  final double? fastestPaceSeconds;
 
   @override
   Widget build(BuildContext context) {
@@ -58,18 +67,6 @@ class ActivitySplitsCard extends StatelessWidget {
     final columnLabel = splits.source == SplitSource.deviceLaps
         ? l10n.activitySplitsHeaderLap
         : l10n.activitySplitsHeaderSplit;
-
-    // The bar scale: the slowest split fills the row. Pace, not distance —
-    // a partial split is short but need not be slow.
-    final paces = <double>[
-      for (final split in rows) ?split.paceSecondsPerUnit(unitMeters),
-    ];
-    final slowestPace = paces.isEmpty
-        ? null
-        : paces.reduce((a, b) => a > b ? a : b);
-    final fastestPace = paces.isEmpty
-        ? null
-        : paces.reduce((a, b) => a < b ? a : b);
 
     return OpenVitalsCard(
       child: Padding(
@@ -105,8 +102,8 @@ class ActivitySplitsCard extends StatelessWidget {
                 columnLabel: columnLabel,
                 formatter: formatter,
                 unitMeters: unitMeters,
-                slowestPaceSeconds: slowestPace,
-                fastestPaceSeconds: fastestPace,
+                slowestPaceSeconds: slowestPaceSeconds,
+                fastestPaceSeconds: fastestPaceSeconds,
                 // The estimated source gives every split the same pace: a bar
                 // chart of it would be a straight line masquerading as a
                 // measurement. Show the numbers, drop the bar.
@@ -197,7 +194,8 @@ class _SplitRow extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: 24),
               child: _PaceBar(
-                paceSeconds: split.paceSecondsPerUnit(unitMeters),
+                // Per kilometre, like the scale it is measured against.
+                paceSeconds: split.paceSecondsPerUnit(1000.0),
                 slowestPaceSeconds: slowestPaceSeconds,
                 fastestPaceSeconds: fastestPaceSeconds,
                 fasterThanAverage: delta != null && delta < 0,

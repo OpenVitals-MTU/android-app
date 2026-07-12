@@ -39,6 +39,7 @@ class ActivityDailyEntriesContent extends StatelessWidget {
     this.titleDate,
   });
 
+  /// Already in list order (newest first) — the view-model cut them.
   final List<ActivityDailyEntry> entries;
   final Color accentColor;
   final LocalDate? titleDate;
@@ -47,11 +48,10 @@ class ActivityDailyEntriesContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final sorted = [...entries]..sort((a, b) => b.date.compareTo(a.date));
 
     return PaginatedEntryList<ActivityDailyEntry>(
       title: activityEntryListTitle(titleDate, locale, l10n),
-      entries: sorted,
+      entries: entries,
       rowBuilder: (context, entry) => ActivityDailyEntryRow(
         entry: entry,
         accentColor: accentColor,

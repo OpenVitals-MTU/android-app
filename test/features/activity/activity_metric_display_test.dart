@@ -6,8 +6,8 @@ import 'package:openvitals/domain/insights/period_comparison.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/domain/query/activity_period_data.dart';
+import 'package:openvitals/features/activity/application/activity_metric_display.dart';
 import 'package:openvitals/features/activity/presentation/activity_metric.dart';
-import 'package:openvitals/features/activity/presentation/activity_metric_display.dart';
 
 /// Unit coverage for the Kotlin `ActivityPresentationMapper` port.
 void main() {
@@ -58,7 +58,7 @@ void main() {
     DatePeriod? period,
     double dailyGoal = 8000,
   }) =>
-      activityMetricDisplay(
+      buildActivityMetricDisplay(
         metric: metric,
         data: data,
         range: range,

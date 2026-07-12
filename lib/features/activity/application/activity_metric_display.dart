@@ -1,67 +1,75 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/daily_goals.dart';
+import '../../../domain/insights/data_confidence.dart';
 import '../../../domain/insights/period_comparison.dart';
 import '../../../domain/insights/personal_baseline.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/query/activity_period_data.dart';
-import 'activity_metric.dart';
+import '../../../ui/charts/bar_chart.dart';
+import '../presentation/activity_metric.dart';
+
+part 'activity_metric_display.freezed.dart';
 
 /// Port of the Kotlin `ActivityDisplayState.kt` + the per-metric `*Display`
 /// functions in `ActivityPresentationMapper.kt`.
 ///
 /// Pure: everything the Steps (and sibling) detail screens render is derived
-/// here from a loaded [ActivityPeriodData], so the sections stay dumb.
+/// here from a loaded [ActivityPeriodData], once per load in the view-model, so
+/// the sections stay dumb.
 
 /// Kotlin `ActivityIntradayPoint`.
-@immutable
-class ActivityIntradayPoint {
-  const ActivityIntradayPoint({required this.time, required this.value});
-
-  final DateTime time;
-  final double value;
+@freezed
+abstract class ActivityIntradayPoint with _$ActivityIntradayPoint {
+  const factory ActivityIntradayPoint({
+    required DateTime time,
+    required double value,
+  }) = _ActivityIntradayPoint;
 }
 
 /// Kotlin `ActivityMetricDisplay`.
-@immutable
-class ActivityMetricDisplay {
-  const ActivityMetricDisplay({
-    this.hasData = false,
-    this.values = const [],
-    this.goalValues = const [],
-    this.trackedDates = const [],
-    this.sampleCount = 0,
-    this.previousTotal = 0.0,
-    this.baselineValues = const [],
-    this.activeDays = 0,
-    this.goalProgress,
-    this.periodComparison,
-    this.baselineCurrentValue = 0.0,
-    this.intradayPoints = const [],
-    this.dayTotal = 0.0,
-  });
+@freezed
+abstract class ActivityMetricDisplay with _$ActivityMetricDisplay {
+  const factory ActivityMetricDisplay({
+    @Default(false) bool hasData,
+    @Default(<double>[]) List<double> values,
+    @Default(<DailyGoalValue>[]) List<DailyGoalValue> goalValues,
+    @Default(<LocalDate>[]) List<LocalDate> trackedDates,
+    @Default(0) int sampleCount,
+    @Default(0.0) double previousTotal,
+    @Default(<BaselineValue>[]) List<BaselineValue> baselineValues,
+    @Default(0) int activeDays,
+    DailyGoalProgress? goalProgress,
+    PeriodComparison? periodComparison,
+    @Default(0.0) double baselineCurrentValue,
+    @Default(<ActivityIntradayPoint>[])
+    List<ActivityIntradayPoint> intradayPoints,
+    @Default(0.0) double dayTotal,
 
-  final bool hasData;
-  final List<double> values;
-  final List<DailyGoalValue> goalValues;
-  final List<LocalDate> trackedDates;
-  final int sampleCount;
-  final double previousTotal;
-  final List<BaselineValue> baselineValues;
-  final int activeDays;
-  final DailyGoalProgress? goalProgress;
-  final PeriodComparison? periodComparison;
-  final double baselineCurrentValue;
-  final List<ActivityIntradayPoint> intradayPoints;
-  final double dayTotal;
+    /// The period total, its best day and its per-active-day average — folded
+    /// once here, not on every rebuild of the statistics grid.
+    @Default(0.0) double total,
+    @Default(0.0) double best,
+    @Default(0.0) double dailyAverage,
 
-  double get total => values.fold(0.0, (sum, value) => sum + value);
+    /// The baseline comparison the statistics grid prints. Null when the
+    /// baseline window is too thin to say anything.
+    PersonalBaselineInsight? baselineInsight,
 
-  double get best => values.isEmpty ? 0.0 : values.reduce(math.max);
+    /// The day rows the entries section lists — the days that carry a value, in
+    /// the order the list prints them (newest first).
+    @Default(<DailyGoalValue>[]) List<DailyGoalValue> entryValues,
+
+    /// The dated bar series for the period chart.
+    @Default(<PeriodChartValue>[]) List<PeriodChartValue> chartValues,
+
+    /// How much of the period the readings actually cover.
+    DataConfidence? dataConfidence,
+  }) = _ActivityMetricDisplay;
 }
 
 /// Kotlin `averageOrZero`.
@@ -118,8 +126,9 @@ bool _hasDailyValue(ActivityMetric metric, DailySteps entry) =>
       ActivityMetric.caloriesOut => true,
     };
 
-/// Kotlin's per-metric `*Display` + shared `metricDisplay`.
-ActivityMetricDisplay activityMetricDisplay({
+/// Kotlin's per-metric `*Display` + shared `metricDisplay`. Pure — no clock, no
+/// `ref`, no I/O: the view-model calls it once per load.
+ActivityMetricDisplay buildActivityMetricDisplay({
   required ActivityMetric metric,
   required ActivityPeriodData data,
   required TimeRange range,
@@ -210,5 +219,24 @@ ActivityMetricDisplay activityMetricDisplay({
     baselineCurrentValue: averageOrZero(total, activeDays),
     intradayPoints: intradayPoints,
     dayTotal: dayTotal,
+    total: total,
+    best: values.isEmpty ? 0.0 : values.reduce(math.max),
+    dailyAverage: averageOrZero(total, activeDays),
+    baselineInsight: personalBaselineInsight(
+      averageOrZero(total, activeDays),
+      baselineValues,
+      period.start.minusDays(1),
+    ),
+    entryValues: [
+      for (final value in goalValues)
+        if (value.value > 0.0) value,
+    ]..sort((a, b) => b.date.compareTo(a.date)),
+    chartValues: metric.chartValues(data),
+    dataConfidence: dataConfidence(
+      period,
+      trackedDates,
+      sampleCount,
+      valueKind: DataValueKind.aggregated,
+    ),
   );
 }

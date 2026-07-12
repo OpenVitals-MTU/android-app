@@ -77,11 +77,8 @@ class _ActivitiesContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final hasAnyData = state.workouts.isNotEmpty ||
-        state.plannedWorkouts.isNotEmpty ||
-        state.overviewDays.any((d) =>
-            d.steps > 0 || d.distanceMeters > 0 || d.energyBurnedKcal > 0);
-    if (!hasAnyData) {
+    final display = state.display;
+    if (display == null || !display.hasAnyData) {
       if (state.isLoading) {
         return const Padding(
           padding: EdgeInsets.symmetric(vertical: 48),
@@ -104,6 +101,7 @@ class _ActivitiesContent extends StatelessWidget {
       selectedDate: state.selectedDate,
       builder: (context, daySelection) => ActivitiesOrderedSections(
         state: state,
+        display: display,
         period: period,
         daySelection: daySelection,
       ),

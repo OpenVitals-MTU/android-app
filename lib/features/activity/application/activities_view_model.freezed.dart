@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ActivitiesState {
 
- LocalDate get selectedDate; TimeRange get selectedRange; bool get isLoading; ScreenError? get error; double get dailyGoalMinutes; int? get selectedActivityType; List<int> get availableActivityTypes; List<ExerciseData> get workouts; List<PlannedExerciseData> get plannedWorkouts; List<ExerciseData> get previousWorkouts; List<ExerciseData> get baselineWorkouts; List<ActivityTypeAggregate> get activityTypeAggregates; List<ActivityOverviewDay> get overviewDays; List<DailyRestingHR> get crossDailyRestingHR;
+ LocalDate get selectedDate; TimeRange get selectedRange; bool get isLoading; ScreenError? get error; double get dailyGoalMinutes; int? get selectedActivityType; List<int> get availableActivityTypes; List<ExerciseData> get workouts; List<PlannedExerciseData> get plannedWorkouts; List<ExerciseData> get previousWorkouts; List<ExerciseData> get baselineWorkouts; List<ActivityTypeAggregate> get activityTypeAggregates; List<ActivityOverviewDay> get overviewDays; List<DailyRestingHR> get crossDailyRestingHR; ActivitiesDisplay? get display;
 /// Create a copy of ActivitiesState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $ActivitiesStateCopyWith<ActivitiesState> get copyWith => _$ActivitiesStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivitiesState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.dailyGoalMinutes, dailyGoalMinutes) || other.dailyGoalMinutes == dailyGoalMinutes)&&(identical(other.selectedActivityType, selectedActivityType) || other.selectedActivityType == selectedActivityType)&&const DeepCollectionEquality().equals(other.availableActivityTypes, availableActivityTypes)&&const DeepCollectionEquality().equals(other.workouts, workouts)&&const DeepCollectionEquality().equals(other.plannedWorkouts, plannedWorkouts)&&const DeepCollectionEquality().equals(other.previousWorkouts, previousWorkouts)&&const DeepCollectionEquality().equals(other.baselineWorkouts, baselineWorkouts)&&const DeepCollectionEquality().equals(other.activityTypeAggregates, activityTypeAggregates)&&const DeepCollectionEquality().equals(other.overviewDays, overviewDays)&&const DeepCollectionEquality().equals(other.crossDailyRestingHR, crossDailyRestingHR));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivitiesState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.dailyGoalMinutes, dailyGoalMinutes) || other.dailyGoalMinutes == dailyGoalMinutes)&&(identical(other.selectedActivityType, selectedActivityType) || other.selectedActivityType == selectedActivityType)&&const DeepCollectionEquality().equals(other.availableActivityTypes, availableActivityTypes)&&const DeepCollectionEquality().equals(other.workouts, workouts)&&const DeepCollectionEquality().equals(other.plannedWorkouts, plannedWorkouts)&&const DeepCollectionEquality().equals(other.previousWorkouts, previousWorkouts)&&const DeepCollectionEquality().equals(other.baselineWorkouts, baselineWorkouts)&&const DeepCollectionEquality().equals(other.activityTypeAggregates, activityTypeAggregates)&&const DeepCollectionEquality().equals(other.overviewDays, overviewDays)&&const DeepCollectionEquality().equals(other.crossDailyRestingHR, crossDailyRestingHR)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,dailyGoalMinutes,selectedActivityType,const DeepCollectionEquality().hash(availableActivityTypes),const DeepCollectionEquality().hash(workouts),const DeepCollectionEquality().hash(plannedWorkouts),const DeepCollectionEquality().hash(previousWorkouts),const DeepCollectionEquality().hash(baselineWorkouts),const DeepCollectionEquality().hash(activityTypeAggregates),const DeepCollectionEquality().hash(overviewDays),const DeepCollectionEquality().hash(crossDailyRestingHR));
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,dailyGoalMinutes,selectedActivityType,const DeepCollectionEquality().hash(availableActivityTypes),const DeepCollectionEquality().hash(workouts),const DeepCollectionEquality().hash(plannedWorkouts),const DeepCollectionEquality().hash(previousWorkouts),const DeepCollectionEquality().hash(baselineWorkouts),const DeepCollectionEquality().hash(activityTypeAggregates),const DeepCollectionEquality().hash(overviewDays),const DeepCollectionEquality().hash(crossDailyRestingHR),display);
 
 @override
 String toString() {
-  return 'ActivitiesState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, dailyGoalMinutes: $dailyGoalMinutes, selectedActivityType: $selectedActivityType, availableActivityTypes: $availableActivityTypes, workouts: $workouts, plannedWorkouts: $plannedWorkouts, previousWorkouts: $previousWorkouts, baselineWorkouts: $baselineWorkouts, activityTypeAggregates: $activityTypeAggregates, overviewDays: $overviewDays, crossDailyRestingHR: $crossDailyRestingHR)';
+  return 'ActivitiesState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, dailyGoalMinutes: $dailyGoalMinutes, selectedActivityType: $selectedActivityType, availableActivityTypes: $availableActivityTypes, workouts: $workouts, plannedWorkouts: $plannedWorkouts, previousWorkouts: $previousWorkouts, baselineWorkouts: $baselineWorkouts, activityTypeAggregates: $activityTypeAggregates, overviewDays: $overviewDays, crossDailyRestingHR: $crossDailyRestingHR, display: $display)';
 }
 
 
@@ -45,11 +45,11 @@ abstract mixin class $ActivitiesStateCopyWith<$Res>  {
   factory $ActivitiesStateCopyWith(ActivitiesState value, $Res Function(ActivitiesState) _then) = _$ActivitiesStateCopyWithImpl;
 @useResult
 $Res call({
- LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, double dailyGoalMinutes, int? selectedActivityType, List<int> availableActivityTypes, List<ExerciseData> workouts, List<PlannedExerciseData> plannedWorkouts, List<ExerciseData> previousWorkouts, List<ExerciseData> baselineWorkouts, List<ActivityTypeAggregate> activityTypeAggregates, List<ActivityOverviewDay> overviewDays, List<DailyRestingHR> crossDailyRestingHR
+ LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, double dailyGoalMinutes, int? selectedActivityType, List<int> availableActivityTypes, List<ExerciseData> workouts, List<PlannedExerciseData> plannedWorkouts, List<ExerciseData> previousWorkouts, List<ExerciseData> baselineWorkouts, List<ActivityTypeAggregate> activityTypeAggregates, List<ActivityOverviewDay> overviewDays, List<DailyRestingHR> crossDailyRestingHR, ActivitiesDisplay? display
 });
 
 
-
+$ActivitiesDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -62,7 +62,7 @@ class _$ActivitiesStateCopyWithImpl<$Res>
 
 /// Create a copy of ActivitiesState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? dailyGoalMinutes = null,Object? selectedActivityType = freezed,Object? availableActivityTypes = null,Object? workouts = null,Object? plannedWorkouts = null,Object? previousWorkouts = null,Object? baselineWorkouts = null,Object? activityTypeAggregates = null,Object? overviewDays = null,Object? crossDailyRestingHR = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? dailyGoalMinutes = null,Object? selectedActivityType = freezed,Object? availableActivityTypes = null,Object? workouts = null,Object? plannedWorkouts = null,Object? previousWorkouts = null,Object? baselineWorkouts = null,Object? activityTypeAggregates = null,Object? overviewDays = null,Object? crossDailyRestingHR = null,Object? display = freezed,}) {
   return _then(_self.copyWith(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
@@ -78,10 +78,23 @@ as List<ExerciseData>,baselineWorkouts: null == baselineWorkouts ? _self.baselin
 as List<ExerciseData>,activityTypeAggregates: null == activityTypeAggregates ? _self.activityTypeAggregates : activityTypeAggregates // ignore: cast_nullable_to_non_nullable
 as List<ActivityTypeAggregate>,overviewDays: null == overviewDays ? _self.overviewDays : overviewDays // ignore: cast_nullable_to_non_nullable
 as List<ActivityOverviewDay>,crossDailyRestingHR: null == crossDailyRestingHR ? _self.crossDailyRestingHR : crossDailyRestingHR // ignore: cast_nullable_to_non_nullable
-as List<DailyRestingHR>,
+as List<DailyRestingHR>,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as ActivitiesDisplay?,
   ));
 }
+/// Create a copy of ActivitiesState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ActivitiesDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
 
+  return $ActivitiesDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
+  });
+}
 }
 
 
@@ -163,10 +176,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  double dailyGoalMinutes,  int? selectedActivityType,  List<int> availableActivityTypes,  List<ExerciseData> workouts,  List<PlannedExerciseData> plannedWorkouts,  List<ExerciseData> previousWorkouts,  List<ExerciseData> baselineWorkouts,  List<ActivityTypeAggregate> activityTypeAggregates,  List<ActivityOverviewDay> overviewDays,  List<DailyRestingHR> crossDailyRestingHR)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  double dailyGoalMinutes,  int? selectedActivityType,  List<int> availableActivityTypes,  List<ExerciseData> workouts,  List<PlannedExerciseData> plannedWorkouts,  List<ExerciseData> previousWorkouts,  List<ExerciseData> baselineWorkouts,  List<ActivityTypeAggregate> activityTypeAggregates,  List<ActivityOverviewDay> overviewDays,  List<DailyRestingHR> crossDailyRestingHR,  ActivitiesDisplay? display)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ActivitiesState() when $default != null:
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.dailyGoalMinutes,_that.selectedActivityType,_that.availableActivityTypes,_that.workouts,_that.plannedWorkouts,_that.previousWorkouts,_that.baselineWorkouts,_that.activityTypeAggregates,_that.overviewDays,_that.crossDailyRestingHR);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.dailyGoalMinutes,_that.selectedActivityType,_that.availableActivityTypes,_that.workouts,_that.plannedWorkouts,_that.previousWorkouts,_that.baselineWorkouts,_that.activityTypeAggregates,_that.overviewDays,_that.crossDailyRestingHR,_that.display);case _:
   return orElse();
 
 }
@@ -184,10 +197,10 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  double dailyGoalMinutes,  int? selectedActivityType,  List<int> availableActivityTypes,  List<ExerciseData> workouts,  List<PlannedExerciseData> plannedWorkouts,  List<ExerciseData> previousWorkouts,  List<ExerciseData> baselineWorkouts,  List<ActivityTypeAggregate> activityTypeAggregates,  List<ActivityOverviewDay> overviewDays,  List<DailyRestingHR> crossDailyRestingHR)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  double dailyGoalMinutes,  int? selectedActivityType,  List<int> availableActivityTypes,  List<ExerciseData> workouts,  List<PlannedExerciseData> plannedWorkouts,  List<ExerciseData> previousWorkouts,  List<ExerciseData> baselineWorkouts,  List<ActivityTypeAggregate> activityTypeAggregates,  List<ActivityOverviewDay> overviewDays,  List<DailyRestingHR> crossDailyRestingHR,  ActivitiesDisplay? display)  $default,) {final _that = this;
 switch (_that) {
 case _ActivitiesState():
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.dailyGoalMinutes,_that.selectedActivityType,_that.availableActivityTypes,_that.workouts,_that.plannedWorkouts,_that.previousWorkouts,_that.baselineWorkouts,_that.activityTypeAggregates,_that.overviewDays,_that.crossDailyRestingHR);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.dailyGoalMinutes,_that.selectedActivityType,_that.availableActivityTypes,_that.workouts,_that.plannedWorkouts,_that.previousWorkouts,_that.baselineWorkouts,_that.activityTypeAggregates,_that.overviewDays,_that.crossDailyRestingHR,_that.display);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -204,10 +217,10 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  double dailyGoalMinutes,  int? selectedActivityType,  List<int> availableActivityTypes,  List<ExerciseData> workouts,  List<PlannedExerciseData> plannedWorkouts,  List<ExerciseData> previousWorkouts,  List<ExerciseData> baselineWorkouts,  List<ActivityTypeAggregate> activityTypeAggregates,  List<ActivityOverviewDay> overviewDays,  List<DailyRestingHR> crossDailyRestingHR)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  double dailyGoalMinutes,  int? selectedActivityType,  List<int> availableActivityTypes,  List<ExerciseData> workouts,  List<PlannedExerciseData> plannedWorkouts,  List<ExerciseData> previousWorkouts,  List<ExerciseData> baselineWorkouts,  List<ActivityTypeAggregate> activityTypeAggregates,  List<ActivityOverviewDay> overviewDays,  List<DailyRestingHR> crossDailyRestingHR,  ActivitiesDisplay? display)?  $default,) {final _that = this;
 switch (_that) {
 case _ActivitiesState() when $default != null:
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.dailyGoalMinutes,_that.selectedActivityType,_that.availableActivityTypes,_that.workouts,_that.plannedWorkouts,_that.previousWorkouts,_that.baselineWorkouts,_that.activityTypeAggregates,_that.overviewDays,_that.crossDailyRestingHR);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.dailyGoalMinutes,_that.selectedActivityType,_that.availableActivityTypes,_that.workouts,_that.plannedWorkouts,_that.previousWorkouts,_that.baselineWorkouts,_that.activityTypeAggregates,_that.overviewDays,_that.crossDailyRestingHR,_that.display);case _:
   return null;
 
 }
@@ -219,7 +232,7 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 
 
 class _ActivitiesState extends ActivitiesState {
-  const _ActivitiesState({required this.selectedDate, this.selectedRange = TimeRange.week, this.isLoading = true, this.error, this.dailyGoalMinutes = 30.0, this.selectedActivityType, final  List<int> availableActivityTypes = const <int>[], final  List<ExerciseData> workouts = const <ExerciseData>[], final  List<PlannedExerciseData> plannedWorkouts = const <PlannedExerciseData>[], final  List<ExerciseData> previousWorkouts = const <ExerciseData>[], final  List<ExerciseData> baselineWorkouts = const <ExerciseData>[], final  List<ActivityTypeAggregate> activityTypeAggregates = const <ActivityTypeAggregate>[], final  List<ActivityOverviewDay> overviewDays = const <ActivityOverviewDay>[], final  List<DailyRestingHR> crossDailyRestingHR = const <DailyRestingHR>[]}): _availableActivityTypes = availableActivityTypes,_workouts = workouts,_plannedWorkouts = plannedWorkouts,_previousWorkouts = previousWorkouts,_baselineWorkouts = baselineWorkouts,_activityTypeAggregates = activityTypeAggregates,_overviewDays = overviewDays,_crossDailyRestingHR = crossDailyRestingHR,super._();
+  const _ActivitiesState({required this.selectedDate, this.selectedRange = TimeRange.week, this.isLoading = true, this.error, this.dailyGoalMinutes = 30.0, this.selectedActivityType, final  List<int> availableActivityTypes = const <int>[], final  List<ExerciseData> workouts = const <ExerciseData>[], final  List<PlannedExerciseData> plannedWorkouts = const <PlannedExerciseData>[], final  List<ExerciseData> previousWorkouts = const <ExerciseData>[], final  List<ExerciseData> baselineWorkouts = const <ExerciseData>[], final  List<ActivityTypeAggregate> activityTypeAggregates = const <ActivityTypeAggregate>[], final  List<ActivityOverviewDay> overviewDays = const <ActivityOverviewDay>[], final  List<DailyRestingHR> crossDailyRestingHR = const <DailyRestingHR>[], this.display}): _availableActivityTypes = availableActivityTypes,_workouts = workouts,_plannedWorkouts = plannedWorkouts,_previousWorkouts = previousWorkouts,_baselineWorkouts = baselineWorkouts,_activityTypeAggregates = activityTypeAggregates,_overviewDays = overviewDays,_crossDailyRestingHR = crossDailyRestingHR,super._();
   
 
 @override final  LocalDate selectedDate;
@@ -284,6 +297,7 @@ class _ActivitiesState extends ActivitiesState {
   return EqualUnmodifiableListView(_crossDailyRestingHR);
 }
 
+@override final  ActivitiesDisplay? display;
 
 /// Create a copy of ActivitiesState
 /// with the given fields replaced by the non-null parameter values.
@@ -295,16 +309,16 @@ _$ActivitiesStateCopyWith<_ActivitiesState> get copyWith => __$ActivitiesStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivitiesState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.dailyGoalMinutes, dailyGoalMinutes) || other.dailyGoalMinutes == dailyGoalMinutes)&&(identical(other.selectedActivityType, selectedActivityType) || other.selectedActivityType == selectedActivityType)&&const DeepCollectionEquality().equals(other._availableActivityTypes, _availableActivityTypes)&&const DeepCollectionEquality().equals(other._workouts, _workouts)&&const DeepCollectionEquality().equals(other._plannedWorkouts, _plannedWorkouts)&&const DeepCollectionEquality().equals(other._previousWorkouts, _previousWorkouts)&&const DeepCollectionEquality().equals(other._baselineWorkouts, _baselineWorkouts)&&const DeepCollectionEquality().equals(other._activityTypeAggregates, _activityTypeAggregates)&&const DeepCollectionEquality().equals(other._overviewDays, _overviewDays)&&const DeepCollectionEquality().equals(other._crossDailyRestingHR, _crossDailyRestingHR));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivitiesState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.dailyGoalMinutes, dailyGoalMinutes) || other.dailyGoalMinutes == dailyGoalMinutes)&&(identical(other.selectedActivityType, selectedActivityType) || other.selectedActivityType == selectedActivityType)&&const DeepCollectionEquality().equals(other._availableActivityTypes, _availableActivityTypes)&&const DeepCollectionEquality().equals(other._workouts, _workouts)&&const DeepCollectionEquality().equals(other._plannedWorkouts, _plannedWorkouts)&&const DeepCollectionEquality().equals(other._previousWorkouts, _previousWorkouts)&&const DeepCollectionEquality().equals(other._baselineWorkouts, _baselineWorkouts)&&const DeepCollectionEquality().equals(other._activityTypeAggregates, _activityTypeAggregates)&&const DeepCollectionEquality().equals(other._overviewDays, _overviewDays)&&const DeepCollectionEquality().equals(other._crossDailyRestingHR, _crossDailyRestingHR)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,dailyGoalMinutes,selectedActivityType,const DeepCollectionEquality().hash(_availableActivityTypes),const DeepCollectionEquality().hash(_workouts),const DeepCollectionEquality().hash(_plannedWorkouts),const DeepCollectionEquality().hash(_previousWorkouts),const DeepCollectionEquality().hash(_baselineWorkouts),const DeepCollectionEquality().hash(_activityTypeAggregates),const DeepCollectionEquality().hash(_overviewDays),const DeepCollectionEquality().hash(_crossDailyRestingHR));
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,dailyGoalMinutes,selectedActivityType,const DeepCollectionEquality().hash(_availableActivityTypes),const DeepCollectionEquality().hash(_workouts),const DeepCollectionEquality().hash(_plannedWorkouts),const DeepCollectionEquality().hash(_previousWorkouts),const DeepCollectionEquality().hash(_baselineWorkouts),const DeepCollectionEquality().hash(_activityTypeAggregates),const DeepCollectionEquality().hash(_overviewDays),const DeepCollectionEquality().hash(_crossDailyRestingHR),display);
 
 @override
 String toString() {
-  return 'ActivitiesState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, dailyGoalMinutes: $dailyGoalMinutes, selectedActivityType: $selectedActivityType, availableActivityTypes: $availableActivityTypes, workouts: $workouts, plannedWorkouts: $plannedWorkouts, previousWorkouts: $previousWorkouts, baselineWorkouts: $baselineWorkouts, activityTypeAggregates: $activityTypeAggregates, overviewDays: $overviewDays, crossDailyRestingHR: $crossDailyRestingHR)';
+  return 'ActivitiesState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, dailyGoalMinutes: $dailyGoalMinutes, selectedActivityType: $selectedActivityType, availableActivityTypes: $availableActivityTypes, workouts: $workouts, plannedWorkouts: $plannedWorkouts, previousWorkouts: $previousWorkouts, baselineWorkouts: $baselineWorkouts, activityTypeAggregates: $activityTypeAggregates, overviewDays: $overviewDays, crossDailyRestingHR: $crossDailyRestingHR, display: $display)';
 }
 
 
@@ -315,11 +329,11 @@ abstract mixin class _$ActivitiesStateCopyWith<$Res> implements $ActivitiesState
   factory _$ActivitiesStateCopyWith(_ActivitiesState value, $Res Function(_ActivitiesState) _then) = __$ActivitiesStateCopyWithImpl;
 @override @useResult
 $Res call({
- LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, double dailyGoalMinutes, int? selectedActivityType, List<int> availableActivityTypes, List<ExerciseData> workouts, List<PlannedExerciseData> plannedWorkouts, List<ExerciseData> previousWorkouts, List<ExerciseData> baselineWorkouts, List<ActivityTypeAggregate> activityTypeAggregates, List<ActivityOverviewDay> overviewDays, List<DailyRestingHR> crossDailyRestingHR
+ LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, double dailyGoalMinutes, int? selectedActivityType, List<int> availableActivityTypes, List<ExerciseData> workouts, List<PlannedExerciseData> plannedWorkouts, List<ExerciseData> previousWorkouts, List<ExerciseData> baselineWorkouts, List<ActivityTypeAggregate> activityTypeAggregates, List<ActivityOverviewDay> overviewDays, List<DailyRestingHR> crossDailyRestingHR, ActivitiesDisplay? display
 });
 
 
-
+@override $ActivitiesDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -332,7 +346,7 @@ class __$ActivitiesStateCopyWithImpl<$Res>
 
 /// Create a copy of ActivitiesState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? dailyGoalMinutes = null,Object? selectedActivityType = freezed,Object? availableActivityTypes = null,Object? workouts = null,Object? plannedWorkouts = null,Object? previousWorkouts = null,Object? baselineWorkouts = null,Object? activityTypeAggregates = null,Object? overviewDays = null,Object? crossDailyRestingHR = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? dailyGoalMinutes = null,Object? selectedActivityType = freezed,Object? availableActivityTypes = null,Object? workouts = null,Object? plannedWorkouts = null,Object? previousWorkouts = null,Object? baselineWorkouts = null,Object? activityTypeAggregates = null,Object? overviewDays = null,Object? crossDailyRestingHR = null,Object? display = freezed,}) {
   return _then(_ActivitiesState(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
@@ -348,11 +362,24 @@ as List<ExerciseData>,baselineWorkouts: null == baselineWorkouts ? _self._baseli
 as List<ExerciseData>,activityTypeAggregates: null == activityTypeAggregates ? _self._activityTypeAggregates : activityTypeAggregates // ignore: cast_nullable_to_non_nullable
 as List<ActivityTypeAggregate>,overviewDays: null == overviewDays ? _self._overviewDays : overviewDays // ignore: cast_nullable_to_non_nullable
 as List<ActivityOverviewDay>,crossDailyRestingHR: null == crossDailyRestingHR ? _self._crossDailyRestingHR : crossDailyRestingHR // ignore: cast_nullable_to_non_nullable
-as List<DailyRestingHR>,
+as List<DailyRestingHR>,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as ActivitiesDisplay?,
   ));
 }
 
+/// Create a copy of ActivitiesState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ActivitiesDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
 
+  return $ActivitiesDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
+  });
+}
 }
 
 // dart format on

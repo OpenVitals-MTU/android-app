@@ -8,12 +8,13 @@ import '../../../domain/insights/activity_splits.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../state/app_providers.dart';
+import 'activity_detail_display.dart';
 
 part 'activity_detail_view_model.freezed.dart';
 
 /// The Riverpod port of the Kotlin `ActivityDetailUiState` — a single workout
-/// plus its in-session heart-rate, speed and cadence samples, and the splits
-/// derived from them.
+/// plus its in-session heart-rate, speed and cadence samples, the splits derived
+/// from them, and the precomputed [ActivityDetailDisplay] the cards render.
 @freezed
 abstract class ActivityDetailState with _$ActivityDetailState {
   const ActivityDetailState._();
@@ -27,6 +28,7 @@ abstract class ActivityDetailState with _$ActivityDetailState {
     @Default(<ActivityCadenceSample>[])
     List<ActivityCadenceSample> cadenceSamples,
     @Default(ActivitySplits.none()) ActivitySplits splits,
+    ActivityDetailDisplay? display,
   }) = _ActivityDetailState;
 }
 
@@ -69,43 +71,47 @@ class ActivityDetailViewModel extends Notifier<ActivityDetailState> {
     final splitDistanceMeters = ref.read(activitySplitDistanceMetersProvider);
     state = state.copyWith(isLoading: true, error: null);
 
-    try {
-      // Reassembling the workout — which repositories to ask, in what order, and
-      // that Health Connect's own totals outrank the ones derived from samples —
-      // is domain knowledge, and lives in the use case. What stays here is the
-      // view's business: the generation guard, and turning a result into state.
-      final result = (await loadActivityDetail(activityId)).orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      if (result == null) {
-        state = const ActivityDetailState(
-          isLoading: false,
-          error: ScreenErrorNotFound(),
-        );
-        return;
-      }
-
-      state = ActivityDetailState(
-        isLoading: false,
-        workout: result.workout,
-        heartRateSamples: result.heartRateSamples,
-        speedSamples: result.speedSamples,
-        cadenceSamples: result.cadenceSamples,
+    // Reassembling the workout — which repositories to ask, in what order, and
+    // that Health Connect's own totals outrank the ones derived from samples —
+    // is domain knowledge, and lives in the use case. What stays here is the
+    // view's business: the generation guard, and turning a result into state.
+    final result = await loadActivityDetail(activityId);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        if (value == null) {
+          state = const ActivityDetailState(
+            isLoading: false,
+            error: ScreenErrorNotFound(),
+          );
+          return;
+        }
         // Splits depend on a user preference, so they are cut here rather than in
         // the use case: changing the split distance must re-cut an open screen.
-        splits: computeActivitySplits(
-          workout: result.workout,
-          heartRateSamples: result.heartRateSamples,
-          speedSamples: result.speedSamples,
+        final splits = computeActivitySplits(
+          workout: value.workout,
+          heartRateSamples: value.heartRateSamples,
+          speedSamples: value.speedSamples,
           splitDistanceMeters: splitDistanceMeters,
-        ),
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = ActivityDetailState(
-        isLoading: false,
-        error:
-            throwableToScreenError(error, fallback: 'Unable to load activity.'),
-      );
+        );
+        state = ActivityDetailState(
+          isLoading: false,
+          workout: value.workout,
+          heartRateSamples: value.heartRateSamples,
+          speedSamples: value.speedSamples,
+          cadenceSamples: value.cadenceSamples,
+          splits: splits,
+          display: buildActivityDetailDisplay(
+            workout: value.workout,
+            cadenceSamples: value.cadenceSamples,
+            splits: splits,
+          ),
+        );
+      case Err(:final failure):
+        state = ActivityDetailState(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load activity.'),
+        );
     }
   }
 }

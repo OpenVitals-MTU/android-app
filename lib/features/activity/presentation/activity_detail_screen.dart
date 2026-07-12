@@ -12,14 +12,13 @@ import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../application/activity_detail_display.dart';
 import '../application/activity_detail_view_model.dart';
 import 'activity_heart_rate_chart_card.dart';
 import 'activity_metric_relevance.dart';
-import '../../../domain/insights/activity_metrics.dart';
 import 'activity_session_metric_chart_cards.dart';
 import 'activity_splits_card.dart';
 import 'exercise_labels.dart';
-import '../maps/route_geometry.dart';
 import '../maps/route_map_view.dart';
 import '../../../ui/components/section_padding.dart';
 
@@ -73,7 +72,8 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       return ErrorMessage(_errorText(error));
     }
     final workout = state.workout;
-    if (workout == null) {
+    final display = state.display;
+    if (workout == null || display == null) {
       return const ErrorMessage('Activity not found.');
     }
 
@@ -83,7 +83,11 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
           sectionPadded(_WorkoutSummaryCard(workout: workout, formatter: formatter)),
-          sectionPadded(_MetricsCard(workout: workout, formatter: formatter)),
+          sectionPadded(_MetricsCard(
+            workout: workout,
+            display: display,
+            formatter: formatter,
+          )),
           // Hidden entirely when there is nothing to split (a strength session).
           if (state.splits.isNotEmpty)
             sectionPadded(
@@ -92,6 +96,8 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 formatter: formatter,
                 splitDistanceMeters:
                     ref.watch(activitySplitDistanceMetersProvider),
+                slowestPaceSeconds: display.slowestSplitPaceSeconds,
+                fastestPaceSeconds: display.fastestSplitPaceSeconds,
               ),
             ),
           if (state.heartRateSamples.isNotEmpty)
@@ -114,22 +120,25 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
             ),
           // One card per cadence kind that actually recorded something: a ride
           // yields cycling samples, a run yields step samples, and neither has to
-          // be inferred from the exercise type.
-          for (final kind in ActivityCadenceKind.values)
-            if (state.cadenceSamples.any((sample) => sample.kind == kind))
-              sectionPadded(
-                ActivityCadenceChartCard(
-                  samples: state.cadenceSamples,
-                  kind: kind,
-                  sessionStart: workout.startTime,
-                  sessionEnd: workout.endTime,
-                  unitFormatter: formatter,
-                ),
+          // be inferred from the exercise type. Which kinds those are is decided
+          // at load time, not here.
+          for (final kind in display.cadenceKinds)
+            sectionPadded(
+              ActivityCadenceChartCard(
+                samples: state.cadenceSamples,
+                kind: kind,
+                sessionStart: workout.startTime,
+                sessionEnd: workout.endTime,
+                unitFormatter: formatter,
               ),
+            ),
           sectionPadded(_SessionDetailsCard(workout: workout)),
           if (workout.route.status == ExerciseRouteStatus.data &&
               workout.route.points.isNotEmpty)
-            sectionPadded(_RouteMapCard(route: workout.route)),
+            sectionPadded(_RouteMapCard(
+              route: workout.route,
+              distanceMeters: display.routeDistanceMeters,
+            )),
           const SizedBox(height: 16),
         ],
       ),
@@ -200,9 +209,14 @@ class _WorkoutSummaryCard extends StatelessWidget {
 }
 
 class _MetricsCard extends StatelessWidget {
-  const _MetricsCard({required this.workout, required this.formatter});
+  const _MetricsCard({
+    required this.workout,
+    required this.display,
+    required this.formatter,
+  });
 
   final ExerciseData workout;
+  final ActivityDetailDisplay display;
   final UnitFormatter formatter;
 
   @override
@@ -211,7 +225,7 @@ class _MetricsCard extends StatelessWidget {
     final type = workout.exerciseType;
     final distance = workout.totalDistanceMeters;
     final hasDistance = distance != null && distance > 0;
-    final pausedMs = pausedDurationMs(workout);
+    final pausedMs = display.pausedDurationMs;
 
     final rows = <(String, String)>[];
 
@@ -234,7 +248,7 @@ class _MetricsCard extends StatelessWidget {
       add(
         ActivityMetric.movingTime,
         l10n.detailMovingTime,
-        formatter.duration(movingDurationMs(workout)),
+        formatter.duration(display.movingDurationMs),
       );
     }
     add(
@@ -378,14 +392,16 @@ class _SessionDetailsCard extends StatelessWidget {
 /// `OfflineRouteMapOrPreview`). The online raster base map is the default;
 /// offline vector packs plug in inside [RouteMapView] (see its TODO).
 class _RouteMapCard extends StatelessWidget {
-  const _RouteMapCard({required this.route});
+  const _RouteMapCard({required this.route, required this.distanceMeters});
 
   final ExerciseRouteData route;
+
+  /// Summed at load time; this card only prints it.
+  final double distanceMeters;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final distanceMeters = routeTotalDistanceMeters(route.points);
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),

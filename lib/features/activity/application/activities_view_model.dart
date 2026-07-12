@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/period/period_calculations.dart';
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
@@ -10,12 +11,12 @@ import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
-import '../../../domain/insights/daily_goals.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/usecase/load_activities_use_case.dart';
 import '../../../domain/insights/activity_metrics.dart';
 import '../presentation/exercise_labels.dart';
+import 'activities_display.dart';
 
 // The overview day and the cached load result are the use case's shape; the
 // screens read them straight off the state, so they stay visible from here.
@@ -23,9 +24,6 @@ export '../../../domain/usecase/load_activities_use_case.dart'
     show ActivitiesLoadResult, ActivityOverviewDay;
 
 part 'activities_view_model.freezed.dart';
-
-/// The workout daily-goal key (Kotlin `MetricDailyGoalKey.WORKOUT_MINUTES`).
-const MetricDailyGoalKey activitiesGoalKey = MetricDailyGoalKey.workoutMinutes;
 
 /// Per-activity-type rollup (Kotlin `ActivityTypeAggregate`). A plain value type.
 class ActivityTypeAggregate {
@@ -49,8 +47,9 @@ class ActivityTypeAggregate {
 }
 
 /// The Riverpod port of the Kotlin `ActivitiesUiState`: the full activities
-/// aggregate. Unlike Kotlin (which tracks a dedicated `ActivityWeekMode`), the
-/// Flutter scaffold drives the period through the shared week-period preference.
+/// aggregate, plus the precomputed [ActivitiesDisplay] the screen renders.
+/// Unlike Kotlin (which tracks a dedicated `ActivityWeekMode`), the Flutter
+/// scaffold drives the period through the shared week-period preference.
 @freezed
 abstract class ActivitiesState with _$ActivitiesState {
   const ActivitiesState._();
@@ -71,6 +70,7 @@ abstract class ActivitiesState with _$ActivitiesState {
     List<ActivityTypeAggregate> activityTypeAggregates,
     @Default(<ActivityOverviewDay>[]) List<ActivityOverviewDay> overviewDays,
     @Default(<DailyRestingHR>[]) List<DailyRestingHR> crossDailyRestingHR,
+    ActivitiesDisplay? display,
   }) = _ActivitiesState;
 
   /// Total recorded duration across the period's workouts.
@@ -88,6 +88,10 @@ abstract class ActivitiesState with _$ActivitiesState {
 /// activities aggregate (workouts, planned workouts, previous/baseline windows,
 /// the per-day overview with cardio-load, and the resting-HR cross series) for
 /// the scaffold's current period.
+///
+/// The display model is built here — at load time, and again whenever the filter
+/// or the daily goal moves the slice it was cut from. The screen renders
+/// [ActivitiesState.display] and derives nothing.
 class ActivitiesViewModel extends Notifier<ActivitiesState> {
   int _generation = 0;
   ActivitiesLoadResult? _latestResult;
@@ -118,25 +122,23 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
       weekPeriodMode: prefs.weekPeriodMode,
     );
 
-    try {
-      // Which repositories the overview needs, and how the per-day cardio-load
-      // is composed out of them, is domain knowledge and lives in the use case.
-      final result = (await loadActivities(query)).orThrow();
-      if (!ref.mounted || generation != _generation) return;
-
-      _latestResult = result;
-      state = _stateWithResult(
-        state.copyWith(isLoading: false, error: null),
-        result,
-        state.selectedActivityType,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error:
-            throwableToScreenError(error, fallback: 'Unable to load workouts.'),
-      );
+    // Which repositories the overview needs, and how the per-day cardio-load
+    // is composed out of them, is domain knowledge and lives in the use case.
+    final result = await loadActivities(query);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        _latestResult = value;
+        state = _stateWithResult(
+          state.copyWith(isLoading: false, error: null),
+          value,
+          state.selectedActivityType,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load workouts.'),
+        );
     }
   }
 
@@ -161,7 +163,13 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
     final next = activitiesGoalKey.normalize(state.dailyGoalMinutes + delta);
     if (next == state.dailyGoalMinutes) return;
     ref.read(preferencesRepositoryProvider).setDailyGoalFor(activitiesGoalKey, next);
-    state = state.copyWith(dailyGoalMinutes: next);
+    // The goal is an input to the display's goal progress, so the moved goal has
+    // to re-derive it — the screen no longer recomputes anything on rebuild.
+    final nudged = state.copyWith(dailyGoalMinutes: next);
+    final result = _latestResult;
+    state = result == null
+        ? nudged
+        : _stateWithResult(nudged, result, nudged.selectedActivityType);
   }
 
   /// Kotlin `deleteActivityEntry`: optimistic removal of an OpenVitals workout,
@@ -183,15 +191,15 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
         state.selectedActivityType,
       );
     }
-    try {
-      (await ref.read(deleteActivityEntryUseCaseProvider)(entryId)).orThrow();
-      await load(PeriodSelection(state.selectedRange, state.selectedDate));
-    } catch (error) {
-      _latestResult = previousResult;
-      state = previousState.copyWith(
-        error: throwableToScreenError(error,
-            fallback: 'Unable to delete workout.'),
-      );
+    final deleted = await ref.read(deleteActivityEntryUseCaseProvider)(entryId);
+    switch (deleted) {
+      case Ok():
+        await load(PeriodSelection(state.selectedRange, state.selectedDate));
+      case Err(:final failure):
+        _latestResult = previousResult;
+        state = previousState.copyWith(
+          error: failure.toScreenError(fallback: 'Unable to delete workout.'),
+        );
     }
   }
 
@@ -202,15 +210,25 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
       result.activityTypes().toList()
         ..sort((a, b) => exerciseTypeLabel(a).compareTo(exerciseTypeLabel(b)));
 
+  /// The period the scaffold is showing — the same window it hands its content
+  /// builder, so the display's goal progress and confidence are cut against the
+  /// dates the screen prints.
+  DatePeriod _displayPeriod(ActivitiesState base) => displayPeriodFor(
+        base.selectedRange,
+        base.selectedDate,
+        weekPeriodMode: ref.read(preferencesRepositoryProvider).weekPeriodMode,
+      );
+
   ActivitiesState _stateWithResult(
     ActivitiesState base,
     ActivitiesLoadResult result,
     int? type,
   ) {
     final filtered = result.filteredBy(type);
+    final availableActivityTypes = _availableActivityTypes(result);
     return base.copyWith(
       selectedActivityType: type,
-      availableActivityTypes: _availableActivityTypes(result),
+      availableActivityTypes: availableActivityTypes,
       workouts: filtered.workouts,
       plannedWorkouts: filtered.plannedWorkouts,
       previousWorkouts: filtered.previousWorkouts,
@@ -218,6 +236,14 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
       activityTypeAggregates: activityTypeAggregatesOf(filtered.workouts),
       overviewDays: filtered.overviewDays,
       crossDailyRestingHR: filtered.crossDailyRestingHR,
+      display: buildActivitiesDisplay(
+        result: filtered,
+        availableActivityTypes: availableActivityTypes,
+        selectedActivityType: type,
+        range: base.selectedRange,
+        period: _displayPeriod(base),
+        dailyGoalMinutes: base.dailyGoalMinutes,
+      ),
     );
   }
 }
@@ -228,20 +254,6 @@ final activitiesProvider =
 );
 
 // ── Pure aggregation helpers (Kotlin `ActivitiesViewModel` / `ActivityTypeAggregates`).
-
-/// The workout minutes per day (Kotlin `workoutDailyGoalValues`).
-List<DailyGoalValue> workoutDailyGoalValues(List<ExerciseData> workouts) {
-  final byDate = <LocalDate, double>{};
-  for (final w in workouts) {
-    final date = instantToLocalDate(w.startTime);
-    byDate[date] =
-        (byDate[date] ?? 0.0) + math.max(0, w.durationMs).toDouble() / 60000.0;
-  }
-  return [
-    for (final entry in byDate.entries)
-      DailyGoalValue(date: entry.key, value: entry.value),
-  ];
-}
 
 List<ActivityTypeAggregate> activityTypeAggregatesOf(
   List<ExerciseData> workouts,

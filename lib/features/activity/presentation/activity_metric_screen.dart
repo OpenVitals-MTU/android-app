@@ -6,8 +6,6 @@ import '../../../core/period/time_range.dart';
 import '../../../core/presentation/display_value.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
-import '../../../domain/insights/data_confidence.dart';
-import '../../../domain/insights/personal_baseline.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
@@ -23,7 +21,7 @@ import '../../../ui/components/personal_baseline_stat.dart';
 import 'activity_daily_entries.dart';
 import 'activity_intraday_chart_card.dart';
 import 'activity_metric.dart';
-import 'activity_metric_display.dart';
+import '../application/activity_metric_display.dart';
 import '../application/activity_metric_view_model.dart';
 import '../../../ui/components/section_padding.dart';
 
@@ -115,8 +113,8 @@ class _ActivityMetricContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final data = state.data;
-    if (data == null) {
+    final display = state.display;
+    if (display == null) {
       if (state.isLoading) {
         return const Padding(
           padding: EdgeInsets.symmetric(vertical: 48),
@@ -126,13 +124,6 @@ class _ActivityMetricContent extends StatelessWidget {
       return _placeholder();
     }
 
-    final display = activityMetricDisplay(
-      metric: metric,
-      data: data,
-      range: state.selectedRange,
-      period: period,
-      dailyGoal: state.dailyGoal,
-    );
     // Kotlin: `if (display.hasData) ... else if (!isLoading) noMetricData(...)`.
     if (!display.hasData) return _placeholder();
 
@@ -167,13 +158,13 @@ class _ActivityMetricContent extends StatelessWidget {
     final selectedDay = daySelection.selectedDate;
     DisplayValue goalFormatter(double value) => metric.format(formatter, value);
 
+    // The days are already picked and ordered; the view only formats them.
     final entries = [
-      for (var i = 0; i < display.goalValues.length; i++)
-        if (display.goalValues[i].value > 0.0)
-          ActivityDailyEntry(
-            date: display.goalValues[i].date,
-            value: goalFormatter(display.goalValues[i].value),
-          ),
+      for (final entry in display.entryValues)
+        ActivityDailyEntry(
+          date: entry.date,
+          value: goalFormatter(entry.value),
+        ),
     ];
 
     return OrderedMetricDetailSections(
@@ -196,7 +187,7 @@ class _ActivityMetricContent extends StatelessWidget {
           visible: !isDay,
           sectionPadded(MetricBarChart(
             title: metric.title,
-            values: metric.chartValues(state.data!),
+            values: display.chartValues,
             selectedRange: state.selectedRange,
             period: period,
             accentColor: metric.accentColor,
@@ -254,10 +245,8 @@ class _ActivityMetricContent extends StatelessWidget {
                   ),
                   InsightStat(
                     title: l10n.statDailyAverage,
-                    value: goalFormatter(
-                        averageOrZero(display.total, display.activeDays)).value,
-                    unit: goalFormatter(
-                        averageOrZero(display.total, display.activeDays)).unit,
+                    value: goalFormatter(display.dailyAverage).value,
+                    unit: goalFormatter(display.dailyAverage).unit,
                     icon: Icons.star_outline,
                     accentColor: metric.accentColor,
                   ),
@@ -284,11 +273,7 @@ class _ActivityMetricContent extends StatelessWidget {
                     l10n: l10n,
                   ),
                   ...personalBaselineInsightStats(
-                    insight: personalBaselineInsight(
-                      display.baselineCurrentValue,
-                      display.baselineValues,
-                      period.start.minusDays(1),
-                    ),
+                    insight: display.baselineInsight,
                     unitFormatter: formatter,
                     valueFormatter: goalFormatter,
                     accentColor: metric.accentColor,
@@ -302,16 +287,13 @@ class _ActivityMetricContent extends StatelessWidget {
         MetricDetailSection(
           MetricDetailSectionId.dataConfidence,
           // A single-day period has no coverage story to tell.
-          visible: period.start != period.end,
-          sectionPadded(DataConfidenceCard(
-            confidence: dataConfidence(
-              period,
-              display.trackedDates,
-              display.sampleCount,
-              valueKind: DataValueKind.aggregated,
-            ),
-            accentColor: metric.accentColor,
-          )),
+          visible: period.start != period.end && display.dataConfidence != null,
+          display.dataConfidence == null
+              ? const SizedBox.shrink()
+              : sectionPadded(DataConfidenceCard(
+                  confidence: display.dataConfidence!,
+                  accentColor: metric.accentColor,
+                )),
         ),
         MetricDetailSection(
           MetricDetailSectionId.entries,

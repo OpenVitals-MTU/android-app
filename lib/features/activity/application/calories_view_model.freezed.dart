@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CaloriesState {
 
- LocalDate get selectedDate; TimeRange get selectedRange; bool get isLoading; ScreenError? get error; ActivityPeriodData? get data; double? get latestBmrKcal;
+ LocalDate get selectedDate; TimeRange get selectedRange; bool get isLoading; ScreenError? get error; ActivityPeriodData? get data; CaloriesDisplay? get display; double? get latestBmrKcal;
 /// Create a copy of CaloriesState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $CaloriesStateCopyWith<CaloriesState> get copyWith => _$CaloriesStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CaloriesState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data)&&(identical(other.latestBmrKcal, latestBmrKcal) || other.latestBmrKcal == latestBmrKcal));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CaloriesState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data)&&(identical(other.display, display) || other.display == display)&&(identical(other.latestBmrKcal, latestBmrKcal) || other.latestBmrKcal == latestBmrKcal));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,data,latestBmrKcal);
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,data,display,latestBmrKcal);
 
 @override
 String toString() {
-  return 'CaloriesState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, data: $data, latestBmrKcal: $latestBmrKcal)';
+  return 'CaloriesState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, data: $data, display: $display, latestBmrKcal: $latestBmrKcal)';
 }
 
 
@@ -45,11 +45,11 @@ abstract mixin class $CaloriesStateCopyWith<$Res>  {
   factory $CaloriesStateCopyWith(CaloriesState value, $Res Function(CaloriesState) _then) = _$CaloriesStateCopyWithImpl;
 @useResult
 $Res call({
- LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, ActivityPeriodData? data, double? latestBmrKcal
+ LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, ActivityPeriodData? data, CaloriesDisplay? display, double? latestBmrKcal
 });
 
 
-$ActivityPeriodDataCopyWith<$Res>? get data;
+$ActivityPeriodDataCopyWith<$Res>? get data;$CaloriesDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -62,14 +62,15 @@ class _$CaloriesStateCopyWithImpl<$Res>
 
 /// Create a copy of CaloriesState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,Object? latestBmrKcal = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,Object? display = freezed,Object? latestBmrKcal = freezed,}) {
   return _then(_self.copyWith(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
 as TimeRange,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,data: freezed == data ? _self.data : data // ignore: cast_nullable_to_non_nullable
-as ActivityPeriodData?,latestBmrKcal: freezed == latestBmrKcal ? _self.latestBmrKcal : latestBmrKcal // ignore: cast_nullable_to_non_nullable
+as ActivityPeriodData?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as CaloriesDisplay?,latestBmrKcal: freezed == latestBmrKcal ? _self.latestBmrKcal : latestBmrKcal // ignore: cast_nullable_to_non_nullable
 as double?,
   ));
 }
@@ -84,6 +85,18 @@ $ActivityPeriodDataCopyWith<$Res>? get data {
 
   return $ActivityPeriodDataCopyWith<$Res>(_self.data!, (value) {
     return _then(_self.copyWith(data: value));
+  });
+}/// Create a copy of CaloriesState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CaloriesDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
+
+  return $CaloriesDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
   });
 }
 }
@@ -167,10 +180,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  ActivityPeriodData? data,  double? latestBmrKcal)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  ActivityPeriodData? data,  CaloriesDisplay? display,  double? latestBmrKcal)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CaloriesState() when $default != null:
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data,_that.latestBmrKcal);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data,_that.display,_that.latestBmrKcal);case _:
   return orElse();
 
 }
@@ -188,10 +201,10 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  ActivityPeriodData? data,  double? latestBmrKcal)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  ActivityPeriodData? data,  CaloriesDisplay? display,  double? latestBmrKcal)  $default,) {final _that = this;
 switch (_that) {
 case _CaloriesState():
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data,_that.latestBmrKcal);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data,_that.display,_that.latestBmrKcal);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -208,10 +221,10 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  ActivityPeriodData? data,  double? latestBmrKcal)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  ActivityPeriodData? data,  CaloriesDisplay? display,  double? latestBmrKcal)?  $default,) {final _that = this;
 switch (_that) {
 case _CaloriesState() when $default != null:
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data,_that.latestBmrKcal);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data,_that.display,_that.latestBmrKcal);case _:
   return null;
 
 }
@@ -223,7 +236,7 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 
 
 class _CaloriesState extends CaloriesState {
-  const _CaloriesState({required this.selectedDate, this.selectedRange = TimeRange.week, this.isLoading = true, this.error, this.data, this.latestBmrKcal}): super._();
+  const _CaloriesState({required this.selectedDate, this.selectedRange = TimeRange.week, this.isLoading = true, this.error, this.data, this.display, this.latestBmrKcal}): super._();
   
 
 @override final  LocalDate selectedDate;
@@ -231,6 +244,7 @@ class _CaloriesState extends CaloriesState {
 @override@JsonKey() final  bool isLoading;
 @override final  ScreenError? error;
 @override final  ActivityPeriodData? data;
+@override final  CaloriesDisplay? display;
 @override final  double? latestBmrKcal;
 
 /// Create a copy of CaloriesState
@@ -243,16 +257,16 @@ _$CaloriesStateCopyWith<_CaloriesState> get copyWith => __$CaloriesStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CaloriesState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data)&&(identical(other.latestBmrKcal, latestBmrKcal) || other.latestBmrKcal == latestBmrKcal));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CaloriesState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data)&&(identical(other.display, display) || other.display == display)&&(identical(other.latestBmrKcal, latestBmrKcal) || other.latestBmrKcal == latestBmrKcal));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,data,latestBmrKcal);
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,data,display,latestBmrKcal);
 
 @override
 String toString() {
-  return 'CaloriesState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, data: $data, latestBmrKcal: $latestBmrKcal)';
+  return 'CaloriesState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, data: $data, display: $display, latestBmrKcal: $latestBmrKcal)';
 }
 
 
@@ -263,11 +277,11 @@ abstract mixin class _$CaloriesStateCopyWith<$Res> implements $CaloriesStateCopy
   factory _$CaloriesStateCopyWith(_CaloriesState value, $Res Function(_CaloriesState) _then) = __$CaloriesStateCopyWithImpl;
 @override @useResult
 $Res call({
- LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, ActivityPeriodData? data, double? latestBmrKcal
+ LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, ActivityPeriodData? data, CaloriesDisplay? display, double? latestBmrKcal
 });
 
 
-@override $ActivityPeriodDataCopyWith<$Res>? get data;
+@override $ActivityPeriodDataCopyWith<$Res>? get data;@override $CaloriesDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -280,14 +294,15 @@ class __$CaloriesStateCopyWithImpl<$Res>
 
 /// Create a copy of CaloriesState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,Object? latestBmrKcal = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,Object? display = freezed,Object? latestBmrKcal = freezed,}) {
   return _then(_CaloriesState(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
 as TimeRange,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,data: freezed == data ? _self.data : data // ignore: cast_nullable_to_non_nullable
-as ActivityPeriodData?,latestBmrKcal: freezed == latestBmrKcal ? _self.latestBmrKcal : latestBmrKcal // ignore: cast_nullable_to_non_nullable
+as ActivityPeriodData?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as CaloriesDisplay?,latestBmrKcal: freezed == latestBmrKcal ? _self.latestBmrKcal : latestBmrKcal // ignore: cast_nullable_to_non_nullable
 as double?,
   ));
 }
@@ -303,6 +318,18 @@ $ActivityPeriodDataCopyWith<$Res>? get data {
 
   return $ActivityPeriodDataCopyWith<$Res>(_self.data!, (value) {
     return _then(_self.copyWith(data: value));
+  });
+}/// Create a copy of CaloriesState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CaloriesDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
+
+  return $CaloriesDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
   });
 }
 }

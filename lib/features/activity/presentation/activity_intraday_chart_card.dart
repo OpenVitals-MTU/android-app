@@ -4,7 +4,7 @@ import '../../../core/time/local_date.dart';
 import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/day_axis.dart';
 import '../../../ui/charts/metric_day_chart.dart';
-import 'activity_metric_display.dart';
+import '../application/activity_metric_display.dart';
 
 /// The day's steps / calories / distance, as they accumulated.
 class IntradayActivityChartCard extends StatelessWidget {

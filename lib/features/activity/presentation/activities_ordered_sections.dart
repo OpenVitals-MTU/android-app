@@ -12,14 +12,8 @@ import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/cardio_load.dart';
-import '../../../domain/insights/cross_metric_insights.dart';
-import '../../../domain/insights/daily_goals.dart';
-import '../../../domain/insights/data_confidence.dart';
 import '../../../domain/insights/metric_interpretations.dart';
-import '../../../domain/insights/period_comparison.dart';
-import '../../../domain/insights/personal_baseline.dart';
 import '../../../domain/model/activity_models.dart';
-import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
@@ -38,13 +32,11 @@ import '../../../ui/components/period_comparison_stat.dart';
 import '../../../ui/components/personal_baseline_stat.dart';
 import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../application/activities_display.dart';
 import '../application/activities_view_model.dart';
 import 'exercise_labels.dart';
 import '../../../ui/components/section_padding.dart';
 import '../../../ui/components/accent_icon_chip.dart';
-
-/// Health Connect `Metadata.RECORDING_METHOD_MANUAL_ENTRY`.
-const int _recordingMethodManualEntry = 3;
 
 final DateFormat _rowTimeFormat = DateFormat('EEE d MMM · HH:mm');
 
@@ -52,15 +44,21 @@ final DateFormat _rowTimeFormat = DateFormat('EEE d MMM · HH:mm');
 /// `renderActivitiesOrderedContent` (`ActivitiesMetricOrderedSections.kt`).
 /// Renders every section in the user's persisted order, gated by the same
 /// visibility rules Kotlin uses.
+///
+/// Everything it prints arrives precomputed on [display] (built by
+/// [ActivitiesViewModel] at load time): this file sorts, folds, buckets and
+/// averages nothing.
 class ActivitiesOrderedSections extends ConsumerWidget {
   const ActivitiesOrderedSections({
     super.key,
     required this.state,
+    required this.display,
     required this.period,
     required this.daySelection,
   });
 
   final ActivitiesState state;
+  final ActivitiesDisplay display;
   final DatePeriod period;
   final ChartDaySelection daySelection;
 
@@ -71,74 +69,46 @@ class ActivitiesOrderedSections extends ConsumerWidget {
     final notifier = ref.read(activitiesProvider.notifier);
     final weekPeriodMode = ref.watch(weekPeriodModeProvider);
 
-    final workouts = state.workouts;
-    final sortedDays = [...state.overviewDays]
-      ..sort((a, b) => a.date.compareTo(b.date));
-    final overviewTotals =
-        sortedDays.isEmpty ? null : _overviewTotals(sortedDays);
+    final hasWorkouts = display.workoutCount > 0;
     final selectedDay = daySelection.selectedDate;
-
-    final goalValues = workoutDailyGoalValues(workouts);
-    final goalProgress = dailyGoalProgress(
-      goalValues,
-      period,
-      state.dailyGoalMinutes,
-      activitiesGoalKey.direction,
-    );
-
-    final hasGuideline = workouts.isNotEmpty &&
-        workoutGuidelineProgress(_guidelineMinutes(workouts)) != null;
-    final hasCrossMetric = workouts.isNotEmpty &&
-        crossMetricInsight(
-              [
-                for (final v in goalValues)
-                  CrossMetricValue(date: v.date, value: v.value),
-              ],
-              [
-                for (final r in state.crossDailyRestingHR)
-                  CrossMetricValue(date: r.date, value: r.bpm.toDouble()),
-              ],
-            ) !=
-            null;
 
     return OrderedMetricDetailSections(
       sections: [
         MetricDetailSection(
           MetricDetailSectionId.activitySummary,
-          visible: workouts.isNotEmpty ||
-              sortedDays.isNotEmpty ||
-              state.plannedWorkouts.isNotEmpty ||
+          visible: hasWorkouts ||
+              display.hasOverviewDays ||
+              display.sortedPlannedWorkouts.isNotEmpty ||
               !state.isLoading,
-          _summarySection(
-              context, ref, l10n, formatter, notifier, sortedDays, weekPeriodMode),
+          _summarySection(context, formatter, notifier, weekPeriodMode),
         ),
         MetricDetailSection(
           MetricDetailSectionId.activityKeyMetrics,
-          visible: sortedDays.isNotEmpty && overviewTotals != null,
-          overviewTotals == null
+          visible: display.hasOverviewDays && display.totals != null,
+          display.totals == null
               ? const SizedBox.shrink()
-              : _keyMetricsSection(context, l10n, formatter, sortedDays,
-                  overviewTotals, weekPeriodMode),
+              : _keyMetricsSection(
+                  context, l10n, formatter, display.totals!, weekPeriodMode),
         ),
         MetricDetailSection(
           MetricDetailSectionId.periodChart,
-          visible: workouts.isNotEmpty,
+          visible: hasWorkouts,
           sectionPadded(_periodChart(formatter, weekPeriodMode)),
         ),
         MetricDetailSection(
           MetricDetailSectionId.selectedDayEntries,
-          visible: selectedDay != null && workouts.isNotEmpty,
+          visible: selectedDay != null && hasWorkouts,
           selectedDay == null
               ? const SizedBox.shrink()
               : sectionPadded(_selectedDayEntries(
-                  context, ref, notifier, formatter, selectedDay)),
+                  context, notifier, formatter, selectedDay)),
         ),
         MetricDetailSection(
           MetricDetailSectionId.dailyGoal,
-          visible: workouts.isNotEmpty,
+          visible: hasWorkouts,
           sectionPadded(DailyGoalCard(
             goal: formatter.minutes(state.dailyGoalMinutes.round()),
-            progress: goalProgress,
+            progress: display.goalProgress,
             icon: Icons.directions_run,
             accentColor: AppColors.workout,
             onDecreaseGoal: notifier.decreaseDailyGoal,
@@ -147,32 +117,24 @@ class ActivitiesOrderedSections extends ConsumerWidget {
         ),
         MetricDetailSection(
           MetricDetailSectionId.statistics,
-          visible: workouts.isNotEmpty,
-          _statisticsSection(l10n, formatter, goalProgress, goalValues),
+          visible: hasWorkouts,
+          _statisticsSection(l10n, formatter),
         ),
         MetricDetailSection(
           MetricDetailSectionId.metricContext,
-          visible: hasGuideline,
+          visible: hasWorkouts && display.guideline != null,
           _guidelineSection(l10n, formatter),
         ),
         MetricDetailSection(
           MetricDetailSectionId.crossMetricInsights,
-          visible: hasCrossMetric,
-          _crossMetricSection(l10n, goalValues),
+          visible: hasWorkouts && display.crossInsight != null,
+          _crossMetricSection(l10n),
         ),
         MetricDetailSection(
           MetricDetailSectionId.dataConfidence,
-          visible: workouts.isNotEmpty && period.start != period.end,
+          visible: hasWorkouts && period.start != period.end,
           sectionPadded(DataConfidenceCard(
-            confidence: dataConfidence(
-              period,
-              [for (final w in workouts) instantToLocalDate(w.startTime)],
-              workouts.length,
-              sources: [for (final w in workouts) w.source],
-              manualEntryCount: workouts
-                  .where((w) => w.recordingMethod == _recordingMethodManualEntry)
-                  .length,
-            ),
+            confidence: display.dataConfidence,
             accentColor: AppColors.workout,
           )),
         ),
@@ -184,11 +146,8 @@ class ActivitiesOrderedSections extends ConsumerWidget {
 
   Widget _summarySection(
     BuildContext context,
-    WidgetRef ref,
-    AppLocalizations l10n,
     UnitFormatter formatter,
     ActivitiesViewModel notifier,
-    List<ActivityOverviewDay> sortedDays,
     WeekPeriodMode weekPeriodMode,
   ) {
     final showFilter = state.availableActivityTypes.isNotEmpty ||
@@ -199,14 +158,16 @@ class ActivitiesOrderedSections extends ConsumerWidget {
         if (showFilter)
           sectionPadded(_ActivityTypeFilter(
             selectedActivityType: state.selectedActivityType,
-            availableActivityTypes: state.availableActivityTypes,
+            options: display.filterOptions,
             onSelect: notifier.selectActivityType,
           )),
-        if (state.workouts.isNotEmpty || sortedDays.isNotEmpty || !state.isLoading)
+        if (state.workouts.isNotEmpty ||
+            display.hasOverviewDays ||
+            !state.isLoading)
           sectionPadded(_ActivityPeriodSummaryCard(
             state: state,
+            display: display,
             period: period,
-            days: sortedDays,
             formatter: formatter,
             weekPeriodMode: weekPeriodMode,
             showEmptyState: !state.isLoading,
@@ -218,9 +179,9 @@ class ActivitiesOrderedSections extends ConsumerWidget {
             aggregates: state.activityTypeAggregates,
             formatter: formatter,
           )),
-        if (state.plannedWorkouts.isNotEmpty)
+        if (display.sortedPlannedWorkouts.isNotEmpty)
           sectionPadded(_PlannedWorkoutCard(
-            plannedWorkouts: state.plannedWorkouts,
+            plannedWorkouts: display.sortedPlannedWorkouts,
             formatter: formatter,
             onStart: (id) =>
                 context.push(AppRoutes.activityEntryLocation(planId: id)),
@@ -235,8 +196,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
     BuildContext context,
     AppLocalizations l10n,
     UnitFormatter formatter,
-    List<ActivityOverviewDay> days,
-    _OverviewTotals totals,
+    ActivityOverviewTotals totals,
     WeekPeriodMode weekPeriodMode,
   ) {
     final title = periodTitle(
@@ -245,14 +205,11 @@ class ActivitiesOrderedSections extends ConsumerWidget {
       period,
       weekPeriodMode: weekPeriodMode,
     );
-    final buckets = _buckets(days, state.selectedRange);
     final bucketLabels = _bucketLabels(
-      buckets,
+      display.bucketDates,
       state.selectedRange,
       Localizations.localeOf(context).toString(),
     );
-    final estimated = days
-        .any((d) => d.energyBurnedSource == CaloriesBurnedSource.estimatedActiveAndBmr);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -266,10 +223,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
               '$title / ${_cardioConfidenceLabel(l10n, totals.cardioLoadConfidence)}',
           icon: Icons.favorite,
           accentColor: AppColors.heart,
-          series: _series(buckets, (d) =>
-              d.cardioLoadConfidence == CardioLoadConfidence.noData
-                  ? null
-                  : d.cardioLoad.toDouble()),
+          series: display.cardioLoadSeries,
           bucketLabels: bucketLabels,
           onTap: () => context.push(AppRoutes.cardioLoadDetail),
         ),
@@ -278,13 +232,11 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           value: totals.hasEnergyBurned
               ? formatter.energy(totals.energyBurnedKcal)
               : DisplayValue(l10n.noData, ''),
-          subtitle: estimated ? l10n.caloriesEstimatedActiveBmr : title,
+          subtitle:
+              display.energyEstimated ? l10n.caloriesEstimatedActiveBmr : title,
           icon: Icons.local_fire_department,
           accentColor: AppColors.calories,
-          series: _series(buckets, (d) =>
-              d.energyBurnedSource == CaloriesBurnedSource.noData
-                  ? null
-                  : d.energyBurnedKcal),
+          series: display.energyBurnedSeries,
           bucketLabels: bucketLabels,
           onTap: () => context.push(AppRoutes.calories),
         ),
@@ -294,7 +246,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           subtitle: title,
           icon: Icons.directions_walk,
           accentColor: AppColors.steps,
-          series: _series(buckets, (d) => d.steps.toDouble()),
+          series: display.stepsSeries,
           bucketLabels: bucketLabels,
           onTap: () => context.push(AppRoutes.metricLocation('STEPS')),
         ),
@@ -304,7 +256,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           subtitle: title,
           icon: Icons.straighten,
           accentColor: AppColors.distance,
-          series: _series(buckets, (d) => d.distanceMeters),
+          series: display.distanceSeries,
           bucketLabels: bucketLabels,
           onTap: () => context.push(AppRoutes.metricLocation('DISTANCE')),
         ),
@@ -316,7 +268,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           subtitle: '$title / ${l10n.statAverage}',
           icon: Icons.favorite_border,
           accentColor: AppColors.heart,
-          series: _series(buckets, (d) => d.hrvRmssdMs, average: true),
+          series: display.hrvSeries,
           bucketLabels: bucketLabels,
           onTap: () => context.push(AppRoutes.metricLocation('HRV')),
         ),
@@ -326,51 +278,34 @@ class ActivitiesOrderedSections extends ConsumerWidget {
 
   // ── PERIOD_CHART ────────────────────────────────────────────────────
 
-  Widget _periodChart(UnitFormatter formatter, WeekPeriodMode weekPeriodMode) {
-    final byDate = <LocalDate, double>{};
-    for (final w in state.workouts) {
-      final date = instantToLocalDate(w.startTime);
-      byDate[date] =
-          (byDate[date] ?? 0.0) + math.max(0, w.durationMs).toDouble() / 60000.0;
-    }
-    final totalMs =
-        state.workouts.fold<int>(0, (sum, w) => sum + math.max(0, w.durationMs));
-    return MetricBarChart(
-      title: '',
-      values: [
-        for (final entry in byDate.entries)
-          PeriodChartValue(entry.key, entry.value),
-      ],
-      selectedRange: state.selectedRange,
-      period: period,
-      accentColor: AppColors.workout,
-      summaryValue: formatter.duration(totalMs),
-      weekPeriodMode: weekPeriodMode,
-      selectedDate: daySelection.selectedDate,
-      onDateSelected: daySelection.onDateSelected,
-      valueFormatter: (value) => formatter.minutes(value.round()).text,
-    );
-  }
+  Widget _periodChart(UnitFormatter formatter, WeekPeriodMode weekPeriodMode) =>
+      MetricBarChart(
+        title: '',
+        values: display.chartValues,
+        selectedRange: state.selectedRange,
+        period: period,
+        accentColor: AppColors.workout,
+        summaryValue: formatter.duration(display.totalDurationMs),
+        weekPeriodMode: weekPeriodMode,
+        selectedDate: daySelection.selectedDate,
+        onDateSelected: daySelection.onDateSelected,
+        valueFormatter: (value) => formatter.minutes(value.round()).text,
+      );
 
   // ── SELECTED_DAY_ENTRIES ────────────────────────────────────────────
 
   Widget _selectedDayEntries(
     BuildContext context,
-    WidgetRef ref,
     ActivitiesViewModel notifier,
     UnitFormatter formatter,
     LocalDate selectedDay,
   ) {
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final entries = [
-      for (final w in state.workouts)
-        if (instantToLocalDate(w.startTime) == selectedDay) w,
-    ];
     return PaginatedEntryList<ExerciseData>(
       title: DateFormat.yMMMd(locale).format(
         DateTime(selectedDay.year, selectedDay.month, selectedDay.day),
       ),
-      entries: entries,
+      entries: display.workoutsByDay[selectedDay] ?? const <ExerciseData>[],
       rowBuilder: (context, workout) => _WorkoutRow(
         workout: workout,
         formatter: formatter,
@@ -385,32 +320,8 @@ class ActivitiesOrderedSections extends ConsumerWidget {
 
   // ── STATISTICS ──────────────────────────────────────────────────────
 
-  Widget _statisticsSection(
-    AppLocalizations l10n,
-    UnitFormatter formatter,
-    DailyGoalProgress goalProgress,
-    List<DailyGoalValue> goalValues,
-  ) {
-    final workouts = state.workouts;
-    final totalMs =
-        workouts.fold<int>(0, (sum, w) => sum + math.max(0, w.durationMs));
-    final averageMs = workouts.isEmpty ? 0 : totalMs ~/ workouts.length;
-    final longestMs = workouts.isEmpty
-        ? 0
-        : workouts
-            .map((w) => math.max(0, w.durationMs))
-            .reduce((a, b) => a > b ? a : b);
-    final previousTotalMs = state.previousWorkouts
-        .fold<int>(0, (sum, w) => sum + math.max(0, w.durationMs));
-    final dailyMinutes = [for (final v in goalValues) v.value];
-    final currentAverage = dailyMinutes.isEmpty
-        ? 0.0
-        : dailyMinutes.reduce((a, b) => a + b) / dailyMinutes.length;
-    final baselineValues = [
-      for (final v in workoutDailyGoalValues(state.baselineWorkouts))
-        BaselineValue(date: v.date, value: v.value),
-    ];
-
+  Widget _statisticsSection(AppLocalizations l10n, UnitFormatter formatter) {
+    final goalProgress = display.goalProgress;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -426,37 +337,34 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           stats: [
             InsightStat(
               title: l10n.statTotal,
-              value: formatter.duration(totalMs),
+              value: formatter.duration(display.totalDurationMs),
               unit: '',
               icon: Icons.directions_run,
               accentColor: AppColors.workout,
             ),
             InsightStat(
               title: l10n.sectionActivities,
-              value: formatter.count(workouts.length),
+              value: formatter.count(display.workoutCount),
               unit: '',
               icon: Icons.check_circle_outline,
               accentColor: AppColors.workout,
             ),
             InsightStat(
               title: l10n.statAverageDuration,
-              value: formatter.duration(averageMs),
+              value: formatter.duration(display.averageDurationMs),
               unit: '',
               icon: Icons.star_outline,
               accentColor: AppColors.workout,
             ),
             InsightStat(
               title: l10n.statLongestWorkout,
-              value: formatter.duration(longestMs),
+              value: formatter.duration(display.longestDurationMs),
               unit: '',
               icon: Icons.calendar_month_outlined,
               accentColor: AppColors.workout,
             ),
             previousPeriodInsightStat(
-              comparison: periodComparison(
-                totalMs.toDouble(),
-                previousTotalMs.toDouble(),
-              ),
+              comparison: display.periodComparison,
               selectedRange: state.selectedRange,
               unitFormatter: formatter,
               valueFormatter: (value) =>
@@ -465,11 +373,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
               l10n: l10n,
             ),
             ...personalBaselineInsightStats(
-              insight: personalBaselineInsight(
-                currentAverage,
-                baselineValues,
-                period.start.minusDays(1),
-              ),
+              insight: display.baselineInsight,
               unitFormatter: formatter,
               valueFormatter: (value) => formatter.minutes(value.round()),
               accentColor: AppColors.workout,
@@ -484,9 +388,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
   // ── METRIC_CONTEXT (HHS guideline) ─────────────────────────────────
 
   Widget _guidelineSection(AppLocalizations l10n, UnitFormatter formatter) {
-    final useWeeklyAverage = state.selectedRange == TimeRange.month ||
-        state.selectedRange == TimeRange.year;
-    final progress = workoutGuidelineProgress(_guidelineMinutes(state.workouts));
+    final progress = display.guideline;
     if (progress == null) return const SizedBox.shrink();
     final status = switch (progress.status) {
       WorkoutGuidelineStatus.noLoggedMinutes => l10n.interpretationWorkoutNone,
@@ -505,7 +407,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
         sectionPadded(MetricInterpretationCard(
           title: l10n.interpretationWorkoutTitle,
           status: status,
-          body: useWeeklyAverage
+          body: display.guidelineUsesWeeklyAverage
               ? l10n.interpretationWorkoutBodyWeeklyAverage(
                   minutesText, percentText)
               : l10n.interpretationWorkoutBody(minutesText, percentText),
@@ -520,17 +422,8 @@ class ActivitiesOrderedSections extends ConsumerWidget {
 
   // ── CROSS_METRIC_INSIGHTS (resting HR) ─────────────────────────────
 
-  Widget _crossMetricSection(
-    AppLocalizations l10n,
-    List<DailyGoalValue> goalValues,
-  ) {
-    final insight = crossMetricInsight(
-      [for (final v in goalValues) CrossMetricValue(date: v.date, value: v.value)],
-      [
-        for (final r in state.crossDailyRestingHR)
-          CrossMetricValue(date: r.date, value: r.bpm.toDouble()),
-      ],
-    );
+  Widget _crossMetricSection(AppLocalizations l10n) {
+    final insight = display.crossInsight;
     if (insight == null) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -547,52 +440,9 @@ class ActivitiesOrderedSections extends ConsumerWidget {
       ],
     );
   }
-
-  double _guidelineMinutes(List<ExerciseData> workouts) {
-    final totalMinutes =
-        workouts.fold<int>(0, (sum, w) => sum + math.max(0, w.durationMs)) /
-            60000.0;
-    if (state.selectedRange == TimeRange.month ||
-        state.selectedRange == TimeRange.year) {
-      return totalMinutes / _weekCount(period);
-    }
-    return totalMinutes;
-  }
 }
 
-
-double _weekCount(DatePeriod period) {
-  final days = period.end.epochDay - period.start.epochDay + 1;
-  return math.max(days / 7.0, 1.0 / 7.0);
-}
-
-// ── Overview buckets / series / totals ─────────────────────────────────
-
-class _Bucket {
-  const _Bucket(this.date, this.days);
-  // The bucket's representative date — its first (earliest) day (Kotlin
-  // `ActivityOverviewBucket.date`).
-  final LocalDate date;
-  final List<ActivityOverviewDay> days;
-
-  /// The workout that gets to represent this bucket — the first one, as Kotlin's
-  /// `activityOverviewMarkerWorkout` did. A day with two rides shows one icon;
-  /// the strip answers "did you train?", not "how often".
-  ExerciseData? get markerWorkout {
-    for (final day in days) {
-      if (day.workouts.isNotEmpty) return day.workouts.first;
-    }
-    return null;
-  }
-}
-
-/// The week's day markers, one per day (Kotlin `ActivityOverviewStrip`).
-///
-/// Only ever built for [TimeRange.week]: seven markers read at a glance, and a
-/// month of thirty-one rings does not. Returns empty for every other range, which
-/// is what hides the strip.
-List<_Bucket> _stripBuckets(List<ActivityOverviewDay> days, TimeRange range) =>
-    range == TimeRange.week ? _buckets(days, range) : const <_Bucket>[];
+// ── Bucket labels (locale formatting; the buckets themselves are precomputed) ──
 
 /// A filled circle carrying the workout's own icon on the days you trained; an
 /// empty ring on the days you did not. Port of Kotlin `ActivityOverviewStrip`.
@@ -602,11 +452,11 @@ List<_Bucket> _stripBuckets(List<ActivityOverviewDay> days, TimeRange range) =>
 /// that showed WHICH days you were active.
 class _ActivityOverviewStrip extends StatelessWidget {
   const _ActivityOverviewStrip({
-    required this.buckets,
+    required this.markers,
     required this.selectedRange,
   });
 
-  final List<_Bucket> buckets;
+  final List<ActivityStripMarker> markers;
   final TimeRange selectedRange;
 
   /// Kotlin `ActivityOverviewMarkerSize`.
@@ -622,21 +472,21 @@ class _ActivityOverviewStrip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
           children: [
-            for (final bucket in buckets)
+            for (final marker in markers)
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _Marker(
                       key: ValueKey(
-                        'activity-day-marker-${bucket.date.toString()}-'
-                        '${bucket.markerWorkout == null ? 'rest' : 'active'}',
+                        'activity-day-marker-${marker.date.toString()}-'
+                        '${marker.workout == null ? 'rest' : 'active'}',
                       ),
-                      workout: bucket.markerWorkout,
+                      workout: marker.workout,
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _bucketLabel(bucket.date, selectedRange, locale),
+                      _bucketLabel(marker.date, selectedRange, locale),
                       maxLines: 1,
                       overflow: TextOverflow.clip,
                       style: theme.textTheme.labelMedium?.copyWith(
@@ -689,47 +539,15 @@ class _Marker extends StatelessWidget {
   }
 }
 
-List<_Bucket> _buckets(List<ActivityOverviewDay> days, TimeRange range) {
-  final sorted = [...days]..sort((a, b) => a.date.compareTo(b.date));
-  final maxBuckets = range == TimeRange.year ? 12 : 7;
-  final List<_Bucket> raw;
-  if (range == TimeRange.year) {
-    final byMonth = <String, List<ActivityOverviewDay>>{};
-    for (final day in sorted) {
-      final key = '${day.date.year}-${day.date.month}';
-      byMonth.putIfAbsent(key, () => <ActivityOverviewDay>[]).add(day);
-    }
-    raw = [
-      for (final group in byMonth.values) _Bucket(group.first.date, group),
-    ];
-  } else {
-    raw = [
-      for (final day in sorted) _Bucket(day.date, [day]),
-    ];
-  }
-  if (raw.isEmpty || maxBuckets <= 0) return const <_Bucket>[];
-  if (raw.length <= maxBuckets) return raw;
-  final chunkSize = math.max(1, (raw.length / maxBuckets).ceil());
-  final chunked = <_Bucket>[];
-  for (var i = 0; i < raw.length; i += chunkSize) {
-    final slice = raw.sublist(i, math.min(i + chunkSize, raw.length));
-    chunked.add(_Bucket(
-      slice.first.date,
-      [for (final b in slice) ...b.days],
-    ));
-  }
-  return chunked;
-}
-
 /// The per-bucket labels under a key-metric sparkline (Kotlin
 /// `activityOverviewBucketLabel`): DAY & WEEK → the weekday's initial;
 /// MONTH → day-of-month; YEAR → the month's initial. Uses [locale].
 List<String> _bucketLabels(
-  List<_Bucket> buckets,
+  List<LocalDate> bucketDates,
   TimeRange range,
   String locale,
 ) =>
-    [for (final bucket in buckets) _bucketLabel(bucket.date, range, locale)];
+    [for (final date in bucketDates) _bucketLabel(date, range, locale)];
 
 String _bucketLabel(LocalDate date, TimeRange range, String locale) {
   final dateTime = DateTime(date.year, date.month, date.day);
@@ -746,78 +564,6 @@ String _bucketLabel(LocalDate date, TimeRange range, String locale) {
 
 String _initial(String text) =>
     text.isEmpty ? '' : String.fromCharCode(text.runes.first);
-
-List<double> _series(
-  List<_Bucket> buckets,
-  double? Function(ActivityOverviewDay) selector, {
-  bool average = false,
-}) =>
-    [
-      for (final bucket in buckets)
-        () {
-          final values = [
-            for (final day in bucket.days)
-              if (selector(day) != null) selector(day)!,
-          ];
-          if (values.isEmpty) return 0.0;
-          final sum = values.reduce((a, b) => a + b);
-          return average ? sum / values.length : sum;
-        }(),
-    ];
-
-class _OverviewTotals {
-  const _OverviewTotals({
-    required this.steps,
-    required this.distanceMeters,
-    required this.energyBurnedKcal,
-    required this.hasEnergyBurned,
-    required this.cardioLoad,
-    required this.hasCardioLoad,
-    required this.cardioLoadConfidence,
-    required this.hrvRmssdMs,
-  });
-
-  final int steps;
-  final double distanceMeters;
-  final double energyBurnedKcal;
-  final bool hasEnergyBurned;
-  final int cardioLoad;
-  final bool hasCardioLoad;
-  final CardioLoadConfidence cardioLoadConfidence;
-  final double? hrvRmssdMs;
-}
-
-_OverviewTotals _overviewTotals(List<ActivityOverviewDay> days) {
-  final hrvValues = [for (final d in days) if (d.hrvRmssdMs != null) d.hrvRmssdMs!];
-  final cardioDays = [
-    for (final d in days)
-      if (d.cardioLoadConfidence != CardioLoadConfidence.noData) d,
-  ];
-  return _OverviewTotals(
-    steps: days.fold<int>(0, (sum, d) => sum + d.steps),
-    distanceMeters: days.fold<double>(0, (sum, d) => sum + d.distanceMeters),
-    energyBurnedKcal: days.fold<double>(0, (sum, d) => sum + d.energyBurnedKcal),
-    hasEnergyBurned:
-        days.any((d) => d.energyBurnedSource != CaloriesBurnedSource.noData),
-    cardioLoad: cardioDays.fold<int>(0, (sum, d) => sum + d.cardioLoad),
-    hasCardioLoad: cardioDays.isNotEmpty,
-    cardioLoadConfidence: _aggregateCardioConfidence(cardioDays),
-    hrvRmssdMs: hrvValues.isEmpty
-        ? null
-        : hrvValues.reduce((a, b) => a + b) / hrvValues.length,
-  );
-}
-
-CardioLoadConfidence _aggregateCardioConfidence(List<ActivityOverviewDay> days) {
-  if (days.isEmpty) return CardioLoadConfidence.noData;
-  if (days.any((d) => d.cardioLoadConfidence == CardioLoadConfidence.low)) {
-    return CardioLoadConfidence.low;
-  }
-  if (days.any((d) => d.cardioLoadConfidence == CardioLoadConfidence.medium)) {
-    return CardioLoadConfidence.medium;
-  }
-  return CardioLoadConfidence.high;
-}
 
 String _cardioConfidenceLabel(
   AppLocalizations l10n,
@@ -836,22 +582,19 @@ String _cardioConfidenceLabel(
 class _ActivityTypeFilter extends StatelessWidget {
   const _ActivityTypeFilter({
     required this.selectedActivityType,
-    required this.availableActivityTypes,
+    required this.options,
     required this.onSelect,
   });
 
   final int? selectedActivityType;
-  final List<int> availableActivityTypes;
+
+  /// Already unioned with the selection and ordered by label (by the view-model).
+  final List<int> options;
   final ValueChanged<int?> onSelect;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final options = <int>{
-      ...availableActivityTypes,
-      ?selectedActivityType,
-    }.toList()
-      ..sort((a, b) => exerciseTypeLabel(a).compareTo(exerciseTypeLabel(b)));
     return DropdownButtonFormField<int?>(
       initialValue: selectedActivityType,
       isExpanded: true,
@@ -878,8 +621,8 @@ class _ActivityTypeFilter extends StatelessWidget {
 class _ActivityPeriodSummaryCard extends StatefulWidget {
   const _ActivityPeriodSummaryCard({
     required this.state,
+    required this.display,
     required this.period,
-    required this.days,
     required this.formatter,
     required this.weekPeriodMode,
     required this.showEmptyState,
@@ -888,8 +631,8 @@ class _ActivityPeriodSummaryCard extends StatefulWidget {
   });
 
   final ActivitiesState state;
+  final ActivitiesDisplay display;
   final DatePeriod period;
-  final List<ActivityOverviewDay> days;
   final UnitFormatter formatter;
   final WeekPeriodMode weekPeriodMode;
   final bool showEmptyState;
@@ -912,6 +655,12 @@ class _ActivityPeriodSummaryCardState
     final workouts = widget.state.workouts;
     final visibleCount = math.min(_visibleCount, workouts.length);
     final visible = workouts.take(visibleCount).toList();
+    // The week strip: one marker per day, filled with the workout's own icon on
+    // the days you trained and left as an empty ring on the days you did not.
+    // Week only — a month of 31 rings says nothing, which is why Kotlin gated it
+    // on WEEK too (`stripBuckets`); the view-model returns an empty list for
+    // every other range.
+    final stripMarkers = widget.display.stripMarkers;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -925,14 +674,9 @@ class _ActivityPeriodSummaryCardState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // The week strip: one marker per day, filled with the workout's own
-              // icon on the days you trained and left as an empty ring on the days
-              // you did not. Week only — a month of 31 rings says nothing, which is
-              // why Kotlin gated it on WEEK too (`stripBuckets`).
-              if (_stripBuckets(widget.days, widget.state.selectedRange)
-                  case final stripBuckets when stripBuckets.isNotEmpty)
+              if (stripMarkers.isNotEmpty)
                 _ActivityOverviewStrip(
-                  buckets: stripBuckets,
+                  markers: stripMarkers,
                   selectedRange: widget.state.selectedRange,
                 ),
               if (workouts.isEmpty)
@@ -1256,6 +1000,7 @@ class _PlannedWorkoutCard extends StatelessWidget {
     required this.onStart,
   });
 
+  /// Already ordered earliest-first by the view-model.
   final List<PlannedExerciseData> plannedWorkouts;
   final UnitFormatter formatter;
   final ValueChanged<String> onStart;
@@ -1264,8 +1009,6 @@ class _PlannedWorkoutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final sorted = [...plannedWorkouts]
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1274,9 +1017,9 @@ class _PlannedWorkoutCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var i = 0; i < sorted.length; i++) ...[
-                _plannedRow(context, l10n, sorted[i]),
-                if (i < sorted.length - 1)
+              for (var i = 0; i < plannedWorkouts.length; i++) ...[
+                _plannedRow(context, l10n, plannedWorkouts[i]),
+                if (i < plannedWorkouts.length - 1)
                   Divider(
                     height: 1,
                     indent: 72,
@@ -1479,4 +1222,3 @@ class _MetricCard extends StatelessWidget {
     );
   }
 }
-

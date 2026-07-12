@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/period/period_calculations.dart';
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
@@ -11,13 +12,14 @@ import '../../../di/providers.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/activity_period_data.dart';
 import '../presentation/activity_metric.dart';
-import '../presentation/activity_metric_display.dart';
+import 'activity_metric_display.dart';
 
 part 'activity_metric_view_model.freezed.dart';
 
 /// The Riverpod port of the Kotlin `ActivityUiState`, trimmed to the fields the
 /// period detail UI actually consumes: the selection the scaffold drives, the
-/// loaded [ActivityPeriodData] payload, and loading/error flags.
+/// loaded [ActivityPeriodData] payload, its precomputed [ActivityMetricDisplay],
+/// and loading/error flags.
 @freezed
 abstract class ActivityMetricState with _$ActivityMetricState {
   const ActivityMetricState._();
@@ -28,6 +30,7 @@ abstract class ActivityMetricState with _$ActivityMetricState {
     @Default(true) bool isLoading,
     ScreenError? error,
     ActivityPeriodData? data,
+    ActivityMetricDisplay? display,
     /// The metric's persisted daily goal, moved by the goal card's steppers.
     @Default(0.0) double dailyGoal,
   }) = _ActivityMetricState;
@@ -41,6 +44,9 @@ abstract class ActivityMetricState with _$ActivityMetricState {
 /// [MetricDetailScaffold] drives every load through [load] (once on first frame,
 /// then on each selection change) and pull-to-refresh through [refresh]. A
 /// monotonic [_generation] guard drops stale results.
+///
+/// The display model is built here, at load time — the screen renders
+/// [ActivityMetricState.display] and derives nothing.
 class ActivityMetricViewModel extends Notifier<ActivityMetricState> {
   ActivityMetricViewModel(this.metric);
 
@@ -62,7 +68,15 @@ class ActivityMetricViewModel extends Notifier<ActivityMetricState> {
     final next = key.normalize(state.dailyGoal + delta);
     if (next == state.dailyGoal) return;
     ref.read(preferencesRepositoryProvider).setDailyGoalFor(key, next);
-    state = state.copyWith(dailyGoal: next);
+    // The goal feeds the display's goal progress, so a moved goal re-derives it:
+    // the screen recomputes nothing on rebuild.
+    final data = state.data;
+    state = state.copyWith(
+      dailyGoal: next,
+      display: data == null
+          ? null
+          : _display(data, state.selectedRange, state.selectedDate, next),
+    );
   }
 
   void increaseDailyGoal() =>
@@ -94,23 +108,32 @@ class ActivityMetricViewModel extends Notifier<ActivityMetricState> {
       weekPeriodMode: prefs.weekPeriodMode,
     );
 
-    try {
-      final data = (await loadActivityMetricPeriod(
-        query,
-        includeSteps: metric.usesDailySteps,
-        includeNutrition: metric.usesNutrition,
-        includeWheelchairPushes: metric.usesWheelchairPushes,
-        refreshMode: refreshMode,
-      ))
-          .orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(isLoading: false, data: data, error: null);
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unable to load data.'),
-      );
+    final result = await loadActivityMetricPeriod(
+      query,
+      includeSteps: metric.usesDailySteps,
+      includeNutrition: metric.usesNutrition,
+      includeWheelchairPushes: metric.usesWheelchairPushes,
+      refreshMode: refreshMode,
+    );
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          data: value,
+          display: _display(
+            value,
+            selection.selectedRange,
+            selection.selectedDate,
+            state.dailyGoal,
+          ),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
     }
   }
 
@@ -118,6 +141,27 @@ class ActivityMetricViewModel extends Notifier<ActivityMetricState> {
   Future<void> refresh() => load(
         PeriodSelection(state.selectedRange, state.selectedDate),
         refreshMode: RefreshMode.force,
+      );
+
+  /// The derivation, cut against the period the scaffold is showing — the same
+  /// window it hands its content builder.
+  ActivityMetricDisplay _display(
+    ActivityPeriodData data,
+    TimeRange range,
+    LocalDate anchorDate,
+    double dailyGoal,
+  ) =>
+      buildActivityMetricDisplay(
+        metric: metric,
+        data: data,
+        range: range,
+        period: displayPeriodFor(
+          range,
+          anchorDate,
+          weekPeriodMode:
+              ref.read(preferencesRepositoryProvider).weekPeriodMode,
+        ),
+        dailyGoal: dailyGoal,
       );
 }
 

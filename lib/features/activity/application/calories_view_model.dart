@@ -10,11 +10,13 @@ import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/activity_period_data.dart';
+import 'calories_display.dart';
 
 part 'calories_view_model.freezed.dart';
 
 /// The Riverpod port of the Kotlin `CaloriesUiState` — the calories overview
-/// (burned + active + BMR) for the selected period.
+/// (burned + active + BMR) for the selected period, plus the precomputed
+/// [CaloriesDisplay] the screen renders.
 @freezed
 abstract class CaloriesState with _$CaloriesState {
   const CaloriesState._();
@@ -25,6 +27,7 @@ abstract class CaloriesState with _$CaloriesState {
     @Default(true) bool isLoading,
     ScreenError? error,
     ActivityPeriodData? data,
+    CaloriesDisplay? display,
     double? latestBmrKcal,
   }) = _CaloriesState;
 }
@@ -59,22 +62,22 @@ class CaloriesViewModel extends Notifier<CaloriesState> {
       weekPeriodMode: prefs.weekPeriodMode,
     );
 
-    try {
-      final result =
-          (await loadCalories(query, refreshMode: refreshMode)).orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        data: result.data,
-        latestBmrKcal: result.latestBmrKcal,
-        error: null,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unable to load data.'),
-      );
+    final result = await loadCalories(query, refreshMode: refreshMode);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          data: value.data,
+          display: buildCaloriesDisplay(value.data),
+          latestBmrKcal: value.latestBmrKcal,
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
     }
   }
 

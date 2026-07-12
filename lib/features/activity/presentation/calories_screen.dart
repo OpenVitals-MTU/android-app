@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
-import '../../../domain/query/activity_period_data.dart';
 import '../../../data/source/health/health_permissions.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/charts/period_chart.dart';
@@ -12,6 +11,7 @@ import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import 'activity_metric.dart';
+import '../application/calories_display.dart';
 import '../application/calories_view_model.dart';
 
 /// Calories overview pushed over the shell (`/calories`), ported from the Kotlin
@@ -57,8 +57,8 @@ List<Widget> _content(
   DatePeriod period,
   WeekPeriodMode weekPeriodMode,
 ) {
-  final data = state.data;
-  if (data == null) {
+  final display = state.display;
+  if (display == null) {
     if (state.isLoading) {
       return const [
         Padding(
@@ -83,7 +83,7 @@ List<Widget> _content(
   return [
     ..._metricSection(
       ActivityMetric.caloriesOut,
-      data,
+      display.caloriesOut,
       state,
       formatter,
       period,
@@ -91,7 +91,7 @@ List<Widget> _content(
     ),
     ..._metricSection(
       ActivityMetric.activeCalories,
-      data,
+      display.activeCalories,
       state,
       formatter,
       period,
@@ -114,18 +114,15 @@ List<Widget> _content(
 
 List<Widget> _metricSection(
   ActivityMetric metric,
-  ActivityPeriodData data,
+  CaloriesMetricSeries series,
   CaloriesState state,
   UnitFormatter formatter,
   DatePeriod period,
   WeekPeriodMode weekPeriodMode,
 ) {
-  final values = metric.chartValues(data);
-  final hasData = values.any((value) => value.value > 0.0);
-  final total = values.fold<double>(0.0, (sum, value) => sum + value.value);
-  final hero = metric.format(formatter, total);
+  final hero = metric.format(formatter, series.total);
 
-  if (!hasData) {
+  if (!series.hasData) {
     return [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -154,7 +151,7 @@ List<Widget> _metricSection(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: MetricBarChart(
         title: metric.title,
-        values: values,
+        values: series.values,
         selectedRange: state.selectedRange,
         period: period,
         accentColor: metric.accentColor,
