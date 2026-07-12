@@ -3,6 +3,7 @@ import 'package:openvitals/core/geo/geo_distance.dart';
 import 'package:openvitals/domain/insights/activity_splits.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
+import 'package:openvitals/domain/model/activity_entry_types.dart';
 
 /// `computeActivitySplits` is arithmetic, so it is tested like arithmetic:
 /// known geometry in, exact numbers out.
@@ -41,12 +42,13 @@ ExerciseData _workout({
   List<ExerciseRoutePoint> routePoints = const <ExerciseRoutePoint>[],
   List<ExerciseLapData> laps = const <ExerciseLapData>[],
   DateTime? endTime,
+  int exerciseType = 56, // running
 }) {
   final end = endTime ?? _at(600);
   return ExerciseData(
     id: 'w1',
     title: 'Run',
-    exerciseType: 56,
+    exerciseType: exerciseType,
     startTime: _start,
     endTime: end,
     durationMs: durationMs ?? end.difference(_start).inMilliseconds,
@@ -95,6 +97,48 @@ double _secondsFromStart(DateTime time) =>
     time.difference(_start).inMicroseconds / Duration.microsecondsPerSecond;
 
 void main() {
+  group('an activity that does not travel has no splits', () {
+    test('a strength session with GPS drift is not cut into "laps"', () {
+      // The bug, from a real session: a phone left on the bench picked up 1.2 km
+      // of GPS drift over 36 minutes. Health Connect recorded it faithfully, the
+      // old "does it have any distance?" gate said yes, and a lifting session was
+      // duly cut into a "1.0 km" split and a "181 m (partial)" one, both at a
+      // 30:29 min/km pace. The distance was real data; the splits were nonsense.
+      final splits = _compute(
+        _workout(
+          exerciseType: ExerciseSessionType.strengthTraining,
+          totalDistanceMeters: 1200,
+          endTime: _at(2160), // 36 minutes
+        ),
+      );
+
+      expect(splits.splits, isEmpty);
+      expect(splits.isEmpty, isTrue);
+    });
+
+    test('...and neither is one carrying a route it never meant to record', () {
+      final splits = _compute(
+        _workout(
+          exerciseType: ExerciseSessionType.strengthTraining,
+          // ~1.2 km of "movement" — exactly the drift a bench-side phone logs.
+          routePoints: [_point(0, 0), _point(2160, 1200)],
+        ),
+      );
+      expect(splits.splits, isEmpty);
+    });
+
+    test('a run with the same distance IS cut, so the gate is on the KIND', () {
+      final splits = _compute(
+        _workout(
+          exerciseType: ExerciseSessionType.running,
+          totalDistanceMeters: 1200,
+          endTime: _at(2160),
+        ),
+      );
+      expect(splits.splits, isNotEmpty);
+    });
+  });
+
   group('the equator-line fixture', () {
     test('really does put the requested number of meters between fixes', () {
       // Everything below reads distance off this; if the fixture lies, the

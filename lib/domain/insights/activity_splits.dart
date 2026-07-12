@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../../core/geo/geo_distance.dart';
 import '../model/activity_models.dart';
 import '../model/heart_models.dart';
+import '../model/exercise_type_traits.dart';
 
 /// Per-segment splits ("laps") for a distance-based activity.
 ///
@@ -186,14 +187,24 @@ const double _minPartialMeters = 1.0;
 /// already carries device laps, which win outright.
 ///
 /// Source priority: device laps > GPS route > speed samples > estimated. See
-/// [SplitSource]. Returns an empty result when the activity has no distance at
-/// all (a strength session has no splits).
+/// [SplitSource]. Returns an empty result for an activity that does not travel,
+/// and for one that travelled no measurable distance.
 ActivitySplits computeActivitySplits({
   required ExerciseData workout,
   required List<HeartRateSample> heartRateSamples,
   required List<SpeedSample> speedSamples,
   required double splitDistanceMeters,
 }) {
+  // Whether an activity HAS splits is a question about its kind, not its data.
+  // The old gate only asked "is there any distance?", and a strength session
+  // answers yes: a phone left on the bench picks up a couple of hundred metres of
+  // GPS drift, Health Connect records it faithfully, and a lifting session was
+  // duly cut into "1.0 km" and "181 m" splits at a 30:29 min/km pace. The distance
+  // was real; the splits were nonsense.
+  if (!isDistanceBasedExercise(workout.exerciseType)) {
+    return const ActivitySplits.none();
+  }
+
   final unit =
       (splitDistanceMeters.isFinite && splitDistanceMeters > 0)
           ? splitDistanceMeters

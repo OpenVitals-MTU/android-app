@@ -1,4 +1,5 @@
 import '../../../domain/model/activity_entry_types.dart';
+import '../../../domain/model/exercise_type_traits.dart';
 
 /// Which metric rows are worth showing on the activity detail screen.
 ///
@@ -50,41 +51,9 @@ const int _rowingMachine = 54;
 const int _stairClimbing = 68;
 const int _stairClimbingMachine = 69;
 const int _swimmingPool = 74;
-const int _iceSkating = 39;
 
-/// Activities measured in strides: steps and step cadence mean something.
-const Set<int> _stepBased = {
-  ExerciseSessionType.running,
-  ExerciseSessionType.runningTreadmill,
-  ExerciseSessionType.walking,
-  ExerciseSessionType.hiking,
-  ExerciseSessionType.snowshoeing,
-  _stairClimbing,
-  _stairClimbingMachine,
-};
 
-/// Activities with a crank: pedalling cadence means something.
-const Set<int> _cycling = {ExerciseSessionType.biking, _bikingStationary};
 
-/// Activities that cover ground (or simulate covering it), so a distance and a
-/// speed exist even on a machine.
-const Set<int> _distanceBased = {
-  ..._stepBased,
-  ..._cycling,
-  ExerciseSessionType.rowing,
-  _rowingMachine,
-  _elliptical,
-  ExerciseSessionType.swimmingOpenWater,
-  _swimmingPool,
-  ExerciseSessionType.skating,
-  _iceSkating,
-  ExerciseSessionType.skiing,
-  ExerciseSessionType.snowboarding,
-  ExerciseSessionType.paddling,
-  ExerciseSessionType.surfing,
-  ExerciseSessionType.sailing,
-  ExerciseSessionType.wheelchair,
-};
 
 /// Pace reads better than speed for these; speed reads better for the rest.
 /// Mirrors `_prefersPace` in `activities_ordered_sections.dart`.
@@ -122,17 +91,17 @@ bool isMetricRelevant(
   ActivityMetric.averageHeartRate ||
   ActivityMetric.caloriesBurned ||
   ActivityMetric.activeCalories => true,
-  ActivityMetric.steps => _stepBased.contains(exerciseType),
-  ActivityMetric.cyclingCadence => _cycling.contains(exerciseType),
-  ActivityMetric.distance => _distanceBased.contains(exerciseType),
+  ActivityMetric.steps => stepBasedExercises.contains(exerciseType),
+  ActivityMetric.cyclingCadence => cyclingExercises.contains(exerciseType),
+  ActivityMetric.distance => distanceBasedExercises.contains(exerciseType),
   ActivityMetric.averagePace => _prefersPace.contains(exerciseType),
-  ActivityMetric.averageSpeed => _distanceBased.contains(exerciseType),
+  ActivityMetric.averageSpeed => distanceBasedExercises.contains(exerciseType),
   ActivityMetric.wheelchairPushes =>
     exerciseType == ExerciseSessionType.wheelchair,
   ActivityMetric.floorsClimbed =>
     exerciseType == _stairClimbing || exerciseType == _stairClimbingMachine,
   ActivityMetric.elevationGained =>
-    _distanceBased.contains(exerciseType) && !_indoor.contains(exerciseType),
+    distanceBasedExercises.contains(exerciseType) && !_indoor.contains(exerciseType),
 
   // Everything below needs hardware most people do not own -- a power meter, a
   // footpod, a bike computer reporting its own average. Their absence is the
