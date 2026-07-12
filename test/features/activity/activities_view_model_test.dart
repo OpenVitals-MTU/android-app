@@ -1,3 +1,4 @@
+import '../../support/today_fixtures.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -92,7 +93,7 @@ void main() {
   }
 
   final today = LocalDate.now();
-  final morning = DateTime.now().toUtc().subtract(const Duration(hours: 2));
+  final morning = earlierTodayUtc(const Duration(hours: 2));
   final selection = PeriodSelection(TimeRange.week, today);
 
   test('a loaded period lands with its display precomputed', () async {

@@ -1,3 +1,6 @@
+import 'package:openvitals/domain/preferences/activity_week_mode.dart';
+import 'package:openvitals/data/prefs/preferences_repository.dart';
+import '../../support/today_fixtures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -142,7 +145,7 @@ ExerciseData _workout({
   List<ExerciseSegmentData> segments = const <ExerciseSegmentData>[],
   bool openVitals = false,
 }) {
-  final start = DateTime.now().toUtc().subtract(const Duration(hours: 2));
+  final start = earlierTodayUtc(const Duration(hours: 2));
   return ExerciseData(
     id: id,
     title: title,
@@ -162,8 +165,10 @@ Future<Widget> _bootstrap({
   required _FakeActivityRepository repository,
   HeartRepository? heartRepository,
   SharedPreferences? prefs,
+  ActivityWeekMode weekMode = ActivityWeekMode.mondayToSunday,
 }) async {
   final sharedPrefs = prefs ?? await SharedPreferences.getInstance();
+  PreferencesRepository(sharedPrefs).activityWeekMode = weekMode;
   final router = GoRouter(
     initialLocation: '/activity',
     routes: [
@@ -328,7 +333,7 @@ void main() {
   test('a pause segment shortens moving duration and speeds moving pace',
       () async {
     // Two 40-minute, 6 km workouts; one contains a 10-minute pause segment.
-    final start = DateTime.now().toUtc().subtract(const Duration(hours: 2));
+    final start = earlierTodayUtc(const Duration(hours: 2));
     final paused = _workout(
       id: 'paused',
       title: 'Paused run',
@@ -454,7 +459,14 @@ void main() {
       dailySteps: [_steps(today, 9000), _steps(today.minusDays(1), 7000)],
       nutrition: [_nutrition(today)],
     );
-    await tester.pumpWidget(await _bootstrap(repository: repo));
+    // A rolling seven-day week, so that "a week" is seven days whatever day
+    // this runs on. Under Monday-to-Sunday a MONDAY has one elapsed day, there
+    // is no rest of the week to assert about, and this test fails — which is
+    // exactly how it failed on the first Monday after it was written.
+    await tester.pumpWidget(await _bootstrap(
+      repository: repo,
+      weekMode: ActivityWeekMode.last7Days,
+    ));
     await tester.pumpAndSettle();
 
     // The default range is a week ⇒ each of the seven buckets is a single day,
@@ -500,7 +512,14 @@ void main() {
       dailySteps: [_steps(today, 9000)],
       nutrition: [_nutrition(today)],
     );
-    await tester.pumpWidget(await _bootstrap(repository: repo));
+    // A rolling seven-day week, so that "a week" is seven days whatever day
+    // this runs on. Under Monday-to-Sunday a MONDAY has one elapsed day, there
+    // is no rest of the week to assert about, and this test fails — which is
+    // exactly how it failed on the first Monday after it was written.
+    await tester.pumpWidget(await _bootstrap(
+      repository: repo,
+      weekMode: ActivityWeekMode.last7Days,
+    ));
     await tester.pumpAndSettle();
 
     final active = find.byKey(ValueKey('activity-day-marker-$today-active'));

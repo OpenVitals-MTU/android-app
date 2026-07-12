@@ -1,3 +1,4 @@
+import '../../support/today_fixtures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,10 +80,9 @@ void main() {
   }
 
   test('a loaded window lands with its display precomputed', () async {
-    final now = DateTime.now();
     await boot(Ok(CaffeinePeriodData(entries: [
-      _entry(now.subtract(const Duration(hours: 2)), 95),
-      _entry(now.subtract(const Duration(hours: 6)), 120),
+      _entry(earlierToday(const Duration(hours: 2)), 95),
+      _entry(earlierToday(const Duration(hours: 6)), 120),
     ])));
     container.listen(caffeineProvider, (_, _) {});
 

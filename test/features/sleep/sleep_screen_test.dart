@@ -1,3 +1,5 @@
+import 'package:openvitals/domain/preferences/activity_week_mode.dart';
+import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,9 +101,11 @@ Future<Widget> _bootstrap({
   required Set<String> granted,
   List<DailyHrv> hrv = const <DailyHrv>[],
   Map<String, Object> prefsValues = const <String, Object>{},
+  ActivityWeekMode weekMode = ActivityWeekMode.mondayToSunday,
 }) async {
   SharedPreferences.setMockInitialValues(prefsValues);
   final prefs = await SharedPreferences.getInstance();
+  PreferencesRepository(prefs).activityWeekMode = weekMode;
   return ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
@@ -214,6 +218,13 @@ void main() {
     final today = LocalDate.now();
     await tester.pumpWidget(
       await _bootstrap(
+        // A rolling seven-day week, so that "a week of nights" is seven days
+        // whatever day this runs on. Under Monday-to-Sunday a MONDAY holds one
+        // elapsed day: four of these five nights fall in the previous week, the
+        // pairs drop below the correlation threshold, and the card the test is
+        // looking for is correctly not drawn. That is how it failed on the
+        // first Monday after it was written.
+        weekMode: ActivityWeekMode.last7Days,
         sleepRepository: _FakeSleepRepository(sessions: [
           for (var i = 0; i < 5; i++) _session(daysAgo: i, hours: 6 + i),
         ]),
