@@ -205,7 +205,19 @@ Map<String, Object?> _provenance(Row r, Map<int, String> writers) => {
       'clientRecordId': r['client_record_id'] == null
           ? null
           : _id(r['client_record_id'] as String, 'client'),
-      'clientRecordVersion': r['client_record_version'],
+      // Health Connect stores client_record_version as TEXT, so it arrives as a
+      // String. The Pigeon field is an int, and the cast throws — which the data
+      // source's `_catch` then swallows into an empty list. A whole screen goes
+      // blank and nothing anywhere reports an error. Parse it here.
+      'clientRecordVersion': _asInt(r['client_record_version']),
+    };
+
+int? _asInt(Object? value) => switch (value) {
+      null => null,
+      final int v => v,
+      final String v => int.tryParse(v),
+      final num v => v.toInt(),
+      _ => null,
     };
 
 // ── record types ────────────────────────────────────────────────────────────
