@@ -1,4 +1,5 @@
 import '../../../core/period/time_range.dart';
+import '../../../core/result/result.dart';
 import '../../../domain/insights/body_energy_timeline.dart';
 import '../../../domain/model/refresh_mode.dart';
 
@@ -49,6 +50,12 @@ class BodyEnergyTimelineResult {
 }
 
 /// Port of the Kotlin `BodyEnergyRepository` contract.
+///
+/// Fallible operations return [Result]; the timeline derivation reads several
+/// other repositories, so there is no synchronous cached-state probe to stay
+/// bare.
 abstract interface class BodyEnergyRepository {
-  Future<BodyEnergyTimelineResult> loadTimeline(BodyEnergyTimelineQuery query);
+  Future<Result<BodyEnergyTimelineResult>> loadTimeline(
+    BodyEnergyTimelineQuery query,
+  );
 }

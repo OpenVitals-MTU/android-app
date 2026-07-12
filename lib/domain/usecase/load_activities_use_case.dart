@@ -1,5 +1,6 @@
 import '../../core/period/period_load_query.dart';
 import '../../core/period/time_range.dart';
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/activity_repository.dart';
 import '../../data/repository/contract/heart_repository.dart';
@@ -162,10 +163,12 @@ class LoadActivitiesUseCase {
       _heartRepository.loadDailyRestingHR(current.start, current.end),
       _heartRepository.loadDailyHRV(current.start, current.end),
       isYear
-          ? Future<List<HeartRateSample>>.value(const <HeartRateSample>[])
+          ? Future<Result<List<HeartRateSample>>>.value(
+              const Ok(<HeartRateSample>[]))
           : _heartRepository.loadHeartRateSamples(current.start, current.end),
     ).wait;
 
+    final crossDailyRestingHR = results.$7.orThrow();
     return ActivitiesLoadResult(
       workouts: results.$1,
       plannedWorkouts: results.$2,
@@ -177,11 +180,11 @@ class LoadActivitiesUseCase {
         steps: results.$5,
         nutrition: results.$6,
         workouts: results.$1,
-        heartRateSamples: results.$9,
-        restingHeartRate: results.$7,
-        hrv: results.$8,
+        heartRateSamples: results.$9.orThrow(),
+        restingHeartRate: crossDailyRestingHR,
+        hrv: results.$8.orThrow(),
       ),
-      crossDailyRestingHR: results.$7,
+      crossDailyRestingHR: crossDailyRestingHR,
     );
   }
 }

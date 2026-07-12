@@ -5,6 +5,7 @@ import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../di/providers.dart';
@@ -82,11 +83,12 @@ class HeartMetricViewModel extends Notifier<HeartMetricState> {
     );
 
     try {
-      final result = await useCase(
+      final result = (await useCase(
         query,
         metric.loadRequest,
         refreshMode: refreshMode,
-      );
+      ))
+          .orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, result: result, error: null);
     } catch (error) {

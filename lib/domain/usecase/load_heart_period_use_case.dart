@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/heart_repository.dart';
 import '../../data/repository/contract/vitals_repository.dart';
 import '../model/heart_models.dart';
@@ -260,29 +261,36 @@ class LoadHeartPeriodUseCase {
   final HeartRepository _heartRepository;
   final VitalsRepository _vitalsRepository;
 
-  Future<HeartPeriodLoadResult> call(
+  Future<Result<HeartPeriodLoadResult>> call(
     PeriodLoadQuery query,
     HeartPeriodLoadRequest request, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
     switch (request) {
       case HeartPeriodLoadCombined():
+        // Both halves are the screen's content, so either failing fails the
+        // combined load — the same as before the Result migration. The vitals
+        // read still throws; it becomes a Result with the vitals slice.
         final heart = _heartRepository
             .loadHeartPeriod(query, HeartPeriodMetric.all, refreshMode: refreshMode)
-            .then(_heartToResult);
+            .then((loaded) => loaded.map(_heartToResult));
         final vitals = _vitalsRepository
             .loadVitalsPeriod(query, VitalsPeriodMetric.all, refreshMode: refreshMode)
-            .then(_vitalsToResult);
+            .then((data) => Result.ok(_vitalsToResult(data)));
         final results = await Future.wait([heart, vitals]);
-        return results[0].merge(results[1]);
+        return results[0].flatMap(
+          (heartResult) async => results[1].map(heartResult.merge),
+        );
       case HeartPeriodLoadHeartOnly(:final metric):
-        return _heartToResult(
-          await _heartRepository.loadHeartPeriod(query, metric, refreshMode: refreshMode),
-        );
+        final loaded = await _heartRepository.loadHeartPeriod(query, metric,
+            refreshMode: refreshMode);
+        return loaded.map(_heartToResult);
       case HeartPeriodLoadVitalsOnly(:final metric):
-        return _vitalsToResult(
+        // The vitals repository is not Result-typed yet; a failed read keeps
+        // throwing here until the vitals slice migrates.
+        return Ok(_vitalsToResult(
           await _vitalsRepository.loadVitalsPeriod(query, metric, refreshMode: refreshMode),
-        );
+        ));
     }
   }
 

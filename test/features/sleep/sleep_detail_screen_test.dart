@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/sleep_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
@@ -17,8 +18,8 @@ class _FakeSleepRepository implements SleepRepository {
   final SleepData? session;
 
   @override
-  Future<SleepData?> loadSleepSession(String id) async =>
-      session?.id == id ? session : null;
+  Future<Result<SleepData?>> loadSleepSession(String id) async =>
+      Ok(session?.id == id ? session : null);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

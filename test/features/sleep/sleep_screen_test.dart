@@ -12,6 +12,7 @@ import 'package:openvitals/ui/components/metric_interpretation_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/period/period_load_query.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
 import 'package:openvitals/data/repository/contract/sleep_repository.dart';
@@ -36,12 +37,12 @@ class _FakeSleepRepository implements SleepRepository {
 
 
   @override
-  Future<SleepPeriodData> loadSleepPeriod(
+  Future<Result<SleepPeriodData>> loadSleepPeriod(
     PeriodLoadQuery query,
     SleepRangeMode sleepRangeMode, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      SleepPeriodData(sessions: sessions);
+      Ok(SleepPeriodData(sessions: sessions));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -55,8 +56,9 @@ class _FakeHeartRepository implements HeartRepository {
   final List<DailyHrv> hrv;
 
   @override
-  Future<List<DailyHrv>> loadDailyHRV(LocalDate start, LocalDate end) async =>
-      hrv;
+  Future<Result<List<DailyHrv>>> loadDailyHRV(
+          LocalDate start, LocalDate end) async =>
+      Ok(hrv);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

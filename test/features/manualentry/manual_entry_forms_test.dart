@@ -33,15 +33,16 @@ class _FakeBodyRepository implements BodyRepository {
       {HcPermissions.writeWeight};
 
   @override
-  Future<bool> hasBodyWritePermission(BodyMeasurementType type) async => true;
+  Future<Result<bool>> hasBodyWritePermission(BodyMeasurementType type) async =>
+      const Ok(true);
 
   @override
-  Future<String> writeBodyMeasurementEntry(
+  Future<Result<String>> writeBodyMeasurementEntry(
     BodyMeasurementWriteRequest request,
   ) async {
     written = request;
     writeCount += 1;
-    return 'record-id';
+    return const Ok('record-id');
   }
 
   @override

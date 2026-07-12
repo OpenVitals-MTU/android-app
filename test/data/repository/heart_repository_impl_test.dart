@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/impl/heart_repository_impl.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
@@ -72,8 +73,9 @@ void main() {
         _sample(start.add(const Duration(minutes: 30)), 150),
       ]);
 
-      final samples = await HeartRepositoryImpl(source)
-          .loadHeartRateSamplesInstant(start, end);
+      final samples = (await HeartRepositoryImpl(source)
+              .loadHeartRateSamplesInstant(start, end))
+          .orThrow();
 
       expect(samples.map((s) => s.beatsPerMinute), [120, 150]);
     });
@@ -82,8 +84,11 @@ void main() {
       final source = _CaptureDataSource([_sample(start, 120)]);
       final repo = HeartRepositoryImpl(source);
 
-      expect(await repo.loadHeartRateSamplesInstant(end, start), isEmpty);
-      expect(await repo.loadHeartRateSamplesInstant(start, start), isEmpty);
+      expect(
+          (await repo.loadHeartRateSamplesInstant(end, start)).orThrow(), isEmpty);
+      expect(
+          (await repo.loadHeartRateSamplesInstant(start, start)).orThrow(),
+          isEmpty);
       expect(source.capturedRawStart, isNull);
     });
 
@@ -94,7 +99,8 @@ void main() {
       );
 
       expect(
-        await HeartRepositoryImpl(source).loadHeartRateSamplesInstant(start, end),
+        (await HeartRepositoryImpl(source).loadHeartRateSamplesInstant(start, end))
+            .orThrow(),
         isEmpty,
       );
       expect(source.capturedRawStart, isNull);

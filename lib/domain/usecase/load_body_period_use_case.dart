@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/body_repository.dart';
 import '../model/refresh_mode.dart';
 import '../query/body_period_data.dart';
@@ -15,7 +16,7 @@ class LoadBodyPeriodUseCase {
 
   final BodyRepository _bodyRepository;
 
-  Future<BodyPeriodData> call(
+  Future<Result<BodyPeriodData>> call(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>

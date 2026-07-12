@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/sleep_models.dart';
 
@@ -53,7 +54,7 @@ class SleepDetailViewModel extends Notifier<SleepDetailState> {
     );
 
     try {
-      final session = await loadSleepDetail(sleepId);
+      final session = (await loadSleepDetail(sleepId)).orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = SleepDetailState(
         isLoading: false,

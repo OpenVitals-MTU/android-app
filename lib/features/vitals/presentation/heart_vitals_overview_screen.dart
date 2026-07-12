@@ -13,6 +13,7 @@ import '../../../core/presentation/display_value.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/heart_models.dart';
@@ -122,11 +123,12 @@ class HeartVitalsOverviewViewModel extends Notifier<HeartVitalsOverviewState> {
     );
 
     try {
-      final result = await useCase(
+      final result = (await useCase(
         query,
         const HeartPeriodLoadCombined(),
         refreshMode: refreshMode,
-      );
+      ))
+          .orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, result: result, clearError: true);
     } catch (error) {

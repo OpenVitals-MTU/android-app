@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/period/time_range.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/body_energy_timeline_cache_store.dart';
@@ -26,37 +27,40 @@ class _FakeHeart implements HeartRepository {
   int dailyRestingCalls = 0;
 
   @override
-  Future<List<HeartRateSample>> loadRawHeartRateSamplesForDayGraph(
+  Future<Result<List<HeartRateSample>>> loadRawHeartRateSamplesForDayGraph(
       LocalDate date) async {
     dayGraphCalls++;
-    return [
+    return Ok([
       HeartRateSample(
         time: DateTime(date.year, date.month, date.day, 9),
         beatsPerMinute: 70,
         source: 'test',
       ),
-    ];
+    ]);
   }
 
   @override
-  Future<List<HrvSample>> loadHrvSamples(DateTime start, DateTime end) async =>
-      const [];
+  Future<Result<List<HrvSample>>> loadHrvSamples(
+          DateTime start, DateTime end) async =>
+      const Ok([]);
   @override
-  Future<int?> loadRestingHeartRate(LocalDate date) async => 55;
+  Future<Result<int?>> loadRestingHeartRate(LocalDate date) async =>
+      const Ok(55);
   @override
-  Future<List<DailyRestingHR>> loadDailyRestingHR(
+  Future<Result<List<DailyRestingHR>>> loadDailyRestingHR(
       LocalDate start, LocalDate end) async {
     dailyRestingCalls++;
-    return [DailyRestingHR(date: end, bpm: 54)];
+    return Ok([DailyRestingHR(date: end, bpm: 54)]);
   }
 
   @override
-  Future<List<DailyHrv>> loadDailyHRV(LocalDate start, LocalDate end) async =>
-      const [];
+  Future<Result<List<DailyHrv>>> loadDailyHRV(
+          LocalDate start, LocalDate end) async =>
+      const Ok([]);
   @override
-  Future<List<HeartRateSample>> loadHeartRateSamplesInstant(
+  Future<Result<List<HeartRateSample>>> loadHeartRateSamplesInstant(
           DateTime start, DateTime end) async =>
-      const [];
+      const Ok([]);
 
   @override
   dynamic noSuchMethod(Invocation i) =>
@@ -68,8 +72,9 @@ class _FakeHeart implements HeartRepository {
 class _Empty
     implements SleepRepository, ActivityRepository, VitalsRepository {
   @override
-  Future<List<SleepData>> loadSleepSessions(LocalDate a, LocalDate b) async =>
-      const [];
+  Future<Result<List<SleepData>>> loadSleepSessions(
+          LocalDate a, LocalDate b) async =>
+      const Ok([]);
   @override
   Future<List<ExerciseData>> loadWorkouts(LocalDate a, LocalDate b) async =>
       const [];
@@ -132,25 +137,25 @@ void main() {
   test('a fresh cached timeline is served without recomputing', () async {
     await setUpRepo();
     final r = repo();
-    await r.loadTimeline(query);
+    (await r.loadTimeline(query)).orThrow();
     expect(heart.dayGraphCalls, 1);
 
     // Same instant → within the 15-minute freshness window → cache hit.
-    await r.loadTimeline(query);
+    (await r.loadTimeline(query)).orThrow();
     expect(heart.dayGraphCalls, 1, reason: 'timeline should be served cached');
   });
 
   test('a stale timeline recomputes but reuses the fresh baseline', () async {
     await setUpRepo();
     final r = repo();
-    await r.loadTimeline(query);
+    (await r.loadTimeline(query)).orThrow();
     expect(heart.dayGraphCalls, 1);
     expect(heart.dailyRestingCalls, 1);
 
     // 20 minutes later: today's timeline is stale (>=15 min) so it recomputes,
     // but the baseline is still fresh (<24 h) and must be reused.
     clock = clock.add(const Duration(minutes: 20));
-    await r.loadTimeline(query);
+    (await r.loadTimeline(query)).orThrow();
     expect(heart.dayGraphCalls, 2, reason: 'stale timeline recomputes');
     expect(heart.dailyRestingCalls, 1, reason: 'baseline reused, not recomputed');
   });
@@ -159,14 +164,15 @@ void main() {
       () async {
     await setUpRepo();
     final r = repo();
-    await r.loadTimeline(query);
+    (await r.loadTimeline(query)).orThrow();
     expect(heart.dayGraphCalls, 1);
 
-    await r.loadTimeline(BodyEnergyTimelineQuery(
+    (await r.loadTimeline(BodyEnergyTimelineQuery(
       period: DatePeriod(today, today),
       range: TimeRange.day,
       refreshMode: RefreshMode.force,
-    ));
+    )))
+        .orThrow();
     expect(heart.dayGraphCalls, 2, reason: 'force bypasses the cache');
   });
 }

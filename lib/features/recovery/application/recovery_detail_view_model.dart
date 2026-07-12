@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/usecase/load_recovery_days_use_case.dart';
@@ -62,7 +63,7 @@ class RecoveryDetailViewModel extends Notifier<RecoveryDetailState> {
     try {
       // The lookback window, and the scoring of each night against the ones
       // around it, belong to the use case.
-      final days = await loadRecoveryDays(today);
+      final days = (await loadRecoveryDays(today)).orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = RecoveryDetailState(
         isLoading: false,

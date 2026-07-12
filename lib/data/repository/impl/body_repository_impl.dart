@@ -1,5 +1,6 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/time_range.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/body_models.dart';
 import '../../../domain/model/refresh_mode.dart';
@@ -9,8 +10,13 @@ import '../../source/health/health_permissions.dart';
 import '../contract/body_repository.dart';
 import '../contract/repository_exceptions.dart';
 import 'health_connect_gating.dart';
+import 'run_catching.dart';
 
 /// Port of the Kotlin `BodyRepositoryImpl`.
+///
+/// Public methods convert exceptions to failures via [runCatching] at the
+/// boundary; the private `_raw` / `_latestX` bodies keep the original throwing
+/// flow so internal composition stays plain awaits.
 class BodyRepositoryImpl implements BodyRepository {
   BodyRepositoryImpl(this._dataSource);
 
@@ -24,11 +30,17 @@ class BodyRepositoryImpl implements BodyRepository {
       };
 
   @override
-  Future<BodyPeriodData> loadBodyPeriod(
+  Future<Result<BodyPeriodData>> loadBodyPeriod(
     PeriodLoadQuery query,
     BodyPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
+  }) =>
+      runCatching(() => _loadBodyPeriodRaw(query, metric));
+
+  Future<BodyPeriodData> _loadBodyPeriodRaw(
+    PeriodLoadQuery query,
+    BodyPeriodMetric metric,
+  ) async {
     final granted = await _dataSource.grantedIfAvailable();
     final w = query.windows;
 
@@ -168,129 +180,157 @@ class BodyRepositoryImpl implements BodyRepository {
   }
 
   @override
-  Future<List<WeightEntry>> loadWeightEntries(LocalDate start, LocalDate end) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readWeight)) return const [];
-    return _dataSource.readWeightEntries(start, end);
-  }
-
-  @override
-  Future<double?> loadLatestHeight() async => _latestHeightCm(await _dataSource.grantedIfAvailable());
-
-  @override
-  Future<List<HeightEntry>> loadHeightEntries(LocalDate start, LocalDate end) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readHeight)) return const [];
-    return _dataSource.readHeightEntries(start, end);
-  }
-
-  @override
-  Future<List<BodyFatEntry>> loadBodyFatEntries(LocalDate start, LocalDate end) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readBodyFat)) return const [];
-    return _dataSource.readBodyFatEntries(start, end);
-  }
-
-  @override
-  Future<double?> loadLatestLeanBodyMass() async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readLeanMass)) return null;
-    return _dataSource.readLatestLeanBodyMass();
-  }
-
-  @override
-  Future<List<LeanBodyMassEntry>> loadLeanBodyMassEntries(
+  Future<Result<List<WeightEntry>>> loadWeightEntries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readLeanMass)) return const [];
-    return _dataSource.readLeanBodyMassEntries(start, end);
-  }
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readWeight)) return const [];
+        return _dataSource.readWeightEntries(start, end);
+      });
 
   @override
-  Future<double?> loadLatestBMR() async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readBmr)) return null;
-    return _dataSource.readLatestBMR();
-  }
+  Future<Result<double?>> loadLatestHeight() => runCatching(
+      () async => _latestHeightCm(await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<BmrEntry>> loadBmrEntries(LocalDate start, LocalDate end) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readBmr)) return const [];
-    return _dataSource.readBmrEntries(start, end);
-  }
-
-  @override
-  Future<double?> loadLatestBoneMass() async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readBoneMass)) return null;
-    return _dataSource.readLatestBoneMass();
-  }
-
-  @override
-  Future<List<BoneMassEntry>> loadBoneMassEntries(LocalDate start, LocalDate end) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readBoneMass)) return const [];
-    return _dataSource.readBoneMassEntries(start, end);
-  }
-
-  @override
-  Future<double?> loadLatestBodyWaterMass() async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readBodyWaterMass)) return null;
-    return _dataSource.readLatestBodyWaterMass();
-  }
-
-  @override
-  Future<List<BodyWaterMassEntry>> loadBodyWaterMassEntries(
+  Future<Result<List<HeightEntry>>> loadHeightEntries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readBodyWaterMass)) return const [];
-    return _dataSource.readBodyWaterMassEntries(start, end);
-  }
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readHeight)) return const [];
+        return _dataSource.readHeightEntries(start, end);
+      });
 
   @override
-  Future<bool> hasBodyWritePermission(BodyMeasurementType type) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    return granted.containsAll(bodyWritePermissions(type));
-  }
+  Future<Result<List<BodyFatEntry>>> loadBodyFatEntries(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readBodyFat)) return const [];
+        return _dataSource.readBodyFatEntries(start, end);
+      });
 
   @override
-  Future<String> writeBodyMeasurementEntry(
+  Future<Result<double?>> loadLatestLeanBodyMass() =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readLeanMass)) return null;
+        return _dataSource.readLatestLeanBodyMass();
+      });
+
+  @override
+  Future<Result<List<LeanBodyMassEntry>>> loadLeanBodyMassEntries(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readLeanMass)) return const [];
+        return _dataSource.readLeanBodyMassEntries(start, end);
+      });
+
+  @override
+  Future<Result<double?>> loadLatestBMR() =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readBmr)) return null;
+        return _dataSource.readLatestBMR();
+      });
+
+  @override
+  Future<Result<List<BmrEntry>>> loadBmrEntries(LocalDate start, LocalDate end) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readBmr)) return const [];
+        return _dataSource.readBmrEntries(start, end);
+      });
+
+  @override
+  Future<Result<double?>> loadLatestBoneMass() =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readBoneMass)) return null;
+        return _dataSource.readLatestBoneMass();
+      });
+
+  @override
+  Future<Result<List<BoneMassEntry>>> loadBoneMassEntries(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readBoneMass)) return const [];
+        return _dataSource.readBoneMassEntries(start, end);
+      });
+
+  @override
+  Future<Result<double?>> loadLatestBodyWaterMass() =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readBodyWaterMass)) return null;
+        return _dataSource.readLatestBodyWaterMass();
+      });
+
+  @override
+  Future<Result<List<BodyWaterMassEntry>>> loadBodyWaterMassEntries(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readBodyWaterMass)) return const [];
+        return _dataSource.readBodyWaterMassEntries(start, end);
+      });
+
+  @override
+  Future<Result<bool>> hasBodyWritePermission(BodyMeasurementType type) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        return granted.containsAll(bodyWritePermissions(type));
+      });
+
+  @override
+  Future<Result<String>> writeBodyMeasurementEntry(
     BodyMeasurementWriteRequest request,
-  ) async {
-    await _requireWrite(request.type);
-    return _dataSource.writeBodyMeasurementEntry(request);
-  }
+  ) =>
+      runCatching(() async {
+        await _requireWrite(request.type);
+        return _dataSource.writeBodyMeasurementEntry(request);
+      });
 
   @override
-  Future<BodyMeasurementEntry?> loadBodyMeasurementEntry(
+  Future<Result<BodyMeasurementEntry?>> loadBodyMeasurementEntry(
     BodyMeasurementType type,
     String id,
   ) =>
-      _dataSource.readBodyMeasurementEntry(type, id);
+      runCatching(() => _dataSource.readBodyMeasurementEntry(type, id));
 
   @override
-  Future<void> updateBodyMeasurementEntry(
+  Future<Result<void>> updateBodyMeasurementEntry(
     String id,
     BodyMeasurementWriteRequest request,
-  ) async {
-    await _requireWrite(request.type);
-    return _dataSource.updateBodyMeasurementEntry(id, request);
-  }
+  ) =>
+      runCatching(() async {
+        await _requireWrite(request.type);
+        return _dataSource.updateBodyMeasurementEntry(id, request);
+      });
 
   @override
-  Future<void> deleteBodyMeasurementEntry(
+  Future<Result<void>> deleteBodyMeasurementEntry(
     BodyMeasurementType type,
     String id,
-  ) async {
-    await _requireWrite(type);
-    return _dataSource.deleteBodyMeasurementEntry(type, id);
-  }
+  ) =>
+      runCatching(() async {
+        await _requireWrite(type);
+        return _dataSource.deleteBodyMeasurementEntry(type, id);
+      });
 
   Future<void> _requireWrite(BodyMeasurementType type) async {
     final granted = await _dataSource.grantedIfAvailable();

@@ -5,6 +5,7 @@ import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/daily_goals.dart';
@@ -100,7 +101,8 @@ class SleepViewModel extends Notifier<SleepState> {
 
     try {
       final result =
-          await useCase(query, sleepRangeMode, refreshMode: refreshMode);
+          (await useCase(query, sleepRangeMode, refreshMode: refreshMode))
+              .orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, result: result, error: null);
     } catch (error) {

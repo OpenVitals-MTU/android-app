@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/repository/contract/body_energy_repository.dart';
 import '../../../di/providers.dart';
@@ -55,7 +56,8 @@ class BodyEnergyViewModel extends Notifier<BodyEnergyState> {
 
     try {
       final result =
-          await loadBodyEnergyTimeline(clamped, refreshMode: refreshMode);
+          (await loadBodyEnergyTimeline(clamped, refreshMode: refreshMode))
+              .orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, result: result, error: null);
     } catch (error) {

@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/body_repository.dart';
 import '../model/body_models.dart';
 
@@ -15,6 +16,6 @@ class DeleteBodyMeasurementEntryUseCase {
 
   final BodyRepository _bodyRepository;
 
-  Future<void> call(BodyMeasurementType type, String entryId) =>
+  Future<Result<void>> call(BodyMeasurementType type, String entryId) =>
       _bodyRepository.deleteBodyMeasurementEntry(type, entryId);
 }

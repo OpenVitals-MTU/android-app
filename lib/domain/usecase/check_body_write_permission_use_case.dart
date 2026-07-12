@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/body_repository.dart';
 import '../model/body_models.dart';
 import '../model/write_permission_status.dart';
@@ -19,13 +20,13 @@ class CheckBodyWritePermissionUseCase {
 
   Future<WritePermissionStatus> call(BodyMeasurementType type) async {
     final permissions = _bodyRepository.bodyWritePermissions(type);
-    try {
-      return WritePermissionStatus(
-        permissions: permissions,
-        granted: await _bodyRepository.hasBodyWritePermission(type),
-      );
-    } catch (error) {
-      return WritePermissionStatus.failed(permissions, error);
-    }
+    return switch (await _bodyRepository.hasBodyWritePermission(type)) {
+      Ok(:final value) => WritePermissionStatus(
+          permissions: permissions,
+          granted: value,
+        ),
+      Err(:final failure) =>
+        WritePermissionStatus.failed(permissions, failure.cause ?? failure),
+    };
   }
 }

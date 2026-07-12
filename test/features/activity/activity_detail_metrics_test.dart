@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
 import 'package:openvitals/di/providers.dart';
@@ -106,11 +107,11 @@ class _FakeActivityRepository implements ActivityRepository {
 
 class _FakeHeartRepository implements HeartRepository {
   @override
-  Future<List<HeartRateSample>> loadHeartRateSamplesInstant(
+  Future<Result<List<HeartRateSample>>> loadHeartRateSamplesInstant(
     DateTime start,
     DateTime end,
   ) async =>
-      const <HeartRateSample>[];
+      const Ok(<HeartRateSample>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/body_energy_repository.dart';
@@ -44,11 +45,11 @@ class _FakeBodyEnergyRepository implements BodyEnergyRepository {
   bool loaded = false;
 
   @override
-  Future<BodyEnergyTimelineResult> loadTimeline(
+  Future<Result<BodyEnergyTimelineResult>> loadTimeline(
     BodyEnergyTimelineQuery query,
   ) async {
     loaded = true;
-    return BodyEnergyTimelineResult(query: query, days: [_day]);
+    return Ok(BodyEnergyTimelineResult(query: query, days: [_day]));
   }
 }
 

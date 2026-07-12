@@ -1,4 +1,5 @@
 import '../../../core/period/period_load_query.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/body_models.dart';
 import '../../../domain/model/refresh_mode.dart';
@@ -19,58 +20,79 @@ enum BodyPeriodMetric {
 }
 
 /// Port of the Kotlin `BodyRepository` contract.
+///
+/// Fallible operations return [Result]; the synchronous probe
+/// ([bodyWritePermissions]) reads cached state and cannot fail, so it stays
+/// bare.
 abstract interface class BodyRepository {
   Set<String> bodyWritePermissions(BodyMeasurementType type);
 
-  Future<BodyPeriodData> loadBodyPeriod(
+  Future<Result<BodyPeriodData>> loadBodyPeriod(
     PeriodLoadQuery query,
     BodyPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   });
 
-  Future<List<WeightEntry>> loadWeightEntries(LocalDate start, LocalDate end);
-
-  Future<double?> loadLatestHeight();
-
-  Future<List<HeightEntry>> loadHeightEntries(LocalDate start, LocalDate end);
-
-  Future<List<BodyFatEntry>> loadBodyFatEntries(LocalDate start, LocalDate end);
-
-  Future<double?> loadLatestLeanBodyMass();
-
-  Future<List<LeanBodyMassEntry>> loadLeanBodyMassEntries(
+  Future<Result<List<WeightEntry>>> loadWeightEntries(
     LocalDate start,
     LocalDate end,
   );
 
-  Future<double?> loadLatestBMR();
+  Future<Result<double?>> loadLatestHeight();
 
-  Future<List<BmrEntry>> loadBmrEntries(LocalDate start, LocalDate end);
-
-  Future<double?> loadLatestBoneMass();
-
-  Future<List<BoneMassEntry>> loadBoneMassEntries(LocalDate start, LocalDate end);
-
-  Future<double?> loadLatestBodyWaterMass();
-
-  Future<List<BodyWaterMassEntry>> loadBodyWaterMassEntries(
+  Future<Result<List<HeightEntry>>> loadHeightEntries(
     LocalDate start,
     LocalDate end,
   );
 
-  Future<bool> hasBodyWritePermission(BodyMeasurementType type);
+  Future<Result<List<BodyFatEntry>>> loadBodyFatEntries(
+    LocalDate start,
+    LocalDate end,
+  );
 
-  Future<String> writeBodyMeasurementEntry(BodyMeasurementWriteRequest request);
+  Future<Result<double?>> loadLatestLeanBodyMass();
 
-  Future<BodyMeasurementEntry?> loadBodyMeasurementEntry(
+  Future<Result<List<LeanBodyMassEntry>>> loadLeanBodyMassEntries(
+    LocalDate start,
+    LocalDate end,
+  );
+
+  Future<Result<double?>> loadLatestBMR();
+
+  Future<Result<List<BmrEntry>>> loadBmrEntries(LocalDate start, LocalDate end);
+
+  Future<Result<double?>> loadLatestBoneMass();
+
+  Future<Result<List<BoneMassEntry>>> loadBoneMassEntries(
+    LocalDate start,
+    LocalDate end,
+  );
+
+  Future<Result<double?>> loadLatestBodyWaterMass();
+
+  Future<Result<List<BodyWaterMassEntry>>> loadBodyWaterMassEntries(
+    LocalDate start,
+    LocalDate end,
+  );
+
+  Future<Result<bool>> hasBodyWritePermission(BodyMeasurementType type);
+
+  Future<Result<String>> writeBodyMeasurementEntry(
+    BodyMeasurementWriteRequest request,
+  );
+
+  Future<Result<BodyMeasurementEntry?>> loadBodyMeasurementEntry(
     BodyMeasurementType type,
     String id,
   );
 
-  Future<void> updateBodyMeasurementEntry(
+  Future<Result<void>> updateBodyMeasurementEntry(
     String id,
     BodyMeasurementWriteRequest request,
   );
 
-  Future<void> deleteBodyMeasurementEntry(BodyMeasurementType type, String id);
+  Future<Result<void>> deleteBodyMeasurementEntry(
+    BodyMeasurementType type,
+    String id,
+  );
 }

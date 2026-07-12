@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/body_energy_repository.dart';
 import 'package:openvitals/di/providers.dart';
@@ -21,13 +22,13 @@ class _FakeBodyEnergyRepository implements BodyEnergyRepository {
   final BodyEnergyTimeline? timeline;
 
   @override
-  Future<BodyEnergyTimelineResult> loadTimeline(
+  Future<Result<BodyEnergyTimelineResult>> loadTimeline(
     BodyEnergyTimelineQuery query,
   ) async =>
-      BodyEnergyTimelineResult(
+      Ok(BodyEnergyTimelineResult(
         query: query,
         days: timeline == null ? const [] : [timeline!],
-      );
+      ));
 }
 
 BodyEnergyTimelinePoint _point(LocalDate date, int hour, int score) =>

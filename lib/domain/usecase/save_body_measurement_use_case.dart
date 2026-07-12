@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/body_repository.dart';
 import '../model/body_models.dart';
 
@@ -12,14 +13,14 @@ class SaveBodyMeasurementUseCase {
 
   final BodyRepository _bodyRepository;
 
-  Future<void> call(
+  Future<Result<void>> call(
     BodyMeasurementWriteRequest request, {
     String? editRecordId,
   }) async {
     if (editRecordId == null) {
-      await _bodyRepository.writeBodyMeasurementEntry(request);
-    } else {
-      await _bodyRepository.updateBodyMeasurementEntry(editRecordId, request);
+      final written = await _bodyRepository.writeBodyMeasurementEntry(request);
+      return written.map((_) {});
     }
+    return _bodyRepository.updateBodyMeasurementEntry(editRecordId, request);
   }
 }

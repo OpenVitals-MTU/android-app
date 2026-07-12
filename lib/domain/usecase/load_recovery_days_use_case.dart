@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/sleep_repository.dart';
 import '../insights/sleep_score.dart';
@@ -49,10 +50,10 @@ class LoadRecoveryDaysUseCase {
 
   final SleepRepository _sleepRepository;
 
-  Future<List<RecoveryDay>> call(LocalDate today) async {
+  Future<Result<List<RecoveryDay>>> call(LocalDate today) async {
     final start = today.minusDays(recoveryLookbackDays - 1);
-    final sessions = await _sleepRepository.loadSleepSessions(start, today);
-    return _toRecoveryDays(sessions, start, today);
+    final loaded = await _sleepRepository.loadSleepSessions(start, today);
+    return loaded.map((sessions) => _toRecoveryDays(sessions, start, today));
   }
 }
 

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../../../core/period/time_range.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../prefs/preferences_repository.dart';
 import '../../../domain/dashboard/dashboard_aggregator.dart';
@@ -257,6 +258,7 @@ class DashboardDataLoader {
               range: TimeRange.day,
               refreshMode: query.refreshMode,
             )))
+            .orThrow()
             .latestDay);
 
     final missingPerms = _dashboardPermissionsFor(metrics, showOpenVitalsCalculatedCalories)

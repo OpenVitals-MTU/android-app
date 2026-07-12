@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/heart_repository.dart';
 import '../../data/repository/contract/sleep_repository.dart';
 import '../model/heart_models.dart';
@@ -35,29 +36,34 @@ class LoadSleepPeriodUseCase {
   final SleepRepository _sleepRepository;
   final HeartRepository? _heartRepository;
 
-  Future<SleepPeriodLoadResult> call(
+  Future<Result<SleepPeriodLoadResult>> call(
     PeriodLoadQuery query,
     SleepRangeMode sleepRangeMode, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final periodData = await _sleepRepository.loadSleepPeriod(
+    final loaded = await _sleepRepository.loadSleepPeriod(
       query,
       sleepRangeMode,
       refreshMode: refreshMode,
     );
-    final crossDailyHrv = await _heartRepository?.loadDailyHRV(
-          query.windows.current.start,
-          query.windows.current.end,
-        ) ??
-        const <DailyHrv>[];
-    return SleepPeriodLoadResult(
-      sessions: periodData.sessions,
-      previousSessions: periodData.previousSessions,
-      baselineSessions: periodData.baselineSessions,
-      dailyDurations: periodData.dailyDurations,
-      previousDailyDurations: periodData.previousDailyDurations,
-      baselineDailyDurations: periodData.baselineDailyDurations,
-      crossDailyHrv: crossDailyHrv,
-    );
+    return loaded.flatMap((periodData) async {
+      // The cross-metric HRV is insight, not sleep: a failed heart read keeps
+      // the overlay empty rather than sinking the sleep period that did load.
+      final crossDailyHrv = (await _heartRepository?.loadDailyHRV(
+            query.windows.current.start,
+            query.windows.current.end,
+          ))
+              ?.getOrNull() ??
+          const <DailyHrv>[];
+      return Ok(SleepPeriodLoadResult(
+        sessions: periodData.sessions,
+        previousSessions: periodData.previousSessions,
+        baselineSessions: periodData.baselineSessions,
+        dailyDurations: periodData.dailyDurations,
+        previousDailyDurations: periodData.previousDailyDurations,
+        baselineDailyDurations: periodData.baselineDailyDurations,
+        crossDailyHrv: crossDailyHrv,
+      ));
+    });
   }
 }

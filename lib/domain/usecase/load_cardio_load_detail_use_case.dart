@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/activity_repository.dart';
 import '../../data/repository/contract/heart_repository.dart';
@@ -55,8 +56,8 @@ class LoadCardioLoadDetailUseCase {
 
     final dailySteps = results.$1;
     final workouts = results.$2;
-    final samples = results.$3;
-    final restingHr = results.$4;
+    final samples = results.$3.orThrow();
+    final restingHr = results.$4.orThrow();
 
     final todaySteps = dailySteps.where((s) => s.date == today).fold<DailySteps?>(
           null,

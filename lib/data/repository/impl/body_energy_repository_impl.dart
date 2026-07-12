@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../prefs/preferences_repository.dart';
 import '../body_energy_timeline_cache_store.dart';
@@ -18,6 +19,7 @@ import '../contract/health_repository.dart';
 import '../contract/sleep_repository.dart';
 import '../contract/vitals_repository.dart';
 import 'repository_time.dart';
+import 'run_catching.dart';
 
 /// Port of the Kotlin `BodyEnergyRepositoryImpl`.
 ///
@@ -25,6 +27,11 @@ import 'repository_time.dart';
 /// per-day body-energy timeline via [calculateBodyEnergyTimeline], caching both
 /// the timeline and the expensive 28-day baselines keyed by a
 /// permission/calibration signature (mirroring the Kotlin repository).
+///
+/// The heart and sleep reads already return a [Result]; their failures are
+/// rethrown via `orThrow` inside [runCatching], so the boundary stays a single
+/// wrap and any collaborator failing still fails the whole timeline, exactly
+/// as before the Result migration.
 class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
   BodyEnergyRepositoryImpl({
     required HeartRepository heartRepository,
@@ -61,27 +68,28 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
   static const int _baselineCacheHours = 24;
 
   @override
-  Future<BodyEnergyTimelineResult> loadTimeline(
+  Future<Result<BodyEnergyTimelineResult>> loadTimeline(
     BodyEnergyTimelineQuery query,
-  ) async {
-    final calibration = _preferences.bodyEnergyCalibrationListenable.value;
-    final bodyProfile = _preferences.bodyProfileListenable.value;
-    final permissionSignature = await _permissionSignature();
+  ) =>
+      runCatching(() async {
+        final calibration = _preferences.bodyEnergyCalibrationListenable.value;
+        final bodyProfile = _preferences.bodyProfileListenable.value;
+        final permissionSignature = await _permissionSignature();
 
-    final days = <BodyEnergyTimeline>[];
-    var date = query.period.start;
-    while (!date.isAfter(query.period.end)) {
-      days.add(await _loadDay(
-        date: date,
-        refreshMode: query.refreshMode,
-        permissionSignature: permissionSignature,
-        calibration: calibration,
-        bodyProfile: bodyProfile,
-      ));
-      date = date.plusDays(1);
-    }
-    return BodyEnergyTimelineResult(query: query, days: days);
-  }
+        final days = <BodyEnergyTimeline>[];
+        var date = query.period.start;
+        while (!date.isAfter(query.period.end)) {
+          days.add(await _loadDay(
+            date: date,
+            refreshMode: query.refreshMode,
+            permissionSignature: permissionSignature,
+            calibration: calibration,
+            bodyProfile: bodyProfile,
+          ));
+          date = date.plusDays(1);
+        }
+        return BodyEnergyTimelineResult(query: query, days: days);
+      });
 
   Future<BodyEnergyTimeline> _loadDay({
     required LocalDate date,
@@ -117,10 +125,10 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
     );
 
     final heartRateSamples =
-        await _heart.loadRawHeartRateSamplesForDayGraph(date);
-    final hrvSamples = await _heart.loadHrvSamples(dayStart, dayEnd);
+        (await _heart.loadRawHeartRateSamplesForDayGraph(date)).orThrow();
+    final hrvSamples = (await _heart.loadHrvSamples(dayStart, dayEnd)).orThrow();
     final sleepSessions =
-        await _sleep.loadSleepSessions(date.minusDays(1), date);
+        (await _sleep.loadSleepSessions(date.minusDays(1), date)).orThrow();
     final workouts = await _activity.loadWorkouts(date, date);
     // Kotlin loads respiratory only when a respiratory baseline exists (the
     // stress factor is inert without one).
@@ -128,7 +136,7 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
         baselines.respiratoryRateBaseline != null
             ? await _vitals.loadRespiratoryRate(date, date)
             : const <RespiratoryRateEntry>[];
-    final restingHr = await _heart.loadRestingHeartRate(date);
+    final restingHr = (await _heart.loadRestingHeartRate(date)).orThrow();
     // Kotlin seeds the day from the previous day's cached score.
     final previousEndScore =
         _cache.load(date.minusDays(1), signature)?.currentScore;
@@ -172,22 +180,25 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
 
     final baselineResting = DashboardAggregator.medianLongOrNull(
       (await _heart.loadDailyRestingHR(baselineStart, baselineEnd))
+          .orThrow()
           .map((e) => e.bpm)
           .where((v) => v > 0)
           .toList(),
     );
     final baselineHrv = DashboardAggregator.medianDoubleValuesOrNull(
       (await _heart.loadDailyHRV(baselineStart, baselineEnd))
+          .orThrow()
           .map((e) => e.rmssdMs)
           .where((v) => v > 0)
           .toList(),
     );
     // Observed max is taken over the whole baseline window (Kotlin), not just
     // the current day's samples.
-    final baselineSamples = await _heart.loadHeartRateSamplesInstant(
+    final baselineSamples = (await _heart.loadHeartRateSamplesInstant(
       localDayStart(baselineStart),
       dayStart,
-    );
+    ))
+        .orThrow();
     final observedMax = baselineSamples.isEmpty
         ? null
         : baselineSamples

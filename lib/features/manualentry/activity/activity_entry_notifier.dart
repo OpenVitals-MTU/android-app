@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../data/repository/contract/activity_repository.dart';
@@ -975,8 +976,9 @@ class ActivityEntryController {
         }
         final heartRateSamples = heartRepository == null
             ? const <HeartRateSample>[]
-            : await heartRepository!
-                .loadHeartRateSamplesInstant(workout.startTime, workout.endTime);
+            : (await heartRepository!.loadHeartRateSamplesInstant(
+                    workout.startTime, workout.endTime))
+                .orThrow();
         final current = _state.value;
         var editState = exerciseToEditState(
           workout,

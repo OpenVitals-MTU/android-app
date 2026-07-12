@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/activity_repository.dart';
 import '../../data/repository/contract/body_repository.dart';
 import '../model/refresh_mode.dart';
@@ -44,6 +45,7 @@ class LoadCaloriesUseCase {
       ),
       _bodyRepository.loadLatestBMR(),
     ).wait;
-    return CaloriesLoadResult(data: results.$1, latestBmrKcal: results.$2);
+    return CaloriesLoadResult(
+        data: results.$1, latestBmrKcal: results.$2.orThrow());
   }
 }

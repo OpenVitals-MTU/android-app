@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/activity_repository.dart';
 import '../../data/repository/contract/heart_repository.dart';
 import '../model/activity_backfill.dart';
@@ -58,10 +59,12 @@ class LoadActivityDetailUseCase {
     final workout = await _activityRepository.loadWorkout(activityId);
     if (workout == null) return null;
 
-    final heartRateSamples = await _heartRepository.loadHeartRateSamplesInstant(
+    final heartRateSamples =
+        (await _heartRepository.loadHeartRateSamplesInstant(
       workout.startTime,
       workout.endTime,
-    );
+    ))
+            .orThrow();
     final speedSamples = await _degrade(
       () => _activityRepository.loadSpeedSamples(
         workout.startTime,

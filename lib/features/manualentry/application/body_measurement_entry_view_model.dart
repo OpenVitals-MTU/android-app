@@ -3,6 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/measurement_input.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/body_models.dart';
 
@@ -134,10 +135,11 @@ class BodyMeasurementEntryViewModel extends Notifier<BodyMeasurementEntryState> 
       value: canonicalValue,
     );
     try {
-      await ref.read(saveBodyMeasurementUseCaseProvider)(
+      (await ref.read(saveBodyMeasurementUseCaseProvider)(
         request,
         editRecordId: editRecordId,
-      );
+      ))
+          .orThrow();
       if (!ref.mounted) return;
       state = state.copyWith(
         inputText: state.isEditMode ? state.inputText : '',
@@ -164,10 +166,12 @@ class BodyMeasurementEntryViewModel extends Notifier<BodyMeasurementEntryState> 
     final recordId = editRecordId;
     if (recordId == null) return;
     try {
-      final entry = await ref.read(loadBodyMeasurementForEditUseCaseProvider)(
+      final entry =
+          (await ref.read(loadBodyMeasurementForEditUseCaseProvider)(
         type,
         recordId,
-      );
+      ))
+              .orThrow();
       if (!ref.mounted) return;
       // Null covers both "no such record" and "not ours to edit".
       if (entry == null) {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/period/period_load_query.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
@@ -34,18 +35,19 @@ class _FakeHeartRepository implements HeartRepository {
   final List<PeriodLoadQuery> queries = [];
 
   @override
-  Future<HeartPeriodData> loadHeartPeriod(
+  Future<Result<HeartPeriodData>> loadHeartPeriod(
     PeriodLoadQuery query,
     HeartPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
     queries.add(query);
-    return data;
+    return Ok(data);
   }
 
   @override
-  Future<List<DailyHrv>> loadDailyHRV(LocalDate start, LocalDate end) async =>
-      const <DailyHrv>[];
+  Future<Result<List<DailyHrv>>> loadDailyHRV(
+          LocalDate start, LocalDate end) async =>
+      const Ok(<DailyHrv>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

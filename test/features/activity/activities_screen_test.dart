@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/presentation/metric_detail_sections.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
@@ -89,22 +90,23 @@ class _FakeActivityRepository implements ActivityRepository {
 
 class _FakeHeartRepository implements HeartRepository {
   @override
-  Future<List<HeartRateSample>> loadHeartRateSamples(
+  Future<Result<List<HeartRateSample>>> loadHeartRateSamples(
     LocalDate start,
     LocalDate end,
   ) async =>
-      const <HeartRateSample>[];
+      const Ok(<HeartRateSample>[]);
 
   @override
-  Future<List<DailyRestingHR>> loadDailyRestingHR(
+  Future<Result<List<DailyRestingHR>>> loadDailyRestingHR(
     LocalDate start,
     LocalDate end,
   ) async =>
-      const <DailyRestingHR>[];
+      const Ok(<DailyRestingHR>[]);
 
   @override
-  Future<List<DailyHrv>> loadDailyHRV(LocalDate start, LocalDate end) async =>
-      const <DailyHrv>[];
+  Future<Result<List<DailyHrv>>> loadDailyHRV(
+          LocalDate start, LocalDate end) async =>
+      const Ok(<DailyHrv>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

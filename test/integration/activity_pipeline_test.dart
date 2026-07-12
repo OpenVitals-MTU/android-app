@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/insights/activity_splits.dart';
@@ -22,12 +23,13 @@ void main() {
     final h = await bootContainer();
     final workout = h.fixture.swallowedWorkout;
 
-    final samples = await h.container
-        .read(heartRepositoryProvider)
-        .loadHeartRateSamplesInstant(
-          DateTime.fromMillisecondsSinceEpoch(workout['start']! as int, isUtc: true),
-          DateTime.fromMillisecondsSinceEpoch(workout['end']! as int, isUtc: true),
-        );
+    final samples = (await h.container
+            .read(heartRepositoryProvider)
+            .loadHeartRateSamplesInstant(
+              DateTime.fromMillisecondsSinceEpoch(workout['start']! as int, isUtc: true),
+              DateTime.fromMillisecondsSinceEpoch(workout['end']! as int, isUtc: true),
+            ))
+        .orThrow();
 
     expect(samples, isNotEmpty,
         reason: 'The workout inside the swallowing record has no heart rate. Either '

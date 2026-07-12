@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/presentation/metric_detail_sections.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/body_repository.dart';
 import 'package:openvitals/di/providers.dart';
@@ -31,15 +32,15 @@ class _FakeBodyRepository implements BodyRepository {
   final List<(BodyMeasurementType, String)> deletedEntries = [];
 
   @override
-  Future<BodyPeriodData> loadBodyPeriod(
+  Future<Result<BodyPeriodData>> loadBodyPeriod(
     PeriodLoadQuery query,
     BodyPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      data;
+      Ok(data);
 
   @override
-  Future<void> deleteBodyMeasurementEntry(
+  Future<Result<void>> deleteBodyMeasurementEntry(
     BodyMeasurementType type,
     String id,
   ) async {
@@ -51,6 +52,7 @@ class _FakeBodyRepository implements BodyRepository {
       heightEntries: data.heightEntries.where((e) => e.id != id).toList(),
       bodyFatEntries: data.bodyFatEntries.where((e) => e.id != id).toList(),
     );
+    return const Ok(null);
   }
 
   @override

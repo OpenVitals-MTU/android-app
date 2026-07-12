@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/period/period_selection.dart';
 import 'package:openvitals/core/period/time_range.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/di/providers.dart';
@@ -54,12 +55,13 @@ void main() {
     // instead, every screen would break at once.
     final h = await bootContainer(granted: const {});
 
-    final samples = await h.container
-        .read(heartRepositoryProvider)
-        .loadHeartRateSamplesInstant(
-          DateTime.utc(2025, 6, 23, 6, 5),
-          DateTime.utc(2025, 6, 23, 6, 41),
-        );
+    final samples = (await h.container
+            .read(heartRepositoryProvider)
+            .loadHeartRateSamplesInstant(
+              DateTime.utc(2025, 6, 23, 6, 5),
+              DateTime.utc(2025, 6, 23, 6, 41),
+            ))
+        .orThrow();
 
     expect(samples, isEmpty);
   });
@@ -107,12 +109,13 @@ void main() {
     final h = await bootContainer();
     h.hc.syncEnabled = false;
 
-    final samples = await h.container
-        .read(heartRepositoryProvider)
-        .loadHeartRateSamplesInstant(
-          DateTime.utc(2025, 6, 23, 6, 5),
-          DateTime.utc(2025, 6, 23, 6, 41),
-        );
+    final samples = (await h.container
+            .read(heartRepositoryProvider)
+            .loadHeartRateSamplesInstant(
+              DateTime.utc(2025, 6, 23, 6, 5),
+              DateTime.utc(2025, 6, 23, 6, 41),
+            ))
+        .orThrow();
 
     // The gate lives natively, so the Dart tier sees whatever the host returns; what
     // matters here is that nothing throws on the way through.

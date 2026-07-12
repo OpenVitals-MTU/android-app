@@ -5,6 +5,7 @@ import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/body_models.dart';
@@ -66,7 +67,8 @@ class BodyMetricViewModel extends Notifier<BodyMetricState> {
     );
 
     try {
-      final data = await loadBodyPeriod(query, refreshMode: refreshMode);
+      final data =
+          (await loadBodyPeriod(query, refreshMode: refreshMode)).orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = state.copyWith(isLoading: false, data: data, error: null);
     } catch (error) {
@@ -101,7 +103,9 @@ class BodyMetricViewModel extends Notifier<BodyMetricState> {
       error: null,
     );
     try {
-      await ref.read(deleteBodyMeasurementEntryUseCaseProvider)(type, entryId);
+      (await ref.read(deleteBodyMeasurementEntryUseCaseProvider)(
+              type, entryId))
+          .orThrow();
       if (!ref.mounted) return;
       await load(
         PeriodSelection(state.selectedRange, state.selectedDate),

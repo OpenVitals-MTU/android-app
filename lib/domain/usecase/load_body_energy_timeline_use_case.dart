@@ -1,4 +1,5 @@
 import '../../core/period/time_range.dart';
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/body_energy_repository.dart';
 import '../model/refresh_mode.dart';
@@ -16,7 +17,7 @@ class LoadBodyEnergyTimelineUseCase {
 
   final BodyEnergyRepository _bodyEnergyRepository;
 
-  Future<BodyEnergyTimelineResult> call(
+  Future<Result<BodyEnergyTimelineResult>> call(
     LocalDate date, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>

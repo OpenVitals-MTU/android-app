@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/sleep_repository.dart';
 import '../model/sleep_models.dart';
 
@@ -12,6 +13,6 @@ class LoadSleepDetailUseCase {
 
   final SleepRepository _sleepRepository;
 
-  Future<SleepData?> call(String sleepId) =>
+  Future<Result<SleepData?>> call(String sleepId) =>
       _sleepRepository.loadSleepSession(sleepId);
 }

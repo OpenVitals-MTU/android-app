@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/period/time_range.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
@@ -49,9 +50,10 @@ void main() {
       final first = dayOf(nights.first['start']! as int);
       final last = dayOf(nights.last['start']! as int);
 
-      final sessions = await h.container
-          .read(sleepRepositoryProvider)
-          .loadSleepSessions(first.minusDays(1), last.plusDays(1));
+      final sessions = (await h.container
+              .read(sleepRepositoryProvider)
+              .loadSleepSessions(first.minusDays(1), last.plusDays(1)))
+          .orThrow();
 
       expect(sessions, isNotEmpty);
       // Merging can COMBINE overlapping sessions, so the count may be lower than the
@@ -74,9 +76,10 @@ void main() {
       expect(raw.map((s) => s['writer']).toSet().length, greaterThan(1),
           reason: 'The fixture no longer has two writers on this night.');
 
-      final merged = await h.container
-          .read(sleepRepositoryProvider)
-          .loadSleepSessions(day, day.plusDays(1));
+      final merged = (await h.container
+              .read(sleepRepositoryProvider)
+              .loadSleepSessions(day, day.plusDays(1)))
+          .orThrow();
 
       expect(merged.length, lessThanOrEqualTo(raw.length),
           reason: 'Merging produced MORE sessions than it was given.');
@@ -88,9 +91,10 @@ void main() {
       final h = await bootContainer();
       final day = dayOf(h.fixture.swallowingHeartRate['start']! as int);
 
-      final samples = await h.container
-          .read(heartRepositoryProvider)
-          .loadHeartRateSamplesForDay(day);
+      final samples = (await h.container
+              .read(heartRepositoryProvider)
+              .loadHeartRateSamplesForDay(day))
+          .orThrow();
 
       expect(samples, isNotEmpty);
     });
@@ -101,9 +105,10 @@ void main() {
       final h = await bootContainer();
       final day = dayOf(h.fixture.swallowingHeartRate['start']! as int);
 
-      final summaries = await h.container
-          .read(heartRepositoryProvider)
-          .loadDailyHeartRateSummaries(day, day.plusDays(1));
+      final summaries = (await h.container
+              .read(heartRepositoryProvider)
+              .loadDailyHeartRateSummaries(day, day.plusDays(1)))
+          .orThrow();
 
       expect(summaries, isNotEmpty);
       expect(summaries.first.maxBpm, greaterThanOrEqualTo(summaries.first.minBpm));

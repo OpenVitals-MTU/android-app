@@ -1,5 +1,6 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/time_range.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/heart_rate_sample_reduction.dart';
@@ -10,22 +11,33 @@ import '../../source/health/health_permissions.dart';
 import '../contract/heart_repository.dart';
 import 'repository_time.dart';
 import 'health_connect_gating.dart';
+import 'run_catching.dart';
 import '../../../core/stats/stats.dart';
 
 /// Port of the Kotlin `HeartRepositoryImpl`. Thin, permission-aware facade over
 /// [HealthDataSource]; reads degrade to empty/null when the backing permission
 /// is not granted (matching the Kotlin `readXPermission !in granted` guards).
+///
+/// Public methods convert exceptions to failures via [runCatching] at the
+/// boundary; the private gated reads keep the original throwing flow so
+/// internal composition stays plain awaits.
 class HeartRepositoryImpl implements HeartRepository {
   HeartRepositoryImpl(this._dataSource);
 
   final HealthDataSource _dataSource;
 
   @override
-  Future<HeartPeriodData> loadHeartPeriod(
+  Future<Result<HeartPeriodData>> loadHeartPeriod(
     PeriodLoadQuery query,
     HeartPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
+  }) =>
+      runCatching(() => _loadHeartPeriodRaw(query, metric));
+
+  Future<HeartPeriodData> _loadHeartPeriodRaw(
+    PeriodLoadQuery query,
+    HeartPeriodMetric metric,
+  ) async {
     final granted = await _dataSource.grantedIfAvailable();
     final isDay = query.range == TimeRange.day;
     final windows = query.windows;
@@ -108,97 +120,113 @@ class HeartRepositoryImpl implements HeartRepository {
   // ── Contract reads ────────────────────────────────────────────────────────
 
   @override
-  Future<List<HeartRateSample>> loadHeartRateSamplesForDay(LocalDate date) async =>
-      _daySamples(date, await _dataSource.grantedIfAvailable());
-
-  @override
-  Future<List<HeartRateSample>> loadRawHeartRateSamplesForDayGraph(
+  Future<Result<List<HeartRateSample>>> loadHeartRateSamplesForDay(
     LocalDate date,
-  ) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readHeartRate)) return const [];
-    return _dataSource.readRawHeartRateSamples(
-      localDayStart(date),
-      localDayEnd(date),
-    );
-  }
+  ) =>
+      runCatching(() async =>
+          _daySamples(date, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<HeartRateSample>> loadHeartRateSamples(
+  Future<Result<List<HeartRateSample>>> loadRawHeartRateSamplesForDayGraph(
+    LocalDate date,
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readHeartRate)) return const [];
+        return _dataSource.readRawHeartRateSamples(
+          localDayStart(date),
+          localDayEnd(date),
+        );
+      });
+
+  @override
+  Future<Result<List<HeartRateSample>>> loadHeartRateSamples(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readHeartRate)) return const [];
-    final samples = await _dataSource.readHeartRateSamples(
-      localDayStart(start),
-      localDayEnd(end),
-    );
-    // Reduce per day, not across the whole range: the chart draws one series per
-    // day, so a range-wide reduction would thin early days away to nothing.
-    final byDay = <LocalDate, List<HeartRateSample>>{};
-    for (final sample in samples) {
-      byDay.putIfAbsent(instantToLocalDate(sample.time), () => []).add(sample);
-    }
-    return [
-      for (final daySamples in byDay.values) ...daySamples.reducedForChart(),
-    ];
-  }
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readHeartRate)) return const [];
+        final samples = await _dataSource.readHeartRateSamples(
+          localDayStart(start),
+          localDayEnd(end),
+        );
+        // Reduce per day, not across the whole range: the chart draws one series
+        // per day, so a range-wide reduction would thin early days away to
+        // nothing.
+        final byDay = <LocalDate, List<HeartRateSample>>{};
+        for (final sample in samples) {
+          byDay
+              .putIfAbsent(instantToLocalDate(sample.time), () => [])
+              .add(sample);
+        }
+        return [
+          for (final daySamples in byDay.values) ...daySamples.reducedForChart(),
+        ];
+      });
 
   @override
-  Future<List<HeartRateSample>> loadHeartRateSamplesInstant(
+  Future<Result<List<HeartRateSample>>> loadHeartRateSamplesInstant(
     DateTime start,
     DateTime end,
-  ) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readHeartRate)) return const [];
-    if (!end.isAfter(start)) return const [];
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readHeartRate)) return const [];
+        if (!end.isAfter(start)) return const [];
 
-    // Just the window. How Health Connect stores heart rate -- that a series
-    // record hides its samples behind its own boundary, and that aggregation is
-    // the way out when it does -- is settled natively, in HealthConnectSeries.kt,
-    // where the Health Connect SDK actually is. This used to guess at it from
-    // Dart, across a Pigeon channel, and got it wrong: an activity whose beats
-    // sat inside a longer record read as "Not available".
-    final samples = await _dataSource.readRawHeartRateSamples(start, end);
-    return samples.reducedForChart();
-  }
+        // Just the window. How Health Connect stores heart rate -- that a series
+        // record hides its samples behind its own boundary, and that aggregation
+        // is the way out when it does -- is settled natively, in
+        // HealthConnectSeries.kt, where the Health Connect SDK actually is. This
+        // used to guess at it from Dart, across a Pigeon channel, and got it
+        // wrong: an activity whose beats sat inside a longer record read as
+        // "Not available".
+        final samples = await _dataSource.readRawHeartRateSamples(start, end);
+        return samples.reducedForChart();
+      });
 
   @override
-  Future<List<HeartRateSummary>> loadDailyHeartRateSummaries(
+  Future<Result<List<HeartRateSummary>>> loadDailyHeartRateSummaries(
     LocalDate start,
     LocalDate end,
-  ) async =>
-      _dailySummaries(DatePeriod(start, end), await _dataSource.grantedIfAvailable());
+  ) =>
+      runCatching(() async => _dailySummaries(
+          DatePeriod(start, end), await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<int?> loadRestingHeartRate(LocalDate date) async =>
-      _restingBpm(date, await _dataSource.grantedIfAvailable());
+  Future<Result<int?>> loadRestingHeartRate(LocalDate date) =>
+      runCatching(() async =>
+          _restingBpm(date, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<DailyRestingHR>> loadDailyRestingHR(
+  Future<Result<List<DailyRestingHR>>> loadDailyRestingHR(
     LocalDate start,
     LocalDate end,
-  ) async =>
-      _dailyRestingHR(DatePeriod(start, end), await _dataSource.grantedIfAvailable());
+  ) =>
+      runCatching(() async => _dailyRestingHR(
+          DatePeriod(start, end), await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<double?> loadHrvRmssd(LocalDate date) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readHrv)) return null;
-    return _dataSource.readHrvRmssd(date);
-  }
+  Future<Result<double?>> loadHrvRmssd(LocalDate date) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readHrv)) return null;
+        return _dataSource.readHrvRmssd(date);
+      });
 
   @override
-  Future<List<HrvSample>> loadHrvSamples(DateTime start, DateTime end) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readHrv)) return const [];
-    return _dataSource.readHrvSamples(start, end);
-  }
+  Future<Result<List<HrvSample>>> loadHrvSamples(DateTime start, DateTime end) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readHrv)) return const [];
+        return _dataSource.readHrvSamples(start, end);
+      });
 
   @override
-  Future<List<DailyHrv>> loadDailyHRV(LocalDate start, LocalDate end) async =>
-      _dailyHrv(DatePeriod(start, end), await _dataSource.grantedIfAvailable());
+  Future<Result<List<DailyHrv>>> loadDailyHRV(LocalDate start, LocalDate end) =>
+      runCatching(() async => _dailyHrv(
+          DatePeriod(start, end), await _dataSource.grantedIfAvailable()));
 
   // ── Private gated reads ─────────────────────────────────────────────────
 
