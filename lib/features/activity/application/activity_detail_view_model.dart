@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/activity_splits.dart';
 import '../../../domain/model/activity_models.dart';
@@ -73,7 +74,7 @@ class ActivityDetailViewModel extends Notifier<ActivityDetailState> {
       // that Health Connect's own totals outrank the ones derived from samples —
       // is domain knowledge, and lives in the use case. What stays here is the
       // view's business: the generation guard, and turning a result into state.
-      final result = await loadActivityDetail(activityId);
+      final result = (await loadActivityDetail(activityId)).orThrow();
       if (!ref.mounted || generation != _generation) return;
       if (result == null) {
         state = const ActivityDetailState(

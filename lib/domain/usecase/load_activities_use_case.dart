@@ -142,7 +142,7 @@ class LoadActivitiesUseCase {
   final ActivityRepository _activityRepository;
   final HeartRepository _heartRepository;
 
-  Future<ActivitiesLoadResult> call(PeriodLoadQuery query) async {
+  Future<Result<ActivitiesLoadResult>> call(PeriodLoadQuery query) async {
     final windows = query.windows;
     final current = windows.current;
     final isYear = query.range == TimeRange.year;
@@ -168,24 +168,51 @@ class LoadActivitiesUseCase {
           : _heartRepository.loadHeartRateSamples(current.start, current.end),
     ).wait;
 
-    final crossDailyRestingHR = results.$7.orThrow();
-    return ActivitiesLoadResult(
-      workouts: results.$1,
-      plannedWorkouts: results.$2,
-      previousWorkouts: results.$3,
-      baselineWorkouts: results.$4,
-      overviewDays: _activityOverviewDays(
-        start: current.start,
-        end: current.end,
-        steps: results.$5,
-        nutrition: results.$6,
-        workouts: results.$1,
-        heartRateSamples: results.$9.orThrow(),
-        restingHeartRate: crossDailyRestingHR,
-        hrv: results.$8.orThrow(),
-      ),
-      crossDailyRestingHR: crossDailyRestingHR,
-    );
+    // Nothing degrades here — the overview is the screen — so the composition
+    // is STRICT: the nine reads still run together, and the first failure
+    // sinks the whole load.
+    if (results
+        case (
+          Ok(value: final workouts),
+          Ok(value: final plannedWorkouts),
+          Ok(value: final previousWorkouts),
+          Ok(value: final baselineWorkouts),
+          Ok(value: final steps),
+          Ok(value: final nutrition),
+          Ok(value: final crossDailyRestingHR),
+          Ok(value: final hrv),
+          Ok(value: final heartRateSamples),
+        )) {
+      return Ok(ActivitiesLoadResult(
+        workouts: workouts,
+        plannedWorkouts: plannedWorkouts,
+        previousWorkouts: previousWorkouts,
+        baselineWorkouts: baselineWorkouts,
+        overviewDays: _activityOverviewDays(
+          start: current.start,
+          end: current.end,
+          steps: steps,
+          nutrition: nutrition,
+          workouts: workouts,
+          heartRateSamples: heartRateSamples,
+          restingHeartRate: crossDailyRestingHR,
+          hrv: hrv,
+        ),
+        crossDailyRestingHR: crossDailyRestingHR,
+      ));
+    }
+    final firstFailure = [
+      results.$1,
+      results.$2,
+      results.$3,
+      results.$4,
+      results.$5,
+      results.$6,
+      results.$7,
+      results.$8,
+      results.$9,
+    ].whereType<Err<Object?>>().first;
+    return Err(firstFailure.failure);
   }
 }
 

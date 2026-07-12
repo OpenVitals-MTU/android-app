@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/activity_models.dart';
@@ -107,7 +108,8 @@ class AchievementsViewModel extends Notifier<AchievementsState> {
     try {
       // How far back a lifetime badge counts is the use case's business; what
       // the badges make of the history is this screen's.
-      final history = await ref.read(loadAchievementHistoryUseCaseProvider)();
+      final history =
+          (await ref.read(loadAchievementHistoryUseCaseProvider)()).orThrow();
       if (!ref.mounted || generation != _generation) return;
       state = _evaluate(history.days, history.start, history.end);
     } catch (error) {

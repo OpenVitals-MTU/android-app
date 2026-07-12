@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/activity_repository.dart';
 
 /// Deletes one OpenVitals-authored workout.
@@ -11,6 +12,6 @@ class DeleteActivityEntryUseCase {
 
   final ActivityRepository _activityRepository;
 
-  Future<void> call(String entryId) =>
+  Future<Result<void>> call(String entryId) =>
       _activityRepository.deleteActivityEntry(entryId);
 }

@@ -1,5 +1,6 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/time_range.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../prefs/preferences_repository.dart';
 import '../../../domain/model/activity_models.dart';
@@ -13,8 +14,14 @@ import '../contract/activity_repository.dart';
 import '../contract/repository_exceptions.dart';
 import 'repository_time.dart';
 import 'health_connect_gating.dart';
+import 'run_catching.dart';
 
 /// Port of the Kotlin `ActivityRepositoryImpl`.
+///
+/// Public methods convert exceptions to failures via [runCatching] at the
+/// boundary; the private `_raw` bodies keep the original throwing flow so
+/// internal composition ([loadActivitiesPeriod], the gated writes) stays
+/// plain awaits.
 class ActivityRepositoryImpl implements ActivityRepository {
   ActivityRepositoryImpl(
     this._dataSource, {
@@ -29,79 +36,90 @@ class ActivityRepositoryImpl implements ActivityRepository {
   final ActivityMarkerRepository? _markers;
 
   @override
-  Future<ActivityPeriodData> loadActivityPeriod(
+  Future<Result<ActivityPeriodData>> loadActivityPeriod(
     PeriodLoadQuery query, {
     required bool includeSteps,
     required bool includeNutrition,
     bool includeWheelchairPushes = false,
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    final w = query.windows;
-    final includeActiveCalories = granted.contains(HcPermissions.readActiveCalories);
+  }) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        final w = query.windows;
+        final includeActiveCalories =
+            granted.contains(HcPermissions.readActiveCalories);
 
-    Future<List<DailySteps>> steps(DatePeriod period) async {
-      if (!(includeSteps || includeWheelchairPushes)) return const [];
-      if (!granted.contains(HcPermissions.readSteps)) return const [];
-      return _dataSource.readDailySteps(
-        period.start,
-        period.end,
-        includeActiveCalories: includeActiveCalories,
-      );
-    }
+        Future<List<DailySteps>> steps(DatePeriod period) async {
+          if (!(includeSteps || includeWheelchairPushes)) return const [];
+          if (!granted.contains(HcPermissions.readSteps)) return const [];
+          return _dataSource.readDailySteps(
+            period.start,
+            period.end,
+            includeActiveCalories: includeActiveCalories,
+          );
+        }
 
-    Future<List<DailyNutrition>> nutrition(DatePeriod period) async {
-      if (!includeNutrition) return const [];
-      if (!granted.contains(HcPermissions.readNutrition)) return const [];
-      return _dataSource.readDailyNutrition(
-        period.start,
-        period.end,
-        includeHydration: false,
-      );
-    }
+        Future<List<DailyNutrition>> nutrition(DatePeriod period) async {
+          if (!includeNutrition) return const [];
+          if (!granted.contains(HcPermissions.readNutrition)) return const [];
+          return _dataSource.readDailyNutrition(
+            period.start,
+            period.end,
+            includeHydration: false,
+          );
+        }
 
-    final activityProgress = query.range == TimeRange.day &&
-            granted.contains(HcPermissions.readSteps)
-        ? await _dataSource.readRawActivityProgress(w.current.start)
-        : const <ActivityProgressPoint>[];
+        final activityProgress = query.range == TimeRange.day &&
+                granted.contains(HcPermissions.readSteps)
+            ? await _dataSource.readRawActivityProgress(w.current.start)
+            : const <ActivityProgressPoint>[];
 
-    return ActivityPeriodData(
-      dailySteps: await steps(w.current),
-      previousDailySteps: await steps(w.previous),
-      baselineDailySteps: await steps(w.baseline),
-      nutrition: await nutrition(w.current),
-      previousNutrition: await nutrition(w.previous),
-      baselineNutrition: await nutrition(w.baseline),
-      activityProgress: activityProgress,
-    );
-  }
+        return ActivityPeriodData(
+          dailySteps: await steps(w.current),
+          previousDailySteps: await steps(w.previous),
+          baselineDailySteps: await steps(w.baseline),
+          nutrition: await nutrition(w.current),
+          previousNutrition: await nutrition(w.previous),
+          baselineNutrition: await nutrition(w.baseline),
+          activityProgress: activityProgress,
+        );
+      });
 
   @override
-  Future<ActivitiesPeriodData> loadActivitiesPeriod(
+  Future<Result<ActivitiesPeriodData>> loadActivitiesPeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
-    final w = query.windows;
-    return ActivitiesPeriodData(
-      workouts: await loadWorkouts(w.current.start, w.current.end),
-      previousWorkouts: await loadWorkouts(w.previous.start, w.previous.end),
-      baselineWorkouts: await loadWorkouts(w.baseline.start, w.baseline.end),
-      plannedWorkouts: await loadPlannedWorkouts(w.current.start, w.current.end),
-    );
-  }
+  }) =>
+      runCatching(() async {
+        final w = query.windows;
+        return ActivitiesPeriodData(
+          workouts: await _loadWorkoutsRaw(w.current.start, w.current.end),
+          previousWorkouts:
+              await _loadWorkoutsRaw(w.previous.start, w.previous.end),
+          baselineWorkouts:
+              await _loadWorkoutsRaw(w.baseline.start, w.baseline.end),
+          plannedWorkouts:
+              await _loadPlannedWorkoutsRaw(w.current.start, w.current.end),
+        );
+      });
 
   @override
-  Future<List<DailySteps>> loadDailySteps(LocalDate start, LocalDate end) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readSteps)) return const [];
-    return _dataSource.readDailySteps(
-      _activityHistoryStart(start, end, granted),
-      end,
-      includeActiveCalories: granted.contains(HcPermissions.readActiveCalories),
-      includeFloors: granted.contains(HcPermissions.readFloors),
-      includeElevation: granted.contains(HcPermissions.readElevation),
-    );
-  }
+  Future<Result<List<DailySteps>>> loadDailySteps(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readSteps)) return const [];
+        return _dataSource.readDailySteps(
+          _activityHistoryStart(start, end, granted),
+          end,
+          includeActiveCalories:
+              granted.contains(HcPermissions.readActiveCalories),
+          includeFloors: granted.contains(HcPermissions.readFloors),
+          includeElevation: granted.contains(HcPermissions.readElevation),
+        );
+      });
 
   /// Port of Kotlin `ActivityRepository.activityHistoryStart`: when the platform
   /// gates historical reads behind READ_HEALTH_DATA_HISTORY and that permission
@@ -125,92 +143,116 @@ class ActivityRepositoryImpl implements ActivityRepository {
   }
 
   @override
-  Future<List<ActivityProgressPoint>> loadActivityProgress({
+  Future<Result<List<ActivityProgressPoint>>> loadActivityProgress({
     LocalDate? date,
-  }) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readSteps)) return const [];
-    return _dataSource.readRawActivityProgress(date ?? LocalDate.now());
-  }
+  }) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readSteps)) return const [];
+        return _dataSource.readRawActivityProgress(date ?? LocalDate.now());
+      });
 
   @override
-  Future<List<ExerciseData>> loadWorkouts(LocalDate start, LocalDate end) async {
+  Future<Result<List<ExerciseData>>> loadWorkouts(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      runCatching(() => _loadWorkoutsRaw(start, end));
+
+  Future<List<ExerciseData>> _loadWorkoutsRaw(
+    LocalDate start,
+    LocalDate end,
+  ) async {
     final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readExercise)) return const [];
     return _dataSource.readExerciseSessions(localDayStart(start), localDayEnd(end));
   }
 
   @override
-  Future<List<ExerciseData>> loadWorkoutsWithMetrics(
+  Future<Result<List<ExerciseData>>> loadWorkoutsWithMetrics(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readExercise)) return const [];
-    // Distance / speed are gated independently: an ungranted metric is left out
-    // of the aggregate and comes back null, rather than failing the read.
-    return _dataSource.readExerciseSessionsWithMetrics(
-      localDayStart(start),
-      localDayEnd(end),
-      includeDistance: granted.contains(HcPermissions.readDistance),
-      includeSpeed: granted.contains(HcPermissions.readSpeed),
-    );
-  }
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readExercise)) return const [];
+        // Distance / speed are gated independently: an ungranted metric is left
+        // out of the aggregate and comes back null, rather than failing the read.
+        return _dataSource.readExerciseSessionsWithMetrics(
+          localDayStart(start),
+          localDayEnd(end),
+          includeDistance: granted.contains(HcPermissions.readDistance),
+          includeSpeed: granted.contains(HcPermissions.readSpeed),
+        );
+      });
 
   @override
-  Future<ExerciseData?> loadWorkout(String id) =>
-      _dataSource.readExerciseSession(id);
+  Future<Result<ExerciseData?>> loadWorkout(String id) =>
+      runCatching(() => _dataSource.readExerciseSession(id));
 
   /// Each metric is gated on its OWN read permission, exactly as the list read
   /// gates distance and speed: an ungranted metric is simply left out of the
   /// request and comes back null, instead of failing the whole read.
   @override
-  Future<ExerciseSessionMetrics> loadWorkoutMetrics(
-    DateTime start,
-    DateTime end,
-  ) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    final wanted = <ExerciseSessionMetric>{
-      if (granted.contains(HcPermissions.readDistance))
-        ExerciseSessionMetric.distance,
-      if (granted.contains(HcPermissions.readSpeed)) ExerciseSessionMetric.speed,
-      if (granted.contains(HcPermissions.readSteps)) ExerciseSessionMetric.steps,
-      if (granted.contains(HcPermissions.readTotalCalories))
-        ExerciseSessionMetric.totalCalories,
-      if (granted.contains(HcPermissions.readActiveCalories))
-        ExerciseSessionMetric.activeCalories,
-      if (granted.contains(HcPermissions.readElevation))
-        ExerciseSessionMetric.elevation,
-      if (granted.contains(HcPermissions.readFloors))
-        ExerciseSessionMetric.floors,
-      if (granted.contains(HcPermissions.readWheelchairPushes))
-        ExerciseSessionMetric.wheelchairPushes,
-      if (granted.contains(HcPermissions.readPower))
-        ExerciseSessionMetric.power,
-    };
-    if (wanted.isEmpty) return ExerciseSessionMetrics.none;
-    return _dataSource.readExerciseSessionMetrics(start, end, wanted);
-  }
-
-  @override
-  Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end) async {
-    // Gated like every other metric read: without the SPEED permission the
-    // caller gets "no speed samples", not an exception. The activity detail
-    // screen degrades to route-derived (or estimated) splits.
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readSpeed)) return const [];
-    return _dataSource.readSpeedSamples(start, end);
-  }
-
-  @override
-  Future<List<ActivityCadenceSample>> loadActivityCadenceSamples(
+  Future<Result<ExerciseSessionMetrics>> loadWorkoutMetrics(
     DateTime start,
     DateTime end,
   ) =>
-      _dataSource.readActivityCadenceSamples(start, end);
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        final wanted = <ExerciseSessionMetric>{
+          if (granted.contains(HcPermissions.readDistance))
+            ExerciseSessionMetric.distance,
+          if (granted.contains(HcPermissions.readSpeed))
+            ExerciseSessionMetric.speed,
+          if (granted.contains(HcPermissions.readSteps))
+            ExerciseSessionMetric.steps,
+          if (granted.contains(HcPermissions.readTotalCalories))
+            ExerciseSessionMetric.totalCalories,
+          if (granted.contains(HcPermissions.readActiveCalories))
+            ExerciseSessionMetric.activeCalories,
+          if (granted.contains(HcPermissions.readElevation))
+            ExerciseSessionMetric.elevation,
+          if (granted.contains(HcPermissions.readFloors))
+            ExerciseSessionMetric.floors,
+          if (granted.contains(HcPermissions.readWheelchairPushes))
+            ExerciseSessionMetric.wheelchairPushes,
+          if (granted.contains(HcPermissions.readPower))
+            ExerciseSessionMetric.power,
+        };
+        if (wanted.isEmpty) return ExerciseSessionMetrics.none;
+        return _dataSource.readExerciseSessionMetrics(start, end, wanted);
+      });
 
   @override
-  Future<List<PlannedExerciseData>> loadPlannedWorkouts(
+  Future<Result<List<SpeedSample>>> loadSpeedSamples(
+    DateTime start,
+    DateTime end,
+  ) =>
+      runCatching(() async {
+        // Gated like every other metric read: without the SPEED permission the
+        // caller gets "no speed samples", not a failure. The activity detail
+        // screen degrades to route-derived (or estimated) splits.
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readSpeed)) return const [];
+        return _dataSource.readSpeedSamples(start, end);
+      });
+
+  @override
+  Future<Result<List<ActivityCadenceSample>>> loadActivityCadenceSamples(
+    DateTime start,
+    DateTime end,
+  ) =>
+      runCatching(() => _dataSource.readActivityCadenceSamples(start, end));
+
+  @override
+  Future<Result<List<PlannedExerciseData>>> loadPlannedWorkouts(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      runCatching(() => _loadPlannedWorkoutsRaw(start, end));
+
+  Future<List<PlannedExerciseData>> _loadPlannedWorkoutsRaw(
     LocalDate start,
     LocalDate end,
   ) async {
@@ -220,35 +262,39 @@ class ActivityRepositoryImpl implements ActivityRepository {
   }
 
   @override
-  Future<List<PlannedExerciseData>> loadPlannedWorkoutOptions(
+  Future<Result<List<PlannedExerciseData>>> loadPlannedWorkoutOptions(
     LocalDate date,
     int exerciseType,
   ) async =>
-      const [];
+      const Ok([]);
 
   @override
-  Future<List<PlannedExerciseData>> loadExistingPlannedWorkouts({
+  Future<Result<List<PlannedExerciseData>>> loadExistingPlannedWorkouts({
     LocalDate? anchorDate,
   }) async =>
-      const [];
+      const Ok([]);
 
   @override
-  Future<String> writePlannedWorkout(PlannedExerciseWriteRequest request) async {
-    // TODO(health-pkg): PlannedExerciseSession writes are unsupported.
-    throw const MissingHealthPermissionException(
-      'Planned workouts are not supported by the health package.',
-    );
-  }
+  Future<Result<String>> writePlannedWorkout(
+    PlannedExerciseWriteRequest request,
+  ) =>
+      runCatching(() async {
+        // TODO(health-pkg): PlannedExerciseSession writes are unsupported.
+        throw const MissingHealthPermissionException(
+          'Planned workouts are not supported by the health package.',
+        );
+      });
 
   @override
-  Future<List<DailyNutrition>> loadDailyNutrition(
+  Future<Result<List<DailyNutrition>>> loadDailyNutrition(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    if (!granted.contains(HcPermissions.readNutrition)) return const [];
-    return _dataSource.readDailyNutrition(start, end, includeHydration: false);
-  }
+  ) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        if (!granted.contains(HcPermissions.readNutrition)) return const [];
+        return _dataSource.readDailyNutrition(start, end, includeHydration: false);
+      });
 
   // ── Write permissions ─────────────────────────────────────────────────────
 
@@ -290,35 +336,44 @@ class ActivityRepositoryImpl implements ActivityRepository {
       _dataSource.permissionService.plannedExercisePermissions;
 
   @override
-  Future<bool> hasActivityWritePermission() async {
+  Future<Result<bool>> hasActivityWritePermission() =>
+      runCatching(_hasWritePermissionRaw);
+
+  Future<bool> _hasWritePermissionRaw() async {
     final granted = await _dataSource.grantedIfAvailable();
     return granted.containsAll(activityWritePermissions());
   }
 
   @override
-  Future<bool> hasActivityWritePermissionFor({
+  Future<Result<bool>> hasActivityWritePermissionFor({
     required bool includeRoute,
     required bool includeDistance,
     required bool includeElevation,
     required bool includeActiveCalories,
     required bool includeTotalCalories,
     bool includeSteps = false,
-  }) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    return granted.containsAll(
-      activityWritePermissionsFor(
-        includeRoute: includeRoute,
-        includeDistance: includeDistance,
-        includeElevation: includeElevation,
-        includeActiveCalories: includeActiveCalories,
-        includeTotalCalories: includeTotalCalories,
-        includeSteps: includeSteps,
-      ),
-    );
-  }
+  }) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        return granted.containsAll(
+          activityWritePermissionsFor(
+            includeRoute: includeRoute,
+            includeDistance: includeDistance,
+            includeElevation: includeElevation,
+            includeActiveCalories: includeActiveCalories,
+            includeTotalCalories: includeTotalCalories,
+            includeSteps: includeSteps,
+          ),
+        );
+      });
 
   @override
-  Future<bool> hasActivityWritePermissionForRequest(
+  Future<Result<bool>> hasActivityWritePermissionForRequest(
+    ActivityWriteRequest request,
+  ) =>
+      runCatching(() => _hasWritePermissionForRequestRaw(request));
+
+  Future<bool> _hasWritePermissionForRequestRaw(
     ActivityWriteRequest request,
   ) async {
     final granted = await _dataSource.grantedIfAvailable();
@@ -326,33 +381,39 @@ class ActivityRepositoryImpl implements ActivityRepository {
   }
 
   @override
-  Future<String> writeActivityEntry(ActivityWriteRequest request) async {
-    if (!await hasActivityWritePermissionForRequest(request)) {
-      throw const MissingHealthPermissionException(
-        'Missing Health Connect activity write permission.',
-      );
-    }
-    return _dataSource.writeActivityEntry(request);
-  }
+  Future<Result<String>> writeActivityEntry(ActivityWriteRequest request) =>
+      runCatching(() async {
+        if (!await _hasWritePermissionForRequestRaw(request)) {
+          throw const MissingHealthPermissionException(
+            'Missing Health Connect activity write permission.',
+          );
+        }
+        return _dataSource.writeActivityEntry(request);
+      });
 
   @override
-  Future<void> updateActivityEntry(String id, ActivityWriteRequest request) async {
-    if (!await hasActivityWritePermissionForRequest(request)) {
-      throw const MissingHealthPermissionException(
-        'Missing Health Connect activity write permission.',
-      );
-    }
-    await _dataSource.updateActivityEntry(id, request);
-  }
+  Future<Result<void>> updateActivityEntry(
+    String id,
+    ActivityWriteRequest request,
+  ) =>
+      runCatching(() async {
+        if (!await _hasWritePermissionForRequestRaw(request)) {
+          throw const MissingHealthPermissionException(
+            'Missing Health Connect activity write permission.',
+          );
+        }
+        await _dataSource.updateActivityEntry(id, request);
+      });
 
   @override
-  Future<void> deleteActivityEntry(String id) async {
-    if (!await hasActivityWritePermission()) {
-      throw const MissingHealthPermissionException(
-        'Missing Health Connect activity write permission.',
-      );
-    }
-    await _dataSource.deleteActivityEntry(id);
-    _markers?.deleteMarkersForActivity(id);
-  }
+  Future<Result<void>> deleteActivityEntry(String id) =>
+      runCatching(() async {
+        if (!await _hasWritePermissionRaw()) {
+          throw const MissingHealthPermissionException(
+            'Missing Health Connect activity write permission.',
+          );
+        }
+        await _dataSource.deleteActivityEntry(id);
+        _markers?.deleteMarkersForActivity(id);
+      });
 }

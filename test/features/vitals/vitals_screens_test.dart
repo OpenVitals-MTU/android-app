@@ -50,19 +50,20 @@ class _FakeVitalsRepository implements VitalsRepository {
   Set<String> get phase3Permissions => const <String>{};
 
   @override
-  Future<VitalsPeriodData> loadVitalsPeriod(
+  Future<Result<VitalsPeriodData>> loadVitalsPeriod(
     PeriodLoadQuery query,
     VitalsPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      VitalsPeriodData(bloodPressure: bloodPressure);
+      Ok(VitalsPeriodData(bloodPressure: bloodPressure));
 
   @override
-  Future<void> deleteVitalsMeasurementEntry(
+  Future<Result<void>> deleteVitalsMeasurementEntry(
     VitalsMeasurementType type,
     String id,
   ) async {
     deletedEntries.add((type, id));
+    return const Ok(null);
   }
 
   @override

@@ -76,12 +76,13 @@ class _Empty
           LocalDate a, LocalDate b) async =>
       const Ok([]);
   @override
-  Future<List<ExerciseData>> loadWorkouts(LocalDate a, LocalDate b) async =>
-      const [];
-  @override
-  Future<List<RespiratoryRateEntry>> loadRespiratoryRate(
+  Future<Result<List<ExerciseData>>> loadWorkouts(
           LocalDate a, LocalDate b) async =>
-      const [];
+      const Ok([]);
+  @override
+  Future<Result<List<RespiratoryRateEntry>>> loadRespiratoryRate(
+          LocalDate a, LocalDate b) async =>
+      const Ok([]);
   @override
   dynamic noSuchMethod(Invocation i) =>
       throw UnimplementedError('${i.memberName}');

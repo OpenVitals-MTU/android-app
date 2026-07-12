@@ -58,16 +58,17 @@ class _FakeVitalsRepository implements VitalsRepository {
       {HcPermissions.writeBloodPressure};
 
   @override
-  Future<bool> hasVitalsWritePermission(VitalsMeasurementType type) async =>
-      true;
+  Future<Result<bool>> hasVitalsWritePermission(
+          VitalsMeasurementType type) async =>
+      const Ok(true);
 
   @override
-  Future<String> writeVitalsMeasurementEntry(
+  Future<Result<String>> writeVitalsMeasurementEntry(
     VitalsMeasurementWriteRequest request,
   ) async {
     written = request;
     writeCount += 1;
-    return 'record-id';
+    return const Ok('record-id');
   }
 
   @override

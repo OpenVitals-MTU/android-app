@@ -3,6 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/measurement_input.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/vitals_models.dart';
 
@@ -183,10 +184,11 @@ class VitalsMeasurementEntryViewModel
       secondaryValue: secondaryValue,
     );
     try {
-      await ref.read(saveVitalsMeasurementUseCaseProvider)(
+      (await ref.read(saveVitalsMeasurementUseCaseProvider)(
         request,
         editRecordId: editRecordId,
-      );
+      ))
+          .orThrow();
       if (!ref.mounted) return;
       state = state.copyWith(
         inputText: state.isEditMode ? state.inputText : '',
@@ -215,10 +217,11 @@ class VitalsMeasurementEntryViewModel
     final recordId = editRecordId;
     if (recordId == null) return;
     try {
-      final entry = await ref.read(loadVitalsMeasurementForEditUseCaseProvider)(
+      final entry = (await ref.read(loadVitalsMeasurementForEditUseCaseProvider)(
         type,
         recordId,
-      );
+      ))
+          .orThrow();
       if (!ref.mounted) return;
       // Null covers both "no such record" and "not ours to edit".
       if (entry == null) {

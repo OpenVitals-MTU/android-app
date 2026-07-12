@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/preferences/unit_system.dart';
 import '../../../domain/usecase/write_imported_activity_use_case.dart';
@@ -166,7 +167,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         // Checks the permissions THIS record needs, then writes it — a file with
         // a route needs more than a bare track does. See
         // [WriteImportedActivityUseCase].
-        await writeImportedActivity(request);
+        (await writeImportedActivity(request)).orThrow();
         preferences.lastActivityExerciseType = request.exerciseType;
         importedFiles += 1;
       } catch (error) {

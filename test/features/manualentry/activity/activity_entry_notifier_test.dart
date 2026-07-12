@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
@@ -1366,51 +1367,54 @@ class _FakeActivityRepository implements ActivityRepository {
   Set<String> plannedWorkoutWritePermissions() => plannedPermissions;
 
   @override
-  Future<bool> hasActivityWritePermission() async => canWriteValue;
+  Future<Result<bool>> hasActivityWritePermission() async => Ok(canWriteValue);
 
   @override
-  Future<bool> hasActivityWritePermissionForRequest(
+  Future<Result<bool>> hasActivityWritePermissionForRequest(
           ActivityWriteRequest request) async =>
-      canWriteValue;
+      Ok(canWriteValue);
 
   @override
-  Future<String> writeActivityEntry(ActivityWriteRequest request) async {
+  Future<Result<String>> writeActivityEntry(ActivityWriteRequest request) async {
     writeActivityEntryCalls.add(request);
-    return 'activity-id';
+    return const Ok('activity-id');
   }
 
   @override
-  Future<void> updateActivityEntry(String id, ActivityWriteRequest request) async {}
+  Future<Result<void>> updateActivityEntry(
+          String id, ActivityWriteRequest request) async =>
+      const Ok(null);
 
   @override
-  Future<ExerciseData?> loadWorkout(String id) async => workout;
+  Future<Result<ExerciseData?>> loadWorkout(String id) async => Ok(workout);
 
   @override
-  Future<List<PlannedExerciseData>> loadPlannedWorkoutOptions(
+  Future<Result<List<PlannedExerciseData>>> loadPlannedWorkoutOptions(
     LocalDate date,
     int exerciseType,
   ) async {
     loadPlannedWorkoutOptionsExerciseTypes.add(exerciseType);
-    return plannedWorkouts;
+    return Ok(plannedWorkouts);
   }
 
   @override
-  Future<List<PlannedExerciseData>> loadExistingPlannedWorkouts({
+  Future<Result<List<PlannedExerciseData>>> loadExistingPlannedWorkouts({
     LocalDate? anchorDate,
   }) async {
     if (!canReadPlans) {
       throw const MissingHealthPermissionException('Missing planned read.');
     }
-    return plannedWorkouts;
+    return Ok(plannedWorkouts);
   }
 
   @override
-  Future<String> writePlannedWorkout(PlannedExerciseWriteRequest request) async {
+  Future<Result<String>> writePlannedWorkout(
+      PlannedExerciseWriteRequest request) async {
     if (!canWritePlan) {
       throw const MissingHealthPermissionException('Missing planned write.');
     }
     writePlannedWorkoutCalls.add(request);
-    return 'saved-plan-id';
+    return const Ok('saved-plan-id');
   }
 
   @override

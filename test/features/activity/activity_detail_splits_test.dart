@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
+import 'package:openvitals/domain/model/exercise_session_metrics.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/activity/presentation/activity_detail_screen.dart';
@@ -72,13 +74,33 @@ class _FakeActivityRepository implements ActivityRepository {
   final bool speedThrows;
 
   @override
-  Future<ExerciseData?> loadWorkout(String id) async => workout;
+  Future<Result<ExerciseData?>> loadWorkout(String id) async => Ok(workout);
 
   @override
-  Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end) async {
-    if (speedThrows) throw StateError('SPEED permission denied');
-    return speedSamples;
+  Future<Result<List<SpeedSample>>> loadSpeedSamples(
+      DateTime start, DateTime end) async {
+    // A conforming repository never throws — a failed read is a failure Result.
+    if (speedThrows) {
+      return Err(UnexpectedFailure(
+        'SPEED permission denied',
+        cause: StateError('SPEED permission denied'),
+      ));
+    }
+    return Ok(speedSamples);
   }
+
+  // The sibling reads these tests never stub fail as a Result (they used to
+  // fail as a noSuchMethod throw the use-case caught); the detail load must
+  // degrade them to empty either way.
+  @override
+  Future<Result<ExerciseSessionMetrics>> loadWorkoutMetrics(
+          DateTime start, DateTime end) async =>
+      const Err(UnexpectedFailure('not stubbed'));
+
+  @override
+  Future<Result<List<ActivityCadenceSample>>> loadActivityCadenceSamples(
+          DateTime start, DateTime end) async =>
+      const Err(UnexpectedFailure('not stubbed'));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

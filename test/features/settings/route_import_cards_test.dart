@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
@@ -80,15 +81,15 @@ class _FakeActivityRepository implements ActivityRepository {
   Set<String> activityWritePermissionsForRequest(ActivityWriteRequest r) =>
       _allWrite;
   @override
-  Future<bool> hasActivityWritePermission() async => true;
+  Future<Result<bool>> hasActivityWritePermission() async => const Ok(true);
   @override
-  Future<bool> hasActivityWritePermissionForRequest(
+  Future<Result<bool>> hasActivityWritePermissionForRequest(
           ActivityWriteRequest r) async =>
-      true;
+      const Ok(true);
   @override
-  Future<String> writeActivityEntry(ActivityWriteRequest request) async {
+  Future<Result<String>> writeActivityEntry(ActivityWriteRequest request) async {
     writes.add(request);
-    return 'id-${writes.length}';
+    return Ok('id-${writes.length}');
   }
 
   @override

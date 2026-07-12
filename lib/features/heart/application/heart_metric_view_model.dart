@@ -162,7 +162,8 @@ class HeartMetricViewModel extends Notifier<HeartMetricState> {
   ) async {
     if (entryId.isEmpty) return;
     try {
-      await ref.read(deleteVitalsMeasurementEntryUseCaseProvider)(type, entryId);
+      (await ref.read(deleteVitalsMeasurementEntryUseCaseProvider)(type, entryId))
+          .orThrow();
       if (!ref.mounted) return;
       final result = state.result;
       if (result == null) return;

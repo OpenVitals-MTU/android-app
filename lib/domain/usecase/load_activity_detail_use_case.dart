@@ -35,7 +35,7 @@ class ActivityDetailLoadResult {
 /// Reassembling it needs two repositories and three fallible reads, in a
 /// particular order:
 ///
-/// 1. The session itself. Absent → null, and the screen says "not found".
+/// 1. The session itself. Absent → `Ok(null)`, and the screen says "not found".
 /// 2. Health Connect's own sibling-record totals for the session's window. It is
 ///    the authority, so these are applied FIRST.
 /// 3. The samples (heart rate, speed, cadence), which fill whatever is still
@@ -43,8 +43,8 @@ class ActivityDetailLoadResult {
 ///    that recorded speed but wrote no DistanceRecord at all.
 ///
 /// Speed, cadence and the session metrics each degrade to empty on failure: a
-/// missing permission costs one card, never the screen. The workout itself does
-/// not degrade — without it there is nothing to show.
+/// missing permission costs one card, never the screen. The workout itself and
+/// the heart-rate read do not degrade — without them there is nothing to show.
 ///
 /// This orchestration used to live in `ActivityDetailViewModel`, which made a
 /// view-model responsible for knowing that Health Connect outranks the samples.
@@ -54,61 +54,54 @@ class LoadActivityDetailUseCase {
   final ActivityRepository _activityRepository;
   final HeartRepository _heartRepository;
 
-  /// Null when no workout has this id.
-  Future<ActivityDetailLoadResult?> call(String activityId) async {
-    final workout = await _activityRepository.loadWorkout(activityId);
-    if (workout == null) return null;
+  /// `Ok(null)` when no workout has this id.
+  Future<Result<ActivityDetailLoadResult?>> call(String activityId) async {
+    final loadedWorkout = await _activityRepository.loadWorkout(activityId);
+    return loadedWorkout.flatMap((workout) async {
+      if (workout == null) return const Ok(null);
 
-    final heartRateSamples =
-        (await _heartRepository.loadHeartRateSamplesInstant(
-      workout.startTime,
-      workout.endTime,
-    ))
-            .orThrow();
-    final speedSamples = await _degrade(
-      () => _activityRepository.loadSpeedSamples(
+      final loadedHeartRate = await _heartRepository.loadHeartRateSamplesInstant(
         workout.startTime,
         workout.endTime,
-      ),
-      const <SpeedSample>[],
-    );
-    final cadenceSamples = await _degrade(
-      () => _activityRepository.loadActivityCadenceSamples(
-        workout.startTime,
-        workout.endTime,
-      ),
-      const <ActivityCadenceSample>[],
-    );
-    final sessionMetrics = await _degrade(
-      () => _activityRepository.loadWorkoutMetrics(
-        workout.startTime,
-        workout.endTime,
-      ),
-      ExerciseSessionMetrics.none,
-    );
+      );
+      return loadedHeartRate.flatMap((heartRateSamples) async {
+        // A failed speed / cadence / session-metrics read is worth one card,
+        // not the screen: each degrades to empty.
+        final speedSamples = (await _activityRepository.loadSpeedSamples(
+              workout.startTime,
+              workout.endTime,
+            ))
+                .getOrNull() ??
+            const <SpeedSample>[];
+        final cadenceSamples =
+            (await _activityRepository.loadActivityCadenceSamples(
+              workout.startTime,
+              workout.endTime,
+            ))
+                    .getOrNull() ??
+                const <ActivityCadenceSample>[];
+        final sessionMetrics = (await _activityRepository.loadWorkoutMetrics(
+              workout.startTime,
+              workout.endTime,
+            ))
+                .getOrNull() ??
+            ExerciseSessionMetrics.none;
 
-    return ActivityDetailLoadResult(
-      // Health Connect first — it is the authority — then the samples, which fill
-      // whatever it left null.
-      workout: workout
-          .withSessionMetricsBackfilled(sessionMetrics)
-          .withSampleBackfilledMetrics(
-            heartRateSamples: heartRateSamples,
-            speedSamples: speedSamples,
-            cadenceSamples: cadenceSamples,
-          ),
-      heartRateSamples: heartRateSamples,
-      speedSamples: speedSamples,
-      cadenceSamples: cadenceSamples,
-    );
-  }
-
-  /// A read whose failure is worth one card, not the screen.
-  Future<T> _degrade<T>(Future<T> Function() read, T fallback) async {
-    try {
-      return await read();
-    } catch (_) {
-      return fallback;
-    }
+        return Ok(ActivityDetailLoadResult(
+          // Health Connect first — it is the authority — then the samples, which
+          // fill whatever it left null.
+          workout: workout
+              .withSessionMetricsBackfilled(sessionMetrics)
+              .withSampleBackfilledMetrics(
+                heartRateSamples: heartRateSamples,
+                speedSamples: speedSamples,
+                cadenceSamples: cadenceSamples,
+              ),
+          heartRateSamples: heartRateSamples,
+          speedSamples: speedSamples,
+          cadenceSamples: cadenceSamples,
+        ));
+      });
+    });
   }
 }

@@ -1,4 +1,5 @@
 import '../../../core/period/period_load_query.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/exercise_session_metrics.dart';
@@ -10,8 +11,12 @@ import '../../../domain/query/activity_period_data.dart';
 ///
 /// Kotlin overloads (`activityWritePermissions` / `hasActivityWritePermission`)
 /// are disambiguated with distinct names since Dart has no method overloading.
+///
+/// Fallible operations return [Result]; the synchronous permission-set
+/// probes ([activityWritePermissions] and friends) read cached state and
+/// cannot fail, so they stay bare.
 abstract interface class ActivityRepository {
-  Future<ActivityPeriodData> loadActivityPeriod(
+  Future<Result<ActivityPeriodData>> loadActivityPeriod(
     PeriodLoadQuery query, {
     required bool includeSteps,
     required bool includeNutrition,
@@ -19,57 +24,65 @@ abstract interface class ActivityRepository {
     RefreshMode refreshMode = RefreshMode.normal,
   });
 
-  Future<ActivitiesPeriodData> loadActivitiesPeriod(
+  Future<Result<ActivitiesPeriodData>> loadActivitiesPeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   });
 
-  Future<List<DailySteps>> loadDailySteps(LocalDate start, LocalDate end);
+  Future<Result<List<DailySteps>>> loadDailySteps(LocalDate start, LocalDate end);
 
-  Future<List<ActivityProgressPoint>> loadActivityProgress({LocalDate? date});
+  Future<Result<List<ActivityProgressPoint>>> loadActivityProgress({
+    LocalDate? date,
+  });
 
-  Future<List<ExerciseData>> loadWorkouts(LocalDate start, LocalDate end);
+  Future<Result<List<ExerciseData>>> loadWorkouts(LocalDate start, LocalDate end);
 
   /// [loadWorkouts] plus the per-session route metrics (total distance / average
   /// speed) that only a Health Connect aggregate over each session's window can
   /// produce. Costs one aggregate per session, so it is reserved for the window
   /// that actually renders those metrics.
-  Future<List<ExerciseData>> loadWorkoutsWithMetrics(
+  Future<Result<List<ExerciseData>>> loadWorkoutsWithMetrics(
     LocalDate start,
     LocalDate end,
   );
 
-  Future<ExerciseData?> loadWorkout(String id);
+  Future<Result<ExerciseData?>> loadWorkout(String id);
 
   /// The steps / distance / calories / elevation totals a session record does not
   /// carry, aggregated over its own window. Only the metrics the user has granted
   /// a read permission for come back; the rest stay null.
-  Future<ExerciseSessionMetrics> loadWorkoutMetrics(DateTime start, DateTime end);
-
-  Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end);
-
-  Future<List<ActivityCadenceSample>> loadActivityCadenceSamples(
+  Future<Result<ExerciseSessionMetrics>> loadWorkoutMetrics(
     DateTime start,
     DateTime end,
   );
 
-  Future<List<PlannedExerciseData>> loadPlannedWorkouts(
+  Future<Result<List<SpeedSample>>> loadSpeedSamples(DateTime start, DateTime end);
+
+  Future<Result<List<ActivityCadenceSample>>> loadActivityCadenceSamples(
+    DateTime start,
+    DateTime end,
+  );
+
+  Future<Result<List<PlannedExerciseData>>> loadPlannedWorkouts(
     LocalDate start,
     LocalDate end,
   );
 
-  Future<List<PlannedExerciseData>> loadPlannedWorkoutOptions(
+  Future<Result<List<PlannedExerciseData>>> loadPlannedWorkoutOptions(
     LocalDate date,
     int exerciseType,
   );
 
-  Future<List<PlannedExerciseData>> loadExistingPlannedWorkouts({
+  Future<Result<List<PlannedExerciseData>>> loadExistingPlannedWorkouts({
     LocalDate? anchorDate,
   });
 
-  Future<String> writePlannedWorkout(PlannedExerciseWriteRequest request);
+  Future<Result<String>> writePlannedWorkout(PlannedExerciseWriteRequest request);
 
-  Future<List<DailyNutrition>> loadDailyNutrition(LocalDate start, LocalDate end);
+  Future<Result<List<DailyNutrition>>> loadDailyNutrition(
+    LocalDate start,
+    LocalDate end,
+  );
 
   Set<String> activityWritePermissions();
 
@@ -86,9 +99,9 @@ abstract interface class ActivityRepository {
 
   Set<String> plannedWorkoutWritePermissions();
 
-  Future<bool> hasActivityWritePermission();
+  Future<Result<bool>> hasActivityWritePermission();
 
-  Future<bool> hasActivityWritePermissionFor({
+  Future<Result<bool>> hasActivityWritePermissionFor({
     required bool includeRoute,
     required bool includeDistance,
     required bool includeElevation,
@@ -97,19 +110,24 @@ abstract interface class ActivityRepository {
     bool includeSteps = false,
   });
 
-  Future<bool> hasActivityWritePermissionForRequest(
+  Future<Result<bool>> hasActivityWritePermissionForRequest(
     ActivityWriteRequest request,
   );
 
-  Future<String> writeActivityEntry(ActivityWriteRequest request);
+  Future<Result<String>> writeActivityEntry(ActivityWriteRequest request);
 
-  Future<void> updateActivityEntry(String id, ActivityWriteRequest request);
+  Future<Result<void>> updateActivityEntry(String id, ActivityWriteRequest request);
 
-  Future<void> deleteActivityEntry(String id);
+  Future<Result<void>> deleteActivityEntry(String id);
 }
 
 /// Port of the Kotlin `ActivityMarkerRepository` (a SharedPreferences-backed
 /// per-activity marker store; not Health Connect).
+///
+/// Deliberately not [Result]-typed: every operation is a synchronous access to
+/// SharedPreferences' in-memory cache (the persist behind [setMarkersForActivity]
+/// is fire-and-forget, as in Kotlin), so there is no failure to type — the same
+/// rule that keeps the other contracts' cached-state probes bare.
 abstract interface class ActivityMarkerRepository {
   List<ActivityRecordingMarker> markersForActivity(String activityId);
 

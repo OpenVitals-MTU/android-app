@@ -49,40 +49,47 @@ class _FakeActivityRepository implements ActivityRepository {
   final List<({LocalDate start, LocalDate end})> plainWindows = [];
 
   @override
-  Future<List<ExerciseData>> loadWorkouts(LocalDate start, LocalDate end) async {
+  Future<Result<List<ExerciseData>>> loadWorkouts(
+    LocalDate start,
+    LocalDate end,
+  ) async {
     plainWindows.add((start: start, end: end));
-    return workouts;
+    return Ok(workouts);
   }
 
   @override
-  Future<List<ExerciseData>> loadWorkoutsWithMetrics(
+  Future<Result<List<ExerciseData>>> loadWorkoutsWithMetrics(
     LocalDate start,
     LocalDate end,
   ) async {
     withMetricsWindows.add((start: start, end: end));
-    return workouts;
+    return Ok(workouts);
   }
 
   @override
-  Future<List<PlannedExerciseData>> loadPlannedWorkouts(
+  Future<Result<List<PlannedExerciseData>>> loadPlannedWorkouts(
     LocalDate start,
     LocalDate end,
   ) async =>
-      planned;
+      Ok(planned);
 
   @override
-  Future<List<DailySteps>> loadDailySteps(LocalDate start, LocalDate end) async =>
-      dailySteps;
+  Future<Result<List<DailySteps>>> loadDailySteps(
+          LocalDate start, LocalDate end) async =>
+      Ok(dailySteps);
 
   @override
-  Future<List<DailyNutrition>> loadDailyNutrition(
+  Future<Result<List<DailyNutrition>>> loadDailyNutrition(
     LocalDate start,
     LocalDate end,
   ) async =>
-      nutrition;
+      Ok(nutrition);
 
   @override
-  Future<void> deleteActivityEntry(String id) async => deleted.add(id);
+  Future<Result<void>> deleteActivityEntry(String id) async {
+    deleted.add(id);
+    return const Ok(null);
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

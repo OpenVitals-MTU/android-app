@@ -205,7 +205,7 @@ class ActivityEntryController {
         detailError: null,
       ));
       try {
-        final canWrite = await repository.hasActivityWritePermission();
+        final canWrite = (await repository.hasActivityWritePermission()).orThrow();
         _set(_state.value.copyWith(
           isCheckingPermission: false,
           canWrite: canWrite,
@@ -289,8 +289,9 @@ class ActivityEntryController {
         validationErrors: const {},
       ));
       try {
-        final plans =
-            await repository.loadExistingPlannedWorkouts(anchorDate: _todayLocalDate());
+        final plans = (await repository.loadExistingPlannedWorkouts(
+                anchorDate: _todayLocalDate()))
+            .orThrow();
         _set(_state.value.copyWith(
           plannedWorkouts: plans,
           isLoadingPlannedWorkouts: false,
@@ -326,8 +327,9 @@ class ActivityEntryController {
         validationErrors: const {},
       ));
       try {
-        final plans =
-            await repository.loadExistingPlannedWorkouts(anchorDate: _todayLocalDate());
+        final plans = (await repository.loadExistingPlannedWorkouts(
+                anchorDate: _todayLocalDate()))
+            .orThrow();
         _set(_state.value.copyWith(
           plannedWorkouts: plans,
           isLoadingPlannedWorkouts: false,
@@ -607,10 +609,11 @@ class ActivityEntryController {
     _launch(() async {
       _set(_state.value.copyWith(isLoadingPlannedWorkouts: true));
       try {
-        final plans = await repository.loadPlannedWorkoutOptions(
+        final plans = (await repository.loadPlannedWorkoutOptions(
           date,
           snapshot.selectedActivityType.exerciseType,
-        );
+        ))
+            .orThrow();
         final currentSelectedId = _state.value.selectedPlannedWorkoutId;
         final selectedId = currentSelectedId != null &&
                 (plans.isEmpty || plans.any((p) => p.id == currentSelectedId))
@@ -712,7 +715,8 @@ class ActivityEntryController {
         detailError: null,
       ));
       try {
-        final savedPlanId = await repository.writePlannedWorkout(request);
+        final savedPlanId =
+            (await repository.writePlannedWorkout(request)).orThrow();
         final savedState = _state.value;
         _set(savedState.copyWith(
           selectedPlannedWorkoutId: savedPlanId,
@@ -964,7 +968,7 @@ class ActivityEntryController {
     _editEntryLoaded = true;
     _launch(() async {
       try {
-        final workout = await repository.loadWorkout(recordId);
+        final workout = (await repository.loadWorkout(recordId)).orThrow();
         if (workout == null || !workout.isOpenVitalsEntry) {
           _set(_state.value.copyWith(
             entryError: ActivityEntryError.writeFailed,
@@ -1054,7 +1058,8 @@ class ActivityEntryController {
         writePermissions: requestPermissions,
       ));
       final hasPermission =
-          await repository.hasActivityWritePermissionForRequest(request);
+          (await repository.hasActivityWritePermissionForRequest(request))
+              .orThrow();
       if (!hasPermission) {
         _set(_state.value.copyWith(
           isSavingEntry: false,
@@ -1068,9 +1073,11 @@ class ActivityEntryController {
       try {
         final String savedActivityId;
         if (editRecordId == null) {
-          savedActivityId = await repository.writeActivityEntry(request);
+          savedActivityId =
+              (await repository.writeActivityEntry(request)).orThrow();
         } else {
-          await repository.updateActivityEntry(editRecordId, request);
+          (await repository.updateActivityEntry(editRecordId, request))
+              .orThrow();
           savedActivityId = editRecordId;
         }
         markerRepository?.setMarkersForActivity(savedActivityId, markersToSave);

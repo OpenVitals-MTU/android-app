@@ -62,12 +62,12 @@ class _FakeVitalsRepository implements VitalsRepository {
   Set<String> get phase3Permissions => const <String>{};
 
   @override
-  Future<VitalsPeriodData> loadVitalsPeriod(
+  Future<Result<VitalsPeriodData>> loadVitalsPeriod(
     PeriodLoadQuery query,
     VitalsPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      data;
+      Ok(data);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

@@ -7,6 +7,7 @@ import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/daily_goals.dart';
@@ -120,7 +121,7 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
     try {
       // Which repositories the overview needs, and how the per-day cardio-load
       // is composed out of them, is domain knowledge and lives in the use case.
-      final result = await loadActivities(query);
+      final result = (await loadActivities(query)).orThrow();
       if (!ref.mounted || generation != _generation) return;
 
       _latestResult = result;
@@ -183,7 +184,7 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
       );
     }
     try {
-      await ref.read(deleteActivityEntryUseCaseProvider)(entryId);
+      (await ref.read(deleteActivityEntryUseCaseProvider)(entryId)).orThrow();
       await load(PeriodSelection(state.selectedRange, state.selectedDate));
     } catch (error) {
       _latestResult = previousResult;

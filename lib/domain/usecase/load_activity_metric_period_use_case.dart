@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/activity_repository.dart';
 import '../model/refresh_mode.dart';
 import '../query/activity_period_data.dart';
@@ -15,7 +16,7 @@ class LoadActivityMetricPeriodUseCase {
 
   final ActivityRepository _activityRepository;
 
-  Future<ActivityPeriodData> call(
+  Future<Result<ActivityPeriodData>> call(
     PeriodLoadQuery query, {
     required bool includeSteps,
     required bool includeNutrition,

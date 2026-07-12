@@ -268,15 +268,15 @@ class LoadHeartPeriodUseCase {
   }) async {
     switch (request) {
       case HeartPeriodLoadCombined():
-        // Both halves are the screen's content, so either failing fails the
-        // combined load — the same as before the Result migration. The vitals
-        // read still throws; it becomes a Result with the vitals slice.
+        // Both halves are the screen's content, so the composition is STRICT:
+        // either half's failure fails the combined load, exactly as the
+        // pre-Result `Future.wait` sank it on either throw.
         final heart = _heartRepository
             .loadHeartPeriod(query, HeartPeriodMetric.all, refreshMode: refreshMode)
             .then((loaded) => loaded.map(_heartToResult));
         final vitals = _vitalsRepository
             .loadVitalsPeriod(query, VitalsPeriodMetric.all, refreshMode: refreshMode)
-            .then((data) => Result.ok(_vitalsToResult(data)));
+            .then((loaded) => loaded.map(_vitalsToResult));
         final results = await Future.wait([heart, vitals]);
         return results[0].flatMap(
           (heartResult) async => results[1].map(heartResult.merge),
@@ -286,11 +286,9 @@ class LoadHeartPeriodUseCase {
             refreshMode: refreshMode);
         return loaded.map(_heartToResult);
       case HeartPeriodLoadVitalsOnly(:final metric):
-        // The vitals repository is not Result-typed yet; a failed read keeps
-        // throwing here until the vitals slice migrates.
-        return Ok(_vitalsToResult(
-          await _vitalsRepository.loadVitalsPeriod(query, metric, refreshMode: refreshMode),
-        ));
+        final loaded = await _vitalsRepository.loadVitalsPeriod(query, metric,
+            refreshMode: refreshMode);
+        return loaded.map(_vitalsToResult);
     }
   }
 

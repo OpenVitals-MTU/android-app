@@ -28,10 +28,10 @@ import 'run_catching.dart';
 /// the timeline and the expensive 28-day baselines keyed by a
 /// permission/calibration signature (mirroring the Kotlin repository).
 ///
-/// The heart and sleep reads already return a [Result]; their failures are
-/// rethrown via `orThrow` inside [runCatching], so the boundary stays a single
-/// wrap and any collaborator failing still fails the whole timeline, exactly
-/// as before the Result migration.
+/// The heart, sleep, activity and vitals reads already return a [Result];
+/// their failures are rethrown via `orThrow` inside [runCatching], so the
+/// boundary stays a single wrap and any collaborator failing still fails the
+/// whole timeline, exactly as before the Result migration.
 class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
   BodyEnergyRepositoryImpl({
     required HeartRepository heartRepository,
@@ -129,12 +129,12 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
     final hrvSamples = (await _heart.loadHrvSamples(dayStart, dayEnd)).orThrow();
     final sleepSessions =
         (await _sleep.loadSleepSessions(date.minusDays(1), date)).orThrow();
-    final workouts = await _activity.loadWorkouts(date, date);
+    final workouts = (await _activity.loadWorkouts(date, date)).orThrow();
     // Kotlin loads respiratory only when a respiratory baseline exists (the
     // stress factor is inert without one).
     final List<RespiratoryRateEntry> respiratory =
         baselines.respiratoryRateBaseline != null
-            ? await _vitals.loadRespiratoryRate(date, date)
+            ? (await _vitals.loadRespiratoryRate(date, date)).orThrow()
             : const <RespiratoryRateEntry>[];
     final restingHr = (await _heart.loadRestingHeartRate(date)).orThrow();
     // Kotlin seeds the day from the previous day's cached score.

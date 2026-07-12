@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/di/providers.dart';
@@ -15,8 +16,9 @@ class _FakeActivityRepository implements ActivityRepository {
   final List<DailySteps> days;
 
   @override
-  Future<List<DailySteps>> loadDailySteps(LocalDate start, LocalDate end) async =>
-      days;
+  Future<Result<List<DailySteps>>> loadDailySteps(
+          LocalDate start, LocalDate end) async =>
+      Ok(days);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

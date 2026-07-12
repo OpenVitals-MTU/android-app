@@ -123,9 +123,10 @@ void main() {
       final first = dayOf(sessions.first['start']! as int);
       final last = dayOf(sessions.last['start']! as int);
 
-      final workouts = await h.container
-          .read(activityRepositoryProvider)
-          .loadWorkouts(first, last.plusDays(1));
+      final workouts = (await h.container
+              .read(activityRepositoryProvider)
+              .loadWorkouts(first, last.plusDays(1)))
+          .orThrow();
 
       expect(workouts.length, sessions.length,
           reason: 'Sessions were lost between the fixture and the repository. '
@@ -141,9 +142,10 @@ void main() {
       final route = h.fixture.routeWorkout;
       final day = dayOf(route['start']! as int);
 
-      final workouts = await h.container
-          .read(activityRepositoryProvider)
-          .loadWorkoutsWithMetrics(day, day.plusDays(1));
+      final workouts = (await h.container
+              .read(activityRepositoryProvider)
+              .loadWorkoutsWithMetrics(day, day.plusDays(1)))
+          .orThrow();
       final session = workouts.firstWhere((w) => w.id == route['id']);
 
       expect(session.route.points.length, (route['route']! as List).length,
@@ -156,10 +158,14 @@ void main() {
       final h = await bootContainer();
       final route = h.fixture.routeWorkout;
 
-      final speed = await h.container.read(activityRepositoryProvider).loadSpeedSamples(
-            DateTime.fromMillisecondsSinceEpoch(route['start']! as int, isUtc: true),
-            DateTime.fromMillisecondsSinceEpoch(route['end']! as int, isUtc: true),
-          );
+      final speed =
+          (await h.container.read(activityRepositoryProvider).loadSpeedSamples(
+                DateTime.fromMillisecondsSinceEpoch(route['start']! as int,
+                    isUtc: true),
+                DateTime.fromMillisecondsSinceEpoch(route['end']! as int,
+                    isUtc: true),
+              ))
+              .orThrow();
 
       expect(speed, isNotEmpty);
       expect(speed.map((s) => s.time).toList(), isSorted);

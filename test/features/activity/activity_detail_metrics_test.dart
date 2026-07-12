@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
@@ -77,28 +78,41 @@ class _FakeActivityRepository implements ActivityRepository {
   final bool metricsThrow;
 
   @override
-  Future<ExerciseData?> loadWorkout(String id) async => workout;
+  Future<Result<ExerciseData?>> loadWorkout(String id) async => Ok(workout);
 
   @override
-  Future<ExerciseSessionMetrics> loadWorkoutMetrics(
+  Future<Result<ExerciseSessionMetrics>> loadWorkoutMetrics(
     DateTime start,
     DateTime end,
   ) async {
-    if (metricsThrow) throw StateError('STEPS permission denied');
-    return sessionMetrics;
+    // A conforming repository never throws — a failed read is a failure Result.
+    if (metricsThrow) {
+      return Err(UnexpectedFailure(
+        'STEPS permission denied',
+        cause: StateError('STEPS permission denied'),
+      ));
+    }
+    return Ok(sessionMetrics);
   }
 
   @override
-  Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end) async =>
-      speedSamples;
+  Future<Result<List<SpeedSample>>> loadSpeedSamples(
+          DateTime start, DateTime end) async =>
+      Ok(speedSamples);
 
   @override
-  Future<List<ActivityCadenceSample>> loadActivityCadenceSamples(
+  Future<Result<List<ActivityCadenceSample>>> loadActivityCadenceSamples(
     DateTime start,
     DateTime end,
   ) async {
-    if (cadenceThrows) throw StateError('CADENCE permission denied');
-    return cadenceSamples;
+    // A conforming repository never throws — a failed read is a failure Result.
+    if (cadenceThrows) {
+      return Err(UnexpectedFailure(
+        'CADENCE permission denied',
+        cause: StateError('CADENCE permission denied'),
+      ));
+    }
+    return Ok(cadenceSamples);
   }
 
   @override

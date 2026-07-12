@@ -44,7 +44,7 @@ class LoadCardioLoadDetailUseCase {
   final ActivityRepository _activityRepository;
   final HeartRepository _heartRepository;
 
-  Future<CardioLoadDetailLoadResult> call(LocalDate today) async {
+  Future<Result<CardioLoadDetailLoadResult>> call(LocalDate today) async {
     final start = today.minusDays(cardioLoadLookbackDays - 1);
 
     final results = await (
@@ -54,27 +54,38 @@ class LoadCardioLoadDetailUseCase {
       _heartRepository.loadDailyRestingHR(start, today),
     ).wait;
 
-    final dailySteps = results.$1;
-    final workouts = results.$2;
-    final samples = results.$3.orThrow();
-    final restingHr = results.$4.orThrow();
+    // All four reads are the estimate's evidence, so the composition is
+    // STRICT: the reads still run together, and any failure sinks the load —
+    // exactly as before the Result migration.
+    if (results
+        case (
+          Ok(value: final dailySteps),
+          Ok(value: final workouts),
+          Ok(value: final samples),
+          Ok(value: final restingHr),
+        )) {
+      final todaySteps =
+          dailySteps.where((s) => s.date == today).fold<DailySteps?>(
+                null,
+                (previous, element) => element,
+              );
 
-    final todaySteps = dailySteps.where((s) => s.date == today).fold<DailySteps?>(
-          null,
-          (previous, element) => element,
-        );
-
-    return CardioLoadDetailLoadResult(
-      estimate: _estimateFor(
-        today: today,
-        dailySteps: dailySteps,
-        workouts: workouts,
-        samples: samples,
-        restingHr: restingHr,
-      ),
-      steps: todaySteps?.steps ?? 0,
-      activeCaloriesKcal: todaySteps?.activeCaloriesKcal,
-    );
+      return Ok(CardioLoadDetailLoadResult(
+        estimate: _estimateFor(
+          today: today,
+          dailySteps: dailySteps,
+          workouts: workouts,
+          samples: samples,
+          restingHr: restingHr,
+        ),
+        steps: todaySteps?.steps ?? 0,
+        activeCaloriesKcal: todaySteps?.activeCaloriesKcal,
+      ));
+    }
+    final firstFailure = [results.$1, results.$2, results.$3, results.$4]
+        .whereType<Err<Object?>>()
+        .first;
+    return Err(firstFailure.failure);
   }
 
   CardioLoadEstimate _estimateFor({

@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../core/time/local_date.dart';
 import '../../data/repository/contract/activity_repository.dart';
 import '../model/activity_models.dart';
@@ -33,13 +34,12 @@ class LoadAchievementHistoryUseCase {
 
   final ActivityRepository _activityRepository;
 
-  Future<AchievementHistory> call() async {
+  Future<Result<AchievementHistory>> call() async {
     final start = legacyActivityStartDate;
     final end = LocalDate.now();
-    return AchievementHistory(
-      days: await _activityRepository.loadDailySteps(start, end),
-      start: start,
-      end: end,
+    final loaded = await _activityRepository.loadDailySteps(start, end);
+    return loaded.map(
+      (days) => AchievementHistory(days: days, start: start, end: end),
     );
   }
 }

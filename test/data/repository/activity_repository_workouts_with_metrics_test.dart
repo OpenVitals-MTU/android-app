@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/impl/activity_repository_impl.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
@@ -65,7 +66,8 @@ void main() {
     });
 
     final workouts =
-        await ActivityRepositoryImpl(ds).loadWorkoutsWithMetrics(start, end);
+        (await ActivityRepositoryImpl(ds).loadWorkoutsWithMetrics(start, end))
+            .orThrow();
 
     expect(ds.capturedIncludeDistance, isTrue);
     expect(ds.capturedIncludeSpeed, isTrue);
@@ -77,7 +79,8 @@ void main() {
     final ds = _source({HcPermissions.readExercise});
 
     final workouts =
-        await ActivityRepositoryImpl(ds).loadWorkoutsWithMetrics(start, end);
+        (await ActivityRepositoryImpl(ds).loadWorkoutsWithMetrics(start, end))
+            .orThrow();
 
     // The read still happens (the sessions themselves are readable) — only the
     // aggregate metrics are dropped. It must not throw.
@@ -101,7 +104,8 @@ void main() {
     final ds = _source({HcPermissions.readDistance, HcPermissions.readSpeed});
 
     final workouts =
-        await ActivityRepositoryImpl(ds).loadWorkoutsWithMetrics(start, end);
+        (await ActivityRepositoryImpl(ds).loadWorkoutsWithMetrics(start, end))
+            .orThrow();
 
     expect(workouts, isEmpty);
     expect(ds.withMetricsCalls, 0);

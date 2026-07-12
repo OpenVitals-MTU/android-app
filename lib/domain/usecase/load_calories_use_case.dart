@@ -32,7 +32,7 @@ class LoadCaloriesUseCase {
   final ActivityRepository _activityRepository;
   final BodyRepository _bodyRepository;
 
-  Future<CaloriesLoadResult> call(
+  Future<Result<CaloriesLoadResult>> call(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
@@ -45,7 +45,14 @@ class LoadCaloriesUseCase {
       ),
       _bodyRepository.loadLatestBMR(),
     ).wait;
-    return CaloriesLoadResult(
-        data: results.$1, latestBmrKcal: results.$2.orThrow());
+    // Both halves are the story the screen tells (active burn + resting burn),
+    // so the composition is STRICT: either read failing fails the overview,
+    // exactly as before the Result migration.
+    return results.$1.flatMap(
+      (data) async => results.$2.map(
+        (latestBmrKcal) =>
+            CaloriesLoadResult(data: data, latestBmrKcal: latestBmrKcal),
+      ),
+    );
   }
 }

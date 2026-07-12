@@ -50,14 +50,16 @@ void main() {
     final end =
         DateTime.fromMillisecondsSinceEpoch(route['end']! as int, isUtc: true);
 
-    final workouts = await h.container
-        .read(activityRepositoryProvider)
-        .loadWorkouts(LocalDate.fromDateTime(start), LocalDate.fromDateTime(end));
+    final workouts = (await h.container
+            .read(activityRepositoryProvider)
+            .loadWorkouts(LocalDate.fromDateTime(start), LocalDate.fromDateTime(end)))
+        .orThrow();
     final workout = workouts.firstWhere((w) => w.id == route['id']);
 
-    final speed = await h.container
-        .read(activityRepositoryProvider)
-        .loadSpeedSamples(start, end);
+    final speed = (await h.container
+            .read(activityRepositoryProvider)
+            .loadSpeedSamples(start, end))
+        .orThrow();
     expect(speed, isNotEmpty,
         reason: 'No speed samples for the GPS session, so any split it produces is '
             'necessarily an estimate.');
@@ -88,9 +90,10 @@ void main() {
     final end =
         DateTime.fromMillisecondsSinceEpoch(workout['end']! as int, isUtc: true);
 
-    final workouts = await h.container
-        .read(activityRepositoryProvider)
-        .loadWorkouts(LocalDate.fromDateTime(start), LocalDate.fromDateTime(end));
+    final workouts = (await h.container
+            .read(activityRepositoryProvider)
+            .loadWorkouts(LocalDate.fromDateTime(start), LocalDate.fromDateTime(end)))
+        .orThrow();
     final session = workouts.firstWhere((w) => w.id == workout['id']);
 
     final splits = computeActivitySplits(
@@ -119,10 +122,12 @@ void main() {
     final hr = h.fixture.swallowingHeartRate;
     final start = DateTime.fromMillisecondsSinceEpoch(hr['start']! as int, isUtc: true);
 
-    final workouts = await h.container.read(activityRepositoryProvider).loadWorkouts(
-          LocalDate.fromDateTime(start.subtract(const Duration(days: 7))),
-          LocalDate.fromDateTime(start.add(const Duration(days: 7))),
-        );
+    final workouts =
+        (await h.container.read(activityRepositoryProvider).loadWorkouts(
+              LocalDate.fromDateTime(start.subtract(const Duration(days: 7))),
+              LocalDate.fromDateTime(start.add(const Duration(days: 7))),
+            ))
+            .orThrow();
 
     expect(workouts, isNotEmpty);
     expect(workouts.where((w) => w.recordingMethod != null), isNotEmpty,

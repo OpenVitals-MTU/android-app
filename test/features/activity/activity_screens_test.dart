@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/period/period_range_preference_key.dart';
 import 'package:openvitals/core/period/time_range.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/di/providers.dart';
@@ -42,25 +43,25 @@ class _FakeActivityRepository implements ActivityRepository {
   final List<ActivityProgressPoint> activityProgress;
 
   @override
-  Future<ActivityPeriodData> loadActivityPeriod(
+  Future<Result<ActivityPeriodData>> loadActivityPeriod(
     PeriodLoadQuery query, {
     required bool includeSteps,
     required bool includeNutrition,
     bool includeWheelchairPushes = false,
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      ActivityPeriodData(
+      Ok(ActivityPeriodData(
         dailySteps: dailySteps,
         nutrition: nutrition,
         activityProgress: activityProgress,
-      );
+      ));
 
   @override
-  Future<List<PlannedExerciseData>> loadPlannedWorkouts(
+  Future<Result<List<PlannedExerciseData>>> loadPlannedWorkouts(
     LocalDate start,
     LocalDate end,
   ) async =>
-      const <PlannedExerciseData>[];
+      const Ok(<PlannedExerciseData>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

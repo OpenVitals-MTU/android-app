@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/vitals_repository.dart';
 import '../model/vitals_models.dart';
 
@@ -11,17 +12,18 @@ class SaveVitalsMeasurementUseCase {
 
   final VitalsRepository _vitalsRepository;
 
-  Future<void> call(
+  Future<Result<void>> call(
     VitalsMeasurementWriteRequest request, {
     String? editRecordId,
   }) async {
     if (editRecordId == null) {
-      await _vitalsRepository.writeVitalsMeasurementEntry(request);
-    } else {
-      await _vitalsRepository.updateVitalsMeasurementEntry(
-        editRecordId,
-        request,
-      );
+      final written =
+          await _vitalsRepository.writeVitalsMeasurementEntry(request);
+      return written.map((_) {});
     }
+    return _vitalsRepository.updateVitalsMeasurementEntry(
+      editRecordId,
+      request,
+    );
   }
 }

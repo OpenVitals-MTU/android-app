@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/vitals_repository.dart';
 import '../model/vitals_models.dart';
 
@@ -15,6 +16,6 @@ class DeleteVitalsMeasurementEntryUseCase {
 
   final VitalsRepository _vitalsRepository;
 
-  Future<void> call(VitalsMeasurementType type, String entryId) =>
+  Future<Result<void>> call(VitalsMeasurementType type, String entryId) =>
       _vitalsRepository.deleteVitalsMeasurementEntry(type, entryId);
 }

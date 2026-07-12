@@ -1,4 +1,5 @@
 import '../../../core/period/period_load_query.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/vitals_models.dart';
@@ -9,8 +10,13 @@ import '../contract/vitals_repository.dart';
 import '../contract/repository_exceptions.dart';
 import 'repository_time.dart';
 import 'health_connect_gating.dart';
+import 'run_catching.dart';
 
 /// Port of the Kotlin `VitalsRepositoryImpl`.
+///
+/// Public methods convert exceptions to failures via [runCatching] at the
+/// boundary; the private permission-gated series reads keep the original
+/// throwing flow so [loadVitalsPeriod] composes them as plain awaits.
 class VitalsRepositoryImpl implements VitalsRepository {
   VitalsRepositoryImpl(this._dataSource);
 
@@ -30,17 +36,24 @@ class VitalsRepositoryImpl implements VitalsRepository {
       };
 
   @override
-  Future<Set<String>> missingPermissions() async {
-    final granted = await _dataSource.grantedIfAvailable();
-    return phase3Permissions.difference(granted);
-  }
+  Future<Result<Set<String>>> missingPermissions() =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        return phase3Permissions.difference(granted);
+      });
 
   @override
-  Future<VitalsPeriodData> loadVitalsPeriod(
+  Future<Result<VitalsPeriodData>> loadVitalsPeriod(
     PeriodLoadQuery query,
     VitalsPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
+  }) =>
+      runCatching(() => _loadVitalsPeriodRaw(query, metric));
+
+  Future<VitalsPeriodData> _loadVitalsPeriodRaw(
+    PeriodLoadQuery query,
+    VitalsPeriodMetric metric,
+  ) async {
     final granted = await _dataSource.grantedIfAvailable();
     final missing = phase3Permissions.difference(granted);
     final w = query.windows;
@@ -122,86 +135,97 @@ class VitalsRepositoryImpl implements VitalsRepository {
   }
 
   @override
-  Future<List<BloodPressureEntry>> loadBloodPressure(
+  Future<Result<List<BloodPressureEntry>>> loadBloodPressure(
     LocalDate start,
     LocalDate end,
-  ) async =>
-      _bloodPressure(start, end, await _dataSource.grantedIfAvailable());
+  ) =>
+      runCatching(() async =>
+          _bloodPressure(start, end, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<SpO2Entry>> loadSpO2(LocalDate start, LocalDate end) async =>
-      _spO2(start, end, await _dataSource.grantedIfAvailable());
+  Future<Result<List<SpO2Entry>>> loadSpO2(LocalDate start, LocalDate end) =>
+      runCatching(() async =>
+          _spO2(start, end, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<RespiratoryRateEntry>> loadRespiratoryRate(
+  Future<Result<List<RespiratoryRateEntry>>> loadRespiratoryRate(
     LocalDate start,
     LocalDate end,
-  ) async =>
-      _respiratoryRate(start, end, await _dataSource.grantedIfAvailable());
+  ) =>
+      runCatching(() async =>
+          _respiratoryRate(start, end, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<BodyTempEntry>> loadBodyTemperature(
+  Future<Result<List<BodyTempEntry>>> loadBodyTemperature(
     LocalDate start,
     LocalDate end,
-  ) async =>
-      _bodyTemperature(start, end, await _dataSource.grantedIfAvailable());
+  ) =>
+      runCatching(() async =>
+          _bodyTemperature(start, end, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<Vo2MaxEntry>> loadVo2Max(LocalDate start, LocalDate end) async =>
-      _vo2Max(start, end, await _dataSource.grantedIfAvailable());
+  Future<Result<List<Vo2MaxEntry>>> loadVo2Max(LocalDate start, LocalDate end) =>
+      runCatching(() async =>
+          _vo2Max(start, end, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<BloodGlucoseEntry>> loadBloodGlucose(
+  Future<Result<List<BloodGlucoseEntry>>> loadBloodGlucose(
     LocalDate start,
     LocalDate end,
-  ) async =>
-      _bloodGlucose(start, end, await _dataSource.grantedIfAvailable());
+  ) =>
+      runCatching(() async =>
+          _bloodGlucose(start, end, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<List<SkinTemperatureEntry>> loadSkinTemperature(
+  Future<Result<List<SkinTemperatureEntry>>> loadSkinTemperature(
     LocalDate start,
     LocalDate end,
-  ) async =>
-      _skinTemperature(start, end, await _dataSource.grantedIfAvailable());
+  ) =>
+      runCatching(() async =>
+          _skinTemperature(start, end, await _dataSource.grantedIfAvailable()));
 
   @override
-  Future<bool> hasVitalsWritePermission(VitalsMeasurementType type) async {
-    final granted = await _dataSource.grantedIfAvailable();
-    return granted.containsAll(vitalsWritePermissions(type));
-  }
+  Future<Result<bool>> hasVitalsWritePermission(VitalsMeasurementType type) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        return granted.containsAll(vitalsWritePermissions(type));
+      });
 
   @override
-  Future<String> writeVitalsMeasurementEntry(
+  Future<Result<String>> writeVitalsMeasurementEntry(
     VitalsMeasurementWriteRequest request,
-  ) async {
-    await _requireWrite(request.type);
-    return _dataSource.writeVitalsMeasurementEntry(request);
-  }
+  ) =>
+      runCatching(() async {
+        await _requireWrite(request.type);
+        return _dataSource.writeVitalsMeasurementEntry(request);
+      });
 
   @override
-  Future<VitalsMeasurementEntry?> loadVitalsMeasurementEntry(
+  Future<Result<VitalsMeasurementEntry?>> loadVitalsMeasurementEntry(
     VitalsMeasurementType type,
     String id,
   ) =>
-      _dataSource.readVitalsMeasurementEntry(type, id);
+      runCatching(() => _dataSource.readVitalsMeasurementEntry(type, id));
 
   @override
-  Future<void> updateVitalsMeasurementEntry(
+  Future<Result<void>> updateVitalsMeasurementEntry(
     String id,
     VitalsMeasurementWriteRequest request,
-  ) async {
-    await _requireWrite(request.type);
-    return _dataSource.updateVitalsMeasurementEntry(id, request);
-  }
+  ) =>
+      runCatching(() async {
+        await _requireWrite(request.type);
+        return _dataSource.updateVitalsMeasurementEntry(id, request);
+      });
 
   @override
-  Future<void> deleteVitalsMeasurementEntry(
+  Future<Result<void>> deleteVitalsMeasurementEntry(
     VitalsMeasurementType type,
     String id,
-  ) async {
-    await _requireWrite(type);
-    return _dataSource.deleteVitalsMeasurementEntry(type, id);
-  }
+  ) =>
+      runCatching(() async {
+        await _requireWrite(type);
+        return _dataSource.deleteVitalsMeasurementEntry(type, id);
+      });
 
   Future<void> _requireWrite(VitalsMeasurementType type) async {
     final granted = await _dataSource.grantedIfAvailable();

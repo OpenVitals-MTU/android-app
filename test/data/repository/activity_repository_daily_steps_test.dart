@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/impl/activity_repository_impl.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
@@ -94,7 +95,8 @@ void main() {
   test('returns empty without the steps permission', () async {
     final ds = _source(const <String>{});
     final result =
-        await ActivityRepositoryImpl(ds).loadDailySteps(legacyStart, end);
+        (await ActivityRepositoryImpl(ds).loadDailySteps(legacyStart, end))
+            .orThrow();
 
     expect(result, isEmpty);
     expect(ds.capturedStart, isNull, reason: 'never queries the data source');

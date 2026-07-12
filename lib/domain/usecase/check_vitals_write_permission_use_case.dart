@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/vitals_repository.dart';
 import '../model/vitals_models.dart';
 import '../model/write_permission_status.dart';
@@ -17,13 +18,13 @@ class CheckVitalsWritePermissionUseCase {
 
   Future<WritePermissionStatus> call(VitalsMeasurementType type) async {
     final permissions = _vitalsRepository.vitalsWritePermissions(type);
-    try {
-      return WritePermissionStatus(
-        permissions: permissions,
-        granted: await _vitalsRepository.hasVitalsWritePermission(type),
-      );
-    } catch (error) {
-      return WritePermissionStatus.failed(permissions, error);
-    }
+    return switch (await _vitalsRepository.hasVitalsWritePermission(type)) {
+      Ok(:final value) => WritePermissionStatus(
+          permissions: permissions,
+          granted: value,
+        ),
+      Err(:final failure) =>
+        WritePermissionStatus.failed(permissions, failure.cause ?? failure),
+    };
   }
 }

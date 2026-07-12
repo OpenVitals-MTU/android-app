@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/cardio_load.dart';
@@ -49,7 +50,7 @@ class CardioLoadViewModel extends Notifier<CardioLoadState> {
       // The 30-day baseline window, the four reads it spans and the scoring of
       // today's slice against them are domain knowledge, and live in the use
       // case. What stays here is the generation guard and the state mapping.
-      final result = await loadCardioLoadDetail(today);
+      final result = (await loadCardioLoadDetail(today)).orThrow();
       if (!ref.mounted || generation != _generation) return;
 
       state = state.copyWith(
