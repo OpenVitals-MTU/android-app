@@ -774,6 +774,68 @@ void main() {
       expect(session.stages.last.stageType, 5);
     });
 
+    test('a Sleep session carries the record provenance the detail screen shows',
+        () async {
+      // Start zone, End zone, Recording, Last modified and Client version all
+      // read "Not available" on the sleep detail screen, for every session ever
+      // recorded. The domain model had the fields and the screen rendered them —
+      // the Pigeon message simply never carried them, so they were always null.
+      final api = FakeHostApi()
+        ..sleepById['sleep-2'] = SleepDataMsg(
+          id: 'sleep-2',
+          startEpochMs: _ms(2026, 1, 2, 23),
+          endEpochMs: _ms(2026, 1, 3, 6),
+          source: 'nodomain.freeyourgadget.gadgetbridge',
+          title: null,
+          notes: null,
+          clientRecordId: 'gb-sleep-1',
+          device: null,
+          stages: const [],
+          // +02:00, i.e. the zone the WRITER recorded the night in.
+          startZoneOffsetSeconds: 2 * 3600,
+          endZoneOffsetSeconds: 2 * 3600,
+          lastModifiedEpochMs: _ms(2026, 1, 3, 7),
+          clientRecordVersion: 3,
+          recordingMethod: 2,
+        );
+
+      final session = await _source(api).readSleepSession('sleep-2');
+
+      expect(session!.startZoneOffset, const Duration(hours: 2));
+      expect(session.endZoneOffset, const Duration(hours: 2));
+      expect(session.lastModifiedTime, isNotNull);
+      expect(session.clientRecordVersion, 3);
+      expect(session.recordingMethod, 2);
+    });
+
+    test('a session with no zone offsets keeps them null, not zero', () async {
+      // Null means "the writer recorded no offset"; zero means UTC. Collapsing
+      // the two would print "UTC" for a record that never claimed one.
+      final api = FakeHostApi()
+        ..sleepById['sleep-3'] = SleepDataMsg(
+          id: 'sleep-3',
+          startEpochMs: _ms(2026, 1, 2, 23),
+          endEpochMs: _ms(2026, 1, 3, 6),
+          source: 'com.watch',
+          title: null,
+          notes: null,
+          clientRecordId: null,
+          device: null,
+          stages: const [],
+          startZoneOffsetSeconds: null,
+          endZoneOffsetSeconds: null,
+          lastModifiedEpochMs: null,
+          clientRecordVersion: null,
+          recordingMethod: null,
+        );
+
+      final session = await _source(api).readSleepSession('sleep-3');
+
+      expect(session!.startZoneOffset, isNull);
+      expect(session.endZoneOffset, isNull);
+      expect(session.lastModifiedTime, isNull);
+    });
+
     test('Weight entries map from typed msgs and preserve ownership', () async {
       // Unit conversion + ownership tagging now happen in the native
       // BodyHealthReader; the data source maps WeightEntryMsg -> WeightEntry.

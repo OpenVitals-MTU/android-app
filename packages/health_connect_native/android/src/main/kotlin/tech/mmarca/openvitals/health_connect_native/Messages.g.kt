@@ -3769,7 +3769,12 @@ data class SleepDataMsg (
   val notes: String? = null,
   val clientRecordId: String? = null,
   val device: SleepDeviceDataMsg? = null,
-  val stages: List<SleepStageMsg>
+  val stages: List<SleepStageMsg>,
+  val startZoneOffsetSeconds: Long? = null,
+  val endZoneOffsetSeconds: Long? = null,
+  val lastModifiedEpochMs: Long? = null,
+  val clientRecordVersion: Long? = null,
+  val recordingMethod: Long? = null
 )
  {
   companion object {
@@ -3783,7 +3788,12 @@ data class SleepDataMsg (
       val clientRecordId = pigeonVar_list[6] as String?
       val device = pigeonVar_list[7] as SleepDeviceDataMsg?
       val stages = pigeonVar_list[8] as List<SleepStageMsg>
-      return SleepDataMsg(id, startEpochMs, endEpochMs, source, title, notes, clientRecordId, device, stages)
+      val startZoneOffsetSeconds = pigeonVar_list[9] as Long?
+      val endZoneOffsetSeconds = pigeonVar_list[10] as Long?
+      val lastModifiedEpochMs = pigeonVar_list[11] as Long?
+      val clientRecordVersion = pigeonVar_list[12] as Long?
+      val recordingMethod = pigeonVar_list[13] as Long?
+      return SleepDataMsg(id, startEpochMs, endEpochMs, source, title, notes, clientRecordId, device, stages, startZoneOffsetSeconds, endZoneOffsetSeconds, lastModifiedEpochMs, clientRecordVersion, recordingMethod)
     }
   }
   fun toList(): List<Any?> {
@@ -3797,6 +3807,11 @@ data class SleepDataMsg (
       clientRecordId,
       device,
       stages,
+      startZoneOffsetSeconds,
+      endZoneOffsetSeconds,
+      lastModifiedEpochMs,
+      clientRecordVersion,
+      recordingMethod,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -3807,7 +3822,7 @@ data class SleepDataMsg (
       return true
     }
     val other = other as SleepDataMsg
-    return MessagesPigeonUtils.deepEquals(this.id, other.id) && MessagesPigeonUtils.deepEquals(this.startEpochMs, other.startEpochMs) && MessagesPigeonUtils.deepEquals(this.endEpochMs, other.endEpochMs) && MessagesPigeonUtils.deepEquals(this.source, other.source) && MessagesPigeonUtils.deepEquals(this.title, other.title) && MessagesPigeonUtils.deepEquals(this.notes, other.notes) && MessagesPigeonUtils.deepEquals(this.clientRecordId, other.clientRecordId) && MessagesPigeonUtils.deepEquals(this.device, other.device) && MessagesPigeonUtils.deepEquals(this.stages, other.stages)
+    return MessagesPigeonUtils.deepEquals(this.id, other.id) && MessagesPigeonUtils.deepEquals(this.startEpochMs, other.startEpochMs) && MessagesPigeonUtils.deepEquals(this.endEpochMs, other.endEpochMs) && MessagesPigeonUtils.deepEquals(this.source, other.source) && MessagesPigeonUtils.deepEquals(this.title, other.title) && MessagesPigeonUtils.deepEquals(this.notes, other.notes) && MessagesPigeonUtils.deepEquals(this.clientRecordId, other.clientRecordId) && MessagesPigeonUtils.deepEquals(this.device, other.device) && MessagesPigeonUtils.deepEquals(this.stages, other.stages) && MessagesPigeonUtils.deepEquals(this.startZoneOffsetSeconds, other.startZoneOffsetSeconds) && MessagesPigeonUtils.deepEquals(this.endZoneOffsetSeconds, other.endZoneOffsetSeconds) && MessagesPigeonUtils.deepEquals(this.lastModifiedEpochMs, other.lastModifiedEpochMs) && MessagesPigeonUtils.deepEquals(this.clientRecordVersion, other.clientRecordVersion) && MessagesPigeonUtils.deepEquals(this.recordingMethod, other.recordingMethod)
   }
 
   override fun hashCode(): Int {
@@ -3821,10 +3836,15 @@ data class SleepDataMsg (
     result = 31 * result + MessagesPigeonUtils.deepHash(this.clientRecordId)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.device)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.stages)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.startZoneOffsetSeconds)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.endZoneOffsetSeconds)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.lastModifiedEpochMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.clientRecordVersion)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.recordingMethod)
     return result
   }
   override fun toString(): String {
-    return "SleepDataMsg(id=$id, startEpochMs=$startEpochMs, endEpochMs=$endEpochMs, source=$source, title=$title, notes=$notes, clientRecordId=$clientRecordId, device=$device, stages=$stages)"
+    return "SleepDataMsg(id=$id, startEpochMs=$startEpochMs, endEpochMs=$endEpochMs, source=$source, title=$title, notes=$notes, clientRecordId=$clientRecordId, device=$device, stages=$stages, startZoneOffsetSeconds=$startZoneOffsetSeconds, endZoneOffsetSeconds=$endZoneOffsetSeconds, lastModifiedEpochMs=$lastModifiedEpochMs, clientRecordVersion=$clientRecordVersion, recordingMethod=$recordingMethod)"
   }
 }
 private open class MessagesPigeonCodec : StandardMessageCodec() {

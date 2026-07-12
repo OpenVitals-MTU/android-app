@@ -45,5 +45,14 @@ internal class SleepHealthReader(
         stageType = it.stage.toLong(),
       )
     },
+    // The record's own provenance. The zone offsets are the ones the WRITER
+    // recorded the night in -- a night slept in another timezone is the reason
+    // Health Connect keeps them at all, so they are passed through rather than
+    // derived from this phone's zone.
+    startZoneOffsetSeconds = startZoneOffset?.totalSeconds?.toLong(),
+    endZoneOffsetSeconds = endZoneOffset?.totalSeconds?.toLong(),
+    lastModifiedEpochMs = metadata.lastModifiedTime.toEpochMilli(),
+    clientRecordVersion = metadata.clientRecordVersion,
+    recordingMethod = metadata.recordingMethod.toLong(),
   )
 }

@@ -54,6 +54,10 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   /// Maps a Pigeon epoch-millis field back to a local [DateTime].
   DateTime _fromMs(int epochMs) => DateTime.fromMillisecondsSinceEpoch(epochMs);
 
+/// A writer-recorded UTC offset, or null when the record carried none.
+Duration? _zoneOffset(int? seconds) =>
+    seconds == null ? null : Duration(seconds: seconds);
+
   /// Degrade one metric to [fallback] rather than failing the whole screen.
   ///
   /// This mirrors the Kotlin readers, which swallow a Health Connect failure per
@@ -1662,6 +1666,14 @@ class HealthConnectNativeDataSource extends HealthDataSource {
               model: m.device!.model,
             ),
       stages: stages,
+      // The record's provenance, shown on the sleep detail screen. The zone
+      // offsets are the writer's, not this phone's — see the Pigeon contract.
+      startZoneOffset: _zoneOffset(m.startZoneOffsetSeconds),
+      endZoneOffset: _zoneOffset(m.endZoneOffsetSeconds),
+      lastModifiedTime:
+          m.lastModifiedEpochMs == null ? null : _fromMs(m.lastModifiedEpochMs!),
+      clientRecordVersion: m.clientRecordVersion,
+      recordingMethod: m.recordingMethod,
     );
   }
 

@@ -955,6 +955,21 @@ class SleepDataMsg {
   final String? clientRecordId;
   final SleepDeviceDataMsg? device;
   final List<SleepStageMsg> stages;
+
+  // The record's own provenance, all of it shown on the sleep detail screen.
+  // Health Connect has always had these; the port simply never carried them
+  // across the bridge, so the screen said "Not available" for five rows that
+  // Kotlin filled in.
+  //
+  // Zone offsets are the SECONDS a writer recorded the session in, not this
+  // phone's current zone: a night slept in another timezone is the whole reason
+  // Health Connect stores them, so they must not be recomputed on this side.
+  final int? startZoneOffsetSeconds;
+  final int? endZoneOffsetSeconds;
+  final int? lastModifiedEpochMs;
+  final int? clientRecordVersion;
+  final int? recordingMethod;
+
   SleepDataMsg(
     this.id,
     this.startEpochMs,
@@ -965,6 +980,11 @@ class SleepDataMsg {
     this.clientRecordId,
     this.device,
     this.stages,
+    this.startZoneOffsetSeconds,
+    this.endZoneOffsetSeconds,
+    this.lastModifiedEpochMs,
+    this.clientRecordVersion,
+    this.recordingMethod,
   );
 }
 

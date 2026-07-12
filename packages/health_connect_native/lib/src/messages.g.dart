@@ -4343,6 +4343,11 @@ class SleepDataMsg {
     this.clientRecordId,
     this.device,
     required this.stages,
+    this.startZoneOffsetSeconds,
+    this.endZoneOffsetSeconds,
+    this.lastModifiedEpochMs,
+    this.clientRecordVersion,
+    this.recordingMethod,
   });
 
   String id;
@@ -4363,6 +4368,16 @@ class SleepDataMsg {
 
   List<SleepStageMsg> stages;
 
+  int? startZoneOffsetSeconds;
+
+  int? endZoneOffsetSeconds;
+
+  int? lastModifiedEpochMs;
+
+  int? clientRecordVersion;
+
+  int? recordingMethod;
+
   List<Object?> _toList() {
     return <Object?>[
       id,
@@ -4374,6 +4389,11 @@ class SleepDataMsg {
       clientRecordId,
       device,
       stages,
+      startZoneOffsetSeconds,
+      endZoneOffsetSeconds,
+      lastModifiedEpochMs,
+      clientRecordVersion,
+      recordingMethod,
     ];
   }
 
@@ -4392,6 +4412,11 @@ class SleepDataMsg {
       clientRecordId: result[6] as String?,
       device: result[7] as SleepDeviceDataMsg?,
       stages: (result[8]! as List<Object?>).cast<SleepStageMsg>(),
+      startZoneOffsetSeconds: result[9] as int?,
+      endZoneOffsetSeconds: result[10] as int?,
+      lastModifiedEpochMs: result[11] as int?,
+      clientRecordVersion: result[12] as int?,
+      recordingMethod: result[13] as int?,
     );
   }
 
@@ -4404,7 +4429,7 @@ class SleepDataMsg {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(id, other.id) && _deepEquals(startEpochMs, other.startEpochMs) && _deepEquals(endEpochMs, other.endEpochMs) && _deepEquals(source, other.source) && _deepEquals(title, other.title) && _deepEquals(notes, other.notes) && _deepEquals(clientRecordId, other.clientRecordId) && _deepEquals(device, other.device) && _deepEquals(stages, other.stages);
+    return _deepEquals(id, other.id) && _deepEquals(startEpochMs, other.startEpochMs) && _deepEquals(endEpochMs, other.endEpochMs) && _deepEquals(source, other.source) && _deepEquals(title, other.title) && _deepEquals(notes, other.notes) && _deepEquals(clientRecordId, other.clientRecordId) && _deepEquals(device, other.device) && _deepEquals(stages, other.stages) && _deepEquals(startZoneOffsetSeconds, other.startZoneOffsetSeconds) && _deepEquals(endZoneOffsetSeconds, other.endZoneOffsetSeconds) && _deepEquals(lastModifiedEpochMs, other.lastModifiedEpochMs) && _deepEquals(clientRecordVersion, other.clientRecordVersion) && _deepEquals(recordingMethod, other.recordingMethod);
   }
 
   @override
@@ -4413,7 +4438,7 @@ class SleepDataMsg {
 
   @override
   String toString() {
-    return 'SleepDataMsg(id: $id, startEpochMs: $startEpochMs, endEpochMs: $endEpochMs, source: $source, title: $title, notes: $notes, clientRecordId: $clientRecordId, device: $device, stages: $stages)';
+    return 'SleepDataMsg(id: $id, startEpochMs: $startEpochMs, endEpochMs: $endEpochMs, source: $source, title: $title, notes: $notes, clientRecordId: $clientRecordId, device: $device, stages: $stages, startZoneOffsetSeconds: $startZoneOffsetSeconds, endZoneOffsetSeconds: $endZoneOffsetSeconds, lastModifiedEpochMs: $lastModifiedEpochMs, clientRecordVersion: $clientRecordVersion, recordingMethod: $recordingMethod)';
   }
 }
 
