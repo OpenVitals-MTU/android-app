@@ -113,6 +113,14 @@ class SleepSessionTimelineCard extends StatelessWidget {
               child: SizedBox(
                 height: 16,
                 child: Row(
+                  // stretch, NOT the default centre: a Row hands its children LOOSE
+                  // cross-axis constraints, and a childless ColoredBox collapses to
+                  // zero height under those. Expanded makes the WIDTH tight and says
+                  // nothing about the height — so every stage band was painted 0px
+                  // tall and the night's hypnogram was an empty 16px strip.
+                  //
+                  // Same trap as the "share of time in bed" bars below, one card up.
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (final stage in stages)
                       if (stage.durationMs > 0)
