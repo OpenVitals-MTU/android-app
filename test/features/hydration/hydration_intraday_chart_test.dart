@@ -4,6 +4,7 @@ import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
+import 'package:openvitals/features/hydration/application/hydration_display.dart';
 import 'package:openvitals/features/hydration/presentation/hydration_intraday_chart.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/charts/metric_line_plot.dart';
@@ -44,7 +45,7 @@ void main() {
               width: 400,
               child: HydrationIntradayChartCard(
                 selectedDate: day,
-                entries: entries,
+                samples: cumulativeHydration(entries),
                 dailyGoalLiters: 2.0,
                 formatter: UnitFormatter(
                   unitSystemProvider: () => UnitSystem.metric,
@@ -150,7 +151,7 @@ void main() {
           width: 400,
           child: HydrationIntradayChartCard(
             selectedDate: today,
-            entries: [
+            samples: cumulativeHydration([
               HydrationEntry(
                 id: 'e',
                 startTime: morning,
@@ -158,7 +159,7 @@ void main() {
                 liters: 0.25,
                 source: 'test',
               ),
-            ],
+            ]),
             dailyGoalLiters: 2.0,
             formatter: UnitFormatter(unitSystemProvider: () => UnitSystem.metric),
           ),

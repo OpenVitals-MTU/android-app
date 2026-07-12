@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/period/period_calculations.dart';
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
@@ -11,14 +12,14 @@ import '../../../di/providers.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../presentation/nutrition_metric.dart';
+import 'nutrition_display.dart';
 
 part 'nutrition_view_model.freezed.dart';
 
 /// The Riverpod port of the Kotlin `NutritionUiState`, trimmed to the read-only
 /// period detail: the scaffold-driven selection, the loaded daily macros +
-/// entries, the resolved daily goal for the keyed metric, and loading/error
-/// flags. The per-nutrient derivations (series, goal progress, statistics) are
-/// computed on demand by the screen (the Kotlin `NutritionPresentationMapper`).
+/// entries, the resolved daily goal for the keyed metric, the precomputed
+/// [NutritionDisplay], and loading/error flags.
 @freezed
 abstract class NutritionState with _$NutritionState {
   const factory NutritionState({
@@ -31,18 +32,10 @@ abstract class NutritionState with _$NutritionState {
     @Default(<DailyMacros>[]) List<DailyMacros> previousDailyMacros,
     @Default(<DailyMacros>[]) List<DailyMacros> baselineDailyMacros,
     @Default(<NutritionEntry>[]) List<NutritionEntry> entries,
+    NutritionDisplay? display,
   }) = _NutritionState;
 
   const NutritionState._();
-
-  bool get hasData =>
-      entries.isNotEmpty ||
-      dailyMacros.any((day) =>
-          day.energyKcal > 0.0 ||
-          day.proteinGrams > 0.0 ||
-          day.carbsGrams > 0.0 ||
-          day.fatGrams > 0.0 ||
-          day.nutrientValues.values.any((value) => value > 0.0));
 }
 
 /// The Riverpod port of the Kotlin `NutritionViewModel`, shared across the four
@@ -52,6 +45,11 @@ abstract class NutritionState with _$NutritionState {
 /// A manual [Notifier] (no codegen) matching the activity template: the owning
 /// [MetricDetailScaffold] drives every load through [load] and pull-to-refresh
 /// through [refresh]. A monotonic [_generation] guard drops stale results.
+///
+/// The display model is built here, at load time — the screens render
+/// [NutritionState.display] and derive nothing (the Kotlin
+/// `NutritionPresentationMapper` discipline). A nudged daily goal rebuilds it
+/// too: the goal card counts the same loaded days against a new target.
 class NutritionViewModel extends Notifier<NutritionState> {
   NutritionViewModel(this.metric);
 
@@ -75,6 +73,32 @@ class NutritionViewModel extends Notifier<NutritionState> {
     if (next == state.dailyGoal) return;
     ref.read(preferencesRepositoryProvider).setDailyGoalFor(key, next);
     state = state.copyWith(dailyGoal: next);
+    // The goal progress and the goal statistics are part of the display, so a
+    // moved goal has to rebuild it — no reload, the same loaded days.
+    _rebuildDisplay();
+  }
+
+  /// The screen-ready derivation of the loaded period under the current goal.
+  /// The one place a [NutritionDisplay] is made.
+  NutritionDisplay _display() => buildNutritionDisplay(
+        nutrient: metric.nutrient,
+        goalDirection: metric.dailyGoalKey.direction,
+        dailyGoal: state.dailyGoal,
+        period: displayPeriodFor(
+          state.selectedRange,
+          state.selectedDate,
+          weekPeriodMode:
+              ref.read(preferencesRepositoryProvider).weekPeriodMode,
+        ),
+        dailyMacros: state.dailyMacros,
+        previousDailyMacros: state.previousDailyMacros,
+        baselineDailyMacros: state.baselineDailyMacros,
+        entries: state.entries,
+      );
+
+  void _rebuildDisplay() {
+    if (state.display == null) return;
+    state = state.copyWith(display: _display());
   }
 
   void increaseDailyGoal() => _nudgeDailyGoal(metric.dailyGoalKey.step);
@@ -104,27 +128,26 @@ class NutritionViewModel extends Notifier<NutritionState> {
       weekPeriodMode: prefs.weekPeriodMode,
     );
 
-    try {
-      // Three windows, not one: the statistics section needs the previous and
-      // baseline macros to compare against — see [LoadNutritionPeriodUseCase].
-      final result =
-          (await loadNutritionPeriod(query, refreshMode: refreshMode))
-              .orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: null,
-        dailyMacros: result.dailyMacros,
-        previousDailyMacros: result.previousDailyMacros,
-        baselineDailyMacros: result.baselineDailyMacros,
-        entries: result.entries,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unable to load data.'),
-      );
+    // Three windows, not one: the statistics section needs the previous and
+    // baseline macros to compare against — see [LoadNutritionPeriodUseCase].
+    final result = await loadNutritionPeriod(query, refreshMode: refreshMode);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          error: null,
+          dailyMacros: value.dailyMacros,
+          previousDailyMacros: value.previousDailyMacros,
+          baselineDailyMacros: value.baselineDailyMacros,
+          entries: value.entries,
+        );
+        state = state.copyWith(display: _display());
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
     }
   }
 

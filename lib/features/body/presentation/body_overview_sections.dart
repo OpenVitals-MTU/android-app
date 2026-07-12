@@ -5,8 +5,6 @@ import '../../../core/presentation/display_value.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/metric_interpretations.dart';
-import '../../../domain/model/body_models.dart';
-import '../../../domain/query/body_period_data.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/day_axis.dart';
@@ -17,345 +15,177 @@ import '../../../ui/components/metric_interpretation_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/theme/app_colors.dart';
-import 'body_summary.dart';
+import '../application/body_display.dart';
 import '../../../ui/components/section_padding.dart';
 
-/// Ports of the Kotlin `BodyMetricSharedSections.kt` data helpers and the row /
-/// card widgets the aggregate `/body` overview renders
+/// Ports of the Kotlin `BodyMetricSharedSections.kt` presentation helpers and the
+/// row / card widgets the aggregate `/body` overview renders
 /// (`BodyMetricOrderedSections.kt`, `BodyRows.kt`).
+///
+/// The series, the latest values and the reading list arrive precomputed on the
+/// [BodyDisplay]; what is left here is the title, the accent, the icon and the
+/// unit formatting — which is what presentation is.
 
 // ── Per-metric chart/statistics data (Kotlin `BodyMetricData`) ───────────────
 
+/// One metric's precomputed series, dressed for the screen: its localized title,
+/// its accent, its icon and the formatter that turns its storage-unit values into
+/// text.
 @immutable
 class BodyMetricData {
   const BodyMetricData({
+    required this.series,
     required this.title,
-    required this.latest,
-    required this.values,
-    this.dayValues = const <(DateTime, double)>[],
     required this.color,
     required this.icon,
     required this.format,
   });
 
+  final BodyMetricSeries series;
   final String title;
-
-  /// The latest formatted value, or null when the metric has no reading.
-  final DisplayValue? latest;
-
-  /// Daily latest values feeding the period chart.
-  final List<PeriodChartValue> values;
-
-  /// Raw (time, value) samples feeding the DAY-range intraday line.
-  final List<(DateTime, double)> dayValues;
   final Color color;
   final IconData icon;
   final DisplayValue Function(double) format;
 
+  /// Daily latest values feeding the period chart.
+  List<PeriodChartValue> get values => series.values;
+
+  /// Raw samples feeding the DAY-range intraday line, oldest first.
+  List<DaySample> get daySamples => series.daySamples;
+
   /// Kotlin `hasTrackedValues`: the metric earns a trend chart only when the
   /// period actually has values.
-  bool get hasTrackedValues => values.isNotEmpty;
+  bool get hasTrackedValues => series.hasTrackedValues;
+
+  /// The latest formatted value, or null when the metric has no reading.
+  DisplayValue? get latest => series.latest?.let(format);
 }
 
-/// Kotlin `bodyMetricData`: the nine overview metrics, in the Kotlin order
-/// (weight, height, BMI, FFMI, body fat, lean mass, bone mass, body water
-/// mass, BMR).
+/// Dresses every precomputed series in its title, accent, icon and formatter, in
+/// the Kotlin order (weight, height, BMI, FFMI, body fat, lean mass, bone mass,
+/// body water mass, BMR — the order [BodyDisplay.metrics] is already in).
 List<BodyMetricData> bodyMetricData(
-  BodyPeriodData data,
-  BodySummary summary,
+  BodyDisplay display,
+  UnitFormatter formatter,
+  AppLocalizations l10n,
+) =>
+    [
+      for (final series in display.metrics)
+        bodyMetricDataFor(series, formatter, l10n),
+    ];
+
+/// The same, for the metrics that earned a trend chart.
+List<BodyMetricData> trackedBodyMetricData(
+  BodyDisplay display,
+  UnitFormatter formatter,
+  AppLocalizations l10n,
+) =>
+    [
+      for (final series in display.trackedMetrics)
+        bodyMetricDataFor(series, formatter, l10n),
+    ];
+
+BodyMetricData bodyMetricDataFor(
+  BodyMetricSeries series,
   UnitFormatter formatter,
   AppLocalizations l10n,
 ) {
   DisplayValue plain(double value) =>
       DisplayValue(formatter.decimal(value, 1), '');
-  return [
-    BodyMetricData(
-      title: l10n.metricWeight,
-      latest: summary.latestWeightKg?.let(formatter.weight),
-      values: dailyLatestValues(
-        data.weightEntries,
-        (e) => e.time,
-        (e) => e.weightKg,
-      ),
-      dayValues: [for (final e in data.weightEntries) (e.time, e.weightKg)],
-      color: AppColors.weight,
-      icon: Icons.monitor_weight_outlined,
-      format: formatter.weight,
-    ),
-    BodyMetricData(
-      title: l10n.metricHeight,
-      latest: summary.latestHeightCm?.let(formatter.height),
-      values: dailyLatestValues(
-        data.heightEntries,
-        (e) => e.time,
-        (e) => e.heightCm,
-      ),
-      dayValues: [for (final e in data.heightEntries) (e.time, e.heightCm)],
-      color: AppColors.weight,
-      icon: Icons.straighten,
-      format: formatter.height,
-    ),
-    BodyMetricData(
-      title: l10n.metricBmi,
-      latest: summary.bmi?.let(plain),
-      values: _bmiHistoryValues(data.weightEntries, summary.heightCm),
-      dayValues: _bmiDayValues(data.weightEntries, summary.heightCm),
-      color: AppColors.weight,
-      icon: Icons.monitor_weight_outlined,
-      format: plain,
-    ),
-    BodyMetricData(
-      title: l10n.metricFfmi,
-      latest: summary.adjustedFfmi?.let(plain),
-      values: const <PeriodChartValue>[],
-      color: AppColors.bodyFat,
-      icon: Icons.fitness_center,
-      format: plain,
-    ),
-    BodyMetricData(
-      title: l10n.metricBodyFat,
-      latest: summary.latestBodyFatPercent?.let(formatter.percent),
-      values: dailyLatestValues(
-        data.bodyFatEntries,
-        (e) => e.time,
-        (e) => e.percent,
-      ),
-      dayValues: [for (final e in data.bodyFatEntries) (e.time, e.percent)],
-      color: AppColors.bodyFat,
-      icon: Icons.monitor_weight_outlined,
-      format: formatter.percent,
-    ),
-    BodyMetricData(
-      title: l10n.metricLeanMass,
-      latest: summary.latestLeanMassKg?.let(formatter.bodyMass),
-      values: dailyLatestValues(
-        data.leanMassEntries,
-        (e) => e.time,
-        (e) => e.massKg,
-      ),
-      dayValues: [for (final e in data.leanMassEntries) (e.time, e.massKg)],
-      color: AppColors.weight,
-      icon: Icons.monitor_weight_outlined,
-      format: formatter.bodyMass,
-    ),
-    BodyMetricData(
-      title: l10n.metricBoneMass,
-      latest:
-          summary.latestBoneMassKg?.let((v) => formatter.bodyMass(v, decimals: 2)),
-      values: dailyLatestValues(
-        data.boneMassEntries,
-        (e) => e.time,
-        (e) => e.massKg,
-      ),
-      dayValues: [for (final e in data.boneMassEntries) (e.time, e.massKg)],
-      color: AppColors.weight,
-      icon: Icons.monitor_weight_outlined,
-      format: (v) => formatter.bodyMass(v, decimals: 2),
-    ),
-    BodyMetricData(
-      title: l10n.metricBodyWaterMass,
-      latest: summary.latestBodyWaterMassKg
-          ?.let((v) => formatter.bodyMass(v, decimals: 2)),
-      values: dailyLatestValues(
-        data.bodyWaterMassEntries,
-        (e) => e.time,
-        (e) => e.massKg,
-      ),
-      dayValues: [
-        for (final e in data.bodyWaterMassEntries) (e.time, e.massKg),
-      ],
-      color: AppColors.weight,
-      icon: Icons.local_drink_outlined,
-      format: (v) => formatter.bodyMass(v, decimals: 2),
-    ),
-    BodyMetricData(
-      title: l10n.metricBmr,
-      latest: summary.latestBmrKcal?.let(formatter.energy),
-      values: dailyLatestValues(
-        data.bmrEntries,
-        (e) => e.time,
-        (e) => e.kcalPerDay,
-      ),
-      dayValues: [for (final e in data.bmrEntries) (e.time, e.kcalPerDay)],
-      color: AppColors.calories,
-      icon: Icons.local_fire_department_outlined,
-      format: formatter.energy,
-    ),
-  ];
-}
+  DisplayValue mass2(double value) => formatter.bodyMass(value, decimals: 2);
 
-/// Kotlin `dailyLatestValues`: one chart value per tracked day — the value of
-/// that day's latest reading.
-List<PeriodChartValue> dailyLatestValues<T>(
-  List<T> entries,
-  DateTime Function(T) time,
-  double Function(T) value,
-) {
-  final latestByDate = <LocalDate, T>{};
-  for (final entry in entries) {
-    final date = instantToLocalDate(time(entry));
-    final current = latestByDate[date];
-    if (current == null || time(entry).isAfter(time(current))) {
-      latestByDate[date] = entry;
-    }
+  switch (series.kind) {
+    case BodyMetricKind.weight:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricWeight,
+        color: AppColors.weight,
+        icon: Icons.monitor_weight_outlined,
+        format: formatter.weight,
+      );
+    case BodyMetricKind.height:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricHeight,
+        color: AppColors.weight,
+        icon: Icons.straighten,
+        format: formatter.height,
+      );
+    case BodyMetricKind.bmi:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricBmi,
+        color: AppColors.weight,
+        icon: Icons.monitor_weight_outlined,
+        format: plain,
+      );
+    case BodyMetricKind.ffmi:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricFfmi,
+        color: AppColors.bodyFat,
+        icon: Icons.fitness_center,
+        format: plain,
+      );
+    case BodyMetricKind.bodyFat:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricBodyFat,
+        color: AppColors.bodyFat,
+        icon: Icons.monitor_weight_outlined,
+        format: formatter.percent,
+      );
+    case BodyMetricKind.leanMass:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricLeanMass,
+        color: AppColors.weight,
+        icon: Icons.monitor_weight_outlined,
+        format: formatter.bodyMass,
+      );
+    case BodyMetricKind.boneMass:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricBoneMass,
+        color: AppColors.weight,
+        icon: Icons.monitor_weight_outlined,
+        format: mass2,
+      );
+    case BodyMetricKind.bodyWaterMass:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricBodyWaterMass,
+        color: AppColors.weight,
+        icon: Icons.local_drink_outlined,
+        format: mass2,
+      );
+    case BodyMetricKind.bmr:
+      return BodyMetricData(
+        series: series,
+        title: l10n.metricBmr,
+        color: AppColors.calories,
+        icon: Icons.local_fire_department_outlined,
+        format: formatter.energy,
+      );
   }
-  final values = [
-    for (final MapEntry(key: date, value: entry) in latestByDate.entries)
-      PeriodChartValue(date, value(entry)),
-  ]..sort((a, b) => a.date.compareTo(b.date));
-  return values;
-}
-
-List<PeriodChartValue> _bmiHistoryValues(
-  List<WeightEntry> entries,
-  double? heightCm,
-) {
-  final heightMeters = _heightMeters(heightCm);
-  if (heightMeters == null) return const <PeriodChartValue>[];
-  return dailyLatestValues(
-    entries,
-    (e) => e.time,
-    (e) => e.weightKg / (heightMeters * heightMeters),
-  );
-}
-
-List<(DateTime, double)> _bmiDayValues(
-  List<WeightEntry> entries,
-  double? heightCm,
-) {
-  final heightMeters = _heightMeters(heightCm);
-  if (heightMeters == null) return const <(DateTime, double)>[];
-  return [
-    for (final e in entries)
-      (e.time, e.weightKg / (heightMeters * heightMeters)),
-  ];
-}
-
-double? _heightMeters(double? heightCm) =>
-    (heightCm != null && heightCm > 0.0) ? heightCm / 100.0 : null;
-
-// ── Combined reading list (Kotlin `bodyReadingItems`) ────────────────────────
-
-@immutable
-class BodyReadingItem {
-  const BodyReadingItem({
-    required this.value,
-    required this.source,
-    required this.time,
-    required this.accentColor,
-    this.editType,
-    this.editId,
-  });
-
-  /// "Label · value" as in Kotlin.
-  final String value;
-  final String source;
-  final DateTime time;
-  final Color accentColor;
-
-  /// Set when the entry is an editable OpenVitals manual entry (Kotlin
-  /// `isOpenVitalsEntry && id.isNotBlank()`); null rows are read-only.
-  final BodyMeasurementType? editType;
-  final String? editId;
-
-  bool get editable => editType != null && editId != null;
-
-  /// A stable identity for the swipe-to-delete [Key].
-  String get rowKey =>
-      '${editType?.storageName ?? value}-$editId-${time.microsecondsSinceEpoch}';
-}
-
-/// Kotlin `bodyReadingItems`: every reading across the eight metrics, labelled.
-/// Weight / height / body-fat OpenVitals entries carry edit + delete actions.
-List<BodyReadingItem> bodyReadingItems(
-  BodyPeriodData data,
-  UnitFormatter formatter,
-  AppLocalizations l10n,
-) {
-  BodyMeasurementType? editTypeFor(
-    BodyMeasurementType type,
-    bool isOpenVitalsEntry,
-    String id,
-  ) =>
-      (isOpenVitalsEntry && id.isNotEmpty) ? type : null;
-
-  return [
-    for (final e in data.weightEntries)
-      BodyReadingItem(
-        value: '${l10n.metricWeight} · ${formatter.weight(e.weightKg).text}',
-        source: e.source,
-        time: e.time,
-        accentColor: AppColors.weight,
-        editType:
-            editTypeFor(BodyMeasurementType.weight, e.isOpenVitalsEntry, e.id),
-        editId: (e.isOpenVitalsEntry && e.id.isNotEmpty) ? e.id : null,
-      ),
-    for (final e in data.heightEntries)
-      BodyReadingItem(
-        value: '${l10n.metricHeight} · ${formatter.height(e.heightCm).text}',
-        source: e.source,
-        time: e.time,
-        accentColor: AppColors.weight,
-        editType:
-            editTypeFor(BodyMeasurementType.height, e.isOpenVitalsEntry, e.id),
-        editId: (e.isOpenVitalsEntry && e.id.isNotEmpty) ? e.id : null,
-      ),
-    for (final e in data.bodyFatEntries)
-      BodyReadingItem(
-        value: '${l10n.metricBodyFat} · ${formatter.percent(e.percent).text}',
-        source: e.source,
-        time: e.time,
-        accentColor: AppColors.bodyFat,
-        editType:
-            editTypeFor(BodyMeasurementType.bodyFat, e.isOpenVitalsEntry, e.id),
-        editId: (e.isOpenVitalsEntry && e.id.isNotEmpty) ? e.id : null,
-      ),
-    for (final e in data.leanMassEntries)
-      BodyReadingItem(
-        value: '${l10n.metricLeanMass} · ${formatter.bodyMass(e.massKg).text}',
-        source: e.source,
-        time: e.time,
-        accentColor: AppColors.weight,
-      ),
-    for (final e in data.bmrEntries)
-      BodyReadingItem(
-        value: '${l10n.metricBmr} · ${formatter.energy(e.kcalPerDay).text}',
-        source: e.source,
-        time: e.time,
-        accentColor: AppColors.calories,
-      ),
-    for (final e in data.boneMassEntries)
-      BodyReadingItem(
-        value:
-            '${l10n.metricBoneMass} · ${formatter.bodyMass(e.massKg, decimals: 2).text}',
-        source: e.source,
-        time: e.time,
-        accentColor: AppColors.weight,
-      ),
-    for (final e in data.bodyWaterMassEntries)
-      BodyReadingItem(
-        value:
-            '${l10n.metricBodyWaterMass} · ${formatter.bodyMass(e.massKg, decimals: 2).text}',
-        source: e.source,
-        time: e.time,
-        accentColor: AppColors.weight,
-      ),
-  ];
 }
 
 // ── Rows (Kotlin `BodyReadingRow`) ───────────────────────────────────────────
 
-/// A reading row: date-time + source on the left, the accent-colored value and
-/// an optional edit affordance on the right. Deletable rows swipe to delete.
+/// A reading row: date-time + source on the left, the accent-colored "label ·
+/// value" and an optional edit affordance on the right. Deletable rows swipe to
+/// delete.
 class BodyReadingRow extends StatelessWidget {
   const BodyReadingRow({
     super.key,
-    required this.item,
+    required this.reading,
+    required this.formatter,
     this.onEdit,
     this.onDelete,
   });
 
-  final BodyReadingItem item;
+  final BodyReading reading;
+  final UnitFormatter formatter;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -364,6 +194,7 @@ class BodyReadingRow extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
+    final value = _readingText(reading, formatter, l10n);
 
     final content = OpenVitalsCard(
       child: Padding(
@@ -378,10 +209,10 @@ class BodyReadingRow extends StatelessWidget {
                   Text(
                     DateFormat.yMMMd(locale)
                         .add_jm()
-                        .format(item.time.toLocal()),
+                        .format(reading.time.toLocal()),
                     style: theme.textTheme.bodyMedium,
                   ),
-                  SourceChip(source: item.source),
+                  SourceChip(source: reading.source),
                 ],
               ),
             ),
@@ -389,9 +220,9 @@ class BodyReadingRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  item.value,
+                  value,
                   style: theme.textTheme.titleMedium
-                      ?.copyWith(color: item.accentColor),
+                      ?.copyWith(color: _readingColor(reading.kind)),
                 ),
                 if (onEdit != null) ...[
                   const SizedBox(width: 4),
@@ -413,12 +244,53 @@ class BodyReadingRow extends StatelessWidget {
 
     if (onDelete == null) return content;
     return SwipeToDeleteEntryRow(
-      key: ValueKey(item.rowKey),
+      key: ValueKey(_rowKey(reading, value)),
       onDelete: onDelete!,
       child: content,
     );
   }
 }
+
+/// "Label · value" as in Kotlin.
+String _readingText(
+  BodyReading reading,
+  UnitFormatter formatter,
+  AppLocalizations l10n,
+) {
+  switch (reading.kind) {
+    case BodyMetricKind.weight:
+      return '${l10n.metricWeight} · ${formatter.weight(reading.value).text}';
+    case BodyMetricKind.height:
+      return '${l10n.metricHeight} · ${formatter.height(reading.value).text}';
+    case BodyMetricKind.bodyFat:
+      return '${l10n.metricBodyFat} · ${formatter.percent(reading.value).text}';
+    case BodyMetricKind.leanMass:
+      return '${l10n.metricLeanMass} · ${formatter.bodyMass(reading.value).text}';
+    case BodyMetricKind.bmr:
+      return '${l10n.metricBmr} · ${formatter.energy(reading.value).text}';
+    case BodyMetricKind.boneMass:
+      return '${l10n.metricBoneMass} · '
+          '${formatter.bodyMass(reading.value, decimals: 2).text}';
+    case BodyMetricKind.bodyWaterMass:
+      return '${l10n.metricBodyWaterMass} · '
+          '${formatter.bodyMass(reading.value, decimals: 2).text}';
+    // Derived metrics have no readings of their own.
+    case BodyMetricKind.bmi:
+    case BodyMetricKind.ffmi:
+      return formatter.decimal(reading.value, 1);
+  }
+}
+
+Color _readingColor(BodyMetricKind kind) => switch (kind) {
+      BodyMetricKind.bodyFat || BodyMetricKind.ffmi => AppColors.bodyFat,
+      BodyMetricKind.bmr => AppColors.calories,
+      _ => AppColors.weight,
+    };
+
+/// A stable identity for the swipe-to-delete [Key].
+String _rowKey(BodyReading reading, String value) =>
+    '${reading.editType?.storageName ?? value}-${reading.editId}'
+    '-${reading.time.microsecondsSinceEpoch}';
 
 // ── BMI / FFMI context cards (Kotlin `BmiContextCardsContent`) ───────────────
 
@@ -512,9 +384,8 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    final samples = [
-      for (final (time, value) in metricData.dayValues) (time: time, value: value),
-    ]..sort((a, b) => a.time.compareTo(b.time));
+    // Precomputed by the view-model, oldest first.
+    final samples = metricData.daySamples;
     final latest = samples.isEmpty ? null : samples.last.value;
 
     return MetricDayChart(

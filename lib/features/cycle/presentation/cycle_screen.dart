@@ -6,8 +6,6 @@ import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/period_titles.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
-import '../../../core/time/local_date.dart';
-import '../../../domain/model/cycle_models.dart';
 import '../../../data/source/health/health_permissions.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
@@ -16,13 +14,16 @@ import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../application/cycle_display.dart';
 import '../application/cycle_view_model.dart';
 import '../../../ui/components/section_padding.dart';
 
 /// Menstrual-cycle read-detail screen, ported from the Kotlin `CycleScreen` +
 /// `CyclePeriodContent`. Shows the period's summary (period days, ovulation
 /// tests, basal body temperature readings, total entries), statistics, and the
-/// dated cycle observations (flow, ovulation, cervical mucus, BBT, …).
+/// dated cycle observations (flow, ovulation, cervical mucus, BBT, …) — all of
+/// them precomputed by the view-model into a [CycleDisplay]; this screen only
+/// renders it.
 ///
 /// This is sensitive/opt-in data: the screen is gated behind the cycle read
 /// permission (Kotlin `HealthConnectFeature.CYCLE`).
@@ -67,8 +68,8 @@ List<Widget> _content(
   DatePeriod period,
   WeekPeriodMode weekPeriodMode,
 ) {
-  final data = state.data;
-  if (!data.hasData) {
+  final display = state.display;
+  if (display == null || !display.hasData) {
     if (state.isLoading && state.result == null) {
       return const [
         Padding(
@@ -90,8 +91,6 @@ List<Widget> _content(
   }
 
   final l10n = AppLocalizations.of(context);
-  final summary = _CycleSummary.of(data);
-  final observations = _observations(data, formatter);
 
   return [
     sectionPadded(
@@ -100,7 +99,7 @@ List<Widget> _content(
           Expanded(
             child: MetricCard(
               title: 'Period days',
-              value: formatter.count(summary.periodDays),
+              value: formatter.count(display.periodDays),
               unit: 'days',
               icon: Icons.calendar_month,
               accentColor: AppColors.cycle,
@@ -116,7 +115,7 @@ List<Widget> _content(
           Expanded(
             child: MetricCard(
               title: 'Entries',
-              value: formatter.count(summary.totalEntryCount),
+              value: formatter.count(display.totalEntryCount),
               unit: 'total',
               icon: Icons.star_outline,
               accentColor: AppColors.cycle,
@@ -129,156 +128,71 @@ List<Widget> _content(
     sectionPadded(
       _CycleStatisticsCard(
         rows: [
-          ('Period days', formatter.count(summary.periodDays)),
-          ('Ovulation tests', formatter.count(summary.ovulationTestCount)),
-          ('BBT readings', formatter.count(summary.bbtReadingCount)),
-          if (summary.latestBbt != null)
+          ('Period days', formatter.count(display.periodDays)),
+          ('Ovulation tests', formatter.count(display.ovulationTestCount)),
+          ('BBT readings', formatter.count(display.bbtReadingCount)),
+          if (display.latestBbtCelsius != null)
             (
               'Latest basal temperature',
-              formatter.temperature(summary.latestBbt!).text,
+              formatter.temperature(display.latestBbtCelsius!).text,
             ),
-          ('Entries', formatter.count(summary.totalEntryCount)),
+          ('Entries', formatter.count(display.totalEntryCount)),
         ],
       ),
     ),
     const SectionHeader('Entries'),
-    for (final observation in observations)
-      sectionPadded(_CycleObservationRow(observation: observation)),
+    for (final observation in display.observations)
+      sectionPadded(
+        _CycleObservationRow(observation: observation, formatter: formatter),
+      ),
   ];
 }
 
-class _CycleSummary {
-  const _CycleSummary({
-    required this.periodDays,
-    required this.ovulationTestCount,
-    required this.bbtReadingCount,
-    required this.totalEntryCount,
-    required this.latestBbt,
-  });
+// ── Observation labels (Kotlin `CyclePresentation`) ──────────────────────────
 
-  factory _CycleSummary.of(CycleData data) {
-    final periodDates = <LocalDate>{};
-    for (final period in data.menstruationPeriods) {
-      final start = instantToLocalDate(period.startTime);
-      final end = instantToLocalDate(
-        period.endTime.subtract(const Duration(milliseconds: 1)),
-      );
-      var date = start;
-      while (!date.isAfter(end)) {
-        periodDates.add(date);
-        date = date.plusDays(1);
-      }
-    }
-    BasalBodyTemperatureEntry? latest;
-    for (final entry in data.basalBodyTemperature) {
-      if (latest == null || entry.time.isAfter(latest.time)) {
-        latest = entry;
-      }
-    }
-    final total = data.menstruationFlows.length +
-        data.menstruationPeriods.length +
-        data.ovulationTests.length +
-        data.cervicalMucus.length +
-        data.basalBodyTemperature.length +
-        data.intermenstrualBleeding.length +
-        data.sexualActivity.length;
-    return _CycleSummary(
-      periodDays: periodDates.length,
-      ovulationTestCount: data.ovulationTests.length,
-      bbtReadingCount: data.basalBodyTemperature.length,
-      totalEntryCount: total,
-      latestBbt: latest?.temperatureCelsius,
-    );
+/// The row title for an observation's kind.
+String _observationTitle(CycleObservationKind kind) {
+  switch (kind) {
+    case CycleObservationKind.menstruationPeriod:
+      return 'Menstruation period';
+    case CycleObservationKind.menstruationFlow:
+      return 'Menstruation flow';
+    case CycleObservationKind.ovulationTest:
+      return 'Ovulation test';
+    case CycleObservationKind.cervicalMucus:
+      return 'Cervical mucus';
+    case CycleObservationKind.basalBodyTemperature:
+      return 'Basal body temperature';
+    case CycleObservationKind.intermenstrualBleeding:
+      return 'Intermenstrual bleeding';
+    case CycleObservationKind.sexualActivity:
+      return 'Sexual activity';
   }
-
-  final int periodDays;
-  final int ovulationTestCount;
-  final int bbtReadingCount;
-  final int totalEntryCount;
-  final double? latestBbt;
 }
 
-class _CycleObservation {
-  const _CycleObservation({
-    required this.time,
-    required this.title,
-    required this.value,
-    required this.source,
-  });
-
-  final DateTime time;
-  final String title;
-  final String value;
-  final String source;
-}
-
-List<_CycleObservation> _observations(CycleData data, UnitFormatter formatter) {
-  final observations = <_CycleObservation>[];
-  for (final period in data.menstruationPeriods) {
-    final start = instantToLocalDate(period.startTime);
-    final end = instantToLocalDate(
-      period.endTime.subtract(const Duration(milliseconds: 1)),
-    );
-    final days = (end.epochDay - start.epochDay + 1).clamp(1, 1 << 30);
-    observations.add(_CycleObservation(
-      time: period.startTime,
-      title: 'Menstruation period',
-      value: days == 1 ? '1 day' : '$days days',
-      source: period.source,
-    ));
+/// The row's value line: the Health Connect codes the observation carries, read
+/// back as words (and, for a basal temperature, in the user's unit system).
+String _observationValue(CycleObservation observation, UnitFormatter formatter) {
+  switch (observation.kind) {
+    case CycleObservationKind.menstruationPeriod:
+      final days = observation.days ?? 1;
+      return days == 1 ? '1 day' : '$days days';
+    case CycleObservationKind.menstruationFlow:
+      return _flowLabel(observation.flow ?? 0);
+    case CycleObservationKind.ovulationTest:
+      return _ovulationLabel(observation.ovulationResult ?? 0);
+    case CycleObservationKind.cervicalMucus:
+      return '${_mucusAppearance(observation.mucusAppearance ?? 0)} · '
+          '${_mucusSensation(observation.mucusSensation ?? 0)}';
+    case CycleObservationKind.basalBodyTemperature:
+      final celsius = observation.temperatureCelsius ?? 0.0;
+      return '${formatter.temperature(celsius).text}'
+          ' · ${_measurementLocation(observation.measurementLocation ?? 0)}';
+    case CycleObservationKind.intermenstrualBleeding:
+      return 'Recorded';
+    case CycleObservationKind.sexualActivity:
+      return _protectionLabel(observation.protectionUsed ?? 0);
   }
-  for (final flow in data.menstruationFlows) {
-    observations.add(_CycleObservation(
-      time: flow.time,
-      title: 'Menstruation flow',
-      value: _flowLabel(flow.flow),
-      source: flow.source,
-    ));
-  }
-  for (final test in data.ovulationTests) {
-    observations.add(_CycleObservation(
-      time: test.time,
-      title: 'Ovulation test',
-      value: _ovulationLabel(test.result),
-      source: test.source,
-    ));
-  }
-  for (final mucus in data.cervicalMucus) {
-    observations.add(_CycleObservation(
-      time: mucus.time,
-      title: 'Cervical mucus',
-      value: '${_mucusAppearance(mucus.appearance)} · '
-          '${_mucusSensation(mucus.sensation)}',
-      source: mucus.source,
-    ));
-  }
-  for (final temperature in data.basalBodyTemperature) {
-    observations.add(_CycleObservation(
-      time: temperature.time,
-      title: 'Basal body temperature',
-      value: '${formatter.temperature(temperature.temperatureCelsius).text}'
-          ' · ${_measurementLocation(temperature.measurementLocation)}',
-      source: temperature.source,
-    ));
-  }
-  for (final bleeding in data.intermenstrualBleeding) {
-    observations.add(_CycleObservation(
-      time: bleeding.time,
-      title: 'Intermenstrual bleeding',
-      value: 'Recorded',
-      source: bleeding.source,
-    ));
-  }
-  for (final activity in data.sexualActivity) {
-    observations.add(_CycleObservation(
-      time: activity.time,
-      title: 'Sexual activity',
-      value: _protectionLabel(activity.protectionUsed),
-      source: activity.source,
-    ));
-  }
-  observations.sort((a, b) => b.time.compareTo(a.time));
-  return observations;
 }
 
 // ── Health Connect enum → label maps (Kotlin `CyclePresentation`) ───────────
@@ -379,9 +293,13 @@ String _protectionLabel(int protectionUsed) {
 }
 
 class _CycleObservationRow extends StatelessWidget {
-  const _CycleObservationRow({required this.observation});
+  const _CycleObservationRow({
+    required this.observation,
+    required this.formatter,
+  });
 
-  final _CycleObservation observation;
+  final CycleObservation observation;
+  final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
@@ -398,10 +316,13 @@ class _CycleObservationRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(observation.title, style: theme.textTheme.titleSmall),
+                  Text(
+                    _observationTitle(observation.kind),
+                    style: theme.textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 2),
                   Text(
-                    observation.value,
+                    _observationValue(observation, formatter),
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 2),

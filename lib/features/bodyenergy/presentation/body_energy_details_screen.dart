@@ -12,7 +12,7 @@ import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/period_navigator.dart';
 import '../../settings/presentation/cards/body_energy_calibration_card.dart';
-import 'body_energy_display.dart';
+import '../application/body_energy_display.dart';
 import '../application/body_energy_view_model.dart';
 import 'body_energy_timeline_chart.dart';
 
@@ -106,8 +106,9 @@ class _BodyEnergyBody extends ConsumerWidget {
       return ErrorMessage(_errorText(state.error!, l10n));
     }
 
-    final timeline = result?.latestDay;
-    final display = buildBodyEnergyDisplay(timeline);
+    // Precomputed at load time by the view-model; empty until the first one
+    // lands (the screen renders the day navigator over it either way).
+    final display = state.display ?? const BodyEnergyDisplay();
     final items = <Widget>[
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -283,6 +284,7 @@ class _TimelineCard extends StatelessWidget {
               BodyEnergyTimelineChart(
                 points: display.chartPoints,
                 influenceBars: display.influenceBars,
+                maxMagnitude: display.maxInfluenceMagnitude,
               ),
               const SizedBox(height: 12),
               Wrap(

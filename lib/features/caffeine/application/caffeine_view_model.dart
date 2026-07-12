@@ -9,6 +9,7 @@ import '../../../di/providers.dart';
 import '../../../domain/insights/caffeine_insight_calculator.dart';
 import '../../../domain/model/caffeine_models.dart';
 import '../../../domain/model/refresh_mode.dart';
+import 'caffeine_display.dart';
 
 part 'caffeine_view_model.freezed.dart';
 
@@ -43,8 +44,9 @@ enum CaffeineAnalyticsRange {
 
 /// The Riverpod port of the Kotlin `CaffeineUiState`, trimmed to the read-only
 /// analytics UI: the loading flag, the selected analytics range, the home
-/// (today) insights and the analytics-range insights, plus an error slot. The
-/// Kotlin setup/entry-selection fields are Phase 6 concerns and are omitted.
+/// (today) insights and the analytics-range insights, the precomputed
+/// [CaffeineDisplay], plus an error slot. The Kotlin setup/entry-selection fields
+/// are Phase 6 concerns and are omitted.
 @freezed
 abstract class CaffeineState with _$CaffeineState {
   const factory CaffeineState({
@@ -53,6 +55,7 @@ abstract class CaffeineState with _$CaffeineState {
     CaffeineAnalyticsRange analyticsRange,
     @Default(CaffeineInsights()) CaffeineInsights homeDisplay,
     @Default(CaffeineInsights()) CaffeineInsights analyticsDisplay,
+    CaffeineDisplay? display,
     ScreenError? error,
   }) = _CaffeineState;
 }
@@ -98,39 +101,39 @@ class CaffeineViewModel extends Notifier<CaffeineState> {
 
     state = state.copyWith(isLoading: true, error: null);
 
-    try {
-      // One read over the union of the two windows — see [LoadCaffeineUseCase].
-      final result = (await loadCaffeine(
-        homePeriod,
-        analyticsPeriod,
-        refreshMode: refreshMode,
-      ))
-          .orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      final home = CaffeineInsightCalculator.build(
-        entries: result.entries,
-        period: homePeriod,
-        preferences: preferences,
-        bodyProfile: bodyProfile,
-      );
-      final analytics = CaffeineInsightCalculator.build(
-        entries: result.entries,
-        period: analyticsPeriod,
-        preferences: preferences,
-        bodyProfile: bodyProfile,
-      );
-      state = state.copyWith(
-        isLoading: false,
-        homeDisplay: home,
-        analyticsDisplay: analytics,
-        error: null,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unable to load data.'),
-      );
+    // One read over the union of the two windows — see [LoadCaffeineUseCase].
+    final result = await loadCaffeine(
+      homePeriod,
+      analyticsPeriod,
+      refreshMode: refreshMode,
+    );
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        final home = CaffeineInsightCalculator.build(
+          entries: value.entries,
+          period: homePeriod,
+          preferences: preferences,
+          bodyProfile: bodyProfile,
+        );
+        final analytics = CaffeineInsightCalculator.build(
+          entries: value.entries,
+          period: analyticsPeriod,
+          preferences: preferences,
+          bodyProfile: bodyProfile,
+        );
+        state = state.copyWith(
+          isLoading: false,
+          homeDisplay: home,
+          analyticsDisplay: analytics,
+          display: buildCaffeineDisplay(home: home, analytics: analytics),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
     }
   }
 }

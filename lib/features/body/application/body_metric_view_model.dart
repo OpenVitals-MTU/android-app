@@ -11,13 +11,14 @@ import '../../../di/providers.dart';
 import '../../../domain/model/body_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/body_period_data.dart';
+import 'body_display.dart';
 
 part 'body_metric_view_model.freezed.dart';
 
 /// The Riverpod port of the Kotlin `BodyUiState`, trimmed to the selection the
-/// scaffold drives plus the single [BodyPeriodData] payload (which the Kotlin
+/// scaffold drives, the single [BodyPeriodData] payload (which the Kotlin
 /// view-model loads once — via `BodyPeriodMetric.ALL` — and shares across every
-/// body metric). Per-metric derivations are computed on demand by the screen.
+/// body metric) and the [BodyDisplay] derived from it.
 @freezed
 abstract class BodyMetricState with _$BodyMetricState {
   const BodyMetricState._();
@@ -28,6 +29,7 @@ abstract class BodyMetricState with _$BodyMetricState {
     @Default(true) bool isLoading,
     ScreenError? error,
     BodyPeriodData? data,
+    BodyDisplay? display,
   }) = _BodyMetricState;
 }
 
@@ -38,6 +40,10 @@ abstract class BodyMetricState with _$BodyMetricState {
 /// The owning
 /// [MetricDetailScaffold] drives loads through [load] and pull-to-refresh through
 /// [refresh]; a monotonic [_generation] guard drops stale results.
+///
+/// The display model is built here, at load time — the screen renders
+/// [BodyMetricState.display] and derives nothing. The optimistic delete rebuilds
+/// it too: it drops an entry from the loaded data without reloading.
 class BodyMetricViewModel extends Notifier<BodyMetricState> {
   int _generation = 0;
 
@@ -66,17 +72,21 @@ class BodyMetricViewModel extends Notifier<BodyMetricState> {
       weekPeriodMode: prefs.weekPeriodMode,
     );
 
-    try {
-      final data =
-          (await loadBodyPeriod(query, refreshMode: refreshMode)).orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(isLoading: false, data: data, error: null);
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unable to load data.'),
-      );
+    final result = await loadBodyPeriod(query, refreshMode: refreshMode);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          data: value,
+          display: buildBodyDisplay(value),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
     }
   }
 
@@ -98,24 +108,28 @@ class BodyMetricViewModel extends Notifier<BodyMetricState> {
     if (!_isOpenVitalsEntry(data, type, entryId)) return;
 
     final previous = state;
+    // The entry leaves the list at once — and the display with it, since it is
+    // what the list renders.
+    final withoutEntry = _withDeletedEntry(data, type, entryId);
     state = state.copyWith(
-      data: _withDeletedEntry(data, type, entryId),
+      data: withoutEntry,
+      display: buildBodyDisplay(withoutEntry),
       error: null,
     );
-    try {
-      (await ref.read(deleteBodyMeasurementEntryUseCaseProvider)(
-              type, entryId))
-          .orThrow();
-      if (!ref.mounted) return;
-      await load(
-        PeriodSelection(state.selectedRange, state.selectedDate),
-        refreshMode: RefreshMode.force,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = previous.copyWith(
-        error: throwableToScreenError(error, fallback: 'Unable to load data.'),
-      );
+
+    final deletion =
+        await ref.read(deleteBodyMeasurementEntryUseCaseProvider)(type, entryId);
+    if (!ref.mounted) return;
+    switch (deletion) {
+      case Ok():
+        await load(
+          PeriodSelection(state.selectedRange, state.selectedDate),
+          refreshMode: RefreshMode.force,
+        );
+      case Err(:final failure):
+        state = previous.copyWith(
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
     }
   }
 

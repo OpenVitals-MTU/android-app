@@ -19,6 +19,7 @@ import '../../../ui/components/paginated_entry_list.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../data/source/health/health_permissions.dart';
 import 'hydration_intraday_chart.dart';
+import '../application/hydration_display.dart';
 import '../application/hydration_view_model.dart';
 import '../reminders/hydration_reminder_card.dart';
 import '../../../ui/components/section_padding.dart';
@@ -27,8 +28,9 @@ import '../../../ui/components/section_padding.dart';
 ///
 /// A [MetricDetailScaffold] (HYDRATION range key) rendering the daily hydration
 /// bar chart, the goal-progress card, the drink-type breakdown, the period
-/// statistics and the reminder settings card. The "+ add drink" action routes to
-/// the (existing) add-entry screen; inline quick-add is Phase 6.
+/// statistics and the reminder settings card. Everything it draws is precomputed
+/// by the view-model into a [HydrationDisplay]. The "+ add drink" action routes
+/// to the (existing) add-entry screen; inline quick-add is Phase 6.
 class HydrationScreen extends ConsumerWidget {
   const HydrationScreen({super.key});
 
@@ -79,7 +81,8 @@ List<Widget> _content(
   DatePeriod period,
   WeekPeriodMode weekPeriodMode,
 ) {
-  if (!state.hasData) {
+  final display = state.display;
+  if (display == null || !display.hasData) {
     if (state.isLoading) {
       return const [
         Padding(
@@ -88,13 +91,14 @@ List<Widget> _content(
         ),
       ];
     }
+    final entries = display?.entriesNewestFirst ?? const <HydrationEntry>[];
     return [
       sectionPadded(
         MetricCardPlaceholder(
           title: 'Hydration',
           icon: Icons.local_drink_outlined,
           accentColor: AppColors.hydration,
-          message: state.entries.isEmpty
+          message: entries.isEmpty
               ? 'No hydration logged for this period.'
               : 'No hydration added for this period.',
         ),
@@ -105,17 +109,13 @@ List<Widget> _content(
       // Kotlin renders its ENTRIES section in the empty branch too: a period can
       // hold nutrition-only beverages (a drink with nutrients but no volume),
       // which log no litres yet still belong in the history.
-      if (state.entries.isNotEmpty)
-        _HydrationEntriesContent(entries: state.entries, formatter: formatter),
+      if (entries.isNotEmpty)
+        _HydrationEntriesContent(entries: entries, formatter: formatter),
     ];
   }
 
-  final summary = state.summary;
+  final summary = display.summary;
   final total = formatter.hydration(summary.totalLiters);
-  final values = [
-    for (final day in state.dailyHydration)
-      PeriodChartValue(day.date, day.liters),
-  ];
 
   return [
     sectionPadded(
@@ -155,13 +155,13 @@ List<Widget> _content(
       state.selectedRange == TimeRange.day
           ? HydrationIntradayChartCard(
               selectedDate: state.selectedDate,
-              entries: state.entries,
+              samples: display.cumulativeSamples,
               dailyGoalLiters: state.dailyGoalLiters,
               formatter: formatter,
             )
           : MetricBarChart(
               title: 'Hydration',
-              values: values,
+              values: display.chartValues,
               selectedRange: state.selectedRange,
               period: period,
               accentColor: AppColors.hydration,
@@ -170,36 +170,50 @@ List<Widget> _content(
               valueFormatter: (value) => formatter.hydration(value).text,
             ),
     ),
-    sectionPadded(_HydrationGoalCard(state: state, formatter: formatter)),
-    if (state.drinkBreakdown.isNotEmpty)
-      sectionPadded(_HydrationDrinkBreakdownCard(state: state, formatter: formatter)),
+    sectionPadded(_HydrationGoalCard(
+      display: display,
+      dailyGoalLiters: state.dailyGoalLiters,
+      formatter: formatter,
+    )),
+    if (display.drinkBreakdown.isNotEmpty)
+      sectionPadded(
+        _HydrationDrinkBreakdownCard(display: display, formatter: formatter),
+      ),
     const SectionHeader('Statistics'),
-    sectionPadded(_HydrationStatisticsCard(state: state, formatter: formatter)),
+    sectionPadded(
+      _HydrationStatisticsCard(summary: summary, formatter: formatter),
+    ),
     sectionPadded(const HydrationReminderCard()),
     // Kotlin's `MetricDetailSectionId.ENTRIES` — the per-entry beverage history,
     // rendered last. This is the day view's "line info": one row per logged
     // drink, with its name, time, source and volume.
-    if (state.entries.isNotEmpty)
-      _HydrationEntriesContent(entries: state.entries, formatter: formatter),
+    if (display.entriesNewestFirst.isNotEmpty)
+      _HydrationEntriesContent(
+        entries: display.entriesNewestFirst,
+        formatter: formatter,
+      ),
   ];
 }
 
 
 class _HydrationGoalCard extends StatelessWidget {
-  const _HydrationGoalCard({required this.state, required this.formatter});
+  const _HydrationGoalCard({
+    required this.display,
+    required this.dailyGoalLiters,
+    required this.formatter,
+  });
 
-  final HydrationState state;
+  final HydrationDisplay display;
+  final double dailyGoalLiters;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final goal = formatter.hydration(state.dailyGoalLiters);
-    final summary = state.summary;
-    final progress = state.dailyGoalLiters > 0.0
-        ? (summary.averageLiters / state.dailyGoalLiters).clamp(0.0, 1.0)
-        : 0.0;
+    final goal = formatter.hydration(dailyGoalLiters);
+    final summary = display.summary;
+    final progress = display.goalProgress;
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -262,23 +276,19 @@ class _HydrationGoalCard extends StatelessWidget {
 
 class _HydrationDrinkBreakdownCard extends StatelessWidget {
   const _HydrationDrinkBreakdownCard({
-    required this.state,
+    required this.display,
     required this.formatter,
   });
 
-  final HydrationState state;
+  final HydrationDisplay display;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final slices = state.drinkBreakdown.take(6).toList();
-    var max = 0.0;
-    for (final slice in slices) {
-      if (slice.liters > max) max = slice.liters;
-    }
-    if (max <= 0.0) max = 1.0;
+    final slices = display.topDrinkSlices;
+    final max = display.maxDrinkLiters;
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -336,16 +346,18 @@ class _HydrationDrinkBreakdownCard extends StatelessWidget {
 }
 
 class _HydrationStatisticsCard extends StatelessWidget {
-  const _HydrationStatisticsCard({required this.state, required this.formatter});
+  const _HydrationStatisticsCard({
+    required this.summary,
+    required this.formatter,
+  });
 
-  final HydrationState state;
+  final HydrationSummary summary;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final summary = state.summary;
     final rows = <(String, String)>[
       ('Goal streak', '${formatter.count(summary.currentGoalStreakDays)} days'),
       ('Goals met', '${formatter.count(summary.goalMetDays)} days'),
@@ -400,8 +412,8 @@ class _HydrationStatisticsCard extends StatelessWidget {
   }
 }
 
-/// Kotlin `HydrationEntriesContent`: the beverage history, newest first, as a
-/// paginated list of rows.
+/// Kotlin `HydrationEntriesContent`: the beverage history, newest first (the
+/// view-model sorted it), as a paginated list of rows.
 ///
 /// DEVIATION from Kotlin, which makes each row swipe-to-delete and (for an
 /// OpenVitals hydration record) edit-tappable. The Dart screen has no delete or
@@ -418,16 +430,12 @@ class _HydrationEntriesContent extends StatelessWidget {
   final UnitFormatter formatter;
 
   @override
-  Widget build(BuildContext context) {
-    final sorted = [...entries]
-      ..sort((a, b) => b.startTime.compareTo(a.startTime));
-    return PaginatedEntryList<HydrationEntry>(
-      title: AppLocalizations.of(context).sectionEntries,
-      entries: sorted,
-      rowBuilder: (context, entry) =>
-          _HydrationEntryRow(entry: entry, formatter: formatter),
-    );
-  }
+  Widget build(BuildContext context) => PaginatedEntryList<HydrationEntry>(
+        title: AppLocalizations.of(context).sectionEntries,
+        entries: entries,
+        rowBuilder: (context, entry) =>
+            _HydrationEntryRow(entry: entry, formatter: formatter),
+      );
 }
 
 /// Kotlin `HydrationEntryRowContent`: one logged beverage — its name, when it

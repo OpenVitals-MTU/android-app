@@ -11,14 +11,14 @@ import '../../../di/providers.dart';
 import '../../../domain/model/cycle_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/cycle_period_data.dart';
+import 'cycle_display.dart';
 
 part 'cycle_view_model.freezed.dart';
 
 /// The Riverpod port of the Kotlin `CycleUiState`, trimmed to the selection the
 /// scaffold drives, the loaded [CyclePeriodData] payload (menstruation flow,
-/// periods, ovulation tests, cervical mucus, basal body temperature, …), and
-/// loading/error flags. The Kotlin `CycleDisplayState` (calendar + summary) is
-/// derived on demand by the screen.
+/// periods, ovulation tests, cervical mucus, basal body temperature, …), the
+/// precomputed [CycleDisplay], and loading/error flags.
 @freezed
 abstract class CycleMetricState with _$CycleMetricState {
   const CycleMetricState._();
@@ -29,6 +29,7 @@ abstract class CycleMetricState with _$CycleMetricState {
     @Default(true) bool isLoading,
     ScreenError? error,
     CyclePeriodData? result,
+    CycleDisplay? display,
   }) = _CycleMetricState;
 
   CycleData get data => result?.data ?? const CycleData();
@@ -40,6 +41,10 @@ abstract class CycleMetricState with _$CycleMetricState {
 /// codegen), matching the activity/heart templates: the owning
 /// [MetricDetailScaffold] drives every load through [load] and pull-to-refresh
 /// through [refresh]. A monotonic [_generation] guard drops stale results.
+///
+/// The display model is built here, at load time — the screen renders
+/// [CycleMetricState.display] and derives nothing (Kotlin `CycleDisplayState`
+/// discipline).
 class CycleViewModel extends Notifier<CycleMetricState> {
   int _generation = 0;
 
@@ -67,17 +72,21 @@ class CycleViewModel extends Notifier<CycleMetricState> {
       weekPeriodMode: prefs.weekPeriodMode,
     );
 
-    try {
-      final result =
-          (await loadCyclePeriod(query, refreshMode: refreshMode)).orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(isLoading: false, result: result, error: null);
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unable to load data.'),
-      );
+    final result = await loadCyclePeriod(query, refreshMode: refreshMode);
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          result: value,
+          display: buildCycleDisplay(value.data),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
     }
   }
 

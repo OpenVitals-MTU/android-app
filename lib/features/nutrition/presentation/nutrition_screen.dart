@@ -5,8 +5,6 @@ import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
-import '../../../domain/insights/data_confidence.dart';
-import '../../../domain/insights/metric_interpretations.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../l10n/app_localizations.dart';
@@ -20,6 +18,7 @@ import '../../../ui/theme/app_colors.dart';
 import '../../../data/source/health/health_permissions.dart';
 import 'nutrition_formatting.dart';
 import 'nutrition_metric.dart';
+import '../application/nutrition_display.dart';
 import '../application/nutrition_view_model.dart';
 import 'nutrition_sections.dart';
 
@@ -98,7 +97,8 @@ class _NutritionOverviewContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (!state.hasData) {
+    final display = state.display;
+    if (display == null || !display.hasData) {
       if (state.isLoading) {
         return const Padding(
           padding: EdgeInsets.symmetric(vertical: 48),
@@ -112,7 +112,7 @@ class _NutritionOverviewContent extends StatelessWidget {
       selectedRange: state.selectedRange,
       selectedDate: state.selectedDate,
       builder: (context, daySelection) =>
-          _sections(context, l10n, daySelection),
+          _sections(context, l10n, display, daySelection),
     );
   }
 
@@ -133,44 +133,15 @@ class _NutritionOverviewContent extends StatelessWidget {
   Widget _sections(
     BuildContext context,
     AppLocalizations l10n,
+    NutritionDisplay display,
     ChartDaySelection daySelection,
   ) {
-    final metricsData = [
-      for (final nutrient in NutritionNutrient.values)
-        nutritionSeriesFor(state.dailyMacros, nutrient),
-    ];
-    final byNutrient = {for (final series in metricsData) series.nutrient: series};
-    final primaryMetricsData = [
-      for (final nutrient in primaryNutritionOverviewNutrients)
-        if (byNutrient[nutrient] != null) byNutrient[nutrient]!,
-    ];
-    final trackedMetricsData =
-        metricsData.where((series) => series.hasTrackedValues).toList();
-    final additionalMetricsData = trackedMetricsData
-        .where((series) =>
-            !primaryNutritionOverviewNutrients.contains(series.nutrient))
-        .toList();
-
-    final macroSplit = macroSplitInterpretation(
-      state.dailyMacros.fold<double>(0.0, (sum, day) => sum + day.proteinGrams),
-      state.dailyMacros.fold<double>(0.0, (sum, day) => sum + day.carbsGrams),
-      state.dailyMacros.fold<double>(0.0, (sum, day) => sum + day.fatGrams),
-    );
-
+    final macroSplit = display.macroSplit;
     final selectedDay = daySelection.selectedDate;
     final selectedEntries = selectedDay == null
         ? const <NutritionEntry>[]
-        : nutritionEntriesForDay(state.entries, selectedDay);
-    final sortedEntries = [...state.entries]
-      ..sort((a, b) => b.time.compareTo(a.time));
-
-    final trackedDates = [
-      for (final day in state.dailyMacros)
-        if (_hasNutritionData(day)) day.date,
-    ];
-    // Kotlin gates the whole macro-derived block on `dailyMacros.isNotEmpty()`;
-    // only the ENTRIES section renders for an entries-only period.
-    final hasMacros = state.dailyMacros.isNotEmpty;
+        : (display.entriesByDay[selectedDay] ?? const <NutritionEntry>[]);
+    final hasMacros = display.hasMacros;
 
     return OrderedMetricDetailSections(
       sections: [
@@ -179,30 +150,35 @@ class _NutritionOverviewContent extends StatelessWidget {
         MetricDetailSection(
           MetricDetailSectionId.activitySummary,
           visible: hasMacros &&
-              (primaryMetricsData.isNotEmpty ||
-                  additionalMetricsData.isNotEmpty),
+              (display.primarySeries.isNotEmpty ||
+                  display.additionalSeries.isNotEmpty),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (primaryMetricsData.isNotEmpty) ...[
+              if (display.primarySeries.isNotEmpty) ...[
                 nutritionPadded(SectionHeader(l10n.sectionStatistics)),
-                nutritionPadded(_totalsGrid(primaryMetricsData, l10n)),
+                nutritionPadded(_totalsGrid(display.primarySeries, l10n)),
               ],
               for (final group in NutritionNutrientGroup.values)
                 if (group != NutritionNutrientGroup.overview)
-                  ..._groupTotals(group, additionalMetricsData, l10n),
+                  ..._groupTotals(
+                    group,
+                    display.additionalSeriesByGroup[group] ??
+                        const <NutritionSeries>[],
+                    l10n,
+                  ),
             ],
           ),
         ),
         // Kotlin section PERIOD_CHART: one trend chart per tracked nutrient.
         MetricDetailSection(
           MetricDetailSectionId.periodChart,
-          visible: hasMacros && trackedMetricsData.isNotEmpty,
+          visible: hasMacros && display.trackedSeries.isNotEmpty,
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               nutritionPadded(SectionHeader(l10n.sectionNutritionTrends)),
-              for (final series in trackedMetricsData)
+              for (final series in display.trackedSeries)
                 nutritionPadded(nutritionTrendChart(
                   series: series,
                   selectedRange: state.selectedRange,
@@ -212,7 +188,6 @@ class _NutritionOverviewContent extends StatelessWidget {
                   selectedDate: selectedDay,
                   onDateSelected: daySelection.onDateSelected,
                   day: state.selectedDate,
-                  entries: state.entries,
                   weekPeriodMode: weekPeriodMode,
                 )),
             ],
@@ -237,13 +212,7 @@ class _NutritionOverviewContent extends StatelessWidget {
           MetricDetailSectionId.dataConfidence,
           visible: hasMacros && period.start != period.end,
           nutritionPadded(DataConfidenceCard(
-            confidence: dataConfidence(
-              period,
-              trackedDates,
-              state.entries.isNotEmpty ? state.entries.length : trackedDates.length,
-              sources: [for (final entry in state.entries) entry.source],
-              valueKind: DataValueKind.aggregated,
-            ),
+            confidence: display.overviewConfidence,
             accentColor: AppColors.nutrition,
           )),
         ),
@@ -263,10 +232,10 @@ class _NutritionOverviewContent extends StatelessWidget {
         // Kotlin section ENTRIES: every logged meal, newest first.
         MetricDetailSection(
           MetricDetailSectionId.entries,
-          visible: state.entries.isNotEmpty,
+          visible: display.entriesNewestFirst.isNotEmpty,
           nutritionPadded(NutritionEntriesContent(
             title: l10n.sectionMeals,
-            entries: sortedEntries,
+            entries: display.entriesNewestFirst,
             formatter: formatter,
           )),
         ),
@@ -276,12 +245,9 @@ class _NutritionOverviewContent extends StatelessWidget {
 
   List<Widget> _groupTotals(
     NutritionNutrientGroup group,
-    List<NutritionSeries> additionalMetricsData,
+    List<NutritionSeries> groupMetrics,
     AppLocalizations l10n,
   ) {
-    final groupMetrics = additionalMetricsData
-        .where((series) => series.nutrient.group == group)
-        .toList();
     if (groupMetrics.isEmpty) return const [];
     return [
       nutritionPadded(SectionHeader(_groupTitle(group, l10n))),
@@ -318,11 +284,3 @@ String _groupTitle(NutritionNutrientGroup group, AppLocalizations l10n) =>
       NutritionNutrientGroup.minerals => l10n.sectionMinerals,
       NutritionNutrientGroup.other => l10n.sectionOtherNutrients,
     };
-
-/// Kotlin `DailyMacros.hasNutritionData()`.
-bool _hasNutritionData(DailyMacros day) =>
-    day.nutrientValues.values.any((value) => value > 0.0) ||
-    day.energyKcal > 0.0 ||
-    day.proteinGrams > 0.0 ||
-    day.carbsGrams > 0.0 ||
-    day.fatGrams > 0.0;

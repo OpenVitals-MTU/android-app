@@ -3,20 +3,28 @@ import 'package:flutter/material.dart';
 import '../../../domain/insights/body_energy_timeline.dart';
 import '../../../ui/charts/day_axis.dart';
 import '../../../ui/theme/app_colors.dart';
-import 'body_energy_display.dart';
+import '../application/body_energy_display.dart';
 
 /// The Body Energy day timeline: a smoothed 0-100 score line drawn by a
 /// [CustomPainter], with a charge/drain influence-bar strip beneath. A trimmed
 /// port of the Kotlin `BodyEnergyTimelineChart`.
+///
+/// Everything it draws arrives precomputed on the [BodyEnergyDisplay] — the
+/// bucket fractions, the bar magnitudes and the strip's scale. This card only
+/// paints them.
 class BodyEnergyTimelineChart extends StatelessWidget {
   const BodyEnergyTimelineChart({
     super.key,
     required this.points,
     required this.influenceBars,
+    required this.maxMagnitude,
   });
 
   final List<BodyEnergyChartPoint> points;
   final List<BodyEnergyInfluenceBar> influenceBars;
+
+  /// The tallest charge/drain in [influenceBars], precomputed by the view-model.
+  final double maxMagnitude;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +49,7 @@ class BodyEnergyTimelineChart extends StatelessWidget {
           child: CustomPaint(
             painter: _InfluenceBarsPainter(
               bars: influenceBars,
+              maxMagnitude: maxMagnitude,
               axisColor: scheme.outlineVariant.withValues(alpha: 0.8),
               noDataColor: scheme.outline.withValues(alpha: 0.36),
               colorFor: (influence) => influenceColor(influence, scheme),
@@ -197,12 +206,14 @@ class _LinePainter extends CustomPainter {
 class _InfluenceBarsPainter extends CustomPainter {
   _InfluenceBarsPainter({
     required this.bars,
+    required this.maxMagnitude,
     required this.axisColor,
     required this.noDataColor,
     required this.colorFor,
   });
 
   final List<BodyEnergyInfluenceBar> bars;
+  final double maxMagnitude;
   final Color axisColor;
   final Color noDataColor;
   final Color Function(BodyEnergyPrimaryInfluence) colorFor;
@@ -219,12 +230,6 @@ class _InfluenceBarsPainter extends CustomPainter {
     );
     if (bars.isEmpty) return;
 
-    var maxMagnitude = 0.0;
-    for (final bar in bars) {
-      final magnitude = bar.charge > bar.drain ? bar.charge : bar.drain;
-      if (magnitude > maxMagnitude) maxMagnitude = magnitude;
-    }
-    if (maxMagnitude <= 0.0) maxMagnitude = 1.0;
     const minBarWidth = 2.0;
     const radius = Radius.circular(2);
 

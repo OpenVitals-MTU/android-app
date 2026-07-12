@@ -89,7 +89,7 @@ void main() {
     await boot(Ok(MindfulnessPeriodData(sessions: [
       _session(monday, const Duration(minutes: 30)),
     ])));
-    container.listen(mindfulnessProvider, (_, __) {});
+    container.listen(mindfulnessProvider, (_, _) {});
 
     await container.read(mindfulnessProvider.notifier).load(selection);
 
@@ -106,7 +106,7 @@ void main() {
 
   test('a permission failure becomes ScreenErrorPermissionDenied', () async {
     await boot(const Err(PermissionFailure('mindfulness read')));
-    container.listen(mindfulnessProvider, (_, __) {});
+    container.listen(mindfulnessProvider, (_, _) {});
 
     await container.read(mindfulnessProvider.notifier).load(selection);
 
@@ -118,7 +118,7 @@ void main() {
 
   test('an unexpected failure carries its message to the screen', () async {
     await boot(const Err(UnexpectedFailure('the provider hung up')));
-    container.listen(mindfulnessProvider, (_, __) {});
+    container.listen(mindfulnessProvider, (_, _) {});
 
     await container.read(mindfulnessProvider.notifier).load(selection);
 
@@ -130,7 +130,7 @@ void main() {
 
   test('refresh reloads the current selection in force mode', () async {
     await boot(const Ok(MindfulnessPeriodData()));
-    container.listen(mindfulnessProvider, (_, __) {});
+    container.listen(mindfulnessProvider, (_, _) {});
     final viewModel = container.read(mindfulnessProvider.notifier);
 
     await viewModel.load(selection);
@@ -143,7 +143,7 @@ void main() {
 
   test('a stale load cannot overwrite the newer one it lost to', () async {
     await boot(const Ok(MindfulnessPeriodData()));
-    container.listen(mindfulnessProvider, (_, __) {});
+    container.listen(mindfulnessProvider, (_, _) {});
     final viewModel = container.read(mindfulnessProvider.notifier);
     repository.gated = true;
 

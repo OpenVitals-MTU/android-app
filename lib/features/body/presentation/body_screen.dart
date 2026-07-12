@@ -7,7 +7,6 @@ import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
-import '../../../core/time/local_date.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../data/source/health/health_permissions.dart';
 import '../../../l10n/app_localizations.dart';
@@ -20,9 +19,9 @@ import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import '../../../ui/components/paginated_entry_list.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../application/body_display.dart';
 import '../application/body_metric_view_model.dart';
 import 'body_overview_sections.dart';
-import 'body_summary.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/section_padding.dart';
 
@@ -106,21 +105,14 @@ class _BodyOverviewContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final data = state.data;
-    if (data == null) {
+    final display = state.display;
+    if (display == null) {
       if (state.isLoading) return const SectionLoading();
       return _placeholder(l10n);
     }
 
-    final summary = BodySummary.fromPeriod(data);
-    final metricsData = bodyMetricData(data, summary, formatter, l10n);
-    final readingItems = bodyReadingItems(data, formatter, l10n);
-
     // Kotlin `bodyContent`: placeholder when the whole period has no body data.
-    final hasAnyBodyData = metricsData
-            .any((metric) => metric.latest != null || metric.hasTrackedValues) ||
-        readingItems.isNotEmpty;
-    if (!hasAnyBodyData && !state.isLoading) return _placeholder(l10n);
+    if (!display.hasAnyBodyData && !state.isLoading) return _placeholder(l10n);
 
     return ChartDaySelectionScope(
       selectedRange: state.selectedRange,
@@ -129,9 +121,7 @@ class _BodyOverviewContent extends ConsumerWidget {
         context,
         ref,
         l10n,
-        metricsData,
-        summary,
-        readingItems,
+        display,
         daySelection,
       ),
     );
@@ -141,16 +131,13 @@ class _BodyOverviewContent extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     AppLocalizations l10n,
-    List<BodyMetricData> metricsData,
-    BodySummary summary,
-    List<BodyReadingItem> readingItems,
+    BodyDisplay display,
     ChartDaySelection daySelection,
   ) {
-    final trackedMetricsData =
-        metricsData.where((metric) => metric.hasTrackedValues).toList();
+    final metricsData = bodyMetricData(display, formatter, l10n);
+    final trackedMetricsData = trackedBodyMetricData(display, formatter, l10n);
+    final summary = display.summary;
     final selectedDay = daySelection.selectedDate;
-    final sortedItems = [...readingItems]
-      ..sort((a, b) => b.time.compareTo(a.time));
 
     return OrderedMetricDetailSections(
       sections: [
@@ -206,18 +193,16 @@ class _BodyOverviewContent extends ConsumerWidget {
               : Builder(builder: (context) {
                   final locale =
                       Localizations.localeOf(context).toLanguageTag();
-                  return PaginatedEntryList<BodyReadingItem>(
+                  return PaginatedEntryList<BodyReading>(
                     title: DateFormat.yMMMd(locale).format(DateTime(
                       selectedDay.year,
                       selectedDay.month,
                       selectedDay.day,
                     )),
-                    entries: [
-                      for (final item in sortedItems)
-                        if (instantToLocalDate(item.time) == selectedDay) item,
-                    ],
-                    rowBuilder: (context, item) =>
-                        _readingRow(context, ref, item),
+                    entries: display.readingsByDate[selectedDay] ??
+                        const <BodyReading>[],
+                    rowBuilder: (context, reading) =>
+                        _readingRow(context, ref, reading),
                   );
                 }),
         ),
@@ -225,10 +210,10 @@ class _BodyOverviewContent extends ConsumerWidget {
         // delete and tap to edit where the entry is an OpenVitals one.
         MetricDetailSection(
           MetricDetailSectionId.entries,
-          PaginatedEntryList<BodyReadingItem>(
+          PaginatedEntryList<BodyReading>(
             title: l10n.sectionEntries,
-            entries: sortedItems,
-            rowBuilder: (context, item) => _readingRow(context, ref, item),
+            entries: display.readingsNewestFirst,
+            rowBuilder: (context, reading) => _readingRow(context, ref, reading),
           ),
         ),
       ],
@@ -261,12 +246,19 @@ class _BodyOverviewContent extends ConsumerWidget {
     );
   }
 
-  Widget _readingRow(BuildContext context, WidgetRef ref, BodyReadingItem item) {
-    if (!item.editable) return BodyReadingRow(item: item);
-    final type = item.editType!;
-    final id = item.editId!;
+  Widget _readingRow(
+    BuildContext context,
+    WidgetRef ref,
+    BodyReading reading,
+  ) {
+    if (!reading.editable) {
+      return BodyReadingRow(reading: reading, formatter: formatter);
+    }
+    final type = reading.editType!;
+    final id = reading.editId!;
     return BodyReadingRow(
-      item: item,
+      reading: reading,
+      formatter: formatter,
       onEdit: () => context.push(
         AppRoutes.bodyMeasurementEntryEditLocation(type.storageName, id),
       ),

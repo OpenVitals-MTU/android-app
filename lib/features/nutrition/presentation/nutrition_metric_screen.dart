@@ -6,11 +6,6 @@ import '../../../core/period/time_range.dart';
 import '../../../core/presentation/display_value.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
-import '../../../domain/insights/daily_goals.dart';
-import '../../../domain/insights/data_confidence.dart';
-import '../../../domain/insights/metric_interpretations.dart';
-import '../../../domain/insights/period_comparison.dart';
-import '../../../domain/insights/personal_baseline.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../l10n/app_localizations.dart';
@@ -26,6 +21,7 @@ import '../../../ui/components/personal_baseline_stat.dart';
 import '../../../data/source/health/health_permissions.dart';
 import 'nutrition_formatting.dart';
 import 'nutrition_metric.dart';
+import '../application/nutrition_display.dart';
 import '../application/nutrition_view_model.dart';
 import 'nutrition_sections.dart';
 
@@ -116,7 +112,8 @@ class _NutritionMetricContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (!state.hasData) {
+    final display = state.display;
+    if (display == null || !display.hasData) {
       if (state.isLoading) {
         return const Padding(
           padding: EdgeInsets.symmetric(vertical: 48),
@@ -130,7 +127,7 @@ class _NutritionMetricContent extends StatelessWidget {
       selectedRange: state.selectedRange,
       selectedDate: state.selectedDate,
       builder: (context, daySelection) =>
-          _sections(context, l10n, daySelection),
+          _sections(context, l10n, display, daySelection),
     );
   }
 
@@ -151,45 +148,25 @@ class _NutritionMetricContent extends StatelessWidget {
   Widget _sections(
     BuildContext context,
     AppLocalizations l10n,
+    NutritionDisplay display,
     ChartDaySelection daySelection,
   ) {
     final nutrient = metric.nutrient;
     final color = metric.accentColor;
-    final series = nutritionSeriesFor(state.dailyMacros, nutrient);
-    final previousSeries =
-        nutritionSeriesFor(state.previousDailyMacros, nutrient);
-    final baselineSeries =
-        nutritionSeriesFor(state.baselineDailyMacros, nutrient);
+    final series = display.metricSeries;
 
     DisplayValue format(double value) =>
         nutrientDisplayValue(nutrient, value, formatter);
 
-    final goalProgress = dailyGoalProgress(
-      [for (final value in series.values) DailyGoalValue(date: value.date, value: value.value)],
-      period,
-      state.dailyGoal,
-      metric.dailyGoalKey.direction,
-    );
-    final comparison = periodComparison(series.total, previousSeries.total);
-    final macroSplit = macroSplitInterpretation(
-      state.dailyMacros.fold<double>(0.0, (sum, day) => sum + day.proteinGrams),
-      state.dailyMacros.fold<double>(0.0, (sum, day) => sum + day.carbsGrams),
-      state.dailyMacros.fold<double>(0.0, (sum, day) => sum + day.fatGrams),
-    );
+    final goalProgress = display.goalProgress;
+    final comparison = display.comparison;
+    final macroSplit = display.macroSplit;
 
     final selectedDay = daySelection.selectedDate;
-    final selectedEntries =
-        selectedDay == null ? const <NutritionEntry>[] : nutritionEntriesForDay(state.entries, selectedDay);
-    final sortedEntries = [...state.entries]
-      ..sort((a, b) => b.time.compareTo(a.time));
-
-    final trackedDates = [
-      for (final value in series.values)
-        if (value.value > 0.0) value.date,
-    ];
-    // Kotlin gates the whole macro-derived block on `dailyMacros.isNotEmpty()`;
-    // only the ENTRIES section renders for an entries-only period.
-    final hasMacros = state.dailyMacros.isNotEmpty;
+    final selectedEntries = selectedDay == null
+        ? const <NutritionEntry>[]
+        : (display.entriesByDay[selectedDay] ?? const <NutritionEntry>[]);
+    final hasMacros = display.hasMacros;
 
     return OrderedMetricDetailSections(
       sections: [
@@ -203,8 +180,9 @@ class _NutritionMetricContent extends StatelessWidget {
             unit: format(series.total).unit,
             icon: metric.icon,
             accentColor: color,
-            subtitle: state.entries.isNotEmpty
-                ? l10n.summaryEntries(formatter.count(state.entries.length))
+            subtitle: display.entriesNewestFirst.isNotEmpty
+                ? l10n.summaryEntries(
+                    formatter.count(display.entriesNewestFirst.length))
                 : l10n.summaryAcrossSelectedPeriod,
           )),
         ),
@@ -221,7 +199,6 @@ class _NutritionMetricContent extends StatelessWidget {
             selectedDate: selectedDay,
             onDateSelected: daySelection.onDateSelected,
             day: state.selectedDate,
-            entries: state.entries,
             weekPeriodMode: weekPeriodMode,
           )),
         ),
@@ -244,13 +221,7 @@ class _NutritionMetricContent extends StatelessWidget {
           MetricDetailSectionId.dataConfidence,
           visible: hasMacros && period.start != period.end,
           nutritionPadded(DataConfidenceCard(
-            confidence: dataConfidence(
-              period,
-              trackedDates,
-              state.entries.isNotEmpty ? state.entries.length : trackedDates.length,
-              sources: [for (final entry in state.entries) entry.source],
-              valueKind: DataValueKind.aggregated,
-            ),
+            confidence: display.metricConfidence,
             accentColor: color,
           )),
         ),
@@ -321,14 +292,7 @@ class _NutritionMetricContent extends StatelessWidget {
                     l10n: l10n,
                   ),
                   ...personalBaselineInsightStats(
-                    insight: personalBaselineInsight(
-                      series.average,
-                      [
-                        for (final value in baselineSeries.values)
-                          BaselineValue(date: value.date, value: value.value),
-                      ],
-                      period.start.minusDays(1),
-                    ),
+                    insight: display.baselineInsight,
                     unitFormatter: formatter,
                     valueFormatter: format,
                     accentColor: color,
@@ -355,10 +319,10 @@ class _NutritionMetricContent extends StatelessWidget {
         // Kotlin section ENTRIES: every logged meal, newest first.
         MetricDetailSection(
           MetricDetailSectionId.entries,
-          visible: state.entries.isNotEmpty,
+          visible: display.entriesNewestFirst.isNotEmpty,
           nutritionPadded(NutritionEntriesContent(
             title: l10n.sectionMeals,
-            entries: sortedEntries,
+            entries: display.entriesNewestFirst,
             formatter: formatter,
           )),
         ),

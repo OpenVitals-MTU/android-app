@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CycleMetricState {
 
- LocalDate get selectedDate; TimeRange get selectedRange; bool get isLoading; ScreenError? get error; CyclePeriodData? get result;
+ LocalDate get selectedDate; TimeRange get selectedRange; bool get isLoading; ScreenError? get error; CyclePeriodData? get result; CycleDisplay? get display;
 /// Create a copy of CycleMetricState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $CycleMetricStateCopyWith<CycleMetricState> get copyWith => _$CycleMetricStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CycleMetricState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CycleMetricState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,result);
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,result,display);
 
 @override
 String toString() {
-  return 'CycleMetricState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, result: $result)';
+  return 'CycleMetricState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, result: $result, display: $display)';
 }
 
 
@@ -45,11 +45,11 @@ abstract mixin class $CycleMetricStateCopyWith<$Res>  {
   factory $CycleMetricStateCopyWith(CycleMetricState value, $Res Function(CycleMetricState) _then) = _$CycleMetricStateCopyWithImpl;
 @useResult
 $Res call({
- LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, CyclePeriodData? result
+ LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, CyclePeriodData? result, CycleDisplay? display
 });
 
 
-$CyclePeriodDataCopyWith<$Res>? get result;
+$CyclePeriodDataCopyWith<$Res>? get result;$CycleDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -62,14 +62,15 @@ class _$CycleMetricStateCopyWithImpl<$Res>
 
 /// Create a copy of CycleMetricState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? result = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? result = freezed,Object? display = freezed,}) {
   return _then(_self.copyWith(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
 as TimeRange,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,result: freezed == result ? _self.result : result // ignore: cast_nullable_to_non_nullable
-as CyclePeriodData?,
+as CyclePeriodData?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as CycleDisplay?,
   ));
 }
 /// Create a copy of CycleMetricState
@@ -83,6 +84,18 @@ $CyclePeriodDataCopyWith<$Res>? get result {
 
   return $CyclePeriodDataCopyWith<$Res>(_self.result!, (value) {
     return _then(_self.copyWith(result: value));
+  });
+}/// Create a copy of CycleMetricState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CycleDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
+
+  return $CycleDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
   });
 }
 }
@@ -166,10 +179,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  CyclePeriodData? result)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  CyclePeriodData? result,  CycleDisplay? display)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CycleMetricState() when $default != null:
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.result,_that.display);case _:
   return orElse();
 
 }
@@ -187,10 +200,10 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  CyclePeriodData? result)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  CyclePeriodData? result,  CycleDisplay? display)  $default,) {final _that = this;
 switch (_that) {
 case _CycleMetricState():
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.result,_that.display);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -207,10 +220,10 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  CyclePeriodData? result)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  CyclePeriodData? result,  CycleDisplay? display)?  $default,) {final _that = this;
 switch (_that) {
 case _CycleMetricState() when $default != null:
-return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.result,_that.display);case _:
   return null;
 
 }
@@ -222,7 +235,7 @@ return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.err
 
 
 class _CycleMetricState extends CycleMetricState {
-  const _CycleMetricState({required this.selectedDate, this.selectedRange = TimeRange.month, this.isLoading = true, this.error, this.result}): super._();
+  const _CycleMetricState({required this.selectedDate, this.selectedRange = TimeRange.month, this.isLoading = true, this.error, this.result, this.display}): super._();
   
 
 @override final  LocalDate selectedDate;
@@ -230,6 +243,7 @@ class _CycleMetricState extends CycleMetricState {
 @override@JsonKey() final  bool isLoading;
 @override final  ScreenError? error;
 @override final  CyclePeriodData? result;
+@override final  CycleDisplay? display;
 
 /// Create a copy of CycleMetricState
 /// with the given fields replaced by the non-null parameter values.
@@ -241,16 +255,16 @@ _$CycleMetricStateCopyWith<_CycleMetricState> get copyWith => __$CycleMetricStat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CycleMetricState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CycleMetricState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,result);
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,result,display);
 
 @override
 String toString() {
-  return 'CycleMetricState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, result: $result)';
+  return 'CycleMetricState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, result: $result, display: $display)';
 }
 
 
@@ -261,11 +275,11 @@ abstract mixin class _$CycleMetricStateCopyWith<$Res> implements $CycleMetricSta
   factory _$CycleMetricStateCopyWith(_CycleMetricState value, $Res Function(_CycleMetricState) _then) = __$CycleMetricStateCopyWithImpl;
 @override @useResult
 $Res call({
- LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, CyclePeriodData? result
+ LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, CyclePeriodData? result, CycleDisplay? display
 });
 
 
-@override $CyclePeriodDataCopyWith<$Res>? get result;
+@override $CyclePeriodDataCopyWith<$Res>? get result;@override $CycleDisplayCopyWith<$Res>? get display;
 
 }
 /// @nodoc
@@ -278,14 +292,15 @@ class __$CycleMetricStateCopyWithImpl<$Res>
 
 /// Create a copy of CycleMetricState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? result = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? result = freezed,Object? display = freezed,}) {
   return _then(_CycleMetricState(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
 as TimeRange,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,result: freezed == result ? _self.result : result // ignore: cast_nullable_to_non_nullable
-as CyclePeriodData?,
+as CyclePeriodData?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as CycleDisplay?,
   ));
 }
 
@@ -300,6 +315,18 @@ $CyclePeriodDataCopyWith<$Res>? get result {
 
   return $CyclePeriodDataCopyWith<$Res>(_self.result!, (value) {
     return _then(_self.copyWith(result: value));
+  });
+}/// Create a copy of CycleMetricState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CycleDisplayCopyWith<$Res>? get display {
+    if (_self.display == null) {
+    return null;
+  }
+
+  return $CycleDisplayCopyWith<$Res>(_self.display!, (value) {
+    return _then(_self.copyWith(display: value));
   });
 }
 }

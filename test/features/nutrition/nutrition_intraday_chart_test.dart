@@ -4,6 +4,7 @@ import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
+import 'package:openvitals/features/nutrition/application/nutrition_display.dart';
 import 'package:openvitals/features/nutrition/presentation/nutrition_sections.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/charts/metric_line_plot.dart';
@@ -30,7 +31,6 @@ Widget _harness(Widget child) => MaterialApp(
 
 void main() {
   final formatter = UnitFormatter(unitSystemProvider: () => UnitSystem.metric);
-  final series = NutritionSeries(NutritionNutrient.energy, const []);
 
   group('cumulativeNutritionPoints (Kotlin parity)', () {
     test('sorts by time, accumulates, and drops non-positive readings', () {
@@ -66,11 +66,14 @@ void main() {
       final dayStart = DateTime(2026, 3, 4);
       await tester.pumpWidget(_harness(NutritionIntradayChartCard(
         day: day,
-        series: series,
-        entries: [
-          _entry(dayStart.add(const Duration(hours: 6)), energyKcal: 400),
-          _entry(dayStart.add(const Duration(hours: 18)), energyKcal: 600),
-        ],
+        nutrient: NutritionNutrient.energy,
+        samples: cumulativeNutritionPoints(
+          [
+            _entry(dayStart.add(const Duration(hours: 6)), energyKcal: 400),
+            _entry(dayStart.add(const Duration(hours: 18)), energyKcal: 600),
+          ],
+          NutritionNutrient.energy,
+        ),
         formatter: formatter,
         // A past day: the axis runs the full 24h, so 06:00 sits at 0.25.
         now: () => DateTime(2026, 3, 10),
@@ -97,8 +100,11 @@ void main() {
       final dayStart = DateTime(2026, 3, 4);
       await tester.pumpWidget(_harness(NutritionIntradayChartCard(
         day: LocalDate(2026, 3, 4),
-        series: series,
-        entries: [_entry(dayStart.add(const Duration(hours: 6)), energyKcal: 400)],
+        nutrient: NutritionNutrient.energy,
+        samples: cumulativeNutritionPoints(
+          [_entry(dayStart.add(const Duration(hours: 6)), energyKcal: 400)],
+          NutritionNutrient.energy,
+        ),
         formatter: formatter,
         now: () => dayStart.add(const Duration(hours: 12)),
       )));
@@ -124,8 +130,8 @@ void main() {
         (tester) async {
       await tester.pumpWidget(_harness(NutritionIntradayChartCard(
         day: LocalDate(2026, 3, 4),
-        series: series,
-        entries: const [],
+        nutrient: NutritionNutrient.energy,
+        samples: const [],
         formatter: formatter,
         now: () => DateTime(2026, 3, 10),
       )));

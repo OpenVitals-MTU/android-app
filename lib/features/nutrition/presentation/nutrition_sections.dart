@@ -19,49 +19,19 @@ import '../../../ui/components/metric_interpretation_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/paginated_entry_list.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../application/nutrition_display.dart';
 import 'nutrition_formatting.dart';
 
 /// Shared building blocks for the nutrition metric-detail sections, ported from
 /// the Kotlin `NutritionPeriodContent.kt` + `NutritionRows.kt`.
+///
+/// Every series they draw arrives precomputed on the [NutritionDisplay]; these
+/// widgets format and lay out, and derive nothing.
 
 Widget nutritionPadded(Widget child) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: child,
     );
-
-/// Per-nutrient daily series across a loaded period (port of the Kotlin
-/// `NutritionNutrientSeries` + `NutritionSeriesUiModel`).
-class NutritionSeries {
-  NutritionSeries(this.nutrient, this.values);
-
-  final NutritionNutrient nutrient;
-  final List<PeriodChartValue> values;
-
-  List<double> get _raw => [for (final value in values) value.value];
-  double get total => _raw.fold(0.0, (sum, value) => sum + value);
-  bool get hasTrackedValues => _raw.any((value) => value > 0.0);
-  int get loggedDays => _raw.where((value) => value > 0.0).length;
-  double get average => loggedDays > 0 ? total / loggedDays : 0.0;
-  double get best => _raw.fold(0.0, (m, value) => math.max(m, value));
-}
-
-NutritionSeries nutritionSeriesFor(
-  List<DailyMacros> macros,
-  NutritionNutrient nutrient,
-) =>
-    NutritionSeries(nutrient, [
-      for (final day in macros)
-        PeriodChartValue(day.date, day.valueFor(nutrient)),
-    ]);
-
-/// The four primary overview nutrients, always surfaced first (Kotlin
-/// `primaryNutritionOverviewNutrients`).
-const List<NutritionNutrient> primaryNutritionOverviewNutrients = [
-  NutritionNutrient.energy,
-  NutritionNutrient.protein,
-  NutritionNutrient.totalCarbohydrate,
-  NutritionNutrient.totalFat,
-];
 
 /// Kotlin `NutritionMetricTrendContent`: on the DAY range the nutrient's
 /// cumulative intake curve, otherwise the daily bar chart across the period.
@@ -76,15 +46,14 @@ Widget nutritionTrendChart({
   required LocalDate? selectedDate,
   required ValueChanged<LocalDate> onDateSelected,
   required LocalDate day,
-  required List<NutritionEntry> entries,
   WeekPeriodMode weekPeriodMode = WeekPeriodMode.mondayToSunday,
   DateTime Function() now = DateTime.now,
 }) {
   if (selectedRange == TimeRange.day) {
     return NutritionIntradayChartCard(
       day: day,
-      series: series,
-      entries: entries,
+      nutrient: series.nutrient,
+      samples: series.cumulativeSamples,
       formatter: formatter,
       now: now,
     );
@@ -106,39 +75,23 @@ Widget nutritionTrendChart({
   );
 }
 
-/// Kotlin `List<NutritionEntry>.cumulativeNutritionPoints`: entries sorted by
-/// time, zero/absent readings dropped, values accumulated.
-List<({DateTime time, double value})> cumulativeNutritionPoints(
-  List<NutritionEntry> entries,
-  NutritionNutrient nutrient,
-) {
-  final sorted = [...entries]..sort((a, b) => a.time.compareTo(b.time));
-  var cumulative = 0.0;
-  final points = <({DateTime time, double value})>[];
-  for (final entry in sorted) {
-    // Kotlin: `entry.valueFor(nutrient)?.takeIf { it > 0.0 } ?: return@mapNotNull null`
-    final value = entry.valueFor(nutrient);
-    if (value == null || value <= 0.0) continue;
-    cumulative += value;
-    points.add((time: entry.time, value: cumulative));
-  }
-  return points;
-}
-
 /// The day's cumulative intake curve for one nutrient.
+///
+/// The curve arrives precomputed (`cumulativeNutritionPoints`, built by the
+/// view-model); this card only paints it.
 class NutritionIntradayChartCard extends StatelessWidget {
   const NutritionIntradayChartCard({
     super.key,
     required this.day,
-    required this.series,
-    required this.entries,
+    required this.nutrient,
+    required this.samples,
     required this.formatter,
     this.now = DateTime.now,
   });
 
   final LocalDate day;
-  final NutritionSeries series;
-  final List<NutritionEntry> entries;
+  final NutritionNutrient nutrient;
+  final List<DaySample> samples;
   final UnitFormatter formatter;
   final DateTime Function() now;
 
@@ -146,9 +99,8 @@ class NutritionIntradayChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     DisplayValue format(double value) =>
-        nutrientDisplayValue(series.nutrient, value, formatter);
+        nutrientDisplayValue(nutrient, value, formatter);
 
-    final samples = cumulativeNutritionPoints(entries, series.nutrient);
     final total = samples.isEmpty ? 0.0 : samples.last.value;
 
     return MetricDayChart(
@@ -156,8 +108,8 @@ class NutritionIntradayChartCard extends StatelessWidget {
       samples: samples,
       shape: DaySeriesShape.cumulative,
       range: ChartRange(0, math.max(total, 1)),
-      accentColor: nutrientColor(series.nutrient),
-      metricName: nutrientTitle(series.nutrient, l10n),
+      accentColor: nutrientColor(nutrient),
+      metricName: nutrientTitle(nutrient, l10n),
       emptyLabel: l10n.screenNutrition,
       headlineText: format(total).text,
       valueFormatter: (value) => format(value).text,
@@ -332,15 +284,3 @@ String _mealTypeLabel(int mealType, AppLocalizations l10n) => switch (mealType) 
       4 => l10n.mealSnack,
       _ => l10n.mealGeneric,
     };
-
-/// Meal entries falling on [day], newest first.
-List<NutritionEntry> nutritionEntriesForDay(
-  List<NutritionEntry> entries,
-  LocalDate day,
-) {
-  final matching = [
-    for (final entry in entries)
-      if (instantToLocalDate(entry.time) == day) entry,
-  ]..sort((a, b) => b.time.compareTo(a.time));
-  return matching;
-}

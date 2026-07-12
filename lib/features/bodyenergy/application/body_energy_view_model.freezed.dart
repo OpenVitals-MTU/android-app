@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$BodyEnergyState {
 
- LocalDate get selectedDate; bool get isLoading; ScreenError? get error; BodyEnergyTimelineResult? get result;
+ LocalDate get selectedDate; bool get isLoading; ScreenError? get error; BodyEnergyTimelineResult? get result; BodyEnergyDisplay? get display;
 /// Create a copy of BodyEnergyState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $BodyEnergyStateCopyWith<BodyEnergyState> get copyWith => _$BodyEnergyStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BodyEnergyState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BodyEnergyState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,isLoading,error,result);
+int get hashCode => Object.hash(runtimeType,selectedDate,isLoading,error,result,display);
 
 @override
 String toString() {
-  return 'BodyEnergyState(selectedDate: $selectedDate, isLoading: $isLoading, error: $error, result: $result)';
+  return 'BodyEnergyState(selectedDate: $selectedDate, isLoading: $isLoading, error: $error, result: $result, display: $display)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $BodyEnergyStateCopyWith<$Res>  {
   factory $BodyEnergyStateCopyWith(BodyEnergyState value, $Res Function(BodyEnergyState) _then) = _$BodyEnergyStateCopyWithImpl;
 @useResult
 $Res call({
- LocalDate selectedDate, bool isLoading, ScreenError? error, BodyEnergyTimelineResult? result
+ LocalDate selectedDate, bool isLoading, ScreenError? error, BodyEnergyTimelineResult? result, BodyEnergyDisplay? display
 });
 
 
@@ -62,13 +62,14 @@ class _$BodyEnergyStateCopyWithImpl<$Res>
 
 /// Create a copy of BodyEnergyState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? isLoading = null,Object? error = freezed,Object? result = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? isLoading = null,Object? error = freezed,Object? result = freezed,Object? display = freezed,}) {
   return _then(_self.copyWith(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,result: freezed == result ? _self.result : result // ignore: cast_nullable_to_non_nullable
-as BodyEnergyTimelineResult?,
+as BodyEnergyTimelineResult?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as BodyEnergyDisplay?,
   ));
 }
 
@@ -153,10 +154,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  BodyEnergyTimelineResult? result)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  BodyEnergyTimelineResult? result,  BodyEnergyDisplay? display)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BodyEnergyState() when $default != null:
-return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result,_that.display);case _:
   return orElse();
 
 }
@@ -174,10 +175,10 @@ return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result);cas
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  BodyEnergyTimelineResult? result)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  BodyEnergyTimelineResult? result,  BodyEnergyDisplay? display)  $default,) {final _that = this;
 switch (_that) {
 case _BodyEnergyState():
-return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result,_that.display);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +195,10 @@ return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result);cas
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  BodyEnergyTimelineResult? result)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  bool isLoading,  ScreenError? error,  BodyEnergyTimelineResult? result,  BodyEnergyDisplay? display)?  $default,) {final _that = this;
 switch (_that) {
 case _BodyEnergyState() when $default != null:
-return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result);case _:
+return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result,_that.display);case _:
   return null;
 
 }
@@ -209,13 +210,14 @@ return $default(_that.selectedDate,_that.isLoading,_that.error,_that.result);cas
 
 
 class _BodyEnergyState extends BodyEnergyState {
-  const _BodyEnergyState({required this.selectedDate, this.isLoading = true, this.error, this.result}): super._();
+  const _BodyEnergyState({required this.selectedDate, this.isLoading = true, this.error, this.result, this.display}): super._();
   
 
 @override final  LocalDate selectedDate;
 @override@JsonKey() final  bool isLoading;
 @override final  ScreenError? error;
 @override final  BodyEnergyTimelineResult? result;
+@override final  BodyEnergyDisplay? display;
 
 /// Create a copy of BodyEnergyState
 /// with the given fields replaced by the non-null parameter values.
@@ -227,16 +229,16 @@ _$BodyEnergyStateCopyWith<_BodyEnergyState> get copyWith => __$BodyEnergyStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BodyEnergyState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BodyEnergyState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.result, result) || other.result == result)&&(identical(other.display, display) || other.display == display));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,selectedDate,isLoading,error,result);
+int get hashCode => Object.hash(runtimeType,selectedDate,isLoading,error,result,display);
 
 @override
 String toString() {
-  return 'BodyEnergyState(selectedDate: $selectedDate, isLoading: $isLoading, error: $error, result: $result)';
+  return 'BodyEnergyState(selectedDate: $selectedDate, isLoading: $isLoading, error: $error, result: $result, display: $display)';
 }
 
 
@@ -247,7 +249,7 @@ abstract mixin class _$BodyEnergyStateCopyWith<$Res> implements $BodyEnergyState
   factory _$BodyEnergyStateCopyWith(_BodyEnergyState value, $Res Function(_BodyEnergyState) _then) = __$BodyEnergyStateCopyWithImpl;
 @override @useResult
 $Res call({
- LocalDate selectedDate, bool isLoading, ScreenError? error, BodyEnergyTimelineResult? result
+ LocalDate selectedDate, bool isLoading, ScreenError? error, BodyEnergyTimelineResult? result, BodyEnergyDisplay? display
 });
 
 
@@ -264,13 +266,14 @@ class __$BodyEnergyStateCopyWithImpl<$Res>
 
 /// Create a copy of BodyEnergyState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? isLoading = null,Object? error = freezed,Object? result = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? isLoading = null,Object? error = freezed,Object? result = freezed,Object? display = freezed,}) {
   return _then(_BodyEnergyState(
 selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
 as LocalDate,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,result: freezed == result ? _self.result : result // ignore: cast_nullable_to_non_nullable
-as BodyEnergyTimelineResult?,
+as BodyEnergyTimelineResult?,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as BodyEnergyDisplay?,
   ));
 }
 

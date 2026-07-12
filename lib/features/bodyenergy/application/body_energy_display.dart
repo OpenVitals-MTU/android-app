@@ -4,6 +4,11 @@ import '../../../domain/insights/body_energy_timeline.dart';
 /// Kotlin `BodyEnergyDisplayState` + `toBodyEnergyDisplayState()` mapping: the
 /// per-bucket chart points, the charge/drain influence bars, the ranked "why"
 /// reasons, and the input-availability rows.
+///
+/// Built once per load by [buildBodyEnergyDisplay] and stored on the state — the
+/// view-model precomputes, the screen only renders. It used to be built in the
+/// screen's build method, which is the seam this refactor reverses; the function
+/// itself was already pure, and only had to move layer.
 const double _minutesPerDay = 24.0 * 60.0;
 const double _minimumReasonAmount = 0.5;
 const int _maxTopReasons = 3;
@@ -84,6 +89,7 @@ class BodyEnergyDisplay {
     this.legendInfluences = const [],
     this.topReasons = const [],
     this.inputRows = const [],
+    this.maxInfluenceMagnitude = 1.0,
   });
 
   final BodyEnergyTimeline? timeline;
@@ -93,6 +99,11 @@ class BodyEnergyDisplay {
   final List<BodyEnergyPrimaryInfluence> legendInfluences;
   final List<BodyEnergyReason> topReasons;
   final List<BodyEnergyInputRow> inputRows;
+
+  /// The tallest bar the influence strip has to fit, floored at 1.0 so an
+  /// all-zero day divides by something. The painter used to scan for it on
+  /// every repaint.
+  final double maxInfluenceMagnitude;
 
   bool get isEmpty => timeline == null || chartPoints.isEmpty;
 }
@@ -149,7 +160,20 @@ BodyEnergyDisplay buildBodyEnergyDisplay(BodyEnergyTimeline? timeline) {
     legendInfluences: legend,
     topReasons: _topReasons(timeline),
     inputRows: _inputRows(timeline.inputSummary),
+    maxInfluenceMagnitude: _maxInfluenceMagnitude(influenceBars),
   );
+}
+
+/// The influence strip scales every bar against the tallest one; a day with no
+/// charge and no drain divides by 1.0 rather than by zero.
+double _maxInfluenceMagnitude(List<BodyEnergyInfluenceBar> bars) {
+  var maxMagnitude = 0.0;
+  for (final bar in bars) {
+    final magnitude = bar.charge > bar.drain ? bar.charge : bar.drain;
+    if (magnitude > maxMagnitude) maxMagnitude = magnitude;
+  }
+  if (maxMagnitude <= 0.0) maxMagnitude = 1.0;
+  return maxMagnitude;
 }
 
 List<BodyEnergyReason> _topReasons(BodyEnergyTimeline timeline) {

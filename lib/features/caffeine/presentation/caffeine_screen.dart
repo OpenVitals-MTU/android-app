@@ -11,6 +11,7 @@ import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
+import '../application/caffeine_display.dart';
 import '../application/caffeine_view_model.dart';
 import '../../../ui/components/section_padding.dart';
 
@@ -19,8 +20,9 @@ import '../../../ui/components/section_padding.dart';
 /// A bespoke read-only analytics screen (not the Day/Week/Month/Year scaffold):
 /// it renders the active-caffeine pharmacokinetic curve, the current-level and
 /// bedtime-safety guidance cards, and the source/item/category/time-of-day
-/// distributions for the selected analytics range. The Kotlin setup card, entry
-/// detail sheet and science/reference cards are omitted (drink logging + profile
+/// distributions for the selected analytics range — all of them precomputed by
+/// the view-model into a [CaffeineDisplay]. The Kotlin setup card, entry detail
+/// sheet and science/reference cards are omitted (drink logging + profile
 /// editing are Phase 6).
 class CaffeineScreen extends ConsumerWidget {
   const CaffeineScreen({super.key});
@@ -61,21 +63,23 @@ List<Widget> _content(
   UnitFormatter formatter,
 ) {
   final error = _resolveError(state.error);
-  final home = state.homeDisplay;
-  final analytics = state.analyticsDisplay;
+  // Precomputed at load time by the view-model; empty until the first one lands.
+  final display = state.display ?? const CaffeineDisplay();
+  final home = display.home;
+  final analytics = display.analytics;
 
   return [
     if (error != null) ErrorMessage(error),
-    if (state.isLoading && home.curvePoints.isEmpty)
+    if (state.isLoading && home.insights.curvePoints.isEmpty)
       const Padding(
         padding: EdgeInsets.symmetric(vertical: 48),
         child: Center(child: CircularProgressIndicator()),
       ),
     const SectionHeader('Caffeine dashboard'),
-    sectionPadded(_CaffeineOverviewCard(insights: home, formatter: formatter)),
-    sectionPadded(_CaffeineCurveCard(insights: home, formatter: formatter)),
+    sectionPadded(_CaffeineOverviewCard(home: home, formatter: formatter)),
+    sectionPadded(_CaffeineCurveCard(home: home, formatter: formatter)),
     const SectionHeader('Sleep impact'),
-    sectionPadded(_CaffeineSleepImpactCard(insights: home, formatter: formatter)),
+    sectionPadded(_CaffeineSleepImpactCard(home: home, formatter: formatter)),
     const SectionHeader('Analytics'),
     sectionPadded(
       _AnalyticsRangePicker(
@@ -84,30 +88,32 @@ List<Widget> _content(
       ),
     ),
     sectionPadded(
-      _CaffeineAnalyticsSummaryCard(insights: analytics, formatter: formatter),
+      _CaffeineAnalyticsSummaryCard(analytics: analytics, formatter: formatter),
     ),
     sectionPadded(
       _CaffeineDistributionCard(
         title: 'Sources',
-        slices: analytics.sourceTotals,
+        bars: analytics.sourceBars,
         formatter: formatter,
       ),
     ),
     sectionPadded(
       _CaffeineDistributionCard(
         title: 'Items',
-        slices: analytics.itemTotals,
+        bars: analytics.itemBars,
         formatter: formatter,
       ),
     ),
     sectionPadded(
       _CaffeineDistributionCard(
         title: 'Inferred categories',
-        slices: analytics.categoryTotals,
+        bars: analytics.categoryBars,
         formatter: formatter,
       ),
     ),
-    sectionPadded(_CaffeineTimeBucketsCard(insights: analytics, formatter: formatter)),
+    sectionPadded(
+      _CaffeineTimeBucketsCard(analytics: analytics, formatter: formatter),
+    ),
     const SizedBox(height: 16),
   ];
 }
@@ -116,14 +122,15 @@ List<Widget> _content(
 // ── Current level + today overview ──────────────────────────────────────────
 
 class _CaffeineOverviewCard extends StatelessWidget {
-  const _CaffeineOverviewCard({required this.insights, required this.formatter});
+  const _CaffeineOverviewCard({required this.home, required this.formatter});
 
-  final CaffeineInsights insights;
+  final CaffeineHomeDisplay home;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final insights = home.insights;
     final timeToSafe = insights.timeToThresholdMinutes;
     return OpenVitalsCard(
       child: Padding(
@@ -145,7 +152,7 @@ class _CaffeineOverviewCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: _CaffeineSleepStatusBanner(
-                insights: insights,
+                home: home,
                 formatter: formatter,
               ),
             ),
@@ -180,55 +187,47 @@ class _CaffeineOverviewCard extends StatelessWidget {
   }
 }
 
-enum _SleepImpactStatus { unlikely, elevatedNow, mayAffectSleep }
-
-_SleepImpactStatus _sleepImpactStatus(CaffeineInsights insights) {
-  final threshold = insights.sleepThresholdMg.toDouble();
-  if (insights.bedtimeMg > threshold) return _SleepImpactStatus.mayAffectSleep;
-  if (insights.currentMg > threshold) return _SleepImpactStatus.elevatedNow;
-  return _SleepImpactStatus.unlikely;
-}
-
 class _CaffeineSleepStatusBanner extends StatelessWidget {
   const _CaffeineSleepStatusBanner({
-    required this.insights,
+    required this.home,
     required this.formatter,
   });
 
-  final CaffeineInsights insights;
+  final CaffeineHomeDisplay home;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final status = _sleepImpactStatus(insights);
+    final insights = home.insights;
+    final status = home.sleepImpactStatus;
     final Color color;
     final IconData icon;
     final String title;
     switch (status) {
-      case _SleepImpactStatus.unlikely:
+      case CaffeineSleepImpactStatus.unlikely:
         color = scheme.primary;
         icon = Icons.check_circle_outline;
         title = 'Sleep impact unlikely';
-      case _SleepImpactStatus.elevatedNow:
+      case CaffeineSleepImpactStatus.elevatedNow:
         color = scheme.tertiary;
         icon = Icons.query_stats_outlined;
         title = 'Elevated right now';
-      case _SleepImpactStatus.mayAffectSleep:
+      case CaffeineSleepImpactStatus.mayAffectSleep:
         color = scheme.error;
         icon = Icons.warning_amber_outlined;
         title = 'May affect sleep';
     }
     final body = switch (status) {
-      _SleepImpactStatus.unlikely =>
+      CaffeineSleepImpactStatus.unlikely =>
         'Active caffeine (${_formatMg(insights.currentMg, formatter)}) is below '
             'your sleep threshold (${_formatMg(insights.sleepThresholdMg.toDouble(), formatter)}).',
-      _SleepImpactStatus.elevatedNow =>
+      CaffeineSleepImpactStatus.elevatedNow =>
         'You have ${_formatMg(insights.currentMg, formatter)} active. '
             'Projected at bedtime (${insights.bedtime}): '
             '${_formatMg(insights.bedtimeMg, formatter)}.',
-      _SleepImpactStatus.mayAffectSleep =>
+      CaffeineSleepImpactStatus.mayAffectSleep =>
         'Projected ${_formatMg(insights.bedtimeMg, formatter)} at bedtime '
             '(${insights.bedtime}) is above your threshold '
             '(${_formatMg(insights.sleepThresholdMg.toDouble(), formatter)}).',
@@ -274,9 +273,9 @@ class _CaffeineSleepStatusBanner extends StatelessWidget {
 // ── Active-caffeine curve ───────────────────────────────────────────────────
 
 class _CaffeineCurveCard extends StatelessWidget {
-  const _CaffeineCurveCard({required this.insights, required this.formatter});
+  const _CaffeineCurveCard({required this.home, required this.formatter});
 
-  final CaffeineInsights insights;
+  final CaffeineHomeDisplay home;
   final UnitFormatter formatter;
 
   @override
@@ -284,6 +283,7 @@ class _CaffeineCurveCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
+    final insights = home.insights;
     final points = insights.curvePoints;
     return OpenVitalsCard(
       child: Padding(
@@ -308,9 +308,8 @@ class _CaffeineCurveCard extends StatelessWidget {
                       painter: _CaffeineCurvePainter(
                         points: points,
                         thresholdMg: insights.sleepThresholdMg.toDouble(),
-                        entryTimes: insights.entryInsights
-                            .map((insight) => insight.entry.startTime)
-                            .toList(),
+                        maxMg: home.curveMaxMg,
+                        entryTimes: home.curveEntryTimes,
                         lineColor: scheme.primary,
                         thresholdColor: scheme.error,
                         markerColor: scheme.tertiary,
@@ -336,6 +335,7 @@ class _CaffeineCurvePainter extends CustomPainter {
   _CaffeineCurvePainter({
     required this.points,
     required this.thresholdMg,
+    required this.maxMg,
     required this.entryTimes,
     required this.lineColor,
     required this.thresholdColor,
@@ -344,6 +344,10 @@ class _CaffeineCurvePainter extends CustomPainter {
 
   final List<CaffeinePoint> points;
   final double thresholdMg;
+
+  /// The y-axis maximum, precomputed by the view-model (the painter used to scan
+  /// the points for it on every repaint).
+  final double maxMg;
   final List<DateTime> entryTimes;
   final Color lineColor;
   final Color thresholdColor;
@@ -355,10 +359,7 @@ class _CaffeineCurvePainter extends CustomPainter {
     final startMillis = points.first.time.millisecondsSinceEpoch;
     final endMillis = points.last.time.millisecondsSinceEpoch
         .clamp(startMillis + 1, 1 << 62);
-    var maxValue = thresholdMg < 1.0 ? 1.0 : thresholdMg;
-    for (final point in points) {
-      if (point.valueMg > maxValue) maxValue = point.valueMg;
-    }
+    final maxValue = maxMg;
 
     double xFor(int millis) =>
         (millis - startMillis) / (endMillis - startMillis) * size.width;
@@ -420,18 +421,19 @@ class _CaffeineCurvePainter extends CustomPainter {
 
 class _CaffeineSleepImpactCard extends StatelessWidget {
   const _CaffeineSleepImpactCard({
-    required this.insights,
+    required this.home,
     required this.formatter,
   });
 
-  final CaffeineInsights insights;
+  final CaffeineHomeDisplay home;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final safe = insights.bedtimeMg <= insights.sleepThresholdMg;
+    final insights = home.insights;
+    final safe = home.bedtimeIsSafe;
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -518,19 +520,19 @@ class _AnalyticsRangePicker extends StatelessWidget {
 
 class _CaffeineAnalyticsSummaryCard extends StatelessWidget {
   const _CaffeineAnalyticsSummaryCard({
-    required this.insights,
+    required this.analytics,
     required this.formatter,
   });
 
-  final CaffeineInsights insights;
+  final CaffeineAnalyticsDisplay analytics;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final topSource =
-        insights.sourceTotals.isNotEmpty ? insights.sourceTotals.first.label : 'N/A';
+    final insights = analytics.insights;
+    final topSource = analytics.topSourceLabel ?? 'N/A';
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -605,23 +607,18 @@ class _CaffeineAnalyticsSummaryCard extends StatelessWidget {
 class _CaffeineDistributionCard extends StatelessWidget {
   const _CaffeineDistributionCard({
     required this.title,
-    required this.slices,
+    required this.bars,
     required this.formatter,
   });
 
   final String title;
-  final List<CaffeineDistributionSlice> slices;
+  final List<CaffeineBar> bars;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final visible = slices.take(6).toList();
-    var max = 1.0;
-    for (final slice in visible) {
-      if (slice.valueMg > max) max = slice.valueMg;
-    }
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -629,7 +626,7 @@ class _CaffeineDistributionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: theme.textTheme.titleSmall),
-            if (visible.isEmpty)
+            if (bars.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
@@ -639,11 +636,11 @@ class _CaffeineDistributionCard extends StatelessWidget {
                 ),
               )
             else
-              for (final slice in visible)
+              for (final bar in bars)
                 _DistributionRow(
-                  label: slice.label,
-                  value: _formatMg(slice.valueMg, formatter),
-                  fraction: slice.valueMg / max,
+                  label: bar.label,
+                  value: _formatMg(bar.valueMg, formatter),
+                  fraction: bar.fraction,
                   color: scheme.primary,
                 ),
           ],
@@ -655,22 +652,17 @@ class _CaffeineDistributionCard extends StatelessWidget {
 
 class _CaffeineTimeBucketsCard extends StatelessWidget {
   const _CaffeineTimeBucketsCard({
-    required this.insights,
+    required this.analytics,
     required this.formatter,
   });
 
-  final CaffeineInsights insights;
+  final CaffeineAnalyticsDisplay analytics;
   final UnitFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final buckets = insights.timeBuckets;
-    var max = 1.0;
-    for (final bucket in buckets) {
-      if (bucket.valueMg > max) max = bucket.valueMg;
-    }
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -678,11 +670,11 @@ class _CaffeineTimeBucketsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Time of day', style: theme.textTheme.titleSmall),
-            for (final bucket in buckets)
+            for (final bar in analytics.timeBucketBars)
               _DistributionRow(
-                label: _bucketLabel(bucket.bucket),
-                value: _formatMg(bucket.valueMg, formatter),
-                fraction: bucket.valueMg / max,
+                label: _bucketLabel(bar.bucket),
+                value: _formatMg(bar.valueMg, formatter),
+                fraction: bar.fraction,
                 color: scheme.primary,
               ),
           ],
