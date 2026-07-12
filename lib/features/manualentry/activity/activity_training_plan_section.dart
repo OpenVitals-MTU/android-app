@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/model/activity_models.dart';
 import '../../../l10n/app_localizations.dart';
-import 'activity_entry_notifier.dart';
+import 'activity_entry_view_model.dart';
 import 'activity_entry_state.dart';
 
 /// Port of the Kotlin `ActivityTrainingPlanSection.kt`. Both widgets render

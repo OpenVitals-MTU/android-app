@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_card.dart';
-import 'activity_entry_notifier.dart';
+import 'activity_entry_view_model.dart';
 import 'activity_entry_state.dart';
 import '../../../domain/model/activity_entry_types.dart';
 import 'activity_entry_ui_text.dart';

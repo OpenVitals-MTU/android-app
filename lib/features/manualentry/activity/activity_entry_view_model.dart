@@ -1,18 +1,23 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../data/repository/contract/activity_repository.dart';
 import '../../../data/repository/contract/heart_repository.dart';
-import '../../../data/repository/contract/repository_exceptions.dart';
+import '../../../di/providers.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/preferences/activity_recording_dashboard_layout.dart';
 import '../../../domain/preferences/unit_system.dart';
+import '../../../state/app_providers.dart';
 import 'activity_entry_clock.dart';
 import 'activity_entry_edit_mapper.dart';
+import 'activity_entry_providers.dart';
 import 'activity_entry_state.dart';
 import '../../../domain/model/activity_entry_types.dart';
 import 'activity_entry_write_request_builder.dart';
@@ -28,7 +33,7 @@ class ActivityRouteFileHandle {
   final String? fileName;
 }
 
-/// Wraps route-file I/O so the notifier can be tested with a fake. Mirrors the
+/// Wraps route-file I/O so the view-model can be tested with a fake. Mirrors the
 /// Kotlin `RouteFileImporter`.
 abstract interface class RouteFileImporter {
   Future<RouteFileImport> import(ActivityRouteFileHandle handle);
@@ -43,65 +48,80 @@ class DefaultRouteFileImporter implements RouteFileImporter {
       RouteFileParser.parseFile(handle.bytes, fileName: handle.fileName);
 }
 
-/// Port of the Kotlin `ActivityEntryViewModel`. A plain, directly-constructible
-/// controller exposing an observable [ActivityEntryUiState]; wrapped by a
-/// Riverpod provider for the screen (see `activity_entry_providers.dart`).
-class ActivityEntryController {
-  ActivityEntryController({
-    required this.repository,
-    this.heartRepository,
-    this.routeFileImporter,
-    this.activityRecorder,
-    this.recordingDraftStore,
-    this.preferencesRepository,
-    this.markerRepository,
-    ActivityEntryClock? clock,
+/// Port of the Kotlin `ActivityEntryViewModel`. Owns the manual-entry /
+/// route-import / recording form: every dependency comes from a provider, and
+/// the screen holds nothing but the [NotifierProvider] built with its route
+/// arguments (see `activity_entry_screen.dart`).
+///
+/// The two failable actions each carry their own [CommandState]:
+/// [ActivityEntryUiState.save] and [ActivityEntryUiState.routeImport]. The
+/// recording controller is NOT owned here — this view-model drives the same
+/// `ActivityRecordingController` the recording screens do, and listens to it.
+class ActivityEntryViewModel extends Notifier<ActivityEntryUiState> {
+  ActivityEntryViewModel({
     this.editActivityId,
     this.launchMode,
     this.launchPlanId,
     this.launchActivityTypeId,
-  }) : clock = clock ?? ActivityEntryClock.system() {
-    _state = ValueNotifier<ActivityEntryUiState>(
-      _initialState(recordingDraftStore?.restore()),
-    );
-    _init();
-  }
+  });
 
-  final ActivityRepository repository;
-  final HeartRepository? heartRepository;
-  final RouteFileImporter? routeFileImporter;
-  final ActivityRecordingController? activityRecorder;
-  final ActivityRecordingDraftStore? recordingDraftStore;
-  final PreferencesRepository? preferencesRepository;
-  final ActivityMarkerRepository? markerRepository;
-  final ActivityEntryClock clock;
+  /// The record being edited (the edit route), or null for a new entry.
   final String? editActivityId;
+
+  /// The new-entry route's launch intent: `record` / `manual` / `plan`, an
+  /// optional plan to start from, and an optional preselected activity type.
   final String? launchMode;
   final String? launchPlanId;
   final String? launchActivityTypeId;
 
-  late final ValueNotifier<ActivityEntryUiState> _state;
-  ValueListenable<ActivityEntryUiState> get uiState => _state;
-  ActivityEntryUiState get value => _state.value;
+  ActivityRepository get _repository => ref.read(activityRepositoryProvider);
+  HeartRepository get _heartRepository => ref.read(heartRepositoryProvider);
+  RouteFileImporter get _routeFileImporter => ref.read(routeFileImporterProvider);
+  ActivityRecordingController get _activityRecorder =>
+      ref.read(activityRecordingControllerProvider);
+  ActivityRecordingDraftStore get _recordingDraftStore =>
+      ref.read(activityRecordingDraftStoreProvider);
+  PreferencesRepository get _preferencesRepository =>
+      ref.read(preferencesRepositoryProvider);
+  ActivityMarkerRepository get _markerRepository =>
+      ref.read(activityMarkerRepositoryProvider);
+  ActivityEntryClock get _clock => ref.read(activityEntryClockProvider);
 
   bool _editEntryLoaded = false;
   final Set<Future<void>> _pending = <Future<void>>{};
-  VoidCallback? _recorderListener;
-  bool _disposed = false;
 
-  void _init() {
-    refreshPermission();
-    final recorder = activityRecorder;
-    if (recorder != null) {
-      void listener() {
-        final recording = recorder.state.value;
-        if (recording.isActive) _applyRecordingProgress(recording);
-      }
+  /// The last state published, so the draft store can be written on dispose
+  /// (where `state` is no longer readable).
+  ActivityEntryUiState? _latest;
 
-      _recorderListener = listener;
-      recorder.state.addListener(listener);
+  @override
+  ActivityEntryUiState build() {
+    final draftStore = _recordingDraftStore;
+    final recorder = _activityRecorder;
+
+    void listener() {
+      final recording = recorder.state.value;
+      if (recording.isActive) _applyRecordingProgress(recording);
     }
-    _applyLaunchIntent();
+
+    recorder.state.addListener(listener);
+    ref.onDispose(() {
+      recorder.state.removeListener(listener);
+      final last = _latest;
+      if (last != null) draftStore.store(last);
+    });
+
+    final initial = _initialState(draftStore.restore());
+    _latest = initial;
+    // Riverpod forbids writing `state` while `build` runs, so the init the
+    // Kotlin constructor did inline is deferred by one microtask.
+    Future.microtask(() {
+      if (!ref.mounted) return;
+      refreshPermission();
+      _applyLaunchIntent();
+      if (editActivityId != null) loadEditEntry(ref.read(unitSystemProvider));
+    });
+    return initial;
   }
 
   /// Awaits all in-flight async operations (test helper; analogue of
@@ -120,39 +140,29 @@ class ActivityEntryController {
     }
   }
 
-  void dispose() {
-    _disposed = true;
-    final recorder = activityRecorder;
-    final listener = _recorderListener;
-    if (recorder != null && listener != null) {
-      recorder.state.removeListener(listener);
-    }
-    recordingDraftStore?.store(_state.value);
-    _state.dispose();
-  }
-
   void _launch(Future<void> Function() body) {
     late final Future<void> future;
     future = body().whenComplete(() => _pending.remove(future));
     _pending.add(future);
   }
 
-  void _set(ActivityEntryUiState state) {
-    if (_disposed) return;
-    _state.value = state;
+  void _set(ActivityEntryUiState next) {
+    if (!ref.mounted) return;
+    _latest = next;
+    state = next;
   }
 
   // ── Init / launch intent ────────────────────────────────────────────────
 
   void _applyLaunchIntent() {
     if (editActivityId != null) return;
-    if (_state.value.isRecordingDraft) return;
+    if (state.isRecordingDraft) return;
 
     final typeId = launchActivityTypeId;
     if (typeId != null) {
       final type = activityEntryTypeById(typeId);
       if (type != null) {
-        _set(_state.value.copyWith(selectedActivityType: type));
+        _set(state.copyWith(selectedActivityType: type));
       }
     }
 
@@ -170,21 +180,20 @@ class ActivityEntryController {
   ActivityEntryUiState _initialState(ActivityEntryUiState? recordingDraft) {
     if (editActivityId == null && recordingDraft?.isRecordingDraft == true) {
       return recordingDraft!.copyWith(
-        writePermissions: repository.activityWritePermissions(),
+        writePermissions: _repository.activityWritePermissions(),
         canWrite: false,
         isCheckingPermission: true,
-        isSavingEntry: false,
-        isImportingRoute: false,
+        save: const CommandState.idle(),
+        routeImport: const CommandState.idle(),
         entryError: null,
         detailError: null,
         validationErrors: const {},
         editRecordId: null,
-        saveCompleted: false,
       );
     }
     return initialActivityEntryState(
-      clock,
-      repository.activityWritePermissions(),
+      _clock,
+      _repository.activityWritePermissions(),
       selectedActivityType: _preferredActivityType(),
     ).copyWith(
       mode: editActivityId == null
@@ -199,26 +208,26 @@ class ActivityEntryController {
   void refreshPermission() {
     final permissions = _currentRequiredPermissions();
     _launch(() async {
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         isCheckingPermission: true,
         writePermissions: permissions,
         detailError: null,
       ));
-      try {
-        final canWrite = (await repository.hasActivityWritePermission()).orThrow();
-        _set(_state.value.copyWith(
-          isCheckingPermission: false,
-          canWrite: canWrite,
-          writePermissions: _currentRequiredPermissions(),
-        ));
-      } catch (error) {
-        _set(_state.value.copyWith(
-          isCheckingPermission: false,
-          canWrite: false,
-          entryError: ActivityEntryError.writeFailed,
-          detailError: throwableToScreenError(error),
-          writePermissions: _currentRequiredPermissions(),
-        ));
+      switch (await _repository.hasActivityWritePermission()) {
+        case Ok(:final value):
+          _set(state.copyWith(
+            isCheckingPermission: false,
+            canWrite: value,
+            writePermissions: _currentRequiredPermissions(),
+          ));
+        case Err(:final failure):
+          _set(state.copyWith(
+            isCheckingPermission: false,
+            canWrite: false,
+            entryError: ActivityEntryError.writeFailed,
+            detailError: failure.toScreenError(),
+            writePermissions: _currentRequiredPermissions(),
+          ));
       }
     });
   }
@@ -226,7 +235,7 @@ class ActivityEntryController {
   // ── Source selection ────────────────────────────────────────────────────
 
   void selectActivityType(ActivityEntryType type) {
-    final current = _state.value;
+    final current = state;
     final retainedRoute = current.importedRoute != null &&
             (current.importedRoute!.points.isEmpty || type.supportsGpsRoute)
         ? current.importedRoute
@@ -256,8 +265,8 @@ class ActivityEntryController {
   }
 
   void startManualEntry() {
-    recordingDraftStore?.clear();
-    _set(_state.value.copyWith(
+    _recordingDraftStore.clear();
+    _set(state.copyWith(
       mode: ActivityEntryFormMode.manual,
       selectedPlannedWorkoutId: null,
       selectedPlannedWorkoutActivityTypeId: null,
@@ -275,9 +284,9 @@ class ActivityEntryController {
   }
 
   void startFromExistingPlan() {
-    recordingDraftStore?.clear();
+    _recordingDraftStore.clear();
     _launch(() async {
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         mode: ActivityEntryFormMode.planActivityPicker,
         plannedWorkouts: const [],
         selectedPlannedWorkoutId: null,
@@ -288,34 +297,25 @@ class ActivityEntryController {
         detailError: null,
         validationErrors: const {},
       ));
-      try {
-        final plans = (await repository.loadExistingPlannedWorkouts(
-                anchorDate: _todayLocalDate()))
-            .orThrow();
-        _set(_state.value.copyWith(
-          plannedWorkouts: plans,
-          isLoadingPlannedWorkouts: false,
-        ));
-        _autoAdvancePlanSelection(plans);
-      } catch (error) {
-        _set(_state.value.copyWith(
-          plannedWorkouts: const [],
-          isLoadingPlannedWorkouts: false,
-          writePermissions: repository.plannedWorkoutWritePermissions(),
-          canWrite: false,
-          entryError: error is MissingHealthPermissionException
-              ? ActivityEntryError.missingWritePermission
-              : ActivityEntryError.writeFailed,
-          detailError: throwableToScreenError(error),
-        ));
+      switch (await _repository.loadExistingPlannedWorkouts(
+        anchorDate: _todayLocalDate(),
+      )) {
+        case Ok(:final value):
+          _set(state.copyWith(
+            plannedWorkouts: value,
+            isLoadingPlannedWorkouts: false,
+          ));
+          _autoAdvancePlanSelection(value);
+        case Err(:final failure):
+          _setPlannedWorkoutFailure(failure);
       }
     });
   }
 
   void startWithPlan(String planId) {
-    recordingDraftStore?.clear();
+    _recordingDraftStore.clear();
     _launch(() async {
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         mode: ActivityEntryFormMode.planActivityPicker,
         plannedWorkouts: const [],
         selectedPlannedWorkoutId: null,
@@ -326,32 +326,39 @@ class ActivityEntryController {
         detailError: null,
         validationErrors: const {},
       ));
-      try {
-        final plans = (await repository.loadExistingPlannedWorkouts(
-                anchorDate: _todayLocalDate()))
-            .orThrow();
-        _set(_state.value.copyWith(
-          plannedWorkouts: plans,
-          isLoadingPlannedWorkouts: false,
-        ));
-        if (plans.any((plan) => plan.id == planId)) {
-          applyPlannedWorkout(planId);
-        } else {
-          _autoAdvancePlanSelection(plans);
-        }
-      } catch (error) {
-        _set(_state.value.copyWith(
-          plannedWorkouts: const [],
-          isLoadingPlannedWorkouts: false,
-          writePermissions: repository.plannedWorkoutWritePermissions(),
-          canWrite: false,
-          entryError: error is MissingHealthPermissionException
-              ? ActivityEntryError.missingWritePermission
-              : ActivityEntryError.writeFailed,
-          detailError: throwableToScreenError(error),
-        ));
+      switch (await _repository.loadExistingPlannedWorkouts(
+        anchorDate: _todayLocalDate(),
+      )) {
+        case Ok(:final value):
+          _set(state.copyWith(
+            plannedWorkouts: value,
+            isLoadingPlannedWorkouts: false,
+          ));
+          if (value.any((plan) => plan.id == planId)) {
+            applyPlannedWorkout(planId);
+          } else {
+            _autoAdvancePlanSelection(value);
+          }
+        case Err(:final failure):
+          _setPlannedWorkoutFailure(failure);
       }
     });
+  }
+
+  /// A planned-workout read or write that came back [Err]: the form falls back
+  /// to the planned-workout permission set, exactly as the Kotlin does.
+  void _setPlannedWorkoutFailure(AppFailure failure) {
+    _set(state.copyWith(
+      plannedWorkouts: const [],
+      isLoadingPlannedWorkouts: false,
+      isSavingPlannedWorkout: false,
+      writePermissions: _repository.plannedWorkoutWritePermissions(),
+      canWrite: false,
+      entryError: failure is PermissionFailure
+          ? ActivityEntryError.missingWritePermission
+          : ActivityEntryError.writeFailed,
+      detailError: failure.toScreenError(),
+    ));
   }
 
   void _autoAdvancePlanSelection(List<PlannedExerciseData> plans) {
@@ -373,7 +380,7 @@ class ActivityEntryController {
   }
 
   void selectPlannedWorkoutActivity(String typeId) {
-    _set(_state.value.copyWith(
+    _set(state.copyWith(
       mode: ActivityEntryFormMode.planPicker,
       selectedPlannedWorkoutActivityTypeId: typeId,
       selectedPlannedWorkoutId: null,
@@ -383,7 +390,7 @@ class ActivityEntryController {
   }
 
   void choosePlannedWorkoutActivity() {
-    _set(_state.value.copyWith(
+    _set(state.copyWith(
       mode: ActivityEntryFormMode.planActivityPicker,
       selectedPlannedWorkoutActivityTypeId: null,
       selectedPlannedWorkoutId: null,
@@ -393,17 +400,17 @@ class ActivityEntryController {
   }
 
   void chooseSource() {
-    if (_state.value.isEditMode) return;
-    recordingDraftStore?.clear();
-    activityRecorder?.stopBlePreview();
-    activityRecorder?.clearPreparedRecording();
+    if (state.isEditMode) return;
+    _recordingDraftStore.clear();
+    _activityRecorder.stopBlePreview();
+    _activityRecorder.clearPreparedRecording();
     _set(initialActivityEntryState(
-      clock,
-      repository.activityWritePermissions(),
+      _clock,
+      _repository.activityWritePermissions(),
       selectedActivityType: _preferredActivityType(),
     ).copyWith(
-      canWrite: _state.value.canWrite,
-      isCheckingPermission: _state.value.isCheckingPermission,
+      canWrite: state.canWrite,
+      isCheckingPermission: state.isCheckingPermission,
       editRecordId: editActivityId,
     ));
     refreshPermission();
@@ -545,33 +552,30 @@ class ActivityEntryController {
 
   // ── Route import ────────────────────────────────────────────────────────
 
+  /// The route-import command: the file picked in Settings → Data import is
+  /// handed here (see `pendingRouteImportProvider`), and so is a file picked on
+  /// this screen.
   void importRouteFile(ActivityRouteFileHandle handle, UnitSystem unitSystem) {
-    final importer = routeFileImporter;
-    if (importer == null) {
-      _set(_state.value.copyWith(
-        entryError: ActivityEntryError.routeImportFailed,
-        detailError: const ScreenErrorMessage('Activity file import is not available.'),
-        validationErrors: const {},
-      ));
-      return;
-    }
-    recordingDraftStore?.clear();
+    final importer = _routeFileImporter;
+    _recordingDraftStore.clear();
     _launch(() async {
-      _set(_state.value.copyWith(
-        isImportingRoute: true,
+      _set(state.copyWith(
+        routeImport: const CommandState.running(),
         isRecordingDraft: false,
         entryError: null,
         detailError: null,
         validationErrors: const {},
       ));
+      // The parsers throw on a malformed file rather than returning `Result` —
+      // they are not repositories, and the throw IS the parse verdict.
       try {
         final routeImport = await importer.import(handle);
         _applyRouteImport(routeImport, unitSystem);
       } catch (error) {
-        _set(_state.value.copyWith(
-          isImportingRoute: false,
+        _set(state.copyWith(
+          routeImport: CommandState.failure(throwableToScreenError(error)),
           entryError: ActivityEntryError.routeImportFailed,
-          detailError: throwableToScreenError(error),
+          detailError: null,
           validationErrors: const {},
         ));
       }
@@ -579,12 +583,13 @@ class ActivityEntryController {
   }
 
   void clearImportedRoute() {
-    _set(_state.value.copyWith(
+    _set(state.copyWith(
       mode: ActivityEntryFormMode.manual,
       importedRoute: null,
       recordedPauseIntervals: const [],
       recordedLaps: const [],
       recordedMarkers: const [],
+      routeImport: const CommandState.idle(),
       entryError: null,
       detailError: null,
       validationErrors: const {},
@@ -595,7 +600,7 @@ class ActivityEntryController {
   // ── Planned workouts ────────────────────────────────────────────────────
 
   void refreshPlannedWorkouts() {
-    final snapshot = _state.value;
+    final snapshot = state;
     if (!snapshot.selectedActivityType.supportsSetRepetitions) {
       _set(snapshot.copyWith(
         plannedWorkouts: const [],
@@ -607,46 +612,45 @@ class ActivityEntryController {
     final date = parseStartDate(snapshot.startDateText);
     if (date == null) return;
     _launch(() async {
-      _set(_state.value.copyWith(isLoadingPlannedWorkouts: true));
-      try {
-        final plans = (await repository.loadPlannedWorkoutOptions(
-          date,
-          snapshot.selectedActivityType.exerciseType,
-        ))
-            .orThrow();
-        final currentSelectedId = _state.value.selectedPlannedWorkoutId;
-        final selectedId = currentSelectedId != null &&
-                (plans.isEmpty || plans.any((p) => p.id == currentSelectedId))
-            ? currentSelectedId
-            : null;
-        _set(_state.value.copyWith(
-          plannedWorkouts: plans,
-          selectedPlannedWorkoutId: selectedId,
-          isLoadingPlannedWorkouts: false,
-        ));
-      } catch (error) {
-        _set(_state.value.copyWith(
-          plannedWorkouts: const [],
-          selectedPlannedWorkoutId: null,
-          isLoadingPlannedWorkouts: false,
-          detailError: throwableToScreenError(error),
-        ));
+      _set(state.copyWith(isLoadingPlannedWorkouts: true));
+      switch (await _repository.loadPlannedWorkoutOptions(
+        date,
+        snapshot.selectedActivityType.exerciseType,
+      )) {
+        case Ok(:final value):
+          final currentSelectedId = state.selectedPlannedWorkoutId;
+          final selectedId = currentSelectedId != null &&
+                  (value.isEmpty ||
+                      value.any((p) => p.id == currentSelectedId))
+              ? currentSelectedId
+              : null;
+          _set(state.copyWith(
+            plannedWorkouts: value,
+            selectedPlannedWorkoutId: selectedId,
+            isLoadingPlannedWorkouts: false,
+          ));
+        case Err(:final failure):
+          _set(state.copyWith(
+            plannedWorkouts: const [],
+            selectedPlannedWorkoutId: null,
+            isLoadingPlannedWorkouts: false,
+            detailError: failure.toScreenError(),
+          ));
       }
     });
   }
 
   void applyPlannedWorkout(String planId) {
-    final plan =
-        _state.value.plannedWorkouts.firstWhereOrNull((p) => p.id == planId);
+    final plan = state.plannedWorkouts.firstWhereOrNull((p) => p.id == planId);
     if (plan == null) return;
     final sets = plannedWorkoutToRepetitionSetInputs(plan);
     if (sets.isEmpty) return;
-    final activityType = _planActivityType(plan) ?? _state.value.selectedActivityType;
-    final selectedAt = _truncateToMinute(clock.nowInZone());
+    final activityType = _planActivityType(plan) ?? state.selectedActivityType;
+    final selectedAt = _truncateToMinute(_clock.nowInZone());
     final startDateText = isoLocalDate(selectedAt);
     final startTimeText = timeFormatterText(selectedAt);
     final durationMinutesText = _planDurationMinutesText(plan);
-    _set(_state.value.copyWith(
+    _set(state.copyWith(
       mode: ActivityEntryFormMode.manual,
       selectedActivityType: activityType,
       selectedPlannedWorkoutId: plan.id,
@@ -674,7 +678,7 @@ class ActivityEntryController {
   }
 
   void createNewPlannedWorkout() {
-    final current = _state.value;
+    final current = state;
     _set(current.copyWith(
       selectedPlannedWorkoutId: null,
       selectedPlannedWorkoutBaseline: null,
@@ -693,7 +697,7 @@ class ActivityEntryController {
 
   void saveCurrentAsPlannedWorkout(UnitSystem unitSystem,
       {bool updateSelected = false}) {
-    final current = _state.value;
+    final current = state;
     final validationErrors = validatePlannedExerciseWriteRequest(current, unitSystem);
     final request = buildPlannedExerciseWriteRequest(
       current,
@@ -709,63 +713,56 @@ class ActivityEntryController {
       return;
     }
     _launch(() async {
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         isSavingPlannedWorkout: true,
         entryError: null,
         detailError: null,
       ));
-      try {
-        final savedPlanId =
-            (await repository.writePlannedWorkout(request)).orThrow();
-        final savedState = _state.value;
-        _set(savedState.copyWith(
-          selectedPlannedWorkoutId: savedPlanId,
-          selectedPlannedWorkoutBaseline:
-              savedState.plannedWorkoutBaseline(savedPlanId),
-          isSavingPlannedWorkout: false,
-          detailError: null,
-        ));
-        refreshPlannedWorkouts();
-      } catch (error) {
-        _set(_state.value.copyWith(
-          isSavingPlannedWorkout: false,
-          writePermissions: repository.plannedWorkoutWritePermissions(),
-          canWrite: false,
-          entryError: error is MissingHealthPermissionException
-              ? ActivityEntryError.missingWritePermission
-              : ActivityEntryError.writeFailed,
-          detailError: throwableToScreenError(error),
-        ));
+      switch (await _repository.writePlannedWorkout(request)) {
+        case Ok(:final value):
+          final savedState = state;
+          _set(savedState.copyWith(
+            selectedPlannedWorkoutId: value,
+            selectedPlannedWorkoutBaseline:
+                savedState.plannedWorkoutBaseline(value),
+            isSavingPlannedWorkout: false,
+            detailError: null,
+          ));
+          refreshPlannedWorkouts();
+        case Err(:final failure):
+          _setPlannedWorkoutFailure(failure);
       }
     });
   }
 
   // ── Permission-driven error surfaces ────────────────────────────────────
 
-  void reportLocationPermissionNeeded() => _set(_state.value.copyWith(
+  void reportLocationPermissionNeeded() => _set(state.copyWith(
         entryError: ActivityEntryError.locationPermissionNeeded,
         detailError: null,
         validationErrors: const {},
       ));
 
-  void reportNotificationPermissionNeeded() => _set(_state.value.copyWith(
+  void reportNotificationPermissionNeeded() => _set(state.copyWith(
         entryError: ActivityEntryError.notificationPermissionNeeded,
         detailError: null,
         validationErrors: const {},
       ));
 
-  void reportActivityRecognitionPermissionNeeded() =>
-      _set(_state.value.copyWith(
+  void reportActivityRecognitionPermissionNeeded() => _set(state.copyWith(
         entryError: ActivityEntryError.activityRecognitionPermissionNeeded,
         detailError: null,
         validationErrors: const {},
       ));
 
   // ── Recording ───────────────────────────────────────────────────────────
+  //
+  // The recorder itself is a LATER phase: these methods keep talking to the
+  // `ActivityRecordingController` exactly as the Kotlin ViewModel did.
 
   void prepareGpsRecording() {
-    final current = _state.value;
-    recordingDraftStore?.clear();
+    final current = state;
+    _recordingDraftStore.clear();
     _set(current.copyWith(
       mode: ActivityEntryFormMode.recording,
       selectedActivityType: _preferredActivityType(requireLiveRecording: true),
@@ -781,21 +778,12 @@ class ActivityEntryController {
       validationErrors: const {},
     ));
     refreshPermission();
-    activityRecorder?.clearPreparedRecording();
-    activityRecorder?.previewBleConnections();
+    _activityRecorder.clearPreparedRecording();
+    _activityRecorder.previewBleConnections();
   }
 
   void openRecordingDashboard({int repetitionRestSeconds = 0}) {
-    final recorder = activityRecorder;
-    if (recorder == null) {
-      _set(_state.value.copyWith(
-        entryError: ActivityEntryError.recordingFailed,
-        detailError: const ScreenErrorMessage('GPS recording is not available.'),
-        validationErrors: const {},
-      ));
-      return;
-    }
-    final current = _state.value;
+    final current = state;
     if (!current.selectedActivityType.supportsLiveRecording) {
       _set(current.copyWith(
         entryError: ActivityEntryError.invalidValue,
@@ -810,7 +798,7 @@ class ActivityEntryController {
       startGpsRecording(repetitionRestSeconds: repetitionRestSeconds);
       return;
     }
-    recordingDraftStore?.clear();
+    _recordingDraftStore.clear();
     _set(current.copyWith(
       mode: ActivityEntryFormMode.recording,
       importedRoute: null,
@@ -824,23 +812,15 @@ class ActivityEntryController {
       detailError: null,
       validationErrors: const {},
     ));
-    recorder.prepareRecordingDashboard(current.selectedActivityType);
+    _activityRecorder.prepareRecordingDashboard(current.selectedActivityType);
   }
 
   Future<void> startGpsRecording({
     ActivityRecordingInitialFix? initialFix,
     int repetitionRestSeconds = 0,
   }) async {
-    final recorder = activityRecorder;
-    if (recorder == null) {
-      _set(_state.value.copyWith(
-        entryError: ActivityEntryError.recordingFailed,
-        detailError: const ScreenErrorMessage('GPS recording is not available.'),
-        validationErrors: const {},
-      ));
-      return;
-    }
-    final current = _state.value;
+    final recorder = _activityRecorder;
+    final current = state;
     if (!current.selectedActivityType.supportsLiveRecording) {
       _set(current.copyWith(
         entryError: ActivityEntryError.invalidValue,
@@ -851,8 +831,8 @@ class ActivityEntryController {
       ));
       return;
     }
-    recordingDraftStore?.clear();
-    final now = _truncateToMinute(clock.nowInZone());
+    _recordingDraftStore.clear();
+    final now = _truncateToMinute(_clock.nowInZone());
     _set(current.copyWith(
       mode: ActivityEntryFormMode.recording,
       importedRoute: null,
@@ -876,7 +856,7 @@ class ActivityEntryController {
     );
     if (!started) {
       final message = recorder.state.value.errorMessage;
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         entryError: ActivityEntryError.recordingFailed,
         detailError: message != null ? ScreenErrorMessage(message) : null,
         validationErrors: const {},
@@ -884,40 +864,40 @@ class ActivityEntryController {
     }
   }
 
-  void pauseGpsRecording() => activityRecorder?.pauseRecording();
-  void resumeGpsRecording() => activityRecorder?.resumeRecording();
-  void addRecordingLap() => activityRecorder?.addManualLap();
-  void addRecordingMarker() => activityRecorder?.addMarker();
+  void pauseGpsRecording() => _activityRecorder.pauseRecording();
+  void resumeGpsRecording() => _activityRecorder.resumeRecording();
+  void addRecordingLap() => _activityRecorder.addManualLap();
+  void addRecordingMarker() => _activityRecorder.addMarker();
   void updateRecordingMarker(ActivityRecordingMarker marker) =>
-      activityRecorder?.updateMarker(marker);
+      _activityRecorder.updateMarker(marker);
   void deleteRecordingMarker(String markerId) =>
-      activityRecorder?.deleteMarker(markerId);
+      _activityRecorder.deleteMarker(markerId);
   void adjustRepetitionRecording(int delta) =>
-      activityRecorder?.adjustRepetitionCount(delta);
-  void endRepetitionSet() => activityRecorder?.endRepetitionSet();
-  void startNextRepetitionSet() => activityRecorder?.startNextRepetitionSet();
+      _activityRecorder.adjustRepetitionCount(delta);
+  void endRepetitionSet() => _activityRecorder.endRepetitionSet();
+  void startNextRepetitionSet() => _activityRecorder.startNextRepetitionSet();
 
   /// Kotlin `ActivityEntryViewModel.updateRecordingDashboardLayout`.
   void updateRecordingDashboardLayout(ActivityRecordingDashboardLayout layout) =>
-      activityRecorder?.updateDashboardLayout(layout);
+      _activityRecorder.updateDashboardLayout(layout);
 
   void discardGpsRecording() {
-    activityRecorder?.discardRecording();
-    activityRecorder?.stopBlePreview();
-    recordingDraftStore?.clear();
+    _activityRecorder.discardRecording();
+    _activityRecorder.stopBlePreview();
+    _recordingDraftStore.clear();
     chooseSource();
   }
 
   void discardRecordingDraft() {
-    if (!_state.value.isRecordingDraft || _state.value.isEditMode) return;
-    recordingDraftStore?.clear();
+    if (!state.isRecordingDraft || state.isEditMode) return;
+    _recordingDraftStore.clear();
     chooseSource();
   }
 
   void finishGpsRecording(UnitSystem unitSystem) {
-    final snapshot = activityRecorder?.finishRecording();
+    final snapshot = _activityRecorder.finishRecording();
     if (snapshot == null) {
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         entryError: ActivityEntryError.recordingFailed,
         detailError:
             const ScreenErrorMessage('No active activity recording was found.'),
@@ -942,7 +922,7 @@ class ActivityEntryController {
         unitSystem,
       );
       final activityType = activityEntryTypeById(snapshot.activityTypeId);
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         recordedPauseIntervals: snapshot.pauseIntervals,
         recordedLaps: snapshot.manualLaps.map(_lapToExerciseLap).toList(),
         recordedMarkers: snapshot.markers,
@@ -957,7 +937,7 @@ class ActivityEntryController {
     } else {
       _applyRecordingWithoutRoute(snapshot);
     }
-    if (recordingDraftStore != null) recordingDraftStore!.store(_state.value);
+    _recordingDraftStore.store(state);
   }
 
   // ── Edit ────────────────────────────────────────────────────────────────
@@ -967,102 +947,120 @@ class ActivityEntryController {
     if (recordId == null || _editEntryLoaded) return;
     _editEntryLoaded = true;
     _launch(() async {
-      try {
-        final workout = (await repository.loadWorkout(recordId)).orThrow();
-        if (workout == null || !workout.isOpenVitalsEntry) {
-          _set(_state.value.copyWith(
-            entryError: ActivityEntryError.writeFailed,
-            detailError:
-                const ScreenErrorMessage('Only OpenVitals entries can be edited.'),
-            validationErrors: const {},
-          ));
+      final ExerciseData? workout;
+      switch (await _repository.loadWorkout(recordId)) {
+        case Ok(:final value):
+          workout = value;
+        case Err(:final failure):
+          _setEditLoadFailure(failure.toScreenError());
           return;
-        }
-        final heartRateSamples = heartRepository == null
-            ? const <HeartRateSample>[]
-            : (await heartRepository!.loadHeartRateSamplesInstant(
-                    workout.startTime, workout.endTime))
-                .orThrow();
-        final current = _state.value;
-        var editState = exerciseToEditState(
-          workout,
-          unitSystem: unitSystem,
-          clock: clock,
-          repository: repository,
-          canWrite: current.canWrite,
-          isCheckingPermission: current.isCheckingPermission,
-        ).copyWith(sessionHeartRateSamples: heartRateSamples);
-        final markers = markerRepository?.markersForActivity(recordId) ?? const [];
-        final resolvedMarkers = markers.isNotEmpty
-            ? markers
-            : (workout.clientRecordId != null
-                ? markerRepository?.markersForActivity(workout.clientRecordId!) ??
-                    const []
-                : const <ActivityRecordingMarker>[]);
-        editState = editState.copyWith(recordedMarkers: resolvedMarkers);
-        _set(editState);
-        refreshPlannedWorkouts();
-      } catch (error) {
-        _set(_state.value.copyWith(
-          entryError: ActivityEntryError.writeFailed,
-          detailError: throwableToScreenError(error),
-          validationErrors: const {},
-        ));
       }
+      if (workout == null || !workout.isOpenVitalsEntry) {
+        _setEditLoadFailure(
+          const ScreenErrorMessage('Only OpenVitals entries can be edited.'),
+        );
+        return;
+      }
+      final List<HeartRateSample> heartRateSamples;
+      switch (await _heartRepository.loadHeartRateSamplesInstant(
+        workout.startTime,
+        workout.endTime,
+      )) {
+        case Ok(:final value):
+          heartRateSamples = value;
+        case Err(:final failure):
+          _setEditLoadFailure(failure.toScreenError());
+          return;
+      }
+      final current = state;
+      var editState = exerciseToEditState(
+        workout,
+        unitSystem: unitSystem,
+        clock: _clock,
+        repository: _repository,
+        canWrite: current.canWrite,
+        isCheckingPermission: current.isCheckingPermission,
+      ).copyWith(sessionHeartRateSamples: heartRateSamples);
+      final markers = _markerRepository.markersForActivity(recordId);
+      final resolvedMarkers = markers.isNotEmpty
+          ? markers
+          : (workout.clientRecordId != null
+              ? _markerRepository.markersForActivity(workout.clientRecordId!)
+              : const <ActivityRecordingMarker>[]);
+      editState = editState.copyWith(recordedMarkers: resolvedMarkers);
+      _set(editState);
+      refreshPlannedWorkouts();
     });
+  }
+
+  /// The edit prefill could not be read. It is not a failed *write*, but the
+  /// form still cannot be trusted, so it is reported on the same error line.
+  void _setEditLoadFailure(ScreenError error) {
+    _set(state.copyWith(
+      entryError: ActivityEntryError.writeFailed,
+      detailError: error,
+      validationErrors: const {},
+    ));
   }
 
   // ── Save ────────────────────────────────────────────────────────────────
 
   void addEntry(UnitSystem unitSystem) {
-    if (_state.value.mode == ActivityEntryFormMode.chooseSource) {
-      _set(_state.value.copyWith(
+    if (state.mode == ActivityEntryFormMode.chooseSource) {
+      _set(state.copyWith(
         entryError: ActivityEntryError.invalidValue,
         detailError: null,
         validationErrors: const {},
       ));
       return;
     }
-    final validationErrors = validateActivityEntry(_state.value, unitSystem);
+    final validationErrors = validateActivityEntry(state, unitSystem);
     if (validationErrors.isNotEmpty) {
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         entryError: ActivityEntryError.invalidValue,
         detailError: null,
         validationErrors: validationErrors,
       ));
       return;
     }
-    final request = buildWriteRequest(_state.value, unitSystem);
+    final request = buildWriteRequest(state, unitSystem);
     if (request == null) {
-      _set(_state.value.copyWith(
+      _set(state.copyWith(
         entryError: ActivityEntryError.invalidValue,
         detailError: null,
         validationErrors: validationErrors,
       ));
       return;
     }
-    final editRecordId = _state.value.editRecordId;
-    final wasRecordingDraft = _state.value.isRecordingDraft;
-    final markersToSave = _state.value.selectedActivityType.supportsGpsRoute
-        ? _state.value.recordedMarkers
+    final editRecordId = state.editRecordId;
+    final wasRecordingDraft = state.isRecordingDraft;
+    final markersToSave = state.selectedActivityType.supportsGpsRoute
+        ? state.recordedMarkers
         : const <ActivityRecordingMarker>[];
     final requestPermissions =
-        repository.activityWritePermissionsForRequest(request);
+        _repository.activityWritePermissionsForRequest(request);
 
     _launch(() async {
-      _set(_state.value.copyWith(
-        isSavingEntry: true,
+      _set(state.copyWith(
+        save: const CommandState.running(),
         entryError: null,
         detailError: null,
         validationErrors: const {},
         writePermissions: requestPermissions,
       ));
-      final hasPermission =
-          (await repository.hasActivityWritePermissionForRequest(request))
-              .orThrow();
+      final bool hasPermission;
+      switch (await _repository.hasActivityWritePermissionForRequest(request)) {
+        case Ok(:final value):
+          hasPermission = value;
+        case Err(:final failure):
+          _setSaveFailure(failure);
+          return;
+      }
       if (!hasPermission) {
-        _set(_state.value.copyWith(
-          isSavingEntry: false,
+        // A refusal, not a failure: the command goes back to rest and the form
+        // asks for the permission.
+        _set(state.copyWith(
+          save: const CommandState.idle(),
           canWrite: false,
           entryError: ActivityEntryError.missingWritePermission,
           detailError: null,
@@ -1070,57 +1068,69 @@ class ActivityEntryController {
         ));
         return;
       }
-      try {
-        final String savedActivityId;
-        if (editRecordId == null) {
-          savedActivityId =
-              (await repository.writeActivityEntry(request)).orThrow();
-        } else {
-          (await repository.updateActivityEntry(editRecordId, request))
-              .orThrow();
-          savedActivityId = editRecordId;
+      final String savedActivityId;
+      if (editRecordId == null) {
+        switch (await _repository.writeActivityEntry(request)) {
+          case Ok(:final value):
+            savedActivityId = value;
+          case Err(:final failure):
+            _setSaveFailure(failure);
+            return;
         }
-        markerRepository?.setMarkersForActivity(savedActivityId, markersToSave);
-        recordingDraftStore?.clear();
-        if (wasRecordingDraft) {
-          _rememberLastActivityType(request.exerciseType);
+      } else {
+        switch (await _repository.updateActivityEntry(editRecordId, request)) {
+          case Ok():
+            savedActivityId = editRecordId;
+          case Err(:final failure):
+            _setSaveFailure(failure);
+            return;
         }
-        if (editRecordId == null) {
-          _set(clearedAfterSaveState(clock, repository.activityWritePermissions(),
-                  _preferredActivityType())
-              .copyWith(saveCompleted: true));
-          refreshPermission();
-        } else {
-          _set(_state.value.copyWith(
-            isSavingEntry: false,
-            saveCompleted: true,
-            entryError: null,
-            detailError: null,
-            validationErrors: const {},
-          ));
-        }
-      } catch (error) {
-        _set(_state.value.copyWith(
-          isSavingEntry: false,
-          entryError: ActivityEntryError.writeFailed,
-          detailError: throwableToScreenError(error),
+      }
+      _markerRepository.setMarkersForActivity(savedActivityId, markersToSave);
+      _recordingDraftStore.clear();
+      if (wasRecordingDraft) {
+        _rememberLastActivityType(request.exerciseType);
+      }
+      if (editRecordId == null) {
+        _set(clearedAfterSaveState(
+          _clock,
+          _repository.activityWritePermissions(),
+          _preferredActivityType(),
+        ).copyWith(save: const CommandState.success(null)));
+        refreshPermission();
+      } else {
+        _set(state.copyWith(
+          save: const CommandState.success(null),
+          entryError: null,
+          detailError: null,
           validationErrors: const {},
         ));
       }
     });
   }
 
+  void _setSaveFailure(AppFailure failure) {
+    _set(state.copyWith(
+      save: CommandState.failure(failure.toScreenError()),
+      entryError: ActivityEntryError.writeFailed,
+      detailError: null,
+      validationErrors: const {},
+    ));
+  }
+
+  /// The screen consumed the success (it left the route), so the command returns
+  /// to rest — otherwise re-entering the route would fire it again.
   void onSaveCompletedHandled() =>
-      _set(_state.value.copyWith(saveCompleted: false));
+      _set(state.copyWith(save: const CommandState.idle()));
 
   // ── Internal transforms ─────────────────────────────────────────────────
 
   void _applyRouteImport(RouteFileImport routeImport, UnitSystem unitSystem) {
     _set(activityStateWithRouteImport(
-      _state.value,
+      state,
       routeImport,
       unitSystem,
-      clock,
+      _clock,
     ));
     refreshPermission();
   }
@@ -1128,12 +1138,12 @@ class ActivityEntryController {
   void _applyRecordingProgress(ActivityRecordingState recording) {
     final start = recording.startTime;
     if (start == null) return;
-    final startDateTime = clock.toZone(start);
+    final startDateTime = _clock.toZone(start);
     final durationMinutes =
-        (_atLeast(recording.elapsedDuration(clock.nowUtc()).inSeconds, 1) / 60.0)
+        (_atLeast(recording.elapsedDuration(_clock.nowUtc()).inSeconds, 1) / 60.0)
             .ceil()
             .clamp(1, maxActivityDurationMinutes);
-    _set(_state.value.copyWith(
+    _set(state.copyWith(
       mode: ActivityEntryFormMode.recording,
       importedRoute: null,
       startDateText: isoLocalDate(startDateTime),
@@ -1149,8 +1159,8 @@ class ActivityEntryController {
   }
 
   void _applyRecordingWithoutRoute(ActivityRecordingSnapshot snapshot) {
-    final current = _state.value;
-    final start = clock.toZone(snapshot.startTime);
+    final current = state;
+    final start = _clock.toZone(snapshot.startTime);
     final durationMinutes =
         (_atLeast(snapshot.endTime.difference(snapshot.startTime).inSeconds, 1) /
                 60.0)
@@ -1176,7 +1186,7 @@ class ActivityEntryController {
               restMinutesText: set.restSeconds > 0 ? set.restSeconds.toString() : '',
             ))
         .toList();
-    _set(_state.value.copyWith(
+    _set(state.copyWith(
       mode: ActivityEntryFormMode.manual,
       selectedActivityType: selectedActivityType,
       importedRoute: null,
@@ -1215,7 +1225,7 @@ class ActivityEntryController {
     Set<ActivityEntryField> clearFields = const {},
     required ActivityEntryUiState Function(ActivityEntryUiState) update,
   }) {
-    final previous = _state.value;
+    final previous = state;
     final updated = update(previous);
     final permissions = _currentRequiredPermissions();
     _set(updated.copyWith(
@@ -1229,20 +1239,20 @@ class ActivityEntryController {
   }
 
   Set<String> _currentRequiredPermissions() =>
-      repository.activityWritePermissions();
+      _repository.activityWritePermissions();
 
   ActivityEntryType _preferredActivityType({
     bool requireGpsRoute = false,
     bool requireLiveRecording = false,
   }) =>
       preferredActivityEntryType(
-        preferencesRepository,
+        _preferencesRepository,
         requireGpsRoute: requireGpsRoute,
         requireLiveRecording: requireLiveRecording,
       );
 
   void _rememberLastActivityType(int exerciseType) {
-    preferencesRepository?.lastActivityExerciseType = exerciseType;
+    _preferencesRepository.lastActivityExerciseType = exerciseType;
   }
 
   ActivityPlannedWorkoutBaseline _planBaseline(
@@ -1280,7 +1290,7 @@ class ActivityEntryController {
     return minutes.clamp(1, maxActivityDurationMinutes).toString();
   }
 
-  LocalDate _todayLocalDate() => LocalDate.fromDateTime(clock.nowInZone());
+  LocalDate _todayLocalDate() => LocalDate.fromDateTime(_clock.nowInZone());
 
   DateTime _truncateToMinute(DateTime value) =>
       DateTime(value.year, value.month, value.day, value.hour, value.minute);
@@ -1296,7 +1306,7 @@ class ActivityEntryController {
 
 /// Port of the Kotlin `ActivityEntryUiState.withRouteImport` extension. Folds a
 /// parsed [routeImport] into [current], returning the route-import form state.
-/// Shared by the single-entry controller ([ActivityEntryController.importRouteFile]
+/// Shared by the single-entry view-model ([ActivityEntryViewModel.importRouteFile]
 /// via `_applyRouteImport`) and the settings bulk importer.
 ActivityEntryUiState activityStateWithRouteImport(
   ActivityEntryUiState current,
@@ -1379,7 +1389,7 @@ ActivityEntryUiState activityStateWithRouteImport(
         ? timeFormatterText(start)
         : current.startTimeText,
     durationMinutesText: routeDurationMinutes,
-    isImportingRoute: false,
+    routeImport: const CommandState.idle(),
     entryError: null,
     detailError: null,
     validationErrors: const {},

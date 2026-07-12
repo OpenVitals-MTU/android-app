@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/ble_sensor_models.dart';
@@ -206,20 +207,44 @@ abstract class ActivityEntryUiState with _$ActivityEntryUiState {
     @Default(<String>{}) Set<String> writePermissions,
     @Default(false) bool canWrite,
     @Default(true) bool isCheckingPermission,
-    @Default(false) bool isImportingRoute,
-    @Default(false) bool isSavingEntry,
+
+    /// The route/FIT file import: its own command, because it is a second
+    /// failable action on this form and it fails for its own reasons.
+    @Default(CommandState<void>.idle()) CommandState<void> routeImport,
+
+    /// Writing (or updating) the activity. [CommandSuccess] is consumed exactly
+    /// once by the screen, which then leaves the route.
+    @Default(CommandState<void>.idle()) CommandState<void> save,
     ActivityEntryError? entryError,
+
+    /// The detail behind a non-command [entryError] — a permission probe, a
+    /// planned-workout read, a recording that would not start. A save or an
+    /// import that failed carries its own [ScreenError] in its command; read
+    /// them together through [blockingError].
     ScreenError? detailError,
     @Default(<ActivityEntryValidationError>{})
     Set<ActivityEntryValidationError> validationErrors,
     String? editRecordId,
     @Default(false) bool isRecordingDraft,
-    @Default(false) bool saveCompleted,
     @Default(BleRecordingSampleBuffer()) BleRecordingSampleBuffer recordedBleSamples,
     @Default(<HeartRateSample>[]) List<HeartRateSample> sessionHeartRateSamples,
   }) = _ActivityEntryUiState;
 
   List<ActivityEntryType> get activityTypes => defaultActivityEntryTypes;
+
+  bool get isSavingEntry => save is CommandRunning<void>;
+
+  bool get isImportingRoute => routeImport is CommandRunning<void>;
+
+  /// The error line the form renders under [entryError]: whichever of the two
+  /// commands failed, else the detail of the last non-command failure.
+  ScreenError? get blockingError => switch (save) {
+        CommandFailure<void>(:final error) => error,
+        _ => switch (routeImport) {
+            CommandFailure<void>(:final error) => error,
+            _ => detailError,
+          },
+      };
 
   List<ExerciseRoutePoint> get routePoints =>
       importedRoute?.points ?? const [];

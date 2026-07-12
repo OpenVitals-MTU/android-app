@@ -1,24 +1,34 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/presentation/command_state.dart';
+import 'package:openvitals/core/presentation/screen_error.dart';
+import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
-import 'package:openvitals/data/repository/contract/repository_exceptions.dart';
+import 'package:openvitals/data/repository/contract/heart_repository.dart';
+import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
+import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_clock.dart';
-import 'package:openvitals/features/manualentry/activity/activity_entry_notifier.dart';
+import 'package:openvitals/features/manualentry/activity/activity_entry_providers.dart';
+import 'package:openvitals/features/manualentry/activity/activity_entry_view_model.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_state.dart';
 import 'package:openvitals/domain/model/activity_entry_types.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_write_request_builder.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recording.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recording_draft_store.dart';
 import 'package:openvitals/features/manualentry/activity/routeimport/route_file_parser.dart';
+import 'package:openvitals/state/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Port of the Kotlin `ActivityEntryViewModelTest`.
+/// Port of the Kotlin `ActivityEntryViewModelTest`, on the Riverpod view-model:
+/// every dependency the view-model reads is an override on a [ProviderContainer]
+/// (see [_makeVm]), and the state comes back out of the container.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -65,12 +75,70 @@ void main() {
     return prefs;
   }
 
+  /// Builds the view-model inside a container that overrides every provider it
+  /// reads — the Riverpod replacement for the old seven-repository constructor.
+  /// The container is torn down with the test; read the state back with
+  /// `vm.value`.
+  Future<ActivityEntryViewModel> makeVm({
+    required ActivityRepository repository,
+    required ActivityEntryClock clock,
+    RouteFileImporter? routeFileImporter,
+    ActivityRecordingController? activityRecorder,
+    ActivityRecordingDraftStore? recordingDraftStore,
+    PreferencesRepository? preferencesRepository,
+    HeartRepository? heartRepository,
+    ActivityMarkerRepository? markerRepository,
+    String? editActivityId,
+    String? launchMode,
+    String? launchPlanId,
+    String? launchActivityTypeId,
+    UnitSystem unitSystem = UnitSystem.metric,
+  }) async {
+    final container = ProviderContainer(
+      overrides: [
+        activityRepositoryProvider.overrideWithValue(repository),
+        activityEntryClockProvider.overrideWithValue(clock),
+        routeFileImporterProvider.overrideWithValue(
+            routeFileImporter ?? const DefaultRouteFileImporter()),
+        activityRecordingControllerProvider
+            .overrideWithValue(activityRecorder ?? _FakeRecordingController()),
+        activityRecordingDraftStoreProvider.overrideWithValue(
+            recordingDraftStore ?? ActivityRecordingDraftStore()),
+        preferencesRepositoryProvider
+            .overrideWithValue(preferencesRepository ?? await makePrefs()),
+        heartRepositoryProvider
+            .overrideWithValue(heartRepository ?? _FakeHeartRepository()),
+        activityMarkerRepositoryProvider
+            .overrideWithValue(markerRepository ?? _FakeMarkerRepository()),
+        // The default follows the host locale, so the view-model's own reads of
+        // it (the edit prefill) are pinned here.
+        unitSystemProvider.overrideWithValue(unitSystem),
+      ],
+    );
+    addTearDown(container.dispose);
+    final provider =
+        NotifierProvider<ActivityEntryViewModel, ActivityEntryUiState>(
+      () => ActivityEntryViewModel(
+        editActivityId: editActivityId,
+        launchMode: launchMode,
+        launchPlanId: launchPlanId,
+        launchActivityTypeId: launchActivityTypeId,
+      ),
+    );
+    final viewModel = container.read(provider.notifier);
+    _states[viewModel] = () => container.read(provider);
+    return viewModel;
+  }
+
   _FakeActivityRepository repo({
     bool canWrite = true,
     List<PlannedExerciseData> plannedWorkouts = const [],
     ExerciseData? workout,
     bool canReadPlans = true,
     bool canWritePlan = true,
+    AppFailure? permissionFailure,
+    AppFailure? writeFailure,
+    AppFailure? loadWorkoutFailure,
   }) =>
       _FakeActivityRepository(
         canWriteValue: canWrite,
@@ -80,6 +148,9 @@ void main() {
         canWritePlan: canWritePlan,
         activityPermissions: activityWritePermissions,
         plannedPermissions: plannedWorkoutWritePermissions,
+        permissionFailure: permissionFailure,
+        writeFailure: writeFailure,
+        loadWorkoutFailure: loadWorkoutFailure,
       );
 
   PlannedExerciseData plannedPushUpPlan() => PlannedExerciseData(
@@ -498,7 +569,7 @@ void main() {
   test('activity entry exposes field errors and skips write for invalid values',
       () async {
     final repository = repo(canWrite: true);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -516,12 +587,11 @@ void main() {
     expect(vm.value.validationErrors,
         contains(ActivityEntryValidationError.distanceInvalid));
     expect(repository.writeActivityEntryCalls, isEmpty);
-    vm.dispose();
   });
 
   test('selecting activity clears metric fields that activity does not use',
       () async {
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -535,12 +605,11 @@ void main() {
 
     expect(vm.value.distanceText, '');
     expect(vm.value.elevationText, '');
-    vm.dispose();
   });
 
   test('missing activity write permission prevents write', () async {
     final repository = repo(canWrite: false);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -553,12 +622,11 @@ void main() {
 
     expect(vm.value.entryError, ActivityEntryError.missingWritePermission);
     expect(repository.writeActivityEntryCalls, isEmpty);
-    vm.dispose();
   });
 
   test('activity entry writes request when permission is granted', () async {
     final repository = repo(canWrite: true);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -578,13 +646,12 @@ void main() {
       closeTo(0.0, 0.001),
     );
     expect(vm.value.isSavingEntry, isFalse);
-    expect(vm.value.saveCompleted, isTrue);
-    vm.dispose();
+    expect(vm.value.save, isA<CommandSuccess<void>>());
   });
 
   test('selecting planned workout prefills editable set structure', () async {
     final plan = plannedPullUpPlan();
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true, plannedWorkouts: [plan]),
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -606,12 +673,11 @@ void main() {
 
     vm.updateTitle('Pull-up ladder plus');
     expect(vm.value.hasSelectedPlannedWorkoutChanges, isTrue);
-    vm.dispose();
   });
 
   test('start from existing plan auto-applies the only available plan', () async {
     final plan = plannedPullUpPlan();
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true, plannedWorkouts: [plan]),
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -624,14 +690,13 @@ void main() {
     expect(vm.value.plannedWorkouts, [plan]);
     expect(vm.value.selectedPlannedWorkoutId, 'planned-id');
     expect(vm.value.isLoadingPlannedWorkouts, isFalse);
-    vm.dispose();
   });
 
   test('start from existing plan keeps picker when multiple activity types exist',
       () async {
     final pullUps = plannedPullUpPlan();
     final pushUps = plannedPushUpPlan();
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true, plannedWorkouts: [pullUps, pushUps]),
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -643,11 +708,10 @@ void main() {
     expect(vm.value.mode, ActivityEntryFormMode.planActivityPicker);
     expect(vm.value.plannedWorkouts, [pullUps, pushUps]);
     expect(vm.value.isLoadingPlannedWorkouts, isFalse);
-    vm.dispose();
   });
 
   test('startWithPlan opens the requested plan directly in manual entry', () async {
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(
         canWrite: true,
         plannedWorkouts: [plannedPullUpPlan(), plannedPushUpPlan()],
@@ -662,11 +726,10 @@ void main() {
     expect(vm.value.mode, ActivityEntryFormMode.manual);
     expect(vm.value.selectedPlannedWorkoutId, 'planned-push-id');
     expect(vm.value.selectedActivityType.id, 'push_ups');
-    vm.dispose();
   });
 
   test('selecting activity then plan opens editable manual entry', () async {
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true, plannedWorkouts: [plannedPullUpPlan()]),
       clock: clockAt('2026-05-27T09:45:00Z'),
     );
@@ -682,7 +745,6 @@ void main() {
     expect(vm.value.selectedPlannedWorkoutId, 'planned-id');
     expect(vm.value.startDateText, '2026-05-27');
     expect(vm.value.startTimeText, '9:45');
-    vm.dispose();
   });
 
   test('edit entry loads matching planned workouts without selecting a plan',
@@ -710,7 +772,7 @@ void main() {
     );
     final repository =
         repo(canWrite: true, plannedWorkouts: [plan], workout: workout);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
       editActivityId: 'activity-id',
@@ -727,12 +789,11 @@ void main() {
       repository.loadPlannedWorkoutOptionsExerciseTypes,
       contains(ExerciseSessionType.calisthenics),
     );
-    vm.dispose();
   });
 
   test('missing planned read permission is surfaced when loading existing plans',
       () async {
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true, canReadPlans: false),
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -744,12 +805,11 @@ void main() {
     expect(vm.value.mode, ActivityEntryFormMode.planActivityPicker);
     expect(vm.value.entryError, ActivityEntryError.missingWritePermission);
     expect(vm.value.writePermissions, plannedWorkoutWritePermissions);
-    vm.dispose();
   });
 
   test('activity entry writes selected planned workout id', () async {
     final repository = repo(canWrite: true, plannedWorkouts: [plannedPullUpPlan()]);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -765,12 +825,11 @@ void main() {
     expect(repository.writeActivityEntryCalls.length, 1);
     expect(repository.writeActivityEntryCalls.first.plannedExerciseSessionId,
         'planned-id');
-    vm.dispose();
   });
 
   test('saving current structure writes planned workout', () async {
     final repository = repo(canWrite: true);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -797,12 +856,11 @@ void main() {
       PlannedExerciseCompletionRepetitions(6),
     ]);
     expect(vm.value.selectedPlannedWorkoutId, 'saved-plan-id');
-    vm.dispose();
   });
 
   test('updating selected plan clears changed highlight baseline', () async {
     final repository = repo(canWrite: true, plannedWorkouts: [plannedPullUpPlan()]);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -823,12 +881,11 @@ void main() {
     expect(repository.writePlannedWorkoutCalls.first.id, 'planned-id');
     expect(repository.writePlannedWorkoutCalls.first.title, 'Pull-up ladder plus');
     expect(vm.value.hasSelectedPlannedWorkoutChanges, isFalse);
-    vm.dispose();
   });
 
   test('saving current structure requires a training plan title', () async {
     final repository = repo(canWrite: true);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -846,13 +903,12 @@ void main() {
     expect(vm.value.validationErrors,
         contains(ActivityEntryValidationError.trainingPlanTitleRequired));
     expect(repository.writePlannedWorkoutCalls, isEmpty);
-    vm.dispose();
   });
 
   test('new plan option clears selected plan and saves a new planned workout',
       () async {
     final repository = repo(canWrite: true, plannedWorkouts: [plannedPullUpPlan()]);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repository,
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -879,12 +935,11 @@ void main() {
     expect(repository.writePlannedWorkoutCalls.length, 1);
     expect(repository.writePlannedWorkoutCalls.first.id, isNull);
     expect(repository.writePlannedWorkoutCalls.first.title, 'New pull-up plan');
-    vm.dispose();
   });
 
   test('missing planned workout permission is surfaced before saving plan',
       () async {
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true, canWritePlan: false),
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -901,13 +956,12 @@ void main() {
 
     expect(vm.value.entryError, ActivityEntryError.missingWritePermission);
     expect(vm.value.writePermissions, plannedWorkoutWritePermissions);
-    vm.dispose();
   });
 
   test('activity entry defaults to latest recorded activity when no favorite is set',
       () async {
     final prefs = await makePrefs(last: ExerciseSessionType.biking);
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       preferencesRepository: prefs,
       clock: clockAt('2026-05-26T08:30:00Z'),
@@ -915,7 +969,6 @@ void main() {
     await vm.idle();
 
     expect(vm.value.selectedActivityType.exerciseType, ExerciseSessionType.biking);
-    vm.dispose();
   });
 
   test('favorite activity overrides latest recorded activity', () async {
@@ -923,7 +976,7 @@ void main() {
       favorite: ExerciseSessionType.walking,
       last: ExerciseSessionType.biking,
     );
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       preferencesRepository: prefs,
       clock: clockAt('2026-05-26T08:30:00Z'),
@@ -931,11 +984,10 @@ void main() {
     await vm.idle();
 
     expect(vm.value.selectedActivityType.exerciseType, ExerciseSessionType.walking);
-    vm.dispose();
   });
 
   test('manual activity entry does not estimate calories', () async {
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -946,7 +998,6 @@ void main() {
 
     expect(vm.value.activeCaloriesText, '');
     expect(vm.value.totalCaloriesText, '');
-    vm.dispose();
   });
 
   test('recorded activity without enough route points estimates calories',
@@ -964,7 +1015,7 @@ void main() {
         elevationGainedMeters: 0.0,
       ),
     );
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       activityRecorder: recorder,
       preferencesRepository: prefs,
@@ -979,7 +1030,6 @@ void main() {
     expect(vm.value.activeCaloriesText, '308');
     expect(vm.value.totalCaloriesText, '343');
     expect(prefs.lastActivityExerciseType, ExerciseSessionType.running);
-    vm.dispose();
   });
 
   test('finished recording draft is restored by a new activity entry view model',
@@ -1000,7 +1050,7 @@ void main() {
         elevationGainedMeters: 12.0,
       ),
     );
-    final firstVm = ActivityEntryController(
+    final firstVm = await makeVm(
       repository: repo(canWrite: true),
       activityRecorder: recorder,
       recordingDraftStore: draftStore,
@@ -1013,7 +1063,7 @@ void main() {
     firstVm.finishGpsRecording(UnitSystem.metric);
     await firstVm.idle();
 
-    final restoredVm = ActivityEntryController(
+    final restoredVm = await makeVm(
       repository: repo(canWrite: true),
       recordingDraftStore: draftStore,
       clock: clockAt('2026-05-26T08:31:00Z'),
@@ -1026,8 +1076,6 @@ void main() {
     expect(restoredVm.value.distanceText, '1.2');
     expect(restoredVm.value.elevationText, '12');
     expect(restoredVm.value.isRecordingDraft, isTrue);
-    firstVm.dispose();
-    restoredVm.dispose();
   });
 
   test('finished walking route recording keeps recorded steps', () async {
@@ -1048,7 +1096,7 @@ void main() {
         repetitionCount: 1800,
       ),
     );
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       activityRecorder: recorder,
       clock: clockAt('2026-05-26T08:30:00Z'),
@@ -1064,7 +1112,6 @@ void main() {
     expect(vm.value.selectedActivityType.exerciseType, ExerciseSessionType.walking);
     expect(vm.value.repetitionTotalText, '1800');
     expect(vm.value.distanceText, '1.2');
-    vm.dispose();
   });
 
   test('saving a restored recording draft clears it', () async {
@@ -1081,7 +1128,7 @@ void main() {
         elevationGainedMeters: 0.0,
       ),
     );
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       activityRecorder: recorder,
       recordingDraftStore: draftStore,
@@ -1091,7 +1138,7 @@ void main() {
     vm.finishGpsRecording(UnitSystem.metric);
     await vm.idle();
 
-    final restoredVm = ActivityEntryController(
+    final restoredVm = await makeVm(
       repository: repo(canWrite: true),
       recordingDraftStore: draftStore,
       clock: clockAt('2026-05-26T08:31:00Z'),
@@ -1101,8 +1148,6 @@ void main() {
     await restoredVm.idle();
 
     expect(draftStore.restore(), isNull);
-    vm.dispose();
-    restoredVm.dispose();
   });
 
   test('discarding a finished recording draft clears it and returns to source choice',
@@ -1123,7 +1168,7 @@ void main() {
         elevationGainedMeters: 12.0,
       ),
     );
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       activityRecorder: recorder,
       recordingDraftStore: draftStore,
@@ -1140,12 +1185,11 @@ void main() {
     expect(vm.value.mode, ActivityEntryFormMode.chooseSource);
     expect(vm.value.isRecordingDraft, isFalse);
     expect(vm.value.importedRoute, isNull);
-    vm.dispose();
   });
 
   test('activity entry keeps full write permissions when optional fields change',
       () async {
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       clock: clockAt('2026-05-26T08:30:00Z'),
     );
@@ -1160,7 +1204,6 @@ void main() {
 
     expect(vm.value.writePermissions, activityWritePermissions);
     expect(vm.value.canWrite, isTrue);
-    vm.dispose();
   });
 
   test('route import fills distance and elevation fields in current unit system',
@@ -1177,7 +1220,7 @@ void main() {
         endTime: last,
       ),
     );
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       routeFileImporter: importer,
       clock: clockAt('2026-05-26T08:30:00Z'),
@@ -1193,7 +1236,6 @@ void main() {
     expect(vm.value.durationMinutesText, '11');
     expect(vm.value.activeCaloriesText, '113');
     expect(vm.value.totalCaloriesText, '126');
-    vm.dispose();
   });
 
   test('FIT import without route fills manual activity fields', () async {
@@ -1211,7 +1253,7 @@ void main() {
         type: 'training',
       ),
     );
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       routeFileImporter: importer,
       clock: clockAt('2026-05-26T08:30:00Z'),
@@ -1229,7 +1271,6 @@ void main() {
     expect(vm.value.titleText, 'Functional Strength Training');
     expect(vm.value.durationMinutesText, '45');
     expect(vm.value.activeCaloriesText, '220');
-    vm.dispose();
   });
 
   test('FIT workout import uses workout duration without changing selected time',
@@ -1250,7 +1291,7 @@ void main() {
         hasImportedTimeRange: false,
       ),
     );
-    final vm = ActivityEntryController(
+    final vm = await makeVm(
       repository: repo(canWrite: true),
       routeFileImporter: importer,
       clock: clockAt('2026-05-26T08:30:00Z'),
@@ -1265,14 +1306,260 @@ void main() {
     expect(vm.value.startTimeText, '8:30');
     expect(vm.value.durationMinutesText, '15');
     expect(vm.value.selectedActivityType.exerciseType, ExerciseSessionType.running);
-    vm.dispose();
+  });
+
+  // ── Command lifecycle ────────────────────────────────────────────────────
+
+  test('the save command runs, succeeds, and is consumed exactly once',
+      () async {
+    final vm = await makeVm(
+      repository: repo(canWrite: true),
+      clock: clockAt('2026-05-26T08:30:00Z'),
+    );
+    await vm.idle();
+    vm.startManualEntry();
+    await vm.idle();
+
+    expect(vm.value.save, const CommandState<void>.idle());
+
+    vm.addEntry(UnitSystem.metric);
+    expect(vm.value.save, const CommandState<void>.running());
+    expect(vm.value.isSavingEntry, isTrue);
+    await vm.idle();
+
+    expect(vm.value.save, isA<CommandSuccess<void>>());
+    vm.onSaveCompletedHandled();
+    expect(vm.value.save, const CommandState<void>.idle());
+  });
+
+  test('a failed write lands on the save command with the screen error',
+      () async {
+    final vm = await makeVm(
+      repository: repo(
+        canWrite: true,
+        writeFailure: const UnexpectedFailure('Health Connect said no.'),
+      ),
+      clock: clockAt('2026-05-26T08:30:00Z'),
+    );
+    await vm.idle();
+    vm.startManualEntry();
+    await vm.idle();
+
+    vm.addEntry(UnitSystem.metric);
+    await vm.idle();
+
+    expect(
+      vm.value.save,
+      const CommandFailure<void>(ScreenErrorMessage('Health Connect said no.')),
+    );
+    expect(vm.value.entryError, ActivityEntryError.writeFailed);
+    // The form's error line reads the failed command, not a duplicated field.
+    expect(vm.value.detailError, isNull);
+    expect(
+      vm.value.blockingError,
+      const ScreenErrorMessage('Health Connect said no.'),
+    );
+  });
+
+  test('a refused write permission is a verdict, not a command failure',
+      () async {
+    final vm = await makeVm(
+      repository: repo(canWrite: false),
+      clock: clockAt('2026-05-26T08:30:00Z'),
+    );
+    await vm.idle();
+    vm.startManualEntry();
+    await vm.idle();
+
+    vm.addEntry(UnitSystem.metric);
+    await vm.idle();
+
+    expect(vm.value.save, const CommandState<void>.idle());
+    expect(vm.value.entryError, ActivityEntryError.missingWritePermission);
+  });
+
+  test('refreshPermission probes the repository and publishes the verdict',
+      () async {
+    final repository = repo(canWrite: true);
+    final vm = await makeVm(
+      repository: repository,
+      clock: clockAt('2026-05-26T08:30:00Z'),
+    );
+    await vm.idle();
+
+    expect(vm.value.isCheckingPermission, isFalse);
+    expect(vm.value.canWrite, isTrue);
+    expect(vm.value.writePermissions, activityWritePermissions);
+    expect(repository.hasActivityWritePermissionCalls, greaterThanOrEqualTo(1));
+  });
+
+  test('a permission probe that fails surfaces the error and blocks the write',
+      () async {
+    final vm = await makeVm(
+      repository: repo(
+        canWrite: true,
+        permissionFailure: const UnexpectedFailure('Probe exploded.'),
+      ),
+      clock: clockAt('2026-05-26T08:30:00Z'),
+    );
+    await vm.idle();
+
+    expect(vm.value.isCheckingPermission, isFalse);
+    expect(vm.value.canWrite, isFalse);
+    expect(vm.value.entryError, ActivityEntryError.writeFailed);
+    expect(vm.value.blockingError, const ScreenErrorMessage('Probe exploded.'));
+  });
+
+  test('the edit route prefills the form from the stored workout', () async {
+    final start = DateTime.utc(2026, 5, 26, 8, 30);
+    final workout = ExerciseData(
+      id: 'activity-id',
+      exerciseType: ExerciseSessionType.running,
+      startTime: start,
+      endTime: start.add(const Duration(minutes: 45)),
+      durationMs: 45 * 60 * 1000,
+      source: 'tech.mmarca.openvitals',
+      title: 'Morning run',
+      notes: 'Easy effort',
+      totalDistanceMeters: 10500.0,
+      isOpenVitalsEntry: true,
+    );
+    final vm = await makeVm(
+      repository: repo(canWrite: true, workout: workout),
+      clock: clockAt('2026-05-26T08:30:00Z'),
+      editActivityId: 'activity-id',
+    );
+    await vm.idle();
+
+    expect(vm.value.isEditMode, isTrue);
+    expect(vm.value.editRecordId, 'activity-id');
+    expect(vm.value.titleText, 'Morning run');
+    expect(vm.value.durationMinutesText, '45');
+    expect(vm.value.distanceText, '10.5');
+    expect(vm.value.entryError, isNull);
+  });
+
+  test('an edit prefill that cannot be read reports the failure', () async {
+    final vm = await makeVm(
+      repository: repo(
+        canWrite: true,
+        loadWorkoutFailure: const NotFoundFailure(),
+      ),
+      clock: clockAt('2026-05-26T08:30:00Z'),
+      editActivityId: 'activity-id',
+    );
+    await vm.idle();
+
+    expect(vm.value.entryError, ActivityEntryError.writeFailed);
+    expect(vm.value.blockingError, isA<ScreenErrorNotFound>());
+  });
+
+  test('the route-import command runs and returns to rest', () async {
+    final start = DateTime.utc(2026, 5, 26, 8, 30);
+    final importer = _FakeRouteFileImporter(
+      RouteFileImport(
+        fileName: 'run.gpx',
+        points: [
+          routePoint(start),
+          routePoint(start.add(const Duration(minutes: 30)), latitude: 59.01),
+        ],
+        distanceMeters: 5000.0,
+        elevationGainedMeters: 20.0,
+        startTime: start,
+        endTime: start.add(const Duration(minutes: 30)),
+      ),
+    );
+    final vm = await makeVm(
+      repository: repo(canWrite: true),
+      routeFileImporter: importer,
+      clock: clockAt('2026-05-26T08:30:00Z'),
+    );
+    await vm.idle();
+
+    vm.importRouteFile(_handle(), UnitSystem.metric);
+    expect(vm.value.routeImport, const CommandState<void>.running());
+    expect(vm.value.isImportingRoute, isTrue);
+    await vm.idle();
+
+    expect(vm.value.routeImport, const CommandState<void>.idle());
+    expect(vm.value.mode, ActivityEntryFormMode.routeImport);
+    expect(vm.value.importedRoute?.points.length, 2);
+    // The import is its own command: a failed one never touches the save.
+    expect(vm.value.save, const CommandState<void>.idle());
+  });
+
+  test('a route file that will not parse fails its own command', () async {
+    final vm = await makeVm(
+      repository: repo(canWrite: true),
+      routeFileImporter: _ThrowingRouteFileImporter('Unsupported file.'),
+      clock: clockAt('2026-05-26T08:30:00Z'),
+    );
+    await vm.idle();
+
+    vm.importRouteFile(_handle(), UnitSystem.metric);
+    await vm.idle();
+
+    expect(vm.value.routeImport, isA<CommandFailure<void>>());
+    expect(vm.value.entryError, ActivityEntryError.routeImportFailed);
+    expect(vm.value.save, const CommandState<void>.idle());
+    expect(vm.value.importedRoute, isNull);
+    expect(
+      vm.value.blockingError,
+      isA<ScreenErrorMessage>().having(
+        (e) => e.text,
+        'text',
+        contains('Unsupported file.'),
+      ),
+    );
   });
 }
 
 String _p2(int value) => value.toString().padLeft(2, '0');
 
+/// Reads a view-model's state back out of the container that built it.
+/// `Notifier.state` is `@protected`, and the container is the honest source
+/// anyway — this keeps the assertions reading like the Kotlin test's `vm.value`.
+final Expando<ActivityEntryUiState Function()> _states =
+    Expando<ActivityEntryUiState Function()>();
+
+extension _ActivityEntryViewModelState on ActivityEntryViewModel {
+  ActivityEntryUiState get value => _states[this]!();
+}
+
 ActivityRouteFileHandle _handle() =>
     ActivityRouteFileHandle(bytes: Uint8List(0), fileName: 'route');
+
+class _FakeHeartRepository implements HeartRepository {
+  @override
+  Future<Result<List<HeartRateSample>>> loadHeartRateSamplesInstant(
+    DateTime start,
+    DateTime end,
+  ) async =>
+      const Ok(<HeartRateSample>[]);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName} not stubbed');
+}
+
+class _FakeMarkerRepository implements ActivityMarkerRepository {
+  final Map<String, List<ActivityRecordingMarker>> markers = {};
+
+  @override
+  List<ActivityRecordingMarker> markersForActivity(String activityId) =>
+      markers[activityId] ?? const [];
+
+  @override
+  void setMarkersForActivity(
+    String activityId,
+    List<ActivityRecordingMarker> markers,
+  ) =>
+      this.markers[activityId] = markers;
+
+  @override
+  void deleteMarkersForActivity(String activityId) =>
+      markers.remove(activityId);
+}
 
 class _FakeRouteFileImporter implements RouteFileImporter {
   _FakeRouteFileImporter(this._result);
@@ -1282,10 +1569,22 @@ class _FakeRouteFileImporter implements RouteFileImporter {
   Future<RouteFileImport> import(ActivityRouteFileHandle handle) async => _result;
 }
 
-class _FakeRecordingController implements ActivityRecordingController {
-  _FakeRecordingController({required this.snapshot});
+/// The parsers report a malformed file by throwing (the throw IS the verdict),
+/// so the import command has to survive one.
+class _ThrowingRouteFileImporter implements RouteFileImporter {
+  _ThrowingRouteFileImporter(this.message);
 
-  final ActivityRecordingSnapshot snapshot;
+  final String message;
+
+  @override
+  Future<RouteFileImport> import(ActivityRouteFileHandle handle) async =>
+      throw FormatException(message);
+}
+
+class _FakeRecordingController implements ActivityRecordingController {
+  _FakeRecordingController({this.snapshot});
+
+  final ActivityRecordingSnapshot? snapshot;
 
   @override
   final ValueNotifier<ActivityRecordingState> state =
@@ -1342,6 +1641,9 @@ class _FakeActivityRepository implements ActivityRepository {
     required this.canWritePlan,
     required this.activityPermissions,
     required this.plannedPermissions,
+    this.permissionFailure,
+    this.writeFailure,
+    this.loadWorkoutFailure,
   });
 
   final bool canWriteValue;
@@ -1352,9 +1654,15 @@ class _FakeActivityRepository implements ActivityRepository {
   final Set<String> activityPermissions;
   final Set<String> plannedPermissions;
 
+  /// The `Err` each of the three failable calls answers with, when set.
+  final AppFailure? permissionFailure;
+  final AppFailure? writeFailure;
+  final AppFailure? loadWorkoutFailure;
+
   final List<ActivityWriteRequest> writeActivityEntryCalls = [];
   final List<PlannedExerciseWriteRequest> writePlannedWorkoutCalls = [];
   final List<int> loadPlannedWorkoutOptionsExerciseTypes = [];
+  int hasActivityWritePermissionCalls = 0;
 
   @override
   Set<String> activityWritePermissions() => activityPermissions;
@@ -1367,26 +1675,39 @@ class _FakeActivityRepository implements ActivityRepository {
   Set<String> plannedWorkoutWritePermissions() => plannedPermissions;
 
   @override
-  Future<Result<bool>> hasActivityWritePermission() async => Ok(canWriteValue);
+  Future<Result<bool>> hasActivityWritePermission() async {
+    hasActivityWritePermissionCalls++;
+    final failure = permissionFailure;
+    return failure != null ? Err(failure) : Ok(canWriteValue);
+  }
 
   @override
   Future<Result<bool>> hasActivityWritePermissionForRequest(
-          ActivityWriteRequest request) async =>
-      Ok(canWriteValue);
+      ActivityWriteRequest request) async {
+    final failure = permissionFailure;
+    return failure != null ? Err(failure) : Ok(canWriteValue);
+  }
 
   @override
   Future<Result<String>> writeActivityEntry(ActivityWriteRequest request) async {
+    final failure = writeFailure;
+    if (failure != null) return Err(failure);
     writeActivityEntryCalls.add(request);
     return const Ok('activity-id');
   }
 
   @override
   Future<Result<void>> updateActivityEntry(
-          String id, ActivityWriteRequest request) async =>
-      const Ok(null);
+      String id, ActivityWriteRequest request) async {
+    final failure = writeFailure;
+    return failure != null ? Err(failure) : const Ok(null);
+  }
 
   @override
-  Future<Result<ExerciseData?>> loadWorkout(String id) async => Ok(workout);
+  Future<Result<ExerciseData?>> loadWorkout(String id) async {
+    final failure = loadWorkoutFailure;
+    return failure != null ? Err(failure) : Ok(workout);
+  }
 
   @override
   Future<Result<List<PlannedExerciseData>>> loadPlannedWorkoutOptions(
@@ -1402,7 +1723,7 @@ class _FakeActivityRepository implements ActivityRepository {
     LocalDate? anchorDate,
   }) async {
     if (!canReadPlans) {
-      throw const MissingHealthPermissionException('Missing planned read.');
+      return const Err(PermissionFailure('Missing planned read.'));
     }
     return Ok(plannedWorkouts);
   }
@@ -1411,7 +1732,7 @@ class _FakeActivityRepository implements ActivityRepository {
   Future<Result<String>> writePlannedWorkout(
       PlannedExerciseWriteRequest request) async {
     if (!canWritePlan) {
-      throw const MissingHealthPermissionException('Missing planned write.');
+      return const Err(PermissionFailure('Missing planned write.'));
     }
     writePlannedWorkoutCalls.add(request);
     return const Ok('saved-plan-id');

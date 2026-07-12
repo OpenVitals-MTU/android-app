@@ -7,7 +7,7 @@ import '../../manualentry/activity/activity_entry_view_model.dart';
 /// review. Dart analogue of the Kotlin `ExternalRouteImportRequest`: the settings
 /// card sets the pending handle then navigates to the activity-entry route, and
 /// [ActivityEntryScreen] consumes it once on open (calling
-/// `ActivityEntryController.importRouteFile`) and clears it.
+/// `ActivityEntryViewModel.importRouteFile`) and clears it.
 class PendingRouteImportViewModel extends Notifier<ActivityRouteFileHandle?> {
   @override
   ActivityRouteFileHandle? build() => null;

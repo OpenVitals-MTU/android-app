@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../di/providers.dart';
 import '../../../data/source/sensors/ble/ble_sensor_coordinator.dart';
 import '../../../state/app_providers.dart';
-import 'activity_entry_notifier.dart';
+import 'activity_entry_clock.dart';
+import 'activity_entry_view_model.dart';
 import 'recording/activity_recording.dart';
 import 'recording/activity_recording_controller.dart';
 import 'recording/activity_recording_device_support.dart';
@@ -39,4 +40,10 @@ final activityRecordingControllerProvider =
 
 final routeFileImporterProvider = Provider<RouteFileImporter>(
   (ref) => const DefaultRouteFileImporter(),
+);
+
+/// The clock the entry form dates its records with. Overridable, so a test can
+/// pin "now" without pinning the device clock.
+final activityEntryClockProvider = Provider<ActivityEntryClock>(
+  (ref) => ActivityEntryClock.system(),
 );

@@ -176,7 +176,8 @@ class ActivityEntryErrorText extends StatelessWidget {
     if (error == null) return const SizedBox.shrink();
     final theme = Theme.of(context);
     return Text(
-      activityEntryErrorText(error, state.detailError, AppLocalizations.of(context)),
+      activityEntryErrorText(
+          error, state.blockingError, AppLocalizations.of(context)),
       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
     );
   }
