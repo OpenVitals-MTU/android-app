@@ -85,11 +85,61 @@ void main(List<String> args) {
 
   final db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
   final writers = _writers(db);
+  final exercise = _exercise(db, writers);
   final fixture = <String, Object?>{
     'heartRate': _heartRate(db, writers),
-    'exercise': _exercise(db, writers),
+    'exercise': exercise,
     'sleep': _sleep(db, writers),
+
+    // SERIES records. The same shape as heart rate, and the same bug: Health
+    // Connect filters them by the RECORD's boundary, so a workout buried inside a
+    // longer record reads as having no speed either — which is why the 1 km splits
+    // silently fell back to "estimated" on exactly the activities whose heart rate
+    // had vanished.
+    'speed': _series(db, writers, 'SpeedRecordTable', 'speed_record_table', 'speed',
+        (v, i) => 1.6 + (i % 9) * 0.15),
+    'stepsCadence': _series(db, writers, 'StepsCadenceRecordTable',
+        'steps_cadence_record_table', 'rate', (v, i) => 78.0 + (i % 20)),
+
+    // SIBLING records — the ones a watch writes BESIDE a session rather than in it.
+    // Reading the session alone is why a recorded walk showed "Steps: Not
+    // available" above a chart of its own step cadence.
     'steps': _steps(db, writers),
+    'distance': _interval(db, writers, 'distance_record_table', 'distance',
+        (durationMs) => durationMs / 1000 * 1.4),
+    'activeCalories': _interval(db, writers, 'active_calories_burned_record_table',
+        'energy', (durationMs) => durationMs / 60000 * 5.0 * 4184),
+    'totalCalories': _interval(db, writers, 'total_calories_burned_record_table',
+        'energy', (durationMs) => durationMs / 60000 * 7.0 * 4184),
+    'elevationGained': _interval(db, writers, 'elevation_gained_record_table',
+        'elevation', (durationMs) => durationMs / 60000 * 0.8),
+    // The calorie fallback chain: recorded total wins, else active + BMR pro-rated
+    // over the window. Without BMR records the chain's second branch is unreachable.
+    // BMR is an INSTANT record (a rate at a moment), not an interval. The calorie
+    // chain pro-rates it across the window it needs.
+    'basalMetabolicRate': _instant(db, writers,
+        'basal_metabolic_rate_record_table', 'basal_metabolic_rate',
+        (_) => 1650.0),
+
+    'hrv': _instant(db, writers, 'heart_rate_variability_rmssd_record_table',
+        'heart_rate_variability_millis', (i) => 42.0 + (i % 17)),
+    'restingHeartRate': _instant(db, writers, 'resting_heart_rate_record_table',
+        'beats_per_minute', (i) => 52.0 + (i % 8)),
+    'hydration': _interval(db, writers, 'hydration_record_table', 'volume',
+        (_) => 0.25),
+
+    // NOT IN THE SOURCE DATA. The export has ZERO PowerRecords and ZERO
+    // CyclingPedalingCadenceRecords — this person has no power meter. So these are
+    // hand-authored onto a real session, and flagged as such: they carry no
+    // provenance from anyone's real data, and they are the only records here that
+    // do not.
+    //
+    // They exist because the app WRITES PowerRecord from a BLE sensor, asks Health
+    // Connect for READ_POWER, and until e7dfba37 never read it back — so the fix
+    // has nothing to be tested against unless we make some.
+    'power': _syntheticSeries(exercise, 'power', (i) => 180.0 + (i % 40)),
+    'cyclingCadence':
+        _syntheticSeries(exercise, 'cyclingCadence', (i) => 82.0 + (i % 12)),
   };
   fixture['manifest'] = _manifest(fixture, writers);
   db.close();
@@ -306,6 +356,159 @@ List<Map<String, Object?>> _steps(Database db, Map<int, String> writers) {
         'count': 1 +
             ((r['end_time'] as int) - (r['start_time'] as int)) ~/ 1000 ~/ 2,
       },
+  ];
+}
+
+/// A series record: a parent carrying the provenance, and its nested samples.
+///
+/// Exactly the shape that causes the bug, so it is exactly the shape that must
+/// survive. Sample TIMES are kept (shifted); sample VALUES are synthesized.
+List<Map<String, Object?>> _series(
+  Database db,
+  Map<int, String> writers,
+  String parentTable,
+  String sampleTable,
+  String valueColumn,
+  double Function(double real, int index) synth,
+) {
+  final out = <Map<String, Object?>>[];
+  final records = db.select(
+    'SELECT * FROM $parentTable WHERE start_time >= ? AND start_time < ? '
+    'ORDER BY start_time',
+    [_from.millisecondsSinceEpoch, _to.millisecondsSinceEpoch],
+  );
+
+  for (final r in records) {
+    final samples = db.select(
+      'SELECT epoch_millis, $valueColumn FROM $sampleTable '
+      'WHERE parent_key = ? ORDER BY epoch_millis',
+      [r['row_id']],
+    );
+    if (samples.isEmpty) continue;
+
+    final times = [for (final s in samples) _shift(s['epoch_millis'] as int)];
+    out.add({
+      ..._provenance(r, writers),
+      't0': times.first,
+      'dt': [for (var i = 1; i < times.length; i++) times[i] - times[i - 1]],
+      'v': [
+        for (var i = 0; i < samples.length; i++)
+          synth((samples[i][valueColumn] as num).toDouble(), i),
+      ],
+    });
+  }
+  return out;
+}
+
+/// An interval record — a total over a window. Steps, distance, calories,
+/// elevation, BMR, hydration.
+///
+/// The VALUE is derived from the window's own duration, so totals stay
+/// proportionate to the time they cover and the aggregates over them remain sane.
+/// A distance of 4 km over 40 minutes has to keep being a plausible pace, or every
+/// split assertion downstream is meaningless.
+List<Map<String, Object?>> _interval(
+  Database db,
+  Map<int, String> writers,
+  String table,
+  String valueColumn,
+  double Function(int durationMs) synth,
+) {
+  final records = db.select(
+    'SELECT * FROM $table WHERE start_time >= ? AND start_time < ? '
+    'ORDER BY start_time',
+    [_from.millisecondsSinceEpoch, _to.millisecondsSinceEpoch],
+  );
+
+  return [
+    for (final r in records)
+      {
+        ..._provenance(r, writers),
+        'v': synth((r['end_time'] as int) - (r['start_time'] as int)),
+      },
+  ];
+}
+
+/// An instantaneous record — one value at one moment. HRV, resting heart rate.
+/// Its time column is `time`, not `start_time`, so it cannot share [_interval].
+List<Map<String, Object?>> _instant(
+  Database db,
+  Map<int, String> writers,
+  String table,
+  String valueColumn,
+  double Function(int index) synth,
+) {
+  final records = db.select(
+    'SELECT * FROM $table WHERE time >= ? AND time < ? ORDER BY time',
+    [_from.millisecondsSinceEpoch, _to.millisecondsSinceEpoch],
+  );
+
+  var i = 0;
+  return [
+    for (final r in records)
+      {
+        'id': _id(r['row_id'].toString(), 'rec'),
+        'writer': writers[r['app_info_id']] ?? 'com.example.unknown',
+        'time': _shift(r['time'] as int),
+        'zoneOffsetSeconds': r['zone_offset'],
+        'recordingMethod': r['recording_method'],
+        'lastModified': r['last_modified_time'] == null
+            ? null
+            : _shift(r['last_modified_time'] as int),
+        'v': synth(i++),
+      },
+  ];
+}
+
+/// Wholly invented, and labelled as such.
+///
+/// The export contains ZERO PowerRecords and ZERO CyclingPedalingCadenceRecords —
+/// this person has no power meter, so there is nothing to derive from. But the app
+/// writes PowerRecord from a BLE sensor, asks Health Connect for READ_POWER, and
+/// until e7dfba37 never read it back. A fix with nothing to test it against is a
+/// fix that will break again.
+///
+/// So: a sample a minute across a real session's window. Every other record in this
+/// fixture inherits its SHAPE from real data; these two do not, and `synthetic:
+/// true` says so, so nobody later mistakes them for evidence of how a real power
+/// meter behaves.
+List<Map<String, Object?>> _syntheticSeries(
+  List<Map<String, Object?>> exercise,
+  String kind,
+  double Function(int index) synth,
+) {
+  if (exercise.isEmpty) return const [];
+  // The session with a GPS route: the long outdoor one. That is where a power
+  // meter and a cadence sensor would actually be, and attaching them to a
+  // three-minute session would produce a record with one sample in it.
+  final session = exercise.reduce((a, b) =>
+      (a['route']! as List).length >= (b['route']! as List).length ? a : b);
+  final start = session['start']! as int;
+  final end = session['end']! as int;
+
+  final times = <int>[];
+  for (var t = start; t < end; t += 60000) {
+    times.add(t);
+  }
+  if (times.length < 2) return const [];
+
+  return [
+    {
+      'synthetic': true,
+      'id': _id('$kind-synthetic', 'rec'),
+      'writer': session['writer'],
+      'start': start,
+      'end': end,
+      'startZoneOffsetSeconds': session['startZoneOffsetSeconds'],
+      'endZoneOffsetSeconds': session['endZoneOffsetSeconds'],
+      'recordingMethod': 2, // AUTOMATICALLY_RECORDED
+      'lastModified': session['lastModified'],
+      'clientRecordId': null,
+      'clientRecordVersion': null,
+      't0': times.first,
+      'dt': [for (var i = 1; i < times.length; i++) times[i] - times[i - 1]],
+      'v': [for (var i = 0; i < times.length; i++) synth(i)],
+    },
   ];
 }
 

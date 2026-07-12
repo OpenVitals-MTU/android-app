@@ -97,6 +97,57 @@ void main() {
             'pace and the 1 km splits are never computed from real geometry.');
   });
 
+  test('the sibling records that a session does NOT carry are present', () {
+    // The walking-activity bug. A Health Connect ExerciseSessionRecord carries
+    // almost nothing — a watch writes the walk as a session with a duration, and
+    // puts its steps, distance and calories in SEPARATE records over the same
+    // window. Reading the session alone reported "Not available" for numbers the
+    // watch had recorded, directly above a chart of that same activity's step
+    // cadence. Without these siblings in the fixture, the fix is untestable.
+    for (final key in ['steps', 'distance', 'activeCalories']) {
+      expect(records(key), isNotEmpty, reason: 'No $key sibling records.');
+    }
+    // And the calorie chain's second branch (active + BMR pro-rated) is
+    // unreachable without a BMR record to pro-rate.
+    expect(records('basalMetabolicRate'), isNotEmpty);
+  });
+
+  test('speed is a SERIES record, so splits hit the same bug as heart rate', () {
+    // Same shape, same trap: Health Connect filters SpeedRecord by the record's own
+    // boundary too, which is why the 1 km splits silently fell back to "estimated"
+    // on exactly the activities whose heart rate had vanished. A speed record with
+    // no samples proves nothing.
+    final speed = records('speed');
+    expect(speed, isNotEmpty);
+    expect((speed.first['dt']! as List).length, greaterThan(10),
+        reason: 'The speed record has almost no samples, so no split can be '
+            'computed from it.');
+  });
+
+  test('the synthetic records are exactly the two we could not derive', () {
+    // The export contains ZERO PowerRecords and ZERO CyclingPedalingCadenceRecords —
+    // this person has no power meter. Those two are hand-authored so the power fix
+    // (e7dfba37) has something to be tested against.
+    //
+    // Everything else must inherit its shape from real data. If a `synthetic` flag
+    // ever appears on a third record type, someone has quietly started inventing
+    // the thing the fixture exists to preserve.
+    final synthetic = <String>[];
+    for (final entry in fixture.entries) {
+      if (entry.key == 'manifest' || entry.value is! List) continue;
+      for (final r in (entry.value! as List).cast<Map<String, Object?>>()) {
+        if (r['synthetic'] == true) synthetic.add(entry.key);
+      }
+    }
+
+    expect(synthetic.toSet(), {'power', 'cyclingCadence'},
+        reason: 'The set of INVENTED record types has changed. Every other record '
+            'here derives its shape from real data — that is the whole point.');
+    expect(records('power'), isNotEmpty,
+        reason: 'No power record, so the power read (e7dfba37) has nothing to '
+            'prove itself against.');
+  });
+
   test('records carry the provenance the port kept losing', () {
     // recordingMethod and lastModifiedTime were dropped from two Pigeon messages and
     // read null on every record for months. If the fixture does not carry them, the
