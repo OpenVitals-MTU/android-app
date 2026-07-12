@@ -67,49 +67,53 @@ That turned out to be wrong. The audit is recorded here so that nobody
 
 No view-model maps a load failure through either one.
 
-## Bugs found while moving derivations VERBATIM — not fixed
+## The "bugs" the refactor surfaced — and what they turned out to be
 
-Each was moved unchanged and deserves its own commit. Moving them out of build
-methods is what made them visible (several were duplicated in two places that
-disagreed); changing them in the same commit would have made the refactor
-unreviewable.
+Moving every derivation out of build methods put duplicated logic side by side
+and surfaced twelve suspicious behaviours. **Then each was checked against the
+Kotlin source at `23c14d0`, which AGENTS.md names as the spec.** That check
+changed the answer for most of them, and it is the reason none were "fixed" in
+the refactor commits themselves.
 
-1. **Sleep data-confidence counts the wrong recording method.**
-   `kRecordingMethodManualEntry = 1`, but Health Connect's
-   `RECORDING_METHOD_MANUAL_ENTRY` is `3` (`1` is `ACTIVELY_RECORDED`).
-   `sleep_detail_screen.dart` already gets this right. So the card counts
-   actively-recorded nights as hand-typed ones, and never counts a real one.
-2. **Heart day resting-HR / HRV can print an average outside its own printed
-   range** — the average comes from the provider's aggregate, the min/max from
-   raw samples.
-3. **Respiratory rate shows two different averages** on the same screen: the
-   chart summary uses the mean of daily means, the card the mean of all
-   readings.
-4. **Skin temperature** counts delta-less entries as "readings" while excluding
-   them from the average, and blanks its card when the *newest* entry has no
-   delta even though the chart still draws the older ones that do.
-5. **"Latest" is computed two ways** (`reduce(isAfter)` vs last-of-sorted) —
-   they differ only on equal timestamps.
-6. **Nutrition data-confidence counts MEALS as readings for any nutrient**: the
-   protein screen over a period with 30 meals and no protein data claims 30
-   readings.
-7. **Hydration "daily average" divides by tracked days, not days in the
-   period** — and that average drives the goal bar, so a week where you hit the
-   goal once and logged nothing else reads 100%.
-8. **Body BMI history** recomputes every past weight against the period's
-   *latest* height.
-9. **Activity HRV / cardio-load sparklines** chart a never-sampled bucket as
-   `0.0` while the totals correctly exclude it — an untracked day reads as a dip
-   to zero rather than a gap.
-10. **Caffeine distribution bars** floor their scale at 1 mg, so sub-1 mg slices
-    render at full width.
-11. **Apple Health import** rethrows `MissingHealthPermissionException`, but its
-    formatter only recognises `AppleHealthImportPermissionException` — so a
-    permissions failure reaches the card as a generic error and the grant
-    affordance never appears.
-12. **`refreshPlannedWorkouts`** keeps the selected plan id when the reload
-    returns an empty list, so a deleted plan stays selected and the write
-    request links a dead `plannedExerciseSessionId`.
+### Genuine port defects — FIXED, each in its own commit
+
+1. **Sleep counted the wrong recording method.** `sleep_display.dart` compared
+   `recordingMethod` against `1` and called it a manual entry; Health Connect's
+   `RECORDING_METHOD_MANUAL_ENTRY` is `3` (`1` is `ACTIVELY_RECORDED`). The
+   Kotlin original was correct because it compared against the *named* constant
+   `Metadata.RECORDING_METHOD_MANUAL_ENTRY`; the port hand-copied the number
+   into three files and got one of them wrong. Fixed by giving the app one
+   definition (`domain/model/recording_method.dart`) and deleting all three
+   copies. This is the signature of a real port bug: Kotlin used a name, the
+   port used a literal.
+2. **Apple Health import could never report a permission denial.**
+   `AppleHealthImportPermissionException` was defined and never thrown, so
+   `isPermissionDenied()` always answered false and the card's "grant" button
+   never appeared. A Dart-only subsystem, so there was no Kotlin to check.
+   Fixed once the `Result` migration made `PermissionFailure` a *type* the
+   probe could classify.
+
+### Faithful ports of Kotlin behaviour — NOT bugs, and NOT changed
+
+Each of these was verified to match `23c14d0` exactly. Behaviour parity is the
+default requirement (AGENTS.md), so changing any of them is a **product
+decision**, not a fix — and it needs a reason written down. They are listed
+because they are worth *deciding* about, not because they are broken.
+
+| Behaviour | Kotlin says |
+|---|---|
+| Hydration's "daily average" divides by *tracked* days, not days in the period — and that average drives the goal bar, so a week where you hit the goal once and logged nothing else reads 100% | `averageLiters = trackedDays.takeIf { it > 0 }?.let { totalLiters / it }` — identical |
+| Heart's day resting-HR/HRV can print an average outside its own printed min/max (average from the provider's aggregate, range from raw samples) | `restingBpm = state.dayRestingBpm ?: samples.average()`, low/high from samples — identical |
+| Nutrition's data-confidence counts *meals* as readings for any nutrient (30 meals, no protein data → "30 readings") | `sampleCount = entries.takeIf { it.isNotEmpty() }?.size ?: trackedValues.size` — identical |
+| Body's BMI history recomputes every past weight against the period's *latest* height | `bmi = latestWeightKg.bmiWith(heightCm)`, `previousBmi = previousLatestWeightKg.bmiWith(heightCm)` — same height for both |
+| A deleted plan stays selected when `refreshPlannedWorkouts` reloads an empty list | `plans.isEmpty() || plans.any { it.id == selected }` — identical |
+| Caffeine's distribution bars floor their scale at 1 mg, so sub-1 mg slices render full width | `.coerceAtLeast(1.0)` — identical |
+| Respiratory rate / skin temperature / "latest" computed two ways in two places | the same two derivations exist in the Kotlin screens |
+
+The lesson worth keeping: **a derivation that looks wrong in isolation is not
+evidence of a bug.** Six independent agents each flagged one, and six out of
+seven were the app behaving exactly as designed. Check the spec before you
+"fix" the port.
 
 ## Bugs fixed by construction during the refactor
 
