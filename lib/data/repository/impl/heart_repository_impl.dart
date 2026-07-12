@@ -7,7 +7,7 @@ import '../../../domain/model/heart_rate_sample_reduction.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/heart_period_data.dart';
 import '../../source/health/health_data_source.dart';
-import '../../source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import '../contract/heart_repository.dart';
 import 'repository_time.dart';
 import 'health_connect_gating.dart';

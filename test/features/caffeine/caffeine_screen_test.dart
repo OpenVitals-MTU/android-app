@@ -13,7 +13,7 @@ import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/refresh_mode.dart';
 import 'package:openvitals/features/caffeine/presentation/caffeine_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 import 'package:openvitals/ui/components/metric_card.dart';
 

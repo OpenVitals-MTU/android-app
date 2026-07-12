@@ -18,7 +18,7 @@ import 'package:openvitals/domain/query/heart_period_data.dart';
 import 'package:openvitals/domain/query/vitals_period_data.dart';
 import 'package:openvitals/features/heart/presentation/heart_metric_cards.dart';
 import 'package:openvitals/features/heart/presentation/heart_metric_screen.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/charts/line_chart.dart';
 import 'package:openvitals/ui/components/data_source_education_item.dart';

@@ -4,16 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../bootstrap/background_health_access.dart';
 import '../../../core/reminders/alarm_manager_reminder_scheduler.dart';
 import '../../../core/reminders/local_notifications_reminder_device.dart';
 import '../../../core/reminders/reminder_notifications.dart';
 import '../../../core/result/result.dart';
 import '../../../data/prefs/preferences_repository.dart';
-import '../../../data/repository/impl/health_repository_impl.dart';
 import '../../../data/repository/impl/hydration_repository_impl.dart';
-import '../../../di/providers.dart' show openVitalsPackageName;
 import '../../../data/source/health/health_data_source.dart';
-import '../../../data/source/health/native/health_connect_native_data_source.dart';
 import 'hydration_reminder_controller.dart';
 import 'hydration_reminder_device.dart';
 
@@ -68,14 +66,7 @@ Future<HydrationReminderController>
   await initializeReminderNotifications(plugin);
 
   final HealthDataSource dataSource =
-      HealthConnectNativeDataSource(appPackageName: openVitalsPackageName);
-  // MUST resolve access before any read. `cachedAvailability` starts at
-  // `notSupported`, and every repository gates its reads on it
-  // (`_grantedIfAvailable`), so without this today's intake always reads as 0 —
-  // the goal never counts as met, and the reminder keeps nagging instead of
-  // rolling to tomorrow. The app gets this for free from `HealthConnectGate`;
-  // this isolate has no widget tree.
-  (await HealthRepositoryImpl(dataSource).refreshAvailability()).orThrow();
+      (await openBackgroundHealthAccess()).orThrow();
   final repository = HydrationRepositoryImpl(
     dataSource,
     preferencesRepository: preferences,

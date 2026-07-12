@@ -8,7 +8,7 @@ import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/mindfulness_repository.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/mindfulness_models.dart';
 import 'package:openvitals/features/manualentry/application/mindfulness_entry_view_model.dart';

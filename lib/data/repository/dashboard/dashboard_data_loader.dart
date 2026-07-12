@@ -19,7 +19,7 @@ import '../../../domain/preferences/activity_week_mode.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
 import '../impl/run_catching.dart';
 import '../../source/health/health_data_source.dart';
-import '../../source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import '../contract/body_energy_repository.dart';
 import '../impl/health_connect_gating.dart';
 import '../impl/repository_time.dart';

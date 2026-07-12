@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../bootstrap/background_health_access.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../core/result/result.dart';
 import '../../data/prefs/preferences_repository.dart';
@@ -14,10 +15,8 @@ import '../../data/repository/contract/health_repository.dart';
 import '../../data/repository/impl/health_repository_impl.dart';
 import '../../data/repository/impl/hydration_repository_impl.dart';
 import '../../data/repository/impl/nutrition_repository_impl.dart';
-import '../../di/providers.dart' show openVitalsPackageName;
 import '../../data/source/health/health_data_source.dart';
 import '../../domain/model/nutrition_models.dart';
-import '../../data/source/health/native/health_connect_native_data_source.dart';
 import '../../l10n/app_localizations.dart';
 import '../manualentry/application/hydration_entry_view_model.dart';
 import 'home_widget_beverage.dart';
@@ -120,7 +119,7 @@ Future<QuickBeverageWidgetLogger> buildBackgroundQuickBeverageLogger() async {
   final preferences =
       PreferencesRepository(await SharedPreferences.getInstance());
   final HealthDataSource dataSource =
-      HealthConnectNativeDataSource(appPackageName: openVitalsPackageName);
+      (await openBackgroundHealthAccess()).orThrow();
 
   return QuickBeverageWidgetLogger(
     service: const HomeWidgetService(),

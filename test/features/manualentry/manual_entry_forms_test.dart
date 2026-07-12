@@ -18,7 +18,7 @@ import 'package:openvitals/features/manualentry/presentation/body_measurement_en
 import 'package:openvitals/features/manualentry/presentation/carbs_entry_screen.dart';
 import 'package:openvitals/features/manualentry/presentation/hydration_entry_screen.dart';
 import 'package:openvitals/features/manualentry/presentation/vitals_measurement_entry_screen.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 

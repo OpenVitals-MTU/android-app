@@ -12,7 +12,7 @@ import '../../../domain/model/sleep_models.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/model/apple_health_import_records.dart';
-import 'health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 
 /// The `HealthConnectManager` analogue: a single facade over the platform
 /// health store that the repositories and [DashboardDataLoader] depend on.

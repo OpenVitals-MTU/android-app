@@ -5,7 +5,7 @@ import 'package:openvitals/data/repository/impl/heart_repository_impl.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 
 /// Records what the repository asks the data source for.
 ///

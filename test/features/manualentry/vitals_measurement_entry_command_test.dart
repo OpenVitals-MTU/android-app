@@ -7,7 +7,7 @@ import 'package:openvitals/core/presentation/screen_error.dart';
 import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/vitals_repository.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/vitals_models.dart';
 import 'package:openvitals/features/manualentry/application/vitals_measurement_entry_view_model.dart';

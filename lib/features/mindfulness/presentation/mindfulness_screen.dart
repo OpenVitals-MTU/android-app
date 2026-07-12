@@ -8,7 +8,7 @@ import '../../../core/period/period_titles.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/mindfulness_models.dart';
-import '../../../data/source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';

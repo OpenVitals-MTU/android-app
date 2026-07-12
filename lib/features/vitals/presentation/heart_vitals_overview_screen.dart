@@ -5,7 +5,7 @@ import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
-import '../../../data/source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';

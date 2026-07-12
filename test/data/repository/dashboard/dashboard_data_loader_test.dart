@@ -11,7 +11,7 @@ import 'package:openvitals/domain/model/dashboard_query.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/preferences/body_energy_calibration.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 
 /// A device-free [HealthDataSource] that returns canned values for a few metrics
 /// and reports a fixed granted-permission set. All other reads fall through to

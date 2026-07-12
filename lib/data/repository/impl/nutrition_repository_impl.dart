@@ -6,7 +6,7 @@ import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/nutrition_period_data.dart';
 import '../../source/health/health_data_source.dart';
-import '../../source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import '../contract/nutrition_repository.dart';
 import '../contract/repository_exceptions.dart';
 import 'repository_time.dart';

@@ -18,7 +18,7 @@ import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import '../../../ui/components/period_comparison_stat.dart';
 import '../../../ui/components/personal_baseline_stat.dart';
-import '../../../data/source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import 'nutrition_formatting.dart';
 import 'nutrition_metric.dart';
 import '../application/nutrition_display.dart';

@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/result/result.dart';
+import '../../bootstrap/background_health_access.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../core/reminders/alarm_manager_reminder_scheduler.dart';
 import '../../data/prefs/preferences_repository.dart';
@@ -15,10 +17,8 @@ import '../../data/repository/impl/heart_repository_impl.dart';
 import '../../data/repository/impl/sleep_repository_impl.dart';
 import '../../data/repository/impl/vitals_repository_impl.dart';
 import '../../data/repository/dashboard/dashboard_data_loader.dart';
-import '../../di/providers.dart' show openVitalsPackageName;
 import '../../domain/usecase/load_dashboard_day_use_case.dart';
 import '../../data/source/health/health_data_source.dart';
-import '../../data/source/health/native/health_connect_native_data_source.dart';
 import 'home_widget_refresher.dart';
 import 'home_widget_service.dart';
 
@@ -91,7 +91,7 @@ Future<HomeWidgetRefresher> buildBackgroundHomeWidgetRefresher() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   final preferences = PreferencesRepository(sharedPreferences);
   final HealthDataSource dataSource =
-      HealthConnectNativeDataSource(appPackageName: openVitalsPackageName);
+      (await openBackgroundHealthAccess()).orThrow();
 
   final loader = DashboardDataLoader(
     dataSource,

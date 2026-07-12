@@ -7,8 +7,9 @@
 //
 // The native Health Connect plugin ([HealthConnectHostApi]) requests and
 // queries these permission strings directly, so no per-record data-type mapping
-// is needed here — this file is now a pure, platform-independent taxonomy.
-import '../../../domain/model/permission_grant_mode.dart';
+// is needed here — this is a pure, platform-independent taxonomy, which is why
+// it lives in the domain layer and not beside the data source that consumes it.
+import '../model/permission_grant_mode.dart';
 
 /// AndroidX permission-string prefix, mirrored verbatim from Health Connect.
 const String _hcPrefix = 'android.permission.health.';

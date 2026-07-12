@@ -3,7 +3,7 @@ import 'package:openvitals/core/period/period_selection.dart';
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/features/sleep/application/sleep_view_model.dart';

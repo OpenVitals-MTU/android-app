@@ -6,7 +6,7 @@ import 'package:openvitals/data/repository/impl/activity_repository_impl.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 
 /// Captures the include-flags `loadWorkoutsWithMetrics` forwards, so the tests
 /// can assert the per-metric permission gating without a real provider.

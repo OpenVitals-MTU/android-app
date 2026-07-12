@@ -5,7 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/caffeine_models.dart';
-import '../../../data/source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/loading_state.dart';

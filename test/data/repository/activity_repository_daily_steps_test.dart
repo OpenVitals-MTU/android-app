@@ -6,7 +6,7 @@ import 'package:openvitals/data/repository/impl/activity_repository_impl.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 
 /// Records the arguments `loadDailySteps` forwards, so the tests can assert the
 /// effective-start clamp and the floors flag without a real provider.

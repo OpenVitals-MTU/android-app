@@ -18,7 +18,7 @@ import 'package:openvitals/core/presentation/metric_detail_sections.dart';
 import 'package:openvitals/features/nutrition/presentation/nutrition_metric_screen.dart';
 import 'package:openvitals/features/nutrition/presentation/nutrition_screen.dart';
 import 'package:openvitals/features/nutrition/presentation/nutrition_sections.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 import 'package:openvitals/ui/charts/period_chart.dart';
 import 'package:openvitals/ui/components/daily_goal_components.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';

@@ -5,7 +5,7 @@ import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../domain/query/vitals_period_data.dart';
 import '../../source/health/health_data_source.dart';
-import '../../source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import '../contract/vitals_repository.dart';
 import '../contract/repository_exceptions.dart';
 import 'repository_time.dart';

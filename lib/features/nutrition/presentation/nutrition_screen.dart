@@ -15,7 +15,7 @@ import '../../../ui/components/insight_cards.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../../../data/source/health/health_permissions.dart';
+import '../../../domain/health/health_permissions.dart';
 import 'nutrition_formatting.dart';
 import 'nutrition_metric.dart';
 import '../application/nutrition_display.dart';

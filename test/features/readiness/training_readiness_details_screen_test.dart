@@ -12,7 +12,7 @@ import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/refresh_mode.dart';
 import 'package:openvitals/features/readiness/application/training_readiness_details_view_model.dart';
 import 'package:openvitals/features/readiness/presentation/training_readiness_details_screen.dart';
-import 'package:openvitals/data/source/health/health_permissions.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/data_source_education_item.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
