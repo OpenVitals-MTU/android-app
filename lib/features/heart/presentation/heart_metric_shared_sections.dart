@@ -9,9 +9,9 @@ import '../../../domain/insights/data_confidence.dart';
 import '../../../domain/insights/metric_interpretations.dart';
 import '../../../domain/insights/period_comparison.dart';
 import '../../../domain/insights/personal_baseline.dart';
-import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../l10n/app_localizations.dart';
+import '../application/heart_display.dart';
 import '../../../ui/components/data_confidence_card.dart';
 import '../../../ui/components/insight_cards.dart';
 import '../../../ui/components/metric_card.dart';
@@ -22,7 +22,6 @@ import '../../../ui/components/period_comparison_stat.dart';
 import '../../../ui/components/personal_baseline_stat.dart';
 import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/theme/app_colors.dart';
-import '../../../core/stats/stats.dart';
 import '../../../ui/components/section_padding.dart';
 
 /// Port of the Kotlin `HeartMetricSharedSections.kt`: the section bodies shared
@@ -261,10 +260,6 @@ Widget bodyTemperatureContextCardContent(
 
 // ── Statistics ────────────────────────────────────────────────────────────────
 
-/// Zero on empty is preserved from the hand-rolled original, but it is dead code:
-/// every call site is already guarded on `isNotEmpty`.
-double _average(Iterable<double> values) => averageOrZero(values);
-
 /// Kotlin `HeartNumericStatisticsContent`: the shared avg/low/high/readings
 /// grid, plus the previous-period comparison and the personal-baseline stats.
 class HeartNumericStatisticsContent extends StatelessWidget {
@@ -374,20 +369,19 @@ class HeartNumericStatisticsContent extends StatelessWidget {
 /// Kotlin `BloodPressureStatisticsContent`: Latest/Average/Highest as
 /// systolic/diastolic pairs + readings, previous-period (systolic average) and
 /// systolic personal baseline.
+///
+/// Every number it prints arrives precomputed on [BloodPressureStats]; this only
+/// formats and lays them out.
 class BloodPressureStatisticsContent extends StatelessWidget {
   const BloodPressureStatisticsContent({
     super.key,
-    required this.entries,
-    required this.previousEntries,
-    required this.baselineEntries,
+    required this.stats,
     required this.period,
     required this.selectedRange,
     required this.unitFormatter,
   });
 
-  final List<BloodPressureEntry> entries;
-  final List<BloodPressureEntry> previousEntries;
-  final List<BloodPressureEntry> baselineEntries;
+  final BloodPressureStats stats;
   final DatePeriod period;
   final TimeRange selectedRange;
   final UnitFormatter unitFormatter;
@@ -395,34 +389,22 @@ class BloodPressureStatisticsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final latest = entries.isEmpty
-        ? null
-        : entries.reduce((a, b) => a.time.isAfter(b.time) ? a : b);
+    final latest = stats.latest;
     final average = unitFormatter.bloodPressure(
-      _average(entries.map((e) => e.systolicMmHg.toDouble())).round(),
-      _average(entries.map((e) => e.diastolicMmHg.toDouble())).round(),
+      stats.averageSystolic.round(),
+      stats.averageDiastolic.round(),
     );
-    BloodPressureEntry? highestEntry;
-    for (final entry in entries) {
-      if (highestEntry == null ||
-          entry.systolicMmHg > highestEntry.systolicMmHg ||
-          (entry.systolicMmHg == highestEntry.systolicMmHg &&
-              entry.diastolicMmHg > highestEntry.diastolicMmHg)) {
-        highestEntry = entry;
-      }
-    }
+    final highestEntry = stats.highest;
     final highest = highestEntry == null
         ? unitFormatter.bloodPressure(0, 0)
         : unitFormatter.bloodPressure(
             highestEntry.systolicMmHg,
             highestEntry.diastolicMmHg,
           );
-    final previousAverageSystolic = previousEntries.isEmpty
-        ? null
-        : _average(previousEntries.map((e) => e.systolicMmHg.toDouble()));
     final latestDisplay = latest == null
         ? null
         : unitFormatter.bloodPressure(latest.systolicMmHg, latest.diastolicMmHg);
+    final comparison = stats.comparison;
 
     DisplayValue systolicDisplay(double value) =>
         DisplayValue(unitFormatter.count(value.round()), 'mmHg');
@@ -456,17 +438,14 @@ class BloodPressureStatisticsContent extends StatelessWidget {
             ),
             InsightStat(
               title: l10n.statReadings,
-              value: unitFormatter.count(entries.length),
+              value: unitFormatter.count(stats.readings),
               unit: '',
               icon: Icons.check_circle_outline,
               accentColor: AppColors.vitals,
             ),
-            if (previousAverageSystolic != null)
+            if (comparison != null)
               previousPeriodInsightStat(
-                comparison: periodComparison(
-                  _average(entries.map((e) => e.systolicMmHg.toDouble())),
-                  previousAverageSystolic,
-                ),
+                comparison: comparison,
                 selectedRange: selectedRange,
                 unitFormatter: unitFormatter,
                 valueFormatter: systolicDisplay,
@@ -475,14 +454,8 @@ class BloodPressureStatisticsContent extends StatelessWidget {
               ),
             ...personalBaselineInsightStats(
               insight: personalBaselineInsight(
-                _average(entries.map((e) => e.systolicMmHg.toDouble())),
-                [
-                  for (final entry in baselineEntries)
-                    BaselineValue(
-                      date: instantToLocalDate(entry.time),
-                      value: entry.systolicMmHg.toDouble(),
-                    ),
-                ],
+                stats.averageSystolic,
+                stats.baselineValues,
                 period.start.minusDays(1),
               ),
               unitFormatter: unitFormatter,
@@ -497,218 +470,120 @@ class BloodPressureStatisticsContent extends StatelessWidget {
   }
 }
 
-/// Kotlin `HeartRateSampleStatisticsContent` (day range: raw samples, baseline
-/// fed from the daily summaries).
-Widget heartRateSampleStatisticsContent({
-  required List<HeartRateSample> samples,
-  required List<HeartRateSample> previousSamples,
-  required List<HeartRateSummary> baselineSummaries,
+/// Kotlin `HeartRateSampleStatisticsContent` / `HeartRateSummaryStatisticsContent`
+/// — the same grid, whether the [stats] were derived from a day of raw samples
+/// or a period of daily summaries. Only the count's title differs.
+Widget heartRateStatisticsContent({
+  required HeartStats stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
-}) {
-  final values = samples.map((s) => s.beatsPerMinute.toDouble()).toList();
-  final previousValues =
-      previousSamples.map((s) => s.beatsPerMinute.toDouble()).toList();
-  return HeartNumericStatisticsContent(
-    unitFormatter: unitFormatter,
-    average: unitFormatter.heartRate(_average(values).round()),
-    low: unitFormatter.heartRate(
-        values.isEmpty ? 0 : values.reduce((a, b) => a < b ? a : b).round()),
-    high: unitFormatter.heartRate(
-        values.isEmpty ? 0 : values.reduce((a, b) => a > b ? a : b).round()),
-    readings: samples.length,
-    comparison: previousValues.isEmpty
-        ? null
-        : periodComparison(_average(values), _average(previousValues)),
-    selectedRange: selectedRange,
-    comparisonValueFormatter: (value) => unitFormatter.heartRate(value.round()),
-    icon: Icons.favorite_outline,
-    accentColor: AppColors.heart,
-    period: period,
-    baselineCurrentValue: _average(values),
-    baselineValues: [
-      for (final summary in baselineSummaries)
-        BaselineValue(date: summary.date, value: summary.avgBpm.toDouble()),
-    ],
-  );
-}
-
-/// Kotlin `HeartRateSummaryStatisticsContent` (period range: daily summaries).
-Widget heartRateSummaryStatisticsContent({
-  required List<HeartRateSummary> summaries,
-  required List<HeartRateSummary> previousSummaries,
-  required List<HeartRateSummary> baselineSummaries,
-  required DatePeriod period,
-  required TimeRange selectedRange,
-  required UnitFormatter unitFormatter,
-}) {
-  final average = _average(summaries.map((s) => s.avgBpm.toDouble()));
-  return HeartNumericStatisticsContent(
-    unitFormatter: unitFormatter,
-    average: unitFormatter.heartRate(average.round()),
-    low: unitFormatter.heartRate(summaries.isEmpty
-        ? 0
-        : summaries.map((s) => s.minBpm).reduce((a, b) => a < b ? a : b)),
-    high: unitFormatter.heartRate(summaries.isEmpty
-        ? 0
-        : summaries.map((s) => s.maxBpm).reduce((a, b) => a > b ? a : b)),
-    readings: summaries.length,
-    comparison: previousSummaries.isEmpty
-        ? null
-        : periodComparison(
-            average,
-            _average(previousSummaries.map((s) => s.avgBpm.toDouble())),
-          ),
-    selectedRange: selectedRange,
-    comparisonValueFormatter: (value) => unitFormatter.heartRate(value.round()),
-    icon: Icons.favorite_outline,
-    accentColor: AppColors.heart,
-    countInLoggedDays: true,
-    period: period,
-    baselineCurrentValue: average,
-    baselineValues: [
-      for (final summary in baselineSummaries)
-        BaselineValue(date: summary.date, value: summary.avgBpm.toDouble()),
-    ],
-  );
-}
+  bool countInLoggedDays = false,
+}) =>
+    HeartNumericStatisticsContent(
+      unitFormatter: unitFormatter,
+      average: unitFormatter.heartRate(stats.average.round()),
+      low: unitFormatter.heartRate(stats.low.round()),
+      high: unitFormatter.heartRate(stats.high.round()),
+      readings: stats.readings,
+      comparison: stats.comparison,
+      selectedRange: selectedRange,
+      comparisonValueFormatter: (value) =>
+          unitFormatter.heartRate(value.round()),
+      icon: Icons.favorite_outline,
+      accentColor: AppColors.heart,
+      countInLoggedDays: countInLoggedDays,
+      period: period,
+      baselineCurrentValue: stats.baselineCurrentValue,
+      baselineValues: stats.baselineValues,
+    );
 
 /// Kotlin `RestingHeartRateStatisticsContent`.
 Widget restingHeartRateStatisticsContent({
-  required List<DailyRestingHR> entries,
-  required List<DailyRestingHR> previousEntries,
-  required List<DailyRestingHR> baselineEntries,
+  required HeartStats stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
-}) {
-  final average = _average(entries.map((e) => e.bpm.toDouble()));
-  return HeartNumericStatisticsContent(
-    unitFormatter: unitFormatter,
-    average: unitFormatter.heartRate(average.round()),
-    low: unitFormatter.heartRate(entries.isEmpty
-        ? 0
-        : entries.map((e) => e.bpm).reduce((a, b) => a < b ? a : b)),
-    high: unitFormatter.heartRate(entries.isEmpty
-        ? 0
-        : entries.map((e) => e.bpm).reduce((a, b) => a > b ? a : b)),
-    readings: entries.length,
-    comparison: previousEntries.isEmpty
-        ? null
-        : periodComparison(
-            average,
-            _average(previousEntries.map((e) => e.bpm.toDouble())),
-          ),
-    selectedRange: selectedRange,
-    comparisonValueFormatter: (value) => unitFormatter.heartRate(value.round()),
-    icon: Icons.favorite_border,
-    accentColor: AppColors.heart,
-    countInLoggedDays: true,
-    period: period,
-    baselineCurrentValue: average,
-    baselineValues: [
-      for (final entry in baselineEntries)
-        BaselineValue(date: entry.date, value: entry.bpm.toDouble()),
-    ],
-  );
-}
+}) =>
+    HeartNumericStatisticsContent(
+      unitFormatter: unitFormatter,
+      average: unitFormatter.heartRate(stats.average.round()),
+      low: unitFormatter.heartRate(stats.low.round()),
+      high: unitFormatter.heartRate(stats.high.round()),
+      readings: stats.readings,
+      comparison: stats.comparison,
+      selectedRange: selectedRange,
+      comparisonValueFormatter: (value) =>
+          unitFormatter.heartRate(value.round()),
+      icon: Icons.favorite_border,
+      accentColor: AppColors.heart,
+      countInLoggedDays: true,
+      period: period,
+      baselineCurrentValue: stats.baselineCurrentValue,
+      baselineValues: stats.baselineValues,
+    );
 
 /// Kotlin `HrvStatisticsContent`.
 Widget hrvStatisticsContent({
-  required List<DailyHrv> entries,
-  required List<DailyHrv> previousEntries,
-  required List<DailyHrv> baselineEntries,
+  required HeartStats stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
-}) {
-  final average = _average(entries.map((e) => e.rmssdMs));
-  return HeartNumericStatisticsContent(
-    unitFormatter: unitFormatter,
-    average: unitFormatter.hrv(average),
-    low: unitFormatter.hrv(entries.isEmpty
-        ? 0
-        : entries.map((e) => e.rmssdMs).reduce((a, b) => a < b ? a : b)),
-    high: unitFormatter.hrv(entries.isEmpty
-        ? 0
-        : entries.map((e) => e.rmssdMs).reduce((a, b) => a > b ? a : b)),
-    readings: entries.length,
-    comparison: previousEntries.isEmpty
-        ? null
-        : periodComparison(
-            average,
-            _average(previousEntries.map((e) => e.rmssdMs)),
-          ),
-    selectedRange: selectedRange,
-    comparisonValueFormatter: unitFormatter.hrv,
-    icon: Icons.favorite_border,
-    accentColor: AppColors.heart,
-    countInLoggedDays: true,
-    period: period,
-    baselineCurrentValue: average,
-    baselineValues: [
-      for (final entry in baselineEntries)
-        BaselineValue(date: entry.date, value: entry.rmssdMs),
-    ],
-  );
-}
+}) =>
+    HeartNumericStatisticsContent(
+      unitFormatter: unitFormatter,
+      average: unitFormatter.hrv(stats.average),
+      low: unitFormatter.hrv(stats.low),
+      high: unitFormatter.hrv(stats.high),
+      readings: stats.readings,
+      comparison: stats.comparison,
+      selectedRange: selectedRange,
+      comparisonValueFormatter: unitFormatter.hrv,
+      icon: Icons.favorite_border,
+      accentColor: AppColors.heart,
+      countInLoggedDays: true,
+      period: period,
+      baselineCurrentValue: stats.baselineCurrentValue,
+      baselineValues: stats.baselineValues,
+    );
 
 /// The shared shape of the single-value vitals statistics (Kotlin
 /// `SpO2StatisticsContent`, `Vo2MaxStatisticsContent`, …).
-Widget _vitalStatisticsContent<T>({
-  required List<T> entries,
-  required List<T> previousEntries,
-  required List<T> baselineEntries,
-  required double Function(T) value,
-  required DateTime Function(T) time,
+Widget _vitalStatisticsContent({
+  required HeartStats stats,
   required DisplayValue Function(double) format,
   required IconData icon,
   required Color accentColor,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
-}) {
-  final values = entries.map(value).toList();
-  final previousValues = previousEntries.map(value).toList();
-  return HeartNumericStatisticsContent(
-    unitFormatter: unitFormatter,
-    average: format(_average(values)),
-    low: format(values.isEmpty ? 0 : values.reduce((a, b) => a < b ? a : b)),
-    high: format(values.isEmpty ? 0 : values.reduce((a, b) => a > b ? a : b)),
-    readings: entries.length,
-    comparison: previousValues.isEmpty
-        ? null
-        : periodComparison(_average(values), _average(previousValues)),
-    selectedRange: selectedRange,
-    comparisonValueFormatter: format,
-    icon: icon,
-    accentColor: accentColor,
-    period: period,
-    baselineCurrentValue: _average(values),
-    baselineValues: [
-      for (final entry in baselineEntries)
-        BaselineValue(date: instantToLocalDate(time(entry)), value: value(entry)),
-    ],
-  );
-}
+}) =>
+    HeartNumericStatisticsContent(
+      unitFormatter: unitFormatter,
+      average: format(stats.average),
+      low: format(stats.low),
+      high: format(stats.high),
+      readings: stats.readings,
+      comparison: stats.comparison,
+      selectedRange: selectedRange,
+      comparisonValueFormatter: format,
+      icon: icon,
+      accentColor: accentColor,
+      period: period,
+      baselineCurrentValue: stats.baselineCurrentValue,
+      baselineValues: stats.baselineValues,
+    );
 
 /// Kotlin `SpO2StatisticsContent`.
 Widget spO2StatisticsContent({
-  required List<SpO2Entry> entries,
-  required List<SpO2Entry> previousEntries,
-  required List<SpO2Entry> baselineEntries,
+  required HeartStats stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
   required Color accentColor,
 }) =>
-    _vitalStatisticsContent<SpO2Entry>(
-      entries: entries,
-      previousEntries: previousEntries,
-      baselineEntries: baselineEntries,
-      value: (e) => e.percent,
-      time: (e) => e.time,
+    _vitalStatisticsContent(
+      stats: stats,
       format: unitFormatter.percent,
       icon: Icons.favorite_border,
       accentColor: accentColor,
@@ -719,20 +594,14 @@ Widget spO2StatisticsContent({
 
 /// Kotlin `Vo2MaxStatisticsContent`.
 Widget vo2MaxStatisticsContent({
-  required List<Vo2MaxEntry> entries,
-  required List<Vo2MaxEntry> previousEntries,
-  required List<Vo2MaxEntry> baselineEntries,
+  required HeartStats stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
   required Color accentColor,
 }) =>
-    _vitalStatisticsContent<Vo2MaxEntry>(
-      entries: entries,
-      previousEntries: previousEntries,
-      baselineEntries: baselineEntries,
-      value: (e) => e.vo2MaxMlPerKgPerMin,
-      time: (e) => e.time,
+    _vitalStatisticsContent(
+      stats: stats,
       format: unitFormatter.vo2Max,
       icon: Icons.speed_outlined,
       accentColor: accentColor,
@@ -743,20 +612,14 @@ Widget vo2MaxStatisticsContent({
 
 /// Kotlin `RespiratoryRateStatisticsContent`.
 Widget respiratoryRateStatisticsContent({
-  required List<RespiratoryRateEntry> entries,
-  required List<RespiratoryRateEntry> previousEntries,
-  required List<RespiratoryRateEntry> baselineEntries,
+  required HeartStats stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
   required Color accentColor,
 }) =>
-    _vitalStatisticsContent<RespiratoryRateEntry>(
-      entries: entries,
-      previousEntries: previousEntries,
-      baselineEntries: baselineEntries,
-      value: (e) => e.breathsPerMinute,
-      time: (e) => e.time,
+    _vitalStatisticsContent(
+      stats: stats,
       format: unitFormatter.respiratoryRate,
       icon: Icons.favorite_outline,
       accentColor: accentColor,
@@ -767,20 +630,14 @@ Widget respiratoryRateStatisticsContent({
 
 /// Kotlin `BodyTemperatureStatisticsContent`.
 Widget bodyTemperatureStatisticsContent({
-  required List<BodyTempEntry> entries,
-  required List<BodyTempEntry> previousEntries,
-  required List<BodyTempEntry> baselineEntries,
+  required HeartStats stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
   required Color accentColor,
 }) =>
-    _vitalStatisticsContent<BodyTempEntry>(
-      entries: entries,
-      previousEntries: previousEntries,
-      baselineEntries: baselineEntries,
-      value: (e) => e.temperatureCelsius,
-      time: (e) => e.time,
+    _vitalStatisticsContent(
+      stats: stats,
       format: unitFormatter.temperature,
       icon: Icons.device_thermostat_outlined,
       accentColor: accentColor,
@@ -791,20 +648,14 @@ Widget bodyTemperatureStatisticsContent({
 
 /// Kotlin `BloodGlucoseStatisticsContent`.
 Widget bloodGlucoseStatisticsContent({
-  required List<BloodGlucoseEntry> entries,
-  required List<BloodGlucoseEntry> previousEntries,
-  required List<BloodGlucoseEntry> baselineEntries,
+  required HeartStats stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
   required Color accentColor,
 }) =>
-    _vitalStatisticsContent<BloodGlucoseEntry>(
-      entries: entries,
-      previousEntries: previousEntries,
-      baselineEntries: baselineEntries,
-      value: (e) => e.millimolesPerLiter,
-      time: (e) => e.time,
+    _vitalStatisticsContent(
+      stats: stats,
       format: unitFormatter.bloodGlucose,
       icon: Icons.favorite_outline,
       accentColor: accentColor,
@@ -815,51 +666,25 @@ Widget bloodGlucoseStatisticsContent({
 
 /// Kotlin `SkinTemperatureStatisticsContent`: statistics over the
 /// delta-from-baseline values, formatted as temperature deltas. Entries with no
-/// delta are excluded from the math (but still count as readings), and the
-/// whole grid is omitted when no entry carries a delta.
+/// delta are excluded from the math (but still count as readings), and the whole
+/// grid is omitted when no entry carries a delta — which is what a null [stats]
+/// means here.
 Widget skinTemperatureStatisticsContent({
-  required List<SkinTemperatureEntry> entries,
-  required List<SkinTemperatureEntry> previousEntries,
-  required List<SkinTemperatureEntry> baselineEntries,
+  required HeartStats? stats,
   required DatePeriod period,
   required TimeRange selectedRange,
   required UnitFormatter unitFormatter,
   required Color accentColor,
 }) {
-  final values = [
-    for (final entry in entries)
-      if (entry.averageDeltaCelsius != null) entry.averageDeltaCelsius!,
-  ];
-  if (values.isEmpty) return const SizedBox.shrink();
-  final previousValues = [
-    for (final entry in previousEntries)
-      if (entry.averageDeltaCelsius != null) entry.averageDeltaCelsius!,
-  ];
-  return HeartNumericStatisticsContent(
-    unitFormatter: unitFormatter,
-    average: unitFormatter.temperatureDelta(_average(values)),
-    low: unitFormatter
-        .temperatureDelta(values.reduce((a, b) => a < b ? a : b)),
-    high: unitFormatter
-        .temperatureDelta(values.reduce((a, b) => a > b ? a : b)),
-    readings: entries.length,
-    comparison: previousValues.isEmpty
-        ? null
-        : periodComparison(_average(values), _average(previousValues)),
-    selectedRange: selectedRange,
-    comparisonValueFormatter: unitFormatter.temperatureDelta,
+  if (stats == null) return const SizedBox.shrink();
+  return _vitalStatisticsContent(
+    stats: stats,
+    format: unitFormatter.temperatureDelta,
     icon: Icons.device_thermostat_outlined,
     accentColor: accentColor,
     period: period,
-    baselineCurrentValue: _average(values),
-    baselineValues: [
-      for (final entry in baselineEntries)
-        if (entry.averageDeltaCelsius != null)
-          BaselineValue(
-            date: instantToLocalDate(entry.time),
-            value: entry.averageDeltaCelsius!,
-          ),
-    ],
+    selectedRange: selectedRange,
+    unitFormatter: unitFormatter,
   );
 }
 

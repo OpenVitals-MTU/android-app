@@ -14,14 +14,14 @@ import '../../../domain/model/vitals_models.dart';
 import '../../../domain/usecase/load_heart_period_use_case.dart';
 import '../presentation/heart_metric.dart';
 import '../presentation/heart_metric_cards.dart';
+import 'heart_display.dart';
 
 part 'heart_metric_view_model.freezed.dart';
 
-/// The Riverpod port of the Kotlin `HeartUiState`, trimmed to the selection the
-/// scaffold drives, the loaded [HeartPeriodLoadResult] payload, loading/error
-/// flags and the heart-rate threshold-check preferences. The Kotlin view-model
-/// precomputes a `HeartDisplayState`; here the (cheap) per-metric derivations
-/// are computed on demand by the screen.
+/// The Riverpod port of the Kotlin `HeartUiState`: the selection the scaffold
+/// drives, the loaded [HeartPeriodLoadResult] payload, the precomputed
+/// [HeartDisplay], loading/error flags and the heart-rate threshold-check
+/// preferences.
 @freezed
 abstract class HeartMetricState with _$HeartMetricState {
   const HeartMetricState._();
@@ -36,6 +36,7 @@ abstract class HeartMetricState with _$HeartMetricState {
     int lowHeartRateThresholdBpm,
     ScreenError? error,
     HeartPeriodLoadResult? result,
+    HeartDisplay? display,
   }) = _HeartMetricState;
 }
 
@@ -45,6 +46,11 @@ abstract class HeartMetricState with _$HeartMetricState {
 /// A manual [Notifier] (no codegen), matching the activity template: the owning
 /// [MetricDetailScaffold] drives every load through [load] and pull-to-refresh
 /// through [refresh]. A monotonic [_generation] guard drops stale results.
+///
+/// The display model is built here, at load time — the screen renders
+/// [HeartMetricState.display] and derives nothing (Kotlin `HeartDisplayState`
+/// discipline). Everything that feeds it — a new period, a moved threshold, a
+/// deleted manual entry — rebuilds it through [_display].
 class HeartMetricViewModel extends Notifier<HeartMetricState> {
   HeartMetricViewModel(this.metric);
 
@@ -82,27 +88,40 @@ class HeartMetricViewModel extends Notifier<HeartMetricState> {
       weekPeriodMode: prefs.weekPeriodMode,
     );
 
-    try {
-      final result = (await useCase(
-        query,
-        metric.loadRequest,
-        refreshMode: refreshMode,
-      ))
-          .orThrow();
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(isLoading: false, result: result, error: null);
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unable to load data.'),
-      );
+    final result = await useCase(
+      query,
+      metric.loadRequest,
+      refreshMode: refreshMode,
+    );
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          result: value,
+          display: _display(value),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
     }
   }
 
   Future<void> refresh() => load(
         PeriodSelection(state.selectedRange, state.selectedDate),
         refreshMode: RefreshMode.force,
+      );
+
+  /// The screen-ready derivation of [result] under the current selection and
+  /// thresholds. The one place a [HeartDisplay] is made.
+  HeartDisplay _display(HeartPeriodLoadResult result) => buildHeartDisplay(
+        result,
+        selectedRange: state.selectedRange,
+        highHeartRateThresholdBpm: state.highHeartRateThresholdBpm,
+        lowHeartRateThresholdBpm: state.lowHeartRateThresholdBpm,
       );
 
   // ── Heart-rate threshold steppers (Kotlin `HeartViewModel`) ────────────────
@@ -136,6 +155,7 @@ class HeartMetricViewModel extends Notifier<HeartMetricState> {
     ref.read(preferencesRepositoryProvider).highHeartRateThresholdBpm =
         normalized;
     state = state.copyWith(highHeartRateThresholdBpm: normalized);
+    _rebuildDisplay();
   }
 
   void _setLowHeartRateThreshold(int thresholdBpm) {
@@ -149,6 +169,15 @@ class HeartMetricViewModel extends Notifier<HeartMetricState> {
     ref.read(preferencesRepositoryProvider).lowHeartRateThresholdBpm =
         normalized;
     state = state.copyWith(lowHeartRateThresholdBpm: normalized);
+    _rebuildDisplay();
+  }
+
+  /// The threshold checks are part of the display, so a moved threshold has to
+  /// rebuild it — the cards count the same loaded samples against a new line.
+  void _rebuildDisplay() {
+    final result = state.result;
+    if (result == null) return;
+    state = state.copyWith(display: _display(result));
   }
 
   // ── Manual vitals entry deletion (Kotlin `deleteVitalsMeasurementEntry`) ───
@@ -161,21 +190,26 @@ class HeartMetricViewModel extends Notifier<HeartMetricState> {
     String entryId,
   ) async {
     if (entryId.isEmpty) return;
-    try {
-      (await ref.read(deleteVitalsMeasurementEntryUseCaseProvider)(type, entryId))
-          .orThrow();
-      if (!ref.mounted) return;
-      final result = state.result;
-      if (result == null) return;
-      state = state.copyWith(
-        result: _withDeletedVitalsEntry(result, type, entryId),
-        error: null,
-      );
-    } catch (error) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        error: throwableToScreenError(error, fallback: 'Unable to delete entry.'),
-      );
+    final deletion =
+        await ref.read(deleteVitalsMeasurementEntryUseCaseProvider)(
+      type,
+      entryId,
+    );
+    if (!ref.mounted) return;
+    switch (deletion) {
+      case Ok():
+        final result = state.result;
+        if (result == null) return;
+        final remaining = _withDeletedVitalsEntry(result, type, entryId);
+        state = state.copyWith(
+          result: remaining,
+          display: _display(remaining),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          error: failure.toScreenError(fallback: 'Unable to delete entry.'),
+        );
     }
   }
 }

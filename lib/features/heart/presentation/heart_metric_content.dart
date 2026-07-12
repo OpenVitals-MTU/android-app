@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../../core/period/period_titles.dart';
@@ -7,11 +5,8 @@ import '../../../core/period/time_range.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';
-import '../../../domain/insights/period_comparison.dart';
-import '../../../domain/insights/personal_baseline.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/vitals_models.dart';
-import '../../../domain/usecase/load_heart_period_use_case.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/charts/line_chart.dart';
 import '../../../ui/components/data_source_education_item.dart';
@@ -20,10 +15,10 @@ import '../../../ui/components/paginated_entry_list.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'heart_metric.dart';
 import 'heart_metric_cards.dart';
+import '../application/heart_display.dart';
 import '../application/heart_metric_view_model.dart';
 import 'heart_metric_ordered_sections.dart';
 import 'heart_metric_shared_sections.dart';
-import '../../../core/stats/stats.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/section_padding.dart';
 import 'heart_chart_series.dart';
@@ -38,6 +33,10 @@ typedef VitalsMeasurementCallback = void Function(
 /// Kotlin `HeartMetricContent.kt`, `HeartVitalDetailContent.kt` and
 /// `VitalsBloodPressureContent.kt`. Every metric renders through the
 /// user-reorderable [heartChartMetricSections] skeleton.
+///
+/// It derives nothing: the sorted series, the extremes and the statistics all
+/// arrive precomputed on [HeartMetricState.display] (Kotlin `HeartDisplayState`).
+/// What is left here is layout, theming, l10n and formatting — presentation.
 class HeartMetricContentView extends StatelessWidget {
   const HeartMetricContentView({
     super.key,
@@ -71,8 +70,8 @@ class HeartMetricContentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final result = state.result;
-    if (result == null) {
+    final display = state.display;
+    if (display == null) {
       if (state.isLoading) return const SectionLoading();
       return _placeholder();
     }
@@ -80,36 +79,36 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       selectedDate: state.selectedDate,
       builder: (context, daySelection) =>
-          _content(context, result, daySelection),
+          _content(context, display, daySelection),
     );
   }
 
   Widget _content(
     BuildContext context,
-    HeartPeriodLoadResult result,
+    HeartDisplay display,
     ChartDaySelection daySelection,
   ) {
     switch (metric) {
       case HeartMetric.averageHeartRate:
-        return _averageHeartRate(context, result, daySelection);
+        return _averageHeartRate(context, display, daySelection);
       case HeartMetric.restingHeartRate:
-        return _restingHeartRate(context, result, daySelection);
+        return _restingHeartRate(context, display, daySelection);
       case HeartMetric.hrv:
-        return _hrv(context, result, daySelection);
+        return _hrv(context, display, daySelection);
       case HeartMetric.bloodPressure:
-        return _bloodPressure(context, result);
+        return _bloodPressure(context, display);
       case HeartMetric.spo2:
-        return _spo2(context, result, daySelection);
+        return _spo2(context, display, daySelection);
       case HeartMetric.vo2Max:
-        return _vo2Max(context, result);
+        return _vo2Max(context, display);
       case HeartMetric.respiratoryRate:
-        return _respiratoryRate(context, result, daySelection);
+        return _respiratoryRate(context, display, daySelection);
       case HeartMetric.bodyTemperature:
-        return _bodyTemperature(context, result);
+        return _bodyTemperature(context, display);
       case HeartMetric.bloodGlucose:
-        return _bloodGlucose(context, result, daySelection);
+        return _bloodGlucose(context, display, daySelection);
       case HeartMetric.skinTemperature:
-        return _skinTemperature(context, result, daySelection);
+        return _skinTemperature(context, display, daySelection);
     }
   }
 
@@ -117,18 +116,15 @@ class HeartMetricContentView extends StatelessWidget {
 
   Widget _averageHeartRate(
     BuildContext context,
-    HeartPeriodLoadResult result,
+    HeartDisplay display,
     ChartDaySelection daySelection,
   ) {
     final l10n = AppLocalizations.of(context);
     final isDay = state.selectedRange == TimeRange.day;
 
-    if (isDay && result.daySamples.isNotEmpty) {
-      final samples = [...result.daySamples]
-        ..sort((a, b) => a.time.compareTo(b.time));
-      final bpm = samples.map((s) => s.beatsPerMinute.toDouble()).toList();
-      final minBpm = _min(bpm).round();
-      final maxBpm = _max(bpm).round();
+    final day = display.heartRateDay;
+    if (isDay && day != null) {
+      final samples = day.samples;
       return heartChartMetricSections(
         selectedRange: state.selectedRange,
         period: period,
@@ -140,16 +136,16 @@ class HeartMetricContentView extends StatelessWidget {
                 points: [
                   for (final s in samples) (s.time, s.beatsPerMinute.toDouble())
                 ],
-                averageText: formatter.heartRate(_avg(bpm).round()).text,
+                averageText: formatter.heartRate(day.averageBpm).text,
                 rangeText:
-                    '${formatter.heartRate(minBpm).text}-${formatter.heartRate(maxBpm).text}',
+                    '${formatter.heartRate(day.minBpm).text}-${formatter.heartRate(day.maxBpm).text}',
                 valueFormatter: (value) =>
                     formatter.heartRate(value.round()).text,
-                minValue: math.max(30, minBpm - 5).toDouble(),
-                maxValue: (maxBpm + 5).toDouble(),
+                minValue: day.chartMinValue,
+                maxValue: day.chartMaxValue,
               ))
             : null,
-        highlightCard: _thresholdChecks(result),
+        highlightCard: _thresholdChecks(display),
         dataConfidence: HeartRawDataConfidenceContent<HeartRateSample>(
           period: period,
           entries: samples,
@@ -157,10 +153,8 @@ class HeartMetricContentView extends StatelessWidget {
           time: (s) => s.time,
           accentColor: AppColors.heart,
         ),
-        statistics: heartRateSampleStatisticsContent(
-          samples: samples,
-          previousSamples: result.previousDaySamples,
-          baselineSummaries: result.baselineDailySummaries,
+        statistics: heartRateStatisticsContent(
+          stats: day.stats,
           period: period,
           selectedRange: state.selectedRange,
           unitFormatter: formatter,
@@ -178,15 +172,10 @@ class HeartMetricContentView extends StatelessWidget {
       return sectionPadded(const HeartRateEmptyDayCard());
     }
 
-    final summaries = [...result.dailySummaries]
-      ..sort((a, b) => a.date.compareTo(b.date));
-    if (summaries.isEmpty) return _emptyOrLoading();
+    final periodDisplay = display.heartRatePeriod;
+    if (periodDisplay == null) return _emptyOrLoading();
 
-    final average = _avg(summaries.map((s) => s.avgBpm.toDouble())).round();
-    final lowest =
-        summaries.map((s) => s.minBpm).reduce((a, b) => a < b ? a : b);
-    final highest =
-        summaries.map((s) => s.maxBpm).reduce((a, b) => a > b ? a : b);
+    final summaries = periodDisplay.summaries;
     final selectedDay = daySelection.selectedDate;
 
     final periodSections = heartChartMetricSections(
@@ -202,16 +191,16 @@ class HeartMetricContentView extends StatelessWidget {
         summaryText: _summary(
           l10n,
           l10n.summaryAvgValueRange(
-            formatter.heartRate(average).text,
-            formatter.heartRate(lowest).text,
-            formatter.heartRate(highest).text,
+            formatter.heartRate(periodDisplay.averageBpm).text,
+            formatter.heartRate(periodDisplay.lowestBpm).text,
+            formatter.heartRate(periodDisplay.highestBpm).text,
           ),
         ),
         selectedDate: selectedDay,
         onDateSelected: daySelection.onDateSelected,
         valueFormatter: (value) => formatter.heartRate(value.round()).text,
       )),
-      highlightCard: _thresholdChecks(result),
+      highlightCard: _thresholdChecks(display),
       selectedDayEntries: selectedDay == null
           ? null
           : PaginatedEntryList<HeartRateSummary>(
@@ -231,17 +220,16 @@ class HeartMetricContentView extends StatelessWidget {
         sampleCount: summaries.length,
         accentColor: AppColors.heart,
       ),
-      statistics: heartRateSummaryStatisticsContent(
-        summaries: summaries,
-        previousSummaries: result.previousDailySummaries,
-        baselineSummaries: result.baselineDailySummaries,
+      statistics: heartRateStatisticsContent(
+        stats: periodDisplay.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
+        countInLoggedDays: true,
       ),
       entries: PaginatedEntryList<HeartRateSummary>(
         title: l10n.sectionDailyBreakdown,
-        entries: [...summaries]..sort((a, b) => b.date.compareTo(a.date)),
+        entries: periodDisplay.summariesNewestFirst,
         rowBuilder: (context, summary) => HeartRateDayRow(
           summary: summary,
           unitFormatter: formatter,
@@ -260,22 +248,10 @@ class HeartMetricContentView extends StatelessWidget {
     );
   }
 
-  Widget _thresholdChecks(HeartPeriodLoadResult result) =>
+  Widget _thresholdChecks(HeartDisplay display) =>
       sectionPadded(HeartRateThresholdChecksContent(
-        highCheck: heartRateThresholdCheck(
-          selectedRange: state.selectedRange,
-          type: HeartRateThresholdCheckType.high,
-          thresholdBpm: state.highHeartRateThresholdBpm,
-          daySamples: result.daySamples,
-          dailySummaries: result.dailySummaries,
-        ),
-        lowCheck: heartRateThresholdCheck(
-          selectedRange: state.selectedRange,
-          type: HeartRateThresholdCheckType.low,
-          thresholdBpm: state.lowHeartRateThresholdBpm,
-          daySamples: result.daySamples,
-          dailySummaries: result.dailySummaries,
-        ),
+        highCheck: display.highHeartRateCheck,
+        lowCheck: display.lowHeartRateCheck,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
         onDecreaseHighThreshold: onDecreaseHighHeartRateThreshold,
@@ -288,25 +264,15 @@ class HeartMetricContentView extends StatelessWidget {
 
   Widget _restingHeartRate(
     BuildContext context,
-    HeartPeriodLoadResult result,
+    HeartDisplay display,
     ChartDaySelection daySelection,
   ) {
     final l10n = AppLocalizations.of(context);
     final isDay = state.selectedRange == TimeRange.day;
 
-    final daySamples = [...result.dayRestingSamples]
-      ..sort((a, b) => a.time.compareTo(b.time));
-    final hasDayResting =
-        isDay && (daySamples.isNotEmpty || result.dayRestingBpm != null);
-    if (hasDayResting) {
-      final restingBpm = result.dayRestingBpm ??
-          _avg(daySamples.map((s) => s.beatsPerMinute.toDouble())).round();
-      final lowResting = daySamples.isEmpty
-          ? restingBpm
-          : daySamples.map((s) => s.beatsPerMinute).reduce((a, b) => a < b ? a : b);
-      final highResting = daySamples.isEmpty
-          ? restingBpm
-          : daySamples.map((s) => s.beatsPerMinute).reduce((a, b) => a > b ? a : b);
+    final day = display.restingHeartRateDay;
+    if (isDay && day != null) {
+      final daySamples = day.samples;
       return heartChartMetricSections(
         selectedRange: state.selectedRange,
         period: period,
@@ -319,13 +285,13 @@ class HeartMetricContentView extends StatelessWidget {
                   for (final s in daySamples)
                     (s.time, s.beatsPerMinute.toDouble())
                 ],
-                averageText: formatter.heartRate(restingBpm).text,
+                averageText: formatter.heartRate(day.restingBpm).text,
                 rangeText:
-                    '${formatter.heartRate(lowResting).text}-${formatter.heartRate(highResting).text}',
+                    '${formatter.heartRate(day.lowBpm).text}-${formatter.heartRate(day.highBpm).text}',
                 valueFormatter: (value) =>
                     formatter.heartRate(value.round()).text,
-                minValue: math.max(30, lowResting - 5).toDouble(),
-                maxValue: (highResting + 5).toDouble(),
+                minValue: day.chartMinValue,
+                maxValue: day.chartMaxValue,
               ))
             : null,
         highlightCard: Column(
@@ -333,9 +299,9 @@ class HeartMetricContentView extends StatelessWidget {
           children: [
             sectionPadded(HeartDayValueCard(
               title: metric.title,
-              value: formatter.heartRate(restingBpm).text,
+              value: formatter.heartRate(day.restingBpm).text,
             )),
-            restingHeartRateContextCardContent(restingBpm),
+            restingHeartRateContextCardContent(day.restingBpm),
           ],
         ),
         dataConfidence: daySamples.isNotEmpty
@@ -349,33 +315,24 @@ class HeartMetricContentView extends StatelessWidget {
             : HeartAggregateDataConfidenceContent(
                 period: period,
                 trackedDates: [state.selectedDate],
-                sampleCount: math.max(daySamples.length, 1),
+                sampleCount: day.stats.readings,
                 accentColor: AppColors.heart,
               ),
         statistics: HeartNumericStatisticsContent(
           unitFormatter: formatter,
-          average: formatter.heartRate(restingBpm),
-          low: formatter.heartRate(lowResting),
-          high: formatter.heartRate(highResting),
-          readings: math.max(daySamples.length, 1),
-          comparison: result.dayRestingBpm != null &&
-                  result.previousDayRestingBpm != null
-              ? periodComparison(
-                  result.dayRestingBpm!.toDouble(),
-                  result.previousDayRestingBpm!.toDouble(),
-                )
-              : null,
+          average: formatter.heartRate(day.restingBpm),
+          low: formatter.heartRate(day.lowBpm),
+          high: formatter.heartRate(day.highBpm),
+          readings: day.stats.readings,
+          comparison: day.stats.comparison,
           selectedRange: state.selectedRange,
           comparisonValueFormatter: (value) =>
               formatter.heartRate(value.round()),
           icon: Icons.favorite_border,
           accentColor: AppColors.heart,
           period: period,
-          baselineCurrentValue: restingBpm.toDouble(),
-          baselineValues: [
-            for (final entry in result.baselineDailyRestingHR)
-              BaselineValue(date: entry.date, value: entry.bpm.toDouble()),
-          ],
+          baselineCurrentValue: day.stats.baselineCurrentValue,
+          baselineValues: day.stats.baselineValues,
         ),
         entries: daySamples.isNotEmpty
             ? HeartEntryListContent<RestingHeartRateSample>(
@@ -386,7 +343,7 @@ class HeartMetricContentView extends StatelessWidget {
               )
             : HeartDailyEntryListContent<DailyRestingHR>(
                 entries: [
-                  DailyRestingHR(date: state.selectedDate, bpm: restingBpm),
+                  DailyRestingHR(date: state.selectedDate, bpm: day.restingBpm),
                 ],
                 date: (e) => e.date,
                 value: (e) => formatter.heartRate(e.bpm).text,
@@ -395,12 +352,10 @@ class HeartMetricContentView extends StatelessWidget {
       );
     }
 
-    final sorted = [...result.dailyRestingHR]
-      ..sort((a, b) => a.date.compareTo(b.date));
-    if (isDay || sorted.isEmpty) return _emptyOrLoading();
+    final periodDisplay = display.restingHeartRatePeriod;
+    if (isDay || periodDisplay == null) return _emptyOrLoading();
 
-    final bpm = sorted.map((e) => e.bpm.toDouble()).toList();
-    final average = _avg(bpm).round();
+    final sorted = periodDisplay.entries;
     final selectedDay = daySelection.selectedDate;
     return heartChartMetricSections(
       selectedRange: state.selectedRange,
@@ -423,9 +378,9 @@ class HeartMetricContentView extends StatelessWidget {
         summaryText: _summary(
           l10n,
           l10n.summaryAvgValueRange(
-            formatter.heartRate(average).text,
-            formatter.heartRate(_min(bpm).round()).text,
-            formatter.heartRate(_max(bpm).round()).text,
+            formatter.heartRate(periodDisplay.averageBpm).text,
+            formatter.heartRate(periodDisplay.lowBpm).text,
+            formatter.heartRate(periodDisplay.highBpm).text,
           ),
         ),
         selectedDate: selectedDay,
@@ -450,11 +405,10 @@ class HeartMetricContentView extends StatelessWidget {
         sampleCount: sorted.length,
         accentColor: AppColors.heart,
       ),
-      contextInsight: restingHeartRateContextCardContent(average),
+      contextInsight:
+          restingHeartRateContextCardContent(periodDisplay.averageBpm),
       statistics: restingHeartRateStatisticsContent(
-        entries: sorted,
-        previousEntries: result.previousDailyRestingHR,
-        baselineEntries: result.baselineDailyRestingHR,
+        stats: periodDisplay.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
@@ -472,25 +426,15 @@ class HeartMetricContentView extends StatelessWidget {
 
   Widget _hrv(
     BuildContext context,
-    HeartPeriodLoadResult result,
+    HeartDisplay display,
     ChartDaySelection daySelection,
   ) {
     final l10n = AppLocalizations.of(context);
     final isDay = state.selectedRange == TimeRange.day;
 
-    final daySamples = [...result.dayHrvSamples]
-      ..sort((a, b) => a.time.compareTo(b.time));
-    final hasDayHrv =
-        isDay && (daySamples.isNotEmpty || result.dayHrvMs != null);
-    if (hasDayHrv) {
-      final hrvMs =
-          result.dayHrvMs ?? _avg(daySamples.map((s) => s.rmssdMs));
-      final lowHrv = daySamples.isEmpty
-          ? hrvMs
-          : daySamples.map((s) => s.rmssdMs).reduce((a, b) => a < b ? a : b);
-      final highHrv = daySamples.isEmpty
-          ? hrvMs
-          : daySamples.map((s) => s.rmssdMs).reduce((a, b) => a > b ? a : b);
+    final day = display.hrvDay;
+    if (isDay && day != null) {
+      final daySamples = day.samples;
       return heartChartMetricSections(
         selectedRange: state.selectedRange,
         period: period,
@@ -500,17 +444,17 @@ class HeartMetricContentView extends StatelessWidget {
                 date: state.selectedDate,
                 metricName: l10n.metricHrv,
                 points: [for (final s in daySamples) (s.time, s.rmssdMs)],
-                averageText: formatter.hrv(hrvMs).text,
+                averageText: formatter.hrv(day.hrvMs).text,
                 rangeText:
-                    '${formatter.hrv(lowHrv).text}-${formatter.hrv(highHrv).text}',
+                    '${formatter.hrv(day.lowMs).text}-${formatter.hrv(day.highMs).text}',
                 valueFormatter: (value) => formatter.hrv(value).text,
-                minValue: math.max(0, lowHrv - 5),
-                maxValue: highHrv + 5,
+                minValue: day.chartMinValue,
+                maxValue: day.chartMaxValue,
               ))
             : null,
         highlightCard: sectionPadded(HeartDayValueCard(
           title: metric.title,
-          value: '${formatter.hrv(hrvMs).text} RMSSD',
+          value: '${formatter.hrv(day.hrvMs).text} RMSSD',
         )),
         dataConfidence: daySamples.isNotEmpty
             ? HeartRawDataConfidenceContent<HrvSample>(
@@ -523,28 +467,23 @@ class HeartMetricContentView extends StatelessWidget {
             : HeartAggregateDataConfidenceContent(
                 period: period,
                 trackedDates: [state.selectedDate],
-                sampleCount: math.max(daySamples.length, 1),
+                sampleCount: day.stats.readings,
                 accentColor: AppColors.heart,
               ),
         statistics: HeartNumericStatisticsContent(
           unitFormatter: formatter,
-          average: formatter.hrv(hrvMs),
-          low: formatter.hrv(lowHrv),
-          high: formatter.hrv(highHrv),
-          readings: math.max(daySamples.length, 1),
-          comparison: result.dayHrvMs != null && result.previousDayHrvMs != null
-              ? periodComparison(result.dayHrvMs!, result.previousDayHrvMs!)
-              : null,
+          average: formatter.hrv(day.hrvMs),
+          low: formatter.hrv(day.lowMs),
+          high: formatter.hrv(day.highMs),
+          readings: day.stats.readings,
+          comparison: day.stats.comparison,
           selectedRange: state.selectedRange,
           comparisonValueFormatter: formatter.hrv,
           icon: Icons.favorite_border,
           accentColor: AppColors.heart,
           period: period,
-          baselineCurrentValue: hrvMs,
-          baselineValues: [
-            for (final entry in result.baselineDailyHrv)
-              BaselineValue(date: entry.date, value: entry.rmssdMs),
-          ],
+          baselineCurrentValue: day.stats.baselineCurrentValue,
+          baselineValues: day.stats.baselineValues,
         ),
         entries: daySamples.isNotEmpty
             ? HeartEntryListContent<HrvSample>(
@@ -554,7 +493,9 @@ class HeartMetricContentView extends StatelessWidget {
                 time: (s) => s.time,
               )
             : HeartDailyEntryListContent<DailyHrv>(
-                entries: [DailyHrv(date: state.selectedDate, rmssdMs: hrvMs)],
+                entries: [
+                  DailyHrv(date: state.selectedDate, rmssdMs: day.hrvMs),
+                ],
                 date: (e) => e.date,
                 value: (e) => formatter.hrv(e.rmssdMs).text,
                 accentColor: AppColors.heart,
@@ -562,11 +503,10 @@ class HeartMetricContentView extends StatelessWidget {
       );
     }
 
-    final sorted = [...result.dailyHrv]
-      ..sort((a, b) => a.date.compareTo(b.date));
-    if (isDay || sorted.isEmpty) return _emptyOrLoading();
+    final periodDisplay = display.hrvPeriod;
+    if (isDay || periodDisplay == null) return _emptyOrLoading();
 
-    final ms = sorted.map((e) => e.rmssdMs).toList();
+    final sorted = periodDisplay.entries;
     final selectedDay = daySelection.selectedDate;
     return heartChartMetricSections(
       selectedRange: state.selectedRange,
@@ -589,9 +529,9 @@ class HeartMetricContentView extends StatelessWidget {
         summaryText: _summary(
           l10n,
           l10n.summaryAvgValueRange(
-            formatter.hrv(_avg(ms)).text,
-            formatter.hrv(_min(ms)).text,
-            formatter.hrv(_max(ms)).text,
+            formatter.hrv(periodDisplay.averageMs).text,
+            formatter.hrv(periodDisplay.lowMs).text,
+            formatter.hrv(periodDisplay.highMs).text,
           ),
         ),
         selectedDate: selectedDay,
@@ -617,9 +557,7 @@ class HeartMetricContentView extends StatelessWidget {
         accentColor: AppColors.heart,
       ),
       statistics: hrvStatisticsContent(
-        entries: sorted,
-        previousEntries: result.previousDailyHrv,
-        baselineEntries: result.baselineDailyHrv,
+        stats: periodDisplay.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
@@ -635,12 +573,11 @@ class HeartMetricContentView extends StatelessWidget {
 
   // ── Blood pressure (Kotlin `bloodPressureContent`) ─────────────────────────
 
-  Widget _bloodPressure(BuildContext context, HeartPeriodLoadResult result) {
+  Widget _bloodPressure(BuildContext context, HeartDisplay display) {
     final l10n = AppLocalizations.of(context);
-    final entries = result.bloodPressure;
-    if (entries.isEmpty) return _emptyOrLoading();
-    final sorted = [...entries]..sort((a, b) => a.time.compareTo(b.time));
-    final latest = sorted.last;
+    final bloodPressure = display.bloodPressure;
+    if (bloodPressure == null) return _emptyOrLoading();
+    final sorted = bloodPressure.entries;
 
     return heartChartMetricSections(
       selectedRange: state.selectedRange,
@@ -654,28 +591,27 @@ class HeartMetricContentView extends StatelessWidget {
         accentColor: metric.accentColor,
         summaryText: _summary(
           l10n,
-          l10n.summaryReadings(formatter.count(entries.length)),
+          l10n.summaryReadings(formatter.count(sorted.length)),
         ),
         valueFormatter: (value) => '${value.round()} mmHg',
       )),
       dataConfidence: HeartRawDataConfidenceContent<BloodPressureEntry>(
         period: period,
-        entries: entries,
+        entries: sorted,
         source: (e) => e.source,
         time: (e) => e.time,
         accentColor: metric.accentColor,
       ),
-      contextInsight: BloodPressureContextCardContent(entry: latest),
+      contextInsight:
+          BloodPressureContextCardContent(entry: bloodPressure.latest),
       statistics: BloodPressureStatisticsContent(
-        entries: entries,
-        previousEntries: result.previousBloodPressure,
-        baselineEntries: result.baselineBloodPressure,
+        stats: bloodPressure.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
       ),
       entries: HeartEntryListContent<BloodPressureEntry>(
-        entries: entries,
+        entries: sorted,
         value: (e) =>
             formatter.bloodPressure(e.systolicMmHg, e.diastolicMmHg).text,
         source: (e) => e.source,
@@ -694,15 +630,14 @@ class HeartMetricContentView extends StatelessWidget {
 
   Widget _spo2(
     BuildContext context,
-    HeartPeriodLoadResult result,
+    HeartDisplay display,
     ChartDaySelection daySelection,
   ) {
     final l10n = AppLocalizations.of(context);
-    final entries = result.spO2;
-    if (entries.isEmpty) return _emptyOrLoading();
-    final sorted = [...entries]..sort((a, b) => a.time.compareTo(b.time));
+    final spO2 = display.spO2;
+    if (spO2 == null) return _emptyOrLoading();
+    final sorted = spO2.entries;
     final selectedDay = daySelection.selectedDate;
-    final latest = sorted.last;
 
     return heartChartMetricSections(
       selectedRange: state.selectedRange,
@@ -721,7 +656,7 @@ class HeartMetricContentView extends StatelessWidget {
         summaryText: _summary(
           l10n,
           l10n.summaryValueAvg(
-            formatter.percent(_avg(entries.map((e) => e.percent))).text,
+            formatter.percent(spO2.averagePercent).text,
           ),
         ),
         selectedDate: selectedDay,
@@ -732,7 +667,7 @@ class HeartMetricContentView extends StatelessWidget {
           ? null
           : HeartEntryListContent<SpO2Entry>(
               entries: [
-                for (final e in entries)
+                for (final e in sorted)
                   if (instantToLocalDate(e.time) == selectedDay) e,
               ],
               value: (e) => formatter.percent(e.percent).text,
@@ -748,26 +683,24 @@ class HeartMetricContentView extends StatelessWidget {
             ),
       dataConfidence: HeartRawDataConfidenceContent<SpO2Entry>(
         period: period,
-        entries: entries,
+        entries: sorted,
         source: (e) => e.source,
         time: (e) => e.time,
         accentColor: metric.accentColor,
       ),
       contextInsight: oxygenSaturationContextCardContent(
-        latest,
+        spO2.latest,
         metric.accentColor,
       ),
       statistics: spO2StatisticsContent(
-        entries: entries,
-        previousEntries: result.previousSpO2,
-        baselineEntries: result.baselineSpO2,
+        stats: spO2.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
         accentColor: metric.accentColor,
       ),
       entries: HeartEntryListContent<SpO2Entry>(
-        entries: entries,
+        entries: sorted,
         value: (e) => formatter.percent(e.percent).text,
         source: (e) => e.source,
         time: (e) => e.time,
@@ -783,19 +716,19 @@ class HeartMetricContentView extends StatelessWidget {
 
   // ── VO2 max (Kotlin `vo2MaxContent`) ───────────────────────────────────────
 
-  Widget _vo2Max(BuildContext context, HeartPeriodLoadResult result) {
+  Widget _vo2Max(BuildContext context, HeartDisplay display) {
     final l10n = AppLocalizations.of(context);
-    final entries = result.vo2Max;
-    if (entries.isEmpty) return _emptyOrLoading();
-    final sorted = [...entries]..sort((a, b) => a.time.compareTo(b.time));
-    final latest = sorted.last;
+    final vo2Max = display.vo2Max;
+    if (vo2Max == null) return _emptyOrLoading();
+    final sorted = vo2Max.entries;
+    final latest = vo2Max.latest;
     final latestValue = formatter.vo2Max(latest.vo2MaxMlPerKgPerMin);
 
     return heartChartMetricSections(
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: null,
-      periodChart: entries.length > 1
+      periodChart: sorted.length > 1
           ? sectionPadded(MetricLineChart(
               title: metric.title,
               series: singleSeries(
@@ -823,22 +756,20 @@ class HeartMetricContentView extends StatelessWidget {
       )),
       dataConfidence: HeartRawDataConfidenceContent<Vo2MaxEntry>(
         period: period,
-        entries: entries,
+        entries: sorted,
         source: (e) => e.source,
         time: (e) => e.time,
         accentColor: metric.accentColor,
       ),
       statistics: vo2MaxStatisticsContent(
-        entries: entries,
-        previousEntries: result.previousVo2Max,
-        baselineEntries: result.baselineVo2Max,
+        stats: vo2Max.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
         accentColor: metric.accentColor,
       ),
       entries: HeartEntryListContent<Vo2MaxEntry>(
-        entries: entries,
+        entries: sorted,
         value: (e) => formatter.vo2Max(e.vo2MaxMlPerKgPerMin).text,
         source: (e) => e.source,
         time: (e) => e.time,
@@ -850,18 +781,15 @@ class HeartMetricContentView extends StatelessWidget {
 
   Widget _respiratoryRate(
     BuildContext context,
-    HeartPeriodLoadResult result,
+    HeartDisplay display,
     ChartDaySelection daySelection,
   ) {
     final l10n = AppLocalizations.of(context);
-    final entries = result.respiratoryRate;
-    if (entries.isEmpty) return _emptyOrLoading();
+    final respiratoryRate = display.respiratoryRate;
+    if (respiratoryRate == null) return _emptyOrLoading();
+    final entries = respiratoryRate.entries;
     final selectedDay = daySelection.selectedDate;
     final isDay = state.selectedRange == TimeRange.day;
-    final daySummaries = respiratoryRateDaySummaries(entries)
-      ..sort((a, b) => b.date.compareTo(a.date));
-    final periodAverage =
-        _avg(daySummaries.map((summary) => summary.average));
 
     return heartChartMetricSections(
       selectedRange: state.selectedRange,
@@ -876,7 +804,9 @@ class HeartMetricContentView extends StatelessWidget {
         accentColor: metric.accentColor,
         summaryText: _summary(
           l10n,
-          l10n.summaryValueAvg(formatter.respiratoryRate(periodAverage).text),
+          l10n.summaryValueAvg(
+            formatter.respiratoryRate(respiratoryRate.periodAverage).text,
+          ),
         ),
         selectedDate: selectedDay,
         onDateSelected: daySelection.onDateSelected,
@@ -908,13 +838,11 @@ class HeartMetricContentView extends StatelessWidget {
         accentColor: metric.accentColor,
       ),
       contextInsight: respiratoryRateContextCardContent(
-        _avg(entries.map((e) => e.breathsPerMinute)),
+        respiratoryRate.entriesAverage,
         metric.accentColor,
       ),
       statistics: respiratoryRateStatisticsContent(
-        entries: entries,
-        previousEntries: result.previousRespiratoryRate,
-        baselineEntries: result.baselineRespiratoryRate,
+        stats: respiratoryRate.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
@@ -926,7 +854,7 @@ class HeartMetricContentView extends StatelessWidget {
           if (!isDay)
             PaginatedEntryList<RespiratoryRateDaySummary>(
               title: l10n.sectionRespiratoryRateDailyBreakdown,
-              entries: daySummaries,
+              entries: respiratoryRate.daySummariesNewestFirst,
               rowBuilder: (context, summary) => RespiratoryRateDayRow(
                 summary: summary,
                 unitFormatter: formatter,
@@ -952,12 +880,11 @@ class HeartMetricContentView extends StatelessWidget {
 
   // ── Body temperature (Kotlin `bodyTemperatureContent`) ─────────────────────
 
-  Widget _bodyTemperature(BuildContext context, HeartPeriodLoadResult result) {
+  Widget _bodyTemperature(BuildContext context, HeartDisplay display) {
     final l10n = AppLocalizations.of(context);
-    final entries = result.bodyTemperature;
-    if (entries.isEmpty) return _emptyOrLoading();
-    final sorted = [...entries]..sort((a, b) => a.time.compareTo(b.time));
-    final latest = sorted.last;
+    final bodyTemperature = display.bodyTemperature;
+    if (bodyTemperature == null) return _emptyOrLoading();
+    final sorted = bodyTemperature.entries;
 
     return heartChartMetricSections(
       selectedRange: state.selectedRange,
@@ -981,26 +908,24 @@ class HeartMetricContentView extends StatelessWidget {
       )),
       dataConfidence: HeartRawDataConfidenceContent<BodyTempEntry>(
         period: period,
-        entries: entries,
+        entries: sorted,
         source: (e) => e.source,
         time: (e) => e.time,
         accentColor: metric.accentColor,
       ),
       contextInsight: bodyTemperatureContextCardContent(
-        latest,
+        bodyTemperature.latest,
         metric.accentColor,
       ),
       statistics: bodyTemperatureStatisticsContent(
-        entries: entries,
-        previousEntries: result.previousBodyTemperature,
-        baselineEntries: result.baselineBodyTemperature,
+        stats: bodyTemperature.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
         accentColor: metric.accentColor,
       ),
       entries: HeartEntryListContent<BodyTempEntry>(
-        entries: entries,
+        entries: sorted,
         value: (e) => formatter.temperature(e.temperatureCelsius).text,
         source: (e) => e.source,
         time: (e) => e.time,
@@ -1018,13 +943,13 @@ class HeartMetricContentView extends StatelessWidget {
 
   Widget _bloodGlucose(
     BuildContext context,
-    HeartPeriodLoadResult result,
+    HeartDisplay display,
     ChartDaySelection daySelection,
   ) {
     final l10n = AppLocalizations.of(context);
-    final entries = result.bloodGlucose;
-    if (entries.isEmpty) return _emptyOrLoading();
-    final sorted = [...entries]..sort((a, b) => a.time.compareTo(b.time));
+    final bloodGlucose = display.bloodGlucose;
+    if (bloodGlucose == null) return _emptyOrLoading();
+    final sorted = bloodGlucose.entries;
     final selectedDay = daySelection.selectedDate;
 
     return heartChartMetricSections(
@@ -1044,9 +969,7 @@ class HeartMetricContentView extends StatelessWidget {
         summaryText: _summary(
           l10n,
           l10n.summaryValueAvg(
-            formatter
-                .bloodGlucose(_avg(sorted.map((e) => e.millimolesPerLiter)))
-                .text,
+            formatter.bloodGlucose(bloodGlucose.averageMmolPerLiter).text,
           ),
         ),
         selectedDate: selectedDay,
@@ -1057,7 +980,7 @@ class HeartMetricContentView extends StatelessWidget {
           ? null
           : HeartEntryListContent<BloodGlucoseEntry>(
               entries: [
-                for (final e in entries)
+                for (final e in sorted)
                   if (instantToLocalDate(e.time) == selectedDay) e,
               ],
               value: (e) => formatter.bloodGlucose(e.millimolesPerLiter).text,
@@ -1067,22 +990,20 @@ class HeartMetricContentView extends StatelessWidget {
             ),
       dataConfidence: HeartRawDataConfidenceContent<BloodGlucoseEntry>(
         period: period,
-        entries: entries,
+        entries: sorted,
         source: (e) => e.source,
         time: (e) => e.time,
         accentColor: metric.accentColor,
       ),
       statistics: bloodGlucoseStatisticsContent(
-        entries: entries,
-        previousEntries: result.previousBloodGlucose,
-        baselineEntries: result.baselineBloodGlucose,
+        stats: bloodGlucose.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
         accentColor: metric.accentColor,
       ),
       entries: HeartEntryListContent<BloodGlucoseEntry>(
-        entries: entries,
+        entries: sorted,
         value: (e) => formatter.bloodGlucose(e.millimolesPerLiter).text,
         source: (e) => e.source,
         time: (e) => e.time,
@@ -1094,23 +1015,22 @@ class HeartMetricContentView extends StatelessWidget {
 
   Widget _skinTemperature(
     BuildContext context,
-    HeartPeriodLoadResult result,
+    HeartDisplay display,
     ChartDaySelection daySelection,
   ) {
     final l10n = AppLocalizations.of(context);
-    final entries = result.skinTemperature;
-    if (entries.isEmpty) return _emptyOrLoading();
-    final chartEntries = [
-      for (final e in entries)
-        if (e.averageDeltaCelsius != null) e,
-    ]..sort((a, b) => a.time.compareTo(b.time));
+    final skinTemperature = display.skinTemperature;
+    if (skinTemperature == null) return _emptyOrLoading();
+    final entries = skinTemperature.entries;
+    final chartEntries = skinTemperature.chartEntries;
+    final averageDelta = skinTemperature.averageDeltaCelsius;
     final selectedDay = daySelection.selectedDate;
 
     return heartChartMetricSections(
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: selectedDay,
-      periodChart: chartEntries.isEmpty
+      periodChart: averageDelta == null
           ? null
           : sectionPadded(MetricLineChart(
               title: metric.title,
@@ -1128,10 +1048,7 @@ class HeartMetricContentView extends StatelessWidget {
               summaryText: _summary(
                 l10n,
                 l10n.summaryValueAvg(
-                  formatter
-                      .temperatureDelta(_avg(chartEntries
-                          .map((e) => e.averageDeltaCelsius!)))
-                      .text,
+                  formatter.temperatureDelta(averageDelta).text,
                 ),
               ),
               selectedDate: selectedDay,
@@ -1159,9 +1076,7 @@ class HeartMetricContentView extends StatelessWidget {
         accentColor: metric.accentColor,
       ),
       statistics: skinTemperatureStatisticsContent(
-        entries: entries,
-        previousEntries: result.previousSkinTemperature,
-        baselineEntries: result.baselineSkinTemperature,
+        stats: skinTemperature.stats,
         period: period,
         selectedRange: state.selectedRange,
         unitFormatter: formatter,
@@ -1194,15 +1109,4 @@ class HeartMetricContentView extends StatelessWidget {
 
   Widget _emptyOrLoading() =>
       state.isLoading ? const SectionLoading() : _placeholder();
-
 }
-
-/// Zero on empty is preserved from the hand-rolled originals, but it is dead code:
-/// every call site is already guarded on `isNotEmpty`. Same for the bang on
-/// [minOf]/[maxOf], whose ancestors threw on empty for the same unreachable case.
-double _avg(Iterable<double> values) => averageOrZero(values);
-
-double _min(Iterable<double> values) => minOf(values)!;
-
-double _max(Iterable<double> values) => maxOf(values)!;
-
