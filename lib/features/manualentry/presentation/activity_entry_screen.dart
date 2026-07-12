@@ -10,16 +10,15 @@ import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
 import '../../imports/application/pending_route_import.dart';
 import '../activity/activity_entry_form.dart';
-import '../activity/activity_entry_providers.dart';
 import '../activity/activity_entry_source_card.dart';
 import '../activity/activity_entry_state.dart';
 import '../activity/activity_entry_view_model.dart';
 import '../activity/recording/activity_recording_device_support.dart';
-import '../activity/recording/activity_recording_focus_mode.dart';
 import '../activity/recording/activity_recording_screen.dart';
 import '../activity/recording/activity_recording_setup_screen.dart';
 import '../activity/activity_plan_picker_cards.dart';
 import '../activity/recording/activity_recording.dart';
+import '../activity/recording/activity_recording_view_model.dart';
 import 'manual_entry_form_scaffold.dart';
 
 /// Activity manual-entry screen. Riverpod + Flutter port of the Kotlin
@@ -155,10 +154,6 @@ class _ActivityEntryScreenState extends ConsumerState<ActivityEntryScreen>
     _viewModel.reportActivityRecognitionPermissionNeeded();
   }
 
-  /// Owned here, not by the recording screen, because the app bar below turns on
-  /// it: focus mode takes the whole display.
-  bool _isRecordingFocusMode = false;
-
   @override
   Widget build(BuildContext context) {
     final formatter = ref.watch(unitFormatterProvider);
@@ -184,36 +179,32 @@ class _ActivityEntryScreenState extends ConsumerState<ActivityEntryScreen>
     }
     // The recording state has to be in scope for the APP BAR, not just the
     // body: focus mode hides it, and focus mode ends by itself when the
-    // recording does. Listening to it only around the body would leave a
-    // finished recording sitting on a screen with no app bar.
-    final recorder = ref.watch(activityRecordingControllerProvider);
-    return ValueListenableBuilder<ActivityRecordingState>(
-      valueListenable: recorder.state,
-      builder: (context, recordingState, _) {
-        final showFocusMode =
-            _isRecordingFocusMode && canUseRecordingFocusMode(recordingState);
-        final content = _ActivityEntryRecordingContent(
-          viewModel: _viewModel,
-          state: state,
-          recordingState: recordingState,
-          unitFormatter: formatter,
-          isFocusMode: _isRecordingFocusMode,
-          onFocusModeChanged: (value) =>
-              setState(() => _isRecordingFocusMode = value),
-          onRequestLocationPermission: _requestLocationPermission,
-          onRequestActivityRecognitionPermission:
-              _requestActivityRecognitionPermission,
-          onRequestWritePermission: _requestWritePermission,
-        );
-        return _scaffold(
-          showAppBar: !showFocusMode,
-          // The setup card is a card like any other and keeps the padded
-          // scroll view.
-          child: isRecordingDashboardVisible(recordingState)
-              ? content
-              : _scrollableForm(content),
-        );
-      },
+    // recording does. Watching it only around the body would leave a finished
+    // recording sitting on a screen with no app bar.
+    final recording = ref.watch(activityRecordingViewModelProvider);
+    final recordingViewModel =
+        ref.read(activityRecordingViewModelProvider.notifier);
+    final content = _ActivityEntryRecordingContent(
+      viewModel: _viewModel,
+      state: state,
+      recordingState: recording.recording,
+      unitFormatter: formatter,
+      isFocusMode: recording.isFocusMode,
+      onFocusModeChanged: recordingViewModel.setFocusMode,
+      onRequestLocationPermission: _requestLocationPermission,
+      onRequestActivityRecognitionPermission:
+          _requestActivityRecognitionPermission,
+      onRequestWritePermission: _requestWritePermission,
+    );
+    return _scaffold(
+      // Focus mode ends by itself when the recording does, so the view-model
+      // decides whether it is in force — the screen no longer re-derives it.
+      showAppBar: !recording.showFocusMode,
+      // The setup card is a card like any other and keeps the padded
+      // scroll view.
+      child: isRecordingDashboardVisible(recording.recording)
+          ? content
+          : _scrollableForm(content),
     );
   }
 

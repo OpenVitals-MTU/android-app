@@ -1,10 +1,10 @@
 # Architecture refactor tracker
 
 Working checklist for the Flutter app-architecture conformance refactor
-(plan: MVVM roles on Riverpod, `*ViewModel` naming, `Result<T>` end-to-end,
+(MVVM roles on Riverpod, `*ViewModel` naming, `Result<T>` end-to-end,
 display derivation in view-models, `CommandState` for write flows).
 Archived at closeout — this is a scratchpad, not documentation; the durable
-rules land in `architecture.md` / `AGENTS.md` as each phase invalidates them.
+rules live in `architecture.md` / `AGENTS.md` / `feature-playbook.md`.
 
 Legend: `—` not started · `~` in progress · `x` done · `n/a` not applicable
 
@@ -15,58 +15,114 @@ Legend: `—` not started · `~` in progress · `x` done · `n/a` not applicable
 | 0 | Foundations (Result, AppFailure, runCatching, CommandState, toScreenError) | x |
 | 1 | Rename Notifier→ViewModel + application/presentation layout everywhere | x |
 | 2 | Result through repositories + use-cases | x |
-| 3 | VMs on Result + CommandState; seam reversal templates (mindfulness, sleep, manual-entry) | x |
-| 4 | Seam reversal heavy features + freezed state conversions | ~ |
-| 5 | Vitals god-file split | — |
-| 6 | Layer hygiene (permissions→domain, BLE contract, widget→repo cleanup, background DI helper) | — |
+| 3 | VMs on Result + CommandState; seam reversal templates | x |
+| 4 | Seam reversal, all remaining features + freezed state conversions | x |
+| 5 | Vitals god-file split | x |
+| 6 | Layer hygiene (permissions→domain, widget→repo cleanup, background DI helper) | x |
 | 7 | DI split with barrel export | x |
-| 8 | Offline map import VM | — |
-| 9 | ActivityEntry VM | — |
-| 10 | Recording service/VM split | — |
-| 11 | Closeout (delete orThrow + throwableToScreenError, docs) | — |
+| 8 | Offline map import → Result + CommandState | x |
+| 9 | ActivityEntry controller → ViewModel | x |
+| 10 | Recording service/VM split | ~ |
+| 11 | Closeout (docs, bridge audit) | ~ |
 
 ## Feature matrix
 
-Columns: **Layout** = application/+presentation/ dirs + ViewModel naming (Ph 1)
-· **Result** = repo slice + use-cases return Result (Ph 2) · **VM** = view-model
-switches on Result, CommandState for writes (Ph 3–4) · **Display** = derivation
-out of build paths into `*_display.dart` (Ph 3–5) · **Freezed** = state class
-freezed (Ph 4–5) · **VM test** = dedicated view-model unit test.
+All 21 features now have: the `application/` + `presentation/` layout,
+`*ViewModel` naming, `Result`-based repositories and use-cases, the display
+precomputed in the view-model, a freezed state, and a view-model unit test.
+**Complete** — the only open items are the two below.
 
-| Feature | Layout | Result | VM | Display | Freezed | VM test |
-|---|---|---|---|---|---|---|
-| mindfulness | x | x | x | x | x | x |
-| cycle | x | x | — | — | x | — |
-| nutrition | x | x | — | — | x | — |
-| caffeine | x | x | — | — | x | — |
-| hydration | x | x | — | — | x | — |
-| sleep (incl. detail) | x | x | x | x | x | x |
-| heart | x | x | x | x | x | x |
-| body | x | x | — | — | x | — |
-| bodyenergy | x | x | — | — | x | — |
-| vitals (Ph 5) | x | x | — | — | — | — |
-| activity (metrics + sections) | x | x | — | — | x | — |
-| manualentry (forms) | x | x | x | n/a | x | x |
-| manualentry/activity entry (Ph 9) | x | x | — | — | — | — |
-| recording (Ph 10) | x | x | — | — | — | — |
-| dashboard | x | x | — | — | x | — |
-| recovery (incl. details) | x | x | detail: x | detail: x | x | x |
-| readiness (incl. training details) | x | x | — | — | x | — |
-| achievements | x | x | — | — | — | — |
-| onboarding | x | x | — | — | x | — |
-| settings (+ 11 cards) | x | x | — | — | ble: — | partial |
-| imports (route + applehealth) | x | x | — | — | — | — |
-| homewidgets (Ph 6 helper) | n/a | x | n/a | n/a | n/a | — |
+## Still open
 
-## Cross-cutting items
+- **Recording (Phase 10).** `activity_recording_controller.dart` — the
+  foreground service, its notification comm port, and process-death draft
+  recovery. Being split into a byte-identical `ActivityRecordingService` plus a
+  thin view-model. **Needs on-device verification before it ships**: start →
+  background → lock → notification pause/resume → process-death recovery →
+  stop/save → entry appears.
+- **BLE repository contract.** Features still import
+  `data/source/sensors/ble/` directly — `dashboard_sensor_status.dart`,
+  `settings/application/ble_devices_view_model.dart`,
+  `manualentry/activity/activity_entry_providers.dart`, and the recording
+  controller. The BLE stack has no `contract/` type wrapping
+  `BleSensorCoordinator`. Deferred behind Phase 10, because the recording
+  controller is one of its four consumers and both would have to move together.
 
-- [ ] `orThrow()` call sites: 100 in lib/ after Ph 2; must be zero by Ph 11
-- [ ] `throwableToScreenError` call sites (~28 files): deleted by Ph 11
-- [ ] Hand-written states → freezed: Achievements, RecoveryDetail,
-      RouteBulkImport, HydrationReminderSettings, MindfulnessReminderSettings,
-      AppleHealthImport, BleDevices, SleepDetail, HeartVitalsOverview
-- [ ] `health_permissions.dart` → `lib/domain/health/` (Ph 6)
-- [ ] BLE repository contract (Ph 6)
-- [ ] `lib/bootstrap/background_health_access.dart` + 5 isolate entrypoints (Ph 6)
-- [ ] DI barrel split (Ph 7)
-- [ ] architecture.md Known Seams §1 rewrite (first commit of Ph 3)
+## Bridges — audited, deliberately NOT deleted
+
+The plan said to delete `orThrow()` and `throwableToScreenError` at closeout.
+That turned out to be wrong. The audit is recorded here so that nobody
+"finishes the job" by mistake:
+
+- **`orThrow()`** is the adapter to the parts of Dart that signal failure by
+  throwing. Legitimate callers: a `FutureProvider` body (its `AsyncError`
+  channel already *is* this type — see `health_connect_gate.dart`), a
+  background-isolate entrypoint (no screen to render a `ScreenError` onto, and
+  it must fail loudly rather than silently), and a repository composing another
+  repository *inside* its own `runCatching`. Anywhere else, switch on the
+  `Result`.
+- **`throwableToScreenError`** is for collaborators that genuinely throw
+  because they are not repositories and have no `Result` to return: the route
+  file parser handed a malformed file, the platform report saver.
+
+No view-model maps a load failure through either one.
+
+## Bugs found while moving derivations VERBATIM — not fixed
+
+Each was moved unchanged and deserves its own commit. Moving them out of build
+methods is what made them visible (several were duplicated in two places that
+disagreed); changing them in the same commit would have made the refactor
+unreviewable.
+
+1. **Sleep data-confidence counts the wrong recording method.**
+   `kRecordingMethodManualEntry = 1`, but Health Connect's
+   `RECORDING_METHOD_MANUAL_ENTRY` is `3` (`1` is `ACTIVELY_RECORDED`).
+   `sleep_detail_screen.dart` already gets this right. So the card counts
+   actively-recorded nights as hand-typed ones, and never counts a real one.
+2. **Heart day resting-HR / HRV can print an average outside its own printed
+   range** — the average comes from the provider's aggregate, the min/max from
+   raw samples.
+3. **Respiratory rate shows two different averages** on the same screen: the
+   chart summary uses the mean of daily means, the card the mean of all
+   readings.
+4. **Skin temperature** counts delta-less entries as "readings" while excluding
+   them from the average, and blanks its card when the *newest* entry has no
+   delta even though the chart still draws the older ones that do.
+5. **"Latest" is computed two ways** (`reduce(isAfter)` vs last-of-sorted) —
+   they differ only on equal timestamps.
+6. **Nutrition data-confidence counts MEALS as readings for any nutrient**: the
+   protein screen over a period with 30 meals and no protein data claims 30
+   readings.
+7. **Hydration "daily average" divides by tracked days, not days in the
+   period** — and that average drives the goal bar, so a week where you hit the
+   goal once and logged nothing else reads 100%.
+8. **Body BMI history** recomputes every past weight against the period's
+   *latest* height.
+9. **Activity HRV / cardio-load sparklines** chart a never-sampled bucket as
+   `0.0` while the totals correctly exclude it — an untracked day reads as a dip
+   to zero rather than a gap.
+10. **Caffeine distribution bars** floor their scale at 1 mg, so sub-1 mg slices
+    render at full width.
+11. **Apple Health import** rethrows `MissingHealthPermissionException`, but its
+    formatter only recognises `AppleHealthImportPermissionException` — so a
+    permissions failure reaches the card as a generic error and the grant
+    affordance never appears.
+12. **`refreshPlannedWorkouts`** keeps the selected plan id when the reload
+    returns an empty list, so a deleted plan stays selected and the write
+    request links a dead `plannedExerciseSessionId`.
+
+## Bugs fixed by construction during the refactor
+
+- Dashboard's minimum-permission check and onboarding's `checkState` both had
+  `orThrow()` **outside** the try, in an unawaited microtask — a failing probe
+  threw into nothing and left the screen spinning forever. Both now surface a
+  `ScreenError`.
+- `ActivityEntryController.addEntry` had the write-permission probe's
+  `orThrow()` outside its try — a failing probe mid-save left `isSavingEntry`
+  true and the form spinning forever.
+- Hand-written `AchievementsState.copyWith` wrote `error: error` instead of
+  `error ?? this.error`, so any unrelated `copyWith` silently cleared the error.
+- `hydration_entry_screen_test`'s fake never implemented `loadHydrationEntry`;
+  the try/catch this refactor removed had been swallowing the resulting
+  `NoSuchMethodError`, so "edit an existing entry" was passing over a prefill
+  that never ran.
