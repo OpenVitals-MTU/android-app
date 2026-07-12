@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
 import '../../../../core/presentation/display_value.dart';
+import '../../../../core/presentation/elapsed_format.dart';
 import '../../../../core/presentation/reorder.dart';
 import '../../../../core/presentation/unit_formatter.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
@@ -17,18 +18,13 @@ import 'activity_recording_sensor_ui.dart';
 /// its edit mode.
 
 /// Kotlin `RecordingDashboardResizeStep`.
-const double kRecordingDashboardResizeStep = 44;
+// formatRecordingElapsed moved to core (the session charts label their axis with
+// it, and ui/ must not reach into features/). Re-exported so the recording files
+// that already import it from here keep working.
+export '../../../../core/presentation/elapsed_format.dart'
+    show formatRecordingElapsed;
 
-/// Kotlin `formatRecordingElapsed` (lives in `ActivityRecordingSplitsUi.kt`).
-String formatRecordingElapsed(Duration duration) {
-  final totalSeconds = duration.inSeconds < 0 ? 0 : duration.inSeconds;
-  final hours = totalSeconds ~/ 3600;
-  final minutes = (totalSeconds % 3600) ~/ 60;
-  final seconds = totalSeconds % 60;
-  final mm = minutes.toString().padLeft(2, '0');
-  final ss = seconds.toString().padLeft(2, '0');
-  return hours > 0 ? '$hours:$mm:$ss' : '$minutes:$ss';
-}
+const double kRecordingDashboardResizeStep = 44;
 
 /// Kotlin `RecordingDashboardStat`.
 class RecordingDashboardStat {
