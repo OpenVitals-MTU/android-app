@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../di/providers.dart';
-import '../../../data/source/sensors/ble/ble_sensor_coordinator.dart';
 import '../../../state/app_providers.dart';
 import 'activity_entry_clock.dart';
 import 'activity_entry_view_model.dart';
@@ -30,7 +29,7 @@ final activityRecordingServiceProvider =
     Provider<ActivityRecordingService>((ref) {
   final service = ActivityRecordingService(
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
-    bleSensorCoordinator: ref.watch(bleSensorCoordinatorProvider),
+    bleSensorCoordinator: ref.watch(bleSensorRepositoryProvider),
     recordingStore: ref.watch(activityRecordingStoreProvider),
     unitFormatter: ref.watch(unitFormatterProvider),
     deviceSupport: ref.watch(activityRecordingDeviceSupportProvider),

@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../data/repository/contract/ble_sensor_repository.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../domain/usecase/edit_ble_device_registry_use_case.dart';
-import '../../../data/source/sensors/ble/ble_sensor_coordinator.dart';
 
 part 'ble_devices_view_model.freezed.dart';
 
@@ -55,8 +55,8 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
   BleDevicesUiState _local = const BleDevicesUiState();
   int _discoverGeneration = 0;
 
-  BleSensorCoordinator get _coordinator =>
-      ref.read(bleSensorCoordinatorProvider);
+  BleSensorRepository get _coordinator =>
+      ref.read(bleSensorRepositoryProvider);
 
   /// Every registry call below is synchronous, deliberately: the conflict map has
   /// to land in the same frame as the checkbox that caused it. See
@@ -120,6 +120,17 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
   void setShowAllDevices(bool enabled) {
     _setLocal(_local.copyWith(showAllDevices: enabled));
     if (state.isScanning) startScan();
+  }
+
+  /// Opens the add-device flow, asking for the scan permission first. Returns
+  /// false when the user refuses it — there is nothing to scan with, so the
+  /// caller must not open the sheet.
+  Future<bool> beginAddFlow() async {
+    final granted = await ref.read(bleScanPermissionGateProvider)();
+    if (!granted || !ref.mounted) return false;
+    openAddFlow();
+    startScan();
+    return true;
   }
 
   void startScan() {

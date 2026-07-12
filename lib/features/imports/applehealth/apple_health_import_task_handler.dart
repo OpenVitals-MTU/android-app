@@ -30,12 +30,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../bootstrap/background_health_access.dart';
 import '../../../core/result/result.dart';
 import '../../../data/repository/impl/apple_health_import_repository_impl.dart';
 import '../../../data/repository/impl/health_repository_impl.dart';
-import '../../../di/providers.dart' show openVitalsPackageName;
 import '../../../data/source/health/health_data_source.dart';
-import '../../../data/source/health/native/health_connect_native_data_source.dart';
 import '../../../l10n/app_localizations.dart';
 import 'apple_health_import_background.dart';
 import 'apple_health_import_checkpoint_store.dart';
@@ -101,8 +100,13 @@ class AppleHealthImportTaskHandler extends TaskHandler {
         );
       }
 
+      // Built AND resolved by the shared helper (AGENTS.md §1) — this isolate
+      // no longer knows the native class exists. The job's own
+      // `resolveHealthAccess` still runs at the point the job chooses: it is
+      // the guard that must abort a run which would otherwise write nothing and
+      // report success, and re-resolving is cheap.
       final HealthDataSource dataSource =
-          HealthConnectNativeDataSource(appPackageName: openVitalsPackageName);
+          (await openBackgroundHealthAccess()).orThrow();
       final outcome = await runAppleHealthImportJob(
         AppleHealthImportJobInputs(
           service: AppleHealthImportService(

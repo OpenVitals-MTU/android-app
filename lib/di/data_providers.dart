@@ -1,3 +1,6 @@
+import '../domain/model/ble_sensor_models.dart';
+import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
+import '../data/repository/contract/ble_sensor_repository.dart';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -206,3 +209,33 @@ final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
     cacheStore: ref.watch(bodyEnergyTimelineCacheStoreProvider),
   ),
 );
+
+// ── BLE sensors ───────────────────────────────────────────────────────────
+
+/// The app-lifetime BLE coordinator (Kotlin `@Singleton`), bound to its
+/// contract so features never name the service class.
+final bleSensorRepositoryProvider = Provider<BleSensorRepository>((ref) {
+  final coordinator =
+      BleSensorCoordinator(ref.watch(bleDeviceRepositoryProvider));
+  ref.onDispose(coordinator.dispose);
+  return coordinator;
+});
+
+/// Live recording metrics (Kotlin `StateFlow<BleRecordingMetrics>`).
+final bleMetricsProvider = StreamProvider<BleRecordingMetrics>((ref) {
+  return ref.watch(bleSensorRepositoryProvider).metricsStream;
+});
+
+/// Live scan results (Kotlin `StateFlow<List<BleDiscoveredDevice>>`).
+final bleDiscoveredDevicesProvider =
+    StreamProvider<List<BleDiscoveredDevice>>((ref) {
+  return ref.watch(bleSensorRepositoryProvider).discoveredDevicesStream;
+});
+
+/// The paired BLE sensor registry as a live list, seeded with the current
+/// snapshot (Kotlin `StateFlow<List<BleSensorDevice>>`).
+final bleDevicesProvider = StreamProvider<List<BleSensorDevice>>((ref) async* {
+  final repository = ref.watch(bleDeviceRepositoryProvider);
+  yield repository.devices;
+  yield* repository.devicesStream;
+});

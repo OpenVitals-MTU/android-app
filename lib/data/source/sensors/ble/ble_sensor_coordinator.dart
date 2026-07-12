@@ -3,14 +3,12 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../repository/contract/ble_device_repository.dart';
-import '../../../../di/providers.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import 'ble_gatt_connection.dart';
 import 'ble_uuids.dart';
-import '../../../../domain/port/ble_capability_probe.dart';
+import '../../../repository/contract/ble_sensor_repository.dart';
 
 /// Port of the Kotlin `BleSensorCoordinator` over `flutter_blue_plus`.
 ///
@@ -26,7 +24,7 @@ import '../../../../domain/port/ble_capability_probe.dart';
 /// latest value on subscribe ([metricsStream], [discoveredDevicesStream]).
 ///
 /// Runtime verification is deferred; scan/connect are device-dependent.
-class BleSensorCoordinator implements BleCapabilityProbe {
+class BleSensorCoordinator implements BleSensorRepository {
   BleSensorCoordinator(this._deviceRepository);
 
   final BleDeviceRepository _deviceRepository;
@@ -52,14 +50,17 @@ class BleSensorCoordinator implements BleCapabilityProbe {
   static const Duration _metricsTimeoutPublishInterval = Duration(seconds: 1);
 
   /// Latest metrics snapshot, then live updates.
+  @override
   Stream<BleRecordingMetrics> get metricsStream async* {
     yield _metrics;
     yield* _metricsController.stream;
   }
 
+  @override
   BleRecordingMetrics get metrics => _metrics;
 
   /// Latest discovered-devices list, then live updates.
+  @override
   Stream<List<BleDiscoveredDevice>> get discoveredDevicesStream async* {
     yield _discoveredDevices;
     yield* _discoveredController.stream;
@@ -67,10 +68,12 @@ class BleSensorCoordinator implements BleCapabilityProbe {
 
   List<BleDiscoveredDevice> get discoveredDevices => _discoveredDevices;
 
+  @override
   BleRecordingSampleBuffer currentSampleBuffer() => _sampleBuffer;
 
   // ── Recording lifecycle ────────────────────────────────────────────────
 
+  @override
   void startRecording() {
     _recordingActive = true;
     _sampleBuffer = const BleRecordingSampleBuffer();
@@ -85,6 +88,7 @@ class BleSensorCoordinator implements BleCapabilityProbe {
     }
   }
 
+  @override
   BleRecordingSampleBuffer stopRecording() {
     _recordingActive = false;
     disconnectAll();
@@ -94,6 +98,7 @@ class BleSensorCoordinator implements BleCapabilityProbe {
     return buffer;
   }
 
+  @override
   void refreshConnections() {
     disconnectAll();
     _capabilityOwners.clear();
@@ -123,6 +128,7 @@ class BleSensorCoordinator implements BleCapabilityProbe {
     _scheduleMetricsTimeoutTicker();
   }
 
+  @override
   void disconnectAll() {
     _stopMetricsTimeoutTicker();
     for (final connection in _connections.values) {
@@ -135,6 +141,7 @@ class BleSensorCoordinator implements BleCapabilityProbe {
 
   // ── Scanning ───────────────────────────────────────────────────────────
 
+  @override
   Future<void> startScan({bool showAllDevices = false}) async {
     await stopScan();
     _scanResults.clear();
@@ -160,6 +167,7 @@ class BleSensorCoordinator implements BleCapabilityProbe {
     _publishScanResults();
   }
 
+  @override
   Future<void> stopScan() async {
     await _scanSub?.cancel();
     _scanSub = null;
@@ -424,29 +432,3 @@ class _CoordinatorConnectionListener implements BleConnectionListener {
   void onBatteryLevelChanged(String deviceId, int batteryPercent) =>
       _coordinator._onBatteryLevelChanged(deviceId, batteryPercent);
 }
-
-/// The app-lifetime coordinator (Kotlin `@Singleton`).
-final bleSensorCoordinatorProvider = Provider<BleSensorCoordinator>((ref) {
-  final coordinator = BleSensorCoordinator(ref.watch(bleDeviceRepositoryProvider));
-  ref.onDispose(coordinator.dispose);
-  return coordinator;
-});
-
-/// Live recording metrics (Kotlin `StateFlow<BleRecordingMetrics>`).
-final bleMetricsProvider = StreamProvider<BleRecordingMetrics>((ref) {
-  return ref.watch(bleSensorCoordinatorProvider).metricsStream;
-});
-
-/// Live scan results (Kotlin `StateFlow<List<BleDiscoveredDevice>>`).
-final bleDiscoveredDevicesProvider =
-    StreamProvider<List<BleDiscoveredDevice>>((ref) {
-  return ref.watch(bleSensorCoordinatorProvider).discoveredDevicesStream;
-});
-
-/// The paired BLE sensor registry as a live list, seeded with the current
-/// snapshot (Kotlin `StateFlow<List<BleSensorDevice>>`).
-final bleDevicesProvider = StreamProvider<List<BleSensorDevice>>((ref) async* {
-  final repository = ref.watch(bleDeviceRepositoryProvider);
-  yield repository.devices;
-  yield* repository.devicesStream;
-});

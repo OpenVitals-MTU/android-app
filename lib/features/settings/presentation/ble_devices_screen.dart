@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../data/source/sensors/ble/ble_scan_permission.dart';
 import '../application/ble_devices_view_model.dart';
 
 /// The Sensors settings screen: list paired BLE sensors (enable / edit / remove)
@@ -43,11 +42,8 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
   }
 
   Future<void> _startAddFlow() async {
-    if (!await ensureBleScanPermissions()) return;
+    if (!await _notifier.beginAddFlow()) return;
     if (!mounted) return;
-    _notifier
-      ..openAddFlow()
-      ..startScan();
     await showDialog<void>(
       context: context,
       builder: (_) => const _AddDeviceDialog(),

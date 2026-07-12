@@ -34,7 +34,6 @@ import '../domain/usecase/save_last_custom_hydration_amount_use_case.dart';
 import '../domain/usecase/save_mindfulness_session_use_case.dart';
 import '../domain/usecase/save_vitals_measurement_use_case.dart';
 import '../domain/usecase/write_imported_activity_use_case.dart';
-import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
 import '../domain/usecase/load_achievement_history_use_case.dart';
 import '../domain/usecase/load_activities_use_case.dart';
 import '../domain/usecase/load_activity_detail_use_case.dart';
@@ -217,7 +216,7 @@ final readHydrationEntrySettingsUseCaseProvider =
 final discoverBleDeviceCapabilitiesUseCaseProvider =
     Provider<DiscoverBleDeviceCapabilitiesUseCase>(
   (ref) => DiscoverBleDeviceCapabilitiesUseCase(
-    ref.watch(bleSensorCoordinatorProvider),
+    ref.watch(bleSensorRepositoryProvider),
     ref.watch(bleDeviceRepositoryProvider),
   ),
 );

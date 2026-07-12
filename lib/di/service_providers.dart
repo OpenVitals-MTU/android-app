@@ -1,4 +1,5 @@
 
+import '../data/source/sensors/ble/ble_scan_permission.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -161,3 +162,11 @@ final offlineMapImportControllerProvider =
     mapsDirectoryPath: mapsDirectoryPath,
   );
 });
+
+// ── BLE scan permission ───────────────────────────────────────────────────
+
+/// The runtime scan-permission gate. A provider, not a bare call, so a
+/// view-model can depend on it and a test can grant or refuse it.
+final bleScanPermissionGateProvider = Provider<Future<bool> Function()>(
+  (ref) => ensureBleScanPermissions,
+);
