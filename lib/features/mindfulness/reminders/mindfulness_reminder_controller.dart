@@ -1,5 +1,6 @@
 import '../../../core/reminders/reminder_controller.dart';
 import '../../../core/reminders/reminder_schedule.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../data/repository/contract/mindfulness_repository.dart';
@@ -71,7 +72,8 @@ class MindfulnessReminderController {
         preferences.dailyGoalFor(MetricDailyGoalKey.mindfulnessMinutes);
     final today = LocalDate.now();
     try {
-      final sessions = await repository.loadMindfulnessSessions(today, today);
+      final sessions =
+          (await repository.loadMindfulnessSessions(today, today)).orThrow();
       final totalMs = sessions.fold<int>(
         0,
         (sum, session) =>

@@ -1,4 +1,5 @@
 import '../../core/period/period_load_query.dart';
+import '../../core/result/result.dart';
 import '../../data/repository/contract/mindfulness_repository.dart';
 import '../model/refresh_mode.dart';
 import '../query/mindfulness_period_data.dart';
@@ -13,7 +14,7 @@ class LoadMindfulnessPeriodUseCase {
 
   final MindfulnessRepository _mindfulnessRepository;
 
-  Future<MindfulnessPeriodData> call(
+  Future<Result<MindfulnessPeriodData>> call(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>

@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/mindfulness_repository.dart';
 
 /// What the mindfulness entry screen may do right now.
@@ -41,21 +42,19 @@ class CheckMindfulnessWriteAccessUseCase {
 
   Future<MindfulnessWriteAccess> call() async {
     final permissions = _mindfulnessRepository.mindfulnessWritePermissions;
-    try {
-      final available = _mindfulnessRepository.isMindfulnessAvailable();
-      final granted = await _mindfulnessRepository.hasMindfulnessWritePermission();
-      return MindfulnessWriteAccess(
-        available: available,
-        permissions: permissions,
-        granted: granted,
-      );
-    } catch (error) {
-      return MindfulnessWriteAccess(
-        available: false,
-        permissions: permissions,
-        granted: false,
-        error: error,
-      );
-    }
+    final available = _mindfulnessRepository.isMindfulnessAvailable();
+    return switch (await _mindfulnessRepository.hasMindfulnessWritePermission()) {
+      Ok(:final value) => MindfulnessWriteAccess(
+          available: available,
+          permissions: permissions,
+          granted: value,
+        ),
+      Err(:final failure) => MindfulnessWriteAccess(
+          available: false,
+          permissions: permissions,
+          granted: false,
+          error: failure.cause ?? failure,
+        ),
+    };
   }
 }

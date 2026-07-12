@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/mindfulness_models.dart';
 
@@ -526,10 +527,11 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
       endTime: end,
     );
     try {
-      await ref.read(saveMindfulnessSessionUseCaseProvider)(
+      (await ref.read(saveMindfulnessSessionUseCaseProvider)(
         request,
         editRecordId: editRecordId,
-      );
+      ))
+          .orThrow();
       if (!ref.mounted) return;
       onSuccess();
     } catch (error) {
@@ -550,9 +552,11 @@ class MindfulnessEntryViewModel extends Notifier<MindfulnessEntryState> {
     final recordId = editRecordId;
     if (recordId == null) return;
     try {
-      final session = await ref.read(loadMindfulnessSessionForEditUseCaseProvider)(
+      final session =
+          (await ref.read(loadMindfulnessSessionForEditUseCaseProvider)(
         recordId,
-      );
+      ))
+              .orThrow();
       if (!ref.mounted) return;
       // Null covers both "no such session" and "not ours to edit".
       if (session == null) {

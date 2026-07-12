@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/mindfulness_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
@@ -19,17 +20,17 @@ class _FakeRepository implements MindfulnessRepository {
   bool isMindfulnessAvailable() => true;
 
   @override
-  Future<bool> hasMindfulnessWritePermission() async => true;
+  Future<Result<bool>> hasMindfulnessWritePermission() async => const Ok(true);
 
   @override
   Set<String> get mindfulnessWritePermissions => const {'write.mindfulness'};
 
   @override
-  Future<String> writeMindfulnessSessionEntry(
+  Future<Result<String>> writeMindfulnessSessionEntry(
     MindfulnessSessionWriteRequest request,
   ) async {
     writes.add(request);
-    return 'id';
+    return const Ok('id');
   }
 
   @override

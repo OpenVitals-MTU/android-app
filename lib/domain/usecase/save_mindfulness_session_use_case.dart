@@ -1,3 +1,4 @@
+import '../../core/result/result.dart';
 import '../../data/repository/contract/mindfulness_repository.dart';
 import '../model/mindfulness_models.dart';
 
@@ -11,17 +12,18 @@ class SaveMindfulnessSessionUseCase {
 
   final MindfulnessRepository _mindfulnessRepository;
 
-  Future<void> call(
+  Future<Result<void>> call(
     MindfulnessSessionWriteRequest request, {
     String? editRecordId,
   }) async {
     if (editRecordId == null) {
-      await _mindfulnessRepository.writeMindfulnessSessionEntry(request);
-    } else {
-      await _mindfulnessRepository.updateMindfulnessSessionEntry(
-        editRecordId,
-        request,
-      );
+      final written =
+          await _mindfulnessRepository.writeMindfulnessSessionEntry(request);
+      return written.map((_) {});
     }
+    return _mindfulnessRepository.updateMindfulnessSessionEntry(
+      editRecordId,
+      request,
+    );
   }
 }

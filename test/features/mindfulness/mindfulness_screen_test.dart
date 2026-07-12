@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/period/period_range_preference_key.dart';
@@ -26,11 +27,11 @@ class _FakeMindfulnessRepository implements MindfulnessRepository {
   final List<MindfulnessSession> sessions;
 
   @override
-  Future<MindfulnessPeriodData> loadMindfulnessPeriod(
+  Future<Result<MindfulnessPeriodData>> loadMindfulnessPeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
-      MindfulnessPeriodData(sessions: sessions);
+      Ok(MindfulnessPeriodData(sessions: sessions));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

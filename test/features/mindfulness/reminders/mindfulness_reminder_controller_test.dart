@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/reminders/reminder_controller.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
@@ -16,12 +17,12 @@ class _FakeMindfulnessRepository implements MindfulnessRepository {
   final int minutesToday;
 
   @override
-  Future<List<MindfulnessSession>> loadMindfulnessSessions(
+  Future<Result<List<MindfulnessSession>>> loadMindfulnessSessions(
     LocalDate start,
     LocalDate end,
   ) async {
     final now = DateTime.now();
-    return [
+    return Ok([
       MindfulnessSession(
         id: '$minutesToday',
         title: null,
@@ -30,7 +31,7 @@ class _FakeMindfulnessRepository implements MindfulnessRepository {
         durationMs: minutesToday * 60000,
         source: 'test',
       ),
-    ];
+    ]);
   }
 
   @override
