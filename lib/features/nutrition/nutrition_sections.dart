@@ -10,6 +10,7 @@ import '../../core/time/local_date.dart';
 import '../../domain/insights/metric_interpretations.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../ui/charts/day_axis.dart';
 import '../../ui/charts/metric_line_plot.dart';
 import '../../ui/charts/period_chart.dart';
 import '../../ui/components/metric_card.dart';
@@ -150,13 +151,11 @@ class NutritionIntradayChartCard extends StatelessWidget {
     DisplayValue format(double value) =>
         nutrientDisplayValue(series.nutrient, value, formatter);
 
-    final dayStart = DateTime(day.year, day.month, day.day);
-    final isToday = day == LocalDate.fromDateTime(now());
-    final chartEnd = isToday ? now() : dayStart.add(const Duration(days: 1));
-    final elapsedMillis = math.max(
-      1,
-      chartEnd.millisecondsSinceEpoch - dayStart.millisecondsSinceEpoch,
-    );
+    // Shared, because this maths was written five times over and four of them
+    // plotted the point at the wrong hour. See [DayAxis].
+    final axis = DayAxis(day, now: now());
+    final isToday = axis.isToday;
+    final dayStart = axis.start;
 
     final points = cumulativeNutritionPoints(entries, series.nutrient);
     final total = points.isEmpty ? 0.0 : points.last.value;
@@ -192,19 +191,18 @@ class NutritionIntradayChartCard extends StatelessWidget {
               )
             else ...[
               MetricLinePlot(
-                // Kotlin brackets the curve with a zero point at midnight and
-                // carries the total forward to the right edge.
+                // Bracketed: zero at midnight, and the total held forward to the
+                // end of the axis.
                 points: [
                   const MetricLinePlotPoint(xFraction: 0, value: 0),
                   for (final point in points)
                     MetricLinePlotPoint(
-                      xFraction: (point.time.millisecondsSinceEpoch -
-                                  dayStart.millisecondsSinceEpoch)
-                              .clamp(0, elapsedMillis) /
-                          elapsedMillis,
+                      xFraction: axis.fractionOf(point.time),
                       value: point.value,
                     ),
-                  MetricLinePlotPoint(xFraction: 1, value: total),
+                  // To now, not to the right edge: the rest of today has not been
+                  // eaten yet.
+                  MetricLinePlotPoint(xFraction: axis.endFraction, value: total),
                 ],
                 minValue: 0,
                 maxValue: math.max(total, 1),
@@ -212,23 +210,7 @@ class NutritionIntradayChartCard extends StatelessWidget {
                 valueFormatter: (value) => format(value).text,
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  for (final label in [
-                    '00:00',
-                    '06:00',
-                    '12:00',
-                    '18:00',
-                    if (isToday) l10n.summaryNow else '24:00',
-                  ])
-                    Text(
-                      label,
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                ],
-              ),
+              DayAxisLabels(axis: axis),
               const SizedBox(height: 12),
               Text(
                 l10n.summaryLastUpdate(

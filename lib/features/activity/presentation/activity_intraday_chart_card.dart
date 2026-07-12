@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/time/local_date.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../ui/charts/day_axis.dart';
 import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/metric_line_plot.dart';
 import '../../../ui/components/ov_card.dart';
@@ -39,15 +40,13 @@ class IntradayActivityChartCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final currentTime = now ?? DateTime.now();
-    final isToday = selectedDate == LocalDate.now();
-
-    final dayStart =
-        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-    final chartEnd = isToday ? currentTime : dayStart.add(const Duration(days: 1));
-    // Never zero: a same-instant window would divide by zero below.
-    final elapsedMillis =
-        (chartEnd.difference(dayStart).inMilliseconds).clamp(1, 1 << 62);
+    // The x axis is the WHOLE day, and a point sits at its real hour. This used to
+    // scale by the time ELAPSED so far, so on a chart opened at 12:49 a reading from
+    // 09:29 landed at 74% of the width -- under a fixed 00:00/06:00/12:00/18:00 axis
+    // that put it at quarter past five. See [DayAxis]: the same twenty lines were
+    // written five times and four of them were wrong the same way.
+    final axis = DayAxis(selectedDate, now: now);
+    final isToday = axis.isToday;
 
     return OpenVitalsCard(
       child: Padding(
@@ -64,7 +63,7 @@ class IntradayActivityChartCard extends StatelessWidget {
                   ? l10n.summaryToday(title)
                   : l10n.summaryOnDate(
                       title,
-                      DateFormat.yMMMd(locale).format(dayStart),
+                      DateFormat.yMMMd(locale).format(axis.start),
                     ),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -80,7 +79,7 @@ class IntradayActivityChartCard extends StatelessWidget {
               )
             else ...[
               MetricLinePlot(
-                points: _plotPoints(dayStart, elapsedMillis),
+                points: _plotPoints(axis),
                 minValue: 0,
                 // Cumulative: the last sample is the day's maximum.
                 maxValue: points.last.value < 1.0 ? 1.0 : points.last.value,
@@ -92,12 +91,12 @@ class IntradayActivityChartCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    for (final label in [
+                    for (final label in const [
                       '00:00',
                       '06:00',
                       '12:00',
                       '18:00',
-                      if (isToday) l10n.summaryNow else '24:00',
+                      '24:00',
                     ])
                       Text(
                         label,
@@ -122,19 +121,19 @@ class IntradayActivityChartCard extends StatelessWidget {
     );
   }
 
-  /// Kotlin anchors the curve at (0, 0) and extends the last value out to the
-  /// right edge, so a day that stopped updating reads as a plateau, not a drop.
-  List<MetricLinePlotPoint> _plotPoints(DateTime dayStart, int elapsedMillis) {
-    return [
-      const MetricLinePlotPoint(xFraction: 0, value: 0),
-      for (final point in points)
+  /// Anchored at (0, 0) and held out to [DayAxis.endFraction], so a day that
+  /// stopped updating reads as a plateau rather than a drop -- but only as far as
+  /// NOW, never to the right edge, because the rest of today has not happened.
+  List<MetricLinePlotPoint> _plotPoints(DayAxis axis) => [
+        const MetricLinePlotPoint(xFraction: 0, value: 0),
+        for (final point in points)
+          MetricLinePlotPoint(
+            xFraction: axis.fractionOf(point.time),
+            value: point.value,
+          ),
         MetricLinePlotPoint(
-          xFraction: (point.time.toLocal().difference(dayStart).inMilliseconds)
-                  .clamp(0, elapsedMillis) /
-              elapsedMillis,
-          value: point.value,
+          xFraction: axis.endFraction,
+          value: points.last.value,
         ),
-      MetricLinePlotPoint(xFraction: 1, value: points.last.value),
-    ];
-  }
+      ];
 }

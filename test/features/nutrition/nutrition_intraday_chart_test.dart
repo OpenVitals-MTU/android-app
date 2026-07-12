@@ -92,7 +92,7 @@ void main() {
       expect(find.text('00:00'), findsOneWidget);
     });
 
-    testWidgets('today ends the axis at "now" and scales the curve to it',
+    testWidgets('today plots a meal at its real hour and stops the line at now',
         (tester) async {
       final dayStart = DateTime(2026, 3, 4);
       await tester.pumpWidget(_harness(NutritionIntradayChartCard(
@@ -100,13 +100,24 @@ void main() {
         series: series,
         entries: [_entry(dayStart.add(const Duration(hours: 6)), energyKcal: 400)],
         formatter: formatter,
-        // Noon today: the 06:00 entry sits halfway along the elapsed axis.
         now: () => dayStart.add(const Duration(hours: 12)),
       )));
 
       final plot = tester.widget<MetricLinePlot>(find.byType(MetricLinePlot));
-      expect(plot.points[1].xFraction, closeTo(0.5, 0.001));
-      expect(find.text('24:00'), findsNothing);
+
+      // Breakfast at 06:00 is a quarter of the way through the DAY, and that is
+      // where it is drawn. This test used to assert 0.5 — it scaled against the
+      // twelve hours that had elapsed, so the meal was drawn at noon, under an
+      // axis whose labels said otherwise. The bug was pinned, not caught.
+      expect(plot.points[1].xFraction, closeTo(0.25, 0.001));
+
+      // The line stops at now. It does not run to the right edge drawing an
+      // afternoon that has not happened.
+      expect(plot.points.last.xFraction, closeTo(0.5, 0.001));
+      expect(plot.points.last.value, 400);
+
+      // The axis is the whole day, today included.
+      expect(find.text('24:00'), findsOneWidget);
     });
 
     testWidgets('renders the empty-day message and no plot without entries',

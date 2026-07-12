@@ -5,6 +5,7 @@ import '../../core/presentation/unit_formatter.dart';
 import '../../core/time/local_date.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../ui/charts/day_axis.dart';
 import '../../ui/charts/metric_line_plot.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
@@ -42,28 +43,11 @@ class HydrationIntradayChartCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
 
-    final isToday = selectedDate == LocalDate.now();
-    final dayStart = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day,
-    );
-
-    // The x axis is the WHOLE DAY, always — 00:00 to 24:00 — and a drink is placed
-    // at its real hour.
-    //
-    // Kotlin scaled x by the time ELAPSED so far, so on a chart opened at 12:49 a
-    // drink at 09:29 landed at 74% of the width... under an axis whose labels read
-    // 00:00 / 06:00 / 12:00 / 18:00. The chart said quarter-past-five. That is not a
-    // rendering nit: the only thing this chart exists to tell you is WHEN, and it
-    // was telling you the wrong hour. Porting it faithfully reproduced the lie.
-    //
-    // So the day is the day. Today's line simply stops at `now` instead of running
-    // to the right edge, which is honest — the rest of the day has not happened.
-    const dayMs = Duration.millisecondsPerDay;
-    double fractionOf(DateTime time) =>
-        (time.difference(dayStart).inMilliseconds.clamp(0, dayMs)) / dayMs;
-    final endFraction = isToday ? fractionOf(DateTime.now()) : 1.0;
+    // Shared, because the same maths was written five times and four of them put
+    // the point at the wrong hour. See [DayAxis].
+    final axis = DayAxis(selectedDate);
+    final isToday = axis.isToday;
+    final dayStart = axis.start;
 
     final points = _cumulative(entries);
     final total = points.isEmpty ? 0.0 : points.last.$2;
@@ -114,16 +98,16 @@ class HydrationIntradayChartCard extends StatelessWidget {
                   const MetricLinePlotPoint(xFraction: 0, value: 0),
                   for (final (index, point) in points.indexed) ...[
                     MetricLinePlotPoint(
-                      xFraction: fractionOf(point.$1),
+                      xFraction: axis.fractionOf(point.$1),
                       value: index == 0 ? 0.0 : points[index - 1].$2,
                     ),
                     MetricLinePlotPoint(
-                      xFraction: fractionOf(point.$1),
+                      xFraction: axis.fractionOf(point.$1),
                       value: point.$2,
                     ),
                   ],
                   // Holds the total to now (today) or to midnight (a past day).
-                  MetricLinePlotPoint(xFraction: endFraction, value: total),
+                  MetricLinePlotPoint(xFraction: axis.endFraction, value: total),
                 ],
                 minValue: 0,
                 maxValue: maxValue,
@@ -131,19 +115,7 @@ class HydrationIntradayChartCard extends StatelessWidget {
                 valueFormatter: (value) => formatter.hydration(value).text,
               ),
               const SizedBox(height: 8),
-              // Evenly spaced, and now TRUE: the axis spans the whole day, so the
-              // 12:00 tick really is halfway across it.
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  for (final label in ['00:00', '06:00', '12:00', '18:00', '24:00'])
-                    Text(
-                      label,
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                ],
-              ),
+              DayAxisLabels(axis: axis),
               const SizedBox(height: 12),
               Text(
                 l10n.summaryLastUpdate(

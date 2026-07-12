@@ -8,6 +8,7 @@ import '../../domain/insights/metric_interpretations.dart';
 import '../../domain/model/body_models.dart';
 import '../../domain/query/body_period_data.dart';
 import '../../l10n/app_localizations.dart';
+import '../../ui/charts/day_axis.dart';
 import '../../ui/charts/chart_axis.dart';
 import '../../ui/charts/metric_line_plot.dart';
 import '../../ui/charts/period_chart.dart';
@@ -513,14 +514,12 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
 
-    final currentTime = now ?? DateTime.now();
-    final isToday = selectedDate == LocalDate.now();
-    final dayStart =
-        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-    final chartEnd =
-        isToday ? currentTime : dayStart.add(const Duration(days: 1));
-    final elapsedMillis =
-        chartEnd.difference(dayStart).inMilliseconds.clamp(1, 1 << 62);
+    // Shared, and it also honours the injected clock — `isToday` used to ask
+    // `LocalDate.now()` directly, so a test could pin `now` and still be told the
+    // day was over. See [DayAxis].
+    final axis = DayAxis(selectedDate, now: now);
+    final isToday = axis.isToday;
+    final dayStart = axis.start;
 
     final points = [...metricData.dayValues]
       ..sort((a, b) => a.$1.compareTo(b.$1));
@@ -574,12 +573,7 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
                 points: [
                   for (final (time, value) in points)
                     MetricLinePlotPoint(
-                      xFraction: time
-                              .toLocal()
-                              .difference(dayStart)
-                              .inMilliseconds
-                              .clamp(0, elapsedMillis) /
-                          elapsedMillis,
+                      xFraction: axis.fractionOf(time),
                       value: value,
                     ),
                 ],
@@ -589,25 +583,7 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
                 valueFormatter: (value) => metricData.format(value).text,
               ),
               const SizedBox(height: 8),
-              ChartXAxisWithYAxis(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    for (final label in [
-                      '00:00',
-                      '06:00',
-                      '12:00',
-                      '18:00',
-                      if (isToday) l10n.summaryNow else '24:00',
-                    ])
-                      Text(
-                        label,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                  ],
-                ),
-              ),
+              ChartXAxisWithYAxis(child: DayAxisLabels(axis: axis)),
               const SizedBox(height: 12),
               Text(
                 l10n.summaryLastUpdate(
