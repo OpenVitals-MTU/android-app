@@ -2965,6 +2965,7 @@
     }
   },
   "caffeineCurveTitle": "Caffeine curve",
+  "caffeineCurveEmpty": "No caffeine to model.",
   "caffeineThresholdLine": "Sleep threshold {arg0}",
   "@caffeineThresholdLine": {
     "placeholders": {

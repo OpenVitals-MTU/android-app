@@ -21,6 +21,7 @@ import '../../ui/components/metric_card.dart';
 import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
+import 'mindfulness_intraday_chart.dart';
 import 'mindfulness_notifier.dart';
 import 'reminders/mindfulness_reminder_card.dart';
 import '../../ui/components/section_padding.dart';
@@ -142,18 +143,26 @@ List<Widget> _content(
         ],
       ),
     ),
+    // The DAY range gets a real day chart, as Kotlin had and the port dropped: a
+    // bar chart of one day is one fat bar, which repeats the number already printed
+    // on the card above it. A day is a shape — when you sat, and for how long.
     sectionPadded(
-      MetricBarChart(
-        title: 'Mindfulness',
-        values: chartValues,
-        selectedRange: state.selectedRange,
-        period: period,
-        accentColor: AppColors.mindfulness,
-        summaryValue: total.text,
-        weekPeriodMode: weekPeriodMode,
-        valueFormatter: (value) =>
-            formatter.minutes(value.round()).text,
-      ),
+      state.selectedRange == TimeRange.day
+          ? MindfulnessIntradayChartCard(
+              selectedDate: state.selectedDate,
+              sessions: sessions,
+              formatter: formatter,
+            )
+          : MetricBarChart(
+              title: l10n.metricMindfulness,
+              values: chartValues,
+              selectedRange: state.selectedRange,
+              period: period,
+              accentColor: AppColors.mindfulness,
+              summaryValue: total.text,
+              weekPeriodMode: weekPeriodMode,
+              valueFormatter: (value) => formatter.minutes(value.round()).text,
+            ),
     ),
     sectionPadded(
       _MindfulnessStatisticsCard(

@@ -122,7 +122,7 @@ class MetricDayChart extends StatelessWidget {
                 lineStrokeWidth: lineStrokeWidth,
               ),
               const SizedBox(height: 8),
-              DayAxisLabels(axis: axis),
+              const DayAxisLabels(),
               const SizedBox(height: 12),
               footer ??
                   Text(

@@ -72,7 +72,7 @@ void main() {
         );
 
     testWidgets('reads midnight to midnight', (tester) async {
-      await pump(tester, DayAxisLabels(axis: DayAxis(day, now: at(12, 49))));
+      await pump(tester, const DayAxisLabels());
 
       for (final label in ['00:00', '06:00', '12:00', '18:00', '24:00']) {
         expect(find.text(label), findsOneWidget);
@@ -89,7 +89,7 @@ void main() {
       // Kotlin never got this wrong because every hour row went through
       // ChartXAxisWithYAxis. Wrapping is a thing you can forget, so now the row
       // insets itself and there is nothing to forget.
-      await pump(tester, DayAxisLabels(axis: DayAxis(day, now: at(12, 49))));
+      await pump(tester, const DayAxisLabels());
 
       final midnight = tester.getTopLeft(find.text('00:00')).dx;
       expect(midnight, greaterThanOrEqualTo(kChartYAxisWidth + kChartAxisGap));
@@ -98,7 +98,7 @@ void main() {
     testWidgets('a painter with no y axis can opt out', (tester) async {
       await pump(
         tester,
-        DayAxisLabels(axis: DayAxis(day, now: at(12, 49)), inset: 0),
+        const DayAxisLabels(inset: 0),
       );
 
       expect(tester.getTopLeft(find.text('00:00')).dx, 0);

@@ -21,6 +21,12 @@ const int kAnchorMinuteOfDay = 18 * 60;
 const int kMinutesPerDay = 24 * 60;
 
 const double _chartHeight = 232;
+/// This chart reserves its label column on the RIGHT — the painter writes the hour
+/// scale there — so its plot starts at the card's left edge and its x-axis row is
+/// padded on the right instead. That is deliberate, not a forgotten
+/// `kChartPlotInset`: the charts built on `MetricLinePlot` put their value labels
+/// on the LEFT, so their axis rows inset from the left to match. Two conventions,
+/// each internally consistent; what is not allowed is a row that matches neither.
 const double _axisLabelWidth = 46;
 
 /// Kotlin `SleepScheduleDay`.

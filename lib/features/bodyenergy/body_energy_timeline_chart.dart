@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/insights/body_energy_timeline.dart';
+import '../../ui/charts/day_axis.dart';
 import '../../ui/theme/app_colors.dart';
 import 'body_energy_display.dart';
 
@@ -20,10 +21,6 @@ class BodyEnergyTimelineChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final labelStyle = Theme.of(context)
-        .textTheme
-        .labelSmall
-        ?.copyWith(color: scheme.onSurfaceVariant);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -51,13 +48,9 @@ class BodyEnergyTimelineChart extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            for (final label in const ['00:00', '06:00', '12:00', '18:00', '24:00'])
-              Text(label, style: labelStyle),
-          ],
-        ),
+        // inset: 0 — these painters draw no y-axis label column, so the plot starts
+        // at the card's edge and the hour row must too.
+        const DayAxisLabels(inset: 0),
       ],
     );
   }

@@ -11,6 +11,7 @@ import 'package:openvitals/domain/model/caffeine_models.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/refresh_mode.dart';
 import 'package:openvitals/features/caffeine/caffeine_screen.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 import 'package:openvitals/ui/components/metric_card.dart';
@@ -63,7 +64,11 @@ Future<Widget> _bootstrap({
           .overrideWith((ref) async => HealthConnectAvailability.available),
       grantedHealthPermissionsProvider.overrideWith((ref) async => granted),
     ],
-    child: const MaterialApp(home: CaffeineScreen()),
+    child: const MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: CaffeineScreen(),
+    ),
   );
 }
 
@@ -85,7 +90,9 @@ void main() {
     expect(tester.takeException(), isNull);
     // Top-of-scroll cards (the rest of the long list is lazily built off-screen).
     expect(find.text('Active caffeine now'), findsOneWidget);
-    expect(find.text('Active caffeine over time'), findsOneWidget);
+    // The card used to hardcode this title in English, while `caffeineCurveTitle`
+    // sat unused in the catalogs — translated, and never shown to anyone.
+    expect(find.text('Caffeine curve'), findsOneWidget);
     expect(find.text('Caffeine dashboard'), findsOneWidget);
     expect(find.byType(CustomPaint), findsWidgets);
   });

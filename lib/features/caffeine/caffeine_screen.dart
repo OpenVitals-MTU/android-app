@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../domain/model/caffeine_models.dart';
@@ -282,6 +283,7 @@ class _CaffeineCurveCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
     final points = insights.curvePoints;
     return OpenVitalsCard(
       child: Padding(
@@ -289,8 +291,7 @@ class _CaffeineCurveCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Active caffeine over time',
-                style: theme.textTheme.titleSmall),
+            Text(l10n.caffeineCurveTitle, style: theme.textTheme.titleSmall),
             const SizedBox(height: 12),
             SizedBox(
               height: 180,
@@ -298,7 +299,7 @@ class _CaffeineCurveCard extends StatelessWidget {
               child: points.length < 2
                   ? Center(
                       child: Text(
-                        'No caffeine to model.',
+                        l10n.caffeineCurveEmpty,
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(color: scheme.onSurfaceVariant),
                       ),
@@ -318,8 +319,9 @@ class _CaffeineCurveCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Dashed line: sleep threshold '
-              '(${_formatMg(insights.sleepThresholdMg.toDouble(), formatter)})',
+              l10n.caffeineThresholdLine(
+                _formatMg(insights.sleepThresholdMg.toDouble(), formatter),
+              ),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: scheme.onSurfaceVariant),
             ),

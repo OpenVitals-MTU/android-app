@@ -81,16 +81,15 @@ class DayAxis {
 /// the heart timeline, because remembering to wrap is a thing you can forget. So
 /// the row insets itself, and there is nothing left to remember.
 ///
-/// Painters that draw no y axis (the sleep lane, the body-energy strip) pass
-/// `inset: 0`.
+/// It takes no [DayAxis], because it does not need one: the row is the same five
+/// labels for every day. Kotlin's cards wrote "Now" in place of "24:00" on today,
+/// which was only ever a patch over the elapsed-scaling bug — the axis really did
+/// end at now, because they had squeezed the day into the part that had happened.
+/// The axis is the whole day. Midnight is midnight.
+///
+/// Painters that draw no y axis (the body-energy strip) pass `inset: 0`.
 class DayAxisLabels extends StatelessWidget {
-  const DayAxisLabels({
-    super.key,
-    required this.axis,
-    this.inset = kChartYAxisWidth + kChartAxisGap,
-  });
-
-  final DayAxis axis;
+  const DayAxisLabels({super.key, this.inset = kChartPlotInset});
 
   /// How far the plot above starts from the left edge of the card.
   final double inset;
