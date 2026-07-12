@@ -449,9 +449,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // The default range is a week ⇒ each of the seven buckets is a single day,
-    // labelled with its weekday initial. Wednesday's "W" appears once per card.
+    // labelled with its weekday initial. Wednesday's "W" appears once per card —
+    // and once more under the week strip, which labels the same seven buckets.
     expect(find.byType(SparklineChart), findsNWidgets(5));
-    expect(find.text('W'), findsNWidgets(5));
+    expect(find.text('W'), findsNWidgets(6));
   });
 
   test('the section order persists across notifier instances', () async {
@@ -476,4 +477,37 @@ void main() {
     expect(second.read(metricDetailSectionOrderProvider), after);
     second.dispose();
   });
+  testWidgets('the week strip marks the day you trained and rings the rest',
+      (tester) async {
+    // Kotlin opened the week card with a strip of seven markers: a filled circle
+    // carrying the workout's own icon on the days you trained, an empty ring on
+    // the days you did not. The Flutter port used the buckets for its sparklines
+    // and dropped the strip entirely -- so the week view lost the one thing that
+    // showed WHICH days were active.
+    _tallScreen(tester);
+    final repo = _FakeActivityRepository(
+      // A single workout, today. Six other days of the week have none.
+      workouts: [_workout(id: 'w1', title: 'Morning run', type: 56)],
+      dailySteps: [_steps(today, 9000)],
+      nutrition: [_nutrition(today)],
+    );
+    await tester.pumpWidget(await _bootstrap(repository: repo));
+    await tester.pumpAndSettle();
+
+    final active = find.byKey(ValueKey('activity-day-marker-$today-active'));
+    expect(active, findsOneWidget, reason: 'today had a workout');
+
+    // The marker is filled AND carries the exercise icon -- an empty ring would
+    // have no child, which is exactly what the six rest days render.
+    expect(find.descendant(of: active, matching: find.byType(Icon)),
+        findsOneWidget);
+
+    // Every other day of the week is a rest ring: seven markers, one active.
+    final rest = find.byWidgetPredicate((w) =>
+        w.key is ValueKey<String> &&
+        (w.key! as ValueKey<String>).value.startsWith('activity-day-marker-') &&
+        (w.key! as ValueKey<String>).value.endsWith('-rest'));
+    expect(rest, findsNWidgets(6));
+  });
+
 }

@@ -574,6 +574,119 @@ class _Bucket {
   // `ActivityOverviewBucket.date`).
   final LocalDate date;
   final List<ActivityOverviewDay> days;
+
+  /// The workout that gets to represent this bucket — the first one, as Kotlin's
+  /// `activityOverviewMarkerWorkout` did. A day with two rides shows one icon;
+  /// the strip answers "did you train?", not "how often".
+  ExerciseData? get markerWorkout {
+    for (final day in days) {
+      if (day.workouts.isNotEmpty) return day.workouts.first;
+    }
+    return null;
+  }
+}
+
+/// The week's day markers, one per day (Kotlin `ActivityOverviewStrip`).
+///
+/// Only ever built for [TimeRange.week]: seven markers read at a glance, and a
+/// month of thirty-one rings does not. Returns empty for every other range, which
+/// is what hides the strip.
+List<_Bucket> _stripBuckets(List<ActivityOverviewDay> days, TimeRange range) =>
+    range == TimeRange.week ? _buckets(days, range) : const <_Bucket>[];
+
+/// A filled circle carrying the workout's own icon on the days you trained; an
+/// empty ring on the days you did not. Port of Kotlin `ActivityOverviewStrip`.
+///
+/// This was simply never ported — the Flutter activities screen used the buckets
+/// for its sparklines and dropped the strip, so the week view lost the one thing
+/// that showed WHICH days you were active.
+class _ActivityOverviewStrip extends StatelessWidget {
+  const _ActivityOverviewStrip({
+    required this.buckets,
+    required this.selectedRange,
+  });
+
+  final List<_Bucket> buckets;
+  final TimeRange selectedRange;
+
+  /// Kotlin `ActivityOverviewMarkerSize`.
+  static const double _markerSize = 38;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context).toString();
+    return ColoredBox(
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.36),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        child: Row(
+          children: [
+            for (final bucket in buckets)
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _Marker(
+                      key: ValueKey(
+                        'activity-day-marker-${bucket.date.toString()}-'
+                        '${bucket.markerWorkout == null ? 'rest' : 'active'}',
+                      ),
+                      workout: bucket.markerWorkout,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _bucketLabel(bucket.date, selectedRange, locale),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Marker extends StatelessWidget {
+  const _Marker({super.key, required this.workout});
+
+  /// Null on a day with no workout — that day gets the empty ring.
+  final ExerciseData? workout;
+
+  @override
+  Widget build(BuildContext context) {
+    final activity = workout;
+    if (activity == null) {
+      return Container(
+        width: _ActivityOverviewStrip._markerSize,
+        height: _ActivityOverviewStrip._markerSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.workout, width: 2),
+        ),
+      );
+    }
+    return Container(
+      width: _ActivityOverviewStrip._markerSize,
+      height: _ActivityOverviewStrip._markerSize,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.workout,
+      ),
+      child: Icon(
+        exerciseTypeIcon(activity.exerciseType),
+        size: 22,
+        color: Colors.white,
+      ),
+    );
+  }
 }
 
 List<_Bucket> _buckets(List<ActivityOverviewDay> days, TimeRange range) {
@@ -812,6 +925,16 @@ class _ActivityPeriodSummaryCardState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // The week strip: one marker per day, filled with the workout's own
+              // icon on the days you trained and left as an empty ring on the days
+              // you did not. Week only — a month of 31 rings says nothing, which is
+              // why Kotlin gated it on WEEK too (`stripBuckets`).
+              if (_stripBuckets(widget.days, widget.state.selectedRange)
+                  case final stripBuckets when stripBuckets.isNotEmpty)
+                _ActivityOverviewStrip(
+                  buckets: stripBuckets,
+                  selectedRange: widget.state.selectedRange,
+                ),
               if (workouts.isEmpty)
                 if (widget.showEmptyState)
                   Padding(
