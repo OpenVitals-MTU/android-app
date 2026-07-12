@@ -22,8 +22,8 @@ Legend: `—` not started · `~` in progress · `x` done · `n/a` not applicable
 | 7 | DI split with barrel export | x |
 | 8 | Offline map import → Result + CommandState | x |
 | 9 | ActivityEntry controller → ViewModel | x |
-| 10 | Recording service/VM split | ~ |
-| 11 | Closeout (docs, bridge audit) | ~ |
+| 10 | Recording service/VM split | x |
+| 11 | Closeout (docs, bridge audit) | x |
 
 ## Feature matrix
 
@@ -32,21 +32,34 @@ All 21 features now have: the `application/` + `presentation/` layout,
 precomputed in the view-model, a freezed state, and a view-model unit test.
 **Complete** — the only open items are the two below.
 
-## Still open
+## Status: complete
 
-- **Recording (Phase 10).** `activity_recording_controller.dart` — the
-  foreground service, its notification comm port, and process-death draft
-  recovery. Being split into a byte-identical `ActivityRecordingService` plus a
-  thin view-model. **Needs on-device verification before it ships**: start →
-  background → lock → notification pause/resume → process-death recovery →
-  stop/save → entry appears.
-- **BLE repository contract.** Features still import
-  `data/source/sensors/ble/` directly — `dashboard_sensor_status.dart`,
-  `settings/application/ble_devices_view_model.dart`,
-  `manualentry/activity/activity_entry_providers.dart`, and the recording
-  controller. The BLE stack has no `contract/` type wrapping
-  `BleSensorCoordinator`. Deferred behind Phase 10, because the recording
-  controller is one of its four consumers and both would have to move together.
+All eleven phases are done, and the two items that could not be closed by a
+test suite are closed:
+
+- **Recording** was verified by hand on a Pixel 6 Pro (2026-07-12): GPS start,
+  backgrounding, screen lock, the notification's pause/resume through the
+  communication port, process-death recovery mid-run, and stop/save. This was
+  the reason `ActivityRecordingService` is a byte-for-byte copy of the old
+  controller rather than a rewrite — there is no harness for any of it.
+- **BLE** now has a `contract/ble_sensor_repository.dart`; no feature imports
+  `data/source/sensors/ble/` any more.
+
+Conformance, measured rather than asserted:
+
+| | |
+|---|---|
+| widgets holding a repository | 0 |
+| `*Notifier`-suffixed classes in features | 0 |
+| feature files naming `HealthConnectNativeDataSource` | 0 |
+| imperative controller islands (`ValueNotifier`/`ChangeNotifier` state) | 0 |
+| features with `application/` + `presentation/` | all (`homewidgets` excepted by design — isolate glue, no view-model) |
+| features with a pure display builder | 21 |
+| repository contracts returning `Result` | 13 of 15 (2 are synchronous cache reads by design) |
+
+The five feature files still importing `data/source/` are the background
+isolates, naming the `HealthDataSource` *type* they receive from
+`openBackgroundHealthAccess()`. That is the intended shape.
 
 ## Bridges — audited, deliberately NOT deleted
 
