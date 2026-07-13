@@ -115,7 +115,11 @@ void main() {
   //
   // (Spanish reached 100% and this test broke by requiring the key to be absent
   // from all four locales. That was too strict: completing a translation is not a
-  // regression.)
+  // regression. Then de/es/et/it ALL reached 100% and it broke again, because the
+  // locale list was hard-coded to exactly those four and gl -- the one locale
+  // still partial -- was never consulted. So the list is no longer hard-coded:
+  // every app_*.arb on disk is a candidate, and a new partial locale keeps the
+  // fallback provable without anyone having to remember to add it here.)
   //
   // If a future Flutter changes `_generateBaseClassFile` so a missing message no
   // longer falls back to the template, this fails loudly instead of the app
@@ -129,7 +133,17 @@ void main() {
     final en = await AppLocalizations.delegate.load(const Locale('en'));
     final proving = <String>[];
 
-    for (final code in <String>['de', 'es', 'it', 'et']) {
+    final codes = Directory('lib/l10n')
+        .listSync()
+        .whereType<File>()
+        .map((f) => f.uri.pathSegments.last)
+        .where((n) => n.startsWith('app_') && n.endsWith('.arb'))
+        .map((n) => n.substring('app_'.length, n.length - '.arb'.length))
+        .where((c) => c != 'en')
+        .toList()
+      ..sort();
+
+    for (final code in codes) {
       final arb = jsonDecode(
         await File('lib/l10n/app_$code.arb').readAsString(),
       ) as Map<String, dynamic>;
@@ -156,10 +170,10 @@ void main() {
     expect(
       proving,
       isNotEmpty,
-      reason: 'Every locale now translates "$sentinelKey", so it can no longer '
-          'demonstrate the template fallback. Point this test at a key that is '
-          'still untranslated somewhere -- see the "N untranslated message(s)" '
-          'lines that `flutter gen-l10n` prints.',
+      reason: 'Every locale in $codes now translates "$sentinelKey", so it can '
+          'no longer demonstrate the template fallback. Point this test at a key '
+          'that is still untranslated somewhere -- see the "N untranslated '
+          'message(s)" lines that `flutter gen-l10n` prints.',
     );
   });
 }
