@@ -64,8 +64,9 @@ class ChartTokens extends ThemeExtension<ChartTokens> {
   /// object sitting behind the chart, where a tinted one reads as part of it.
   Color grid(Color accent) => accent.withValues(alpha: 0.12);
 
-  /// The wash under a line. (Phase B replaces the flat fill with a gradient; it
-  /// stays a function of the accent, so nothing else has to change.)
+  /// The wash under a line, where a FLAT colour is still what is wanted (a legend
+  /// swatch, a heatmap cell). The line charts themselves now fade it to nothing at
+  /// the baseline — see `chartAreaGradient`.
   Color areaFill(Color accent) => accent.withValues(alpha: 0.12);
 
   /// The line a chart sits ON — heavier than a grid line, lighter than the trace.

@@ -45,10 +45,28 @@ Paint chartLinePaint(Color accent, {double strokeWidth = kChartLineStroke}) =>
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-/// The wash under a data line.
+/// The wash under a data line: the accent, fading to nothing at the baseline.
 ///
-/// A flat alpha today, and a single place for Phase B to make it a gradient — at
-/// which point every line chart in the app gains one, and none of them has to
-/// know.
-Paint chartFillPaint(Color accent, ChartTokens tokens) =>
-    Paint()..color = tokens.areaFill(accent);
+/// A flat block of colour under a line reads as a second object — a coloured
+/// rectangle that happens to have a curved lid. A gradient reads as what it is:
+/// the line, and the space it encloses, which is why every chart drawn in the last
+/// decade does this. It is also the honest shape, because the fill means "under
+/// here", and the further under you go the less it is telling you.
+Shader chartAreaGradient(
+  Rect bounds,
+  Color accent, {
+  double topAlpha = 0.26,
+  double bottomAlpha = 0.0,
+}) =>
+    LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        accent.withValues(alpha: topAlpha),
+        accent.withValues(alpha: bottomAlpha),
+      ],
+    ).createShader(bounds);
+
+/// The wash under a data line.
+Paint chartFillPaint(Color accent, Rect bounds) =>
+    Paint()..shader = chartAreaGradient(bounds, accent);

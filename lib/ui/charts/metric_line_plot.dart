@@ -184,9 +184,13 @@ class _MetricLinePlotPainter extends CustomPainter {
       ..lineTo(offsets.last.dx, size.height)
       ..lineTo(first.dx, size.height)
       ..close();
+    // Gradient, not a flat block: a solid wash under a line reads as a second
+    // object — a coloured rectangle with a curved lid — where a fade reads as the
+    // line and the space it encloses. It is the honest shape too, because the fill
+    // says "under here", and the further under you go the less it is saying.
     canvas.drawPath(
       fill,
-      Paint()..color = accentColor.withValues(alpha: 0.12),
+      chartFillPaint(accentColor, Offset.zero & size),
     );
     canvas.drawPath(
       path,
