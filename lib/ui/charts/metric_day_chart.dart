@@ -119,6 +119,15 @@ class MetricDayChart extends StatelessWidget {
                 drawPoints: drawPoints,
                 pointRadius: pointRadius,
                 lineStrokeWidth: lineStrokeWidth,
+                // Drag along the chart and it tells you the reading and the hour
+                // it was taken. The number was always in the data and never on the
+                // screen; the only way to ask "how much, and when?" was to squint
+                // between two axis labels.
+                scrubLabelBuilder: (point) => (
+                  valueFormatter(point.value),
+                  TimeOfDay.fromDateTime(axis.timeAt(point.xFraction))
+                      .format(context),
+                ),
               ),
               const SizedBox(height: 8),
               const DayAxisLabels(),

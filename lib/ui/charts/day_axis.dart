@@ -49,6 +49,14 @@ class DayAxis {
   double fractionOf(DateTime time) =>
       time.toLocal().difference(start).inMilliseconds.clamp(0, _dayMs) / _dayMs;
 
+  /// The inverse of [fractionOf]: what time it was, that far across the day.
+  ///
+  /// The scrubber needs it — a finger lands on an x, and the chart has to say what
+  /// hour that was. Against the whole day, for the same reason [fractionOf] is.
+  DateTime timeAt(double fraction) => start.add(
+        Duration(milliseconds: (fraction.clamp(0.0, 1.0) * _dayMs).round()),
+      );
+
   /// Where the series should stop: now, if the day is still running.
   ///
   /// Not 1.0 for today. A line held out to the right edge at two in the afternoon

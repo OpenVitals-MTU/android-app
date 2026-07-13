@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'chart_axis.dart';
 import 'chart_curve.dart';
 import 'chart_paint.dart';
+import 'chart_scrubber.dart';
 
 /// Port of the Kotlin `MetricLinePlot`: a line drawn against a normalized x
 /// axis, for series whose points are not evenly spaced in time (the intraday
@@ -42,6 +43,7 @@ class MetricLinePlot extends StatelessWidget {
     this.drawPoints = false,
     this.guides = const <ChartGuideLine>[],
     this.markers = const <ChartMarker>[],
+    this.scrubLabelBuilder,
   });
 
   final List<MetricLinePlotPoint> points;
@@ -65,6 +67,12 @@ class MetricLinePlot extends StatelessWidget {
 
   /// Moments worth marking on the baseline. See [ChartMarker].
   final List<ChartMarker> markers;
+
+  /// Turns a sample into the two lines of a scrub tooltip: the VALUE, and what it
+  /// is a value OF (usually the time it was taken). Null leaves the chart inert —
+  /// which is what a chart with nothing to say about a single point should be.
+  final (String primary, String? secondary) Function(MetricLinePlotPoint point)?
+      scrubLabelBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -90,19 +98,47 @@ class MetricLinePlot extends StatelessWidget {
         safeMax,
         valueFormatter: valueFormatter,
       ),
-      chart: CustomPaint(
-        size: Size.infinite,
-        painter: _MetricLinePlotPainter(
-          points: points,
-          minValue: minValue,
-          maxValue: safeMax,
-          accentColor: accentColor,
-          guides: guides,
-          markers: markers,
-          strokeWidth: lineStrokeWidth,
-          pointRadius: drawPoints ? pointRadius : 0,
+      chart: _maybeScrubbable(
+        CustomPaint(
+          size: Size.infinite,
+          painter: _MetricLinePlotPainter(
+            points: points,
+            minValue: minValue,
+            maxValue: safeMax,
+            accentColor: accentColor,
+            guides: guides,
+            markers: markers,
+            strokeWidth: lineStrokeWidth,
+            pointRadius: drawPoints ? pointRadius : 0,
+          ),
         ),
       ),
+    );
+  }
+
+  /// Wraps the plot in a [ChartScrubber] when the caller said how to label a
+  /// sample, and returns it untouched otherwise.
+  Widget _maybeScrubbable(Widget plot) {
+    final builder = scrubLabelBuilder;
+    if (builder == null || points.length < 2) return plot;
+
+    final span = maxValue - minValue;
+    final safeSpan = span.abs() < 1e-9 ? 1.0 : span;
+    return ChartScrubber(
+      accentColor: accentColor,
+      targets: [
+        for (final point in points)
+          () {
+            final (primary, secondary) = builder(point);
+            return (
+              xFraction: point.xFraction.clamp(0.0, 1.0),
+              yFraction: ((point.value - minValue) / safeSpan).clamp(0.0, 1.0),
+              primary: primary,
+              secondary: secondary,
+            );
+          }(),
+      ],
+      child: plot,
     );
   }
 }
