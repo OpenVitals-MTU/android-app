@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/charts/chart_paint.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -726,31 +727,16 @@ class _DistributionRow extends StatelessWidget {
     final scheme = theme.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 10),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(label, style: theme.textTheme.bodyMedium),
-              ),
-              Text(
-                value,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(3)),
-            child: LinearProgressIndicator(
-              value: fraction.clamp(0.0, 1.0),
-              minHeight: 6,
-              backgroundColor: scheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ],
+      child: ChartBarRow(
+        fraction: fraction,
+        color: color,
+        height: 6,
+        radius: 3,
+        label: Text(label),
+        labelStyle: theme.textTheme.bodyMedium,
+        trailing: Text(value),
+        trailingStyle: theme.textTheme.bodySmall
+            ?.copyWith(color: scheme.onSurfaceVariant),
       ),
     );
   }

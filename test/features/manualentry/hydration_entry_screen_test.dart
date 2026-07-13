@@ -19,6 +19,7 @@ import 'package:openvitals/features/manualentry/presentation/hydration_catalog_w
 import 'package:openvitals/features/manualentry/presentation/hydration_entry_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/state/app_providers.dart';
+import 'package:openvitals/ui/charts/chart_bar_row.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 
 
@@ -495,7 +496,7 @@ void main() {
     expect(find.byType(HydrationTodayCounter), findsOneWidget);
     // "<today> / <goal>", in whatever unit system the formatter is on.
     expect(find.textContaining(' / '), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.byType(ChartBarRow), findsOneWidget);
   });
 
   testWidgets('category sections start collapsed and expand on tap',

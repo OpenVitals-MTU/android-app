@@ -5,6 +5,7 @@ import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/caffeine_models.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'hydration_catalog.dart';
 import 'hydration_drink_dialogs.dart';
@@ -17,7 +18,7 @@ const double _rowHeight = 76;
 /// Kotlin `HydrationTodayCounter`.
 ///
 /// Compose uses a `LinearWavyProgressIndicator`; Flutter has no wavy indicator,
-/// so this draws a rounded [LinearProgressIndicator] of the same height.
+/// so this draws a rounded [ChartBarRow] of the same height.
 class HydrationTodayCounter extends StatelessWidget {
   const HydrationTodayCounter({
     super.key,
@@ -57,14 +58,15 @@ class HydrationTodayCounter extends StatelessWidget {
           TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0, end: progress.toDouble()),
             duration: const Duration(milliseconds: 650),
-            builder: (context, value, _) => ClipRRect(
-              borderRadius: BorderRadius.circular(9),
-              child: LinearProgressIndicator(
-                value: value,
-                minHeight: 18,
-                color: AppColors.hydration.withValues(alpha: 0.86),
-                backgroundColor: scheme.outlineVariant,
-              ),
+            builder: (context, value, _) => ChartBarRow(
+              fraction: value,
+              color: AppColors.hydration.withValues(alpha: 0.86),
+              // The one bar in the app that sits ON `surfaceContainerHighest` (the
+              // counter's own container), so its track has to be darker than the
+              // track every other bar uses, or it would be invisible.
+              trackColor: scheme.outlineVariant,
+              height: 18,
+              radius: 9,
             ),
           ),
         ],

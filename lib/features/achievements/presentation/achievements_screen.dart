@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/components/loading_state.dart';
 
 import '../../../core/presentation/screen_error.dart';
@@ -169,12 +170,18 @@ class AchievementSummaryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: state.completionRatio,
-                minHeight: 8,
-              ),
+            ChartBarRow(
+              fraction: state.completionRatio,
+              color: theme.colorScheme.primary,
+              // This one bar took its colours from LinearProgressIndicator's M3
+              // defaults rather than naming them, and that track is
+              // `secondaryContainer` — not the `surfaceContainerHighest` every
+              // other bar in the app uses. Named, not changed: retinting it is a
+              // design decision with a golden diff behind it, not a side effect of
+              // deleting a widget.
+              trackColor: theme.colorScheme.secondaryContainer,
+              height: 8,
+              radius: 8,
             ),
             const SizedBox(height: 12),
             Text(
@@ -370,14 +377,11 @@ class AchievementBadgeCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress.progressRatio.clamp(0.0, 1.0),
-                minHeight: 8,
-                color: color,
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              ),
+            ChartBarRow(
+              fraction: progress.progressRatio,
+              color: color,
+              height: 8,
+              radius: 8,
             ),
             const SizedBox(height: 8),
             Row(

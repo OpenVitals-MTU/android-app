@@ -4,6 +4,7 @@ import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/insights/activity_splits.dart';
 import '../../../domain/preferences/unit_system.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'activity_split_distance_label.dart';
@@ -308,18 +309,14 @@ class _PaceBar extends StatelessWidget {
         ? 1.0
         : minFraction + (1 - minFraction) * ((pace - fastest) / span);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(3),
-      child: LinearProgressIndicator(
-        value: fraction.clamp(minFraction, 1.0),
-        minHeight: 6,
-        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          fasterThanAverage
-              ? AppColors.workout
-              : theme.colorScheme.primary.withValues(alpha: 0.55),
-        ),
-      ),
+    return ChartBarRow(
+      fraction: fraction,
+      minFraction: minFraction,
+      color: fasterThanAverage
+          ? AppColors.workout
+          : theme.colorScheme.primary.withValues(alpha: 0.55),
+      height: 6,
+      radius: 3,
     );
   }
 }

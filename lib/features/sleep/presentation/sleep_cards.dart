@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/theme/chart_colors.dart';
 
 import '../../../core/presentation/unit_formatter.dart';
@@ -262,45 +263,20 @@ class _StageRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        SizedBox(width: 60, child: Text(label, style: theme.textTheme.bodyMedium)),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(5)),
-            child: SizedBox(
-              height: 10,
-              child: Stack(
-                children: [
-                  Positioned.fill(child: ColoredBox(color: trackColor)),
-                  // Positioned.fill, not a bare child: a non-positioned Stack child
-                  // gets LOOSE constraints, and a childless ColoredBox collapses to
-                  // zero height under them — so the fill was painted 0px tall and
-                  // every bar rendered as an empty grey track, while the durations
-                  // and percentages beside it were perfectly correct.
-                  //
-                  // centerLeft, because FractionallySizedBox centres by default: the
-                  // bar has to grow from the left edge, as Kotlin's
-                  // `fillMaxWidth(fraction).fillMaxHeight()` Box did.
-                  Positioned.fill(
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: fraction,
-                      child: ColoredBox(color: color),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          trailing,
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
-      ],
+    return ChartBarRow(
+      layout: ChartBarRowLayout.inline,
+      fraction: fraction,
+      color: color,
+      trackColor: trackColor,
+      labelWidth: 60,
+      gap: 12,
+      height: 10,
+      radius: 5,
+      label: Text(label),
+      labelStyle: theme.textTheme.bodyMedium,
+      trailing: Text(trailing),
+      trailingStyle: theme.textTheme.bodyMedium
+          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
     );
   }
 }

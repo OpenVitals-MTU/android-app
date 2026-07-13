@@ -22,6 +22,9 @@ import 'package:openvitals/features/sleep/application/sleep_display.dart';
 ///
 /// Nothing caught it because every existing sleep test asserted on the numbers,
 /// which were right the whole time. These assert on the PIXELS.
+///
+/// The card now draws its bars with [ChartBarRow], so these guard the primitive
+/// on the card's behalf — the loose-constraints trap is the same one either way.
 void main() {
   _timelineTests();
 
@@ -41,17 +44,17 @@ void main() {
         ),
       );
 
-  /// The coloured fills, i.e. every ColoredBox that is not the grey track.
+  /// The coloured fills, i.e. the box inside each bar's [FractionallySizedBox] —
+  /// which is the one part of the bar that is not the full-width grey track.
   List<Size> fillSizes(WidgetTester tester) {
-    final boxes = tester
-        .widgetList<ColoredBox>(find.byType(ColoredBox))
-        .toList(growable: false);
-    final sizes = <Size>[];
-    for (var i = 0; i < boxes.length; i++) {
-      final size = tester.getSize(find.byType(ColoredBox).at(i));
-      sizes.add(size);
-    }
-    return sizes;
+    final fills = find.descendant(
+      of: find.byType(FractionallySizedBox),
+      matching: find.byType(DecoratedBox),
+    );
+    final count = tester.widgetList<DecoratedBox>(fills).length;
+    return [
+      for (var i = 0; i < count; i++) tester.getSize(fills.at(i)),
+    ];
   }
 
   testWidgets('the stage fills are actually painted — non-zero HEIGHT',

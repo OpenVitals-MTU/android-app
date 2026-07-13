@@ -11,6 +11,7 @@ import '../../../domain/model/nutrition_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
+import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/charts/period_chart.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/metric_card.dart';
@@ -254,16 +255,11 @@ class _HydrationGoalCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(6)),
-              child: LinearProgressIndicator(
-                value: progress.toDouble(),
-                minHeight: 10,
-                backgroundColor: scheme.surfaceContainerHighest,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.hydration,
-                ),
-              ),
+            ChartBarRow(
+              fraction: progress.toDouble(),
+              color: AppColors.hydration,
+              height: 10,
+              radius: 6,
             ),
           ],
         ),
@@ -305,43 +301,23 @@ class HydrationDrinkBreakdownCard extends StatelessWidget {
             for (final slice in slices)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            // A drink with no name of its own (another app's
-                            // plain water log) is "Beverage" — never its
-                            // originating package name.
-                            slice.label ??
-                                AppLocalizations.of(context)
-                                    .hydrationEntryNutritionOnly,
-                            style: theme.textTheme.bodyMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          formatter.hydration(slice.liters).text,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: const BorderRadius.all(Radius.circular(3)),
-                      child: LinearProgressIndicator(
-                        value: (slice.liters / max).clamp(0.0, 1.0),
-                        minHeight: 6,
-                        backgroundColor: scheme.surfaceContainerHighest,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.hydration,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: ChartBarRow(
+                  fraction: slice.liters / max,
+                  color: AppColors.hydration,
+                  height: 6,
+                  radius: 3,
+                  label: Text(
+                    // A drink with no name of its own (another app's plain water
+                    // log) is "Beverage" — never its originating package name.
+                    slice.label ??
+                        AppLocalizations.of(context).hydrationEntryNutritionOnly,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  labelStyle: theme.textTheme.bodyMedium,
+                  trailing: Text(formatter.hydration(slice.liters).text),
+                  trailingStyle: theme.textTheme.bodySmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
                 ),
               ),
           ],
