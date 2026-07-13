@@ -146,7 +146,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Import GPX/KML/KMZ file'));
+    await tester.tap(find.text('Import GPX/KML/KMZ/TCX file'));
     await tester.pumpAndSettle();
 
     final pending = container.read(pendingRouteImportProvider);
@@ -184,7 +184,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Bulk import GPX/KML/KMZ files'));
+    await tester.tap(find.text('Bulk import GPX/KML/KMZ/TCX files'));
     await tester.pumpAndSettle();
 
     expect(repo.writes.length, 2);
@@ -203,7 +203,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Bulk import GPX/KML/KMZ files'));
+    await tester.tap(find.text('Bulk import GPX/KML/KMZ/TCX files'));
     await tester.pumpAndSettle();
 
     // One good file writes; the bad one is counted as failed, not aborted.

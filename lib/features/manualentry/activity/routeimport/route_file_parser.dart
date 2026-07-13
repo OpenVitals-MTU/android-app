@@ -8,6 +8,7 @@ import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import 'fit_route_parser.dart';
 import 'gpx_kml_route_parser.dart';
+import 'tcx_route_parser.dart';
 
 /// Port of the Kotlin `RouteFileParser`, `RouteFileParsingCommon` and
 /// `RouteFileImport`. Pure Dart route-file parsing shared by the GPX / KML / KMZ
@@ -157,12 +158,20 @@ class RouteFileParser {
           routeText.toLowerCase().contains('<kml')) {
         return KmlRouteParser.parse(routeText, fileName: fileName);
       }
+      // Before the GPX fallback, and that ORDER is the fix. A TCX is XML, so it
+      // used to fall through to the GPX parser, which found no `trkpt` and threw
+      // "GPX route must contain at least 2 timestamped location points" — the
+      // message users reported when importing an indoor activity, on a file that
+      // was never a GPX and carried a perfectly complete session.
+      if (hasExtension(fileName, 'tcx') || TcxRouteParser.looksLikeTcx(routeText)) {
+        return TcxRouteParser.parse(routeText, fileName: fileName);
+      }
       return parse(routeText, fileName: fileName);
     } on RouteImportException {
       rethrow;
     } catch (_) {
       throw const RouteImportException(
-        'Activity file is not a valid GPX, KML, KMZ, or FIT file.',
+        'Activity file is not a valid GPX, KML, KMZ, TCX, or FIT file.',
       );
     }
   }

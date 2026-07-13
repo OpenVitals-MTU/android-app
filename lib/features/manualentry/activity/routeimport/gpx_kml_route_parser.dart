@@ -32,7 +32,15 @@ class GpxRouteParser {
     final routePoints = mutableToRoutePoints(mutablePoints);
     if (routePoints.length < minRoutePoints) {
       throw const RouteImportException(
-        'GPX route must contain at least 2 timestamped location points.',
+        // Says what to DO. A GPX is a list of places — its trackpoints REQUIRE a
+        // latitude and a longitude — so an indoor activity cannot be expressed in
+        // one, and this refusal used to read as though the file were corrupt when
+        // the file was simply the wrong format for what the user did. TCX and FIT
+        // both carry a session (duration, distance, calories) with no route at
+        // all, and the app now reads both.
+        'This GPX has no track: it needs at least 2 timestamped location '
+        'points. An indoor activity has no GPS, so export it as TCX or FIT '
+        'instead — those formats can carry a session with no route.',
       );
     }
     return buildRouteImport(
@@ -100,7 +108,7 @@ class KmlRouteParser {
     if (trackPoints.isNotEmpty) {
       if (trackPoints.length < minRoutePoints) {
         throw const RouteImportException(
-          'KML/KMZ gx:Track route must contain at least 2 timestamped location '
+          'This KML/KMZ has no gx:Track: it needs at least 2 timestamped location '
           'points.',
         );
       }

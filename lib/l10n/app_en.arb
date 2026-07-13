@@ -2441,8 +2441,8 @@
     }
   },
   "settingsAppleHealthImportPermissionDenied": "Access to the selected file was lost, so the import couldn't continue. Select the same Apple Health export again to pick up right where it left off.",
-  "settingsRouteImportTitle": "GPX/KML/KMZ Importer",
-  "settingsRouteImportBody": "Import GPX, KML, or KMZ route files. Review one file before saving, or bulk import multiple files directly into Health Connect.",
+  "settingsRouteImportTitle": "GPX/KML/KMZ/TCX Importer",
+  "settingsRouteImportBody": "Import GPX, KML, KMZ, or TCX activity files. TCX carries indoor activities that have no GPS. Review one file before saving, or bulk import multiple files directly into Health Connect.",
   "settingsRouteImportPermissions": "{arg0}/{arg1} route import permissions granted.",
   "@settingsRouteImportPermissions": {
     "placeholders": {
@@ -2455,8 +2455,8 @@
     }
   },
   "settingsRouteImportGrant": "Grant route import permissions",
-  "settingsRouteImportAction": "Import GPX/KML/KMZ file",
-  "settingsRouteImportBulkAction": "Bulk import GPX/KML/KMZ files",
+  "settingsRouteImportAction": "Import GPX/KML/KMZ/TCX file",
+  "settingsRouteImportBulkAction": "Bulk import GPX/KML/KMZ/TCX files",
   "settingsRouteImporting": "Importing routes...",
   "settingsRouteImportProgress": "File {arg0}/{arg1}. Imported {arg2}, failed {arg3}.",
   "@settingsRouteImportProgress": {

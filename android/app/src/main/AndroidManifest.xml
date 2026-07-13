@@ -280,7 +280,7 @@
                  own dedicated configuration activity — see
                  HomeWidgetConfigureActivity.kt. -->
 
-            <!-- "Open with" / "Share" a route file (.gpx/.kml/.kmz/.fit) into the
+            <!-- "Open with" / "Share" a route file (.gpx/.kml/.kmz/.fit/.tcx) into the
                  activity-entry form. Mirrors the Kotlin manifest: one filter by
                  MIME type, one by filename suffix (many providers report route
                  files as `*/*` or octet-stream, so the suffix filter is the one
@@ -304,6 +304,8 @@
                 <data android:mimeType="application/vnd.garmin.fit" />
                 <data android:mimeType="application/fit" />
                 <data android:mimeType="application/x-fit" />
+                <data android:mimeType="application/vnd.garmin.tcx+xml" />
+                <data android:mimeType="application/tcx+xml" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -323,6 +325,8 @@
                 <data android:pathPattern="/.*\\.KMZ" />
                 <data android:pathPattern="/.*\\.fit" />
                 <data android:pathPattern="/.*\\.FIT" />
+                <data android:pathPattern="/.*\\.tcx" />
+                <data android:pathPattern="/.*\\.TCX" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -339,6 +343,8 @@
                 <data android:mimeType="application/vnd.garmin.fit" />
                 <data android:mimeType="application/fit" />
                 <data android:mimeType="application/x-fit" />
+                <data android:mimeType="application/vnd.garmin.tcx+xml" />
+                <data android:mimeType="application/tcx+xml" />
             </intent-filter>
         </activity>
 

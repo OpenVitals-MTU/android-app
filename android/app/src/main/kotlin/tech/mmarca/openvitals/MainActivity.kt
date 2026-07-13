@@ -168,7 +168,7 @@ class MainActivity : FlutterFragmentActivity() {
                 System.currentTimeMillis()
             },
         )
-        // "Open with" / "Share" of a .gpx/.kml/.kmz/.fit. Port of the Kotlin
+        // "Open with" / "Share" of a .gpx/.kml/.kmz/.fit/.tcx. Port of the Kotlin
         // `MainActivity.updateRouteImportRequest` + `ExternalRouteImportRequest`:
         // resolve the URI, read the bytes, and park them until Dart takes them
         // (exactly once). Dart drains this on launch and on every resume, which
@@ -625,8 +625,8 @@ class MainActivity : FlutterFragmentActivity() {
         const val MAX_FOLDER_DEPTH = 8
         const val MAX_FOLDER_FILES = 2000
 
-        /** The route formats the activity-entry form can parse (no TCX). */
-        val ROUTE_IMPORT_EXTENSIONS = listOf(".gpx", ".kml", ".kmz", ".fit")
+        /** The route formats the activity-entry form can parse. */
+        val ROUTE_IMPORT_EXTENSIONS = listOf(".gpx", ".kml", ".kmz", ".fit", ".tcx")
     }
 }
 
