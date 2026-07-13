@@ -36,16 +36,39 @@ class ChartEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final text = Text(
-      message,
-      style: theme.textTheme.bodyMedium
-          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+    final scheme = theme.colorScheme;
+
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Muted, and small. An empty state is the least important thing on the
+        // screen: it should be legible and then get out of the way, not sit there
+        // as a large grey exclamation about a day you simply did not log.
+        Icon(
+          Icons.show_chart,
+          size: 28,
+          color: scheme.onSurfaceVariant.withValues(alpha: 0.45),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+      ],
     );
-    if (height == null) return text;
+
+    if (height == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: content),
+      );
+    }
     return SizedBox(
       height: height,
       width: double.infinity,
-      child: Center(child: text),
+      child: Center(child: content),
     );
   }
 }
