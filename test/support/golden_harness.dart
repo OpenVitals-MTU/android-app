@@ -98,7 +98,20 @@ Future<void> expectChartGolden(
                 child: SingleChildScrollView(
                   child: RepaintBoundary(
                     key: _goldenKey,
-                    child: SizedBox(width: width, child: child),
+                    // Painted onto the theme's surface, not onto nothing.
+                    //
+                    // A chart paints no background of its own, so a RepaintBoundary
+                    // around one captures TRANSPARENT pixels wherever the chart did
+                    // not draw — and every image viewer in the world then composites
+                    // that over white. Which means the dark-mode goldens rendered as
+                    // dark ink on a WHITE page, and I read a correct dark-grey track
+                    // as a light-grey one and reported a dark-mode bug that did not
+                    // exist. A golden you cannot trust your eyes on is worse than no
+                    // golden: it invents work.
+                    child: ColoredBox(
+                      color: scheme.surface,
+                      child: SizedBox(width: width, child: child),
+                    ),
                   ),
                 ),
               ),
