@@ -20,7 +20,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # scripts/version-code.sh (a monotonic counter whose source of truth is this repo's
 # Codeberg release notes, NOT git). On Android this drives versionName/versionCode;
 # on iOS it drives CFBundleShortVersionString/CFBundleVersion.
-version: 2.0.4+107030357
+version: 2.1.0+107030359
 
 environment:
   sdk: ^3.12.0

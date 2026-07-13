@@ -1,5 +1,67 @@
 # Changelog
 
+## 2.1.0 - 2026-07-13
+
+### English
+
+- Import a whole folder of FIT files at once, instead of one file at a time. Pick the folder and every FIT file inside it is imported, including the ones in sub-folders where a watch buries them.
+- Indoor activities can now be imported. A treadmill run, a trainer ride, a strength session - files with no GPS in them - were refused as broken. They were not broken; they had no route, which is not the same thing.
+- Read TCX files, the format Strava and Garmin export an indoor activity as. The app could not open them at all.
+- A GPX with no locations in it now imports. The heart rate and the times were in the file all along.
+- An indoor bike ride imported as a run, because the exporter's name in the file name outvoted the sport the file itself recorded. A 27 km ride was saved as a run.
+- Stationary bike is now an activity type of its own, so a trainer ride is no longer saved as an outdoor one.
+- A GPX with a heart rate in it lost the heart rate on import, and arrived as a bare line on a map.
+- See the elevation profile of an activity: where you climbed, not just how much.
+- See a speed graph for an activity even when the device recorded no speed. It is rebuilt from the splits, one step per split, because that is the resolution those numbers really have.
+
+### Espanol
+
+- Importa una carpeta entera de archivos FIT de una vez, en lugar de uno por uno. Elige la carpeta y se importan todos los FIT que hay dentro, incluidos los de las subcarpetas donde los reloj es los esconden.
+- Ya se pueden importar las actividades de interior. Una carrera en cinta, una salida en rodillo, una sesion de fuerza - archivos sin GPS - se rechazaban como si estuvieran corruptos. No lo estaban: no tenian ruta, que no es lo mismo.
+- Lee archivos TCX, el formato en el que Strava y Garmin exportan una actividad de interior. La app no podia abrirlos.
+- Un GPX sin ubicaciones ya se importa. La frecuencia cardiaca y las horas estaban en el archivo desde el principio.
+- Una salida en bici de interior se importaba como carrera, porque el nombre del exportador en el nombre del archivo ganaba al deporte que el propio archivo habia grabado. Una salida de 27 km se guardaba como carrera.
+- La bici estatica es ahora un tipo de actividad propio, asi que una salida en rodillo ya no se guarda como una de exterior.
+- Un GPX con frecuencia cardiaca perdia esa frecuencia al importarlo y llegaba como una simple linea en el mapa.
+- Ve el perfil de desnivel de una actividad: donde subiste, no solo cuanto.
+- Ve un grafico de velocidad aunque el dispositivo no grabara ninguna. Se reconstruye a partir de los parciales, un escalon por parcial, porque esa es la resolucion que esos numeros tienen de verdad.
+
+### Deutsch
+
+- Importiere einen ganzen Ordner voller FIT-Dateien auf einmal statt einzeln. Waehle den Ordner, und jede FIT-Datei darin wird importiert, auch die in Unterordnern, in denen Uhren sie vergraben.
+- Aktivitaeten in Innenraeumen lassen sich jetzt importieren. Ein Laufband-Lauf, eine Rollentrainer-Fahrt, eine Krafteinheit - Dateien ohne GPS - wurden als defekt abgelehnt. Sie waren nicht defekt; sie hatten keine Route, was nicht dasselbe ist.
+- Liest TCX-Dateien, das Format, in dem Strava und Garmin eine Indoor-Aktivitaet exportieren. Die App konnte sie gar nicht oeffnen.
+- Eine GPX-Datei ohne Orte laesst sich jetzt importieren. Die Herzfrequenz und die Zeiten standen die ganze Zeit darin.
+- Eine Indoor-Radfahrt wurde als Lauf importiert, weil der Name des Exportprogramms im Dateinamen die Sportart uebertrumpfte, die die Datei selbst aufgezeichnet hatte. Eine 27-km-Fahrt wurde als Lauf gespeichert.
+- Der Heimtrainer ist jetzt eine eigene Aktivitaetsart, sodass eine Rollenfahrt nicht mehr als Fahrt im Freien gespeichert wird.
+- Eine GPX-Datei mit Herzfrequenz verlor diese beim Import und kam als blosse Linie auf der Karte an.
+- Sieh das Hoehenprofil einer Aktivitaet: wo du gestiegen bist, nicht nur wie viel.
+- Sieh ein Geschwindigkeitsdiagramm, auch wenn das Geraet keine Geschwindigkeit aufgezeichnet hat. Es wird aus den Zwischenzeiten neu gebaut, eine Stufe pro Abschnitt, denn das ist die Aufloesung, die diese Zahlen wirklich haben.
+
+### Italiano
+
+- Importa un'intera cartella di file FIT in una volta sola, invece di uno alla volta. Scegli la cartella e viene importato ogni file FIT al suo interno, anche quelli nelle sottocartelle in cui gli orologi li seppelliscono.
+- Ora si possono importare le attivita al chiuso. Una corsa sul tapis roulant, un'uscita sui rulli, una sessione di forza - file senza GPS - venivano rifiutati come rotti. Non erano rotti: non avevano un percorso, che non e la stessa cosa.
+- Legge i file TCX, il formato in cui Strava e Garmin esportano un'attivita al chiuso. L'app non riusciva ad aprirli.
+- Un GPX senza posizioni ora si importa. La frequenza cardiaca e gli orari erano nel file fin dall'inizio.
+- Un'uscita in bici al chiuso veniva importata come corsa, perche il nome dell'esportatore nel nome del file batteva lo sport che il file stesso aveva registrato. Un'uscita di 27 km veniva salvata come corsa.
+- La cyclette e ora un tipo di attivita a se, cosi un'uscita sui rulli non viene piu salvata come una all'aperto.
+- Un GPX con la frequenza cardiaca la perdeva durante l'importazione e arrivava come una semplice linea sulla mappa.
+- Guarda il profilo altimetrico di un'attivita: dove sei salito, non solo quanto.
+- Guarda un grafico della velocita anche quando il dispositivo non ne ha registrata nessuna. Viene ricostruito dai parziali, un gradino per parziale, perche quella e la risoluzione che quei numeri hanno davvero.
+
+### Eesti
+
+- Impordi korraga terve kaust FIT-faile, mitte uks fail korraga. Vali kaust ja koik selles olevad FIT-failid imporditakse, ka need alamkaustades, kuhu kellad need peidavad.
+- Nuud saab importida ka siseruumide treeninguid. Jooksulindil jooks, rullidel soit, jouetreening - GPS-ita failid - lukati tagasi kui katkised. Need ei olnud katkised: neil polnud marsruuti, mis ei ole sama asi.
+- Loeb TCX-faile ehk vormingut, milles Strava ja Garmin siseruumide treeninguid ekspordivad. Rakendus ei suutnud neid uldse avada.
+- Asukohtadeta GPX-fail imporditakse nuud. Pulss ja kellaajad olid failis kogu aeg olemas.
+- Siseruumis tehtud rattasoit imporditi jooksuna, sest eksportija nimi failinimes kaalus ules spordiala, mille fail ise oli salvestanud. 27 km soit salvestati jooksuna.
+- Statsionaarne ratas on nuud omaette treeningutuup, nii et rullidel soitu ei salvestata enam ouesoiduna.
+- Pulsiga GPX-fail kaotas importimisel pulsi ja joudis kohale pelga joonena kaardil.
+- Vaata treeningu korgusprofiili: kus sa tousid, mitte ainult kui palju.
+- Vaata kiirusegraafikut ka siis, kui seade kiirust ei salvestanud. See ehitatakse uuesti vaheaegadest, uks aste vaheaja kohta, sest just selline on nende numbrite tegelik tapsus.
+
 ## 2.0.4 - 2026-07-12
 
 ### English
