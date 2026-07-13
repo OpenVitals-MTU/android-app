@@ -1,5 +1,32 @@
 # Changelog
 
+## 2.2.1 - 2026-07-13
+
+### English
+
+- Google Play Services are gone from the app. The location plugin depended on Google's proprietary location library, and F-Droid will not build an app that carries it.
+- The app never used it. Route recording has always asked Android's own location manager for satellite fixes, because Google's fused provider mixes in network and wifi positions that are not the GPS readings a route is made of. Nothing about recording changes.
+
+### Espanol
+
+- Google Play Services ya no esta en la app. El plugin de ubicacion dependia de la libreria de ubicacion propietaria de Google, y F-Droid no compila una app que la lleve.
+- La app nunca la uso. La grabacion de rutas siempre ha pedido las posiciones por satelite al gestor de ubicacion de Android, porque el proveedor combinado de Google mezcla posiciones de red y wifi que no son las lecturas GPS de las que se compone una ruta. La grabacion no cambia en nada.
+
+### Deutsch
+
+- Google Play Services sind aus der App verschwunden. Das Standort-Plugin haengte an Googles proprietaerer Standortbibliothek, und F-Droid baut keine App, die sie mitbringt.
+- Die App hat sie nie benutzt. Die Routenaufzeichnung fragt seit jeher direkt den Standortdienst von Android nach Satellitenpositionen, weil Googles kombinierter Anbieter Netz- und WLAN-Positionen untermischt, die nicht die GPS-Messungen sind, aus denen eine Route besteht. An der Aufzeichnung aendert sich nichts.
+
+### Italiano
+
+- Google Play Services non sono piu nell'app. Il plugin di posizione dipendeva dalla libreria di posizione proprietaria di Google, e F-Droid non compila un'app che la contiene.
+- L'app non l'ha mai usata. La registrazione dei percorsi ha sempre chiesto le posizioni satellitari direttamente al gestore di posizione di Android, perche il provider combinato di Google mescola posizioni di rete e wifi che non sono le letture GPS di cui e fatto un percorso. La registrazione non cambia.
+
+### Eesti
+
+- Google Play Services on rakendusest kadunud. Asukoha lisandmoodul soltus Google'i omandiolisest asukohateegist ja F-Droid ei ehita rakendust, mis seda kaasa kannab.
+- Rakendus ei kasutanud seda kunagi. Raja salvestamine on alati kusinud satelliidipositsioone otse Androidi asukohahaldurilt, sest Google'i uhendatud pakkuja segab sekka vorgu- ja wifi-positsioone, mis ei ole need GPS-lugemid, millest rada koosneb. Salvestamises ei muutu midagi.
+
 ## 2.2.0 - 2026-07-13
 
 ### English
