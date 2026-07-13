@@ -5,27 +5,22 @@ import 'package:intl/intl.dart';
 
 import '../../core/period/time_range.dart';
 import '../../core/time/local_date.dart';
+import '../theme/chart_tokens.dart';
+
+// The plot's layout constants (kChartYAxisWidth / kChartAxisGap / kChartPlotInset)
+// live in `chart_tokens.dart` now, with the rest of the chart design tokens — and
+// were declared HERE as well, which is exactly the duplication this refactor exists
+// to remove. I put it there myself, in the commit that created the tokens. Exported
+// rather than moved-and-forgotten, so the dozen files importing them through this
+// one keep working.
+export '../theme/chart_tokens.dart'
+    show kChartYAxisWidth, kChartAxisGap, kChartPlotInset;
 
 /// Hand-rolled chart axis primitives, ported from the Kotlin `ui/charts/
 /// ChartAxis.kt`. These are the shared building blocks the bar/line charts use
 /// to draw a Y-axis label column, horizontal guide lines, and the X-axis date
 /// strip. No third-party chart library is involved: every chart is a
 /// [CustomPainter] plus a thin [StatelessWidget] wrapper.
-
-/// Width of the leading Y-axis label column (matches Kotlin `ChartYAxisWidth`).
-const double kChartYAxisWidth = 56;
-
-/// Gap between the Y-axis label column and the plot (Kotlin `ChartAxisGap`).
-const double kChartAxisGap = 8;
-
-/// The total left inset of a plot that draws a Y axis — what an X-axis row
-/// underneath must start at to line up with it. [DayAxisLabels] applies this
-/// itself; [ChartXAxisWithYAxis] applies it to anything else.
-///
-/// Charts that reserve their gutter on the RIGHT instead (the sleep schedule
-/// chart, whose painter writes its stage labels there) are a deliberate
-/// exception, not an oversight: their plot starts at the left edge.
-const double kChartPlotInset = kChartYAxisWidth + kChartAxisGap;
 
 /// The y bounds of a plot.
 ///
@@ -149,8 +144,6 @@ class ChartXAxisWithYAxis extends StatelessWidget {
   }
 }
 
-/// Draws the horizontal guide lines and the leading vertical axis line inside a
-/// plot [Canvas]. Port of Kotlin `DrawScope.drawYAxisGuides`.
 /// Which edge a chart draws its axis line along.
 ///
 /// The library's charts draw it down the LEFT, beside the value labels. The

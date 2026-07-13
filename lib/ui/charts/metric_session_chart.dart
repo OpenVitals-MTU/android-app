@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/presentation/elapsed_format.dart';
 import '../../l10n/app_localizations.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
@@ -115,6 +116,13 @@ class MetricSessionChart extends StatelessWidget {
                     value: sample.value,
                   ),
               ],
+              // Drag it: the reading, and how far into the session it was taken.
+              // A session chart with no scrub is a chart that can tell you your
+              // heart hit 171 and never where.
+              scrubLabelBuilder: (point) => (
+                valueFormatter(point.value),
+                formatRecordingElapsed(axis.elapsedAt(point.xFraction)),
+              ),
               minValue: range.min,
               maxValue: range.max,
               accentColor: accentColor,

@@ -34,6 +34,12 @@ class SessionAxis {
   double fractionOf(DateTime time) =>
       time.difference(start).inMilliseconds.clamp(0, durationMs) / durationMs;
 
+  /// The inverse of [fractionOf]: how far into the session that x was. The
+  /// scrubber needs it — a finger lands on an x, and the chart has to say when
+  /// that was.
+  Duration elapsedAt(double fraction) =>
+      Duration(milliseconds: (fraction.clamp(0.0, 1.0) * durationMs).round());
+
   /// Elapsed labels at the quarters: `0:00 … 15:00 … 30:00 … 45:00 … 1:00:00`.
   /// Kotlin `sessionElapsedLabels`.
   List<String> get elapsedLabels => [

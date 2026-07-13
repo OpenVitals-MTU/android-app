@@ -331,6 +331,15 @@ class CaffeineCurveCard extends StatelessWidget {
                 maxValue: home.curveMaxMg,
                 accentColor: scheme.primary,
                 valueFormatter: (value) => _formatMg(value, formatter),
+                // Drag it: how much caffeine was still in you, and at what hour.
+                // That is the only question this chart exists to answer, and until
+                // now the answer was "somewhere between those two gridlines".
+                scrubLabelBuilder: (point) => (
+                  _formatMg(point.value, formatter),
+                  TimeOfDay.fromDateTime(
+                    _curveTimeAt(point.xFraction, points).toLocal(),
+                  ).format(context),
+                ),
                 // The line you are trying to be under by bedtime. Dashed, because
                 // it is a rule, not a reading.
                 guides: [
@@ -371,6 +380,13 @@ class CaffeineCurveCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The inverse of [_curveFraction]: what time it was, that far along the curve.
+DateTime _curveTimeAt(double fraction, List<CaffeinePoint> points) {
+  final start = points.first.time;
+  final span = points.last.time.difference(start);
+  return start.add(span * fraction.clamp(0.0, 1.0));
 }
 
 /// Where a moment sits across the curve's own window, as a fraction. The window

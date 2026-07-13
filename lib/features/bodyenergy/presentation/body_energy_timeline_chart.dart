@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/insights/body_energy_timeline.dart';
-import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/chart_curve.dart';
 import '../../../ui/charts/day_axis.dart';
+import '../../../ui/charts/metric_line_plot.dart';
 import '../../../ui/theme/chart_colors.dart';
 import '../../../ui/theme/chart_tokens.dart';
 import '../application/body_energy_display.dart';
@@ -35,34 +35,52 @@ class BodyEnergyTimelineChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 172,
-          child: CustomPaint(
-            painter: _LinePainter(
-              points: points,
-              lineColor: scheme.primary,
-              gridColor: scheme.primary.withValues(alpha: 0.12),
-              axisColor: scheme.outlineVariant.withValues(alpha: 0.8),
-            ),
+        // The shared plot, at last. This chart was drawing its own line, with its
+        // own spline, its own grid and no y axis at all — a 0-to-100 score with no
+        // scale beside it, which is a number you cannot read. It now gets what
+        // every other line in the app gets: a scale, a gradient, a reveal, and a
+        // finger you can drag along it.
+        MetricLinePlot(
+          points: [
+            for (final point in _dampened(points))
+              MetricLinePlotPoint(xFraction: point.dx, value: point.dy),
+          ],
+          // A score DEFINED as 0 to 100. Not `ChartRange.padded`: padding it would
+          // invent headroom above a ceiling and depth below a floor.
+          minValue: 0,
+          maxValue: 100,
+          accentColor: scheme.primary,
+          chartHeight: kChartHeightBodyEnergy,
+          lineStrokeWidth: 2.5,
+          valueFormatter: (value) => value.round().toString(),
+          scrubLabelBuilder: (point) => (
+            point.value.round().toString(),
+            _clockAt(point.xFraction, context),
           ),
         ),
         const SizedBox(height: 6),
-        SizedBox(
-          height: 44,
-          child: CustomPaint(
-            painter: _InfluenceBarsPainter(
+        // Inset to match the plot above. The line's x, the bar's x and the hour
+        // row's 12:00 all have to come from the same fraction of the same day — if
+        // one drifts, the card says the workout happened at a time it did not.
+        Padding(
+          padding: const EdgeInsets.only(left: kChartPlotInset),
+          child: SizedBox(
+            height: kChartHeightInfluenceStrip,
+            child: CustomPaint(
+              painter: _InfluenceBarsPainter(
               bars: influenceBars,
               maxMagnitude: maxMagnitude,
               axisColor: scheme.outlineVariant.withValues(alpha: 0.8),
               noDataColor: scheme.outline.withValues(alpha: 0.36),
-              colorFor: (influence) => influenceColor(influence, scheme),
+                colorFor: (influence) => influenceColor(influence, scheme),
+              ),
             ),
           ),
         ),
         const SizedBox(height: 6),
-        // inset: 0 — these painters draw no y-axis label column, so the plot starts
-        // at the card's edge and the hour row must too.
-        const DayAxisLabels(inset: 0),
+        // The plot NOW has a y-axis label column, so the hour row insets to match
+        // it — it used to be 0 precisely because the old painters had no gutter.
+        const DayAxisLabels(),
       ],
     );
   }
@@ -70,85 +88,23 @@ class BodyEnergyTimelineChart extends StatelessWidget {
 
 /// The accent colour for a Body Energy influence (port of the Kotlin
 /// `bodyEnergyInfluenceColor`).
-class _LinePainter extends CustomPainter {
-  _LinePainter({
-    required this.points,
-    required this.lineColor,
-    required this.gridColor,
-    required this.axisColor,
-  });
-
-  final List<BodyEnergyChartPoint> points;
-  final Color lineColor;
-  final Color gridColor;
-  final Color axisColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Five guides — 0/25/50/75/100 — and the axis along the BOTTOM: a score out
-    // of a hundred wants a floor, not a scale down its side. Both of those used
-    // to be a hand-rolled loop here, beside an identical one in the library.
-    drawYAxisGuides(
-      canvas,
-      size,
-      gridColor: gridColor,
-      axisColor: axisColor,
-      lineCount: 5,
-      axisLine: ChartAxisLine.baseline,
+/// The score is an integer sampled per bucket, so the raw series is a staircase.
+/// [movingAverageY] damps it before the curve is drawn — a DATA decision, and one
+/// that has to survive the move onto the shared plot, or the line goes back to
+/// tracing the steps.
+List<Offset> _dampened(List<BodyEnergyChartPoint> points) => movingAverageY(
+      [for (final point in points) Offset(point.xFraction, point.score)],
     );
-    if (points.isEmpty) return;
 
-    final rawPoints = [
-      for (final point in points)
-        Offset(
-          size.width * point.xFraction.clamp(0.0, 1.0),
-          size.height * (1.0 - (point.score / 100.0).clamp(0.0, 1.0)),
-        ),
-    ];
-    // Scores are integers (0..100) sampled per bucket, so the raw series is a
-    // staircase. Damp that quantization before splining, or the curve just traces
-    // the steps and reads as jagged.
-    final positioned = movingAverageY(rawPoints);
-
-    final linePaint = Paint()
-      ..color = lineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    if (positioned.length >= 3) {
-      // `smoothPath` — the library's monotone cubic — and not the Catmull-Rom
-      // this used to carry.
-      //
-      // That spline clamped its control points to [0, maxY], which is a confession:
-      // it overshoots. And clamping a CONTROL point does not even keep the rendered
-      // cubic inside the bounds — a Bézier can still bulge past a clamped handle,
-      // which is why this chart's own golden showed the trace leaving the top of
-      // the plot. On a score that is DEFINED as 0 to 100, a curve that climbs above
-      // 100, or dips below the lowest reading of the day, is not a smoothing
-      // artefact. It is a false statement about your body.
-      //
-      // Fritsch–Carlson cannot do it: where the data rises the curve rises, and it
-      // never leaves the interval its samples live in. The line becomes less swoopy.
-      // It also becomes true.
-      canvas.drawPath(smoothPath(positioned), linePaint);
-    } else {
-      final path = Path()..moveTo(positioned.first.dx, positioned.first.dy);
-      for (var i = 1; i < positioned.length; i++) {
-        path.lineTo(positioned[i].dx, positioned[i].dy);
-      }
-      canvas.drawPath(path, linePaint);
-    }
-    if (positioned.length <= 40) {
-      final pointPaint = Paint()..color = lineColor;
-      for (final offset in positioned) {
-        canvas.drawCircle(offset, 3, pointPaint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _LinePainter oldDelegate) => true;
+/// The clock time a fraction of the way through the day. The score points carry no
+/// timestamp of their own — only where they sit across the day — which is all the
+/// tooltip needs.
+String _clockAt(double fraction, BuildContext context) {
+  final minutes = (fraction.clamp(0.0, 1.0) * Duration.minutesPerDay).round();
+  return TimeOfDay(
+    hour: (minutes ~/ 60).clamp(0, 23),
+    minute: minutes % 60,
+  ).format(context);
 }
 
 class _InfluenceBarsPainter extends CustomPainter {
