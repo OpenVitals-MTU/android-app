@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.2.3 - 2026-07-13
+
+### English
+
+- Google's dependency blob is no longer stamped into the APK. Android's build tools attach a block to every APK they sign: a list of every library the app was built from, encrypted with a Google key so only the Play Store can read it. It survived the removal of Google Play Services because it is not a dependency — it is added at the moment of signing. It is gone. The bundle uploaded to Play keeps it, since that is the one place it is read.
+
+### Espanol
+
+- El bloque de dependencias de Google ya no se graba en el APK. Las herramientas de Android adjuntan a cada APK que firman una lista de todas las librerias con las que se compilo la app, cifrada con una clave de Google para que solo la Play Store pueda leerla. Sobrevivio a la retirada de Google Play Services porque no es una dependencia: se anade al firmar. Ya no esta. El paquete que se sube a Play si lo conserva, que es donde se lee.
+
+### Deutsch
+
+- Googles Abhaengigkeits-Block wird nicht mehr in das APK gestempelt. Androids Build-Werkzeuge haengen an jedes signierte APK einen Block: eine Liste aller Bibliotheken, mit denen die App gebaut wurde, verschluesselt mit einem Google-Schluessel, damit nur der Play Store sie lesen kann. Er ueberlebte das Entfernen der Google Play Services, weil er keine Abhaengigkeit ist: er wird beim Signieren angefuegt. Er ist weg. Das Bundle fuer Play behaelt ihn, denn dort wird er gelesen.
+
+### Italiano
+
+- Il blocco delle dipendenze di Google non viene piu impresso nell'APK. Gli strumenti di build di Android allegano a ogni APK che firmano un blocco: l'elenco di tutte le librerie con cui l'app e stata compilata, cifrato con una chiave Google perche solo il Play Store possa leggerlo. E sopravvissuto alla rimozione dei Google Play Services perche non e una dipendenza: viene aggiunto al momento della firma. Ora non c'e piu. Il bundle caricato su Play lo conserva, perche e li che viene letto.
+
+### Eesti
+
+- Google'i soltuvusplokki enam APK-sse ei margita. Androidi ehitustooriistad lisavad igale allkirjastatud APK-le ploki: nimekirja koigist teekidest, millega rakendus ehitati, kruptituna Google'i votmega, et seda saaks lugeda ainult Play pood. See jai alles ka parast Google Play Servicesi eemaldamist, sest see pole soltuvus - see lisatakse allkirjastamise hetkel. Nuud on see kadunud. Play'sse laaditav pakett sailitab selle, sest seal seda loetakse.
+
 ## 2.2.2 - 2026-07-13
 
 ### English
