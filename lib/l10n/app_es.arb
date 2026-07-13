@@ -1808,6 +1808,6 @@
     "activitySpeedPerLapTitle": "Velocidad · por vuelta",
     "settingsFitImportFolderScanning": "Buscando archivos FIT…",
     "settingsFitImportFolderAction": "Importar una carpeta de archivos FIT",
-    "caffeineCurveEmpty": "No hay cafeína que modelar.",
-    "activitySpeedSplitsLabel": "Parciales"
+    "caffeineCurveEmpty": "No incluir la cafeína en el modelo.",
+    "activitySpeedSplitsLabel": "Separaciones"
 }
