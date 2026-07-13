@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../ui/theme/chart_colors.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -12,29 +13,10 @@ import '../../../l10n/app_localizations.dart';
 /// Its own file because BOTH the day card (`sleep_cards.dart`) and the sleep
 /// detail screen draw the same chart, and each owned half of what it needs — the
 /// colour lived beside the cards, the label beside the detail screen. Sharing the
-/// chart between them without this would have been a circular import.
-
-/// The stage accent colours, ported from the Kotlin `stageColor(...)`.
-Color sleepStageColor(int stageType) {
-  switch (stageType) {
-    case SleepStage.stageAwake:
-      return const Color(0xFFF48FB1);
-    case SleepStage.stageLight:
-      return const Color(0xFF8AB4F8);
-    case SleepStage.stageDeep:
-      return const Color(0xFF8E63CE);
-    case SleepStage.stageRem:
-      return const Color(0xFFB3E5FC);
-    case SleepStage.stageAwakeInBed:
-      return const Color(0xFFF8A6C6);
-    case SleepStage.stageSleeping:
-      return const Color(0xFF7EA7F5);
-    case SleepStage.stageOutOfBed:
-      return const Color(0xFFEF9A9A);
-    default:
-      return const Color(0xFF90A4AE);
-  }
-}
+/// chart between them without this would have been a circular import. (The stage
+/// COLOURS have since moved to `ui/theme/chart_colors.dart`, where the rest of
+/// the app's data colours live; this file re-exports nothing and simply imports
+/// them like everyone else.)
 
 /// The per-type stage label, port of the Kotlin `sleepStageLabel` (unlike the
 /// grouped lane labels below, each Health Connect type keeps its own name here —

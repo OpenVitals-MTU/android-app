@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../ui/theme/chart_colors.dart';
 
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';

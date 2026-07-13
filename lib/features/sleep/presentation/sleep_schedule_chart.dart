@@ -9,7 +9,7 @@ import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/sleep_display.dart';
-import 'sleep_stage_chart.dart';
+import '../../../ui/theme/chart_colors.dart';
 
 /// Port of the Kotlin `SleepScheduleChart.kt`: a time-aligned, stage-coloured
 /// bar per night on a shared clock-time axis, for the week and month views.

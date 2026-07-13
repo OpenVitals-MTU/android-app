@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/insights/body_energy_timeline.dart';
 import '../../../ui/charts/day_axis.dart';
-import '../../../ui/theme/app_colors.dart';
+import '../../../ui/theme/chart_colors.dart';
 import '../application/body_energy_display.dart';
 
 /// The Body Energy day timeline: a smoothed 0-100 score line drawn by a
@@ -67,25 +67,6 @@ class BodyEnergyTimelineChart extends StatelessWidget {
 
 /// The accent colour for a Body Energy influence (port of the Kotlin
 /// `bodyEnergyInfluenceColor`).
-Color influenceColor(BodyEnergyPrimaryInfluence influence, ColorScheme scheme) {
-  switch (influence) {
-    case BodyEnergyPrimaryInfluence.sleepRecovery:
-      return AppColors.steps;
-    case BodyEnergyPrimaryInfluence.quietRest:
-      return AppColors.workout;
-    case BodyEnergyPrimaryInfluence.exertion:
-      return AppColors.calories;
-    case BodyEnergyPrimaryInfluence.elevatedHeartRate:
-      return AppColors.floors;
-    case BodyEnergyPrimaryInfluence.recoveryDebt:
-      return AppColors.heart;
-    case BodyEnergyPrimaryInfluence.noData:
-      return scheme.outline;
-    case BodyEnergyPrimaryInfluence.steady:
-      return scheme.onSurfaceVariant;
-  }
-}
-
 class _LinePainter extends CustomPainter {
   _LinePainter({
     required this.points,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../ui/theme/chart_colors.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';

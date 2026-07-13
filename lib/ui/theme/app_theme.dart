@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../domain/preferences/app_theme_mode.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
+import 'chart_tokens.dart';
 
 /// Material 3 theme, ported from the Kotlin `ui/theme/Theme.kt`.
 ///
@@ -128,5 +129,9 @@ class AppTheme {
           bodyColor: scheme.onSurface,
           displayColor: scheme.onSurface,
         ),
+        // How a chart looks, resolved from the scheme it is being shown in — and
+        // therefore correct under dynamic colour and AMOLED, which a hard-coded
+        // grey never was. Reach it with `ChartTokens.read(context)`.
+        extensions: <ThemeExtension<dynamic>>[ChartTokens.of(scheme)],
       );
 }
