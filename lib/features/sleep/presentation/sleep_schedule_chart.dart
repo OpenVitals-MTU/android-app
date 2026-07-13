@@ -6,6 +6,9 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
 import '../../../ui/charts/chart_axis.dart';
+import '../../../ui/charts/chart_paint.dart';
+import '../../../ui/charts/schedule_axis.dart';
+import '../../../ui/theme/chart_tokens.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/sleep_display.dart';
@@ -14,96 +17,20 @@ import '../../../ui/theme/chart_colors.dart';
 /// Port of the Kotlin `SleepScheduleChart.kt`: a time-aligned, stage-coloured
 /// bar per night on a shared clock-time axis, for the week and month views.
 
-/// Minute-of-day the vertical axis is anchored at (18:00), so a normal night —
-/// which straddles midnight — stays one contiguous bar.
-const int kAnchorMinuteOfDay = 18 * 60;
-const int kMinutesPerDay = 24 * 60;
+const double _chartHeight = kChartHeightSchedule;
 
-const double _chartHeight = 232;
 /// This chart reserves its label column on the RIGHT — the painter writes the hour
 /// scale there — so its plot starts at the card's left edge and its x-axis row is
 /// padded on the right instead. That is deliberate, not a forgotten
 /// `kChartPlotInset`: the charts built on `MetricLinePlot` put their value labels
 /// on the LEFT, so their axis rows inset from the left to match. Two conventions,
 /// each internally consistent; what is not allowed is a row that matches neither.
-const double _axisLabelWidth = 46;
+const double _axisLabelWidth = kChartRightAxisWidth;
 
 /// [SleepScheduleDay] and `toSleepScheduleDays` live in `application/
 /// sleep_display.dart`: the nights arrive precomputed and this file only paints
 /// them.
 
-/// Kotlin `Instant.anchoredMinutes`: minutes since the 18:00 anchor, in [0, 1440).
-double anchoredMinutes(DateTime time) {
-  final local = time.toLocal();
-  final minuteOfDay = local.hour * 60 + local.minute + local.second / 60.0;
-  return (minuteOfDay - kAnchorMinuteOfDay + kMinutesPerDay) % kMinutesPerDay;
-}
-
-/// Kotlin `Instant.normalizedEndMinutes`: anchored minutes for [value] measured
-/// from this night's [start], so a wake-up on the next calendar day stays
-/// monotonically after the bedtime instead of wrapping to the top of the chart.
-double normalizedEndMinutes(DateTime start, DateTime value) {
-  final startMinute = anchoredMinutes(start);
-  final valueMinute = anchoredMinutes(value);
-  return valueMinute < startMinute ? valueMinute + kMinutesPerDay : valueMinute;
-}
-
-/// Kotlin `minuteOfDayToAnchored`.
-double minuteOfDayToAnchored(int minuteOfDay) =>
-    ((minuteOfDay - kAnchorMinuteOfDay + kMinutesPerDay) % kMinutesPerDay)
-        .toDouble();
-
-/// Kotlin `anchoredMinuteToClock`.
-({int hour, int minute}) anchoredMinuteToClock(int anchoredMinute) {
-  final minuteOfDay =
-      ((kAnchorMinuteOfDay + anchoredMinute) % kMinutesPerDay + kMinutesPerDay) %
-          kMinutesPerDay;
-  return (hour: minuteOfDay ~/ 60, minute: minuteOfDay % 60);
-}
-
-/// Kotlin `ScheduleAxis`: the vertical range, in anchored minutes.
-@immutable
-class ScheduleAxis {
-  const ScheduleAxis({required this.min, required this.max});
-
-  final double min;
-  final double max;
-
-  double get span => math.max(1.0, max - min);
-
-  /// Whole-hour tick positions, thinned to two-hourly once the range is tall.
-  List<int> labelMinutes() {
-    final step = span > 8 * 60 ? 120 : 60;
-    final first = (min / step).ceil() * step;
-    final last = (max / step).floor() * step;
-    if (last < first) return [min.toInt()];
-    return [for (var minute = first; minute <= last; minute += step) minute];
-  }
-}
-
-/// Kotlin `scheduleAxisRange`. Null when no night has an in-bed window, which is
-/// the caller's signal to fall back to the duration bar chart.
-ScheduleAxis? scheduleAxisRange(List<SleepScheduleDay> days) {
-  var min = double.maxFinite;
-  var max = -double.maxFinite;
-  for (final day in days) {
-    final start = day.inBedStart;
-    final end = day.inBedEnd;
-    if (start == null || end == null) continue;
-    final startMinute = anchoredMinutes(start);
-    final endMinute = normalizedEndMinutes(start, end);
-    if (startMinute < min) min = startMinute;
-    if (endMinute > max) max = endMinute;
-  }
-  if (min == double.maxFinite || max <= min) return null;
-  // Pad to whole hours so the top and bottom gridlines frame the bars.
-  return ScheduleAxis(
-    min: (min / 60.0).floorToDouble() * 60.0,
-    max: (max / 60.0).ceilToDouble() * 60.0,
-  );
-}
-
-/// Kotlin `SleepScheduleStageChart`.
 class SleepScheduleStageChart extends StatelessWidget {
   const SleepScheduleStageChart({
     super.key,
@@ -374,7 +301,7 @@ class _ScheduleChartPainter extends CustomPainter {
 
     for (final (anchoredMinute, label) in averageMarkers) {
       final y = yFor(anchoredMinute);
-      _drawDashedLine(canvas, Offset(0, y), Offset(barsWidth, y), linePaint);
+      drawDashedLine(canvas, Offset(0, y), Offset(barsWidth, y), linePaint);
 
       final measured = _measure(label, chipStyle);
       const padH = 5.0;
@@ -394,23 +321,6 @@ class _ScheduleChartPainter extends CustomPainter {
 
   /// Flutter has no `PathEffect.dashPathEffect`, so the 8-on/6-off dash is
   /// stepped by hand.
-  void _drawDashedLine(Canvas canvas, Offset from, Offset to, Paint paint) {
-    const dash = 8.0;
-    const space = 6.0;
-    final total = (to - from).distance;
-    if (total <= 0) return;
-    final direction = (to - from) / total;
-    var travelled = 0.0;
-    while (travelled < total) {
-      final end = math.min(travelled + dash, total);
-      canvas.drawLine(
-        from + direction * travelled,
-        from + direction * end,
-        paint,
-      );
-      travelled = end + space;
-    }
-  }
 
   static DateTime _clampTime(DateTime value, DateTime low, DateTime high) {
     if (value.isBefore(low)) return low;

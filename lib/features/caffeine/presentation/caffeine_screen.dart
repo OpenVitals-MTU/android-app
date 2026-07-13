@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../ui/charts/chart_paint.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../core/presentation/screen_error.dart';
@@ -375,14 +376,16 @@ class _CaffeineCurvePainter extends CustomPainter {
     final thresholdPaint = Paint()
       ..color = thresholdColor.withValues(alpha: 0.45)
       ..strokeWidth = 2;
-    const dash = 6.0;
-    for (var x = 0.0; x < size.width; x += dash * 2) {
-      canvas.drawLine(
-        Offset(x, thresholdY),
-        Offset((x + dash).clamp(0.0, size.width), thresholdY),
-        thresholdPaint,
-      );
-    }
+    // 6-on/6-off, as it always was. (The sleep-schedule chart's marker line is
+    // 8/6; the two never met, so they never had to agree.)
+    drawDashedLine(
+      canvas,
+      Offset(0, thresholdY),
+      Offset(size.width, thresholdY),
+      thresholdPaint,
+      dash: 6,
+      gap: 6,
+    );
 
     // Active-caffeine curve.
     final path = Path();

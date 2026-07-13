@@ -6,6 +6,8 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
 import 'package:openvitals/features/sleep/application/sleep_display.dart';
 import 'package:openvitals/features/sleep/presentation/sleep_schedule_chart.dart';
+// The 18:00-anchored minute maths now lives with the other axes.
+import 'package:openvitals/ui/charts/schedule_axis.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// The schedule chart's axis is anchored at 18:00 so a night that crosses
