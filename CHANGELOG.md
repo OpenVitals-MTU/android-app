@@ -1,5 +1,32 @@
 # Changelog
 
+## 2.2.2 - 2026-07-13
+
+### English
+
+- The app now builds bit-for-bit identically on other computers. F-Droid rebuilds it from source and compares the result against the release published here, and only distributes the copy we signed if the two match.
+- Everything already matched except twenty bytes in one library: a build-id, a hash the linker stamps in, which quietly records the paths of the machine that did the build. It is no longer stamped, so the app you download is provably the one the source produces.
+
+### Espanol
+
+- La app ahora se compila de forma identica, bit a bit, en otros ordenadores. F-Droid la recompila desde el codigo y compara el resultado con la version publicada aqui; solo distribuye la copia que hemos firmado si ambas coinciden.
+- Todo coincidia ya salvo veinte bytes de una libreria: un build-id, un hash que estampa el enlazador y que en realidad guarda las rutas de la maquina que compilo. Ya no se estampa, asi que la app que descargas es demostrablemente la que produce el codigo.
+
+### Deutsch
+
+- Die App laesst sich jetzt auf anderen Rechnern Bit fuer Bit identisch bauen. F-Droid baut sie aus dem Quelltext nach und vergleicht das Ergebnis mit der hier veroeffentlichten Version; nur wenn beide uebereinstimmen, wird die von uns signierte Datei verteilt.
+- Alles stimmte bereits ueberein bis auf zwanzig Bytes in einer Bibliothek: eine Build-ID, ein Hash, den der Linker einstanzt und der die Pfade des bauenden Rechners festhaelt. Er wird nicht mehr eingestanzt, also ist die App, die du herunterlaedst, nachweislich die aus dem Quelltext.
+
+### Italiano
+
+- L'app ora si compila in modo identico, bit per bit, su altri computer. F-Droid la ricompila dal codice e confronta il risultato con la versione pubblicata qui, e distribuisce la copia che abbiamo firmato solo se le due coincidono.
+- Tutto coincideva gia tranne venti byte in una libreria: un build-id, un hash impresso dal linker che in realta registra i percorsi della macchina che ha compilato. Non viene piu impresso, quindi l'app che scarichi e dimostrabilmente quella prodotta dal codice.
+
+### Eesti
+
+- Rakendus ehitub nuud teistes arvutites bitihaaval identselt. F-Droid ehitab selle lahtekoodist uuesti ja vordleb tulemust siin avaldatud versiooniga ning levitab meie allkirjastatud koopiat ainult siis, kui need kattuvad.
+- Koik kattus juba peale kahekumne baidi uhes teegis: build-id, raakur loob selle rasi, mis salvestab tegelikult ehitanud masina asukohad. Seda enam ei lisata, nii et allalaaditav rakendus on toestatavalt see, mille lahtekood annab.
+
 ## 2.2.1 - 2026-07-13
 
 ### English
