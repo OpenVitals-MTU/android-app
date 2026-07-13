@@ -55,11 +55,22 @@ class MetricLinePlot extends StatelessWidget {
 
     return YAxisChart(
       chartHeight: chartHeight,
-      labels: [
-        valueFormatter(safeMax),
-        valueFormatter(minValue + (safeMax - minValue) / 2),
-        valueFormatter(minValue),
-      ],
+      // `chartYAxisLabels`, not three hand-rolled calls to the formatter — which
+      // is what this was, and it dropped the one thing that function is for.
+      //
+      // The compact formatter rounds anything over 10 to a whole number, so a
+      // narrow range collides: a weight chart across 74.06–74.64 kg asked for
+      // three ticks and got "75", "74", "74". Two of them the same number, at
+      // different heights, on an axis whose whole job is to say how high things
+      // are. `chartYAxisLabels` notices the collision and steps up to a precision
+      // that separates them — and `MetricLineChart` has been calling it all along,
+      // which is exactly why the heart charts never showed this and the day charts
+      // always could.
+      labels: chartYAxisLabels(
+        minValue,
+        safeMax,
+        valueFormatter: valueFormatter,
+      ),
       chart: CustomPaint(
         size: Size.infinite,
         painter: _MetricLinePlotPainter(
