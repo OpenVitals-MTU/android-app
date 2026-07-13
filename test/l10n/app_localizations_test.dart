@@ -66,25 +66,33 @@ void main() {
     });
   });
 
+  // The English template is OURS -- it changes when we change it, so pin it.
+  // The translations are the TRANSLATORS' -- they get reworded in Weblate without
+  // asking us, so pin only what we actually mean: the value is real, and it is not
+  // the English fallback. Pinning the exact wording just turns every reword into a
+  // red CI on the translator's own merge request.
   test('English and German load with distinct translations', () async {
     final en = await AppLocalizations.delegate.load(const Locale('en'));
     final de = await AppLocalizations.delegate.load(const Locale('de'));
 
     expect(en.settingsDisplayGroupTitle, 'Display');
-    expect(de.settingsDisplayGroupTitle, 'Anzeige');
-    // The whole point of wiring l10n: the German value is a real translation,
-    // not the English fallback.
+    expect(de.settingsDisplayGroupTitle, isNotEmpty);
     expect(de.settingsDisplayGroupTitle, isNot(en.settingsDisplayGroupTitle));
   });
 
   test('Spanish, Italian and Estonian also carry real translations', () async {
-    final es = await AppLocalizations.delegate.load(const Locale('es'));
-    final it = await AppLocalizations.delegate.load(const Locale('it'));
-    final et = await AppLocalizations.delegate.load(const Locale('et'));
+    final en = await AppLocalizations.delegate.load(const Locale('en'));
 
-    expect(es.screenSettings, 'Ajustes');
-    expect(it.screenSettings, 'Impostazioni');
-    expect(et.screenSettings, 'Seaded');
+    for (final code in <String>['es', 'it', 'et']) {
+      final l10n = await AppLocalizations.delegate.load(Locale(code));
+
+      expect(l10n.screenSettings, isNotEmpty, reason: '$code is blank');
+      expect(
+        l10n.screenSettings,
+        isNot(en.screenSettings),
+        reason: '$code fell through to the English template',
+      );
+    }
   });
 
   test('placeholder messages interpolate their arguments', () async {
