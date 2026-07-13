@@ -71,10 +71,7 @@ List<Widget> _content(
   return [
     if (error != null) ErrorMessage(error),
     if (state.isLoading && home.insights.curvePoints.isEmpty)
-      const Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(child: CircularProgressIndicator()),
-      ),
+      const SectionLoading(),
     const SectionHeader('Caffeine dashboard'),
     sectionPadded(_CaffeineOverviewCard(home: home, formatter: formatter)),
     sectionPadded(CaffeineCurveCard(home: home, formatter: formatter)),

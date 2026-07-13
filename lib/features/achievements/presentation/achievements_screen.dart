@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../ui/components/loading_state.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
@@ -33,7 +34,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
 
     final Widget body;
     if (state.isLoading && state.badges.isEmpty) {
-      body = const Center(child: CircularProgressIndicator());
+      body = const FullScreenLoading();
     } else {
       // The category filter is precomputed per chip in the display; the screen
       // picks a list, it does not fold one.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../ui/components/loading_state.dart';
 
 import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
@@ -100,10 +101,7 @@ class _NutritionOverviewContent extends StatelessWidget {
     final display = state.display;
     if (display == null || !display.hasData) {
       if (state.isLoading) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 48),
-          child: Center(child: CircularProgressIndicator()),
-        );
+        return const SectionLoading();
       }
       return _placeholder(l10n);
     }

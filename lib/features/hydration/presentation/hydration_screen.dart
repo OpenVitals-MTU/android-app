@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../ui/components/loading_state.dart';
 
 import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
@@ -85,10 +86,7 @@ List<Widget> _content(
   if (display == null || !display.hasData) {
     if (state.isLoading) {
       return const [
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 48),
-          child: Center(child: CircularProgressIndicator()),
-        ),
+        SectionLoading(),
       ];
     }
     final entries = display?.entriesNewestFirst ?? const <HydrationEntry>[];

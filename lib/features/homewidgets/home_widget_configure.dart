@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../ui/components/loading_state.dart';
 
 import '../../app.dart';
 import '../../core/result/result.dart';
@@ -359,7 +360,7 @@ class _HomeQuickBeverageWidgetConfigureScreenState
         future: _drinks,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const FullScreenLoading();
           }
           final drinks = snapshot.data ?? const <CustomHydrationDrink>[];
           if (drinks.isEmpty) {
