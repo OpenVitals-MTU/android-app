@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/theme/chart_tokens.dart';
 import '../../../ui/charts/time_axis.dart';
+import '../../../ui/charts/chart_empty_state.dart';
 import '../../../ui/charts/metric_line_plot.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -302,16 +303,9 @@ class CaffeineCurveCard extends StatelessWidget {
             Text(l10n.caffeineCurveTitle, style: theme.textTheme.titleSmall),
             const SizedBox(height: 12),
             if (points.length < 2)
-              SizedBox(
+              ChartEmptyState(
+                message: l10n.caffeineCurveEmpty,
                 height: kChartHeightDay,
-                width: double.infinity,
-                child: Center(
-                  child: Text(
-                    l10n.caffeineCurveEmpty,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-                ),
               )
             else ...[
               // The shared plot, at last. What this card gains by giving up its own

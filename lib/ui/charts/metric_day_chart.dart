@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
+import 'chart_empty_state.dart';
 import 'day_axis.dart';
 import 'metric_line_plot.dart';
 
@@ -103,12 +104,10 @@ class MetricDayChart extends StatelessWidget {
                 ),
             const SizedBox(height: 16),
             if (ordered.isEmpty)
-              Text(
-                axis.isToday
+              ChartEmptyState(
+                message: axis.isToday
                     ? l10n.summaryEmptyToday(emptyLabel)
                     : l10n.summaryEmptyDay(emptyLabel),
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               )
             else ...[
               MetricLinePlot(
