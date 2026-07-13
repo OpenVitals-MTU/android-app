@@ -151,6 +151,22 @@ class ChartXAxisWithYAxis extends StatelessWidget {
 
 /// Draws the horizontal guide lines and the leading vertical axis line inside a
 /// plot [Canvas]. Port of Kotlin `DrawScope.drawYAxisGuides`.
+/// Which edge a chart draws its axis line along.
+///
+/// The library's charts draw it down the LEFT, beside the value labels. The
+/// body-energy timeline draws it along the BOTTOM, under a 0–100 score that needs
+/// a floor rather than a scale. Both are right; having two functions for it was
+/// not.
+enum ChartAxisLine {
+  /// Down the left edge — the default, and what every existing caller gets.
+  leading,
+
+  /// Along the bottom edge.
+  baseline,
+
+  none,
+}
+
 void drawYAxisGuides(
   Canvas canvas,
   Size size, {
@@ -158,6 +174,7 @@ void drawYAxisGuides(
   Color? axisColor,
   int lineCount = 3,
   double strokeWidth = 1,
+  ChartAxisLine axisLine = ChartAxisLine.leading,
 }) {
   if (lineCount < 2) return;
   final gridPaint = Paint()
@@ -167,10 +184,22 @@ void drawYAxisGuides(
     final y = size.height * index / (lineCount - 1);
     canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
   }
+  if (axisLine == ChartAxisLine.none) return;
   final axisPaint = Paint()
     ..color = axisColor ?? gridColor
     ..strokeWidth = strokeWidth;
-  canvas.drawLine(Offset.zero, Offset(0, size.height), axisPaint);
+  switch (axisLine) {
+    case ChartAxisLine.leading:
+      canvas.drawLine(Offset.zero, Offset(0, size.height), axisPaint);
+    case ChartAxisLine.baseline:
+      canvas.drawLine(
+        Offset(0, size.height),
+        Offset(size.width, size.height),
+        axisPaint,
+      );
+    case ChartAxisLine.none:
+      break;
+  }
 }
 
 /// The three Y-axis labels (max, mid, min). Falls back to a higher-precision

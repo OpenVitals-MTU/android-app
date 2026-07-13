@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/insights/body_energy_timeline.dart';
+import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/day_axis.dart';
 import '../../../ui/theme/chart_colors.dart';
 import '../application/body_energy_display.dart';
@@ -82,20 +83,16 @@ class _LinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Horizontal guide lines at 0/25/50/75/100.
-    final gridPaint = Paint()
-      ..color = gridColor
-      ..strokeWidth = 1;
-    for (var i = 0; i <= 4; i++) {
-      final y = size.height * i / 4;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-    canvas.drawLine(
-      Offset(0, size.height),
-      Offset(size.width, size.height),
-      Paint()
-        ..color = axisColor
-        ..strokeWidth = 1,
+    // Five guides — 0/25/50/75/100 — and the axis along the BOTTOM: a score out
+    // of a hundred wants a floor, not a scale down its side. Both of those used
+    // to be a hand-rolled loop here, beside an identical one in the library.
+    drawYAxisGuides(
+      canvas,
+      size,
+      gridColor: gridColor,
+      axisColor: axisColor,
+      lineCount: 5,
+      axisLine: ChartAxisLine.baseline,
     );
     if (points.isEmpty) return;
 
