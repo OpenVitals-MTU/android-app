@@ -45,6 +45,21 @@ android {
     compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
+    // Keep Google's dependency blob out of the APK.
+    //
+    // AGP stamps a "Dependency metadata" block into the APK signing block: a proto listing
+    // every library the app was built from, encrypted with a Google public key so that only
+    // Play can read it. F-Droid's scanner rejects an APK that carries it ("Found extra
+    // signing block 'Dependency metadata'"), and it would be the last Google-specific thing
+    // left in the build after 2.2.1 removed Play Services.
+    //
+    // Only the APK is opted out. The AAB keeps it, because that is the artifact Play
+    // actually consumes and the metadata is what drives its vulnerability warnings.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = true
+    }
+
     compileOptions {
         // flutter_local_notifications' AAR metadata mandates Java 8+ core-library
         // desugaring (it relies on desugared java.time APIs), so enable it here.
