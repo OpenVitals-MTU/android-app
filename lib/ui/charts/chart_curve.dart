@@ -88,3 +88,33 @@ Path smoothPath(List<Offset> points) {
 
   return path;
 }
+
+/// Damps a quantized staircase before it is splined.
+///
+/// The body-energy score is an integer 0–100 sampled per bucket, so the raw
+/// series is a flight of stairs, and a curve through it traces the steps and
+/// reads as jagged. A small centred moving average — window widening with the
+/// point count — turns the staircase back into the smooth thing it is a
+/// measurement of.
+///
+/// A DATA decision, not a curve one, which is why it is its own function and not
+/// folded into [smoothPath]. Smoothing the geometry is a lie about how the line
+/// gets from A to B; smoothing the SAMPLES is a claim about the signal underneath
+/// them, and the two want to be argued about separately.
+List<Offset> movingAverageY(List<Offset> points) {
+  if (points.length < 3) return points;
+  final radius = (points.length ~/ 16).clamp(1, 4);
+  final last = points.length - 1;
+  return [
+    for (var index = 0; index < points.length; index++)
+      () {
+        final from = (index - radius).clamp(0, last);
+        final to = (index + radius).clamp(0, last);
+        var sum = 0.0;
+        for (var i = from; i <= to; i++) {
+          sum += points[i].dy;
+        }
+        return Offset(points[index].dx, sum / (to - from + 1));
+      }(),
+  ];
+}

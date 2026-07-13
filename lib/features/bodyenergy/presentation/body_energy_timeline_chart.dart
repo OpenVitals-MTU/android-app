@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/insights/body_energy_timeline.dart';
 import '../../../ui/charts/chart_axis.dart';
+import '../../../ui/charts/chart_curve.dart';
 import '../../../ui/charts/day_axis.dart';
 import '../../../ui/theme/chart_colors.dart';
 import '../application/body_energy_display.dart';
@@ -104,9 +105,9 @@ class _LinePainter extends CustomPainter {
         ),
     ];
     // Scores are integers (0..100) sampled per bucket, so the raw series is a
-    // staircase. Damp that quantization with a small moving average before
-    // splining, otherwise the curve just traces the steps and reads as jagged.
-    final positioned = _movingAverageY(rawPoints);
+    // staircase. Damp that quantization before splining, or the curve just traces
+    // the steps and reads as jagged.
+    final positioned = movingAverageY(rawPoints);
 
     final linePaint = Paint()
       ..color = lineColor
@@ -115,10 +116,21 @@ class _LinePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     if (positioned.length >= 3) {
-      canvas.drawPath(
-        _smoothLinePath(positioned, size.height),
-        linePaint,
-      );
+      // `smoothPath` — the library's monotone cubic — and not the Catmull-Rom
+      // this used to carry.
+      //
+      // That spline clamped its control points to [0, maxY], which is a confession:
+      // it overshoots. And clamping a CONTROL point does not even keep the rendered
+      // cubic inside the bounds — a Bézier can still bulge past a clamped handle,
+      // which is why this chart's own golden showed the trace leaving the top of
+      // the plot. On a score that is DEFINED as 0 to 100, a curve that climbs above
+      // 100, or dips below the lowest reading of the day, is not a smoothing
+      // artefact. It is a false statement about your body.
+      //
+      // Fritsch–Carlson cannot do it: where the data rises the curve rises, and it
+      // never leaves the interval its samples live in. The line becomes less swoopy.
+      // It also becomes true.
+      canvas.drawPath(smoothPath(positioned), linePaint);
     } else {
       final path = Path()..moveTo(positioned.first.dx, positioned.first.dy);
       for (var i = 1; i < positioned.length; i++) {
@@ -132,49 +144,6 @@ class _LinePainter extends CustomPainter {
         canvas.drawCircle(offset, 3, pointPaint);
       }
     }
-  }
-
-  /// Smooths the Y series with a centered moving average, keeping each point's
-  /// X. The window radius scales with point count (wider for denser series) so
-  /// the integer-quantized score staircase becomes a flowing line before
-  /// splining. Port of the Kotlin `movingAverageY`.
-  List<Offset> _movingAverageY(List<Offset> pts) {
-    if (pts.length < 3) return pts;
-    final radius = (pts.length ~/ 16).clamp(1, 4);
-    final last = pts.length - 1;
-    return [
-      for (var index = 0; index < pts.length; index++)
-        () {
-          final from = (index - radius).clamp(0, last);
-          final to = (index + radius).clamp(0, last);
-          var sum = 0.0;
-          for (var i = from; i <= to; i++) {
-            sum += pts[i].dy;
-          }
-          return Offset(pts[index].dx, sum / (to - from + 1));
-        }(),
-    ];
-  }
-
-  /// Builds a smooth curve through [pts] using a Catmull-Rom spline converted to
-  /// cubic Bézier segments. Control-point Y is clamped to [0, maxY] so the eased
-  /// curve can never overshoot past the chart's 0/100 bounds. Port of the Kotlin
-  /// `smoothLinePath`.
-  Path _smoothLinePath(List<Offset> pts, double maxY) {
-    final last = pts.length - 1;
-    final path = Path()..moveTo(pts[0].dx, pts[0].dy);
-    for (var i = 0; i < last; i++) {
-      final p0 = pts[i == 0 ? 0 : i - 1];
-      final p1 = pts[i];
-      final p2 = pts[i + 1];
-      final p3 = pts[i + 2 <= last ? i + 2 : last];
-      final control1X = p1.dx + (p2.dx - p0.dx) / 6.0;
-      final control1Y = (p1.dy + (p2.dy - p0.dy) / 6.0).clamp(0.0, maxY);
-      final control2X = p2.dx - (p3.dx - p1.dx) / 6.0;
-      final control2Y = (p2.dy - (p3.dy - p1.dy) / 6.0).clamp(0.0, maxY);
-      path.cubicTo(control1X, control1Y, control2X, control2Y, p2.dx, p2.dy);
-    }
-    return path;
   }
 
   @override
