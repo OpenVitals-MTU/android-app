@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../ui/components/loading_state.dart';
+import '../../../ui/charts/chart_skeleton.dart';
+import '../../../ui/theme/chart_tokens.dart';
 
 import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/period_titles.dart';
@@ -80,7 +81,7 @@ List<Widget> _content(
   if (display == null || display.sessionCount == 0) {
     if (state.isLoading && state.data == null) {
       return const [
-        SectionLoading(),
+        ChartSkeleton(shape: ChartSkeletonShape.bars, height: kChartHeightPeriodBar),
       ];
     }
     return [

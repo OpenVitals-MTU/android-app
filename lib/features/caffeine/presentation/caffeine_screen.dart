@@ -5,6 +5,8 @@ import '../../../ui/theme/chart_tokens.dart';
 import '../../../ui/charts/time_axis.dart';
 import '../../../ui/charts/chart_empty_state.dart';
 import '../../../ui/charts/metric_line_plot.dart';
+import '../../../ui/charts/chart_skeleton.dart';
+import '../../../ui/components/loading_state.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../core/presentation/screen_error.dart';
@@ -13,7 +15,6 @@ import '../../../domain/model/caffeine_models.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
-import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../application/caffeine_display.dart';
@@ -76,7 +77,7 @@ List<Widget> _content(
   return [
     if (error != null) ErrorMessage(error),
     if (state.isLoading && home.insights.curvePoints.isEmpty)
-      const SectionLoading(),
+      const ChartSkeleton(shape: ChartSkeletonShape.bars, height: kChartHeightPeriodBar),
     const SectionHeader('Caffeine dashboard'),
     sectionPadded(_CaffeineOverviewCard(home: home, formatter: formatter)),
     sectionPadded(CaffeineCurveCard(home: home, formatter: formatter)),
