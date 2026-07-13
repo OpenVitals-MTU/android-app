@@ -77,7 +77,7 @@ List<Widget> _content(
       ),
     const SectionHeader('Caffeine dashboard'),
     sectionPadded(_CaffeineOverviewCard(home: home, formatter: formatter)),
-    sectionPadded(_CaffeineCurveCard(home: home, formatter: formatter)),
+    sectionPadded(CaffeineCurveCard(home: home, formatter: formatter)),
     const SectionHeader('Sleep impact'),
     sectionPadded(_CaffeineSleepImpactCard(home: home, formatter: formatter)),
     const SectionHeader('Analytics'),
@@ -91,28 +91,28 @@ List<Widget> _content(
       _CaffeineAnalyticsSummaryCard(analytics: analytics, formatter: formatter),
     ),
     sectionPadded(
-      _CaffeineDistributionCard(
+      CaffeineDistributionCard(
         title: 'Sources',
         bars: analytics.sourceBars,
         formatter: formatter,
       ),
     ),
     sectionPadded(
-      _CaffeineDistributionCard(
+      CaffeineDistributionCard(
         title: 'Items',
         bars: analytics.itemBars,
         formatter: formatter,
       ),
     ),
     sectionPadded(
-      _CaffeineDistributionCard(
+      CaffeineDistributionCard(
         title: 'Inferred categories',
         bars: analytics.categoryBars,
         formatter: formatter,
       ),
     ),
     sectionPadded(
-      _CaffeineTimeBucketsCard(analytics: analytics, formatter: formatter),
+      CaffeineTimeBucketsCard(analytics: analytics, formatter: formatter),
     ),
     const SizedBox(height: 16),
   ];
@@ -272,8 +272,15 @@ class _CaffeineSleepStatusBanner extends StatelessWidget {
 
 // ── Active-caffeine curve ───────────────────────────────────────────────────
 
-class _CaffeineCurveCard extends StatelessWidget {
-  const _CaffeineCurveCard({required this.home, required this.formatter});
+/// Public so the chart goldens can photograph it on its own.
+///
+/// It draws one of the app's nine hand-rolled "labelled proportional bar" copies
+/// (and, for the curve card, one of its three line renderings). Those are about to
+/// be consolidated, and a picture of each — taken BEFORE — is what proves the
+/// consolidation changed nothing it did not mean to.
+@visibleForTesting
+class CaffeineCurveCard extends StatelessWidget {
+  const CaffeineCurveCard({super.key,required this.home, required this.formatter});
 
   final CaffeineHomeDisplay home;
   final UnitFormatter formatter;
@@ -604,8 +611,16 @@ class _CaffeineAnalyticsSummaryCard extends StatelessWidget {
   }
 }
 
-class _CaffeineDistributionCard extends StatelessWidget {
-  const _CaffeineDistributionCard({
+/// Public so the chart goldens can photograph it on its own.
+///
+/// It draws one of the app's nine hand-rolled "labelled proportional bar" copies
+/// (and, for the curve card, one of its three line renderings). Those are about to
+/// be consolidated, and a picture of each — taken BEFORE — is what proves the
+/// consolidation changed nothing it did not mean to.
+@visibleForTesting
+class CaffeineDistributionCard extends StatelessWidget {
+  const CaffeineDistributionCard({
+    super.key,
     required this.title,
     required this.bars,
     required this.formatter,
@@ -650,8 +665,16 @@ class _CaffeineDistributionCard extends StatelessWidget {
   }
 }
 
-class _CaffeineTimeBucketsCard extends StatelessWidget {
-  const _CaffeineTimeBucketsCard({
+/// Public so the chart goldens can photograph it on its own.
+///
+/// It draws one of the app's nine hand-rolled "labelled proportional bar" copies
+/// (and, for the curve card, one of its three line renderings). Those are about to
+/// be consolidated, and a picture of each — taken BEFORE — is what proves the
+/// consolidation changed nothing it did not mean to.
+@visibleForTesting
+class CaffeineTimeBucketsCard extends StatelessWidget {
+  const CaffeineTimeBucketsCard({
+    super.key,
     required this.analytics,
     required this.formatter,
   });

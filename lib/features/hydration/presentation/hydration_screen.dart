@@ -177,7 +177,7 @@ List<Widget> _content(
     )),
     if (display.drinkBreakdown.isNotEmpty)
       sectionPadded(
-        _HydrationDrinkBreakdownCard(display: display, formatter: formatter),
+        HydrationDrinkBreakdownCard(display: display, formatter: formatter),
       ),
     const SectionHeader('Statistics'),
     sectionPadded(
@@ -274,8 +274,16 @@ class _HydrationGoalCard extends StatelessWidget {
   }
 }
 
-class _HydrationDrinkBreakdownCard extends StatelessWidget {
-  const _HydrationDrinkBreakdownCard({
+/// Public so the chart goldens can photograph it on its own.
+///
+/// It draws one of the app's nine hand-rolled "labelled proportional bar" copies
+/// (and, for the curve card, one of its three line renderings). Those are about to
+/// be consolidated, and a picture of each — taken BEFORE — is what proves the
+/// consolidation changed nothing it did not mean to.
+@visibleForTesting
+class HydrationDrinkBreakdownCard extends StatelessWidget {
+  const HydrationDrinkBreakdownCard({
+    super.key,
     required this.display,
     required this.formatter,
   });

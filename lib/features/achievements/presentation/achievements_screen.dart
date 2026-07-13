@@ -47,7 +47,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
               sectionPadded(
-                _AchievementSummaryCard(
+                AchievementSummaryCard(
                   state: state,
                   formatter: formatter,
                   onRefresh: notifier.refresh,
@@ -77,7 +77,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                   body: 'Floor-climbing badges need a device that tracks floors.',
                 )),
               for (final progress in filtered)
-                sectionPadded(_AchievementBadgeCard(
+                sectionPadded(AchievementBadgeCard(
                   progress: progress,
                   formatter: formatter,
                 )),
@@ -106,8 +106,16 @@ String _errorText(ScreenError error) => switch (error) {
 String _formatDate(LocalDate date) =>
     DateFormat('d MMM yyyy').format(DateTime(date.year, date.month, date.day));
 
-class _AchievementSummaryCard extends StatelessWidget {
-  const _AchievementSummaryCard({
+/// Public so the chart goldens can photograph it on its own.
+///
+/// It draws one of the app's nine hand-rolled "labelled proportional bar" copies
+/// (and, for the curve card, one of its three line renderings). Those are about to
+/// be consolidated, and a picture of each — taken BEFORE — is what proves the
+/// consolidation changed nothing it did not mean to.
+@visibleForTesting
+class AchievementSummaryCard extends StatelessWidget {
+  const AchievementSummaryCard({
+    super.key,
     required this.state,
     required this.formatter,
     required this.onRefresh,
@@ -285,8 +293,15 @@ class _AchievementFilters extends StatelessWidget {
   }
 }
 
-class _AchievementBadgeCard extends StatelessWidget {
-  const _AchievementBadgeCard({required this.progress, required this.formatter});
+/// Public so the chart goldens can photograph it on its own.
+///
+/// It draws one of the app's nine hand-rolled "labelled proportional bar" copies
+/// (and, for the curve card, one of its three line renderings). Those are about to
+/// be consolidated, and a picture of each — taken BEFORE — is what proves the
+/// consolidation changed nothing it did not mean to.
+@visibleForTesting
+class AchievementBadgeCard extends StatelessWidget {
+  const AchievementBadgeCard({super.key,required this.progress, required this.formatter});
 
   final AchievementProgress progress;
   final UnitFormatter formatter;
