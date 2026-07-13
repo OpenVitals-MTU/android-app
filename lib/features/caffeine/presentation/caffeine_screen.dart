@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../ui/charts/chart_bar_row.dart';
-import '../../../ui/charts/chart_paint.dart';
+import '../../../ui/theme/chart_tokens.dart';
+import '../../../ui/charts/time_axis.dart';
+import '../../../ui/charts/metric_line_plot.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../core/presentation/screen_error.dart';
@@ -299,29 +301,68 @@ class CaffeineCurveCard extends StatelessWidget {
           children: [
             Text(l10n.caffeineCurveTitle, style: theme.textTheme.titleSmall),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 180,
-              width: double.infinity,
-              child: points.length < 2
-                  ? Center(
-                      child: Text(
-                        l10n.caffeineCurveEmpty,
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    )
-                  : CustomPaint(
-                      painter: _CaffeineCurvePainter(
-                        points: points,
-                        thresholdMg: insights.sleepThresholdMg.toDouble(),
-                        maxMg: home.curveMaxMg,
-                        entryTimes: home.curveEntryTimes,
-                        lineColor: scheme.primary,
-                        thresholdColor: scheme.error,
-                        markerColor: scheme.tertiary,
-                      ),
+            if (points.length < 2)
+              SizedBox(
+                height: kChartHeightDay,
+                width: double.infinity,
+                child: Center(
+                  child: Text(
+                    l10n.caffeineCurveEmpty,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ),
+              )
+            else ...[
+              // The shared plot, at last. What this card gains by giving up its own
+              // painter: a Y AXIS — you could not read a value off this chart,
+              // there was no scale on it at all — GRIDLINES, and a curve that is
+              // actually a curve. The decay of caffeine in a body is smooth, and it
+              // was drawn with `lineTo`: the smooth thing rendered as a run of
+              // straight cuts.
+              //
+              // It also picks up the 64px label gutter every other chart reserves,
+              // so it shifts sideways. That is a real change, and the golden calls
+              // it one rather than letting it pass as a repaint.
+              MetricLinePlot(
+                points: [
+                  for (final point in points)
+                    MetricLinePlotPoint(
+                      xFraction: _curveFraction(point.time, points),
+                      value: point.valueMg,
                     ),
-            ),
+                ],
+                minValue: 0,
+                maxValue: home.curveMaxMg,
+                accentColor: scheme.primary,
+                valueFormatter: (value) => _formatMg(value, formatter),
+                // The line you are trying to be under by bedtime. Dashed, because
+                // it is a rule, not a reading.
+                guides: [
+                  (
+                    value: insights.sleepThresholdMg.toDouble(),
+                    color: scheme.error.withValues(alpha: 0.45),
+                  ),
+                ],
+                // Every drink, on the baseline: each sawtooth in the curve now sits
+                // directly above the act that caused it.
+                markers: [
+                  for (final time in home.curveEntryTimes)
+                    (
+                      xFraction: _curveFraction(time, points),
+                      color: scheme.tertiary,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // And a TIME axis. There was none: a caffeine curve across a whole
+              // day, with no way to tell when any of it happened.
+              TimeAxisLabels(
+                start: points.first.time,
+                end: points.last.time,
+                inset: kChartPlotInset,
+              ),
+            ],
             const SizedBox(height: 8),
             Text(
               l10n.caffeineThresholdLine(
@@ -337,92 +378,14 @@ class CaffeineCurveCard extends StatelessWidget {
   }
 }
 
-class _CaffeineCurvePainter extends CustomPainter {
-  _CaffeineCurvePainter({
-    required this.points,
-    required this.thresholdMg,
-    required this.maxMg,
-    required this.entryTimes,
-    required this.lineColor,
-    required this.thresholdColor,
-    required this.markerColor,
-  });
-
-  final List<CaffeinePoint> points;
-  final double thresholdMg;
-
-  /// The y-axis maximum, precomputed by the view-model (the painter used to scan
-  /// the points for it on every repaint).
-  final double maxMg;
-  final List<DateTime> entryTimes;
-  final Color lineColor;
-  final Color thresholdColor;
-  final Color markerColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (points.length < 2) return;
-    final startMillis = points.first.time.millisecondsSinceEpoch;
-    final endMillis = points.last.time.millisecondsSinceEpoch
-        .clamp(startMillis + 1, 1 << 62);
-    final maxValue = maxMg;
-
-    double xFor(int millis) =>
-        (millis - startMillis) / (endMillis - startMillis) * size.width;
-    double yFor(double value) =>
-        size.height - (value / maxValue).clamp(0.0, 1.0) * size.height;
-
-    // Threshold guide line.
-    final thresholdY = yFor(thresholdMg);
-    final thresholdPaint = Paint()
-      ..color = thresholdColor.withValues(alpha: 0.45)
-      ..strokeWidth = 2;
-    // 6-on/6-off, as it always was. (The sleep-schedule chart's marker line is
-    // 8/6; the two never met, so they never had to agree.)
-    drawDashedLine(
-      canvas,
-      Offset(0, thresholdY),
-      Offset(size.width, thresholdY),
-      thresholdPaint,
-      dash: 6,
-      gap: 6,
-    );
-
-    // Active-caffeine curve.
-    final path = Path();
-    for (var i = 0; i < points.length; i++) {
-      final offset = Offset(
-        xFor(points[i].time.millisecondsSinceEpoch),
-        yFor(points[i].valueMg),
-      );
-      if (i == 0) {
-        path.moveTo(offset.dx, offset.dy);
-      } else {
-        path.lineTo(offset.dx, offset.dy);
-      }
-    }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = lineColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    // Entry markers along the bottom.
-    final markerPaint = Paint()..color = markerColor;
-    for (final time in entryTimes) {
-      final x = xFor(time.millisecondsSinceEpoch);
-      if (x >= 0 && x <= size.width) {
-        canvas.drawCircle(Offset(x, size.height - 4), 4, markerPaint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CaffeineCurvePainter oldDelegate) => true;
+/// Where a moment sits across the curve's own window, as a fraction. The window
+/// is the curve — its first sample to its last — and not the calendar day.
+double _curveFraction(DateTime time, List<CaffeinePoint> points) {
+  final start = points.first.time.millisecondsSinceEpoch;
+  final end = points.last.time.millisecondsSinceEpoch;
+  if (end <= start) return 0;
+  return ((time.millisecondsSinceEpoch - start) / (end - start))
+      .clamp(0.0, 1.0);
 }
 
 // ── Bedtime / sleep impact ──────────────────────────────────────────────────

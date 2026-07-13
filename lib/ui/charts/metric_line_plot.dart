@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'chart_axis.dart';
 import 'chart_curve.dart';
+import 'chart_paint.dart';
 
 /// Port of the Kotlin `MetricLinePlot`: a line drawn against a normalized x
 /// axis, for series whose points are not evenly spaced in time (the intraday
@@ -17,6 +18,16 @@ class MetricLinePlotPoint {
   final double value;
 }
 
+/// A horizontal line the data is measured AGAINST, rather than data itself — the
+/// caffeine sleep threshold, a goal, a clinical limit. Drawn dashed, because a
+/// solid line of the same weight reads as another series.
+typedef ChartGuideLine = ({double value, Color color});
+
+/// A tick along the bottom edge: something happened at this moment. The caffeine
+/// card marks each drink, so the sawtooth in the curve can be read against the
+/// act that caused it.
+typedef ChartMarker = ({double xFraction, Color color});
+
 class MetricLinePlot extends StatelessWidget {
   const MetricLinePlot({
     super.key,
@@ -29,6 +40,8 @@ class MetricLinePlot extends StatelessWidget {
     this.lineStrokeWidth = 3,
     this.pointRadius = 3.5,
     this.drawPoints = false,
+    this.guides = const <ChartGuideLine>[],
+    this.markers = const <ChartMarker>[],
   });
 
   final List<MetricLinePlotPoint> points;
@@ -46,6 +59,12 @@ class MetricLinePlot extends StatelessWidget {
   /// default here because the intraday cumulative charts (this widget's
   /// original callers) pass `drawPoints = false` in Kotlin.
   final bool drawPoints;
+
+  /// Reference lines the data is read against. See [ChartGuideLine].
+  final List<ChartGuideLine> guides;
+
+  /// Moments worth marking on the baseline. See [ChartMarker].
+  final List<ChartMarker> markers;
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +97,8 @@ class MetricLinePlot extends StatelessWidget {
           minValue: minValue,
           maxValue: safeMax,
           accentColor: accentColor,
+          guides: guides,
+          markers: markers,
           strokeWidth: lineStrokeWidth,
           pointRadius: drawPoints ? pointRadius : 0,
         ),
@@ -92,6 +113,8 @@ class _MetricLinePlotPainter extends CustomPainter {
     required this.minValue,
     required this.maxValue,
     required this.accentColor,
+    required this.guides,
+    required this.markers,
     required this.strokeWidth,
     required this.pointRadius,
   });
@@ -100,6 +123,8 @@ class _MetricLinePlotPainter extends CustomPainter {
   final double minValue;
   final double maxValue;
   final Color accentColor;
+  final List<ChartGuideLine> guides;
+  final List<ChartMarker> markers;
   final double strokeWidth;
 
   /// Dot radius for each sample; 0 draws no dots (Kotlin `drawPoints=false`).
@@ -124,6 +149,23 @@ class _MetricLinePlotPainter extends CustomPainter {
       Offset(size.width, size.height),
       baseline,
     );
+
+    // Guides first, so the data is drawn ON them and not under them.
+    for (final guide in guides) {
+      final normalized =
+          ((guide.value - minValue) / (maxValue - minValue)).clamp(0.0, 1.0);
+      final y = size.height - normalized * size.height;
+      drawDashedLine(
+        canvas,
+        Offset(0, y),
+        Offset(size.width, y),
+        Paint()
+          ..color = guide.color
+          ..strokeWidth = 2,
+        dash: 6,
+        gap: 6,
+      );
+    }
 
     final offsets = [for (final point in points) _offsetFor(point, size)];
     final first = offsets.first;
@@ -156,6 +198,16 @@ class _MetricLinePlotPainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round,
     );
 
+    // Moments, on the baseline: each one is a thing that HAPPENED, sitting under
+    // the consequence it had.
+    for (final marker in markers) {
+      canvas.drawCircle(
+        Offset(marker.xFraction.clamp(0.0, 1.0) * size.width, size.height - 3),
+        3,
+        Paint()..color = marker.color,
+      );
+    }
+
     // Kotlin `drawMetricLinePlot`: a dot per sample when requested.
     if (pointRadius > 0) {
       final dotPaint = Paint()..color = accentColor;
@@ -171,5 +223,7 @@ class _MetricLinePlotPainter extends CustomPainter {
       oldDelegate.minValue != minValue ||
       oldDelegate.maxValue != maxValue ||
       oldDelegate.accentColor != accentColor ||
+      oldDelegate.guides != guides ||
+      oldDelegate.markers != markers ||
       oldDelegate.pointRadius != pointRadius;
 }
