@@ -4,7 +4,79 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
+import '../../../../domain/model/ble_sensor_models.dart';
 import 'route_file_parser.dart';
+
+/// The per-point series a GPX carries in its `<extensions>`: heart rate,
+/// cadence, speed — the Garmin `gpxtpx:TrackPointExtension` every exporter
+/// writes, and the only thing an indoor GPX has to say besides the time.
+///
+/// Read off the ROUTED files too, which is a fix in its own right: a GPX with a
+/// track and a heart-rate extension used to import as a bare line on a map, its
+/// heart rate thrown away at the parser.
+class GpxSampleCollector {
+  GpxSampleCollector({required this.isRunning});
+
+  /// Decides which Health Connect record the cadence belongs in. Pedalling
+  /// cadence and step cadence are different record types, and `cad` is just
+  /// "cad".
+  final bool isRunning;
+
+  final List<BleHeartRateSample> _heartRates = [];
+  final List<BleSpeedSample> _speeds = [];
+  final List<(DateTime, int)> _cadences = [];
+
+  void read(XmlElement point, DateTime time) {
+    final heartRate = _extension(point, 'hr');
+    if (heartRate != null && heartRate > 0) {
+      _heartRates.add(
+        BleHeartRateSample(time: time, beatsPerMinute: heartRate.round()),
+      );
+    }
+    final cadence = _extension(point, 'cad');
+    if (cadence != null && cadence >= 0) _cadences.add((time, cadence.round()));
+
+    final speed = _extension(point, 'speed');
+    if (speed != null && speed >= 0) {
+      _speeds.add(
+        BleSpeedSample(
+          time: time,
+          metersPerSecond: speed,
+          isRunning: isRunning,
+        ),
+      );
+    }
+  }
+
+  BleRecordingSampleBuffer get buffer => BleRecordingSampleBuffer(
+        heartRateSamples: _heartRates,
+        speedSamples: _speeds,
+        cyclingCadenceSamples: isRunning
+            ? const []
+            : [
+                for (final (time, rpm) in _cadences)
+                  BleCyclingCadenceSample(time: time, rpm: rpm),
+              ],
+        stepsCadenceSamples: isRunning
+            ? [
+                for (final (time, rpm) in _cadences)
+                  // Running cadence is written per FOOT, as in TCX: 85 means 170
+                  // steps a minute.
+                  BleStepsCadenceSample(time: time, stepsPerMinute: rpm * 2),
+              ]
+            : const [],
+      );
+
+  /// Matched by LOCAL name, so the namespace prefix (`gpxtpx:`, `ns3:`, none at
+  /// all) does not matter — exporters disagree about it and none of them are
+  /// wrong.
+  static double? _extension(XmlElement point, String localName) {
+    final element = point.descendantElements
+        .where((e) => e.name.local == localName)
+        .firstOrNull;
+    return double.tryParse(element?.innerText.trim() ?? '');
+  }
+}
 
 /// Port of the Kotlin `GpxRouteParser`.
 class GpxRouteParser {
@@ -16,37 +88,104 @@ class GpxRouteParser {
     final document = XmlDocument.parse(gpxText);
     final metadata = _routeMetadata(document);
     final mutablePoints = <MutableRoutePoint>[];
+    // Every trackpoint that carries a TIME, whether or not it carries a place.
+    // See [_routelessImport]: this is the indoor session.
+    final timestamps = <DateTime>[];
+    final samples = GpxSampleCollector(
+      isRunning: !(metadata.type ?? '').toLowerCase().contains('bik') &&
+          !(metadata.type ?? '').toLowerCase().contains('cycl'),
+    );
+
     for (final tag in _pointTags) {
       for (final element in elementsByLocalName(document, tag)) {
+        final time = _timeOrNull(directChildText(element, 'time'));
         mutablePoints.add(
           MutableRoutePoint(
             latitude: double.tryParse(element.getAttribute('lat') ?? ''),
             longitude: double.tryParse(element.getAttribute('lon') ?? ''),
             elevationMeters:
                 double.tryParse(directChildText(element, 'ele')?.trim() ?? ''),
-            time: _timeOrNull(directChildText(element, 'time')),
+            time: time,
           ),
         );
+        if (time != null) {
+          timestamps.add(time);
+          samples.read(element, time);
+        }
       }
     }
+
     final routePoints = mutableToRoutePoints(mutablePoints);
-    if (routePoints.length < minRoutePoints) {
-      throw const RouteImportException(
-        // Says what to DO. A GPX is a list of places — its trackpoints REQUIRE a
-        // latitude and a longitude — so an indoor activity cannot be expressed in
-        // one, and this refusal used to read as though the file were corrupt when
-        // the file was simply the wrong format for what the user did. TCX and FIT
-        // both carry a session (duration, distance, calories) with no route at
-        // all, and the app now reads both.
-        'This GPX has no track: it needs at least 2 timestamped location '
-        'points. An indoor activity has no GPS, so export it as TCX or FIT '
-        'instead — those formats can carry a session with no route.',
+    if (routePoints.length >= minRoutePoints) {
+      return buildRouteImport(
+        fileName: fileName,
+        points: routePoints,
+        metadata: metadata,
+      ).copyWith(bleSamples: samples.buffer);
+    }
+
+    // No route. That is not the same as no activity — see below.
+    if (timestamps.length >= minRoutePoints) {
+      return _routelessImport(
+        fileName: fileName,
+        metadata: metadata,
+        timestamps: timestamps,
+        samples: samples,
       );
     }
-    return buildRouteImport(
+
+    throw const RouteImportException(
+      // Now genuinely empty: no places AND no times. A file with neither has
+      // nothing in it to import, and this is the guard that keeps a corrupt XML
+      // (or an HTML error page saved as .gpx) from arriving as a blank activity.
+      'This GPX has nothing in it: no timestamped track points, with or '
+      'without locations.',
+    );
+  }
+
+  /// A GPX with no places, and an activity all the same.
+  ///
+  /// The app used to refuse this outright — "GPX route must contain at least 2
+  /// timestamped location points" — on the theory that a GPX is a list of PLACES
+  /// and an indoor session therefore cannot be written as one. That was wrong,
+  /// and two real HealthFit exports say so: a strength session of 1931
+  /// `<trkpt>`, and an indoor run of 1422, every one of them carrying a `<time>`
+  /// and NO `lat`/`lon` at all. The GPX schema does require those attributes;
+  /// real exporters omit them anyway, and the file that results is not corrupt —
+  /// it is a timestamped series with the positions left out, which is exactly
+  /// what an indoor activity is.
+  ///
+  /// So what a routeless GPX gives up is DISTANCE and CALORIES, not the session:
+  /// the timestamps give the start, the end and the duration, and the extensions
+  /// give the heart rate. Distance stays 0 (for a strength session there is
+  /// nothing to be wrong about, and for a treadmill the file simply did not say),
+  /// and calories are left for the entry form to estimate — which it does, from
+  /// duration, precisely because nothing here was measured to contradict it.
+  static RouteFileImport _routelessImport({
+    required String? fileName,
+    required RouteFileMetadata metadata,
+    required List<DateTime> timestamps,
+    required GpxSampleCollector samples,
+  }) {
+    final ordered = [...timestamps]..sort();
+    final startTime = ordered.first;
+    final last = ordered.last;
+    final endTime =
+        last.isAfter(startTime) ? last : startTime.add(const Duration(seconds: 1));
+
+    return RouteFileImport(
       fileName: fileName,
-      points: routePoints,
-      metadata: metadata,
+      points: const [],
+      distanceMeters: 0.0,
+      elevationGainedMeters: 0.0,
+      startTime: startTime,
+      endTime: endTime,
+      durationSeconds: endTime.difference(startTime).inSeconds,
+      name: metadata.name,
+      description: metadata.description,
+      type: metadata.type,
+      bleSamples: samples.buffer,
+      originalPointCount: 0,
     );
   }
 
