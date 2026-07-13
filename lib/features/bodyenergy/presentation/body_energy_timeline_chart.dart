@@ -5,6 +5,7 @@ import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/chart_curve.dart';
 import '../../../ui/charts/day_axis.dart';
 import '../../../ui/theme/chart_colors.dart';
+import '../../../ui/theme/chart_tokens.dart';
 import '../application/body_energy_display.dart';
 
 /// The Body Energy day timeline: a smoothed 0-100 score line drawn by a
@@ -178,7 +179,6 @@ class _InfluenceBarsPainter extends CustomPainter {
     if (bars.isEmpty) return;
 
     const minBarWidth = 2.0;
-    const radius = Radius.circular(2);
 
     for (final bar in bars) {
       final x = size.width * bar.xFraction.clamp(0.0, 1.0);
@@ -186,6 +186,9 @@ class _InfluenceBarsPainter extends CustomPainter {
           .clamp(minBarWidth, size.width);
       final left =
           (x - width / 2).clamp(0.0, (size.width - width).clamp(0.0, size.width));
+      // The one bar-corner rule, instead of this strip's own flat 2px — which made
+      // it the only bar in the app with square-ish shoulders.
+      final radius = Radius.circular(chartBarRadius(width));
       final color = colorFor(bar.influence);
       final barPaint = Paint()..color = color;
       if (bar.charge > 0.0) {

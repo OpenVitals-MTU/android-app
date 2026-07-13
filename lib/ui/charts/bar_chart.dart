@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/period/time_range.dart';
 import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
+import '../theme/chart_tokens.dart';
 import 'chart_axis.dart';
 import '../../core/stats/stats.dart';
 
@@ -271,7 +272,10 @@ class _BarChartPainter extends CustomPainter {
           .toDouble();
       final left = slotLeft + (slotWidth - barWidth) / 2.0;
       final top = size.height - barHeight;
-      final radius = (barWidth / 2.0).clamp(0.0, 8.0);
+      // `chartBarRadius` — the rule this chart had already worked out for itself,
+      // and which the influence strip and the schedule chart had each answered
+      // differently. A bar is a pill until it gets fat.
+      final radius = chartBarRadius(barWidth);
 
       canvas.drawRRect(
         RRect.fromRectAndRadius(
