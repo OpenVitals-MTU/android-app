@@ -119,8 +119,16 @@ class _MetricLinePlotPainter extends CustomPainter {
     final path = smoothPath(offsets);
 
     // Fill under the line, then stroke it, so the stroke stays crisp on top.
+    //
+    // Closed under the LAST POINT, not at the plot's right edge. Closing at the
+    // edge fills a region the line never went to: on `today` — the commonest
+    // state of the commonest chart in the app — the trace stops at the current
+    // hour and the fill went on sweeping down to the bottom-right corner, shading
+    // a triangle across the hours that have not happened yet. A weight chart did
+    // the same past its final reading of the day. The fill is meant to say "under
+    // the line"; it was saying "and also over here".
     final fill = Path.from(path)
-      ..lineTo(size.width, size.height)
+      ..lineTo(offsets.last.dx, size.height)
       ..lineTo(first.dx, size.height)
       ..close();
     canvas.drawPath(
