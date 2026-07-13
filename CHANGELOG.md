@@ -1,5 +1,77 @@
 # Changelog
 
+## 2.2.0 - 2026-07-13
+
+### English
+
+- Drag any chart to read it. A crosshair follows your finger and a tooltip gives the value and the time it was taken. It snaps to a reading that was actually measured, never to a point the app invented between two of them.
+- The caffeine curve has a scale at last: milligrams down the side, midnight to midnight along the bottom, a dashed line for the level to be under by bedtime, and a tick under each drink, so every rise sits above the drink that caused it.
+- Charts draw themselves in - the line left to right, the bars up out of the axis, the ring round to its value. If you have asked your phone to reduce motion, they are simply there, fully drawn.
+- Charts load into a chart-shaped skeleton instead of a spinner, so the page no longer jumps when the data arrives.
+- An empty chart now looks like an empty chart, with an icon and a sentence, instead of a stray line of grey text.
+- New chart colours. Eight of the seventeen metric accents were too faint to see against the background - gold scored 1.59:1 where 3:1 is the floor for something you are meant to see. Every one clears it now, and keeps the hue it always had.
+- Body Energy could draw a score above 100, or below the lowest reading of the day, on a score defined as 0 to 100. The curve can no longer leave the range of the data it was drawn from, and it gained the 0-100 scale it never had.
+- An axis could label two different heights with the same number.
+- A chart filled the area under a line that was not there.
+- German, Estonian and Italian said route import took GPX/KML/KMZ, while the app has read TCX since 2.1.0 - the one file type an indoor athlete would look for was the one those languages said it could not read.
+- The German, Spanish, Estonian and Italian translations are complete.
+
+### Espanol
+
+- Arrastra cualquier grafico para leerlo. Una cruz sigue tu dedo y un globo indica el valor y la hora a la que se midio. Se ajusta a una lectura medida de verdad, nunca a un punto que la app se haya inventado entre dos.
+- La curva de cafeina por fin tiene escala: miligramos en el lateral, de medianoche a medianoche abajo, una linea discontinua con el nivel que conviene no superar antes de dormir y una marca bajo cada bebida.
+- Los graficos se dibujan solos: la linea de izquierda a derecha, las barras hacia arriba desde el eje, el anillo hasta su valor. Si has pedido al telefono que reduzca el movimiento, aparecen ya dibujados.
+- Los graficos cargan con un esqueleto con forma de grafico en lugar de una rueda giratoria, asi la pagina ya no salta cuando llegan los datos.
+- Un grafico vacio ahora parece un grafico vacio, con un icono y una frase, en vez de una linea suelta de texto gris.
+- Colores nuevos. Ocho de los diecisiete colores de metrica se veian demasiado debiles sobre el fondo: el dorado daba 1.59:1 cuando 3:1 es el minimo para algo que debes poder ver. Todos lo superan ya, conservando su tono de siempre.
+- Energia corporal podia dibujar una puntuacion por encima de 100, o por debajo de la lectura mas baja del dia, en una puntuacion definida de 0 a 100. La curva ya no puede salirse del rango de los datos, y ahora tiene la escala 0-100 que nunca tuvo.
+- Un eje podia etiquetar dos alturas distintas con el mismo numero.
+- Un grafico rellenaba el area bajo una linea que no estaba ahi.
+- En aleman, estonio e italiano la importacion de rutas decia GPX/KML/KMZ, aunque la app lee TCX desde la 2.1.0: el formato que buscaria quien entrena en interior era justo el que esos idiomas decian no poder leer.
+- Las traducciones al aleman, espanol, estonio e italiano estan completas.
+
+### Deutsch
+
+- Zieh mit dem Finger ueber ein Diagramm, um es zu lesen. Ein Fadenkreuz folgt dem Finger, und ein Tooltip nennt den Wert und die Uhrzeit der Messung. Er rastet auf einen wirklich gemessenen Wert ein, nie auf einen Punkt, den die App zwischen zwei Werten erfunden hat.
+- Die Koffeinkurve hat endlich eine Skala: Milligramm an der Seite, Mitternacht bis Mitternacht unten, eine gestrichelte Linie fuer den Wert, den man vor dem Schlafengehen unterschreiten will, und eine Marke unter jedem Getraenk.
+- Diagramme zeichnen sich selbst: die Linie von links nach rechts, die Balken aus der Achse heraus, der Ring bis zu seinem Wert. Wer am Telefon reduzierte Bewegung eingestellt hat, sieht sie einfach fertig gezeichnet.
+- Diagramme laden in ein Skelett in Diagrammform statt in einen Ladekreis, damit die Seite nicht mehr springt, wenn die Daten ankommen.
+- Ein leeres Diagramm sieht jetzt aus wie ein leeres Diagramm, mit Symbol und einem Satz statt einer verlorenen grauen Textzeile.
+- Neue Diagrammfarben. Acht der siebzehn Metrikfarben waren vor dem Hintergrund zu schwach zu sehen - Gold kam auf 1,59:1, wo 3:1 das Minimum fuer etwas ist, das man sehen koennen soll. Jede erreicht es jetzt und behaelt ihren gewohnten Farbton.
+- Koerperenergie konnte einen Wert ueber 100 oder unter dem niedrigsten Messwert des Tages zeichnen - bei einem Wert, der als 0 bis 100 definiert ist. Die Kurve kann den Bereich ihrer Daten nicht mehr verlassen und hat endlich die 0-100-Skala.
+- Eine Achse konnte zwei verschiedene Hoehen mit derselben Zahl beschriften.
+- Ein Diagramm fuellte die Flaeche unter einer Linie, die gar nicht da war.
+- Auf Deutsch, Estnisch und Italienisch hiess es beim Routenimport GPX/KML/KMZ, obwohl die App seit 2.1.0 TCX liest - das eine Format, nach dem man beim Indoor-Training suchen wuerde, war genau das, von dem diese Sprachen sagten, es sei nicht lesbar.
+- Die Uebersetzungen ins Deutsche, Spanische, Estnische und Italienische sind vollstaendig.
+
+### Italiano
+
+- Trascina un grafico per leggerlo. Un mirino segue il dito e un fumetto indica il valore e l'ora in cui e stato misurato. Si aggancia a una lettura misurata davvero, mai a un punto inventato dall'app tra due misure.
+- La curva della caffeina ha finalmente una scala: milligrammi sul lato, da mezzanotte a mezzanotte in basso, una linea tratteggiata per il livello da non superare prima di dormire e una tacca sotto ogni bevanda.
+- I grafici si disegnano da soli: la linea da sinistra a destra, le barre su dall'asse, l'anello fino al suo valore. Se hai chiesto al telefono di ridurre il movimento, sono semplicemente gia disegnati.
+- I grafici caricano con uno scheletro a forma di grafico invece che con una rotella, cosi la pagina non salta piu quando arrivano i dati.
+- Un grafico vuoto ora sembra un grafico vuoto, con un'icona e una frase invece di una riga di testo grigio.
+- Nuovi colori. Otto dei diciassette colori delle metriche erano troppo deboli sullo sfondo: l'oro arrivava a 1,59:1 dove 3:1 e il minimo per qualcosa che si deve poter vedere. Ora tutti lo superano, mantenendo la tinta di sempre.
+- Energia corporea poteva disegnare un punteggio sopra 100, o sotto la lettura piu bassa del giorno, per un punteggio definito da 0 a 100. La curva non puo piu uscire dall'intervallo dei dati e ha finalmente la scala 0-100.
+- Un asse poteva etichettare due altezze diverse con lo stesso numero.
+- Un grafico riempiva l'area sotto una linea che non c'era.
+- In tedesco, estone e italiano l'importazione dei percorsi diceva GPX/KML/KMZ, mentre l'app legge i TCX dalla 2.1.0: proprio il formato che cercherebbe chi si allena al chiuso era quello che quelle lingue dicevano di non saper leggere.
+- Le traduzioni in tedesco, spagnolo, estone e italiano sono complete.
+
+### Eesti
+
+- Lohista graafikut, et seda lugeda. Rist jargib sorme ja vihje naitab vaartust ning kellaaega, mil see moodeti. See haakub tegelikult moodetud naiduga, mitte punktiga, mille rakendus kahe naidu vahele ise valja motles.
+- Kofeiinikoveral on lopuks skaala: milligrammid kuljel, keskoost keskoni all servas, katkendjoon taseme jaoks, millest tahad enne magamaminekut allpool olla, ja mark iga joogi all.
+- Graafikud joonistavad end ise: joon vasakult paremale, tulbad teljest ules, ring oma vaartuseni. Kui oled telefonis liikumise vahendamise sisse lulitanud, on nad lihtsalt kohe valmis joonistatud.
+- Graafikud laadivad graafikukujulise skeletiga, mitte poorleva ringiga, nii et leht ei hupple enam, kui andmed saabuvad.
+- Tuhi graafik naeb nuud valja nagu tuhi graafik - ikoon ja uks lause, mitte uksik hall tekstirida.
+- Uued graafikuvarvid. Kaheksa seitsmeteistkumnest mootiku varvist olid taustal liiga norgad - kuld sai 1,59:1, kui 3:1 on miinimum millegi jaoks, mida peaks nagema. Nuud uletavad koik selle ja sailitavad oma tavaparase varvitooni.
+- Keha energia vois joonistada skoori ule 100 voi alla paeva madalaima naidu, kuigi skoor on maaratud vahemikus 0 kuni 100. Kover ei saa enam andmete vahemikust valja minna ja sai lopuks 0-100 skaala.
+- Telg vois margistada kaks erinevat korgust sama numbriga.
+- Graafik tais joonise ala alla, kus joont polnudki.
+- Saksa, eesti ja itaalia keeles lubas marsruudi import GPX/KML/KMZ-i, kuigi rakendus loeb TCX-i alates versioonist 2.1.0 - just see formaat, mida siseruumides treeniv inimene otsiks, oli see, mida need keeled utlesid lugeda mitte oskavat.
+- Saksa, hispaania, eesti ja itaalia tolked on valmis.
+
 ## 2.1.0 - 2026-07-13
 
 ### English
