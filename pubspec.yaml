@@ -217,6 +217,15 @@ flutter_launcher_icons:
 # helper that drift_dev 2.34.0 still calls, which breaks build_runner. Pin the
 # transitive sqlparser below 0.44.6 until drift_dev catches up.
 dependency_overrides:
+  # geolocator_android pulls in com.google.android.gms:play-services-location.
+  # F-Droid's scanner DELETES the plugin's build.gradle when it finds that, and
+  # the build then dies with a bare NullPointerException configuring
+  # :geolocator_android. The app never used the fused provider anyway (see
+  # activityRecordingLocationSettings: forceLocationManager is always true), so
+  # the fork just removes it. scripts/verify-geolocator-fork.sh keeps the fork
+  # honest -- see packages/geolocator_android/FORK.md.
+  geolocator_android:
+    path: packages/geolocator_android
   sqlparser: '>=0.44.0 <0.44.6'
   # vector_map_tiles (10.0.0-beta.2) still pins latlong2 ^0.9.1 while
   # flutter_map 8.3.1 already allows <0.11.0. The app (and flutter_map) use

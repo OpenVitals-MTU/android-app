@@ -50,6 +50,11 @@ steps:
     image: *flutter_image
     commands:
       - set -eu
+      # The F-Droid half of the fork guard runs on EVERY path, production included:
+      # `build` below recompiles the APK even for a production deployment, so Play
+      # Services creeping back into the vendored geolocator fork would break the
+      # F-Droid build no matter which event got us here.
+      - sh scripts/verify-geolocator-fork.sh --offline
       - |
         if [ "$${CI_PIPELINE_EVENT}" = "deployment" ] && [ "$${CI_PIPELINE_DEPLOY_TARGET:-}" = "production" ]; then
           echo "Skipping prerelease app preflight for production deployment."
@@ -58,6 +63,27 @@ steps:
         fi
       - scripts/ci-flutter.sh analyze lib test
       - dart run tool/verify_l10n.dart
+      # The staleness half of the fork guard, and it cuts differently per channel.
+      #
+      # A nightly only WARNS. Upstream can publish on a day nobody touched this repo,
+      # and losing every nightly until someone ports the fork costs more than the
+      # staleness it would be nagging about -- a nightly is a moving snapshot anyway.
+      #
+      # A tagged release BLOCKS. That is the artifact users install and keep, so it must
+      # not be cut from a fork that has silently stopped tracking upstream (and so
+      # accumulated the bugs upstream already fixed).
+      #
+      # The production-deployment path returned above and never gets here, deliberately:
+      # the tag pipeline already ran this gate on the very same commit, and upstream
+      # could publish between cutting that tag and promoting it -- a fork that was
+      # current when the artifact was built must not block shipping that same artifact.
+      - . .woodpecker/tmp/release-context.env
+      - |
+        if [ "$${OPENVITALS_RELEASE_CHANNEL}" = "nightly" ]; then
+          sh scripts/verify-geolocator-fork.sh --warn-stale
+        else
+          sh scripts/verify-geolocator-fork.sh
+        fi
       - git diff --check
 
   - name: build

@@ -31,4 +31,11 @@ steps:
       # Translation gate. ARB is the source of truth (Weblate edits it directly), so
       # this is what stops a below-threshold or placeholder-broken locale from merging.
       - dart run tool/verify_l10n.dart
+      # F-Droid gate. If Play Services get back into the vendored geolocator fork,
+      # F-Droid's scanner deletes the plugin's build.gradle and the build dies with a
+      # bare NullPointerException -- so catch it here, on the PR that reintroduced it,
+      # not in a release. --offline skips the pub.dev staleness lookup: upstream can
+      # publish on a day nobody touched this repo, and that must not redden unrelated
+      # PRs. Staleness is a release gate instead (.woodpecker/release.yml).
+      - sh scripts/verify-geolocator-fork.sh --offline
       - git diff --check
