@@ -91,3 +91,6 @@ docs/proposals/OpenVitals Design System/
 # and cannot run gen-l10n, so the committed output was stale by construction.
 lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_*.dart
+
+# Golden diffs, written by flutter_test on a mismatch. Never committed.
+test/goldens/**/failures/

@@ -16,7 +16,10 @@ steps:
     image: *flutter_image
     commands:
       - set -eu
-      - scripts/ci-flutter.sh test
+      # Goldens are engine-sensitive pixels and CI pins a different Flutter patch
+      # than the local toolchain, so they are the REFACTOR's safety net rather than
+      # CI's gate. See dart_test.yaml and scripts/goldens.sh.
+      - scripts/ci-flutter.sh test --exclude-tags golden
 
   - name: app-preflight
     depends_on:

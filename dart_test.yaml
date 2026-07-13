@@ -1,0 +1,15 @@
+# Test tags.
+#
+# `golden` marks the chart snapshot suite (`test/goldens/`). Goldens are pixels,
+# and pixels come from a specific Flutter engine build — a golden generated on one
+# engine can fail on another over antialiasing nobody changed. CI pins
+# `ghcr.io/cirruslabs/flutter:3.44.0` while the local toolchain moves ahead, so the
+# two must not be allowed to argue about a PNG.
+#
+# The rule: goldens are the REFACTOR's safety net, not CI's gate. They run locally
+# (`scripts/goldens.sh`) and CI excludes them (`--exclude-tags golden`). To promote
+# them to a CI gate, regenerate them inside the pinned image — `scripts/goldens.sh`
+# already knows how — and drop the exclusion in `.woodpecker/test.yml`.
+tags:
+  golden:
+    description: Chart snapshot tests. Engine-sensitive; see scripts/goldens.sh.

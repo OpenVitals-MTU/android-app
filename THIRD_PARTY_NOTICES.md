@@ -40,3 +40,9 @@ the app.
 - Rendered PMTiles maps display the attribution `© OpenStreetMap contributors, Protomaps`.
   OpenStreetMap data is licensed under the Open Database License (ODbL).
   Source: https://www.openstreetmap.org/copyright
+
+- `test/fonts/Roboto-{Regular,Medium,Bold}.ttf` and `test/fonts/MaterialIcons-Regular.otf`
+  are copied from the Flutter SDK's bundled `material_fonts` artifacts and are used only
+  by the chart golden tests (`test/goldens/`), never shipped in the app. Roboto is
+  licensed under the Apache License 2.0; the Material Icons font under the Apache
+  License 2.0. Source: https://github.com/flutter/flutter (bin/cache/artifacts/material_fonts)
