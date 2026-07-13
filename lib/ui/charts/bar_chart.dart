@@ -5,6 +5,7 @@ import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
 import '../theme/chart_tokens.dart';
 import 'chart_axis.dart';
+import 'chart_reveal.dart';
 import '../../core/stats/stats.dart';
 
 /// A single dated value fed into the period charts. Port of Kotlin
@@ -140,16 +141,21 @@ class PeriodBarChart extends StatelessWidget {
         onDateSelected != null &&
         buckets.isNotEmpty;
 
-    final painter = _BarChartPainter(
-      buckets: buckets,
-      accentColor: accentColor,
-      selectedDate: selectedDate,
-      selectedRange: selectedRange,
-      labelStyle: labelStyle,
-      valueFormatter: valueFormatter,
-      textDirection: Directionality.of(context),
+    _BarChartPainter painterAt(double progress) => _BarChartPainter(
+          buckets: buckets,
+          accentColor: accentColor,
+          selectedDate: selectedDate,
+          selectedRange: selectedRange,
+          labelStyle: labelStyle,
+          valueFormatter: valueFormatter,
+          textDirection: Directionality.of(context),
+          progress: progress,
+        );
+    final painter = painterAt(1);
+    Widget chart = ChartReveal(
+      builder: (context, t) =>
+          CustomPaint(size: Size.infinite, painter: painterAt(t)),
     );
-    Widget chart = CustomPaint(size: Size.infinite, painter: painter);
     if (canSelect) {
       // Wrap in a LayoutBuilder so the tap resolves against the real plot width.
       chart = LayoutBuilder(
@@ -214,6 +220,7 @@ class _BarChartPainter extends CustomPainter {
     required this.labelStyle,
     required this.valueFormatter,
     required this.textDirection,
+    required this.progress,
   });
 
   final List<PeriodChartBucket> buckets;
@@ -223,6 +230,9 @@ class _BarChartPainter extends CustomPainter {
   final TextStyle labelStyle;
   final String Function(double) valueFormatter;
   final TextDirection textDirection;
+
+  /// 0 → 1: how far the bars have grown. See [ChartReveal].
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -271,7 +281,13 @@ class _BarChartPainter extends CustomPainter {
           )
           .toDouble();
       final left = slotLeft + (slotWidth - barWidth) / 2.0;
-      final top = size.height - barHeight;
+      // Grown by `progress`. The LABEL is not: it is laid out against the bar's
+      // final height (that is what reserves room for it) and drawn only once the
+      // bar has arrived — a number sliding up inside a growing rectangle is a
+      // number nobody can read, and a label that overflows a half-grown bar is
+      // worse than one that waits.
+      final drawnHeight = barHeight * progress.clamp(0.0, 1.0);
+      final top = size.height - drawnHeight;
       // `chartBarRadius` — the rule this chart had already worked out for itself,
       // and which the influence strip and the schedule chart had each answered
       // differently. A bar is a pill until it gets fat.
@@ -279,14 +295,16 @@ class _BarChartPainter extends CustomPainter {
 
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(left, top, barWidth, barHeight),
+          Rect.fromLTWH(left, top, barWidth, drawnHeight),
           Radius.circular(radius),
         ),
         Paint()..color = accentColor,
       );
 
       if (labelLayout != null) {
-        _drawLabel(canvas, labelLayout, left, top, barWidth, barHeight);
+        if (progress >= 1.0) {
+          _drawLabel(canvas, labelLayout, left, top, barWidth, barHeight);
+        }
       }
     }
   }

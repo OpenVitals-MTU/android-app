@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'chart_reveal.dart';
+
 /// The app's one radial chart: an open-bottom arc gauge.
 ///
 /// It lived inside `summary_ring_card.dart` — a chart hiding in the components
@@ -49,11 +51,16 @@ class RingGauge extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: CustomPaint(
-                    painter: RingGaugePainter(
-                      progress: progress.clamp(0.0, 1.0),
-                      accentColor: accentColor,
-                      trackColor: trackColor,
+                  // The arc sweeps round to its value instead of being there
+                  // already. On a goal ring that is the whole point: you watch how
+                  // far round it goes.
+                  child: ChartReveal(
+                    builder: (context, t) => CustomPaint(
+                      painter: RingGaugePainter(
+                        progress: progress.clamp(0.0, 1.0) * t,
+                        accentColor: accentColor,
+                        trackColor: trackColor,
+                      ),
                     ),
                   ),
                 ),

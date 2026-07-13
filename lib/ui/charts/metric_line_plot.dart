@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'chart_axis.dart';
 import 'chart_curve.dart';
 import 'chart_paint.dart';
+import 'chart_reveal.dart';
 import 'chart_scrubber.dart';
 
 /// Port of the Kotlin `MetricLinePlot`: a line drawn against a normalized x
@@ -99,17 +100,20 @@ class MetricLinePlot extends StatelessWidget {
         valueFormatter: valueFormatter,
       ),
       chart: _maybeScrubbable(
-        CustomPaint(
-          size: Size.infinite,
-          painter: _MetricLinePlotPainter(
-            points: points,
-            minValue: minValue,
-            maxValue: safeMax,
-            accentColor: accentColor,
-            guides: guides,
-            markers: markers,
-            strokeWidth: lineStrokeWidth,
-            pointRadius: drawPoints ? pointRadius : 0,
+        ChartReveal(
+          builder: (context, t) => CustomPaint(
+            size: Size.infinite,
+            painter: _MetricLinePlotPainter(
+              points: points,
+              minValue: minValue,
+              maxValue: safeMax,
+              accentColor: accentColor,
+              guides: guides,
+              markers: markers,
+              strokeWidth: lineStrokeWidth,
+              pointRadius: drawPoints ? pointRadius : 0,
+              progress: t,
+            ),
           ),
         ),
       ),
@@ -153,6 +157,7 @@ class _MetricLinePlotPainter extends CustomPainter {
     required this.markers,
     required this.strokeWidth,
     required this.pointRadius,
+    required this.progress,
   });
 
   final List<MetricLinePlotPoint> points;
@@ -165,6 +170,9 @@ class _MetricLinePlotPainter extends CustomPainter {
 
   /// Dot radius for each sample; 0 draws no dots (Kotlin `drawPoints=false`).
   final double pointRadius;
+
+  /// 0 → 1: how much of the line has been drawn. See [ChartReveal].
+  final double progress;
 
   Offset _offsetFor(MetricLinePlotPoint point, Size size) {
     final x = point.xFraction.clamp(0.0, 1.0) * size.width;
@@ -205,7 +213,13 @@ class _MetricLinePlotPainter extends CustomPainter {
 
     final offsets = [for (final point in points) _offsetFor(point, size)];
     final first = offsets.first;
-    final path = smoothPath(offsets);
+    final full = smoothPath(offsets);
+
+    // The line draws itself in, left to right — `extractPath` walks the real curve
+    // rather than clipping a rectangle over it, so the leading end is the line's
+    // own end and not a cut.
+    final path = progress >= 1.0 ? full : _partial(full, progress);
+    if (path == null) return;
 
     // Fill under the line, then stroke it, so the stroke stays crisp on top.
     //
@@ -216,8 +230,9 @@ class _MetricLinePlotPainter extends CustomPainter {
     // a triangle across the hours that have not happened yet. A weight chart did
     // the same past its final reading of the day. The fill is meant to say "under
     // the line"; it was saying "and also over here".
+    final drawnEnd = _endOf(path) ?? offsets.last;
     final fill = Path.from(path)
-      ..lineTo(offsets.last.dx, size.height)
+      ..lineTo(drawnEnd.dx, size.height)
       ..lineTo(first.dx, size.height)
       ..close();
     // Gradient, not a flat block: a solid wash under a line reads as a second
@@ -248,17 +263,43 @@ class _MetricLinePlotPainter extends CustomPainter {
       );
     }
 
-    // Kotlin `drawMetricLinePlot`: a dot per sample when requested.
+    // Kotlin `drawMetricLinePlot`: a dot per sample when requested. Only the dots
+    // the line has actually reached — a dot ahead of the trace is a sample the
+    // chart is claiming to have drawn and has not.
     if (pointRadius > 0) {
       final dotPaint = Paint()..color = accentColor;
       for (final point in points) {
-        canvas.drawCircle(_offsetFor(point, size), pointRadius, dotPaint);
+        final offset = _offsetFor(point, size);
+        if (offset.dx <= drawnEnd.dx + 0.5) {
+          canvas.drawCircle(offset, pointRadius, dotPaint);
+        }
       }
     }
   }
 
+  /// The first [fraction] of [path], by length.
+  Path? _partial(Path path, double fraction) {
+    if (fraction <= 0) return null;
+    final metrics = path.computeMetrics().toList();
+    if (metrics.isEmpty) return null;
+    final metric = metrics.first;
+    return metric.extractPath(0, metric.length * fraction.clamp(0.0, 1.0));
+  }
+
+  Offset? _endOf(Path path) {
+    final metrics = path.computeMetrics().toList();
+    if (metrics.isEmpty) return null;
+    final metric = metrics.last;
+    return metric.getTangentForOffset(metric.length)?.position;
+  }
+
   @override
   bool shouldRepaint(_MetricLinePlotPainter oldDelegate) =>
+      // `progress` is in here, and everything else is too — the old answer was a
+      // bare `true` in several of these painters, which is free until something
+      // animates and then costs a repaint every frame, forever, on every chart in
+      // a scrolling list.
+      oldDelegate.progress != progress ||
       oldDelegate.points != points ||
       oldDelegate.minValue != minValue ||
       oldDelegate.maxValue != maxValue ||
