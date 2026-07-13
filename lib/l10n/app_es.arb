@@ -432,7 +432,7 @@
   "metricWheelchairPushes": "Impulsos de silla de ruedas",
   "metricWorkout": "Entrenamiento",
   "metricSleep": "Sueño",
-  "metricHydration": "Hidratación",
+  "metricHydration": "Bebidas",
   "metricTotalHydration": "Hidratación total",
   "metricHydrationTrend": "Tendencia de hidratación",
   "metricLoggedDays": "Días registrados",
@@ -1292,12 +1292,12 @@
   "settingsAppleHealthImportReportSaveFailed": "No se pudo guardar el informe de importación.",
   "settingsAppleHealthImportError": "Error de importación: {arg0}",
   "settingsAppleHealthImportPermissionDenied": "Se perdió el acceso al archivo seleccionado, por lo que la importación no pudo continuar. Selecciona de nuevo la misma exportación de Apple Health para continuar justo donde lo dejaste.",
-  "settingsRouteImportTitle": "Importador GPX/KML/KMZ",
-  "settingsRouteImportBody": "Importa archivos de ruta GPX, KML o KMZ. Revisa un archivo antes de guardarlo o importa varios archivos directamente en Health Connect.",
+  "settingsRouteImportTitle": "Importador de GPX/KML/KMZ/TCX",
+  "settingsRouteImportBody": "Importa archivos de actividad GPX, KML, KMZ o TCX. Los archivos TCX incluyen actividades en interiores sin GPS. Revisa un archivo antes de guardarlo o importa varios archivos a la vez directamente a Health Connect.",
   "settingsRouteImportPermissions": "{arg0}/{arg1} permisos de importación de rutas concedidos.",
   "settingsRouteImportGrant": "Conceder permisos de importación de rutas",
-  "settingsRouteImportAction": "Importar archivo GPX/KML/KMZ",
-  "settingsRouteImportBulkAction": "Importar archivos GPX/KML/KMZ en lote",
+  "settingsRouteImportAction": "Importar archivos GPX/KML/KMZ/TCX",
+  "settingsRouteImportBulkAction": "Importación masiva de archivos GPX/KML/KMZ/TCX",
   "settingsRouteImporting": "Importando rutas...",
   "settingsRouteImportProgress": "Archivo {arg0}/{arg1}. Importados {arg2}, fallidos {arg3}.",
   "settingsRouteImportResult": "Importados {arg0}. Fallidos {arg1}. Seleccionados {arg2}.",
@@ -1305,10 +1305,6 @@
   "settingsFitImportTitle": "Importador FIT",
   "settingsFitImportBody": "Importa archivos FIT de actividad, curso o entrenamiento, revisa los detalles detectados y elige si guardarlos en Health Connect.",
   "settingsFitImportAction": "Importar archivo FIT",
-  "settingsFitImportFolderAction": "Importar una carpeta de archivos FIT",
-  "settingsFitImportFolderScanning": "Buscando archivos FIT…",
-  "settingsFitImportFolderEmpty": "Esa carpeta no contiene archivos FIT.",
-  "settingsFitImportFolderTruncated": "Esa carpeta es muy grande: solo se han importado los primeros {arg0} archivos FIT.",
   "settingsOfflineMapsTitle": "Mapas sin conexión",
   "settingsOfflineMapsBody": "Importa paquetes PMTiles o Mapsforge .map/.maps para mapas de actividad completamente sin conexión. Se admiten mapas base PMTiles compatibles con Protomaps y mapas Mapsforge.",
   "settingsOfflineMapsEmpty": "Aún no hay mapas sin conexión importados.",
@@ -1516,7 +1512,6 @@
   "caffeinePeakDay": "Día pico",
   "caffeinePeakDayValue": "{arg0} - {arg1}",
   "caffeineCurveTitle": "Curva de cafeína",
-  "caffeineCurveEmpty": "No hay cafeína que modelar.",
   "caffeineThresholdLine": "Umbral de sueño {arg0}",
   "caffeineBedtimeForecast": "Previsión de hora de dormir",
   "caffeineBedtimeSummary": "A las {arg0} con umbral {arg1}",
@@ -1729,10 +1724,6 @@
   "activitySplitsLapsTitle": "Vueltas",
   "activitySplitsLapsBody": "Registrado por el dispositivo o la aplicación que guardó esta actividad.",
   "activitySplitsDerivedTitle": "Ritmos · cada {distance}",
-  "activitySpeedPerSplitTitle": "Velocidad · cada {distance}",
-  "activitySpeedPerLapTitle": "Velocidad · por vuelta",
-  "activitySpeedSplitsLabel": "Parciales",
-  "activitySpeedLapsLabel": "Vueltas",
   "@activitySplitsDerivedTitle": {
     "description": "Header of the splits card when splits are derived from the GPS route or speed samples. {distance} is an already-formatted distance such as '1 km' or '1 mi'.",
     "placeholders": {
@@ -1791,5 +1782,32 @@
     }
   },
   "settingsHealthConnectMindfulnessTitle": "Mindfulness en Health Connect",
-  "settingsHealthConnectMindfulnessBody": "Guarda las sesiones de mindfulness en Health Connect. Desactivado por defecto: algunos dispositivos dicen admitirlo pero no pueden mostrar el permiso, y pedirlo bloquea la app del sistema Health Connect. Si Health Connect falla al activarlo, vuelve a desactivarlo; todo lo demas sigue funcionando."
+  "settingsHealthConnectMindfulnessBody": "Guarda las sesiones de mindfulness en Health Connect. Desactivado por defecto: algunos dispositivos dicen admitirlo pero no pueden mostrar el permiso, y pedirlo bloquea la app del sistema Health Connect. Si Health Connect falla al activarlo, vuelve a desactivarlo; todo lo demas sigue funcionando.",
+  "settingsFitImportFolderEmpty": "La carpeta no contiene archivos FIT.",
+  "activitySpeedPerSplitTitle": "Velocidad · cada {distance}",
+  "@activitySpeedPerSplitTitle": {
+    "description": "Header of the speed chart when the device recorded no speed and the trace is rebuilt from the splits, one flat step per split. {distance} is an already-formatted distance such as '1 km' or '1 mi'.",
+    "placeholders": {
+      "distance": {
+        "type": "String",
+        "example": "1 km"
+      }
+    }
+  },
+  "settingsFitImportFolderTruncated": "Esa carpeta es muy grande: solo se importaron los primeros {arg0} archivos FIT.",
+  "@settingsFitImportFolderTruncated": {
+    "description": "Shown when the picked folder held more FIT files than one import will take. {arg0} is the number of files that were imported.",
+    "placeholders": {
+      "arg0": {
+        "type": "int",
+        "example": "2000"
+      }
+    }
+  },
+  "activitySpeedLapsLabel": "Vueltas",
+  "activitySpeedPerLapTitle": "Velocidad · por vuelta",
+  "settingsFitImportFolderScanning": "Buscando archivos FIT…",
+  "settingsFitImportFolderAction": "Importar una carpeta de archivos FIT",
+  "caffeineCurveEmpty": "No hay cafeína que modelar.",
+  "activitySpeedSplitsLabel": "Parciales"
 }
