@@ -1,10 +1,11 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../ui/theme/chart_colors.dart';
+import '../../../ui/theme/chart_tokens.dart';
+import '../../../ui/charts/time_axis.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -42,12 +43,14 @@ String localizedSleepStageLabel(AppLocalizations l10n, int stageType) {
   }
 }
 
-// Kotlin `SleepStagesLaneChart` geometry (all in logical pixels / dp).
-const double _laneHeight = 72;
-const double _labelHeight = 28;
+// Kotlin `SleepStagesLaneChart` geometry (all in logical pixels / dp). The lane
+// sizes are tokens now — the chart is still the only thing that draws lanes, but
+// a number nobody else can see is a number nobody else can keep in step.
+const double _laneHeight = kSleepLaneHeight;
+const double _labelHeight = kSleepLaneLabelHeight;
 const double _trackCenterOffset = 18;
-const double _trackHeight = 26;
-const double _transitionStroke = 2;
+const double _trackHeight = kSleepLaneTrackHeight;
+const double _transitionStroke = kChartTraceStroke;
 
 /// Port of the Kotlin `SleepStagesLaneChart`: one horizontal lane per stage
 /// group (Awake / REM / Light / Deep plus any extra type present), each lane
@@ -85,7 +88,6 @@ class SleepStagesLaneChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final locale = Localizations.localeOf(context).toString();
     final orderedStages = stages.where((s) => s.durationMs > 0).toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
     if (orderedStages.isEmpty) return const SizedBox.shrink();
@@ -95,11 +97,7 @@ class SleepStagesLaneChart extends StatelessWidget {
     if (totalMs <= 0) return const SizedBox.shrink();
 
     final lanes = _sleepStageLanes(orderedStages);
-    final timeFormat = DateFormat.jm(locale);
-    final midpoint =
-        timelineStart.add(Duration(milliseconds: totalMs ~/ 2));
-    final trackColor =
-        theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.38);
+    final trackColor = sleepLaneTrackColor(context);
 
     int laneDurationMs(_SleepStageLane lane) => orderedStages
         .where((stage) => lane.stageTypes.contains(stage.stageType))
@@ -152,17 +150,7 @@ class SleepStagesLaneChart extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            for (final value in [timelineStart, midpoint, timelineEnd])
-              Text(
-                timeFormat.format(value.toLocal()),
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-          ],
-        ),
+        TimeAxisLabels(start: timelineStart, end: timelineEnd),
       ],
     );
   }
