@@ -53,6 +53,39 @@ subprojects {
     }
 }
 
+// Strip the GNU build-id from :jni's libdartjni.so, so the APK is reproducible.
+//
+// F-Droid builds OpenVitals from source and byte-compares the result against the APK
+// published on the Codeberg release; it only ships our signed APK if they match (see
+// the fdroiddata recipe's `Binaries:` + `AllowedAPKSigningKeys`). Everything reproduced
+// except libdartjni.so, which differed in exactly 20 bytes: its `.note.gnu.build-id`.
+//
+// The NDK links with `-Wl,--build-id=sha1`, and that hash is taken over the linked
+// output BEFORE it is stripped -- so it fingerprints the DWARF debug info, which carries
+// absolute paths (the NDK, the pub cache, and AGP's `.cxx/<config-hash>` directory, whose
+// hash is itself computed from absolute paths and the CMake version). The compiled code
+// is identical on every machine; only that fingerprint is not. Chasing it by making two
+// build environments agree on every path and tool version is a race that has to be re-won
+// on every release, so drop the fingerprint instead: with no build-id there is nothing
+// left to differ.
+//
+// libdartjni.so is not ours and cannot be avoided -- the `jni` package arrives
+// transitively through `path_provider_android` and is compiled from source on every
+// build -- so the flag is injected from here. The NDK toolchain puts ANDROID_LINKER_FLAGS
+// (which is where its own `--build-id=sha1` lives) BEFORE CMAKE_SHARED_LINKER_FLAGS, and
+// lld honours the last `--build-id` on the command line, so ours wins.
+subprojects {
+    if (project.name != "jni") return@subprojects
+    afterEvaluate {
+        val library =
+            extensions.findByType(com.android.build.api.dsl.LibraryExtension::class.java)
+                ?: return@afterEvaluate
+        library.defaultConfig.externalNativeBuild.cmake.arguments.add(
+            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--build-id=none",
+        )
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
