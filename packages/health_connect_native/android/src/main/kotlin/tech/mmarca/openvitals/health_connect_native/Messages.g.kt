@@ -4750,6 +4750,23 @@ interface HealthConnectHostApi {
    */
   fun writePlannedExerciseSession(request: PlannedExerciseWriteRequestMsg, callback: (Result<String>) -> Unit)
   fun writeActivityEntry(request: ActivityWriteRequestMsg, callback: (Result<String>) -> Unit)
+  /**
+   * Inserts several activities in a SINGLE Health Connect call, returning one
+   * client record id per request, in order.
+   *
+   * Health Connect charges its rate limit per API CALL, not per record — a
+   * quota failure reads `requested: 1` however many records the call carried.
+   * Writing a folder of route files one call at a time therefore spends a unit
+   * of quota per file and exhausts the daily allowance after a couple of
+   * thousand, which is exactly what a bulk FIT import does. One call carrying
+   * fifty activities costs one unit.
+   *
+   * Insertion is atomic per call: if any record is rejected, NOTHING in the
+   * batch is written. Callers must therefore be prepared to fall back to
+   * single writes to find the file at fault (see [insertImportedRecords],
+   * which the Apple Health import already uses this way).
+   */
+  fun writeActivityEntries(requests: List<ActivityWriteRequestMsg>, callback: (Result<List<String>>) -> Unit)
   fun updateActivityEntry(id: String, request: ActivityWriteRequestMsg, callback: (Result<Unit>) -> Unit)
   fun deleteActivityEntry(id: String, callback: (Result<Unit>) -> Unit)
   /** Typed bulk insert of imported records; returns the inserted HC ids. */
@@ -6623,6 +6640,26 @@ interface HealthConnectHostApi {
             val args = message as List<Any?>
             val requestArg = args[0] as ActivityWriteRequestMsg
             api.writeActivityEntry(requestArg) { result: Result<String> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.health_connect_native.HealthConnectHostApi.writeActivityEntries$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val requestsArg = args[0] as List<ActivityWriteRequestMsg>
+            api.writeActivityEntries(requestsArg) { result: Result<List<String>> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(MessagesPigeonUtils.wrapError(error))

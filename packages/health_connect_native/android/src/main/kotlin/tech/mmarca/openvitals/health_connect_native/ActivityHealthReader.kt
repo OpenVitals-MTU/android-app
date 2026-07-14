@@ -338,6 +338,46 @@ internal class ActivityHealthReader(
       clientRecordId
     }
 
+  /**
+   * Writes several activities in ONE Health Connect call.
+   *
+   * Health Connect charges its rate limit per API CALL, not per record: a quota
+   * failure reads `requested: 1` no matter how many records the call carried. A
+   * bulk route import that calls [writeActivityEntry] per file therefore spends a
+   * unit of quota per file, and a folder of a couple of thousand exhausts the
+   * daily allowance -- so the same records go in one call instead.
+   *
+   * Insertion is atomic: if one record is rejected, none of the batch is written.
+   * The caller isolates the offending file by retrying singly (see
+   * `RouteBulkImportViewModel`).
+   */
+  suspend fun writeActivityEntries(requests: List<ActivityWriteRequestMsg>): List<String> =
+    withContext(Dispatchers.IO) {
+      if (requests.isEmpty()) return@withContext emptyList()
+      support.requireSyncEnabled()
+      val zone = ZoneId.systemDefault()
+      val clientRecordIds = ArrayList<String>(requests.size)
+      val records = ArrayList<Record>(requests.size * 2)
+      for (request in requests) {
+        val startTime = Instant.ofEpochMilli(request.startEpochMs)
+        val clientRecordId = "openvitals_activity_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
+        val metadata = Metadata.manualEntry(
+          clientRecordId = clientRecordId,
+          device = Device(type = Device.TYPE_PHONE),
+        )
+        clientRecordIds.add(clientRecordId)
+        records.add(buildSession(request, metadata))
+        records.addAll(request.toManualActivityMetricRecords(zone))
+      }
+      Log.d(
+        TAG,
+        "Writing ${requests.size} exercise sessions as ${records.size} records in one call " +
+          support.diagnosticsSummary(),
+      )
+      support.client().insertRecords(records)
+      clientRecordIds
+    }
+
   suspend fun updateActivityEntry(id: String, request: ActivityWriteRequestMsg) =
     withContext(Dispatchers.IO) {
       support.requireSyncEnabled()

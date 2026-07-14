@@ -392,6 +392,28 @@ class ActivityRepositoryImpl implements ActivityRepository {
       });
 
   @override
+  Future<Result<List<String>>> writeActivityEntries(
+    List<ActivityWriteRequest> requests,
+  ) =>
+      runCatching(() async {
+        if (requests.isEmpty) return const <String>[];
+        // ONE permission read for the whole batch, not one per request: the
+        // granted set cannot change midway through a single call, and the point of
+        // batching is to stop talking to Health Connect more than we must.
+        final granted = await _dataSource.grantedIfAvailable();
+        final needed = <String>{
+          for (final request in requests)
+            ...activityWritePermissionsForRequest(request),
+        };
+        if (!granted.containsAll(needed)) {
+          throw const MissingHealthPermissionException(
+            'Missing Health Connect activity write permission.',
+          );
+        }
+        return _dataSource.writeActivityEntries(requests);
+      });
+
+  @override
   Future<Result<void>> updateActivityEntry(
     String id,
     ActivityWriteRequest request,

@@ -64,16 +64,40 @@ class FakeRouteFileImporter implements RouteFileImporter {
 /// carrying [MissingActivityWritePermissionException] as its cause) and a failed
 /// write.
 class FakeActivityRepository implements ActivityRepository {
-  FakeActivityRepository({this.granted = true, this.writeFailure, this.events});
+  FakeActivityRepository({
+    this.granted = true,
+    this.writeFailure,
+    this.events,
+    this.batchFailure,
+    this.failSingleWriteAt,
+  });
 
   final bool granted;
+
+  /// Fails every SINGLE write. (The importer only reaches single writes as the
+  /// fallback after a batch was rejected.)
   final AppFailure? writeFailure;
+
+  /// Fails every BATCH write. Health Connect's insert is atomic, so the fake
+  /// writes nothing when it fails — which is what forces the importer to retry
+  /// the batch one file at a time to find the guilty one.
+  final AppFailure? batchFailure;
+
+  /// Fails the Nth single write (1-based), and only that one.
+  final int? failSingleWriteAt;
 
   /// Shared log with the file sources, when a test wants to see the ORDER of
   /// reads against writes rather than just the outcome.
   final List<String>? events;
 
   final List<ActivityWriteRequest> writes = [];
+
+  /// One entry per `writeActivityEntries` CALL, holding that call's batch. The
+  /// count is the point of the whole exercise: Health Connect charges its quota
+  /// per call, so this is what a bulk import actually spends.
+  final List<List<ActivityWriteRequest>> batches = [];
+
+  int _singleWrites = 0;
 
   @override
   Set<String> activityWritePermissions() => _allWrite;
@@ -93,10 +117,37 @@ class FakeActivityRepository implements ActivityRepository {
   @override
   Future<Result<String>> writeActivityEntry(ActivityWriteRequest request) async {
     events?.add('write');
+    _singleWrites += 1;
     final failure = writeFailure;
     if (failure != null) return Err(failure);
+    if (failSingleWriteAt == _singleWrites) {
+      return const Err(UnexpectedFailure('bad record'));
+    }
     writes.add(request);
     return Ok('id-${writes.length}');
+  }
+
+  @override
+  Future<Result<List<String>>> writeActivityEntries(
+    List<ActivityWriteRequest> requests,
+  ) async {
+    events?.add('writeBatch');
+    batches.add(List<ActivityWriteRequest>.of(requests));
+    if (!granted) {
+      return const Err(PermissionFailure(
+        'Missing Health Connect activity write permission for this record.',
+        cause: MissingActivityWritePermissionException(),
+      ));
+    }
+    // [writeFailure] means "writes fail", so it fails the batch as well — otherwise
+    // a test that asks for a failing write would silently get a successful batch.
+    // [batchFailure] is the narrower case: the BATCH is rejected while the single
+    // writes it falls back to still work.
+    final failure = batchFailure ?? writeFailure;
+    // Atomic: a rejected batch writes NOTHING.
+    if (failure != null) return Err(failure);
+    writes.addAll(requests);
+    return Ok([for (var i = 0; i < requests.length; i++) 'id-$i']);
   }
 
   @override
@@ -169,16 +220,18 @@ void main() {
         .read(routeBulkImportProvider.notifier)
         .importRouteFiles([_handle('a.gpx'), _handle('b.gpx')], UnitSystem.metric);
 
-    // Queued (0 of 2), then one snapshot per file, the second one already
-    // carrying the first file's import.
+    // Queued (0 of 2), then a snapshot per file as it is read and parsed. The
+    // import COUNT lands with the batch, not with the file, because the files are
+    // written together — so the last snapshot is the one that carries both.
     expect(
       progress,
       containsAllInOrder(const [
         RouteBulkImportProgress(totalFiles: 2),
         RouteBulkImportProgress(totalFiles: 2, currentFileIndex: 1),
+        RouteBulkImportProgress(totalFiles: 2, currentFileIndex: 2),
         RouteBulkImportProgress(
           totalFiles: 2,
-          importedFiles: 1,
+          importedFiles: 2,
           currentFileIndex: 2,
         ),
       ]),
@@ -238,11 +291,14 @@ void main() {
     expect(state.error, 'bad file');
   });
 
-  test('opens one file at a time, as it reaches them', () async {
-    // The memory contract of a FOLDER import. A folder of four hundred FIT files
-    // must never be read into memory to be imported: each file is opened when
-    // its turn comes and dropped when it is done. If this ever regresses to
-    // reading the batch upfront, a big folder OOMs before the first import.
+  test('opens files as it reaches them, never the whole folder up front',
+      () async {
+    // The memory contract of a FOLDER import. Activities are now written in
+    // batches — Health Connect charges its quota per call, so writing one file at
+    // a time exhausts it — which means the BATCH is what has to fit in memory, not
+    // the file. The contract survives only because the batch is bounded: the
+    // importer must still never read a whole folder before writing anything, or a
+    // big folder OOMs before the first import.
     final events = <String>[];
     final repository = FakeActivityRepository(events: events);
     final container = await _container(repository: repository);
@@ -254,12 +310,104 @@ void main() {
           },
         );
 
+    // Comfortably more files than one batch holds.
+    final files = [for (var i = 0; i < 60; i++) source('f$i.fit')];
     await container
         .read(routeBulkImportProvider.notifier)
-        .importRouteFiles([source('a.fit'), source('b.fit')], UnitSystem.metric);
+        .importRouteFiles(files, UnitSystem.metric);
 
-    // Interleaved, not batched: b is not even opened until a is written.
-    expect(events, ['read:a.fit', 'write', 'read:b.fit', 'write']);
+    // Something was WRITTEN before the last file was ever OPENED. That is the whole
+    // guarantee: reads are bounded by the batch, not by the size of the folder.
+    final firstWrite = events.indexOf('writeBatch');
+    final lastRead = events.lastIndexOf('read:f59.fit');
+    expect(firstWrite, isNonNegative);
+    expect(
+      firstWrite,
+      lessThan(lastRead),
+      reason: 'the whole folder was read before anything was written',
+    );
+    // And every file still got opened exactly once, in order.
+    expect(
+      events.where((e) => e.startsWith('read:')).length,
+      60,
+    );
+  });
+
+  test('writes activities in batches, not one Health Connect call per file',
+      () async {
+    // The reason batching exists. Health Connect charges its API-call quota PER
+    // CALL, not per record ("requested: 1", however many records the call carried),
+    // so a call per file spends a unit of quota per file and a folder of a couple
+    // of thousand dies partway through on "API call quota exceeded". This asserts
+    // the CALL COUNT, because the call count IS the quota bill.
+    final repository = FakeActivityRepository();
+    final container = await _container(repository: repository);
+
+    final files = [for (var i = 0; i < 60; i++) _handle('f$i.fit')];
+    await container
+        .read(routeBulkImportProvider.notifier)
+        .importRouteFiles(files, UnitSystem.metric);
+
+    // 60 files, 25 per batch: three calls, not sixty.
+    expect(repository.batches.length, 3);
+    expect(repository.batches.map((b) => b.length), [25, 25, 10]);
+    expect(repository.writes.length, 60);
+    expect(container.read(routeBulkImportProvider).result?.importedFiles, 60);
+  });
+
+  test('a rejected batch is retried file by file, so one bad file fails alone',
+      () async {
+    // Health Connect's insert is ATOMIC: one bad record and nothing in the batch is
+    // written, and the failure does not say which record was at fault. Without the
+    // single-write fallback, one malformed activity would take 24 good ones down
+    // with it.
+    final repository = FakeActivityRepository(
+      batchFailure: const UnexpectedFailure('bad record somewhere'),
+      failSingleWriteAt: 2,
+    );
+    final container = await _container(repository: repository);
+
+    await container.read(routeBulkImportProvider.notifier).importRouteFiles(
+      [_handle('a.fit'), _handle('b.fit'), _handle('c.fit')],
+      UnitSystem.metric,
+    );
+
+    final state = container.read(routeBulkImportProvider);
+    // The batch was tried once, then each file singly.
+    expect(repository.batches.length, 1);
+    // Only the guilty file failed; the other two were still written.
+    expect(state.result?.importedFiles, 2);
+    expect(state.result?.failedFiles, 1);
+    expect(repository.writes.length, 2);
+  });
+
+  test('a spent Health Connect quota stops the run instead of failing every file',
+      () async {
+    // The bug this was written for: when the quota runs out mid-import, every
+    // REMAINING file fails for the same reason. Treating that as "one bad file and
+    // carry on" marched through the rest of the folder and reported hundreds of
+    // perfectly good files as failures. The data is fine and the quota refills, so
+    // the run stops and says so.
+    final repository = FakeActivityRepository(
+      batchFailure: const RateLimitFailure('API call quota exceeded'),
+    );
+    final container = await _container(repository: repository);
+
+    final files = [for (var i = 0; i < 60; i++) _handle('f$i.fit')];
+    await container
+        .read(routeBulkImportProvider.notifier)
+        .importRouteFiles(files, UnitSystem.metric);
+
+    final state = container.read(routeBulkImportProvider);
+    // Stopped at the first refusal: one batch attempted, and NOT retried file by
+    // file (a quota refusal is not a bad record — retrying singly would only spend
+    // more of a quota that is already gone).
+    expect(repository.batches.length, 1);
+    expect(repository.writes, isEmpty);
+    // Crucially: nothing is blamed on the files.
+    expect(state.result?.failedFiles, 0);
+    expect(state.result?.importedFiles, 0);
+    expect(state.error, contains('later'));
   });
 
   test('a file that cannot be opened fails that file, not the batch', () async {

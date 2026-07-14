@@ -6696,6 +6696,39 @@ class HealthConnectHostApi {
     return pigeonVar_replyValue! as String;
   }
 
+  /// Inserts several activities in a SINGLE Health Connect call, returning one
+  /// client record id per request, in order.
+  ///
+  /// Health Connect charges its rate limit per API CALL, not per record — a
+  /// quota failure reads `requested: 1` however many records the call carried.
+  /// Writing a folder of route files one call at a time therefore spends a unit
+  /// of quota per file and exhausts the daily allowance after a couple of
+  /// thousand, which is exactly what a bulk FIT import does. One call carrying
+  /// fifty activities costs one unit.
+  ///
+  /// Insertion is atomic per call: if any record is rejected, NOTHING in the
+  /// batch is written. Callers must therefore be prepared to fall back to
+  /// single writes to find the file at fault (see [insertImportedRecords],
+  /// which the Apple Health import already uses this way).
+  Future<List<String>> writeActivityEntries(List<ActivityWriteRequestMsg> requests) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.health_connect_native.HealthConnectHostApi.writeActivityEntries$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[requests]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return (pigeonVar_replyValue! as List<Object?>).cast<String>();
+  }
+
   Future<void> updateActivityEntry(String id, ActivityWriteRequestMsg request) async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.health_connect_native.HealthConnectHostApi.updateActivityEntry$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(

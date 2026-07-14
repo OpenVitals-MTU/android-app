@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+
 import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
 import '../contract/repository_exceptions.dart';
@@ -17,6 +19,22 @@ Future<Result<T>> runCatching<T>(Future<T> Function() body) async {
   } on MissingHealthPermissionException catch (error, stackTrace) {
     return Err(
       PermissionFailure(error.message, cause: error, stackTrace: stackTrace),
+    );
+  } on PlatformException catch (error, stackTrace) {
+    // Kept out of UnexpectedFailure on purpose: a spent Health Connect quota is not
+    // a broken record, and a bulk import has to STOP on it rather than shrug and
+    // fail every remaining file for the same reason.
+    if (error.code == healthConnectRateLimitedCode) {
+      return Err(
+        RateLimitFailure(
+          error.message ?? 'Health Connect API call quota exceeded.',
+          cause: error,
+          stackTrace: stackTrace,
+        ),
+      );
+    }
+    return Err(
+      UnexpectedFailure(error.toString(), cause: error, stackTrace: stackTrace),
     );
   } catch (error, stackTrace) {
     return Err(

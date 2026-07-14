@@ -2114,6 +2114,16 @@ Duration? _zoneOffset(int? seconds) =>
       _api.writeActivityEntry(_activityWriteMsg(request));
 
   @override
+  Future<List<String>> writeActivityEntries(
+    List<ActivityWriteRequest> requests,
+  ) async {
+    if (requests.isEmpty) return const <String>[];
+    return _api.writeActivityEntries([
+      for (final request in requests) _activityWriteMsg(request),
+    ]);
+  }
+
+  @override
   Future<void> updateActivityEntry(String id, ActivityWriteRequest request) =>
       _api.updateActivityEntry(id, _activityWriteMsg(request));
 

@@ -397,6 +397,11 @@ final writeImportedActivityUseCaseProvider =
   (ref) => WriteImportedActivityUseCase(ref.watch(activityRepositoryProvider)),
 );
 
+final writeImportedActivitiesUseCaseProvider =
+    Provider<WriteImportedActivitiesUseCase>(
+  (ref) => WriteImportedActivitiesUseCase(ref.watch(activityRepositoryProvider)),
+);
+
 final editBleDeviceRegistryUseCaseProvider =
     Provider<EditBleDeviceRegistryUseCase>(
   (ref) => EditBleDeviceRegistryUseCase(ref.watch(bleDeviceRepositoryProvider)),

@@ -329,6 +329,9 @@ abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
   Future<String> writeActivityEntry(ActivityWriteRequestMsg request) => unimplemented('writeActivityEntry');
 
   @override
+  Future<List<String>> writeActivityEntries(List<ActivityWriteRequestMsg> requests) => unimplemented('writeActivityEntries');
+
+  @override
   Future<void> updateActivityEntry(String id, ActivityWriteRequestMsg request) => unimplemented('updateActivityEntry');
 
   @override

@@ -47,3 +47,25 @@ class WriteImportedActivityUseCase {
     });
   }
 }
+
+/// Writes a whole batch of imported activities in ONE Health Connect call.
+///
+/// This is what makes a folder of a few thousand route files importable at all.
+/// Health Connect charges its rate limit per API CALL, not per record — the
+/// rejection reads `requested: 1` however many records the call carried — so
+/// writing one activity at a time spends a unit of quota per file and runs the
+/// daily allowance dry after a couple of thousand. Fifty activities in one call
+/// cost one unit.
+///
+/// The call is ATOMIC: if Health Connect rejects a single record, nothing in the
+/// batch is written and the failure says nothing about which file was at fault.
+/// Callers therefore fall back to single writes to find it — see
+/// `RouteBulkImportViewModel`.
+class WriteImportedActivitiesUseCase {
+  const WriteImportedActivitiesUseCase(this._activityRepository);
+
+  final ActivityRepository _activityRepository;
+
+  Future<Result<List<String>>> call(List<ActivityWriteRequest> requests) =>
+      _activityRepository.writeActivityEntries(requests);
+}

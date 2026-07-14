@@ -116,6 +116,20 @@ abstract interface class ActivityRepository {
 
   Future<Result<String>> writeActivityEntry(ActivityWriteRequest request);
 
+  /// Writes several activities in ONE Health Connect call, returning a record id
+  /// per request, in order.
+  ///
+  /// Health Connect charges its rate limit per API CALL, not per record, so a bulk
+  /// import that writes one activity at a time spends a unit of quota per file and
+  /// exhausts the daily allowance after a couple of thousand.
+  ///
+  /// The call is atomic: if Health Connect rejects one record, NOTHING in the batch
+  /// is written. A caller that cares which file was at fault must retry the batch
+  /// as single writes.
+  Future<Result<List<String>>> writeActivityEntries(
+    List<ActivityWriteRequest> requests,
+  );
+
   Future<Result<void>> updateActivityEntry(String id, ActivityWriteRequest request);
 
   Future<Result<void>> deleteActivityEntry(String id);

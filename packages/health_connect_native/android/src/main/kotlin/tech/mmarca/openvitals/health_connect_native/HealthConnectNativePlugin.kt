@@ -888,6 +888,11 @@ class HealthConnectNativePlugin :
     callback: (Result<String>) -> Unit,
   ) = launchCatching(callback) { requireActivityReader().writeActivityEntry(request) }
 
+  override fun writeActivityEntries(
+    requests: List<ActivityWriteRequestMsg>,
+    callback: (Result<List<String>>) -> Unit,
+  ) = launchCatching(callback) { requireActivityReader().writeActivityEntries(requests) }
+
   override fun updateActivityEntry(
     id: String,
     request: ActivityWriteRequestMsg,
@@ -1264,14 +1269,53 @@ class HealthConnectNativePlugin :
       try {
         callback(Result.success(block()))
       } catch (e: Throwable) {
-        callback(Result.failure(e))
+        callback(Result.failure(rateLimitErrorOrNull(e) ?: e))
       }
     }
+  }
+
+  /**
+   * Recognises Health Connect's "API call quota exceeded" rejection and re-raises it
+   * under a STABLE error code.
+   *
+   * The platform throws `android.health.connect.HealthConnectException` with
+   * `ERROR_RATE_LIMIT_EXCEEDED`, but androidx wraps it in a plain
+   * `IllegalStateException` on the way out, so by the time it reaches Dart the only
+   * thing left to match on is the message text. Pigeon would hand Dart a
+   * PlatformException whose code is the useless "IllegalStateException".
+   *
+   * The real error code is still there in the cause chain, so dig it out here and give
+   * Dart something it can branch on. A quota rejection is not a bad record -- the
+   * quota refills over time and the same data writes fine later -- so callers need to
+   * tell it apart from a malformed file and STOP, rather than burn through the rest of
+   * a folder marking good files as failures.
+   */
+  private fun rateLimitErrorOrNull(error: Throwable): FlutterError? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return null
+    var cause: Throwable? = error
+    val seen = HashSet<Throwable>()
+    while (cause != null && seen.add(cause)) {
+      if (cause is android.health.connect.HealthConnectException &&
+        cause.errorCode == android.health.connect.HealthConnectException.ERROR_RATE_LIMIT_EXCEEDED
+      ) {
+        Log.w(TAG, "Health Connect API call quota exhausted: ${cause.message}")
+        return FlutterError(ERROR_RATE_LIMITED, cause.message, null)
+      }
+      cause = cause.cause
+    }
+    return null
   }
 
   private companion object {
     private const val TAG = "HealthConnectNative"
     private const val READ_PAGE_SIZE = 1000
+
+    /**
+     * PlatformException code raised when Health Connect refuses a call because the
+     * app's API-call quota is spent. Must stay in step with `kRateLimitedErrorCode`
+     * in `lib/data/source/health/native/health_connect_native_data_source.dart`.
+     */
+    private const val ERROR_RATE_LIMITED = "HEALTH_CONNECT_RATE_LIMITED"
 
     /**
      * System action to open a specific app's Health Connect permission page on

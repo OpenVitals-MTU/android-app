@@ -92,6 +92,17 @@ class _FakeActivityRepository implements ActivityRepository {
     return Ok('id-${writes.length}');
   }
 
+  /// The bulk importer writes a BATCH per Health Connect call, not a file — the
+  /// platform charges its quota per call, so a call per file exhausts it partway
+  /// through a big folder.
+  @override
+  Future<Result<List<String>>> writeActivityEntries(
+    List<ActivityWriteRequest> requests,
+  ) async {
+    writes.addAll(requests);
+    return Ok([for (var i = 0; i < requests.length; i++) 'id-$i']);
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('${invocation.memberName} not stubbed');

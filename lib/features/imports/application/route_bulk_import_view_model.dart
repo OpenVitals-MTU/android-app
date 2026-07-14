@@ -7,6 +7,7 @@ import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
+import '../../../domain/model/activity_models.dart';
 import '../../../domain/preferences/unit_system.dart';
 import '../../activity/application/activities_view_model.dart';
 import '../../dashboard/application/dashboard_view_model.dart';
@@ -109,6 +110,8 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
 
     final importer = ref.read(routeFileImporterProvider);
     final writeImportedActivity = ref.read(writeImportedActivityUseCaseProvider);
+    final writeImportedActivities =
+        ref.read(writeImportedActivitiesUseCaseProvider);
     final preferences = ref.read(preferencesRepositoryProvider);
     final writePermissions =
         ref.read(readActivityWritePermissionsUseCaseProvider)();
@@ -124,7 +127,70 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
       progress: RouteBulkImportProgress(totalFiles: totalFiles),
     );
 
+    // Parsed activities waiting to be written together. Health Connect charges
+    // its rate limit per API CALL, not per record, so writing these one at a time
+    // would spend a unit of quota per file — a folder of a couple of thousand
+    // then dies on "API call quota exceeded" partway through. See
+    // [WriteImportedActivitiesUseCase].
+    final pending = <ActivityWriteRequest>[];
+    // Peak memory is now the BATCH, not the file, so the batch is bounded by the
+    // GPS points it is carrying and not just by how many files it holds.
+    var pendingRoutePoints = 0;
+    // Set when Health Connect says the quota is gone. Not a bad file: the data is
+    // fine and the quota refills, so the run STOPS instead of marching through the
+    // rest of the folder failing every remaining file for the same reason and
+    // reporting them all as broken.
+    var rateLimited = false;
+
+    Future<void> writePending() async {
+      if (pending.isEmpty || rateLimited) return;
+      final batch = List<ActivityWriteRequest>.of(pending);
+      pending.clear();
+      pendingRoutePoints = 0;
+
+      switch (await writeImportedActivities(batch)) {
+        case Ok():
+          importedFiles += batch.length;
+          preferences.lastActivityExerciseType = batch.last.exerciseType;
+        case Err(:final RateLimitFailure failure):
+          rateLimited = true;
+          lastError = _describeFailure(failure);
+        case Err():
+          // The batch is ATOMIC: Health Connect wrote none of it, and the failure
+          // does not say which record it choked on. Retry the files one by one to
+          // find the bad one — the good ones still get written, exactly as they
+          // did before batching, and only the guilty file is counted as failed.
+          for (final request in batch) {
+            if (rateLimited) break;
+            switch (await writeImportedActivity(request)) {
+              case Ok():
+                preferences.lastActivityExerciseType = request.exerciseType;
+                importedFiles += 1;
+              case Err(:final RateLimitFailure failure):
+                rateLimited = true;
+                lastError = _describeFailure(failure);
+              case Err(:final failure):
+                // Per-file tolerance: a refused write — including a permission the
+                // record needs and does not have — fails one file, never the batch.
+                failedFiles += 1;
+                lastError = _describeFailure(failure);
+            }
+          }
+      }
+
+      state = state.copyWith(
+        progress: RouteBulkImportProgress(
+          totalFiles: totalFiles,
+          importedFiles: importedFiles,
+          failedFiles: failedFiles,
+          currentFileIndex: state.progress?.currentFileIndex ?? 0,
+        ),
+      );
+    }
+
     for (var index = 0; index < files.length; index++) {
+      if (rateLimited) break;
+
       state = state.copyWith(
         progress: RouteBulkImportProgress(
           totalFiles: totalFiles,
@@ -137,7 +203,8 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
       try {
         // Opened HERE, one file at a time — see [ActivityRouteFileSource]. The
         // bytes go out of scope with the iteration, so a folder of four hundred
-        // files costs the heap one file, not four hundred.
+        // files costs the heap one file, not four hundred. Only the parsed write
+        // request is held on for the batch, which is small.
         final file = files[index];
         final routeImport = await importer.import(
           ActivityRouteFileHandle(
@@ -164,18 +231,11 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
             'Imported route could not be converted into an activity.',
           );
         }
-        // Checks the permissions THIS record needs, then writes it — a file with
-        // a route needs more than a bare track does. See
-        // [WriteImportedActivityUseCase].
-        switch (await writeImportedActivity(request)) {
-          case Ok():
-            preferences.lastActivityExerciseType = request.exerciseType;
-            importedFiles += 1;
-          case Err(:final failure):
-            // Per-file tolerance: a refused write — including a permission the
-            // record needs and does not have — fails one file, never the batch.
-            failedFiles += 1;
-            lastError = _describeFailure(failure);
+        pending.add(request);
+        pendingRoutePoints += request.routePoints.length;
+        if (pending.length >= _maxPendingFiles ||
+            pendingRoutePoints >= _maxPendingRoutePoints) {
+          await writePending();
         }
       } catch (error) {
         // The route parser still throws (it is not a repository), so a malformed
@@ -186,6 +246,8 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
       }
     }
 
+    await writePending();
+
     state = RouteBulkImportState(
       isImporting: false,
       result: RouteBulkImportResult(
@@ -193,7 +255,10 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         importedFiles: importedFiles,
         failedFiles: failedFiles,
       ),
-      error: failedFiles > 0 ? lastError : null,
+      // Shown whenever anything went wrong, not only when a FILE failed: a run cut
+      // short by the quota can have zero failed files and still owe the user an
+      // explanation for the ones it never got to.
+      error: lastError,
     );
 
     // Newly-written activities must surface on the dashboard and activities
@@ -211,15 +276,22 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
   /// carries `MissingActivityWritePermissionException` as the failure's cause),
   /// which the user must be told about — it will fail every remaining file for
   /// the same reason.
-  String _describeFailure(AppFailure failure) =>
-      switch (failure.toScreenError(fallback: _fallbackError)) {
-        ScreenErrorPermissionDenied() =>
-          'Activity import write permissions are missing.',
-        ScreenErrorHealthConnectUnavailable() =>
-          'Health Connect is unavailable.',
-        ScreenErrorMessage(:final text) => text,
-        ScreenErrorNotFound() || ScreenErrorMissingArgument() => _fallbackError,
-      };
+  String _describeFailure(AppFailure failure) {
+    // Health Connect's own words here are a wall of stack trace ("IllegalStateException:
+    // ... availableQuota: 0.70882547 requested: 1"). What the user needs to know is
+    // that nothing is wrong with their files and the import can simply be resumed.
+    if (failure is RateLimitFailure) {
+      return 'Health Connect has hit its limit on how much can be written at once. '
+          'The files that remain are fine — run the import again later to continue.';
+    }
+    return switch (failure.toScreenError(fallback: _fallbackError)) {
+      ScreenErrorPermissionDenied() =>
+        'Activity import write permissions are missing.',
+      ScreenErrorHealthConnectUnavailable() => 'Health Connect is unavailable.',
+      ScreenErrorMessage(:final text) => text,
+      ScreenErrorNotFound() || ScreenErrorMissingArgument() => _fallbackError,
+    };
+  }
 
   /// A thrown parse/conversion failure (the route parser is not a repository and
   /// still throws).
@@ -231,6 +303,31 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
 }
 
 const String _fallbackError = 'Route import failed.';
+
+/// Activities per Health Connect call.
+///
+/// The quota is charged per CALL, so bigger is cheaper: twenty-five files cost one
+/// unit of quota instead of twenty-five, which turns a folder of a few thousand from
+/// "exhausts the daily allowance partway through" into a few dozen calls.
+///
+/// It cannot simply be raised, though, and the limit is MEMORY, not quota. The
+/// importer holds every batched activity until the batch is written, and a route
+/// file's GPS track is the fat part of it — so the batch, not the file, is now what
+/// has to fit in memory. See [_maxPendingRoutePoints], which is the real bound; this
+/// is only the ceiling for files that carry no route at all.
+const int _maxPendingFiles = 25;
+
+/// Route points per Health Connect call.
+///
+/// The honest bound on a batch. A folder of FIT files is not twenty-five uniform
+/// things: one ride can carry ten thousand GPS points and the next a hundred. Sizing
+/// the batch by file count alone would make peak memory a function of whichever files
+/// the user happened to pick — which is exactly the OOM the one-file-at-a-time reader
+/// was written to avoid (see [ActivityRouteFileSource]).
+///
+/// So the batch flushes on whichever bound comes first. It also keeps the payload of
+/// a single call well clear of Health Connect's own per-call size ceiling.
+const int _maxPendingRoutePoints = 50000;
 
 final routeBulkImportProvider =
     NotifierProvider<RouteBulkImportViewModel, RouteBulkImportState>(

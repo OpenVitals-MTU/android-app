@@ -190,6 +190,17 @@ class HealthDataSource {
   Future<String> writeActivityEntry(ActivityWriteRequest request) async =>
       throw UnsupportedError('writeActivityEntry not supported by base source');
 
+  /// Writes several activities in ONE Health Connect call, returning a record id
+  /// per request, in order.
+  ///
+  /// Health Connect charges its rate limit per API CALL, not per record, so a
+  /// bulk import that writes one activity at a time burns a unit of quota per
+  /// file. Insertion is atomic: one rejected record fails the whole batch.
+  Future<List<String>> writeActivityEntries(
+    List<ActivityWriteRequest> requests,
+  ) async =>
+      throw UnsupportedError('writeActivityEntries not supported by base source');
+
   Future<void> updateActivityEntry(String id, ActivityWriteRequest request) async {}
 
   Future<void> deleteActivityEntry(String id) async {}

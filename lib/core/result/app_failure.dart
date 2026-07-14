@@ -35,6 +35,20 @@ class HealthConnectUnavailableFailure extends AppFailure {
   String toString() => 'HealthConnectUnavailableFailure';
 }
 
+/// Health Connect refused the call because the app's API-call quota is spent.
+///
+/// Distinct from [UnexpectedFailure] because the caller must act differently: the
+/// data is fine and the quota refills over time, so the right response is to stop
+/// and retry later — never to mark the record as bad.
+class RateLimitFailure extends AppFailure {
+  const RateLimitFailure(this.message, {super.cause, super.stackTrace});
+
+  final String message;
+
+  @override
+  String toString() => 'RateLimitFailure: $message';
+}
+
 /// The requested record/entity does not exist.
 class NotFoundFailure extends AppFailure {
   const NotFoundFailure({super.cause, super.stackTrace});

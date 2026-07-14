@@ -47,6 +47,11 @@ extension AppFailureToScreenError on AppFailure {
         HealthConnectUnavailableFailure() =>
           const ScreenErrorHealthConnectUnavailable(),
         NotFoundFailure() => const ScreenErrorNotFound(),
+        // No ScreenError of its own: to a screen, a spent Health Connect quota is
+        // just a message. Callers that must ACT on it (the bulk route importer stops
+        // the run rather than failing every remaining file) switch on the
+        // `RateLimitFailure` itself, before ever reaching this boundary.
+        RateLimitFailure(:final message) => _messageOrFallback(message, fallback),
         UnexpectedFailure(:final message) => _messageOrFallback(
             message,
             fallback,
