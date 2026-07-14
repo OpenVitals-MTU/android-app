@@ -14,7 +14,12 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CaffeineState {
 
- bool get isLoading; CaffeineAnalyticsRange get analyticsRange; CaffeineInsights get homeDisplay; CaffeineInsights get analyticsDisplay; CaffeineDisplay? get display; ScreenError? get error;
+ bool get isLoading; CaffeineAnalyticsRange get analyticsRange; CaffeineInsights get homeDisplay; CaffeineInsights get analyticsDisplay;/// The drinks themselves, as Health Connect holds them.
+///
+/// The insights are a SUM of these, and a sum cannot be tapped. Keeping the entries
+/// is what lets the screen list them and open one -- the difference between knowing
+/// you had 240mg today and knowing which coffee is still keeping you awake.
+ List<CaffeineEntry> get entries; CaffeineDisplay? get display; ScreenError? get error;
 /// Create a copy of CaffeineState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +30,16 @@ $CaffeineStateCopyWith<CaffeineState> get copyWith => _$CaffeineStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CaffeineState&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.analyticsRange, analyticsRange) || other.analyticsRange == analyticsRange)&&(identical(other.homeDisplay, homeDisplay) || other.homeDisplay == homeDisplay)&&(identical(other.analyticsDisplay, analyticsDisplay) || other.analyticsDisplay == analyticsDisplay)&&(identical(other.display, display) || other.display == display)&&(identical(other.error, error) || other.error == error));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CaffeineState&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.analyticsRange, analyticsRange) || other.analyticsRange == analyticsRange)&&(identical(other.homeDisplay, homeDisplay) || other.homeDisplay == homeDisplay)&&(identical(other.analyticsDisplay, analyticsDisplay) || other.analyticsDisplay == analyticsDisplay)&&const DeepCollectionEquality().equals(other.entries, entries)&&(identical(other.display, display) || other.display == display)&&(identical(other.error, error) || other.error == error));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,isLoading,analyticsRange,homeDisplay,analyticsDisplay,display,error);
+int get hashCode => Object.hash(runtimeType,isLoading,analyticsRange,homeDisplay,analyticsDisplay,const DeepCollectionEquality().hash(entries),display,error);
 
 @override
 String toString() {
-  return 'CaffeineState(isLoading: $isLoading, analyticsRange: $analyticsRange, homeDisplay: $homeDisplay, analyticsDisplay: $analyticsDisplay, display: $display, error: $error)';
+  return 'CaffeineState(isLoading: $isLoading, analyticsRange: $analyticsRange, homeDisplay: $homeDisplay, analyticsDisplay: $analyticsDisplay, entries: $entries, display: $display, error: $error)';
 }
 
 
@@ -45,7 +50,7 @@ abstract mixin class $CaffeineStateCopyWith<$Res>  {
   factory $CaffeineStateCopyWith(CaffeineState value, $Res Function(CaffeineState) _then) = _$CaffeineStateCopyWithImpl;
 @useResult
 $Res call({
- bool isLoading, CaffeineAnalyticsRange analyticsRange, CaffeineInsights homeDisplay, CaffeineInsights analyticsDisplay, CaffeineDisplay? display, ScreenError? error
+ bool isLoading, CaffeineAnalyticsRange analyticsRange, CaffeineInsights homeDisplay, CaffeineInsights analyticsDisplay, List<CaffeineEntry> entries, CaffeineDisplay? display, ScreenError? error
 });
 
 
@@ -62,13 +67,14 @@ class _$CaffeineStateCopyWithImpl<$Res>
 
 /// Create a copy of CaffeineState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? isLoading = null,Object? analyticsRange = null,Object? homeDisplay = null,Object? analyticsDisplay = null,Object? display = freezed,Object? error = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? isLoading = null,Object? analyticsRange = null,Object? homeDisplay = null,Object? analyticsDisplay = null,Object? entries = null,Object? display = freezed,Object? error = freezed,}) {
   return _then(_self.copyWith(
 isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,analyticsRange: null == analyticsRange ? _self.analyticsRange : analyticsRange // ignore: cast_nullable_to_non_nullable
 as CaffeineAnalyticsRange,homeDisplay: null == homeDisplay ? _self.homeDisplay : homeDisplay // ignore: cast_nullable_to_non_nullable
 as CaffeineInsights,analyticsDisplay: null == analyticsDisplay ? _self.analyticsDisplay : analyticsDisplay // ignore: cast_nullable_to_non_nullable
-as CaffeineInsights,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as CaffeineInsights,entries: null == entries ? _self.entries : entries // ignore: cast_nullable_to_non_nullable
+as List<CaffeineEntry>,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
 as CaffeineDisplay?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,
   ));
@@ -185,10 +191,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool isLoading,  CaffeineAnalyticsRange analyticsRange,  CaffeineInsights homeDisplay,  CaffeineInsights analyticsDisplay,  CaffeineDisplay? display,  ScreenError? error)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool isLoading,  CaffeineAnalyticsRange analyticsRange,  CaffeineInsights homeDisplay,  CaffeineInsights analyticsDisplay,  List<CaffeineEntry> entries,  CaffeineDisplay? display,  ScreenError? error)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CaffeineState() when $default != null:
-return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.analyticsDisplay,_that.display,_that.error);case _:
+return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.analyticsDisplay,_that.entries,_that.display,_that.error);case _:
   return orElse();
 
 }
@@ -206,10 +212,10 @@ return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.ana
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool isLoading,  CaffeineAnalyticsRange analyticsRange,  CaffeineInsights homeDisplay,  CaffeineInsights analyticsDisplay,  CaffeineDisplay? display,  ScreenError? error)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool isLoading,  CaffeineAnalyticsRange analyticsRange,  CaffeineInsights homeDisplay,  CaffeineInsights analyticsDisplay,  List<CaffeineEntry> entries,  CaffeineDisplay? display,  ScreenError? error)  $default,) {final _that = this;
 switch (_that) {
 case _CaffeineState():
-return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.analyticsDisplay,_that.display,_that.error);case _:
+return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.analyticsDisplay,_that.entries,_that.display,_that.error);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -226,10 +232,10 @@ return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.ana
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool isLoading,  CaffeineAnalyticsRange analyticsRange,  CaffeineInsights homeDisplay,  CaffeineInsights analyticsDisplay,  CaffeineDisplay? display,  ScreenError? error)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool isLoading,  CaffeineAnalyticsRange analyticsRange,  CaffeineInsights homeDisplay,  CaffeineInsights analyticsDisplay,  List<CaffeineEntry> entries,  CaffeineDisplay? display,  ScreenError? error)?  $default,) {final _that = this;
 switch (_that) {
 case _CaffeineState() when $default != null:
-return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.analyticsDisplay,_that.display,_that.error);case _:
+return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.analyticsDisplay,_that.entries,_that.display,_that.error);case _:
   return null;
 
 }
@@ -241,13 +247,30 @@ return $default(_that.isLoading,_that.analyticsRange,_that.homeDisplay,_that.ana
 
 
 class _CaffeineState implements CaffeineState {
-  const _CaffeineState({this.isLoading = true, this.analyticsRange = CaffeineAnalyticsRange.last30Days, this.homeDisplay = const CaffeineInsights(), this.analyticsDisplay = const CaffeineInsights(), this.display, this.error});
+  const _CaffeineState({this.isLoading = true, this.analyticsRange = CaffeineAnalyticsRange.last30Days, this.homeDisplay = const CaffeineInsights(), this.analyticsDisplay = const CaffeineInsights(), final  List<CaffeineEntry> entries = const <CaffeineEntry>[], this.display, this.error}): _entries = entries;
   
 
 @override@JsonKey() final  bool isLoading;
 @override@JsonKey() final  CaffeineAnalyticsRange analyticsRange;
 @override@JsonKey() final  CaffeineInsights homeDisplay;
 @override@JsonKey() final  CaffeineInsights analyticsDisplay;
+/// The drinks themselves, as Health Connect holds them.
+///
+/// The insights are a SUM of these, and a sum cannot be tapped. Keeping the entries
+/// is what lets the screen list them and open one -- the difference between knowing
+/// you had 240mg today and knowing which coffee is still keeping you awake.
+ final  List<CaffeineEntry> _entries;
+/// The drinks themselves, as Health Connect holds them.
+///
+/// The insights are a SUM of these, and a sum cannot be tapped. Keeping the entries
+/// is what lets the screen list them and open one -- the difference between knowing
+/// you had 240mg today and knowing which coffee is still keeping you awake.
+@override@JsonKey() List<CaffeineEntry> get entries {
+  if (_entries is EqualUnmodifiableListView) return _entries;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_entries);
+}
+
 @override final  CaffeineDisplay? display;
 @override final  ScreenError? error;
 
@@ -261,16 +284,16 @@ _$CaffeineStateCopyWith<_CaffeineState> get copyWith => __$CaffeineStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CaffeineState&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.analyticsRange, analyticsRange) || other.analyticsRange == analyticsRange)&&(identical(other.homeDisplay, homeDisplay) || other.homeDisplay == homeDisplay)&&(identical(other.analyticsDisplay, analyticsDisplay) || other.analyticsDisplay == analyticsDisplay)&&(identical(other.display, display) || other.display == display)&&(identical(other.error, error) || other.error == error));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CaffeineState&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.analyticsRange, analyticsRange) || other.analyticsRange == analyticsRange)&&(identical(other.homeDisplay, homeDisplay) || other.homeDisplay == homeDisplay)&&(identical(other.analyticsDisplay, analyticsDisplay) || other.analyticsDisplay == analyticsDisplay)&&const DeepCollectionEquality().equals(other._entries, _entries)&&(identical(other.display, display) || other.display == display)&&(identical(other.error, error) || other.error == error));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,isLoading,analyticsRange,homeDisplay,analyticsDisplay,display,error);
+int get hashCode => Object.hash(runtimeType,isLoading,analyticsRange,homeDisplay,analyticsDisplay,const DeepCollectionEquality().hash(_entries),display,error);
 
 @override
 String toString() {
-  return 'CaffeineState(isLoading: $isLoading, analyticsRange: $analyticsRange, homeDisplay: $homeDisplay, analyticsDisplay: $analyticsDisplay, display: $display, error: $error)';
+  return 'CaffeineState(isLoading: $isLoading, analyticsRange: $analyticsRange, homeDisplay: $homeDisplay, analyticsDisplay: $analyticsDisplay, entries: $entries, display: $display, error: $error)';
 }
 
 
@@ -281,7 +304,7 @@ abstract mixin class _$CaffeineStateCopyWith<$Res> implements $CaffeineStateCopy
   factory _$CaffeineStateCopyWith(_CaffeineState value, $Res Function(_CaffeineState) _then) = __$CaffeineStateCopyWithImpl;
 @override @useResult
 $Res call({
- bool isLoading, CaffeineAnalyticsRange analyticsRange, CaffeineInsights homeDisplay, CaffeineInsights analyticsDisplay, CaffeineDisplay? display, ScreenError? error
+ bool isLoading, CaffeineAnalyticsRange analyticsRange, CaffeineInsights homeDisplay, CaffeineInsights analyticsDisplay, List<CaffeineEntry> entries, CaffeineDisplay? display, ScreenError? error
 });
 
 
@@ -298,13 +321,14 @@ class __$CaffeineStateCopyWithImpl<$Res>
 
 /// Create a copy of CaffeineState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? isLoading = null,Object? analyticsRange = null,Object? homeDisplay = null,Object? analyticsDisplay = null,Object? display = freezed,Object? error = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? isLoading = null,Object? analyticsRange = null,Object? homeDisplay = null,Object? analyticsDisplay = null,Object? entries = null,Object? display = freezed,Object? error = freezed,}) {
   return _then(_CaffeineState(
 isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,analyticsRange: null == analyticsRange ? _self.analyticsRange : analyticsRange // ignore: cast_nullable_to_non_nullable
 as CaffeineAnalyticsRange,homeDisplay: null == homeDisplay ? _self.homeDisplay : homeDisplay // ignore: cast_nullable_to_non_nullable
 as CaffeineInsights,analyticsDisplay: null == analyticsDisplay ? _self.analyticsDisplay : analyticsDisplay // ignore: cast_nullable_to_non_nullable
-as CaffeineInsights,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
+as CaffeineInsights,entries: null == entries ? _self._entries : entries // ignore: cast_nullable_to_non_nullable
+as List<CaffeineEntry>,display: freezed == display ? _self.display : display // ignore: cast_nullable_to_non_nullable
 as CaffeineDisplay?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,
   ));

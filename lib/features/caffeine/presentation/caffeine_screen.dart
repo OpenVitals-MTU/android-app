@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../../../navigation/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/theme/chart_tokens.dart';
@@ -82,6 +86,21 @@ List<Widget> _content(
     const SectionHeader('Caffeine dashboard'),
     sectionPadded(_CaffeineOverviewCard(home: home, formatter: formatter)),
     sectionPadded(CaffeineCurveCard(home: home, formatter: formatter)),
+    // The drinks themselves, and each one openable.
+    //
+    // Everything above this point is a SUM -- 240mg today, a curve that is the total of
+    // everything in you. A sum cannot be tapped, and it cannot tell you WHICH coffee is
+    // the one still keeping you awake. These rows can.
+    SectionHeader(AppLocalizations.of(context).caffeineEntriesTitle),
+    if (state.entries.isEmpty)
+      sectionPadded(
+        _CaffeineEmptyEntries(
+          message: AppLocalizations.of(context).caffeineEntriesEmpty,
+        ),
+      )
+    else
+      for (final entry in state.entries)
+        sectionPadded(_CaffeineEntryRow(entry: entry)),
     const SectionHeader('Sleep impact'),
     sectionPadded(_CaffeineSleepImpactCard(home: home, formatter: formatter)),
     const SectionHeader('Analytics'),
@@ -795,5 +814,63 @@ String? _resolveError(ScreenError? error) {
       return 'Permission denied.';
     case ScreenErrorHealthConnectUnavailable():
       return 'Health Connect is unavailable.';
+  }
+}
+
+
+class _CaffeineEmptyEntries extends StatelessWidget {
+  const _CaffeineEmptyEntries({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          message,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ),
+    );
+  }
+}
+
+/// One logged drink. Tapping it opens what that drink alone is doing to you.
+class _CaffeineEntryRow extends StatelessWidget {
+  const _CaffeineEntryRow({required this.entry});
+
+  final CaffeineEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final time = DateFormat.jm(locale).format(entry.startTime.toLocal());
+
+    return OpenVitalsCard(
+      child: ListTile(
+        leading: const Icon(Icons.local_cafe_outlined),
+        title: Text(entry.name ?? 'Caffeine'),
+        subtitle: Text(time),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${entry.caffeineMg.round()} mg',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: () =>
+            context.push(AppRoutes.caffeineDrinkLocation(entry.id)),
+      ),
+    );
   }
 }

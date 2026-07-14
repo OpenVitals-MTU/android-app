@@ -55,6 +55,13 @@ abstract class CaffeineState with _$CaffeineState {
     CaffeineAnalyticsRange analyticsRange,
     @Default(CaffeineInsights()) CaffeineInsights homeDisplay,
     @Default(CaffeineInsights()) CaffeineInsights analyticsDisplay,
+
+    /// The drinks themselves, as Health Connect holds them.
+    ///
+    /// The insights are a SUM of these, and a sum cannot be tapped. Keeping the entries
+    /// is what lets the screen list them and open one -- the difference between knowing
+    /// you had 240mg today and knowing which coffee is still keeping you awake.
+    @Default(<CaffeineEntry>[]) List<CaffeineEntry> entries,
     CaffeineDisplay? display,
     ScreenError? error,
   }) = _CaffeineState;
@@ -123,6 +130,7 @@ class CaffeineViewModel extends Notifier<CaffeineState> {
           bodyProfile: bodyProfile,
         );
         state = state.copyWith(
+          entries: value.entries,
           isLoading: false,
           homeDisplay: home,
           analyticsDisplay: analytics,

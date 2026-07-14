@@ -14,6 +14,7 @@ import '../features/activity/presentation/calories_screen.dart';
 import '../features/activity/presentation/cardio_load_detail_screen.dart';
 import '../features/body/presentation/body_screen.dart';
 import '../features/bodyenergy/presentation/body_energy_details_screen.dart';
+import '../features/caffeine/presentation/caffeine_drink_screen.dart';
 import '../features/caffeine/presentation/caffeine_screen.dart';
 import '../features/cycle/presentation/cycle_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
@@ -198,6 +199,12 @@ List<RouteBase> _metricSectionRoutes() => [
         path: AppRoutes.heartVitals,
         builder: (context, state) =>
             _openedOn(state, const HeartVitalsOverviewScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.caffeineDrink,
+        builder: (context, state) => CaffeineDrinkScreen(
+          entryId: state.pathParameters[AppRoutes.caffeineDrinkIdArg]!,
+        ),
       ),
       GoRoute(
         path: AppRoutes.cardioLoadDetail,
