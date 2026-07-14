@@ -165,15 +165,30 @@ class _ActivityRecordingSetupScreenState
     final l10n = AppLocalizations.of(context);
 
     if (selectedType.supportsGpsRoute) {
+      final theme = Theme.of(context);
       return [
+        // Compact on purpose. As a full-size SwitchListTile this was the loudest thing on
+        // the card — a headline-sized title and a two-line subtitle for a setting most
+        // people will never touch, sitting above the activity they actually came to
+        // record. It is an option, and it should read like one.
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
+          dense: true,
+          visualDensity: VisualDensity.compact,
           value: _withoutGps,
           onChanged: baseEnabled
               ? (value) => setState(() => _withoutGps = value)
               : null,
-          title: Text(l10n.activityRecordingWithoutGpsTitle),
-          subtitle: Text(l10n.activityRecordingWithoutGpsBody),
+          title: Text(
+            l10n.activityRecordingWithoutGpsTitle,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            l10n.activityRecordingWithoutGpsBody,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
         ),
         // Shown once the switch is ON, so it reads as the consequence of a choice the
         // user has just made rather than as a scare in front of one they have not.
@@ -340,26 +355,36 @@ class PreRecordingGpsFixStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final isReady = state.latestPreciseFix != null;
-    return OpenVitalsSurface(
-      style: OpenVitalsSurfaceStyle.metric,
-      borderRadius: const BorderRadius.all(Radius.circular(999)),
-      contentPadding: const EdgeInsets.all(10),
-      child: Tooltip(
-        message: isReady
-            ? l10n.activityEntryRecordingGpsFix
-            : l10n.activityEntryRecordingGpsWaiting,
-        child: Icon(
+    final label = isReady
+        ? l10n.activityEntryRecordingGpsFix
+        : l10n.activityEntryRecordingGpsWaiting;
+    final color =
+        isReady ? activityRecordingAccentColor() : theme.colorScheme.error;
+
+    // A LABEL, not a lone icon in a circle.
+    //
+    // It used to be a 44px pill holding a red target and nothing else, with the meaning
+    // hidden in a tooltip — on a touch screen, where a tooltip is a thing almost nobody
+    // will ever see. It read as a mystery symbol floating in the middle of the card, and
+    // the one thing it needed to say — that the app is waiting for a fix, and that this
+    // is why Start is greyed out — it did not say at all.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
           Icons.my_location_outlined,
-          size: 24,
-          semanticLabel: isReady
-              ? l10n.activityEntryRecordingGpsFix
-              : l10n.activityEntryRecordingGpsWaiting,
-          color: isReady
-              ? activityRecordingAccentColor()
-              : Theme.of(context).colorScheme.error,
+          size: 16,
+          color: color,
+          semanticLabel: label,
         ),
-      ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: theme.textTheme.labelMedium?.copyWith(color: color),
+        ),
+      ],
     );
   }
 }
