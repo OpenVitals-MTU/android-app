@@ -353,6 +353,7 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
     WidgetRef ref, {
     required ActivityRecordingInitialFix? initialFix,
     required int restSeconds,
+    bool withoutGps = false,
   }) async {
     final support = ref.read(activityRecordingDeviceSupportProvider);
     if (!await support.hasNotificationPermission() &&
@@ -363,6 +364,7 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
     viewModel.startGpsRecording(
       initialFix: initialFix,
       repetitionRestSeconds: restSeconds,
+      withoutGps: withoutGps,
     );
   }
 
@@ -376,10 +378,11 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
         onSelectActivityType: viewModel.selectActivityType,
         // Kotlin's setup Start begins the session immediately, handing the
         // pre-start fix over as the first route point.
-        onStartRecording: (initialFix, restSeconds) => _startRecording(
+        onStartRecording: (initialFix, restSeconds, withoutGps) => _startRecording(
           ref,
           initialFix: initialFix,
           restSeconds: restSeconds,
+          withoutGps: withoutGps,
         ),
         onRequestLocationPermission: onRequestLocationPermission,
         onRequestActivityRecognitionPermission:

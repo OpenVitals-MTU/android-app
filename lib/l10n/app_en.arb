@@ -171,6 +171,30 @@
   },
   "mindfulnessEntrySubtitle": "Mindfulness sessions are saved directly to Health Connect.",
   "mindfulnessEntryPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.",
+  "activityRecordingWithoutGpsTitle": "Record without GPS",
+  "@activityRecordingWithoutGpsTitle": {
+    "description": "Switch: record a running/cycling activity with no route, no location permission and no waiting for a fix."
+  },
+  "activityRecordingWithoutGpsBody": "No location is used, and none is asked for.",
+  "@activityRecordingWithoutGpsBody": {
+    "description": "Subtitle of the record-without-GPS switch."
+  },
+  "activityRecordingWithoutGpsWarningTitle": "What this activity will not have",
+  "@activityRecordingWithoutGpsWarningTitle": {
+    "description": "Heading of the warning shown once the user switches GPS off for a recording."
+  },
+  "activityRecordingWithoutGpsWarningBody": "No map, no automatic distance, no pace or speed, and no splits. These are all worked out from your position, and there will not be one.",
+  "@activityRecordingWithoutGpsWarningBody": {
+    "description": "Plainly states what a GPS-less recording loses. Everything listed is derived from location; things that are not (elevation, steps, heart rate) are still recorded."
+  },
+  "activityRecordingWithoutGpsWarningKept": "Duration, heart rate and elevation gain are still recorded, and you can type the distance in yourself when you save.",
+  "@activityRecordingWithoutGpsWarningKept": {
+    "description": "What a GPS-less recording DOES still capture. Elevation comes from the barometer, which needs no position."
+  },
+  "activityRecordingWithoutGpsWarningKeptSteps": "Duration, heart rate, elevation gain and your step count are still recorded, and you can type the distance in yourself when you save.",
+  "@activityRecordingWithoutGpsWarningKeptSteps": {
+    "description": "As above, for an activity type that counts steps: the step detector needs no position either."
+  },
   "activityEntrySubtitle": "Create a Health Connect activity session. Imported route or activity details are written only when you save.",
   "activityEntryPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add activities, we need Health Connect write permissions for sessions, routes, distance, elevation, calories, and recorded sensor metrics such as heart rate; treadmill entries ask for steps when needed. OpenVitals will not store these entries; they are saved in Health Connect.",
   "activityEntrySourceBody": "Create an activity manually, use an existing plan, or record a GPS route.",
