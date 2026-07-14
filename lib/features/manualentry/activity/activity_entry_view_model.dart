@@ -818,6 +818,7 @@ class ActivityEntryViewModel extends Notifier<ActivityEntryUiState> {
   Future<void> startGpsRecording({
     ActivityRecordingInitialFix? initialFix,
     int repetitionRestSeconds = 0,
+    bool withoutGps = false,
   }) async {
     final recorder = _activityRecorder;
     final current = state;
@@ -853,6 +854,7 @@ class ActivityEntryViewModel extends Notifier<ActivityEntryUiState> {
       current.selectedActivityType,
       initialFix,
       repetitionRestSeconds: repetitionRestSeconds,
+      withoutGps: withoutGps,
     );
     if (!started) {
       final message = recorder.state.value.errorMessage;

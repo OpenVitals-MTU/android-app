@@ -161,7 +161,7 @@ void main() {
           recordingState: const ActivityRecordingState(),
           unitFormatter: formatter(),
           onSelectActivityType: (_) {},
-          onStartRecording: (_, _) {},
+          onStartRecording: (_, _, _) {},
           onRequestLocationPermission: () {},
           onRequestActivityRecognitionPermission: () {},
           onChooseSource: () {},
@@ -188,6 +188,59 @@ void main() {
       expect(_startButton(tester).onPressed, isNotNull);
     });
 
+    testWidgets(
+        'switched to record without GPS, a run starts at once — no fix, no permission',
+        (tester) async {
+      // GPS held but no fix: without the switch this run cannot start at all (the test
+      // above). The whole point of the switch is that there is nothing to wait for.
+      final support = _FakeDeviceSupport(hasLocationPermission: true);
+      var askedForLocation = false;
+      ActivityRecordingInitialFix? startedWithFix;
+      bool? startedWithoutGps;
+
+      await pump(
+        tester,
+        ActivityRecordingSetupScreen(
+          state: ActivityEntryUiState(
+            mode: ActivityEntryFormMode.recording,
+            selectedActivityType: gpsType(),
+            canWrite: true,
+            isCheckingPermission: false,
+          ),
+          recordingState: const ActivityRecordingState(),
+          unitFormatter: formatter(),
+          onSelectActivityType: (_) {},
+          onStartRecording: (fix, _, withoutGps) {
+            startedWithFix = fix;
+            startedWithoutGps = withoutGps;
+          },
+          onRequestLocationPermission: () => askedForLocation = true,
+          onRequestActivityRecognitionPermission: () {},
+          onChooseSource: () {},
+          onRequestWritePermission: () {},
+        ),
+        support: support,
+      );
+
+      expect(_startButton(tester).onPressed, isNull, reason: 'no fix yet');
+
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pump();
+
+      // Nothing to wait for: no satellites are being asked for.
+      expect(_startButton(tester).onPressed, isNotNull);
+
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+
+      expect(startedWithoutGps, isTrue);
+      expect(startedWithFix, isNull,
+          reason: 'a recording that will never look at a location must not carry one');
+      expect(askedForLocation, isFalse,
+          reason: 'asking for the location permission for a recording that will never '
+              'use it is exactly what makes people distrust a health app');
+    });
+
     testWidgets('without the location permission Start is enabled, to ask for it',
         (tester) async {
       final support = _FakeDeviceSupport(hasLocationPermission: false);
@@ -204,7 +257,7 @@ void main() {
           recordingState: const ActivityRecordingState(),
           unitFormatter: formatter(),
           onSelectActivityType: (_) {},
-          onStartRecording: (_, _) {},
+          onStartRecording: (_, _, _) {},
           onRequestLocationPermission: () => askedForLocation = true,
           onRequestActivityRecognitionPermission: () {},
           onChooseSource: () {},

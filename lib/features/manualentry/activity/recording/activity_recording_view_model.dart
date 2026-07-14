@@ -158,6 +158,7 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
     ActivityEntryType activityType,
     ActivityRecordingInitialFix? initialFix, {
     int repetitionRestSeconds = 0,
+    bool withoutGps = false,
   }) async {
     if (state.isStarting) return;
     final service = _service;
@@ -166,6 +167,7 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
       activityType,
       initialFix,
       repetitionRestSeconds: repetitionRestSeconds,
+      withoutGps: withoutGps,
     );
     if (!ref.mounted) return;
     final recording = service.state.value;

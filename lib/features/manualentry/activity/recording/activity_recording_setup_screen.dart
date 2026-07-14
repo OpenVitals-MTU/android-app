@@ -34,9 +34,13 @@ class ActivityRecordingSetupScreen extends ConsumerStatefulWidget {
   final UnitFormatter unitFormatter;
   final ValueChanged<ActivityEntryType> onSelectActivityType;
 
-  /// Kotlin `onStartRecording(Location?, Long)`.
-  final void Function(ActivityRecordingInitialFix? initialFix, int restSeconds)
-      onStartRecording;
+  /// Kotlin `onStartRecording(Location?, Long)`, plus whether the user asked to record
+  /// this GPS-capable activity WITHOUT GPS.
+  final void Function(
+    ActivityRecordingInitialFix? initialFix,
+    int restSeconds,
+    bool withoutGps,
+  ) onStartRecording;
   final VoidCallback onRequestLocationPermission;
   final VoidCallback onRequestActivityRecognitionPermission;
   final VoidCallback onChooseSource;
@@ -50,6 +54,7 @@ class ActivityRecordingSetupScreen extends ConsumerStatefulWidget {
 class _ActivityRecordingSetupScreenState
     extends ConsumerState<ActivityRecordingSetupScreen> {
   final _restSeconds = TextEditingController();
+  bool _withoutGps = false;
 
   /// Kotlin resets the field with `rememberSaveable(selectedType.id)`.
   String? _restSecondsTypeId;
@@ -90,10 +95,17 @@ class _ActivityRecordingSetupScreenState
 
     // Kotlin: a GPS activity needs either a precise fix or no permission yet (so
     // the button can ask for one); everything else needs its sensor.
+    // Recording without GPS waits for nothing: there is no fix to acquire, no location
+    // permission to ask for, and no sensor to require. A duration IS a recording -- which
+    // is the whole point, and the reason this was worth doing rather than telling people
+    // to keep calling their runs treadmills.
+    final recordingWithoutGps = selectedType.supportsGpsRoute && _withoutGps;
     final enabled = baseEnabled &&
-        (selectedType.supportsGpsRoute
-            ? !gpsFix.hasPrecisePermission || gpsFix.latestPreciseFix != null
-            : readiness?.hasRequiredSensor ?? false);
+        (recordingWithoutGps
+            ? true
+            : selectedType.supportsGpsRoute
+                ? !gpsFix.hasPrecisePermission || gpsFix.latestPreciseFix != null
+                : readiness?.hasRequiredSensor ?? false);
 
     return OpenVitalsCard(
       child: Padding(
@@ -154,10 +166,23 @@ class _ActivityRecordingSetupScreenState
 
     if (selectedType.supportsGpsRoute) {
       return [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: PreRecordingGpsFixStatus(state: gpsFix),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _withoutGps,
+          onChanged: baseEnabled
+              ? (value) => setState(() => _withoutGps = value)
+              : null,
+          title: Text(l10n.activityRecordingWithoutGpsTitle),
+          subtitle: Text(l10n.activityRecordingWithoutGpsBody),
         ),
+        // The fix status is about GPS, so it goes away with GPS. Leaving "waiting for a
+        // fix" on screen under a recording that will never use one would be telling the
+        // user to wait for something that is not coming.
+        if (!_withoutGps)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: PreRecordingGpsFixStatus(state: gpsFix),
+          ),
         ActivityRecordingLiveSensorStats(
           state: widget.recordingState,
           unitFormatter: widget.unitFormatter,
@@ -196,19 +221,27 @@ class _ActivityRecordingSetupScreenState
     RecordingSensorReadiness? readiness,
     PreRecordingGpsFixState gpsFix,
   ) {
+    final withoutGps = selectedType.supportsGpsRoute && _withoutGps;
+
     if (selectedType.supportsStepCounting &&
         !(readiness?.hasActivityRecognitionPermission ?? false)) {
       widget.onRequestActivityRecognitionPermission();
       return;
     }
-    if (selectedType.supportsGpsRoute && !gpsFix.hasPrecisePermission) {
+    // Not asked for when the user has said they do not want GPS. Demanding the location
+    // permission for a recording that will never look at a location is exactly the kind
+    // of thing that makes people distrust a health app.
+    if (selectedType.supportsGpsRoute &&
+        !withoutGps &&
+        !gpsFix.hasPrecisePermission) {
       widget.onRequestLocationPermission();
       return;
     }
     final restSeconds = int.tryParse(_restSeconds.text.trim()) ?? 0;
     widget.onStartRecording(
-      selectedType.supportsGpsRoute ? gpsFix.initialFix : null,
+      (selectedType.supportsGpsRoute && !withoutGps) ? gpsFix.initialFix : null,
       restSeconds < 0 ? 0 : restSeconds,
+      withoutGps,
     );
   }
 }

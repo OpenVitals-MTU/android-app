@@ -313,6 +313,7 @@ class _FakeRecordingService implements ActivityRecordingController {
     ActivityEntryType activityType,
     ActivityRecordingInitialFix? initialFix, {
     int repetitionRestSeconds = 0,
+    bool withoutGps = false,
   }) async {
     startCalls += 1;
     if (startResult) {
