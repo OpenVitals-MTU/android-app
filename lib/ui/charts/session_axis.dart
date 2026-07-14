@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/presentation/elapsed_format.dart';
 import 'chart_axis.dart';
+import 'chart_viewport.dart';
 
 /// Where a moment sits within one recorded session, and the axis that says so.
 ///
@@ -42,13 +43,22 @@ class SessionAxis {
 
   /// Elapsed labels at the quarters: `0:00 … 15:00 … 30:00 … 45:00 … 1:00:00`.
   /// Kotlin `sessionElapsedLabels`.
-  List<String> get elapsedLabels => [
-        formatRecordingElapsed(Duration.zero),
-        formatRecordingElapsed(duration ~/ 4),
-        formatRecordingElapsed(duration ~/ 2),
-        formatRecordingElapsed(duration * 3 ~/ 4),
-        formatRecordingElapsed(duration),
+  ///
+  /// Computed from the slice of the session ON SHOW, which at full zoom is the whole of
+  /// it and gives back exactly the five it always did. A row that still read `0:00 …
+  /// 1:00:00` under a plot showing the last ten minutes would be describing a chart that
+  /// is not there -- which is the bug [DayAxisLabels] exists to have killed once already.
+  List<String> elapsedLabelsFor([ChartViewport viewport = ChartViewport.full]) => [
+        for (var tick = 0; tick <= 4; tick++)
+          formatRecordingElapsed(
+            Duration(
+              milliseconds:
+                  (viewport.dataFraction(tick / 4) * durationMs).round(),
+            ),
+          ),
       ];
+
+  List<String> get elapsedLabels => elapsedLabelsFor();
 
   @override
   bool operator ==(Object other) =>
@@ -68,10 +78,14 @@ class SessionAxisLabels extends StatelessWidget {
     super.key,
     required this.axis,
     this.inset = kChartPlotInset,
+    this.viewport = ChartViewport.full,
   });
 
   final SessionAxis axis;
   final double inset;
+
+  /// The slice of the session on show, when the chart above has been pinched.
+  final ChartViewport viewport;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +97,7 @@ class SessionAxisLabels extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (final label in axis.elapsedLabels)
+              for (final label in axis.elapsedLabelsFor(viewport))
                 Text(
                   label,
                   style: theme.textTheme.labelSmall

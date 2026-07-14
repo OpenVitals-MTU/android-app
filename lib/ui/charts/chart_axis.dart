@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import 'chart_viewport.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/period/time_range.dart';
@@ -287,11 +289,20 @@ class PeriodChartXAxis extends StatelessWidget {
   const PeriodChartXAxis({
     super.key,
     required this.dates,
+    this.viewport = ChartViewport.full,
     required this.selectedRange,
   });
 
   final List<LocalDate> dates;
   final TimeRange selectedRange;
+
+  /// The slice of the period on show, when the chart above has been pinched.
+  final ChartViewport viewport;
+
+  bool _slotIsVisible(int index, double width, double slotWidth) {
+    final left = viewport.visibleFraction(index / dates.length) * width;
+    return left + slotWidth > 0 && left < width;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -300,26 +311,60 @@ class PeriodChartXAxis extends StatelessWidget {
       color: theme.colorScheme.onSurfaceVariant,
     );
     final lastIndex = dates.length - 1;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var index = 0; index < dates.length; index++)
-          Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: isPeriodChartLabelVisible(index, lastIndex, selectedRange)
-                  ? Text(
-                      _periodChartLabel(dates[index], selectedRange),
-                      style: labelStyle,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.clip,
-                    )
-                  : const SizedBox(height: 16),
-            ),
+
+    Widget label(int index) => isPeriodChartLabelVisible(
+          index,
+          lastIndex,
+          selectedRange,
+        )
+            ? Text(
+                _periodChartLabel(dates[index], selectedRange),
+                style: labelStyle,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.clip,
+              )
+            : const SizedBox(height: 16);
+
+    if (!viewport.isZoomed) {
+      // Unzoomed, the slots are the whole row: even Expandeds, exactly as before.
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < dates.length; index++)
+            Expanded(child: Align(alignment: Alignment.topCenter, child: label(index))),
+        ],
+      );
+    }
+
+    // Zoomed, a date has to sit over ITS OWN bar. Evenly spacing whichever labels survive
+    // would drift them off the bars they name -- and a bar chart whose dates belong to
+    // the wrong bars is worse than one that does not zoom.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final slotWidth = width / (dates.length * viewport.span);
+        return SizedBox(
+          height: 16,
+          width: width,
+          child: Stack(
+            children: [
+              for (var index = 0; index < dates.length; index++)
+                if (_slotIsVisible(index, width, slotWidth))
+                  Positioned(
+                    left: viewport.visibleFraction(index / dates.length) * width,
+                    width: slotWidth,
+                    top: 0,
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: label(index),
+                    ),
+                  ),
+            ],
           ),
-      ],
+        );
+      },
     );
   }
 }
