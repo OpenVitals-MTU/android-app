@@ -12,14 +12,19 @@ import 'chart_viewport.dart';
 /// vertical one to the page. A zoom gesture that accepted one finger would have to fight
 /// both: it would either eat the scrub, or freeze the page under the user's thumb.
 ///
-/// So the recognizer here refuses to engage until a SECOND pointer lands
-/// ([_TwoFingerScaleGestureRecognizer]). One finger behaves exactly as it always has —
-/// scrub horizontally, scroll the page vertically. Two fingers pinch to zoom and drag to
-/// move along the axis. Nothing that worked before this widget existed behaves any
-/// differently.
+/// So this widget uses a raw [Listener] and CLAIMS NOTHING in the gesture arena. It reads
+/// the pointers as they go past and works the pinch out itself, doing nothing at all until
+/// a second finger lands. One finger behaves exactly as it always has — scrub
+/// horizontally, scroll the page vertically, tap a bar to select its day. Nothing that
+/// worked before this widget existed behaves any differently.
 ///
-/// Double-tap resets, because a chart you have zoomed into and cannot get out of is worse
-/// than one that never zoomed.
+/// That is not belt-and-braces. The first version of this used real recognizers, and each
+/// one took something away: a scale recognizer treats a single finger as a pan and ate the
+/// scrub, and a DoubleTapGestureRecognizer held the arena for its 300ms and swallowed the
+/// bar chart's day-selecting tap. Both were caught by tests, and both are the same lesson.
+///
+/// Double tap resets — spotted from the raw pointers, for the reason above. A chart you
+/// have zoomed into and cannot get out of is worse than one that never zoomed.
 class ChartZoom extends StatefulWidget {
   const ChartZoom({
     super.key,
@@ -51,9 +56,47 @@ class _ChartZoomState extends State<ChartZoom> {
   double _pinchStartSeparation = 0.0;
   double _pinchStartFocus = 0.0;
 
+  /// When and where the last finger lifted, for spotting a double tap ourselves.
+  DateTime? _lastTapAt;
+  Offset? _lastTapPosition;
+  Offset? _downPosition;
+
+  static const Duration _doubleTapWindow = Duration(milliseconds: 300);
+  static const double _tapSlop = 18.0;
+
   void _onPointerDown(PointerDownEvent event) {
     _pointers[event.pointer] = event.localPosition;
+    _downPosition = event.localPosition;
     _restartPinch();
+  }
+
+  /// A double tap, worked out from the raw pointers rather than asked of a
+  /// [GestureDetector].
+  ///
+  /// A DoubleTapGestureRecognizer here would enter the arena, and the bar chart underneath
+  /// resolves a SINGLE tap to select a day — the recognizer held the arena for its 300ms
+  /// and the day never got selected. Which is the whole point of this widget: it claims
+  /// nothing, so it can take nothing away. Recognising the second tap by hand costs a
+  /// dozen lines and leaves every gesture below it exactly as it was.
+  void _maybeDoubleTap(PointerUpEvent event) {
+    final down = _downPosition;
+    if (down == null) return;
+    if ((event.localPosition - down).distance > _tapSlop) return;
+
+    final now = DateTime.now();
+    final last = _lastTapAt;
+    final lastPosition = _lastTapPosition;
+    if (last != null &&
+        lastPosition != null &&
+        now.difference(last) < _doubleTapWindow &&
+        (event.localPosition - lastPosition).distance <= _tapSlop) {
+      _lastTapAt = null;
+      _lastTapPosition = null;
+      _reset();
+      return;
+    }
+    _lastTapAt = now;
+    _lastTapPosition = event.localPosition;
   }
 
   void _onPointerMove(PointerMoveEvent event, double width) {
@@ -80,17 +123,30 @@ class _ChartZoomState extends State<ChartZoom> {
         .zoomed(scale, _pinchStartFocus)
         .panned(focus - _pinchStartFocus);
 
-    if (next != _viewport) setState(() => _viewport = next);
+    if (next != _viewport) {
+      _isPinching = true;
+      setState(() => _viewport = next);
+    }
   }
 
   void _onPointerEnd(PointerEvent event) {
+    // Only a lift that ended a single-finger, still gesture counts as a tap: a finger
+    // coming off a pinch is not a tap, and must not reset the zoom the user just set.
+    if (event is PointerUpEvent && _pointers.length == 1 && !_isPinching) {
+      _maybeDoubleTap(event);
+    }
     _pointers.remove(event.pointer);
     _restartPinch();
   }
 
+  /// Whether a pinch has actually happened during this touch, as opposed to two fingers
+  /// merely resting.
+  bool _isPinching = false;
+
   /// Rebaselines whenever the number of fingers changes, so lifting one of three, or
   /// adding a second, does not make the chart leap.
   void _restartPinch() {
+    if (_pointers.isEmpty) _isPinching = false;
     if (_pointers.length < 2) {
       _pinchStartViewport = null;
       return;
@@ -136,13 +192,7 @@ class _ChartZoomState extends State<ChartZoom> {
           onPointerMove: (event) => _onPointerMove(event, width),
           onPointerUp: _onPointerEnd,
           onPointerCancel: _onPointerEnd,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            // A tap recognizer, so it competes only with other taps. A chart you can zoom
-            // into and cannot get out of is worse than one that never zoomed.
-            onDoubleTap: _reset,
-            child: widget.builder(context, _viewport),
-          ),
+          child: widget.builder(context, _viewport),
         );
       },
     );

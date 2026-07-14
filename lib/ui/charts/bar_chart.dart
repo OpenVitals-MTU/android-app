@@ -5,6 +5,8 @@ import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
 import '../theme/chart_tokens.dart';
 import 'chart_axis.dart';
+import 'chart_viewport.dart';
+import 'chart_zoom.dart';
 import 'chart_reveal.dart';
 import '../../core/stats/stats.dart';
 
@@ -141,36 +143,41 @@ class PeriodBarChart extends StatelessWidget {
         onDateSelected != null &&
         buckets.isNotEmpty;
 
-    _BarChartPainter painterAt(double progress) => _BarChartPainter(
-          buckets: buckets,
-          accentColor: accentColor,
-          selectedDate: selectedDate,
-          selectedRange: selectedRange,
-          labelStyle: labelStyle,
-          valueFormatter: valueFormatter,
-          textDirection: Directionality.of(context),
-          progress: progress,
-        );
-    final painter = painterAt(1);
-    Widget chart = ChartReveal(
-      builder: (context, t) =>
-          CustomPaint(size: Size.infinite, painter: painterAt(t)),
-    );
-    if (canSelect) {
-      // Wrap in a LayoutBuilder so the tap resolves against the real plot width.
-      chart = LayoutBuilder(
-        builder: (context, constraints) {
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapUp: (details) => _handleTap(
-              details.localPosition.dx,
-              constraints.maxWidth,
-              buckets,
-            ),
-            child: CustomPaint(size: Size.infinite, painter: painter),
+    Widget chartFor(ChartViewport viewport) {
+      _BarChartPainter painterAt(double progress) => _BarChartPainter(
+            buckets: buckets,
+            accentColor: accentColor,
+            selectedDate: selectedDate,
+            selectedRange: selectedRange,
+            labelStyle: labelStyle,
+            valueFormatter: valueFormatter,
+            textDirection: Directionality.of(context),
+            progress: progress,
+            viewport: viewport,
           );
-        },
+      final painter = painterAt(1);
+      Widget chart = ChartReveal(
+        builder: (context, t) =>
+            CustomPaint(size: Size.infinite, painter: painterAt(t)),
       );
+      if (canSelect) {
+        // Wrap in a LayoutBuilder so the tap resolves against the real plot width.
+        chart = LayoutBuilder(
+          builder: (context, constraints) {
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (details) => _handleTap(
+                details.localPosition.dx,
+                constraints.maxWidth,
+                buckets,
+                viewport,
+              ),
+              child: CustomPaint(size: Size.infinite, painter: painter),
+            );
+          },
+        );
+      }
+      return chart;
     }
 
     return OpenVitalsCard(
@@ -185,11 +192,22 @@ class PeriodBarChart extends StatelessWidget {
                   ?.copyWith(color: theme.colorScheme.onSurface),
             ),
             const SizedBox(height: 12),
-            SizedBox(height: chartHeight, child: chart),
-            const SizedBox(height: 8),
-            PeriodChartXAxis(
-              dates: buckets.map((bucket) => bucket.date).toList(),
-              selectedRange: selectedRange,
+            // The bars and the dates under them are BOTH inside the zoom and share the
+            // one viewport. A bar chart whose dates had drifted off the bars they name
+            // would be worse than one that never zoomed at all.
+            ChartZoom(
+              builder: (context, viewport) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: chartHeight, child: chartFor(viewport)),
+                  const SizedBox(height: 8),
+                  PeriodChartXAxis(
+                    dates: buckets.map((bucket) => bucket.date).toList(),
+                    selectedRange: selectedRange,
+                    viewport: viewport,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -203,10 +221,18 @@ class PeriodBarChart extends StatelessWidget {
     );
   }
 
-  void _handleTap(double x, double width, List<PeriodChartBucket> buckets) {
+  void _handleTap(
+    double x,
+    double width,
+    List<PeriodChartBucket> buckets,
+    ChartViewport viewport,
+  ) {
     if (buckets.isEmpty || width <= 0) return;
-    final slotWidth = width / buckets.length;
-    final index = (x / slotWidth).floor().clamp(0, buckets.length - 1);
+    // The finger lands on the PLOT; the bucket it is over depends on what is on show.
+    // Tapping the third bar of a zoomed chart has to select the third bar you can SEE.
+    final dataFraction = viewport.dataFraction(x / width);
+    final index =
+        (dataFraction * buckets.length).floor().clamp(0, buckets.length - 1);
     onDateSelected?.call(buckets[index].date);
   }
 }
@@ -221,7 +247,13 @@ class _BarChartPainter extends CustomPainter {
     required this.valueFormatter,
     required this.textDirection,
     required this.progress,
+    required this.viewport,
   });
+
+  /// The slice of the period on show. A bucket is a SLOT on the same 0..1 axis every
+  /// other chart uses -- the nth of n -- so zooming it is the same arithmetic, and the
+  /// slots simply get wider as fewer of them are on screen.
+  final ChartViewport viewport;
 
   final List<PeriodChartBucket> buckets;
   final Color accentColor;
@@ -242,14 +274,27 @@ class _BarChartPainter extends CustomPainter {
         .map((bucket) => bucket.value)
         .fold<double>(1.0, (currentMax, value) => value > currentMax ? value : currentMax);
 
-    final slotWidth = size.width / buckets.length;
-    final gap = _gapFor(buckets.length).clamp(0.0, slotWidth * 0.6);
+    // How many slots FIT on screen, not how many exist: the gap and the label sizing are
+    // about how crowded the plot looks, and a zoomed-in chart showing three bars is not
+    // crowded just because the week has seven.
+    final visibleSlots = (buckets.length * viewport.span).clamp(1.0, 1e9);
+    final slotWidth = size.width / visibleSlots;
+    final gap = _gapFor(visibleSlots.round()).clamp(0.0, slotWidth * 0.6);
     final barWidth = (slotWidth - gap).clamp(1.0, double.infinity);
     const minVisibleHeight = 4.0;
 
+    if (viewport.isZoomed) {
+      canvas.save();
+      canvas.clipRect(Offset.zero & size);
+    }
+
     for (var index = 0; index < buckets.length; index++) {
       final bucket = buckets[index];
-      final slotLeft = index * slotWidth;
+      final slotLeft =
+          viewport.visibleFraction(index / buckets.length) * size.width;
+      // Wholly off one side or the other: nothing to draw, and laying out its label would
+      // be work done for a bar nobody can see.
+      if (slotLeft > size.width || slotLeft + slotWidth < 0) continue;
       final isSelected =
           selectedDate == bucket.date && selectedRange == TimeRange.week;
       if (isSelected) {
@@ -307,6 +352,8 @@ class _BarChartPainter extends CustomPainter {
         }
       }
     }
+
+    if (viewport.isZoomed) canvas.restore();
   }
 
   double _gapFor(int count) {
