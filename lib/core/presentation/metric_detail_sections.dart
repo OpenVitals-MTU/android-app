@@ -131,12 +131,33 @@ class _ChartDaySelectionScopeState extends State<ChartDaySelectionScope> {
 }
 
 /// Kotlin `MetricDetailSectionBuilder.section(id, visible) { ... }`.
+///
+/// Unlike the Kotlin, whose trailing lambda is only invoked for a visible section,
+/// [child] is an ordinary argument: it is BUILT whether the section is shown or not,
+/// and [visible] merely drops it afterwards.
+///
+/// So `visible:` does NOT guard the child, however much it reads like it does:
+///
+/// ```dart
+/// // WRONG — the `!` runs even when the section is invisible, and throws.
+/// MetricDetailSection(id, visible: x != null, Card(value: x!));
+///
+/// // RIGHT — the child is null-safe on its own terms.
+/// MetricDetailSection(id, visible: x != null,
+///     x == null ? const SizedBox.shrink() : Card(value: x));
+/// ```
+///
+/// The sleep screen got this wrong and rendered a blank page for anyone who opened
+/// a week/month/year view on a day they had not slept yet.
 @immutable
 class MetricDetailSection {
   const MetricDetailSection(this.id, this.child, {this.visible = true});
 
   final MetricDetailSectionId id;
+
+  /// Built eagerly, even when [visible] is false — see the class doc.
   final Widget child;
+
   final bool visible;
 }
 

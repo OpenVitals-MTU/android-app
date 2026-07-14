@@ -152,29 +152,44 @@ class _SleepContent extends StatelessWidget {
         ? const <SleepData>[]
         : display.sortedSessionsByDate[selectedDay] ?? const <SleepData>[];
 
+    // Held in a local, because `visible:` does NOT guard the child.
+    //
+    // A section's child is an ordinary Widget argument, so it is BUILT whether the
+    // section is shown or not — `visible: false` only hides it afterwards. Reading
+    // `display.dailySummary!` in there therefore ran even on week/month/year, where
+    // the summary is of the SELECTED DAY and is null whenever that day has no sleep.
+    // Opening the app after midnight and switching off the day view crashed on it:
+    // the day view itself was fine (it returns the "no sleep recorded" message
+    // before ever reaching here), and so was any day that HAD sleep, which is why it
+    // hid for so long.
+    final dailySummary = display.dailySummary;
+    final openableDailySessionId = display.openableDailySessionId;
+
     final orderedSections = OrderedMetricDetailSections(
       sections: [
         MetricDetailSection(
           MetricDetailSectionId.intradayChart,
-          visible: isDay && display.dailySummary != null,
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              sectionPadded(SleepSessionTimelineCard(
-                session: display.dailySummary!,
-                selectedDate: state.selectedDate,
-                formatter: formatter,
-                timeRangeText: display.dayTimeRangeText,
-                onTap: display.openableDailySessionId == null
-                    ? null
-                    : () => onOpenSession(display.openableDailySessionId!),
-              )),
-              sectionPadded(SleepStageShareCard(
-                shares: display.stageShares,
-                formatter: formatter,
-              )),
-            ],
-          ),
+          visible: isDay && dailySummary != null,
+          dailySummary == null
+              ? const SizedBox.shrink()
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    sectionPadded(SleepSessionTimelineCard(
+                      session: dailySummary,
+                      selectedDate: state.selectedDate,
+                      formatter: formatter,
+                      timeRangeText: display.dayTimeRangeText,
+                      onTap: openableDailySessionId == null
+                          ? null
+                          : () => onOpenSession(openableDailySessionId),
+                    )),
+                    sectionPadded(SleepStageShareCard(
+                      shares: display.stageShares,
+                      formatter: formatter,
+                    )),
+                  ],
+                ),
         ),
         MetricDetailSection(
           MetricDetailSectionId.activitySummary,

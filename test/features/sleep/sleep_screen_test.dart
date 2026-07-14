@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:openvitals/features/sleep/presentation/sleep_cards.dart';
 import 'package:openvitals/features/sleep/presentation/sleep_metric_sections.dart';
 import 'package:openvitals/features/sleep/presentation/sleep_schedule_chart.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
@@ -261,6 +262,58 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byType(DataSourceEducationItem), findsOneWidget);
+  });
+
+  testWidgets(
+      'a period view renders when the selected day has no sleep but the period does',
+      (tester) async {
+    // Open the app after midnight, before you have slept: the DAY view has nothing
+    // for today, and says so. Switching to week/month/year then rendered a blank
+    // page — the intraday section force-unwrapped `dailySummary`, which is derived
+    // from the SELECTED DAY and so is null on any period whose selected day has no
+    // sleep. `visible:` did not save it: the section's child is a plain Widget
+    // argument, so it is built whether or not the section is shown.
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      await _bootstrap(
+        // Nights before today, nothing for today itself.
+        sleepRepository: _FakeSleepRepository(sessions: [
+          _session(daysAgo: 1),
+          _session(daysAgo: 2),
+          _session(daysAgo: 3),
+        ]),
+        granted: {HcPermissions.readSleep},
+        prefsValues: const {'detail_range_sleep': 'month'},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // The period has nights, so it must show them — not the empty message, and
+    // certainly not a blank page.
+    expect(find.text('No sleep recorded for this period.'), findsNothing);
+    expect(find.byType(SleepOverviewCard), findsOneWidget);
+  });
+
+  testWidgets('the day view still says so when the selected day has no sleep',
+      (tester) async {
+    // The other half of the same bug: this one always worked, and must keep working.
+    await tester.pumpWidget(
+      await _bootstrap(
+        sleepRepository:
+            _FakeSleepRepository(sessions: [_session(daysAgo: 1)]),
+        granted: {HcPermissions.readSleep},
+        prefsValues: const {'detail_range_sleep': 'day'},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('No sleep recorded for the selected day.'), findsOneWidget);
   });
 
   testWidgets('Sleep screen shows the access gate when permission missing',
