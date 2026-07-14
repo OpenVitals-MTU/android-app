@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.health_connect_native
 
-import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -28,15 +27,23 @@ import kotlin.reflect.KClass
  *    naive `flatMap { it.samples }` takes every sample in it, including the
  *    hours sitting outside the window that was asked for.
  *
- * So: ask for the window; if it comes back empty, ask again with both ends
- * widened far enough to catch a record that merely CONTAINS the window; and in
- * either case keep only the samples that actually fall inside it.
+ * So: ask for a window widened far enough to catch any record that OVERLAPS the
+ * one that was wanted, and keep only the samples that actually fall inside it.
+ *
+ * The widening is unconditional, and that is the fix for the second bug above's
+ * quieter half. This used to ask for the exact window first and only widen when
+ * that came back EMPTY — which catches a record that swallows the window whole,
+ * and misses one that overlaps only its edge. A hike starting at 11:50 whose
+ * watch had been recording since 11:48 read back fine: the records from 12:44
+ * onwards begin inside the window, so the read was full, healthy-looking, and
+ * short by the first fifty-three minutes. Nothing is empty, so nothing asked
+ * again. Emptiness is not the symptom; a record boundary crossing the window's is.
  *
  * Widening BOTH ends is deliberate. Health Connect's interval filtering appears
  * to key on a record's start, but that is observed behaviour rather than a
- * documented promise — a symmetric window is correct whether the filter tests
- * the start or demands full containment, and this is not worth making fragile to
- * save one query on a path that is already the cold one.
+ * documented promise (the FakeHealthConnectClient the tests run against demands
+ * full containment instead) — a symmetric window is correct either way, and is
+ * not worth making fragile to save a few records off a bounded read.
  */
 
 /**
@@ -50,11 +57,16 @@ import kotlin.reflect.KClass
 internal data class TimedSample<out T>(val time: Instant, val value: T)
 
 /**
- * How far either side of a window to look for a record that swallowed it.
+ * How far either side of a window to look for a record that overlaps it.
  *
- * Comfortably past a day: the record that prompted this — a real one, written by
- * this very app — ran 17.5 hours. Only ever paid on a window that came back
- * empty, so a generous bound costs nothing on the healthy path.
+ * It has to be at least as long as the longest record any writer might produce, or
+ * that record's overlap is invisible again. Comfortably past a day: the record that
+ * prompted the original fix — a real one, written by this very app — ran 17.5 hours.
+ *
+ * This is now paid on every read rather than only on one that came back empty, which
+ * is what makes it correct. It is affordable because every window it is asked for is
+ * bounded and small: one day (the intraday charts) or one workout. The margin is a
+ * fixed 30 hours, not a multiple of the window, so it cannot grow with the range.
  */
 private val SeriesRecordLookaround: Duration = Duration.ofHours(30)
 
@@ -71,13 +83,14 @@ internal suspend fun <R : Record, T> HealthConnectClient.readSeriesSamples(
 ): List<T> {
   if (!end.isAfter(start)) return emptyList()
 
-  val direct = readSeriesSamplesClipped(recordType, start, end, start, end, flatten)
-  if (direct.isNotEmpty()) return direct
-
-  // Empty means either "no data" or "every sample sits inside a record whose own
-  // boundary falls outside the window". Only the second is recoverable, and only
-  // a second query tells the two apart.
-  val recovered = readSeriesSamplesClipped(
+  // Read wide, keep narrow. A record is fetched if it could possibly overlap the
+  // window; a SAMPLE is kept only if it actually falls inside it.
+  //
+  // Deliberately unconditional. Asking for the exact window first and widening only
+  // when it came back empty is what hid a record overlapping the START of a workout:
+  // the rest of the workout answers the narrow read, so it is never empty, and the
+  // front of the trace goes missing without a single symptom.
+  return readSeriesSamplesClipped(
     recordType = recordType,
     readStart = start.minus(lookaround),
     readEnd = end.plus(lookaround),
@@ -85,14 +98,6 @@ internal suspend fun <R : Record, T> HealthConnectClient.readSeriesSamples(
     clipEnd = end,
     flatten = flatten,
   )
-  if (recovered.isNotEmpty()) {
-    Log.d(
-      "OpenVitalsPerf",
-      "healthConnect.readSeriesSamples type=${recordType.simpleName} " +
-        "recovered=${recovered.size} samples the windowed read could not see",
-    )
-  }
-  return recovered
 }
 
 /** Reads across `[readStart, readEnd]`, keeping only samples inside `[clipStart, clipEnd)`. */
