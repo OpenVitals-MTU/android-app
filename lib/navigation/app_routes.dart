@@ -83,6 +83,7 @@ class AppRoutes {
 
   // Internal detail routes (from AppNavigation.kt).
   static const String cardioLoadDetail = '/activity/cardio_load';
+  static const String heartRateRecoveryDetail = '/heart/recovery';
   static const String sleepEfficiencyDetail = '/recovery/sleep_efficiency';
   static const String sleepScoreDetail = '/recovery/sleep_score';
 

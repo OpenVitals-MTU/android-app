@@ -11,6 +11,9 @@ enum PeriodRangePreferenceKey {
   hydration('detail_range_hydration', TimeRange.week),
   nutrition('detail_range_nutrition', TimeRange.week),
   mindfulness('detail_range_mindfulness', TimeRange.week),
+  // A month, not a week: recovery tests are not a daily thing, and a week of them is
+  // usually one point or none.
+  heartRateRecovery('detail_range_hrr', TimeRange.month),
   cycle('detail_range_cycle', TimeRange.month);
 
   const PeriodRangePreferenceKey(this.storageKey, this.defaultRange);

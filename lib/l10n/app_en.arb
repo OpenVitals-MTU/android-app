@@ -3473,6 +3473,42 @@
   "@activityRecordingHrrCueComplete": {
     "description": "Spoken when the five minutes of recovery are up."
   },
+  "heartRateRecoveryHistoryTitle": "Heart rate recovery",
+  "@heartRateRecoveryHistoryTitle": {
+    "description": "Title of the heart-rate-recovery history screen."
+  },
+  "heartRateRecoveryTrendTitle": "One-minute fall",
+  "@heartRateRecoveryTrendTitle": {
+    "description": "Chart title: the drop one minute after each effort stopped."
+  },
+  "heartRateRecoveryEmpty": "No workout in this period had a recovery that could be measured.",
+  "@heartRateRecoveryEmpty": {
+    "description": "Shown when the period holds no comparable readings at all."
+  },
+  "heartRateRecoveryEmptyWatch": "This is normal with a watch: most stop recording heart rate the moment a workout ends, and the fall cannot be measured from readings that were never taken. A chest strap records every second, and the guided recovery test uses one.",
+  "@heartRateRecoveryEmptyWatch": {
+    "description": "Explains why a watch user's history is empty, and what would fix it."
+  },
+  "heartRateRecoveryUnmeasured": "{count} workouts could not be measured",
+  "@heartRateRecoveryUnmeasured": {
+    "description": "How many hard workouts in the period had no measurable recovery.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "6"
+      }
+    }
+  },
+  "heartRateRecoveryTruncated": "Only the most recent {count} workouts in this period were read.",
+  "@heartRateRecoveryTruncated": {
+    "description": "The period held more sessions than the app will read; says so rather than showing a quietly short chart.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "400"
+      }
+    }
+  },
   "heartRateRecoveryTitle": "Heart rate recovery",
   "@heartRateRecoveryTitle": {
     "description": "Card title: how far the heart rate fell after the effort stopped."

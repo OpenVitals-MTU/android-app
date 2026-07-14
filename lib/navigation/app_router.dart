@@ -18,6 +18,7 @@ import '../features/caffeine/presentation/caffeine_screen.dart';
 import '../features/cycle/presentation/cycle_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/dashboard/presentation/metric_screen.dart';
+import '../features/heart/presentation/heart_rate_recovery_screen.dart';
 import '../features/heart/presentation/heart_metric.dart';
 import '../features/heart/presentation/heart_metric_screen.dart';
 import '../core/period/metric_detail_initial_day.dart';
@@ -203,6 +204,11 @@ List<RouteBase> _metricSectionRoutes() => [
         path: AppRoutes.cardioLoadDetail,
         builder: (context, state) =>
             _openedOn(state, const CardioLoadDetailScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.heartRateRecoveryDetail,
+        builder: (context, state) =>
+            _openedOn(state, const HeartRateRecoveryScreen()),
       ),
       GoRoute(
         path: AppRoutes.activityDetail,
