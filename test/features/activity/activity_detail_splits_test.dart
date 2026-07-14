@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
+import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
 import 'package:openvitals/di/providers.dart';
@@ -117,6 +118,15 @@ class _FakeHeartRepository implements HeartRepository {
     DateTime end,
   ) async =>
       Ok(samples);
+
+  /// Asked for when no maximum heart rate is set, to work out the heart-rate recovery.
+  /// This ride has no history behind it, so there is no observed maximum.
+  @override
+  Future<Result<List<HeartRateSummary>>> loadDailyHeartRateSummaries(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const Ok(<HeartRateSummary>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

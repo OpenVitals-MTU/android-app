@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../domain/insights/heart_rate_recovery.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../l10n/app_localizations.dart';
@@ -16,6 +17,7 @@ import '../../../ui/theme/app_colors.dart';
 import '../application/activity_detail_display.dart';
 import '../application/activity_detail_view_model.dart';
 import 'activity_heart_rate_chart_card.dart';
+import 'activity_heart_rate_recovery_card.dart';
 import 'activity_metric_relevance.dart';
 import 'activity_session_metric_chart_cards.dart';
 import 'activity_splits_card.dart';
@@ -108,6 +110,19 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 sessionStart: workout.startTime,
                 sessionEnd: workout.endTime,
                 unitFormatter: formatter,
+              ),
+            ),
+          // Shown whenever the effort was hard enough to HAVE a recovery — including
+          // when none could be measured, because "your watch stopped recording heart
+          // rate when the workout ended" is the most useful thing the card can say. It
+          // is hidden only for an easy session, where there is nothing to explain and
+          // the card would be noise on every walk.
+          if (state.heartRateRecovery.peakBpm != null &&
+              !state.heartRateRecovery.issues
+                  .contains(HeartRateRecoveryIssue.effortNotVigorous))
+            sectionPadded(
+              ActivityHeartRateRecoveryCard(
+                reading: state.heartRateRecovery,
               ),
             ),
           if (state.speedSamples.isNotEmpty)

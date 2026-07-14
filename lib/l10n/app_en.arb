@@ -3420,5 +3420,89 @@
   },
   "@settingsHealthConnectMindfulnessBody": {
     "description": "Explains why the Health Connect mindfulness integration is off by default."
+  },
+  "heartRateRecoveryTitle": "Heart rate recovery",
+  "@heartRateRecoveryTitle": {
+    "description": "Card title: how far the heart rate fell after the effort stopped."
+  },
+  "heartRateRecoveryHeadline": "Down {drop} bpm in a minute",
+  "@heartRateRecoveryHeadline": {
+    "description": "The headline figure: the fall one minute after the effort stopped.",
+    "placeholders": {
+      "drop": {
+        "type": "String",
+        "example": "35"
+      }
+    }
+  },
+  "heartRateRecoveryHeadlineUnavailable": "The one-minute fall was not measured",
+  "@heartRateRecoveryHeadlineUnavailable": {
+    "description": "Shown instead of the headline when no sample landed near the one-minute mark."
+  },
+  "heartRateRecoveryPeak": "Peak {bpm} bpm",
+  "@heartRateRecoveryPeak": {
+    "description": "The highest heart rate found just before the effort stopped.",
+    "placeholders": {
+      "bpm": {
+        "type": "String",
+        "example": "180"
+      }
+    }
+  },
+  "heartRateRecoveryMarkSeconds": "{seconds}s",
+  "@heartRateRecoveryMarkSeconds": {
+    "description": "A mark measured in seconds after the effort stopped.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "30"
+      }
+    }
+  },
+  "heartRateRecoveryMarkMinutes": "{minutes} min",
+  "@heartRateRecoveryMarkMinutes": {
+    "description": "A mark measured in minutes after the effort stopped.",
+    "placeholders": {
+      "minutes": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "heartRateRecoveryNoSample": "Not measured",
+  "@heartRateRecoveryNoSample": {
+    "description": "Shown for a mark where no heart-rate reading exists. It is never guessed."
+  },
+  "heartRateRecoveryNoRecoverySamples": "Your device stopped recording heart rate when the workout ended, so there was nothing to measure.",
+  "@heartRateRecoveryNoRecoverySamples": {
+    "description": "Why a recovery could not be measured at all: no samples after the workout."
+  },
+  "heartRateRecoveryCoarseSampling": "Your device recorded heart rate too rarely after the workout for the earliest marks to exist. A chest strap records every second.",
+  "@heartRateRecoveryCoarseSampling": {
+    "description": "Why the 10s and 30s marks are blank: the samples are too far apart."
+  },
+  "heartRateRecoveryCooldownBeforeStop": "Your heart rate was already falling before the workout ended, so this is not a recovery reading. Recovery is measured from the moment hard effort stops.",
+  "@heartRateRecoveryCooldownBeforeStop": {
+    "description": "Why the reading is invalid: the user eased off before stopping the recording."
+  },
+  "heartRateRecoveryEffortNotVigorous": "This effort was not hard enough to have a recovery worth measuring.",
+  "@heartRateRecoveryEffortNotVigorous": {
+    "description": "Why the reading is invalid: the peak was well below the user's maximum."
+  },
+  "heartRateRecoverySubmaximalEffort": "Hard, but not near your maximum — so this reading cannot be compared with the others.",
+  "@heartRateRecoverySubmaximalEffort": {
+    "description": "Why the reading is not comparable: a submaximal effort."
+  },
+  "heartRateRecoveryUnknownMaxHeartRate": "Set your maximum heart rate in your profile, and we can tell you whether the effort was hard enough for this reading to count.",
+  "@heartRateRecoveryUnknownMaxHeartRate": {
+    "description": "No maximum heart rate is known, so effort could not be judged."
+  },
+  "heartRateRecoveryPeakWindowWidened": "No reading exists in the last ten seconds of effort, so the peak was taken from further back.",
+  "@heartRateRecoveryPeakWindowWidened": {
+    "description": "The peak came from a wider window than the definition wants."
+  },
+  "heartRateRecoveryPeakFromSingleSample": "One single reading stands behind the peak.",
+  "@heartRateRecoveryPeakFromSingleSample": {
+    "description": "The peak rests on one sample, so a spurious reading would be it."
   }
 }
