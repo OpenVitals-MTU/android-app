@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.2.5 - 2026-07-14
+
+### English
+
+- The APKs on the releases page are now named after the architecture they are for, so you can tell which one your phone wants. Take the arm64-v8a one unless your phone is an older 32-bit device. F-Droid and the Play Store still choose for you.
+
+### Espanol
+
+- Los APK de la pagina de versiones ahora llevan el nombre de la arquitectura a la que corresponden, para que sepas cual necesita tu telefono. Elige el de arm64-v8a salvo que tu telefono sea un dispositivo antiguo de 32 bits. F-Droid y la Play Store siguen eligiendo por ti.
+
+### Deutsch
+
+- Die APKs auf der Releases-Seite sind jetzt nach der Architektur benannt, fuer die sie bestimmt sind, sodass du erkennst, welches dein Telefon braucht. Nimm das arm64-v8a, sofern dein Telefon kein aelteres 32-Bit-Geraet ist. F-Droid und der Play Store waehlen weiterhin fuer dich.
+
+### Italiano
+
+- Gli APK nella pagina delle versioni ora portano il nome dell'architettura a cui sono destinati, cosi puoi capire quale serve al tuo telefono. Scegli quello arm64-v8a, a meno che il tuo telefono non sia un vecchio dispositivo a 32 bit. F-Droid e il Play Store scelgono ancora per te.
+
+### Eesti
+
+- Valjalasete lehel olevad APK-d on nuud nimetatud selle arhitektuuri jargi, mille jaoks nad on, nii et naed, millist sinu telefon vajab. Vali arm64-v8a oma, kui sinu telefon pole vanem 32-bitine seade. F-Droid ja Play pood valivad endiselt sinu eest.
+
 ## 2.2.4 - 2026-07-14
 
 ### English
