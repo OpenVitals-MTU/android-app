@@ -223,9 +223,18 @@ void main() {
       );
 
       expect(_startButton(tester).onPressed, isNull, reason: 'no fix yet');
+      expect(find.byType(RecordingWithoutGpsWarning), findsNothing,
+          reason: 'no warning before the user has chosen anything to be warned about');
 
       await tester.tap(find.byType(SwitchListTile));
       await tester.pump();
+
+      // The cost, stated before the run rather than discovered after it. A recording that
+      // quietly came back missing half its statistics would feel like the app had failed,
+      // and the user would have no way of knowing they had asked for it.
+      expect(find.byType(RecordingWithoutGpsWarning), findsOneWidget);
+      expect(find.textContaining('No map'), findsOneWidget);
+      expect(find.textContaining('no elevation gain'), findsOneWidget);
 
       // Nothing to wait for: no satellites are being asked for.
       expect(_startButton(tester).onPressed, isNotNull);

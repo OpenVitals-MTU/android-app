@@ -175,6 +175,16 @@ class _ActivityRecordingSetupScreenState
           title: Text(l10n.activityRecordingWithoutGpsTitle),
           subtitle: Text(l10n.activityRecordingWithoutGpsBody),
         ),
+        // Shown once the switch is ON, so it reads as the consequence of a choice the
+        // user has just made rather than as a scare in front of one they have not.
+        //
+        // It says what will be LOST, in full, because everything in that list is worked
+        // out from a position and there will not be one: no map, no distance, no pace, no
+        // elevation, no splits, and no steps for a type that counts them. A recording
+        // that quietly came back missing half its statistics would feel like the app had
+        // failed, and the user would have no way of knowing they had asked for it.
+        if (_withoutGps)
+          RecordingWithoutGpsWarning(countsSteps: selectedType.supportsStepCounting),
         // The fix status is about GPS, so it goes away with GPS. Leaving "waiting for a
         // fix" on screen under a recording that will never use one would be telling the
         // user to wait for something that is not coming.
@@ -348,6 +358,73 @@ class PreRecordingGpsFixStatus extends StatelessWidget {
           color: isReady
               ? activityRecordingAccentColor()
               : Theme.of(context).colorScheme.error,
+        ),
+      ),
+    );
+  }
+}
+
+/// What an activity recorded without GPS will not have.
+///
+/// Every line of this is derived from a position, and there will not be one. Saying so
+/// before the run rather than discovering it after is the difference between a choice the
+/// user made and an app that looks like it lost half their data.
+///
+/// It is not framed as an error. Recording without GPS is a legitimate thing to want —
+/// people were already doing it by calling their runs treadmills — so the card states the
+/// cost and ends with what survives, rather than trying to talk them out of it.
+class RecordingWithoutGpsWarning extends StatelessWidget {
+  const RecordingWithoutGpsWarning({super.key, required this.countsSteps});
+
+  /// Whether this activity type counts steps while recording — one more thing that goes
+  /// with the location, since the step detector only runs on the GPS path.
+  final bool countsSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final scheme = theme.colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 12,
+          children: [
+            Icon(Icons.info_outline, size: 20, color: scheme.onSurfaceVariant),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.activityRecordingWithoutGpsWarningTitle,
+                    style: theme.textTheme.labelLarge
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    countsSteps
+                        ? '${l10n.activityRecordingWithoutGpsWarningBody} '
+                            '${l10n.activityRecordingWithoutGpsWarningSteps}'
+                        : l10n.activityRecordingWithoutGpsWarningBody,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.activityRecordingWithoutGpsWarningKept,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

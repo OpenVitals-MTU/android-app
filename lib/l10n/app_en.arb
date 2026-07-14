@@ -175,9 +175,25 @@
   "@activityRecordingWithoutGpsTitle": {
     "description": "Switch: record a running/cycling activity with no route, no location permission and no waiting for a fix."
   },
-  "activityRecordingWithoutGpsBody": "Records duration and heart rate, with no route and no location. You can type the distance in when you save.",
+  "activityRecordingWithoutGpsBody": "No location is used, and none is asked for.",
   "@activityRecordingWithoutGpsBody": {
-    "description": "Explains what a GPS-less recording captures, and that distance is entered by hand."
+    "description": "Subtitle of the record-without-GPS switch."
+  },
+  "activityRecordingWithoutGpsWarningTitle": "What this activity will not have",
+  "@activityRecordingWithoutGpsWarningTitle": {
+    "description": "Heading of the warning shown once the user switches GPS off for a recording."
+  },
+  "activityRecordingWithoutGpsWarningBody": "No map, no automatic distance, no pace or speed, no elevation gain, and no splits. These are all worked out from your position, and there will not be one.",
+  "@activityRecordingWithoutGpsWarningBody": {
+    "description": "Plainly states everything a GPS-less recording loses. Everything listed is derived from location."
+  },
+  "activityRecordingWithoutGpsWarningSteps": "Your steps will not be counted either.",
+  "@activityRecordingWithoutGpsWarningSteps": {
+    "description": "Extra loss, for an activity type that counts steps while recording."
+  },
+  "activityRecordingWithoutGpsWarningKept": "Duration and heart rate are still recorded, and you can type the distance in yourself when you save.",
+  "@activityRecordingWithoutGpsWarningKept": {
+    "description": "What a GPS-less recording DOES still capture, so the warning is not only bad news."
   },
   "activityEntrySubtitle": "Create a Health Connect activity session. Imported route or activity details are written only when you save.",
   "activityEntryPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add activities, we need Health Connect write permissions for sessions, routes, distance, elevation, calories, and recorded sensor metrics such as heart rate; treadmill entries ask for steps when needed. OpenVitals will not store these entries; they are saved in Health Connect.",
