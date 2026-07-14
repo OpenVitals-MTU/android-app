@@ -6,6 +6,7 @@ import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'manual_entry_form_scaffold.dart';
 import 'manual_entry_timestamp_fields.dart';
@@ -111,7 +112,7 @@ class _MindfulnessEntryForm extends ConsumerWidget {
         !state.isCheckingPermission;
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: screenScrollPadding(context),
       children: [
         // The timer is hidden while editing an existing session — there is
         // nothing to time, only a duration to correct.

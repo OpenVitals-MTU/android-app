@@ -10,6 +10,7 @@ import '../../../ui/components/data_source_education_item.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/period_navigator.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/training_readiness_details_view_model.dart';
 
@@ -188,7 +189,7 @@ class _Content extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 1080),
         child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: screenScrollPadding(context),
           children: items,
         ),
       ),

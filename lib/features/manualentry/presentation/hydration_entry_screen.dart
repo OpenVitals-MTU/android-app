@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'hydration_catalog_widgets.dart';
 import 'hydration_drink_dialogs.dart';
@@ -143,7 +144,7 @@ class _HydrationEntryForm extends ConsumerWidget {
             : l10n.hydrationTrackerSubtitle);
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: screenScrollPadding(context),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

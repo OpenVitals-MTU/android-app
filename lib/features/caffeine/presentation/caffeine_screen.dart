@@ -17,6 +17,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../application/caffeine_display.dart';
 import '../application/caffeine_view_model.dart';
 import '../../../ui/components/section_padding.dart';
@@ -51,7 +52,7 @@ class CaffeineScreen extends ConsumerWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 920),
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: screenScrollPadding(context),
                 children: _content(context, state, notifier, formatter),
               ),
             ),

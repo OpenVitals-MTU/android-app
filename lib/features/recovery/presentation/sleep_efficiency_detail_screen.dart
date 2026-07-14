@@ -14,6 +14,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/recovery_detail_display.dart';
 import '../application/recovery_detail_view_model.dart';
@@ -78,7 +79,7 @@ class _SleepEfficiencyDetailScreenState
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1080),
           child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: screenScrollPadding(context),
             children: [
               _cardPad(
                 _SleepEfficiencySummaryCard(

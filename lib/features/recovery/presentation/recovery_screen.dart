@@ -11,6 +11,7 @@ import '../../../ui/components/health_date_picker.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/period_navigator.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/recovery_view_model.dart';
 
@@ -144,7 +145,7 @@ class _StressBody extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1080),
           child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: screenScrollPadding(context),
             children: items,
           ),
         ),

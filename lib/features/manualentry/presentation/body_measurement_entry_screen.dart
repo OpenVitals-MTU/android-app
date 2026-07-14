@@ -11,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/body_measurement_entry_view_model.dart';
 import 'manual_entry_form_scaffold.dart';
@@ -129,7 +130,7 @@ class _BodyEntryForm extends ConsumerWidget {
         state.canWrite && !state.isSavingEntry && !state.isCheckingPermission;
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: screenScrollPadding(context),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

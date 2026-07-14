@@ -11,6 +11,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/activity_detail_display.dart';
 import '../application/activity_detail_view_model.dart';
@@ -80,7 +81,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
     return RefreshIndicator(
       onRefresh: ref.read(_provider.notifier).refresh,
       child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: screenScrollPadding(context),
         children: [
           sectionPadded(_WorkoutSummaryCard(workout: workout, formatter: formatter)),
           sectionPadded(_MetricsCard(

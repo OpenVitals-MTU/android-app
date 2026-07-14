@@ -8,6 +8,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/cardio_load_detail_view_model.dart';
 import '../../../ui/components/section_padding.dart';
@@ -26,11 +27,12 @@ class CardioLoadDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Cardio load')),
-      body: _body(state, formatter, notifier),
+      body: _body(context, state, formatter, notifier),
     );
   }
 
   Widget _body(
+    BuildContext context,
     CardioLoadState state,
     UnitFormatter formatter,
     CardioLoadViewModel notifier,
@@ -46,7 +48,7 @@ class CardioLoadDetailScreen extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: notifier.refresh,
       child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: screenScrollPadding(context),
         children: [
           sectionPadded(_SummaryCard(estimate: estimate, formatter: formatter)),
           const SectionHeader('Today\'s numbers'),

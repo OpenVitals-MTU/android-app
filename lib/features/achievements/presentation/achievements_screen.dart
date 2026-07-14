@@ -9,6 +9,7 @@ import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import 'achievement_catalog.dart';
 import '../application/achievements_view_model.dart';
 import '../../../ui/components/section_padding.dart';
@@ -46,7 +47,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 920),
           child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: screenScrollPadding(context),
             children: [
               sectionPadded(
                 AchievementSummaryCard(

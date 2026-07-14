@@ -15,6 +15,7 @@ import 'health_date_picker.dart';
 import 'loading_state.dart';
 import 'metric_card.dart';
 import 'period_navigator.dart';
+import 'screen_scroll_padding.dart';
 
 /// The canonical detail-screen frame, ported from the Kotlin
 /// `MetricDetailScaffold`. It owns period selection (via a
@@ -181,7 +182,7 @@ class _MetricDetailScaffoldState extends ConsumerState<MetricDetailScaffold> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 920),
           child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: screenScrollPadding(context),
             children: items,
           ),
         ),

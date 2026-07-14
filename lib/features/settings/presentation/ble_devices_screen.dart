@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/ble_devices_view_model.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 
 /// The Sensors settings screen: list paired BLE sensors (enable / edit / remove)
 /// and add new ones through a scan → capability-discovery → pair flow.
@@ -71,7 +72,7 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsSensorsGroupTitle)),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: screenScrollPadding(context, vertical: 12),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),

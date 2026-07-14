@@ -10,7 +10,7 @@ import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/ui/components/metric_detail_scaffold.dart';
 
-Future<Widget> _bootstrap(Widget child) async {
+Future<Widget> _bootstrap(Widget child, {double bottomInset = 0}) async {
   SharedPreferences.setMockInitialValues(<String, Object>{});
   final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
@@ -18,7 +18,16 @@ Future<Widget> _bootstrap(Widget child) async {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: child),
+      home: Builder(
+        builder: (context) => MediaQuery(
+          // The system navigation bar, as the platform reports it: a three-button
+          // bar is tall, gesture navigation is a sliver.
+          data: MediaQuery.of(context).copyWith(
+            padding: EdgeInsets.only(bottom: bottomInset),
+          ),
+          child: Scaffold(body: child),
+        ),
+      ),
     ),
   );
 }
@@ -148,5 +157,43 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Could not load heart data'), findsOneWidget);
+  });
+
+  testWidgets('reserves the system navigation bar below the last item',
+      (tester) async {
+    // A three-button navigation bar. The app draws edge to edge, so the bar is
+    // painted over the body; without room reserved for it, the foot of the list
+    // sits underneath the buttons and cannot be scrolled into view.
+    await tester.pumpWidget(
+      await _bootstrap(
+        MetricDetailScaffold(
+          rangePreferenceKey: PeriodRangePreferenceKey.heart,
+          onRefresh: () async {},
+          content: (period) => const [Text('CONTENT')],
+        ),
+        bottomInset: 48,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final padding = tester.widget<ListView>(find.byType(ListView)).padding;
+    expect(padding, const EdgeInsets.only(top: 8, bottom: 8 + 48));
+  });
+
+  testWidgets('reserves nothing extra when the bar is a gesture sliver',
+      (tester) async {
+    await tester.pumpWidget(
+      await _bootstrap(
+        MetricDetailScaffold(
+          rangePreferenceKey: PeriodRangePreferenceKey.heart,
+          onRefresh: () async {},
+          content: (period) => const [Text('CONTENT')],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final padding = tester.widget<ListView>(find.byType(ListView)).padding;
+    expect(padding, const EdgeInsets.only(top: 8, bottom: 8));
   });
 }

@@ -10,6 +10,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/app_language_dropdown.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/placeholder_screen.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import 'cards/activity_recording_preferences_card.dart';
 import 'cards/activity_split_distance_card.dart';
 import 'cards/apple_health_import_card.dart';
@@ -53,7 +54,7 @@ class SettingsSectionScreen extends ConsumerWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 920),
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: screenScrollPadding(context),
                 children: _cards(context, ref, section),
               ),
             ),

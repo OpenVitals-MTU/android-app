@@ -12,6 +12,7 @@ import '../../../ui/components/health_date_picker.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/period_navigator.dart';
+import '../../../ui/components/screen_scroll_padding.dart';
 import '../../settings/presentation/cards/body_energy_calibration_card.dart';
 import '../application/body_energy_display.dart';
 import '../application/body_energy_view_model.dart';
@@ -93,7 +94,7 @@ class _BodyEnergyBody extends ConsumerWidget {
     if (!calibration.setupCompleted) {
       return _MaxWidth(
         child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: screenScrollPadding(context),
           children: const [BodyEnergyCalibrationCard()],
         ),
       );
@@ -143,7 +144,7 @@ class _BodyEnergyBody extends ConsumerWidget {
       onRefresh: onRefresh,
       child: _MaxWidth(
         child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: screenScrollPadding(context),
           children: items,
         ),
       ),
