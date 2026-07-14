@@ -20,6 +20,8 @@ import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/dashboard/presentation/metric_screen.dart';
 import '../features/heart/presentation/heart_metric.dart';
 import '../features/heart/presentation/heart_metric_screen.dart';
+import '../core/period/metric_detail_initial_day.dart';
+import '../core/time/local_date.dart';
 import '../features/hydration/presentation/hydration_screen.dart';
 import '../features/manualentry/presentation/activity_entry_screen.dart';
 import '../features/manualentry/presentation/body_measurement_entry_screen.dart';
@@ -158,26 +160,49 @@ List<RouteBase> _readinessRoutes() => [
       ),
     ];
 
+/// The day the caller asked the screen to open on (`?day=YYYY-MM-DD`), or null.
+///
+/// The dashboard is a day view, and the day you were looking at when you tapped a
+/// card is context that must survive the tap — see [AppRoutes.withSelectedDay].
+@visibleForTesting
+LocalDate? initialDayOf(GoRouterState state) {
+  final raw = state.uri.queryParameters[AppRoutes.selectedDayArg];
+  if (raw == null) return null;
+  final parsed = DateTime.tryParse(raw);
+  return parsed == null ? null : LocalDate.fromDateTime(parsed);
+}
+
+/// Hands the requested day down to whatever [MetricDetailScaffold] the screen builds.
+///
+/// Wrapping here rather than adding a parameter to all eleven detail screens: they
+/// all reach the same scaffold, and the scaffold cannot read the route itself
+/// (`GoRouterState.of` throws when there is no route above it, and the screens are
+/// pumped bare in dozens of widget tests).
+Widget _openedOn(GoRouterState state, Widget screen) =>
+    MetricDetailInitialDay(day: initialDayOf(state), child: screen);
+
 List<RouteBase> _metricSectionRoutes() => [
       GoRoute(
         path: AppRoutes.calories,
-        builder: (context, state) => const CaloriesScreen(),
+        builder: (context, state) => _openedOn(state, const CaloriesScreen()),
       ),
       GoRoute(
         path: AppRoutes.nutrition,
-        builder: (context, state) => const NutritionScreen(),
+        builder: (context, state) => _openedOn(state, const NutritionScreen()),
       ),
       GoRoute(
         path: AppRoutes.body,
-        builder: (context, state) => const BodyScreen(),
+        builder: (context, state) => _openedOn(state, const BodyScreen()),
       ),
       GoRoute(
         path: AppRoutes.heartVitals,
-        builder: (context, state) => const HeartVitalsOverviewScreen(),
+        builder: (context, state) =>
+            _openedOn(state, const HeartVitalsOverviewScreen()),
       ),
       GoRoute(
         path: AppRoutes.cardioLoadDetail,
-        builder: (context, state) => const CardioLoadDetailScreen(),
+        builder: (context, state) =>
+            _openedOn(state, const CardioLoadDetailScreen()),
       ),
       GoRoute(
         path: AppRoutes.activityDetail,
@@ -187,7 +212,7 @@ List<RouteBase> _metricSectionRoutes() => [
       ),
       GoRoute(
         path: AppRoutes.sleep,
-        builder: (context, state) => const SleepScreen(),
+        builder: (context, state) => _openedOn(state, const SleepScreen()),
       ),
       GoRoute(
         path: AppRoutes.sleepDetail,
@@ -209,8 +234,10 @@ List<RouteBase> _metricSectionRoutes() => [
       ),
       GoRoute(
         path: AppRoutes.metric,
-        builder: (context, state) =>
-            metricScreenFor(state.pathParameters[AppRoutes.metricIdArg]),
+        builder: (context, state) => _openedOn(
+          state,
+          metricScreenFor(state.pathParameters[AppRoutes.metricIdArg]),
+        ),
       ),
     ];
 

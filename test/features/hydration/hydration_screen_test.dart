@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
+import 'package:openvitals/core/period/metric_detail_initial_day.dart';
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/hydration_repository.dart';
@@ -35,6 +36,10 @@ class _FakeHydrationRepository implements HydrationRepository {
   final List<DailyHydration> dailyHydration;
   final List<HydrationEntry> entries;
 
+  /// Every load the screen asked for. The DAY it asked about is the whole point of
+  /// the "opens on the day you tapped from" test.
+  final List<PeriodLoadQuery> queries = [];
+
   @override
   double hydrationDailyGoalLiters() => 2.0;
 
@@ -42,11 +47,13 @@ class _FakeHydrationRepository implements HydrationRepository {
   Future<Result<HydrationPeriodData>> loadHydrationPeriod(
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async =>
-      Ok(HydrationPeriodData(
-        dailyHydration: dailyHydration,
-        hydrationEntries: entries,
-      ));
+  }) async {
+    queries.add(query);
+    return Ok(HydrationPeriodData(
+      dailyHydration: dailyHydration,
+      hydrationEntries: entries,
+    ));
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -122,6 +129,9 @@ Future<Widget> _bootstrap({
   required _FakeHydrationRepository repository,
   required Set<String> granted,
   _FakeNutritionRepository? nutrition,
+
+  /// What the router hands down when the dashboard was pinned to a past day.
+  LocalDate? openedOn,
 }) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final prefs = await SharedPreferences.getInstance();
@@ -135,10 +145,13 @@ Future<Widget> _bootstrap({
           .overrideWith((ref) async => HealthConnectAvailability.available),
       grantedHealthPermissionsProvider.overrideWith((ref) async => granted),
     ],
-    child: const MaterialApp(
+    child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: HydrationScreen(),
+      home: MetricDetailInitialDay(
+        day: openedOn,
+        child: const HydrationScreen(),
+      ),
     ),
   );
 }
@@ -299,6 +312,45 @@ void main() {
 
     expect(find.byType(MetricCardPlaceholder), findsOneWidget);
     expect(find.byType(MetricBarChart), findsNothing);
+  });
+
+  testWidgets('opens on the day the dashboard was pinned to, not today',
+      (tester) async {
+    // Step the dashboard back to yesterday, tap the beverage card: the detail must
+    // show YESTERDAY's water. It used to show today's — every detail screen builds
+    // its selection from `LocalDate.now()`, so the day you were looking at was
+    // dropped on the way through the tap.
+    final yesterday = LocalDate.now().minusDays(1);
+    final repository = _FakeHydrationRepository();
+
+    await tester.pumpWidget(
+      await _bootstrap(
+        repository: repository,
+        granted: {HcPermissions.readHydration},
+        openedOn: yesterday,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.queries, isNotEmpty);
+    expect(repository.queries.last.anchorDate, yesterday);
+  });
+
+  testWidgets('opens on today when the caller had no day in mind',
+      (tester) async {
+    // A deep link, or a tap from anywhere that is not a pinned day: unchanged.
+    final repository = _FakeHydrationRepository();
+
+    await tester.pumpWidget(
+      await _bootstrap(
+        repository: repository,
+        granted: {HcPermissions.readHydration},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.queries, isNotEmpty);
+    expect(repository.queries.last.anchorDate, LocalDate.now());
   });
 
   testWidgets('Hydration screen shows the access gate when permission missing',

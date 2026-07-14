@@ -138,12 +138,20 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
     if (state.isLoading && data == null) {
       return const FullScreenLoading();
     }
+
     if (state.error != null && data == null) {
       return ErrorMessage(_errorText(state.error!));
     }
     if (data == null || display == null) {
       return const ErrorMessage('No dashboard data yet.');
     }
+
+    // The dashboard is a DAY view, so the day it is showing is part of what a tap
+    // means: stepping back to yesterday and tapping the hydration card is a request
+    // for yesterday's water, not today's. The detail screens all open on today
+    // unless told otherwise, so the pinned day has to travel with the tap.
+    void openMetric(String location) =>
+        context.push(AppRoutes.withSelectedDay(location, state.selectedDate));
 
     // Every ring, tile, tray entry and activity below was derived once, at load
     // time (DashboardViewModel → buildDashboardDisplay). This method only reads
@@ -222,7 +230,7 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
                               accentColor: visibleRings[i].accent,
                               progress: visibleRings[i].progress,
                               onTap: () =>
-                                  context.push(visibleRings[i].location),
+                                  openMetric(visibleRings[i].location),
                             ),
                           ),
                         ],
@@ -262,7 +270,7 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
                 padding: const EdgeInsets.only(top: 12),
                 child: _MetricCarousel(
                   tiles: visibleTiles,
-                  onOpen: (location) => context.push(location),
+                  onOpen: openMetric,
                 ),
               ),
           ],

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/time/local_date.dart';
+
 /// Route paths + typed argument helpers, ported from the Kotlin
 /// `navigation/Screen.kt` (plus the three internal detail routes declared in
 /// `AppNavigation.kt`).
@@ -130,6 +132,25 @@ class AppRoutes {
       '/sleep_detail/${Uri.encodeComponent(sleepId)}';
   static String metricLocation(String metricId) =>
       '/metric/${Uri.encodeComponent(metricId)}';
+
+  /// Query parameter carrying the day a metric detail screen should OPEN on.
+  static const String selectedDayArg = 'day';
+
+  /// Pins [location] to the day the user was looking at when they tapped.
+  ///
+  /// The dashboard is a day view. Step it back to yesterday, tap the hydration
+  /// card, and the detail screen used to open on TODAY — every detail screen builds
+  /// its selection from `LocalDate.now()`, so the day you were looking at was simply
+  /// dropped on the way. It rides along as `?day=YYYY-MM-DD` instead.
+  ///
+  /// Today adds nothing (it is what the screens already do) and is left off, so the
+  /// ordinary case keeps producing the ordinary location.
+  static String withSelectedDay(String location, LocalDate day) {
+    if (day == LocalDate.now()) return location;
+    final separator = location.contains('?') ? '&' : '?';
+    return '$location$separator$selectedDayArg='
+        '${Uri.encodeQueryComponent(day.toString())}';
+  }
 
   /// Kotlin `Screen.ActivityEntry.createRoute(mode, planId, activityTypeId)`.
   /// Optional intents ride as query parameters; the bare path still matches.

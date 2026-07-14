@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/period/metric_detail_initial_day.dart';
 import '../../core/period/period_calculations.dart';
 import '../../core/period/period_range_preference_key.dart';
 import '../../core/period/period_selection.dart';
@@ -75,7 +76,11 @@ class MetricDetailScaffold extends ConsumerStatefulWidget {
   /// Optional override for the [PeriodNavigator] title.
   final String Function(TimeRange range, DatePeriod period)? periodTitleBuilder;
 
-  /// Optional initial anchor date (defaults to today).
+  /// Optional initial anchor date.
+  ///
+  /// Falls back to the day the router was asked to open on
+  /// ([MetricDetailInitialDay] — the dashboard's pinned day travels with the tap),
+  /// and only then to today.
   final LocalDate? initialDate;
 
   @override
@@ -93,7 +98,10 @@ class _MetricDetailScaffoldState extends ConsumerState<MetricDetailScaffold> {
     final prefs = ref.read(preferencesRepositoryProvider);
     _driver = PeriodSelectionDriver(
       initialRange: prefs.timeRangeFor(widget.rangePreferenceKey),
-      initialDate: widget.initialDate,
+      // Read ONCE, here, and never again: the screen owns its selection from this
+      // point on, and re-reading it on rebuild would drag the user back to the day
+      // they arrived on every time they stepped the date.
+      initialDate: widget.initialDate ?? MetricDetailInitialDay.maybeOf(context),
       weekPeriodMode: widget.weekPeriodMode,
       onRangeSelected: (range) =>
           prefs.setTimeRangeFor(widget.rangePreferenceKey, range),
