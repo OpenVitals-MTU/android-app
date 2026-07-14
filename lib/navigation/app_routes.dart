@@ -83,6 +83,9 @@ class AppRoutes {
 
   // Internal detail routes (from AppNavigation.kt).
   static const String cardioLoadDetail = '/activity/cardio_load';
+  static const String caffeineDrinkIdArg = 'entryId';
+  static const String caffeineDrink = '/caffeine/drink/:entryId';
+  static String caffeineDrinkLocation(String entryId) => '/caffeine/drink/$entryId';
   static const String sleepEfficiencyDetail = '/recovery/sleep_efficiency';
   static const String sleepScoreDetail = '/recovery/sleep_score';
 

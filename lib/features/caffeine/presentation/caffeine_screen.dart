@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../../../navigation/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/theme/chart_tokens.dart';
 import '../../../ui/charts/time_axis.dart';
 import '../../../ui/charts/chart_empty_state.dart';
+import '../../../ui/charts/chart_zoom.dart';
 import '../../../ui/charts/metric_line_plot.dart';
 import '../../../ui/charts/chart_skeleton.dart';
 import '../../../ui/components/loading_state.dart';
@@ -82,6 +87,21 @@ List<Widget> _content(
     const SectionHeader('Caffeine dashboard'),
     sectionPadded(_CaffeineOverviewCard(home: home, formatter: formatter)),
     sectionPadded(CaffeineCurveCard(home: home, formatter: formatter)),
+    // The drinks themselves, and each one openable.
+    //
+    // Everything above this point is a SUM -- 240mg today, a curve that is the total of
+    // everything in you. A sum cannot be tapped, and it cannot tell you WHICH coffee is
+    // the one still keeping you awake. These rows can.
+    SectionHeader(AppLocalizations.of(context).caffeineEntriesTitle),
+    if (state.entries.isEmpty)
+      sectionPadded(
+        _CaffeineEmptyEntries(
+          message: AppLocalizations.of(context).caffeineEntriesEmpty,
+        ),
+      )
+    else
+      for (final entry in state.entries)
+        sectionPadded(_CaffeineEntryRow(entry: entry)),
     const SectionHeader('Sleep impact'),
     sectionPadded(_CaffeineSleepImpactCard(home: home, formatter: formatter)),
     const SectionHeader('Analytics'),
@@ -310,6 +330,14 @@ class CaffeineCurveCard extends StatelessWidget {
                 height: kChartHeightDay,
               )
             else ...[
+              // Pinch it. This card drops to the raw MetricLinePlot primitive rather than
+              // going through one of the complete chart cards, which is exactly why it
+              // never picked the zoom up: the zoom was wired into the CARDS. A caffeine
+              // curve spans 42 hours, so it is the chart that needs it most.
+              ChartZoom(
+                builder: (context, viewport) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               // The shared plot, at last. What this card gains by giving up its own
               // painter: a Y AXIS — you could not read a value off this chart,
               // there was no scale on it at all — GRIDLINES, and a curve that is
@@ -358,14 +386,20 @@ class CaffeineCurveCard extends StatelessWidget {
                       color: scheme.tertiary,
                     ),
                 ],
+                viewport: viewport,
               ),
               const SizedBox(height: 8),
               // And a TIME axis. There was none: a caffeine curve across a whole
-              // day, with no way to tell when any of it happened.
+              // day, with no way to tell when any of it happened. It shares the
+              // viewport with the plot, so the hours it names stay the hours on show.
               TimeAxisLabels(
                 start: points.first.time,
                 end: points.last.time,
                 inset: kChartPlotInset,
+                viewport: viewport,
+              ),
+                  ],
+                ),
               ),
             ],
             const SizedBox(height: 8),
@@ -795,5 +829,63 @@ String? _resolveError(ScreenError? error) {
       return 'Permission denied.';
     case ScreenErrorHealthConnectUnavailable():
       return 'Health Connect is unavailable.';
+  }
+}
+
+
+class _CaffeineEmptyEntries extends StatelessWidget {
+  const _CaffeineEmptyEntries({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          message,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ),
+    );
+  }
+}
+
+/// One logged drink. Tapping it opens what that drink alone is doing to you.
+class _CaffeineEntryRow extends StatelessWidget {
+  const _CaffeineEntryRow({required this.entry});
+
+  final CaffeineEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final time = DateFormat.jm(locale).format(entry.startTime.toLocal());
+
+    return OpenVitalsCard(
+      child: ListTile(
+        leading: const Icon(Icons.local_cafe_outlined),
+        title: Text(entry.name ?? 'Caffeine'),
+        subtitle: Text(time),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${entry.caffeineMg.round()} mg',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: () =>
+            context.push(AppRoutes.caffeineDrinkLocation(entry.id)),
+      ),
+    );
   }
 }
