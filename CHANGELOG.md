@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.2.4 - 2026-07-14
+
+### English
+
+- The app no longer carries libraries for architectures your phone cannot run. Every download held both builds of the app, the 64-bit and the 32-bit, so half of what you downloaded was for a phone you do not have. It also held a third set of libraries, for x86_64, that could never have run at all. There is now one APK per architecture, containing only its own, and the download falls from 60 MB to 34.
+
+### Espanol
+
+- La app ya no incluye librerias para arquitecturas que tu telefono no puede ejecutar. Cada descarga llevaba las dos versiones de la app, la de 64 bits y la de 32, asi que la mitad de lo que descargabas era para un telefono que no tienes. Tambien llevaba un tercer grupo de librerias, para x86_64, que nunca habria podido ejecutarse. Ahora hay un APK por arquitectura, con solo la suya, y la descarga baja de 60 MB a 34.
+
+### Deutsch
+
+- Die App enthaelt keine Bibliotheken mehr fuer Architekturen, die dein Telefon nicht ausfuehren kann. Jeder Download enthielt beide Varianten der App, die 64-Bit- und die 32-Bit-Variante, sodass die Haelfte des Heruntergeladenen fuer ein Telefon war, das du nicht hast. Er enthielt zudem einen dritten Satz Bibliotheken fuer x86_64, der ueberhaupt nie haette laufen koennen. Es gibt jetzt ein APK je Architektur, das nur die eigene enthaelt, und der Download faellt von 60 MB auf 34.
+
+### Italiano
+
+- L'app non contiene piu librerie per architetture che il tuo telefono non puo eseguire. Ogni download conteneva entrambe le versioni dell'app, quella a 64 bit e quella a 32, quindi meta di cio che scaricavi era per un telefono che non hai. Conteneva anche un terzo gruppo di librerie, per x86_64, che non avrebbe mai potuto funzionare. Ora c'e un APK per architettura, con solo la propria, e il download scende da 60 MB a 34.
+
+### Eesti
+
+- Rakendus ei kanna enam teeke arhitektuuride jaoks, mida sinu telefon kaivitada ei saa. Iga allalaadimine sisaldas rakenduse molemat versiooni, 64-bitist ja 32-bitist, nii et pool allalaaditust oli telefoni jaoks, mida sul pole. Samuti sisaldas see kolmandat teekide komplekti x86_64 jaoks, mis poleks kunagi saanud tootada. Nuud on iga arhitektuuri kohta uks APK, mis sisaldab ainult enda oma, ja allalaadimine vaheneb 60 MB-lt 34-le.
+
 ## 2.2.3 - 2026-07-13
 
 ### English
