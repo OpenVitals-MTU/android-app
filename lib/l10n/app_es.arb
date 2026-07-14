@@ -1833,5 +1833,51 @@
     "activityRecordingWithoutGpsWarningKeptSteps": "La duración, la frecuencia cardíaca, el desnivel acumulado y el número de pasos siguen registrándose, y puedes introducir tú mismo la distancia al guardar los datos.",
     "@activityRecordingWithoutGpsWarningKeptSteps": {
         "description": "As above, for an activity type that counts steps: the step detector needs no position either."
+    },
+    "caffeineEntriesTitle": "Bebidas",
+    "@caffeineEntriesTitle": {
+        "description": "Section listing the caffeinated drinks logged."
+    },
+    "caffeineEntriesEmpty": "Sin bebidas con cafeína para este día.",
+    "@caffeineEntriesEmpty": {
+        "description": "Empty state for the drinks list."
+    },
+    "caffeineDrinkTitle": "Beber",
+    "@caffeineDrinkTitle": {
+        "description": "Title of the per-drink detail screen."
+    },
+    "caffeineDrinkPeak": "Punto máximo",
+    "@caffeineDrinkPeak": {
+        "description": "The most of this drink that was in the body at once."
+    },
+    "caffeineDrinkNow": "Ahora mismo",
+    "@caffeineDrinkNow": {
+        "description": "How much of this drink is still in the body."
+    },
+    "caffeineDrinkHalfGone": "Por la mitad",
+    "@caffeineDrinkHalfGone": {
+        "description": "When half of this drink's peak has been eliminated."
+    },
+    "caffeineDrinkGone": "Prácticamente desaparecido",
+    "@caffeineDrinkGone": {
+        "description": "When what remains of this drink stops mattering."
+    },
+    "caffeineDrinkStillGoing": "Todavía continúa después de {hours}h",
+    "@caffeineDrinkStillGoing": {
+        "description": "Shown when the drink has not faded within the horizon.",
+        "placeholders": {
+            "hours": {
+                "type": "String",
+                "example": "36"
+            }
+        }
+    },
+    "caffeineDrinkCurveTitle": "únicamente de esa consumición",
+    "@caffeineDrinkCurveTitle": {
+        "description": "Chart of one drink's rise and decline, separate from the day's total."
+    },
+    "caffeineDrinkPeakExplainer": "El pico de absorción es inferior a la cantidad que has bebido: tu cuerpo empieza a eliminar la cafeína antes de haberla absorbido por completo.",
+    "@caffeineDrinkPeakExplainer": {
+        "description": "Explains why peak < dose, which otherwise looks like a bug."
     }
 }
