@@ -36,6 +36,32 @@ val hasReleaseSigning = listOf(
     effectiveReleaseKeyPassword,
 ).all { !it.isNullOrBlank() }
 
+// The ABIs this build was actually asked for.
+//
+// `flutter build --target-platform` reaches Gradle as this property. It governs
+// Flutter's OWN artifacts — the engine, the Dart snapshot — and nothing else, which is
+// the whole problem: a plugin that ships PREBUILT native libraries for every ABI it has
+// heard of gets them packaged regardless. Two of ours do, so the APK carried an x86_64
+// folder holding libdartjni.so and libdatastore_shared_counter.so and nothing else. Not
+// a working x86_64 app — there is no engine to run it — just megabytes of libraries for
+// an architecture the app cannot start on. F-Droid's reviewers found it before we did.
+//
+// Packaging is told the same thing the compiler was (see `abiFilters` below), so a build
+// for one ABI ships one ABI.
+val targetAbis: List<String> =
+    (project.findProperty("target-platform") as String?)
+        ?.split(",")
+        ?.mapNotNull {
+            when (it.trim()) {
+                "android-arm" -> "armeabi-v7a"
+                "android-arm64" -> "arm64-v8a"
+                "android-x64" -> "x86_64"
+                else -> null
+            }
+        }
+        ?.takeIf { it.isNotEmpty() }
+        ?: listOf("armeabi-v7a", "arm64-v8a")
+
 android {
     namespace = "tech.mmarca.openvitals"
     // compileSdk 37 matches the reference Kotlin app. connect-client 1.2.0-alpha04
@@ -86,6 +112,32 @@ android {
         // The launcher (and the widget picker) label. Overridden per build type so a
         // debug install is never mistaken for the real app sitting next to it.
         manifestPlaceholders["appLabel"] = "OpenVitals"
+
+        // Package the ABIs this build targets, and only those. See [targetAbis].
+        //
+        // Necessary but NOT sufficient — see the `packaging` block below. abiFilters
+        // governs what is BUILT; it does not throw out a prebuilt `.so` that arrived
+        // inside a dependency, which is precisely where the foreign libraries come from.
+        ndk {
+            abiFilters += targetAbis
+        }
+    }
+
+    packaging {
+        jniLibs {
+            // Throw out the ABIs this build is not for.
+            //
+            // `abiFilters` above is not enough on its own. It stops Gradle BUILDING other
+            // architectures, but a dependency that ships a prebuilt `.so` per ABI has
+            // already built them, and those sail straight into the APK: an arm64 build
+            // still packaged lib/armeabi-v7a and lib/x86_64, each holding libdartjni.so
+            // and libdatastore_shared_counter.so — from `jni` (via path_provider_android)
+            // and `datastore`. Neither is usable: without libflutter.so and libapp.so
+            // beside them there is no app there to run, only weight.
+            excludes += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+                .filterNot { it in targetAbis }
+                .map { "lib/$it/**" }
+        }
     }
 
     signingConfigs {
@@ -144,6 +196,28 @@ android {
         }
     }
 }
+
+// NOTE on the per-ABI versionCode scheme (F-Droid's `versionCode * 10 + abiCode`,
+// armeabi-v7a 1, arm64-v8a 2, x86_64 3).
+//
+// It is NOT applied here, and deliberately not. F-Droid's snippet for it overrides the
+// version code of each ABI output in Gradle, which does not work for a Flutter app: the
+// Flutter Gradle Plugin ALREADY rewrites the version code of every ABI output when it
+// sees `--split-per-abi`, to `abiCode * 1000 + versionCode`, and it does so from an
+// `afterEvaluate` that runs after anything this file can register. The two do not
+// replace each other, they COMPOUND — the first build with both produced 1070304641
+// where 1070303641 was wanted, Flutter's `+1000` sitting on top of F-Droid's `*10 + 1`.
+//
+// Flutter's own scheme cannot simply be adopted either: `abi * 1000 + versionCode`
+// collides with itself. This app's version code is a counter that increments by one per
+// release, so arm64 of today (`code + 2000`) is armeabi-v7a of the release a thousand
+// releases from now (`code + 1000 + 1000`). Multiplying by ten instead reserves a digit
+// that nothing else can reach, which is exactly why F-Droid asks for it.
+//
+// So the split is not made in Gradle at all. Each ABI is built on its own, with
+// `--target-platform` naming it and `--build-number` carrying the version code it should
+// have — see `scripts/ci-release-context.sh`. Nothing overrides anything, nothing
+// compounds, and the code in the APK is the one the release asked for.
 
 kotlin {
     compilerOptions {

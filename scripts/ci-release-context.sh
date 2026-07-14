@@ -80,7 +80,6 @@ fi
 
 if [ "$release_tag" = "nightly" ]; then
     release_channel="nightly"
-    apk_basename="OpenVitals-nightly.apk"
     aab_basename="OpenVitals-nightly.aab"
     release_title="OpenVitals Nightly"
     prerelease="true"
@@ -98,7 +97,6 @@ if [ "$release_tag" = "nightly" ]; then
     version_name_override="$version_name-nightly.$pipeline_number"
 else
     release_channel="release"
-    apk_basename="OpenVitals-$release_tag.apk"
     release_title="OpenVitals $release_tag"
     prerelease="true"
 
@@ -158,8 +156,10 @@ if [ "$release_channel" = "release" ]; then
             "Versioned prerelease build from commit ${CI_COMMIT_SHA:?}." \
             "" \
             "Assets:" \
-            "- Signed release APK ($apk_abi_filters)" \
-            "- SHA-256 checksum" \
+            "- Signed release APK per ABI, named by version code:" \
+            "  - OpenVitals-$release_tag-$((version_code * 10 + 2)).apk - arm64-v8a (64-bit; almost every phone)" \
+            "  - OpenVitals-$release_tag-$((version_code * 10 + 1)).apk - armeabi-v7a (32-bit; older devices)" \
+            "- A SHA-256 checksum beside each" \
             > "$notes_file"
     fi
 else
@@ -171,8 +171,8 @@ else
         "This release keeps a stable download page. The APK and checksum assets are replaced by the next $release_channel build." \
         "" \
         "Assets:" \
-        "- Signed $release_channel APK ($apk_abi_filters)" \
-        "- SHA-256 checksum" \
+        "- Signed $release_channel APK per ABI (arm64-v8a for almost every phone; armeabi-v7a for older 32-bit ones)" \
+        "- A SHA-256 checksum beside each" \
         > "$notes_file"
 fi
 
@@ -186,10 +186,65 @@ if [ -n "$version_code" ]; then
     } >> "$notes_file"
 fi
 
+# ── The ABI split ──────────────────────────────────────────────────────────────
+#
+# One APK per ABI, each with its own versionCode, because F-Droid asked for it and
+# because the alternative was a 60 MB download of which half was for the other
+# architecture. The scheme is F-Droid's:
+#
+#     versionCode * 10 + abiCode        armeabi-v7a 1, arm64-v8a 2, x86_64 3
+#
+# arm64 has to outrank armeabi-v7a: a 64-bit phone offered both must take the 64-bit
+# one, and the store ranks by versionCode.
+#
+# It is applied HERE, by building each ABI on its own with `--build-number`, rather
+# than in Gradle where F-Droid's own snippet puts it. Gradle cannot: the Flutter Gradle
+# Plugin already rewrites the versionCode of every ABI output when it sees
+# `--split-per-abi`, from an `afterEvaluate` that runs last, and the two COMPOUND rather
+# than replace each other (see the note in android/app/build.gradle.kts).
+#
+# The app bundle takes `versionCode * 10` with no ABI digit. That keeps Play interleaved
+# with the split APKs instead of a billion below them: leave Play on the bare counter and
+# anyone who ever installs an F-Droid or Codeberg APK is stranded on that channel, since
+# Play's next release would look like a downgrade to Android and never install.
+bundle_version_code=""
+apk_builds=""
+if [ -n "$version_code" ]; then
+    bundle_version_code=$((version_code * 10))
+    for platform in $(printf '%s' "$target_platforms" | tr ',' ' '); do
+        case "$platform" in
+            android-arm)   abi="armeabi-v7a"; abi_code=1 ;;
+            android-arm64) abi="arm64-v8a";   abi_code=2 ;;
+            android-x64)   abi="x86_64";      abi_code=3 ;;
+            *)
+                echo "No ABI version code is defined for target platform '$platform'." >&2
+                exit 1
+                ;;
+        esac
+        abi_version_code=$((version_code * 10 + abi_code))
+        # A release names its APKs by version CODE, because that is the only thing
+        # F-Droid can template: its `Binaries:` URL takes the version name (%v) and the
+        # version code (%c) and knows nothing about ABIs. A nightly names them by ABI
+        # instead — its download page is a stable URL that each build overwrites, and a
+        # name that changed every night would just pile up dead assets.
+        if [ "$release_channel" = "nightly" ]; then
+            abi_apk_basename="OpenVitals-nightly-$abi.apk"
+        else
+            abi_apk_basename="OpenVitals-$release_tag-$abi_version_code.apk"
+        fi
+        apk_builds="$apk_builds $platform:$abi_version_code:$abi_apk_basename"
+    done
+    apk_builds="${apk_builds# }"
+fi
+
 {
     printf 'OPENVITALS_RELEASE_CHANNEL=%s\n' "$release_channel"
     printf 'OPENVITALS_RELEASE_TAG=%s\n' "$release_tag"
-    printf 'OPENVITALS_APK_BASENAME=%s\n' "$apk_basename"
+    # Quoted, alone among these: it is the only value holding more than one word (one
+    # spec per ABI). This file is SOURCED, so an unquoted space would end the assignment
+    # and run the rest of the line as a command.
+    printf "OPENVITALS_APK_BUILDS='%s'\n" "$apk_builds"
+    printf 'OPENVITALS_BUNDLE_VERSION_CODE=%s\n' "$bundle_version_code"
     printf 'OPENVITALS_AAB_BASENAME=%s\n' "$aab_basename"
     printf 'OPENVITALS_APK_ABI_FILTERS=%s\n' "$apk_abi_filters"
     printf 'OPENVITALS_TARGET_PLATFORMS=%s\n' "$target_platforms"

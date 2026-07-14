@@ -120,26 +120,54 @@ steps:
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
       - test -n "$${OPENVITALS_TARGET_PLATFORMS}"
       - test -n "$${OPENVITALS_VERSION_CODE}"
+      - test -n "$${OPENVITALS_APK_BUILDS}"
+      # One APK per ABI, each built on its own so it can carry its own versionCode
+      # (`versionCode * 10 + abiCode`, F-Droid's scheme -- see ci-release-context.sh).
+      # A single `--split-per-abi` build cannot do this: the Flutter Gradle Plugin
+      # rewrites the version code of every ABI output itself, and its rewrite lands ON
+      # TOP of any other rather than instead of it.
+      #
+      # It also halves what anyone downloads. The old fat APK was 60 MB, of which half
+      # was the other architecture and 4.4 MB was libraries for x86_64, which this app
+      # has never been able to run on.
       - |
-        set -- build apk --release \
-          --target-platform "$${OPENVITALS_TARGET_PLATFORMS}" \
-          --build-number "$${OPENVITALS_VERSION_CODE}"
-        if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then
-          set -- "$${@}" --build-name "$${OPENVITALS_VERSION_NAME}"
-        fi
-        if [ -n "$${OPENVITALS_DART_DEFINES:-}" ]; then
-          set -- "$${@}" $${OPENVITALS_DART_DEFINES}
-        fi
-        scripts/ci-flutter.sh "$${@}"
-      - apk_path="build/app/outputs/flutter-apk/app-release.apk"
-      - test -f "$${apk_path}"
-      - cp "$${apk_path}" ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}"
-      - (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_APK_BASENAME}" > "$${OPENVITALS_APK_BASENAME}.sha256")
+        for spec in $${OPENVITALS_APK_BUILDS}; do
+          platform="$${spec%%:*}"
+          rest="$${spec#*:}"
+          abi_version_code="$${rest%%:*}"
+          apk_basename="$${rest#*:}"
+
+          set -- build apk --release \
+            --target-platform "$${platform}" \
+            --build-number "$${abi_version_code}"
+          if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then
+            set -- "$${@}" --build-name "$${OPENVITALS_VERSION_NAME}"
+          fi
+          if [ -n "$${OPENVITALS_DART_DEFINES:-}" ]; then
+            set -- "$${@}" $${OPENVITALS_DART_DEFINES}
+          fi
+          scripts/ci-flutter.sh "$${@}"
+
+          apk_path="build/app/outputs/flutter-apk/app-release.apk"
+          test -f "$${apk_path}"
+          cp "$${apk_path}" ".woodpecker/tmp/$${apk_basename}"
+          (cd .woodpecker/tmp && sha256sum "$${apk_basename}" > "$${apk_basename}.sha256")
+          # Each build overwrites the last one's output, so it has to be taken away
+          # before the next runs -- otherwise a failed build would silently publish the
+          # previous ABI's APK under this ABI's name.
+          rm -f "$${apk_path}"
+        done
       - |
         if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
+          test -n "$${OPENVITALS_BUNDLE_VERSION_CODE}"
+          # `versionCode * 10`, with no ABI digit: Play splits the bundle itself, so it
+          # needs one code, but it must sit in the SAME decade as the split APKs. Left on
+          # the bare counter it would be a billion below them, and anyone who ever
+          # installed an F-Droid or Codeberg APK could never be updated by Play again --
+          # every future Play release would look like a downgrade to Android.
           set -- build appbundle --release \
             --target-platform "$${OPENVITALS_TARGET_PLATFORMS}" \
-            --build-number "$${OPENVITALS_VERSION_CODE}"
+            --build-number "$${OPENVITALS_BUNDLE_VERSION_CODE}"
           if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then
             set -- "$${@}" --build-name "$${OPENVITALS_VERSION_NAME}"
           fi
@@ -184,7 +212,7 @@ steps:
         bundle exec fastlane android open_testing \
           json_key:"$${play_key_path}" \
           aab:"$${nightly_aab_path}" \
-          version_code:"$${OPENVITALS_VERSION_CODE}"
+          version_code:"$${OPENVITALS_BUNDLE_VERSION_CODE}"
     when:
       - event: manual
       - event: cron
@@ -213,7 +241,7 @@ steps:
         bundle exec fastlane android production \
           json_key:"$${play_key_path}" \
           aab:"$${release_aab_path}" \
-          version_code:"$${OPENVITALS_VERSION_CODE}"
+          version_code:"$${OPENVITALS_BUNDLE_VERSION_CODE}"
     when:
       - event: deployment
         evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
@@ -232,14 +260,21 @@ steps:
       - test -n "$${CODEBERG_RELEASE_API_KEY}"
       - chmod +x scripts/publish-codeberg-release.sh
       - |
-        scripts/publish-codeberg-release.sh \
-          "$${OPENVITALS_RELEASE_TAG}" \
+        # One APK per ABI now, each with its checksum. The publisher takes any number
+        # of assets, so the list is simply built from the same specs the build looped
+        # over -- there is no second place that has to agree about the names.
+        set -- "$${OPENVITALS_RELEASE_TAG}" \
           .woodpecker/tmp/release-title.txt \
           .woodpecker/tmp/release-notes.md \
           "$${OPENVITALS_RELEASE_PRERELEASE}" \
-          "$${OPENVITALS_RELEASE_TARGET}" \
-          ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
-          ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256"
+          "$${OPENVITALS_RELEASE_TARGET}"
+        for spec in $${OPENVITALS_APK_BUILDS}; do
+          apk_basename="$${spec##*:}"
+          set -- "$${@}" \
+            ".woodpecker/tmp/$${apk_basename}" \
+            ".woodpecker/tmp/$${apk_basename}.sha256"
+        done
+        scripts/publish-codeberg-release.sh "$${@}"
     when:
       - event: manual
       - event: cron
