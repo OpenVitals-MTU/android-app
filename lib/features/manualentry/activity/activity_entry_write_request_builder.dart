@@ -276,6 +276,12 @@ List<ActivityExerciseSegmentWrite>? buildActivityExerciseSegments(
   DateTime start,
   DateTime end,
 ) {
+  // A heart-rate-recovery test wins over everything else: the recovery mark is the only
+  // record of where the effort stopped, and without it the session read back later is
+  // just a workout that happens to end in some sitting down.
+  final recovery = buildRecoveryExerciseSegments(state, start, end);
+  if (recovery != null) return recovery;
+
   final type = state.selectedActivityType;
   if (type.repetitionUnit != ActivityRepetitionUnit.repetitions) {
     return const <ActivityExerciseSegmentWrite>[];
@@ -299,6 +305,54 @@ List<ActivityExerciseSegmentWrite>? buildActivityExerciseSegments(
     case ActivityRepetitionEntryMode.sets:
       return buildSetExerciseSegments(state, start, end, segmentType);
   }
+}
+
+/// Marks where the effort stopped, for a guided heart-rate-recovery test. Null when this
+/// was not one.
+///
+/// A REST segment running from the moment of cessation to the END OF THE SESSION — not
+/// for a fixed five minutes. If it were fixed, a rider who took ninety seconds to press
+/// save would leave it no longer trailing, and the reader would quietly fall back to the
+/// session end as the moment effort stopped: a later moment, a lower heart rate to
+/// measure from, and a flattering recovery that never happened. Running it to the end is
+/// identical when they save on time, and correct when they do not.
+///
+/// Only REST and PAUSE segments are emitted, never an "active" one. Health Connect
+/// validates a segment's type against the session's exercise type with a `require()` —
+/// a mismatch throws and takes the whole save with it — and rest and pause are the two
+/// that are universal. Nothing needs an active segment: the reader only looks for the
+/// trailing rest, and Health Connect does not ask segments to cover the session.
+List<ActivityExerciseSegmentWrite>? buildRecoveryExerciseSegments(
+  ActivityEntryUiState state,
+  DateTime start,
+  DateTime end,
+) {
+  final recoveryStart = state.recordedRecoveryStartTime;
+  if (recoveryStart == null) return null;
+  if (!recoveryStart.isAfter(start) || !recoveryStart.isBefore(end)) return null;
+
+  return [
+    // Explicit segments SUPPRESS the ones the native writer would otherwise synthesize
+    // from the pause intervals, so the pauses have to be carried here by hand or they
+    // are lost. (They were being dropped for non-GPS activities anyway, so this is a
+    // gain, not a regression.)
+    for (final pause in insideActivityRange(state.recordedPauseIntervals, start, end))
+      if (pause.startTime.isBefore(recoveryStart))
+        ActivityExerciseSegmentWrite(
+          startTime: pause.startTime,
+          endTime: pause.endTime.isAfter(recoveryStart)
+              ? recoveryStart
+              : pause.endTime,
+          segmentType: ExerciseSegmentType.pause,
+          repetitions: 0,
+        ),
+    ActivityExerciseSegmentWrite(
+      startTime: recoveryStart,
+      endTime: end,
+      segmentType: ExerciseSegmentType.rest,
+      repetitions: 0,
+    ),
+  ];
 }
 
 List<ActivityExerciseSegmentWrite>? buildSetExerciseSegments(

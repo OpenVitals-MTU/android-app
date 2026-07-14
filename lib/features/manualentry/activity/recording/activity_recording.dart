@@ -26,6 +26,45 @@ enum ActivityRecordingStatus { idle, recording, resting, paused }
 
 enum ActivityRecordingKind { gpsRoute, repetition, timed }
 
+/// Where a heart-rate-recovery test has got to.
+///
+/// Deliberately NOT a new [ActivityRecordingStatus]. Throughout the test the recording is
+/// one continuous `recording` — the phase is a separate thing that runs alongside it. In
+/// particular this must never borrow `ActivityRecordingStatus.resting`, whose bookkeeping
+/// feeds `restDuration()`, `movingDuration()` and the recorded repetition sets: the five
+/// minutes of recovery would be subtracted from the session as though they were a rest
+/// between weightlifting sets.
+enum ActivityRecordingHrrPhase {
+  /// Not an HRR test at all — an ordinary recording.
+  none,
+
+  /// Warming up, counting down to the effort.
+  warmup,
+
+  /// Going hard, until the user says stop or the target heart rate is reached.
+  effort,
+
+  /// The measurement. The clock that matters started the instant this began.
+  recovery,
+
+  /// Five minutes are up. The recording is still running — the user has to save it.
+  complete,
+}
+
+/// How a heart-rate-recovery test was set up.
+@freezed
+abstract class HeartRateRecoveryTestConfig with _$HeartRateRecoveryTestConfig {
+  const factory HeartRateRecoveryTestConfig({
+    /// 0 to skip the warmup and go straight to the effort.
+    @Default(180) int warmupSeconds,
+
+    /// Ends the effort when the heart rate reaches this, if it is set. The user can
+    /// always end it by hand instead.
+    int? targetHeartRateBpm,
+    @Default(300) int recoverySeconds,
+  }) = _HeartRateRecoveryTestConfig;
+}
+
 enum ActivityGpsStatus { waitingForFix, fix, poorAccuracy, lost, disabled }
 
 @freezed
@@ -96,12 +135,59 @@ abstract class ActivityRecordingState with _$ActivityRecordingState {
     List<BleDeviceConnectionStatus> bleDeviceStatuses,
     @Default(ActivityRecordingDashboardLayout())
     ActivityRecordingDashboardLayout dashboardLayout,
+    @Default(ActivityRecordingHrrPhase.none) ActivityRecordingHrrPhase hrrPhase,
+    @Default(HeartRateRecoveryTestConfig()) HeartRateRecoveryTestConfig hrrConfig,
+
+    /// The instant the effort stopped — the one the whole measurement hangs on.
+    ///
+    /// Deliberately NOT persisted to the draft store (see
+    /// `activity_recording_serialization.dart`). The heart-rate samples live in memory,
+    /// in the BLE coordinator, and do not survive the process being killed; a restored
+    /// recording therefore comes back as an ordinary one, with no phase and no recovery
+    /// mark. That loses the test, which is a pity — but the alternative is saving a
+    /// session that carries a rest segment claiming a recovery, with no heart rate behind
+    /// it to measure. A lost measurement is recoverable. A fabricated one is not.
+    DateTime? hrrEffortEndedAt,
   }) = _ActivityRecordingState;
 
   bool get isActive =>
       status == ActivityRecordingStatus.recording ||
       status == ActivityRecordingStatus.resting ||
       status == ActivityRecordingStatus.paused;
+
+  bool get isHeartRateRecoveryTest => hrrPhase != ActivityRecordingHrrPhase.none;
+
+  /// What the current phase is counting down to, or null when nothing is.
+  Duration? hrrPhaseRemaining([DateTime? now]) {
+    final at = now ?? DateTime.now();
+    switch (hrrPhase) {
+      case ActivityRecordingHrrPhase.warmup:
+        final from = startTime;
+        if (from == null || hrrConfig.warmupSeconds <= 0) return null;
+        return _remaining(
+          from.add(Duration(seconds: hrrConfig.warmupSeconds)),
+          at,
+        );
+      case ActivityRecordingHrrPhase.recovery:
+        final from = hrrEffortEndedAt;
+        if (from == null) return null;
+        return _remaining(
+          from.add(Duration(seconds: hrrConfig.recoverySeconds)),
+          at,
+        );
+      case ActivityRecordingHrrPhase.none:
+      case ActivityRecordingHrrPhase.effort:
+      case ActivityRecordingHrrPhase.complete:
+        // The effort has no deadline: it ends when the user does, or when their heart
+        // rate says so.
+        return null;
+    }
+  }
+
+  static Duration _remaining(DateTime until, DateTime now) {
+    final left = until.difference(now);
+    return left.isNegative ? Duration.zero : left;
+  }
 
   // ── Pure state extensions (ActivityRecordingStateExtensions.kt) ────────────
 
@@ -299,6 +385,11 @@ abstract class ActivityRecordingSnapshot with _$ActivityRecordingSnapshot {
     @Default(<ActivityRecordedRepetitionSet>[])
     List<ActivityRecordedRepetitionSet> repetitionSets,
     @Default(BleRecordingSampleBuffer()) BleRecordingSampleBuffer bleSamples,
+
+    /// When the effort stopped, for a heart-rate-recovery test. This is what gets written
+    /// as a trailing rest segment, and it is the only thing that tells anyone reading the
+    /// session back where the recovery began.
+    DateTime? hrrEffortEndedAt,
   }) = _ActivityRecordingSnapshot;
 }
 
@@ -338,6 +429,21 @@ abstract interface class ActivityRecordingController {
     ActivityRecordingInitialFix? initialFix, {
     int repetitionRestSeconds = 0,
   });
+
+  /// Starts a guided heart-rate-recovery test: warm up, go hard, then stop dead and let
+  /// the app watch the heart rate come down.
+  ///
+  /// This is an ordinary timed recording underneath — same foreground service, same
+  /// sensors, same write path. What it adds is a protocol, and the one thing that makes
+  /// the measurement trustworthy: an abrupt, recorded stop.
+  Future<bool> startHeartRateRecoveryTest(
+    ActivityEntryType activityType,
+    HeartRateRecoveryTestConfig config,
+  );
+
+  /// Ends the effort and starts the recovery, now. Always available during the effort —
+  /// the heart-rate target is a convenience, not the only way out.
+  void endHeartRateRecoveryEffort();
 
   void previewBleConnections();
 

@@ -227,6 +227,11 @@ abstract class ActivityEntryUiState with _$ActivityEntryUiState {
     String? editRecordId,
     @Default(false) bool isRecordingDraft,
     @Default(BleRecordingSampleBuffer()) BleRecordingSampleBuffer recordedBleSamples,
+
+    /// The instant the effort stopped in a guided heart-rate-recovery test, carried from
+    /// the recording so the write path can mark it as a trailing rest segment. Null for
+    /// every ordinary activity.
+    DateTime? recordedRecoveryStartTime,
     @Default(<HeartRateSample>[]) List<HeartRateSample> sessionHeartRateSamples,
   }) = _ActivityEntryUiState;
 

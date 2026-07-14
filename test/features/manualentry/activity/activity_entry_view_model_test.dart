@@ -1610,6 +1610,16 @@ class _FakeRecordingController implements ActivityRecordingController {
     int repetitionRestSeconds = 0,
   }) async =>
       true;
+
+  @override
+  Future<bool> startHeartRateRecoveryTest(
+    ActivityEntryType activityType,
+    HeartRateRecoveryTestConfig config,
+  ) async =>
+      true;
+
+  @override
+  void endHeartRateRecoveryEffort() {}
   @override
   void pauseRecording() {}
   @override

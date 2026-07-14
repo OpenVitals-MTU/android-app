@@ -3421,6 +3421,18 @@
   "@settingsHealthConnectMindfulnessBody": {
     "description": "Explains why the Health Connect mindfulness integration is off by default."
   },
+  "activityRecordingHrrCueEffort": "Go hard now.",
+  "@activityRecordingHrrCueEffort": {
+    "description": "Spoken when the warmup ends and the effort begins."
+  },
+  "activityRecordingHrrCueSlowDown": "Slow down and stop. Stay still.",
+  "@activityRecordingHrrCueSlowDown": {
+    "description": "Spoken the instant the effort ends and the recovery is being measured. The one cue the whole test depends on."
+  },
+  "activityRecordingHrrCueComplete": "Recovery complete. You can save the workout.",
+  "@activityRecordingHrrCueComplete": {
+    "description": "Spoken when the five minutes of recovery are up."
+  },
   "heartRateRecoveryTitle": "Heart rate recovery",
   "@heartRateRecoveryTitle": {
     "description": "Card title: how far the heart rate fell after the effort stopped."

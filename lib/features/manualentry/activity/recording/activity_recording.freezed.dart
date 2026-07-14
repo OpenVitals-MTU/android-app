@@ -12,6 +12,287 @@ part of 'activity_recording.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
+mixin _$HeartRateRecoveryTestConfig implements DiagnosticableTreeMixin {
+
+/// 0 to skip the warmup and go straight to the effort.
+ int get warmupSeconds;/// Ends the effort when the heart rate reaches this, if it is set. The user can
+/// always end it by hand instead.
+ int? get targetHeartRateBpm; int get recoverySeconds;
+/// Create a copy of HeartRateRecoveryTestConfig
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$HeartRateRecoveryTestConfigCopyWith<HeartRateRecoveryTestConfig> get copyWith => _$HeartRateRecoveryTestConfigCopyWithImpl<HeartRateRecoveryTestConfig>(this as HeartRateRecoveryTestConfig, _$identity);
+
+
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'HeartRateRecoveryTestConfig'))
+    ..add(DiagnosticsProperty('warmupSeconds', warmupSeconds))..add(DiagnosticsProperty('targetHeartRateBpm', targetHeartRateBpm))..add(DiagnosticsProperty('recoverySeconds', recoverySeconds));
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HeartRateRecoveryTestConfig&&(identical(other.warmupSeconds, warmupSeconds) || other.warmupSeconds == warmupSeconds)&&(identical(other.targetHeartRateBpm, targetHeartRateBpm) || other.targetHeartRateBpm == targetHeartRateBpm)&&(identical(other.recoverySeconds, recoverySeconds) || other.recoverySeconds == recoverySeconds));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,warmupSeconds,targetHeartRateBpm,recoverySeconds);
+
+@override
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+  return 'HeartRateRecoveryTestConfig(warmupSeconds: $warmupSeconds, targetHeartRateBpm: $targetHeartRateBpm, recoverySeconds: $recoverySeconds)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $HeartRateRecoveryTestConfigCopyWith<$Res>  {
+  factory $HeartRateRecoveryTestConfigCopyWith(HeartRateRecoveryTestConfig value, $Res Function(HeartRateRecoveryTestConfig) _then) = _$HeartRateRecoveryTestConfigCopyWithImpl;
+@useResult
+$Res call({
+ int warmupSeconds, int? targetHeartRateBpm, int recoverySeconds
+});
+
+
+
+
+}
+/// @nodoc
+class _$HeartRateRecoveryTestConfigCopyWithImpl<$Res>
+    implements $HeartRateRecoveryTestConfigCopyWith<$Res> {
+  _$HeartRateRecoveryTestConfigCopyWithImpl(this._self, this._then);
+
+  final HeartRateRecoveryTestConfig _self;
+  final $Res Function(HeartRateRecoveryTestConfig) _then;
+
+/// Create a copy of HeartRateRecoveryTestConfig
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? warmupSeconds = null,Object? targetHeartRateBpm = freezed,Object? recoverySeconds = null,}) {
+  return _then(_self.copyWith(
+warmupSeconds: null == warmupSeconds ? _self.warmupSeconds : warmupSeconds // ignore: cast_nullable_to_non_nullable
+as int,targetHeartRateBpm: freezed == targetHeartRateBpm ? _self.targetHeartRateBpm : targetHeartRateBpm // ignore: cast_nullable_to_non_nullable
+as int?,recoverySeconds: null == recoverySeconds ? _self.recoverySeconds : recoverySeconds // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [HeartRateRecoveryTestConfig].
+extension HeartRateRecoveryTestConfigPatterns on HeartRateRecoveryTestConfig {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _HeartRateRecoveryTestConfig value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _HeartRateRecoveryTestConfig() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _HeartRateRecoveryTestConfig value)  $default,){
+final _that = this;
+switch (_that) {
+case _HeartRateRecoveryTestConfig():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _HeartRateRecoveryTestConfig value)?  $default,){
+final _that = this;
+switch (_that) {
+case _HeartRateRecoveryTestConfig() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int warmupSeconds,  int? targetHeartRateBpm,  int recoverySeconds)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _HeartRateRecoveryTestConfig() when $default != null:
+return $default(_that.warmupSeconds,_that.targetHeartRateBpm,_that.recoverySeconds);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int warmupSeconds,  int? targetHeartRateBpm,  int recoverySeconds)  $default,) {final _that = this;
+switch (_that) {
+case _HeartRateRecoveryTestConfig():
+return $default(_that.warmupSeconds,_that.targetHeartRateBpm,_that.recoverySeconds);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int warmupSeconds,  int? targetHeartRateBpm,  int recoverySeconds)?  $default,) {final _that = this;
+switch (_that) {
+case _HeartRateRecoveryTestConfig() when $default != null:
+return $default(_that.warmupSeconds,_that.targetHeartRateBpm,_that.recoverySeconds);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _HeartRateRecoveryTestConfig with DiagnosticableTreeMixin implements HeartRateRecoveryTestConfig {
+  const _HeartRateRecoveryTestConfig({this.warmupSeconds = 180, this.targetHeartRateBpm, this.recoverySeconds = 300});
+  
+
+/// 0 to skip the warmup and go straight to the effort.
+@override@JsonKey() final  int warmupSeconds;
+/// Ends the effort when the heart rate reaches this, if it is set. The user can
+/// always end it by hand instead.
+@override final  int? targetHeartRateBpm;
+@override@JsonKey() final  int recoverySeconds;
+
+/// Create a copy of HeartRateRecoveryTestConfig
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$HeartRateRecoveryTestConfigCopyWith<_HeartRateRecoveryTestConfig> get copyWith => __$HeartRateRecoveryTestConfigCopyWithImpl<_HeartRateRecoveryTestConfig>(this, _$identity);
+
+
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'HeartRateRecoveryTestConfig'))
+    ..add(DiagnosticsProperty('warmupSeconds', warmupSeconds))..add(DiagnosticsProperty('targetHeartRateBpm', targetHeartRateBpm))..add(DiagnosticsProperty('recoverySeconds', recoverySeconds));
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HeartRateRecoveryTestConfig&&(identical(other.warmupSeconds, warmupSeconds) || other.warmupSeconds == warmupSeconds)&&(identical(other.targetHeartRateBpm, targetHeartRateBpm) || other.targetHeartRateBpm == targetHeartRateBpm)&&(identical(other.recoverySeconds, recoverySeconds) || other.recoverySeconds == recoverySeconds));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,warmupSeconds,targetHeartRateBpm,recoverySeconds);
+
+@override
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
+  return 'HeartRateRecoveryTestConfig(warmupSeconds: $warmupSeconds, targetHeartRateBpm: $targetHeartRateBpm, recoverySeconds: $recoverySeconds)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$HeartRateRecoveryTestConfigCopyWith<$Res> implements $HeartRateRecoveryTestConfigCopyWith<$Res> {
+  factory _$HeartRateRecoveryTestConfigCopyWith(_HeartRateRecoveryTestConfig value, $Res Function(_HeartRateRecoveryTestConfig) _then) = __$HeartRateRecoveryTestConfigCopyWithImpl;
+@override @useResult
+$Res call({
+ int warmupSeconds, int? targetHeartRateBpm, int recoverySeconds
+});
+
+
+
+
+}
+/// @nodoc
+class __$HeartRateRecoveryTestConfigCopyWithImpl<$Res>
+    implements _$HeartRateRecoveryTestConfigCopyWith<$Res> {
+  __$HeartRateRecoveryTestConfigCopyWithImpl(this._self, this._then);
+
+  final _HeartRateRecoveryTestConfig _self;
+  final $Res Function(_HeartRateRecoveryTestConfig) _then;
+
+/// Create a copy of HeartRateRecoveryTestConfig
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? warmupSeconds = null,Object? targetHeartRateBpm = freezed,Object? recoverySeconds = null,}) {
+  return _then(_HeartRateRecoveryTestConfig(
+warmupSeconds: null == warmupSeconds ? _self.warmupSeconds : warmupSeconds // ignore: cast_nullable_to_non_nullable
+as int,targetHeartRateBpm: freezed == targetHeartRateBpm ? _self.targetHeartRateBpm : targetHeartRateBpm // ignore: cast_nullable_to_non_nullable
+as int?,recoverySeconds: null == recoverySeconds ? _self.recoverySeconds : recoverySeconds // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$ActivityRecordedRepetitionSet implements DiagnosticableTreeMixin {
 
  int get repetitions; int get restSeconds; int get activeMillis;
@@ -289,7 +570,16 @@ as int,
 /// @nodoc
 mixin _$ActivityRecordingState implements DiagnosticableTreeMixin {
 
- ActivityRecordingStatus get status; ActivityRecordingKind get recordingKind; String? get activityTypeId; int? get exerciseType; DateTime? get startTime; DateTime? get endTime; DateTime? get pausedStartedAt; int get totalPausedMillis; List<ActivityPauseInterval> get pauseIntervals; List<ExerciseRoutePoint> get points; List<int> get routeBreakIndexes; List<ActivityRecordingLap> get manualLaps; List<ActivityRecordingMarker> get markers; ExerciseRoutePoint? get latestUiPoint; double get distanceMeters; double get elevationGainedMeters; double get elevationLostMeters; double get barometerElevationGainedMeters; double get barometerElevationLostMeters; bool get hasBarometerElevation; double? get lastBarometerAltitudeMeters; double get currentSpeedMetersPerSecond; double get maxSpeedMetersPerSecond; ActivityGpsStatus get gpsStatus; bool get keepScreenOnDuringRecording; bool get autoIdleEnabled; int get autoIdleTimeoutMillis; DateTime? get lastMovementAt; int get totalIdleMillis; int get repetitionCount; int get currentSetRepetitionCount; List<ActivityRecordedRepetitionSet> get repetitionSets; int get repetitionRestSeconds; DateTime? get currentSetStartedAt; DateTime? get restStartedAt; int get accumulatedRestMillis; double? get lastAccuracyMeters; DateTime? get lastLocationTime; int get droppedPointCount; String? get errorMessage; int? get currentHeartRateBpm; int? get currentCyclingCadenceRpm; double? get currentPowerWatts; double? get currentSensorSpeedMetersPerSecond; int? get currentRunningCadenceRpm; bool get bleHeartRateNoSignal; List<BleDeviceConnectionStatus> get bleDeviceStatuses; ActivityRecordingDashboardLayout get dashboardLayout;
+ ActivityRecordingStatus get status; ActivityRecordingKind get recordingKind; String? get activityTypeId; int? get exerciseType; DateTime? get startTime; DateTime? get endTime; DateTime? get pausedStartedAt; int get totalPausedMillis; List<ActivityPauseInterval> get pauseIntervals; List<ExerciseRoutePoint> get points; List<int> get routeBreakIndexes; List<ActivityRecordingLap> get manualLaps; List<ActivityRecordingMarker> get markers; ExerciseRoutePoint? get latestUiPoint; double get distanceMeters; double get elevationGainedMeters; double get elevationLostMeters; double get barometerElevationGainedMeters; double get barometerElevationLostMeters; bool get hasBarometerElevation; double? get lastBarometerAltitudeMeters; double get currentSpeedMetersPerSecond; double get maxSpeedMetersPerSecond; ActivityGpsStatus get gpsStatus; bool get keepScreenOnDuringRecording; bool get autoIdleEnabled; int get autoIdleTimeoutMillis; DateTime? get lastMovementAt; int get totalIdleMillis; int get repetitionCount; int get currentSetRepetitionCount; List<ActivityRecordedRepetitionSet> get repetitionSets; int get repetitionRestSeconds; DateTime? get currentSetStartedAt; DateTime? get restStartedAt; int get accumulatedRestMillis; double? get lastAccuracyMeters; DateTime? get lastLocationTime; int get droppedPointCount; String? get errorMessage; int? get currentHeartRateBpm; int? get currentCyclingCadenceRpm; double? get currentPowerWatts; double? get currentSensorSpeedMetersPerSecond; int? get currentRunningCadenceRpm; bool get bleHeartRateNoSignal; List<BleDeviceConnectionStatus> get bleDeviceStatuses; ActivityRecordingDashboardLayout get dashboardLayout; ActivityRecordingHrrPhase get hrrPhase; HeartRateRecoveryTestConfig get hrrConfig;/// The instant the effort stopped — the one the whole measurement hangs on.
+///
+/// Deliberately NOT persisted to the draft store (see
+/// `activity_recording_serialization.dart`). The heart-rate samples live in memory,
+/// in the BLE coordinator, and do not survive the process being killed; a restored
+/// recording therefore comes back as an ordinary one, with no phase and no recovery
+/// mark. That loses the test, which is a pity — but the alternative is saving a
+/// session that carries a rest segment claiming a recovery, with no heart rate behind
+/// it to measure. A lost measurement is recoverable. A fabricated one is not.
+ DateTime? get hrrEffortEndedAt;
 /// Create a copy of ActivityRecordingState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -301,21 +591,21 @@ $ActivityRecordingStateCopyWith<ActivityRecordingState> get copyWith => _$Activi
 void debugFillProperties(DiagnosticPropertiesBuilder properties) {
   properties
     ..add(DiagnosticsProperty('type', 'ActivityRecordingState'))
-    ..add(DiagnosticsProperty('status', status))..add(DiagnosticsProperty('recordingKind', recordingKind))..add(DiagnosticsProperty('activityTypeId', activityTypeId))..add(DiagnosticsProperty('exerciseType', exerciseType))..add(DiagnosticsProperty('startTime', startTime))..add(DiagnosticsProperty('endTime', endTime))..add(DiagnosticsProperty('pausedStartedAt', pausedStartedAt))..add(DiagnosticsProperty('totalPausedMillis', totalPausedMillis))..add(DiagnosticsProperty('pauseIntervals', pauseIntervals))..add(DiagnosticsProperty('points', points))..add(DiagnosticsProperty('routeBreakIndexes', routeBreakIndexes))..add(DiagnosticsProperty('manualLaps', manualLaps))..add(DiagnosticsProperty('markers', markers))..add(DiagnosticsProperty('latestUiPoint', latestUiPoint))..add(DiagnosticsProperty('distanceMeters', distanceMeters))..add(DiagnosticsProperty('elevationGainedMeters', elevationGainedMeters))..add(DiagnosticsProperty('elevationLostMeters', elevationLostMeters))..add(DiagnosticsProperty('barometerElevationGainedMeters', barometerElevationGainedMeters))..add(DiagnosticsProperty('barometerElevationLostMeters', barometerElevationLostMeters))..add(DiagnosticsProperty('hasBarometerElevation', hasBarometerElevation))..add(DiagnosticsProperty('lastBarometerAltitudeMeters', lastBarometerAltitudeMeters))..add(DiagnosticsProperty('currentSpeedMetersPerSecond', currentSpeedMetersPerSecond))..add(DiagnosticsProperty('maxSpeedMetersPerSecond', maxSpeedMetersPerSecond))..add(DiagnosticsProperty('gpsStatus', gpsStatus))..add(DiagnosticsProperty('keepScreenOnDuringRecording', keepScreenOnDuringRecording))..add(DiagnosticsProperty('autoIdleEnabled', autoIdleEnabled))..add(DiagnosticsProperty('autoIdleTimeoutMillis', autoIdleTimeoutMillis))..add(DiagnosticsProperty('lastMovementAt', lastMovementAt))..add(DiagnosticsProperty('totalIdleMillis', totalIdleMillis))..add(DiagnosticsProperty('repetitionCount', repetitionCount))..add(DiagnosticsProperty('currentSetRepetitionCount', currentSetRepetitionCount))..add(DiagnosticsProperty('repetitionSets', repetitionSets))..add(DiagnosticsProperty('repetitionRestSeconds', repetitionRestSeconds))..add(DiagnosticsProperty('currentSetStartedAt', currentSetStartedAt))..add(DiagnosticsProperty('restStartedAt', restStartedAt))..add(DiagnosticsProperty('accumulatedRestMillis', accumulatedRestMillis))..add(DiagnosticsProperty('lastAccuracyMeters', lastAccuracyMeters))..add(DiagnosticsProperty('lastLocationTime', lastLocationTime))..add(DiagnosticsProperty('droppedPointCount', droppedPointCount))..add(DiagnosticsProperty('errorMessage', errorMessage))..add(DiagnosticsProperty('currentHeartRateBpm', currentHeartRateBpm))..add(DiagnosticsProperty('currentCyclingCadenceRpm', currentCyclingCadenceRpm))..add(DiagnosticsProperty('currentPowerWatts', currentPowerWatts))..add(DiagnosticsProperty('currentSensorSpeedMetersPerSecond', currentSensorSpeedMetersPerSecond))..add(DiagnosticsProperty('currentRunningCadenceRpm', currentRunningCadenceRpm))..add(DiagnosticsProperty('bleHeartRateNoSignal', bleHeartRateNoSignal))..add(DiagnosticsProperty('bleDeviceStatuses', bleDeviceStatuses))..add(DiagnosticsProperty('dashboardLayout', dashboardLayout));
+    ..add(DiagnosticsProperty('status', status))..add(DiagnosticsProperty('recordingKind', recordingKind))..add(DiagnosticsProperty('activityTypeId', activityTypeId))..add(DiagnosticsProperty('exerciseType', exerciseType))..add(DiagnosticsProperty('startTime', startTime))..add(DiagnosticsProperty('endTime', endTime))..add(DiagnosticsProperty('pausedStartedAt', pausedStartedAt))..add(DiagnosticsProperty('totalPausedMillis', totalPausedMillis))..add(DiagnosticsProperty('pauseIntervals', pauseIntervals))..add(DiagnosticsProperty('points', points))..add(DiagnosticsProperty('routeBreakIndexes', routeBreakIndexes))..add(DiagnosticsProperty('manualLaps', manualLaps))..add(DiagnosticsProperty('markers', markers))..add(DiagnosticsProperty('latestUiPoint', latestUiPoint))..add(DiagnosticsProperty('distanceMeters', distanceMeters))..add(DiagnosticsProperty('elevationGainedMeters', elevationGainedMeters))..add(DiagnosticsProperty('elevationLostMeters', elevationLostMeters))..add(DiagnosticsProperty('barometerElevationGainedMeters', barometerElevationGainedMeters))..add(DiagnosticsProperty('barometerElevationLostMeters', barometerElevationLostMeters))..add(DiagnosticsProperty('hasBarometerElevation', hasBarometerElevation))..add(DiagnosticsProperty('lastBarometerAltitudeMeters', lastBarometerAltitudeMeters))..add(DiagnosticsProperty('currentSpeedMetersPerSecond', currentSpeedMetersPerSecond))..add(DiagnosticsProperty('maxSpeedMetersPerSecond', maxSpeedMetersPerSecond))..add(DiagnosticsProperty('gpsStatus', gpsStatus))..add(DiagnosticsProperty('keepScreenOnDuringRecording', keepScreenOnDuringRecording))..add(DiagnosticsProperty('autoIdleEnabled', autoIdleEnabled))..add(DiagnosticsProperty('autoIdleTimeoutMillis', autoIdleTimeoutMillis))..add(DiagnosticsProperty('lastMovementAt', lastMovementAt))..add(DiagnosticsProperty('totalIdleMillis', totalIdleMillis))..add(DiagnosticsProperty('repetitionCount', repetitionCount))..add(DiagnosticsProperty('currentSetRepetitionCount', currentSetRepetitionCount))..add(DiagnosticsProperty('repetitionSets', repetitionSets))..add(DiagnosticsProperty('repetitionRestSeconds', repetitionRestSeconds))..add(DiagnosticsProperty('currentSetStartedAt', currentSetStartedAt))..add(DiagnosticsProperty('restStartedAt', restStartedAt))..add(DiagnosticsProperty('accumulatedRestMillis', accumulatedRestMillis))..add(DiagnosticsProperty('lastAccuracyMeters', lastAccuracyMeters))..add(DiagnosticsProperty('lastLocationTime', lastLocationTime))..add(DiagnosticsProperty('droppedPointCount', droppedPointCount))..add(DiagnosticsProperty('errorMessage', errorMessage))..add(DiagnosticsProperty('currentHeartRateBpm', currentHeartRateBpm))..add(DiagnosticsProperty('currentCyclingCadenceRpm', currentCyclingCadenceRpm))..add(DiagnosticsProperty('currentPowerWatts', currentPowerWatts))..add(DiagnosticsProperty('currentSensorSpeedMetersPerSecond', currentSensorSpeedMetersPerSecond))..add(DiagnosticsProperty('currentRunningCadenceRpm', currentRunningCadenceRpm))..add(DiagnosticsProperty('bleHeartRateNoSignal', bleHeartRateNoSignal))..add(DiagnosticsProperty('bleDeviceStatuses', bleDeviceStatuses))..add(DiagnosticsProperty('dashboardLayout', dashboardLayout))..add(DiagnosticsProperty('hrrPhase', hrrPhase))..add(DiagnosticsProperty('hrrConfig', hrrConfig))..add(DiagnosticsProperty('hrrEffortEndedAt', hrrEffortEndedAt));
 }
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityRecordingState&&(identical(other.status, status) || other.status == status)&&(identical(other.recordingKind, recordingKind) || other.recordingKind == recordingKind)&&(identical(other.activityTypeId, activityTypeId) || other.activityTypeId == activityTypeId)&&(identical(other.exerciseType, exerciseType) || other.exerciseType == exerciseType)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.pausedStartedAt, pausedStartedAt) || other.pausedStartedAt == pausedStartedAt)&&(identical(other.totalPausedMillis, totalPausedMillis) || other.totalPausedMillis == totalPausedMillis)&&const DeepCollectionEquality().equals(other.pauseIntervals, pauseIntervals)&&const DeepCollectionEquality().equals(other.points, points)&&const DeepCollectionEquality().equals(other.routeBreakIndexes, routeBreakIndexes)&&const DeepCollectionEquality().equals(other.manualLaps, manualLaps)&&const DeepCollectionEquality().equals(other.markers, markers)&&(identical(other.latestUiPoint, latestUiPoint) || other.latestUiPoint == latestUiPoint)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.elevationGainedMeters, elevationGainedMeters) || other.elevationGainedMeters == elevationGainedMeters)&&(identical(other.elevationLostMeters, elevationLostMeters) || other.elevationLostMeters == elevationLostMeters)&&(identical(other.barometerElevationGainedMeters, barometerElevationGainedMeters) || other.barometerElevationGainedMeters == barometerElevationGainedMeters)&&(identical(other.barometerElevationLostMeters, barometerElevationLostMeters) || other.barometerElevationLostMeters == barometerElevationLostMeters)&&(identical(other.hasBarometerElevation, hasBarometerElevation) || other.hasBarometerElevation == hasBarometerElevation)&&(identical(other.lastBarometerAltitudeMeters, lastBarometerAltitudeMeters) || other.lastBarometerAltitudeMeters == lastBarometerAltitudeMeters)&&(identical(other.currentSpeedMetersPerSecond, currentSpeedMetersPerSecond) || other.currentSpeedMetersPerSecond == currentSpeedMetersPerSecond)&&(identical(other.maxSpeedMetersPerSecond, maxSpeedMetersPerSecond) || other.maxSpeedMetersPerSecond == maxSpeedMetersPerSecond)&&(identical(other.gpsStatus, gpsStatus) || other.gpsStatus == gpsStatus)&&(identical(other.keepScreenOnDuringRecording, keepScreenOnDuringRecording) || other.keepScreenOnDuringRecording == keepScreenOnDuringRecording)&&(identical(other.autoIdleEnabled, autoIdleEnabled) || other.autoIdleEnabled == autoIdleEnabled)&&(identical(other.autoIdleTimeoutMillis, autoIdleTimeoutMillis) || other.autoIdleTimeoutMillis == autoIdleTimeoutMillis)&&(identical(other.lastMovementAt, lastMovementAt) || other.lastMovementAt == lastMovementAt)&&(identical(other.totalIdleMillis, totalIdleMillis) || other.totalIdleMillis == totalIdleMillis)&&(identical(other.repetitionCount, repetitionCount) || other.repetitionCount == repetitionCount)&&(identical(other.currentSetRepetitionCount, currentSetRepetitionCount) || other.currentSetRepetitionCount == currentSetRepetitionCount)&&const DeepCollectionEquality().equals(other.repetitionSets, repetitionSets)&&(identical(other.repetitionRestSeconds, repetitionRestSeconds) || other.repetitionRestSeconds == repetitionRestSeconds)&&(identical(other.currentSetStartedAt, currentSetStartedAt) || other.currentSetStartedAt == currentSetStartedAt)&&(identical(other.restStartedAt, restStartedAt) || other.restStartedAt == restStartedAt)&&(identical(other.accumulatedRestMillis, accumulatedRestMillis) || other.accumulatedRestMillis == accumulatedRestMillis)&&(identical(other.lastAccuracyMeters, lastAccuracyMeters) || other.lastAccuracyMeters == lastAccuracyMeters)&&(identical(other.lastLocationTime, lastLocationTime) || other.lastLocationTime == lastLocationTime)&&(identical(other.droppedPointCount, droppedPointCount) || other.droppedPointCount == droppedPointCount)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.currentHeartRateBpm, currentHeartRateBpm) || other.currentHeartRateBpm == currentHeartRateBpm)&&(identical(other.currentCyclingCadenceRpm, currentCyclingCadenceRpm) || other.currentCyclingCadenceRpm == currentCyclingCadenceRpm)&&(identical(other.currentPowerWatts, currentPowerWatts) || other.currentPowerWatts == currentPowerWatts)&&(identical(other.currentSensorSpeedMetersPerSecond, currentSensorSpeedMetersPerSecond) || other.currentSensorSpeedMetersPerSecond == currentSensorSpeedMetersPerSecond)&&(identical(other.currentRunningCadenceRpm, currentRunningCadenceRpm) || other.currentRunningCadenceRpm == currentRunningCadenceRpm)&&(identical(other.bleHeartRateNoSignal, bleHeartRateNoSignal) || other.bleHeartRateNoSignal == bleHeartRateNoSignal)&&const DeepCollectionEquality().equals(other.bleDeviceStatuses, bleDeviceStatuses)&&(identical(other.dashboardLayout, dashboardLayout) || other.dashboardLayout == dashboardLayout));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityRecordingState&&(identical(other.status, status) || other.status == status)&&(identical(other.recordingKind, recordingKind) || other.recordingKind == recordingKind)&&(identical(other.activityTypeId, activityTypeId) || other.activityTypeId == activityTypeId)&&(identical(other.exerciseType, exerciseType) || other.exerciseType == exerciseType)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.pausedStartedAt, pausedStartedAt) || other.pausedStartedAt == pausedStartedAt)&&(identical(other.totalPausedMillis, totalPausedMillis) || other.totalPausedMillis == totalPausedMillis)&&const DeepCollectionEquality().equals(other.pauseIntervals, pauseIntervals)&&const DeepCollectionEquality().equals(other.points, points)&&const DeepCollectionEquality().equals(other.routeBreakIndexes, routeBreakIndexes)&&const DeepCollectionEquality().equals(other.manualLaps, manualLaps)&&const DeepCollectionEquality().equals(other.markers, markers)&&(identical(other.latestUiPoint, latestUiPoint) || other.latestUiPoint == latestUiPoint)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.elevationGainedMeters, elevationGainedMeters) || other.elevationGainedMeters == elevationGainedMeters)&&(identical(other.elevationLostMeters, elevationLostMeters) || other.elevationLostMeters == elevationLostMeters)&&(identical(other.barometerElevationGainedMeters, barometerElevationGainedMeters) || other.barometerElevationGainedMeters == barometerElevationGainedMeters)&&(identical(other.barometerElevationLostMeters, barometerElevationLostMeters) || other.barometerElevationLostMeters == barometerElevationLostMeters)&&(identical(other.hasBarometerElevation, hasBarometerElevation) || other.hasBarometerElevation == hasBarometerElevation)&&(identical(other.lastBarometerAltitudeMeters, lastBarometerAltitudeMeters) || other.lastBarometerAltitudeMeters == lastBarometerAltitudeMeters)&&(identical(other.currentSpeedMetersPerSecond, currentSpeedMetersPerSecond) || other.currentSpeedMetersPerSecond == currentSpeedMetersPerSecond)&&(identical(other.maxSpeedMetersPerSecond, maxSpeedMetersPerSecond) || other.maxSpeedMetersPerSecond == maxSpeedMetersPerSecond)&&(identical(other.gpsStatus, gpsStatus) || other.gpsStatus == gpsStatus)&&(identical(other.keepScreenOnDuringRecording, keepScreenOnDuringRecording) || other.keepScreenOnDuringRecording == keepScreenOnDuringRecording)&&(identical(other.autoIdleEnabled, autoIdleEnabled) || other.autoIdleEnabled == autoIdleEnabled)&&(identical(other.autoIdleTimeoutMillis, autoIdleTimeoutMillis) || other.autoIdleTimeoutMillis == autoIdleTimeoutMillis)&&(identical(other.lastMovementAt, lastMovementAt) || other.lastMovementAt == lastMovementAt)&&(identical(other.totalIdleMillis, totalIdleMillis) || other.totalIdleMillis == totalIdleMillis)&&(identical(other.repetitionCount, repetitionCount) || other.repetitionCount == repetitionCount)&&(identical(other.currentSetRepetitionCount, currentSetRepetitionCount) || other.currentSetRepetitionCount == currentSetRepetitionCount)&&const DeepCollectionEquality().equals(other.repetitionSets, repetitionSets)&&(identical(other.repetitionRestSeconds, repetitionRestSeconds) || other.repetitionRestSeconds == repetitionRestSeconds)&&(identical(other.currentSetStartedAt, currentSetStartedAt) || other.currentSetStartedAt == currentSetStartedAt)&&(identical(other.restStartedAt, restStartedAt) || other.restStartedAt == restStartedAt)&&(identical(other.accumulatedRestMillis, accumulatedRestMillis) || other.accumulatedRestMillis == accumulatedRestMillis)&&(identical(other.lastAccuracyMeters, lastAccuracyMeters) || other.lastAccuracyMeters == lastAccuracyMeters)&&(identical(other.lastLocationTime, lastLocationTime) || other.lastLocationTime == lastLocationTime)&&(identical(other.droppedPointCount, droppedPointCount) || other.droppedPointCount == droppedPointCount)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.currentHeartRateBpm, currentHeartRateBpm) || other.currentHeartRateBpm == currentHeartRateBpm)&&(identical(other.currentCyclingCadenceRpm, currentCyclingCadenceRpm) || other.currentCyclingCadenceRpm == currentCyclingCadenceRpm)&&(identical(other.currentPowerWatts, currentPowerWatts) || other.currentPowerWatts == currentPowerWatts)&&(identical(other.currentSensorSpeedMetersPerSecond, currentSensorSpeedMetersPerSecond) || other.currentSensorSpeedMetersPerSecond == currentSensorSpeedMetersPerSecond)&&(identical(other.currentRunningCadenceRpm, currentRunningCadenceRpm) || other.currentRunningCadenceRpm == currentRunningCadenceRpm)&&(identical(other.bleHeartRateNoSignal, bleHeartRateNoSignal) || other.bleHeartRateNoSignal == bleHeartRateNoSignal)&&const DeepCollectionEquality().equals(other.bleDeviceStatuses, bleDeviceStatuses)&&(identical(other.dashboardLayout, dashboardLayout) || other.dashboardLayout == dashboardLayout)&&(identical(other.hrrPhase, hrrPhase) || other.hrrPhase == hrrPhase)&&(identical(other.hrrConfig, hrrConfig) || other.hrrConfig == hrrConfig)&&(identical(other.hrrEffortEndedAt, hrrEffortEndedAt) || other.hrrEffortEndedAt == hrrEffortEndedAt));
 }
 
 
 @override
-int get hashCode => Object.hashAll([runtimeType,status,recordingKind,activityTypeId,exerciseType,startTime,endTime,pausedStartedAt,totalPausedMillis,const DeepCollectionEquality().hash(pauseIntervals),const DeepCollectionEquality().hash(points),const DeepCollectionEquality().hash(routeBreakIndexes),const DeepCollectionEquality().hash(manualLaps),const DeepCollectionEquality().hash(markers),latestUiPoint,distanceMeters,elevationGainedMeters,elevationLostMeters,barometerElevationGainedMeters,barometerElevationLostMeters,hasBarometerElevation,lastBarometerAltitudeMeters,currentSpeedMetersPerSecond,maxSpeedMetersPerSecond,gpsStatus,keepScreenOnDuringRecording,autoIdleEnabled,autoIdleTimeoutMillis,lastMovementAt,totalIdleMillis,repetitionCount,currentSetRepetitionCount,const DeepCollectionEquality().hash(repetitionSets),repetitionRestSeconds,currentSetStartedAt,restStartedAt,accumulatedRestMillis,lastAccuracyMeters,lastLocationTime,droppedPointCount,errorMessage,currentHeartRateBpm,currentCyclingCadenceRpm,currentPowerWatts,currentSensorSpeedMetersPerSecond,currentRunningCadenceRpm,bleHeartRateNoSignal,const DeepCollectionEquality().hash(bleDeviceStatuses),dashboardLayout]);
+int get hashCode => Object.hashAll([runtimeType,status,recordingKind,activityTypeId,exerciseType,startTime,endTime,pausedStartedAt,totalPausedMillis,const DeepCollectionEquality().hash(pauseIntervals),const DeepCollectionEquality().hash(points),const DeepCollectionEquality().hash(routeBreakIndexes),const DeepCollectionEquality().hash(manualLaps),const DeepCollectionEquality().hash(markers),latestUiPoint,distanceMeters,elevationGainedMeters,elevationLostMeters,barometerElevationGainedMeters,barometerElevationLostMeters,hasBarometerElevation,lastBarometerAltitudeMeters,currentSpeedMetersPerSecond,maxSpeedMetersPerSecond,gpsStatus,keepScreenOnDuringRecording,autoIdleEnabled,autoIdleTimeoutMillis,lastMovementAt,totalIdleMillis,repetitionCount,currentSetRepetitionCount,const DeepCollectionEquality().hash(repetitionSets),repetitionRestSeconds,currentSetStartedAt,restStartedAt,accumulatedRestMillis,lastAccuracyMeters,lastLocationTime,droppedPointCount,errorMessage,currentHeartRateBpm,currentCyclingCadenceRpm,currentPowerWatts,currentSensorSpeedMetersPerSecond,currentRunningCadenceRpm,bleHeartRateNoSignal,const DeepCollectionEquality().hash(bleDeviceStatuses),dashboardLayout,hrrPhase,hrrConfig,hrrEffortEndedAt]);
 
 @override
 String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
-  return 'ActivityRecordingState(status: $status, recordingKind: $recordingKind, activityTypeId: $activityTypeId, exerciseType: $exerciseType, startTime: $startTime, endTime: $endTime, pausedStartedAt: $pausedStartedAt, totalPausedMillis: $totalPausedMillis, pauseIntervals: $pauseIntervals, points: $points, routeBreakIndexes: $routeBreakIndexes, manualLaps: $manualLaps, markers: $markers, latestUiPoint: $latestUiPoint, distanceMeters: $distanceMeters, elevationGainedMeters: $elevationGainedMeters, elevationLostMeters: $elevationLostMeters, barometerElevationGainedMeters: $barometerElevationGainedMeters, barometerElevationLostMeters: $barometerElevationLostMeters, hasBarometerElevation: $hasBarometerElevation, lastBarometerAltitudeMeters: $lastBarometerAltitudeMeters, currentSpeedMetersPerSecond: $currentSpeedMetersPerSecond, maxSpeedMetersPerSecond: $maxSpeedMetersPerSecond, gpsStatus: $gpsStatus, keepScreenOnDuringRecording: $keepScreenOnDuringRecording, autoIdleEnabled: $autoIdleEnabled, autoIdleTimeoutMillis: $autoIdleTimeoutMillis, lastMovementAt: $lastMovementAt, totalIdleMillis: $totalIdleMillis, repetitionCount: $repetitionCount, currentSetRepetitionCount: $currentSetRepetitionCount, repetitionSets: $repetitionSets, repetitionRestSeconds: $repetitionRestSeconds, currentSetStartedAt: $currentSetStartedAt, restStartedAt: $restStartedAt, accumulatedRestMillis: $accumulatedRestMillis, lastAccuracyMeters: $lastAccuracyMeters, lastLocationTime: $lastLocationTime, droppedPointCount: $droppedPointCount, errorMessage: $errorMessage, currentHeartRateBpm: $currentHeartRateBpm, currentCyclingCadenceRpm: $currentCyclingCadenceRpm, currentPowerWatts: $currentPowerWatts, currentSensorSpeedMetersPerSecond: $currentSensorSpeedMetersPerSecond, currentRunningCadenceRpm: $currentRunningCadenceRpm, bleHeartRateNoSignal: $bleHeartRateNoSignal, bleDeviceStatuses: $bleDeviceStatuses, dashboardLayout: $dashboardLayout)';
+  return 'ActivityRecordingState(status: $status, recordingKind: $recordingKind, activityTypeId: $activityTypeId, exerciseType: $exerciseType, startTime: $startTime, endTime: $endTime, pausedStartedAt: $pausedStartedAt, totalPausedMillis: $totalPausedMillis, pauseIntervals: $pauseIntervals, points: $points, routeBreakIndexes: $routeBreakIndexes, manualLaps: $manualLaps, markers: $markers, latestUiPoint: $latestUiPoint, distanceMeters: $distanceMeters, elevationGainedMeters: $elevationGainedMeters, elevationLostMeters: $elevationLostMeters, barometerElevationGainedMeters: $barometerElevationGainedMeters, barometerElevationLostMeters: $barometerElevationLostMeters, hasBarometerElevation: $hasBarometerElevation, lastBarometerAltitudeMeters: $lastBarometerAltitudeMeters, currentSpeedMetersPerSecond: $currentSpeedMetersPerSecond, maxSpeedMetersPerSecond: $maxSpeedMetersPerSecond, gpsStatus: $gpsStatus, keepScreenOnDuringRecording: $keepScreenOnDuringRecording, autoIdleEnabled: $autoIdleEnabled, autoIdleTimeoutMillis: $autoIdleTimeoutMillis, lastMovementAt: $lastMovementAt, totalIdleMillis: $totalIdleMillis, repetitionCount: $repetitionCount, currentSetRepetitionCount: $currentSetRepetitionCount, repetitionSets: $repetitionSets, repetitionRestSeconds: $repetitionRestSeconds, currentSetStartedAt: $currentSetStartedAt, restStartedAt: $restStartedAt, accumulatedRestMillis: $accumulatedRestMillis, lastAccuracyMeters: $lastAccuracyMeters, lastLocationTime: $lastLocationTime, droppedPointCount: $droppedPointCount, errorMessage: $errorMessage, currentHeartRateBpm: $currentHeartRateBpm, currentCyclingCadenceRpm: $currentCyclingCadenceRpm, currentPowerWatts: $currentPowerWatts, currentSensorSpeedMetersPerSecond: $currentSensorSpeedMetersPerSecond, currentRunningCadenceRpm: $currentRunningCadenceRpm, bleHeartRateNoSignal: $bleHeartRateNoSignal, bleDeviceStatuses: $bleDeviceStatuses, dashboardLayout: $dashboardLayout, hrrPhase: $hrrPhase, hrrConfig: $hrrConfig, hrrEffortEndedAt: $hrrEffortEndedAt)';
 }
 
 
@@ -326,11 +616,11 @@ abstract mixin class $ActivityRecordingStateCopyWith<$Res>  {
   factory $ActivityRecordingStateCopyWith(ActivityRecordingState value, $Res Function(ActivityRecordingState) _then) = _$ActivityRecordingStateCopyWithImpl;
 @useResult
 $Res call({
- ActivityRecordingStatus status, ActivityRecordingKind recordingKind, String? activityTypeId, int? exerciseType, DateTime? startTime, DateTime? endTime, DateTime? pausedStartedAt, int totalPausedMillis, List<ActivityPauseInterval> pauseIntervals, List<ExerciseRoutePoint> points, List<int> routeBreakIndexes, List<ActivityRecordingLap> manualLaps, List<ActivityRecordingMarker> markers, ExerciseRoutePoint? latestUiPoint, double distanceMeters, double elevationGainedMeters, double elevationLostMeters, double barometerElevationGainedMeters, double barometerElevationLostMeters, bool hasBarometerElevation, double? lastBarometerAltitudeMeters, double currentSpeedMetersPerSecond, double maxSpeedMetersPerSecond, ActivityGpsStatus gpsStatus, bool keepScreenOnDuringRecording, bool autoIdleEnabled, int autoIdleTimeoutMillis, DateTime? lastMovementAt, int totalIdleMillis, int repetitionCount, int currentSetRepetitionCount, List<ActivityRecordedRepetitionSet> repetitionSets, int repetitionRestSeconds, DateTime? currentSetStartedAt, DateTime? restStartedAt, int accumulatedRestMillis, double? lastAccuracyMeters, DateTime? lastLocationTime, int droppedPointCount, String? errorMessage, int? currentHeartRateBpm, int? currentCyclingCadenceRpm, double? currentPowerWatts, double? currentSensorSpeedMetersPerSecond, int? currentRunningCadenceRpm, bool bleHeartRateNoSignal, List<BleDeviceConnectionStatus> bleDeviceStatuses, ActivityRecordingDashboardLayout dashboardLayout
+ ActivityRecordingStatus status, ActivityRecordingKind recordingKind, String? activityTypeId, int? exerciseType, DateTime? startTime, DateTime? endTime, DateTime? pausedStartedAt, int totalPausedMillis, List<ActivityPauseInterval> pauseIntervals, List<ExerciseRoutePoint> points, List<int> routeBreakIndexes, List<ActivityRecordingLap> manualLaps, List<ActivityRecordingMarker> markers, ExerciseRoutePoint? latestUiPoint, double distanceMeters, double elevationGainedMeters, double elevationLostMeters, double barometerElevationGainedMeters, double barometerElevationLostMeters, bool hasBarometerElevation, double? lastBarometerAltitudeMeters, double currentSpeedMetersPerSecond, double maxSpeedMetersPerSecond, ActivityGpsStatus gpsStatus, bool keepScreenOnDuringRecording, bool autoIdleEnabled, int autoIdleTimeoutMillis, DateTime? lastMovementAt, int totalIdleMillis, int repetitionCount, int currentSetRepetitionCount, List<ActivityRecordedRepetitionSet> repetitionSets, int repetitionRestSeconds, DateTime? currentSetStartedAt, DateTime? restStartedAt, int accumulatedRestMillis, double? lastAccuracyMeters, DateTime? lastLocationTime, int droppedPointCount, String? errorMessage, int? currentHeartRateBpm, int? currentCyclingCadenceRpm, double? currentPowerWatts, double? currentSensorSpeedMetersPerSecond, int? currentRunningCadenceRpm, bool bleHeartRateNoSignal, List<BleDeviceConnectionStatus> bleDeviceStatuses, ActivityRecordingDashboardLayout dashboardLayout, ActivityRecordingHrrPhase hrrPhase, HeartRateRecoveryTestConfig hrrConfig, DateTime? hrrEffortEndedAt
 });
 
 
-$ExerciseRoutePointCopyWith<$Res>? get latestUiPoint;
+$ExerciseRoutePointCopyWith<$Res>? get latestUiPoint;$HeartRateRecoveryTestConfigCopyWith<$Res> get hrrConfig;
 
 }
 /// @nodoc
@@ -343,7 +633,7 @@ class _$ActivityRecordingStateCopyWithImpl<$Res>
 
 /// Create a copy of ActivityRecordingState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? recordingKind = null,Object? activityTypeId = freezed,Object? exerciseType = freezed,Object? startTime = freezed,Object? endTime = freezed,Object? pausedStartedAt = freezed,Object? totalPausedMillis = null,Object? pauseIntervals = null,Object? points = null,Object? routeBreakIndexes = null,Object? manualLaps = null,Object? markers = null,Object? latestUiPoint = freezed,Object? distanceMeters = null,Object? elevationGainedMeters = null,Object? elevationLostMeters = null,Object? barometerElevationGainedMeters = null,Object? barometerElevationLostMeters = null,Object? hasBarometerElevation = null,Object? lastBarometerAltitudeMeters = freezed,Object? currentSpeedMetersPerSecond = null,Object? maxSpeedMetersPerSecond = null,Object? gpsStatus = null,Object? keepScreenOnDuringRecording = null,Object? autoIdleEnabled = null,Object? autoIdleTimeoutMillis = null,Object? lastMovementAt = freezed,Object? totalIdleMillis = null,Object? repetitionCount = null,Object? currentSetRepetitionCount = null,Object? repetitionSets = null,Object? repetitionRestSeconds = null,Object? currentSetStartedAt = freezed,Object? restStartedAt = freezed,Object? accumulatedRestMillis = null,Object? lastAccuracyMeters = freezed,Object? lastLocationTime = freezed,Object? droppedPointCount = null,Object? errorMessage = freezed,Object? currentHeartRateBpm = freezed,Object? currentCyclingCadenceRpm = freezed,Object? currentPowerWatts = freezed,Object? currentSensorSpeedMetersPerSecond = freezed,Object? currentRunningCadenceRpm = freezed,Object? bleHeartRateNoSignal = null,Object? bleDeviceStatuses = null,Object? dashboardLayout = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? recordingKind = null,Object? activityTypeId = freezed,Object? exerciseType = freezed,Object? startTime = freezed,Object? endTime = freezed,Object? pausedStartedAt = freezed,Object? totalPausedMillis = null,Object? pauseIntervals = null,Object? points = null,Object? routeBreakIndexes = null,Object? manualLaps = null,Object? markers = null,Object? latestUiPoint = freezed,Object? distanceMeters = null,Object? elevationGainedMeters = null,Object? elevationLostMeters = null,Object? barometerElevationGainedMeters = null,Object? barometerElevationLostMeters = null,Object? hasBarometerElevation = null,Object? lastBarometerAltitudeMeters = freezed,Object? currentSpeedMetersPerSecond = null,Object? maxSpeedMetersPerSecond = null,Object? gpsStatus = null,Object? keepScreenOnDuringRecording = null,Object? autoIdleEnabled = null,Object? autoIdleTimeoutMillis = null,Object? lastMovementAt = freezed,Object? totalIdleMillis = null,Object? repetitionCount = null,Object? currentSetRepetitionCount = null,Object? repetitionSets = null,Object? repetitionRestSeconds = null,Object? currentSetStartedAt = freezed,Object? restStartedAt = freezed,Object? accumulatedRestMillis = null,Object? lastAccuracyMeters = freezed,Object? lastLocationTime = freezed,Object? droppedPointCount = null,Object? errorMessage = freezed,Object? currentHeartRateBpm = freezed,Object? currentCyclingCadenceRpm = freezed,Object? currentPowerWatts = freezed,Object? currentSensorSpeedMetersPerSecond = freezed,Object? currentRunningCadenceRpm = freezed,Object? bleHeartRateNoSignal = null,Object? bleDeviceStatuses = null,Object? dashboardLayout = null,Object? hrrPhase = null,Object? hrrConfig = null,Object? hrrEffortEndedAt = freezed,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ActivityRecordingStatus,recordingKind: null == recordingKind ? _self.recordingKind : recordingKind // ignore: cast_nullable_to_non_nullable
@@ -393,7 +683,10 @@ as double?,currentRunningCadenceRpm: freezed == currentRunningCadenceRpm ? _self
 as int?,bleHeartRateNoSignal: null == bleHeartRateNoSignal ? _self.bleHeartRateNoSignal : bleHeartRateNoSignal // ignore: cast_nullable_to_non_nullable
 as bool,bleDeviceStatuses: null == bleDeviceStatuses ? _self.bleDeviceStatuses : bleDeviceStatuses // ignore: cast_nullable_to_non_nullable
 as List<BleDeviceConnectionStatus>,dashboardLayout: null == dashboardLayout ? _self.dashboardLayout : dashboardLayout // ignore: cast_nullable_to_non_nullable
-as ActivityRecordingDashboardLayout,
+as ActivityRecordingDashboardLayout,hrrPhase: null == hrrPhase ? _self.hrrPhase : hrrPhase // ignore: cast_nullable_to_non_nullable
+as ActivityRecordingHrrPhase,hrrConfig: null == hrrConfig ? _self.hrrConfig : hrrConfig // ignore: cast_nullable_to_non_nullable
+as HeartRateRecoveryTestConfig,hrrEffortEndedAt: freezed == hrrEffortEndedAt ? _self.hrrEffortEndedAt : hrrEffortEndedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 /// Create a copy of ActivityRecordingState
@@ -407,6 +700,15 @@ $ExerciseRoutePointCopyWith<$Res>? get latestUiPoint {
 
   return $ExerciseRoutePointCopyWith<$Res>(_self.latestUiPoint!, (value) {
     return _then(_self.copyWith(latestUiPoint: value));
+  });
+}/// Create a copy of ActivityRecordingState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$HeartRateRecoveryTestConfigCopyWith<$Res> get hrrConfig {
+  
+  return $HeartRateRecoveryTestConfigCopyWith<$Res>(_self.hrrConfig, (value) {
+    return _then(_self.copyWith(hrrConfig: value));
   });
 }
 }
@@ -490,10 +792,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( ActivityRecordingStatus status,  ActivityRecordingKind recordingKind,  String? activityTypeId,  int? exerciseType,  DateTime? startTime,  DateTime? endTime,  DateTime? pausedStartedAt,  int totalPausedMillis,  List<ActivityPauseInterval> pauseIntervals,  List<ExerciseRoutePoint> points,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  ExerciseRoutePoint? latestUiPoint,  double distanceMeters,  double elevationGainedMeters,  double elevationLostMeters,  double barometerElevationGainedMeters,  double barometerElevationLostMeters,  bool hasBarometerElevation,  double? lastBarometerAltitudeMeters,  double currentSpeedMetersPerSecond,  double maxSpeedMetersPerSecond,  ActivityGpsStatus gpsStatus,  bool keepScreenOnDuringRecording,  bool autoIdleEnabled,  int autoIdleTimeoutMillis,  DateTime? lastMovementAt,  int totalIdleMillis,  int repetitionCount,  int currentSetRepetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  int repetitionRestSeconds,  DateTime? currentSetStartedAt,  DateTime? restStartedAt,  int accumulatedRestMillis,  double? lastAccuracyMeters,  DateTime? lastLocationTime,  int droppedPointCount,  String? errorMessage,  int? currentHeartRateBpm,  int? currentCyclingCadenceRpm,  double? currentPowerWatts,  double? currentSensorSpeedMetersPerSecond,  int? currentRunningCadenceRpm,  bool bleHeartRateNoSignal,  List<BleDeviceConnectionStatus> bleDeviceStatuses,  ActivityRecordingDashboardLayout dashboardLayout)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( ActivityRecordingStatus status,  ActivityRecordingKind recordingKind,  String? activityTypeId,  int? exerciseType,  DateTime? startTime,  DateTime? endTime,  DateTime? pausedStartedAt,  int totalPausedMillis,  List<ActivityPauseInterval> pauseIntervals,  List<ExerciseRoutePoint> points,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  ExerciseRoutePoint? latestUiPoint,  double distanceMeters,  double elevationGainedMeters,  double elevationLostMeters,  double barometerElevationGainedMeters,  double barometerElevationLostMeters,  bool hasBarometerElevation,  double? lastBarometerAltitudeMeters,  double currentSpeedMetersPerSecond,  double maxSpeedMetersPerSecond,  ActivityGpsStatus gpsStatus,  bool keepScreenOnDuringRecording,  bool autoIdleEnabled,  int autoIdleTimeoutMillis,  DateTime? lastMovementAt,  int totalIdleMillis,  int repetitionCount,  int currentSetRepetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  int repetitionRestSeconds,  DateTime? currentSetStartedAt,  DateTime? restStartedAt,  int accumulatedRestMillis,  double? lastAccuracyMeters,  DateTime? lastLocationTime,  int droppedPointCount,  String? errorMessage,  int? currentHeartRateBpm,  int? currentCyclingCadenceRpm,  double? currentPowerWatts,  double? currentSensorSpeedMetersPerSecond,  int? currentRunningCadenceRpm,  bool bleHeartRateNoSignal,  List<BleDeviceConnectionStatus> bleDeviceStatuses,  ActivityRecordingDashboardLayout dashboardLayout,  ActivityRecordingHrrPhase hrrPhase,  HeartRateRecoveryTestConfig hrrConfig,  DateTime? hrrEffortEndedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ActivityRecordingState() when $default != null:
-return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exerciseType,_that.startTime,_that.endTime,_that.pausedStartedAt,_that.totalPausedMillis,_that.pauseIntervals,_that.points,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.latestUiPoint,_that.distanceMeters,_that.elevationGainedMeters,_that.elevationLostMeters,_that.barometerElevationGainedMeters,_that.barometerElevationLostMeters,_that.hasBarometerElevation,_that.lastBarometerAltitudeMeters,_that.currentSpeedMetersPerSecond,_that.maxSpeedMetersPerSecond,_that.gpsStatus,_that.keepScreenOnDuringRecording,_that.autoIdleEnabled,_that.autoIdleTimeoutMillis,_that.lastMovementAt,_that.totalIdleMillis,_that.repetitionCount,_that.currentSetRepetitionCount,_that.repetitionSets,_that.repetitionRestSeconds,_that.currentSetStartedAt,_that.restStartedAt,_that.accumulatedRestMillis,_that.lastAccuracyMeters,_that.lastLocationTime,_that.droppedPointCount,_that.errorMessage,_that.currentHeartRateBpm,_that.currentCyclingCadenceRpm,_that.currentPowerWatts,_that.currentSensorSpeedMetersPerSecond,_that.currentRunningCadenceRpm,_that.bleHeartRateNoSignal,_that.bleDeviceStatuses,_that.dashboardLayout);case _:
+return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exerciseType,_that.startTime,_that.endTime,_that.pausedStartedAt,_that.totalPausedMillis,_that.pauseIntervals,_that.points,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.latestUiPoint,_that.distanceMeters,_that.elevationGainedMeters,_that.elevationLostMeters,_that.barometerElevationGainedMeters,_that.barometerElevationLostMeters,_that.hasBarometerElevation,_that.lastBarometerAltitudeMeters,_that.currentSpeedMetersPerSecond,_that.maxSpeedMetersPerSecond,_that.gpsStatus,_that.keepScreenOnDuringRecording,_that.autoIdleEnabled,_that.autoIdleTimeoutMillis,_that.lastMovementAt,_that.totalIdleMillis,_that.repetitionCount,_that.currentSetRepetitionCount,_that.repetitionSets,_that.repetitionRestSeconds,_that.currentSetStartedAt,_that.restStartedAt,_that.accumulatedRestMillis,_that.lastAccuracyMeters,_that.lastLocationTime,_that.droppedPointCount,_that.errorMessage,_that.currentHeartRateBpm,_that.currentCyclingCadenceRpm,_that.currentPowerWatts,_that.currentSensorSpeedMetersPerSecond,_that.currentRunningCadenceRpm,_that.bleHeartRateNoSignal,_that.bleDeviceStatuses,_that.dashboardLayout,_that.hrrPhase,_that.hrrConfig,_that.hrrEffortEndedAt);case _:
   return orElse();
 
 }
@@ -511,10 +813,10 @@ return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exer
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( ActivityRecordingStatus status,  ActivityRecordingKind recordingKind,  String? activityTypeId,  int? exerciseType,  DateTime? startTime,  DateTime? endTime,  DateTime? pausedStartedAt,  int totalPausedMillis,  List<ActivityPauseInterval> pauseIntervals,  List<ExerciseRoutePoint> points,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  ExerciseRoutePoint? latestUiPoint,  double distanceMeters,  double elevationGainedMeters,  double elevationLostMeters,  double barometerElevationGainedMeters,  double barometerElevationLostMeters,  bool hasBarometerElevation,  double? lastBarometerAltitudeMeters,  double currentSpeedMetersPerSecond,  double maxSpeedMetersPerSecond,  ActivityGpsStatus gpsStatus,  bool keepScreenOnDuringRecording,  bool autoIdleEnabled,  int autoIdleTimeoutMillis,  DateTime? lastMovementAt,  int totalIdleMillis,  int repetitionCount,  int currentSetRepetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  int repetitionRestSeconds,  DateTime? currentSetStartedAt,  DateTime? restStartedAt,  int accumulatedRestMillis,  double? lastAccuracyMeters,  DateTime? lastLocationTime,  int droppedPointCount,  String? errorMessage,  int? currentHeartRateBpm,  int? currentCyclingCadenceRpm,  double? currentPowerWatts,  double? currentSensorSpeedMetersPerSecond,  int? currentRunningCadenceRpm,  bool bleHeartRateNoSignal,  List<BleDeviceConnectionStatus> bleDeviceStatuses,  ActivityRecordingDashboardLayout dashboardLayout)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( ActivityRecordingStatus status,  ActivityRecordingKind recordingKind,  String? activityTypeId,  int? exerciseType,  DateTime? startTime,  DateTime? endTime,  DateTime? pausedStartedAt,  int totalPausedMillis,  List<ActivityPauseInterval> pauseIntervals,  List<ExerciseRoutePoint> points,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  ExerciseRoutePoint? latestUiPoint,  double distanceMeters,  double elevationGainedMeters,  double elevationLostMeters,  double barometerElevationGainedMeters,  double barometerElevationLostMeters,  bool hasBarometerElevation,  double? lastBarometerAltitudeMeters,  double currentSpeedMetersPerSecond,  double maxSpeedMetersPerSecond,  ActivityGpsStatus gpsStatus,  bool keepScreenOnDuringRecording,  bool autoIdleEnabled,  int autoIdleTimeoutMillis,  DateTime? lastMovementAt,  int totalIdleMillis,  int repetitionCount,  int currentSetRepetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  int repetitionRestSeconds,  DateTime? currentSetStartedAt,  DateTime? restStartedAt,  int accumulatedRestMillis,  double? lastAccuracyMeters,  DateTime? lastLocationTime,  int droppedPointCount,  String? errorMessage,  int? currentHeartRateBpm,  int? currentCyclingCadenceRpm,  double? currentPowerWatts,  double? currentSensorSpeedMetersPerSecond,  int? currentRunningCadenceRpm,  bool bleHeartRateNoSignal,  List<BleDeviceConnectionStatus> bleDeviceStatuses,  ActivityRecordingDashboardLayout dashboardLayout,  ActivityRecordingHrrPhase hrrPhase,  HeartRateRecoveryTestConfig hrrConfig,  DateTime? hrrEffortEndedAt)  $default,) {final _that = this;
 switch (_that) {
 case _ActivityRecordingState():
-return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exerciseType,_that.startTime,_that.endTime,_that.pausedStartedAt,_that.totalPausedMillis,_that.pauseIntervals,_that.points,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.latestUiPoint,_that.distanceMeters,_that.elevationGainedMeters,_that.elevationLostMeters,_that.barometerElevationGainedMeters,_that.barometerElevationLostMeters,_that.hasBarometerElevation,_that.lastBarometerAltitudeMeters,_that.currentSpeedMetersPerSecond,_that.maxSpeedMetersPerSecond,_that.gpsStatus,_that.keepScreenOnDuringRecording,_that.autoIdleEnabled,_that.autoIdleTimeoutMillis,_that.lastMovementAt,_that.totalIdleMillis,_that.repetitionCount,_that.currentSetRepetitionCount,_that.repetitionSets,_that.repetitionRestSeconds,_that.currentSetStartedAt,_that.restStartedAt,_that.accumulatedRestMillis,_that.lastAccuracyMeters,_that.lastLocationTime,_that.droppedPointCount,_that.errorMessage,_that.currentHeartRateBpm,_that.currentCyclingCadenceRpm,_that.currentPowerWatts,_that.currentSensorSpeedMetersPerSecond,_that.currentRunningCadenceRpm,_that.bleHeartRateNoSignal,_that.bleDeviceStatuses,_that.dashboardLayout);case _:
+return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exerciseType,_that.startTime,_that.endTime,_that.pausedStartedAt,_that.totalPausedMillis,_that.pauseIntervals,_that.points,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.latestUiPoint,_that.distanceMeters,_that.elevationGainedMeters,_that.elevationLostMeters,_that.barometerElevationGainedMeters,_that.barometerElevationLostMeters,_that.hasBarometerElevation,_that.lastBarometerAltitudeMeters,_that.currentSpeedMetersPerSecond,_that.maxSpeedMetersPerSecond,_that.gpsStatus,_that.keepScreenOnDuringRecording,_that.autoIdleEnabled,_that.autoIdleTimeoutMillis,_that.lastMovementAt,_that.totalIdleMillis,_that.repetitionCount,_that.currentSetRepetitionCount,_that.repetitionSets,_that.repetitionRestSeconds,_that.currentSetStartedAt,_that.restStartedAt,_that.accumulatedRestMillis,_that.lastAccuracyMeters,_that.lastLocationTime,_that.droppedPointCount,_that.errorMessage,_that.currentHeartRateBpm,_that.currentCyclingCadenceRpm,_that.currentPowerWatts,_that.currentSensorSpeedMetersPerSecond,_that.currentRunningCadenceRpm,_that.bleHeartRateNoSignal,_that.bleDeviceStatuses,_that.dashboardLayout,_that.hrrPhase,_that.hrrConfig,_that.hrrEffortEndedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -531,10 +833,10 @@ return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exer
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( ActivityRecordingStatus status,  ActivityRecordingKind recordingKind,  String? activityTypeId,  int? exerciseType,  DateTime? startTime,  DateTime? endTime,  DateTime? pausedStartedAt,  int totalPausedMillis,  List<ActivityPauseInterval> pauseIntervals,  List<ExerciseRoutePoint> points,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  ExerciseRoutePoint? latestUiPoint,  double distanceMeters,  double elevationGainedMeters,  double elevationLostMeters,  double barometerElevationGainedMeters,  double barometerElevationLostMeters,  bool hasBarometerElevation,  double? lastBarometerAltitudeMeters,  double currentSpeedMetersPerSecond,  double maxSpeedMetersPerSecond,  ActivityGpsStatus gpsStatus,  bool keepScreenOnDuringRecording,  bool autoIdleEnabled,  int autoIdleTimeoutMillis,  DateTime? lastMovementAt,  int totalIdleMillis,  int repetitionCount,  int currentSetRepetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  int repetitionRestSeconds,  DateTime? currentSetStartedAt,  DateTime? restStartedAt,  int accumulatedRestMillis,  double? lastAccuracyMeters,  DateTime? lastLocationTime,  int droppedPointCount,  String? errorMessage,  int? currentHeartRateBpm,  int? currentCyclingCadenceRpm,  double? currentPowerWatts,  double? currentSensorSpeedMetersPerSecond,  int? currentRunningCadenceRpm,  bool bleHeartRateNoSignal,  List<BleDeviceConnectionStatus> bleDeviceStatuses,  ActivityRecordingDashboardLayout dashboardLayout)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( ActivityRecordingStatus status,  ActivityRecordingKind recordingKind,  String? activityTypeId,  int? exerciseType,  DateTime? startTime,  DateTime? endTime,  DateTime? pausedStartedAt,  int totalPausedMillis,  List<ActivityPauseInterval> pauseIntervals,  List<ExerciseRoutePoint> points,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  ExerciseRoutePoint? latestUiPoint,  double distanceMeters,  double elevationGainedMeters,  double elevationLostMeters,  double barometerElevationGainedMeters,  double barometerElevationLostMeters,  bool hasBarometerElevation,  double? lastBarometerAltitudeMeters,  double currentSpeedMetersPerSecond,  double maxSpeedMetersPerSecond,  ActivityGpsStatus gpsStatus,  bool keepScreenOnDuringRecording,  bool autoIdleEnabled,  int autoIdleTimeoutMillis,  DateTime? lastMovementAt,  int totalIdleMillis,  int repetitionCount,  int currentSetRepetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  int repetitionRestSeconds,  DateTime? currentSetStartedAt,  DateTime? restStartedAt,  int accumulatedRestMillis,  double? lastAccuracyMeters,  DateTime? lastLocationTime,  int droppedPointCount,  String? errorMessage,  int? currentHeartRateBpm,  int? currentCyclingCadenceRpm,  double? currentPowerWatts,  double? currentSensorSpeedMetersPerSecond,  int? currentRunningCadenceRpm,  bool bleHeartRateNoSignal,  List<BleDeviceConnectionStatus> bleDeviceStatuses,  ActivityRecordingDashboardLayout dashboardLayout,  ActivityRecordingHrrPhase hrrPhase,  HeartRateRecoveryTestConfig hrrConfig,  DateTime? hrrEffortEndedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _ActivityRecordingState() when $default != null:
-return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exerciseType,_that.startTime,_that.endTime,_that.pausedStartedAt,_that.totalPausedMillis,_that.pauseIntervals,_that.points,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.latestUiPoint,_that.distanceMeters,_that.elevationGainedMeters,_that.elevationLostMeters,_that.barometerElevationGainedMeters,_that.barometerElevationLostMeters,_that.hasBarometerElevation,_that.lastBarometerAltitudeMeters,_that.currentSpeedMetersPerSecond,_that.maxSpeedMetersPerSecond,_that.gpsStatus,_that.keepScreenOnDuringRecording,_that.autoIdleEnabled,_that.autoIdleTimeoutMillis,_that.lastMovementAt,_that.totalIdleMillis,_that.repetitionCount,_that.currentSetRepetitionCount,_that.repetitionSets,_that.repetitionRestSeconds,_that.currentSetStartedAt,_that.restStartedAt,_that.accumulatedRestMillis,_that.lastAccuracyMeters,_that.lastLocationTime,_that.droppedPointCount,_that.errorMessage,_that.currentHeartRateBpm,_that.currentCyclingCadenceRpm,_that.currentPowerWatts,_that.currentSensorSpeedMetersPerSecond,_that.currentRunningCadenceRpm,_that.bleHeartRateNoSignal,_that.bleDeviceStatuses,_that.dashboardLayout);case _:
+return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exerciseType,_that.startTime,_that.endTime,_that.pausedStartedAt,_that.totalPausedMillis,_that.pauseIntervals,_that.points,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.latestUiPoint,_that.distanceMeters,_that.elevationGainedMeters,_that.elevationLostMeters,_that.barometerElevationGainedMeters,_that.barometerElevationLostMeters,_that.hasBarometerElevation,_that.lastBarometerAltitudeMeters,_that.currentSpeedMetersPerSecond,_that.maxSpeedMetersPerSecond,_that.gpsStatus,_that.keepScreenOnDuringRecording,_that.autoIdleEnabled,_that.autoIdleTimeoutMillis,_that.lastMovementAt,_that.totalIdleMillis,_that.repetitionCount,_that.currentSetRepetitionCount,_that.repetitionSets,_that.repetitionRestSeconds,_that.currentSetStartedAt,_that.restStartedAt,_that.accumulatedRestMillis,_that.lastAccuracyMeters,_that.lastLocationTime,_that.droppedPointCount,_that.errorMessage,_that.currentHeartRateBpm,_that.currentCyclingCadenceRpm,_that.currentPowerWatts,_that.currentSensorSpeedMetersPerSecond,_that.currentRunningCadenceRpm,_that.bleHeartRateNoSignal,_that.bleDeviceStatuses,_that.dashboardLayout,_that.hrrPhase,_that.hrrConfig,_that.hrrEffortEndedAt);case _:
   return null;
 
 }
@@ -546,7 +848,7 @@ return $default(_that.status,_that.recordingKind,_that.activityTypeId,_that.exer
 
 
 class _ActivityRecordingState extends ActivityRecordingState with DiagnosticableTreeMixin {
-  const _ActivityRecordingState({this.status = ActivityRecordingStatus.idle, this.recordingKind = ActivityRecordingKind.gpsRoute, this.activityTypeId, this.exerciseType, this.startTime, this.endTime, this.pausedStartedAt, this.totalPausedMillis = 0, final  List<ActivityPauseInterval> pauseIntervals = const <ActivityPauseInterval>[], final  List<ExerciseRoutePoint> points = const <ExerciseRoutePoint>[], final  List<int> routeBreakIndexes = const <int>[], final  List<ActivityRecordingLap> manualLaps = const <ActivityRecordingLap>[], final  List<ActivityRecordingMarker> markers = const <ActivityRecordingMarker>[], this.latestUiPoint, this.distanceMeters = 0.0, this.elevationGainedMeters = 0.0, this.elevationLostMeters = 0.0, this.barometerElevationGainedMeters = 0.0, this.barometerElevationLostMeters = 0.0, this.hasBarometerElevation = false, this.lastBarometerAltitudeMeters, this.currentSpeedMetersPerSecond = 0.0, this.maxSpeedMetersPerSecond = 0.0, this.gpsStatus = ActivityGpsStatus.waitingForFix, this.keepScreenOnDuringRecording = ActivityRecordingPreferences.defaultKeepScreenOnDuringRecording, this.autoIdleEnabled = ActivityRecordingPreferences.defaultAutoIdleEnabled, this.autoIdleTimeoutMillis = ActivityRecordingPreferences.defaultAutoIdleTimeoutSeconds * 1000, this.lastMovementAt, this.totalIdleMillis = 0, this.repetitionCount = 0, this.currentSetRepetitionCount = 0, final  List<ActivityRecordedRepetitionSet> repetitionSets = const <ActivityRecordedRepetitionSet>[], this.repetitionRestSeconds = 0, this.currentSetStartedAt, this.restStartedAt, this.accumulatedRestMillis = 0, this.lastAccuracyMeters, this.lastLocationTime, this.droppedPointCount = 0, this.errorMessage, this.currentHeartRateBpm, this.currentCyclingCadenceRpm, this.currentPowerWatts, this.currentSensorSpeedMetersPerSecond, this.currentRunningCadenceRpm, this.bleHeartRateNoSignal = false, final  List<BleDeviceConnectionStatus> bleDeviceStatuses = const <BleDeviceConnectionStatus>[], this.dashboardLayout = const ActivityRecordingDashboardLayout()}): _pauseIntervals = pauseIntervals,_points = points,_routeBreakIndexes = routeBreakIndexes,_manualLaps = manualLaps,_markers = markers,_repetitionSets = repetitionSets,_bleDeviceStatuses = bleDeviceStatuses,super._();
+  const _ActivityRecordingState({this.status = ActivityRecordingStatus.idle, this.recordingKind = ActivityRecordingKind.gpsRoute, this.activityTypeId, this.exerciseType, this.startTime, this.endTime, this.pausedStartedAt, this.totalPausedMillis = 0, final  List<ActivityPauseInterval> pauseIntervals = const <ActivityPauseInterval>[], final  List<ExerciseRoutePoint> points = const <ExerciseRoutePoint>[], final  List<int> routeBreakIndexes = const <int>[], final  List<ActivityRecordingLap> manualLaps = const <ActivityRecordingLap>[], final  List<ActivityRecordingMarker> markers = const <ActivityRecordingMarker>[], this.latestUiPoint, this.distanceMeters = 0.0, this.elevationGainedMeters = 0.0, this.elevationLostMeters = 0.0, this.barometerElevationGainedMeters = 0.0, this.barometerElevationLostMeters = 0.0, this.hasBarometerElevation = false, this.lastBarometerAltitudeMeters, this.currentSpeedMetersPerSecond = 0.0, this.maxSpeedMetersPerSecond = 0.0, this.gpsStatus = ActivityGpsStatus.waitingForFix, this.keepScreenOnDuringRecording = ActivityRecordingPreferences.defaultKeepScreenOnDuringRecording, this.autoIdleEnabled = ActivityRecordingPreferences.defaultAutoIdleEnabled, this.autoIdleTimeoutMillis = ActivityRecordingPreferences.defaultAutoIdleTimeoutSeconds * 1000, this.lastMovementAt, this.totalIdleMillis = 0, this.repetitionCount = 0, this.currentSetRepetitionCount = 0, final  List<ActivityRecordedRepetitionSet> repetitionSets = const <ActivityRecordedRepetitionSet>[], this.repetitionRestSeconds = 0, this.currentSetStartedAt, this.restStartedAt, this.accumulatedRestMillis = 0, this.lastAccuracyMeters, this.lastLocationTime, this.droppedPointCount = 0, this.errorMessage, this.currentHeartRateBpm, this.currentCyclingCadenceRpm, this.currentPowerWatts, this.currentSensorSpeedMetersPerSecond, this.currentRunningCadenceRpm, this.bleHeartRateNoSignal = false, final  List<BleDeviceConnectionStatus> bleDeviceStatuses = const <BleDeviceConnectionStatus>[], this.dashboardLayout = const ActivityRecordingDashboardLayout(), this.hrrPhase = ActivityRecordingHrrPhase.none, this.hrrConfig = const HeartRateRecoveryTestConfig(), this.hrrEffortEndedAt}): _pauseIntervals = pauseIntervals,_points = points,_routeBreakIndexes = routeBreakIndexes,_manualLaps = manualLaps,_markers = markers,_repetitionSets = repetitionSets,_bleDeviceStatuses = bleDeviceStatuses,super._();
   
 
 @override@JsonKey() final  ActivityRecordingStatus status;
@@ -639,6 +941,18 @@ class _ActivityRecordingState extends ActivityRecordingState with Diagnosticable
 }
 
 @override@JsonKey() final  ActivityRecordingDashboardLayout dashboardLayout;
+@override@JsonKey() final  ActivityRecordingHrrPhase hrrPhase;
+@override@JsonKey() final  HeartRateRecoveryTestConfig hrrConfig;
+/// The instant the effort stopped — the one the whole measurement hangs on.
+///
+/// Deliberately NOT persisted to the draft store (see
+/// `activity_recording_serialization.dart`). The heart-rate samples live in memory,
+/// in the BLE coordinator, and do not survive the process being killed; a restored
+/// recording therefore comes back as an ordinary one, with no phase and no recovery
+/// mark. That loses the test, which is a pity — but the alternative is saving a
+/// session that carries a rest segment claiming a recovery, with no heart rate behind
+/// it to measure. A lost measurement is recoverable. A fabricated one is not.
+@override final  DateTime? hrrEffortEndedAt;
 
 /// Create a copy of ActivityRecordingState
 /// with the given fields replaced by the non-null parameter values.
@@ -651,21 +965,21 @@ _$ActivityRecordingStateCopyWith<_ActivityRecordingState> get copyWith => __$Act
 void debugFillProperties(DiagnosticPropertiesBuilder properties) {
   properties
     ..add(DiagnosticsProperty('type', 'ActivityRecordingState'))
-    ..add(DiagnosticsProperty('status', status))..add(DiagnosticsProperty('recordingKind', recordingKind))..add(DiagnosticsProperty('activityTypeId', activityTypeId))..add(DiagnosticsProperty('exerciseType', exerciseType))..add(DiagnosticsProperty('startTime', startTime))..add(DiagnosticsProperty('endTime', endTime))..add(DiagnosticsProperty('pausedStartedAt', pausedStartedAt))..add(DiagnosticsProperty('totalPausedMillis', totalPausedMillis))..add(DiagnosticsProperty('pauseIntervals', pauseIntervals))..add(DiagnosticsProperty('points', points))..add(DiagnosticsProperty('routeBreakIndexes', routeBreakIndexes))..add(DiagnosticsProperty('manualLaps', manualLaps))..add(DiagnosticsProperty('markers', markers))..add(DiagnosticsProperty('latestUiPoint', latestUiPoint))..add(DiagnosticsProperty('distanceMeters', distanceMeters))..add(DiagnosticsProperty('elevationGainedMeters', elevationGainedMeters))..add(DiagnosticsProperty('elevationLostMeters', elevationLostMeters))..add(DiagnosticsProperty('barometerElevationGainedMeters', barometerElevationGainedMeters))..add(DiagnosticsProperty('barometerElevationLostMeters', barometerElevationLostMeters))..add(DiagnosticsProperty('hasBarometerElevation', hasBarometerElevation))..add(DiagnosticsProperty('lastBarometerAltitudeMeters', lastBarometerAltitudeMeters))..add(DiagnosticsProperty('currentSpeedMetersPerSecond', currentSpeedMetersPerSecond))..add(DiagnosticsProperty('maxSpeedMetersPerSecond', maxSpeedMetersPerSecond))..add(DiagnosticsProperty('gpsStatus', gpsStatus))..add(DiagnosticsProperty('keepScreenOnDuringRecording', keepScreenOnDuringRecording))..add(DiagnosticsProperty('autoIdleEnabled', autoIdleEnabled))..add(DiagnosticsProperty('autoIdleTimeoutMillis', autoIdleTimeoutMillis))..add(DiagnosticsProperty('lastMovementAt', lastMovementAt))..add(DiagnosticsProperty('totalIdleMillis', totalIdleMillis))..add(DiagnosticsProperty('repetitionCount', repetitionCount))..add(DiagnosticsProperty('currentSetRepetitionCount', currentSetRepetitionCount))..add(DiagnosticsProperty('repetitionSets', repetitionSets))..add(DiagnosticsProperty('repetitionRestSeconds', repetitionRestSeconds))..add(DiagnosticsProperty('currentSetStartedAt', currentSetStartedAt))..add(DiagnosticsProperty('restStartedAt', restStartedAt))..add(DiagnosticsProperty('accumulatedRestMillis', accumulatedRestMillis))..add(DiagnosticsProperty('lastAccuracyMeters', lastAccuracyMeters))..add(DiagnosticsProperty('lastLocationTime', lastLocationTime))..add(DiagnosticsProperty('droppedPointCount', droppedPointCount))..add(DiagnosticsProperty('errorMessage', errorMessage))..add(DiagnosticsProperty('currentHeartRateBpm', currentHeartRateBpm))..add(DiagnosticsProperty('currentCyclingCadenceRpm', currentCyclingCadenceRpm))..add(DiagnosticsProperty('currentPowerWatts', currentPowerWatts))..add(DiagnosticsProperty('currentSensorSpeedMetersPerSecond', currentSensorSpeedMetersPerSecond))..add(DiagnosticsProperty('currentRunningCadenceRpm', currentRunningCadenceRpm))..add(DiagnosticsProperty('bleHeartRateNoSignal', bleHeartRateNoSignal))..add(DiagnosticsProperty('bleDeviceStatuses', bleDeviceStatuses))..add(DiagnosticsProperty('dashboardLayout', dashboardLayout));
+    ..add(DiagnosticsProperty('status', status))..add(DiagnosticsProperty('recordingKind', recordingKind))..add(DiagnosticsProperty('activityTypeId', activityTypeId))..add(DiagnosticsProperty('exerciseType', exerciseType))..add(DiagnosticsProperty('startTime', startTime))..add(DiagnosticsProperty('endTime', endTime))..add(DiagnosticsProperty('pausedStartedAt', pausedStartedAt))..add(DiagnosticsProperty('totalPausedMillis', totalPausedMillis))..add(DiagnosticsProperty('pauseIntervals', pauseIntervals))..add(DiagnosticsProperty('points', points))..add(DiagnosticsProperty('routeBreakIndexes', routeBreakIndexes))..add(DiagnosticsProperty('manualLaps', manualLaps))..add(DiagnosticsProperty('markers', markers))..add(DiagnosticsProperty('latestUiPoint', latestUiPoint))..add(DiagnosticsProperty('distanceMeters', distanceMeters))..add(DiagnosticsProperty('elevationGainedMeters', elevationGainedMeters))..add(DiagnosticsProperty('elevationLostMeters', elevationLostMeters))..add(DiagnosticsProperty('barometerElevationGainedMeters', barometerElevationGainedMeters))..add(DiagnosticsProperty('barometerElevationLostMeters', barometerElevationLostMeters))..add(DiagnosticsProperty('hasBarometerElevation', hasBarometerElevation))..add(DiagnosticsProperty('lastBarometerAltitudeMeters', lastBarometerAltitudeMeters))..add(DiagnosticsProperty('currentSpeedMetersPerSecond', currentSpeedMetersPerSecond))..add(DiagnosticsProperty('maxSpeedMetersPerSecond', maxSpeedMetersPerSecond))..add(DiagnosticsProperty('gpsStatus', gpsStatus))..add(DiagnosticsProperty('keepScreenOnDuringRecording', keepScreenOnDuringRecording))..add(DiagnosticsProperty('autoIdleEnabled', autoIdleEnabled))..add(DiagnosticsProperty('autoIdleTimeoutMillis', autoIdleTimeoutMillis))..add(DiagnosticsProperty('lastMovementAt', lastMovementAt))..add(DiagnosticsProperty('totalIdleMillis', totalIdleMillis))..add(DiagnosticsProperty('repetitionCount', repetitionCount))..add(DiagnosticsProperty('currentSetRepetitionCount', currentSetRepetitionCount))..add(DiagnosticsProperty('repetitionSets', repetitionSets))..add(DiagnosticsProperty('repetitionRestSeconds', repetitionRestSeconds))..add(DiagnosticsProperty('currentSetStartedAt', currentSetStartedAt))..add(DiagnosticsProperty('restStartedAt', restStartedAt))..add(DiagnosticsProperty('accumulatedRestMillis', accumulatedRestMillis))..add(DiagnosticsProperty('lastAccuracyMeters', lastAccuracyMeters))..add(DiagnosticsProperty('lastLocationTime', lastLocationTime))..add(DiagnosticsProperty('droppedPointCount', droppedPointCount))..add(DiagnosticsProperty('errorMessage', errorMessage))..add(DiagnosticsProperty('currentHeartRateBpm', currentHeartRateBpm))..add(DiagnosticsProperty('currentCyclingCadenceRpm', currentCyclingCadenceRpm))..add(DiagnosticsProperty('currentPowerWatts', currentPowerWatts))..add(DiagnosticsProperty('currentSensorSpeedMetersPerSecond', currentSensorSpeedMetersPerSecond))..add(DiagnosticsProperty('currentRunningCadenceRpm', currentRunningCadenceRpm))..add(DiagnosticsProperty('bleHeartRateNoSignal', bleHeartRateNoSignal))..add(DiagnosticsProperty('bleDeviceStatuses', bleDeviceStatuses))..add(DiagnosticsProperty('dashboardLayout', dashboardLayout))..add(DiagnosticsProperty('hrrPhase', hrrPhase))..add(DiagnosticsProperty('hrrConfig', hrrConfig))..add(DiagnosticsProperty('hrrEffortEndedAt', hrrEffortEndedAt));
 }
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityRecordingState&&(identical(other.status, status) || other.status == status)&&(identical(other.recordingKind, recordingKind) || other.recordingKind == recordingKind)&&(identical(other.activityTypeId, activityTypeId) || other.activityTypeId == activityTypeId)&&(identical(other.exerciseType, exerciseType) || other.exerciseType == exerciseType)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.pausedStartedAt, pausedStartedAt) || other.pausedStartedAt == pausedStartedAt)&&(identical(other.totalPausedMillis, totalPausedMillis) || other.totalPausedMillis == totalPausedMillis)&&const DeepCollectionEquality().equals(other._pauseIntervals, _pauseIntervals)&&const DeepCollectionEquality().equals(other._points, _points)&&const DeepCollectionEquality().equals(other._routeBreakIndexes, _routeBreakIndexes)&&const DeepCollectionEquality().equals(other._manualLaps, _manualLaps)&&const DeepCollectionEquality().equals(other._markers, _markers)&&(identical(other.latestUiPoint, latestUiPoint) || other.latestUiPoint == latestUiPoint)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.elevationGainedMeters, elevationGainedMeters) || other.elevationGainedMeters == elevationGainedMeters)&&(identical(other.elevationLostMeters, elevationLostMeters) || other.elevationLostMeters == elevationLostMeters)&&(identical(other.barometerElevationGainedMeters, barometerElevationGainedMeters) || other.barometerElevationGainedMeters == barometerElevationGainedMeters)&&(identical(other.barometerElevationLostMeters, barometerElevationLostMeters) || other.barometerElevationLostMeters == barometerElevationLostMeters)&&(identical(other.hasBarometerElevation, hasBarometerElevation) || other.hasBarometerElevation == hasBarometerElevation)&&(identical(other.lastBarometerAltitudeMeters, lastBarometerAltitudeMeters) || other.lastBarometerAltitudeMeters == lastBarometerAltitudeMeters)&&(identical(other.currentSpeedMetersPerSecond, currentSpeedMetersPerSecond) || other.currentSpeedMetersPerSecond == currentSpeedMetersPerSecond)&&(identical(other.maxSpeedMetersPerSecond, maxSpeedMetersPerSecond) || other.maxSpeedMetersPerSecond == maxSpeedMetersPerSecond)&&(identical(other.gpsStatus, gpsStatus) || other.gpsStatus == gpsStatus)&&(identical(other.keepScreenOnDuringRecording, keepScreenOnDuringRecording) || other.keepScreenOnDuringRecording == keepScreenOnDuringRecording)&&(identical(other.autoIdleEnabled, autoIdleEnabled) || other.autoIdleEnabled == autoIdleEnabled)&&(identical(other.autoIdleTimeoutMillis, autoIdleTimeoutMillis) || other.autoIdleTimeoutMillis == autoIdleTimeoutMillis)&&(identical(other.lastMovementAt, lastMovementAt) || other.lastMovementAt == lastMovementAt)&&(identical(other.totalIdleMillis, totalIdleMillis) || other.totalIdleMillis == totalIdleMillis)&&(identical(other.repetitionCount, repetitionCount) || other.repetitionCount == repetitionCount)&&(identical(other.currentSetRepetitionCount, currentSetRepetitionCount) || other.currentSetRepetitionCount == currentSetRepetitionCount)&&const DeepCollectionEquality().equals(other._repetitionSets, _repetitionSets)&&(identical(other.repetitionRestSeconds, repetitionRestSeconds) || other.repetitionRestSeconds == repetitionRestSeconds)&&(identical(other.currentSetStartedAt, currentSetStartedAt) || other.currentSetStartedAt == currentSetStartedAt)&&(identical(other.restStartedAt, restStartedAt) || other.restStartedAt == restStartedAt)&&(identical(other.accumulatedRestMillis, accumulatedRestMillis) || other.accumulatedRestMillis == accumulatedRestMillis)&&(identical(other.lastAccuracyMeters, lastAccuracyMeters) || other.lastAccuracyMeters == lastAccuracyMeters)&&(identical(other.lastLocationTime, lastLocationTime) || other.lastLocationTime == lastLocationTime)&&(identical(other.droppedPointCount, droppedPointCount) || other.droppedPointCount == droppedPointCount)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.currentHeartRateBpm, currentHeartRateBpm) || other.currentHeartRateBpm == currentHeartRateBpm)&&(identical(other.currentCyclingCadenceRpm, currentCyclingCadenceRpm) || other.currentCyclingCadenceRpm == currentCyclingCadenceRpm)&&(identical(other.currentPowerWatts, currentPowerWatts) || other.currentPowerWatts == currentPowerWatts)&&(identical(other.currentSensorSpeedMetersPerSecond, currentSensorSpeedMetersPerSecond) || other.currentSensorSpeedMetersPerSecond == currentSensorSpeedMetersPerSecond)&&(identical(other.currentRunningCadenceRpm, currentRunningCadenceRpm) || other.currentRunningCadenceRpm == currentRunningCadenceRpm)&&(identical(other.bleHeartRateNoSignal, bleHeartRateNoSignal) || other.bleHeartRateNoSignal == bleHeartRateNoSignal)&&const DeepCollectionEquality().equals(other._bleDeviceStatuses, _bleDeviceStatuses)&&(identical(other.dashboardLayout, dashboardLayout) || other.dashboardLayout == dashboardLayout));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityRecordingState&&(identical(other.status, status) || other.status == status)&&(identical(other.recordingKind, recordingKind) || other.recordingKind == recordingKind)&&(identical(other.activityTypeId, activityTypeId) || other.activityTypeId == activityTypeId)&&(identical(other.exerciseType, exerciseType) || other.exerciseType == exerciseType)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.pausedStartedAt, pausedStartedAt) || other.pausedStartedAt == pausedStartedAt)&&(identical(other.totalPausedMillis, totalPausedMillis) || other.totalPausedMillis == totalPausedMillis)&&const DeepCollectionEquality().equals(other._pauseIntervals, _pauseIntervals)&&const DeepCollectionEquality().equals(other._points, _points)&&const DeepCollectionEquality().equals(other._routeBreakIndexes, _routeBreakIndexes)&&const DeepCollectionEquality().equals(other._manualLaps, _manualLaps)&&const DeepCollectionEquality().equals(other._markers, _markers)&&(identical(other.latestUiPoint, latestUiPoint) || other.latestUiPoint == latestUiPoint)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.elevationGainedMeters, elevationGainedMeters) || other.elevationGainedMeters == elevationGainedMeters)&&(identical(other.elevationLostMeters, elevationLostMeters) || other.elevationLostMeters == elevationLostMeters)&&(identical(other.barometerElevationGainedMeters, barometerElevationGainedMeters) || other.barometerElevationGainedMeters == barometerElevationGainedMeters)&&(identical(other.barometerElevationLostMeters, barometerElevationLostMeters) || other.barometerElevationLostMeters == barometerElevationLostMeters)&&(identical(other.hasBarometerElevation, hasBarometerElevation) || other.hasBarometerElevation == hasBarometerElevation)&&(identical(other.lastBarometerAltitudeMeters, lastBarometerAltitudeMeters) || other.lastBarometerAltitudeMeters == lastBarometerAltitudeMeters)&&(identical(other.currentSpeedMetersPerSecond, currentSpeedMetersPerSecond) || other.currentSpeedMetersPerSecond == currentSpeedMetersPerSecond)&&(identical(other.maxSpeedMetersPerSecond, maxSpeedMetersPerSecond) || other.maxSpeedMetersPerSecond == maxSpeedMetersPerSecond)&&(identical(other.gpsStatus, gpsStatus) || other.gpsStatus == gpsStatus)&&(identical(other.keepScreenOnDuringRecording, keepScreenOnDuringRecording) || other.keepScreenOnDuringRecording == keepScreenOnDuringRecording)&&(identical(other.autoIdleEnabled, autoIdleEnabled) || other.autoIdleEnabled == autoIdleEnabled)&&(identical(other.autoIdleTimeoutMillis, autoIdleTimeoutMillis) || other.autoIdleTimeoutMillis == autoIdleTimeoutMillis)&&(identical(other.lastMovementAt, lastMovementAt) || other.lastMovementAt == lastMovementAt)&&(identical(other.totalIdleMillis, totalIdleMillis) || other.totalIdleMillis == totalIdleMillis)&&(identical(other.repetitionCount, repetitionCount) || other.repetitionCount == repetitionCount)&&(identical(other.currentSetRepetitionCount, currentSetRepetitionCount) || other.currentSetRepetitionCount == currentSetRepetitionCount)&&const DeepCollectionEquality().equals(other._repetitionSets, _repetitionSets)&&(identical(other.repetitionRestSeconds, repetitionRestSeconds) || other.repetitionRestSeconds == repetitionRestSeconds)&&(identical(other.currentSetStartedAt, currentSetStartedAt) || other.currentSetStartedAt == currentSetStartedAt)&&(identical(other.restStartedAt, restStartedAt) || other.restStartedAt == restStartedAt)&&(identical(other.accumulatedRestMillis, accumulatedRestMillis) || other.accumulatedRestMillis == accumulatedRestMillis)&&(identical(other.lastAccuracyMeters, lastAccuracyMeters) || other.lastAccuracyMeters == lastAccuracyMeters)&&(identical(other.lastLocationTime, lastLocationTime) || other.lastLocationTime == lastLocationTime)&&(identical(other.droppedPointCount, droppedPointCount) || other.droppedPointCount == droppedPointCount)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.currentHeartRateBpm, currentHeartRateBpm) || other.currentHeartRateBpm == currentHeartRateBpm)&&(identical(other.currentCyclingCadenceRpm, currentCyclingCadenceRpm) || other.currentCyclingCadenceRpm == currentCyclingCadenceRpm)&&(identical(other.currentPowerWatts, currentPowerWatts) || other.currentPowerWatts == currentPowerWatts)&&(identical(other.currentSensorSpeedMetersPerSecond, currentSensorSpeedMetersPerSecond) || other.currentSensorSpeedMetersPerSecond == currentSensorSpeedMetersPerSecond)&&(identical(other.currentRunningCadenceRpm, currentRunningCadenceRpm) || other.currentRunningCadenceRpm == currentRunningCadenceRpm)&&(identical(other.bleHeartRateNoSignal, bleHeartRateNoSignal) || other.bleHeartRateNoSignal == bleHeartRateNoSignal)&&const DeepCollectionEquality().equals(other._bleDeviceStatuses, _bleDeviceStatuses)&&(identical(other.dashboardLayout, dashboardLayout) || other.dashboardLayout == dashboardLayout)&&(identical(other.hrrPhase, hrrPhase) || other.hrrPhase == hrrPhase)&&(identical(other.hrrConfig, hrrConfig) || other.hrrConfig == hrrConfig)&&(identical(other.hrrEffortEndedAt, hrrEffortEndedAt) || other.hrrEffortEndedAt == hrrEffortEndedAt));
 }
 
 
 @override
-int get hashCode => Object.hashAll([runtimeType,status,recordingKind,activityTypeId,exerciseType,startTime,endTime,pausedStartedAt,totalPausedMillis,const DeepCollectionEquality().hash(_pauseIntervals),const DeepCollectionEquality().hash(_points),const DeepCollectionEquality().hash(_routeBreakIndexes),const DeepCollectionEquality().hash(_manualLaps),const DeepCollectionEquality().hash(_markers),latestUiPoint,distanceMeters,elevationGainedMeters,elevationLostMeters,barometerElevationGainedMeters,barometerElevationLostMeters,hasBarometerElevation,lastBarometerAltitudeMeters,currentSpeedMetersPerSecond,maxSpeedMetersPerSecond,gpsStatus,keepScreenOnDuringRecording,autoIdleEnabled,autoIdleTimeoutMillis,lastMovementAt,totalIdleMillis,repetitionCount,currentSetRepetitionCount,const DeepCollectionEquality().hash(_repetitionSets),repetitionRestSeconds,currentSetStartedAt,restStartedAt,accumulatedRestMillis,lastAccuracyMeters,lastLocationTime,droppedPointCount,errorMessage,currentHeartRateBpm,currentCyclingCadenceRpm,currentPowerWatts,currentSensorSpeedMetersPerSecond,currentRunningCadenceRpm,bleHeartRateNoSignal,const DeepCollectionEquality().hash(_bleDeviceStatuses),dashboardLayout]);
+int get hashCode => Object.hashAll([runtimeType,status,recordingKind,activityTypeId,exerciseType,startTime,endTime,pausedStartedAt,totalPausedMillis,const DeepCollectionEquality().hash(_pauseIntervals),const DeepCollectionEquality().hash(_points),const DeepCollectionEquality().hash(_routeBreakIndexes),const DeepCollectionEquality().hash(_manualLaps),const DeepCollectionEquality().hash(_markers),latestUiPoint,distanceMeters,elevationGainedMeters,elevationLostMeters,barometerElevationGainedMeters,barometerElevationLostMeters,hasBarometerElevation,lastBarometerAltitudeMeters,currentSpeedMetersPerSecond,maxSpeedMetersPerSecond,gpsStatus,keepScreenOnDuringRecording,autoIdleEnabled,autoIdleTimeoutMillis,lastMovementAt,totalIdleMillis,repetitionCount,currentSetRepetitionCount,const DeepCollectionEquality().hash(_repetitionSets),repetitionRestSeconds,currentSetStartedAt,restStartedAt,accumulatedRestMillis,lastAccuracyMeters,lastLocationTime,droppedPointCount,errorMessage,currentHeartRateBpm,currentCyclingCadenceRpm,currentPowerWatts,currentSensorSpeedMetersPerSecond,currentRunningCadenceRpm,bleHeartRateNoSignal,const DeepCollectionEquality().hash(_bleDeviceStatuses),dashboardLayout,hrrPhase,hrrConfig,hrrEffortEndedAt]);
 
 @override
 String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
-  return 'ActivityRecordingState(status: $status, recordingKind: $recordingKind, activityTypeId: $activityTypeId, exerciseType: $exerciseType, startTime: $startTime, endTime: $endTime, pausedStartedAt: $pausedStartedAt, totalPausedMillis: $totalPausedMillis, pauseIntervals: $pauseIntervals, points: $points, routeBreakIndexes: $routeBreakIndexes, manualLaps: $manualLaps, markers: $markers, latestUiPoint: $latestUiPoint, distanceMeters: $distanceMeters, elevationGainedMeters: $elevationGainedMeters, elevationLostMeters: $elevationLostMeters, barometerElevationGainedMeters: $barometerElevationGainedMeters, barometerElevationLostMeters: $barometerElevationLostMeters, hasBarometerElevation: $hasBarometerElevation, lastBarometerAltitudeMeters: $lastBarometerAltitudeMeters, currentSpeedMetersPerSecond: $currentSpeedMetersPerSecond, maxSpeedMetersPerSecond: $maxSpeedMetersPerSecond, gpsStatus: $gpsStatus, keepScreenOnDuringRecording: $keepScreenOnDuringRecording, autoIdleEnabled: $autoIdleEnabled, autoIdleTimeoutMillis: $autoIdleTimeoutMillis, lastMovementAt: $lastMovementAt, totalIdleMillis: $totalIdleMillis, repetitionCount: $repetitionCount, currentSetRepetitionCount: $currentSetRepetitionCount, repetitionSets: $repetitionSets, repetitionRestSeconds: $repetitionRestSeconds, currentSetStartedAt: $currentSetStartedAt, restStartedAt: $restStartedAt, accumulatedRestMillis: $accumulatedRestMillis, lastAccuracyMeters: $lastAccuracyMeters, lastLocationTime: $lastLocationTime, droppedPointCount: $droppedPointCount, errorMessage: $errorMessage, currentHeartRateBpm: $currentHeartRateBpm, currentCyclingCadenceRpm: $currentCyclingCadenceRpm, currentPowerWatts: $currentPowerWatts, currentSensorSpeedMetersPerSecond: $currentSensorSpeedMetersPerSecond, currentRunningCadenceRpm: $currentRunningCadenceRpm, bleHeartRateNoSignal: $bleHeartRateNoSignal, bleDeviceStatuses: $bleDeviceStatuses, dashboardLayout: $dashboardLayout)';
+  return 'ActivityRecordingState(status: $status, recordingKind: $recordingKind, activityTypeId: $activityTypeId, exerciseType: $exerciseType, startTime: $startTime, endTime: $endTime, pausedStartedAt: $pausedStartedAt, totalPausedMillis: $totalPausedMillis, pauseIntervals: $pauseIntervals, points: $points, routeBreakIndexes: $routeBreakIndexes, manualLaps: $manualLaps, markers: $markers, latestUiPoint: $latestUiPoint, distanceMeters: $distanceMeters, elevationGainedMeters: $elevationGainedMeters, elevationLostMeters: $elevationLostMeters, barometerElevationGainedMeters: $barometerElevationGainedMeters, barometerElevationLostMeters: $barometerElevationLostMeters, hasBarometerElevation: $hasBarometerElevation, lastBarometerAltitudeMeters: $lastBarometerAltitudeMeters, currentSpeedMetersPerSecond: $currentSpeedMetersPerSecond, maxSpeedMetersPerSecond: $maxSpeedMetersPerSecond, gpsStatus: $gpsStatus, keepScreenOnDuringRecording: $keepScreenOnDuringRecording, autoIdleEnabled: $autoIdleEnabled, autoIdleTimeoutMillis: $autoIdleTimeoutMillis, lastMovementAt: $lastMovementAt, totalIdleMillis: $totalIdleMillis, repetitionCount: $repetitionCount, currentSetRepetitionCount: $currentSetRepetitionCount, repetitionSets: $repetitionSets, repetitionRestSeconds: $repetitionRestSeconds, currentSetStartedAt: $currentSetStartedAt, restStartedAt: $restStartedAt, accumulatedRestMillis: $accumulatedRestMillis, lastAccuracyMeters: $lastAccuracyMeters, lastLocationTime: $lastLocationTime, droppedPointCount: $droppedPointCount, errorMessage: $errorMessage, currentHeartRateBpm: $currentHeartRateBpm, currentCyclingCadenceRpm: $currentCyclingCadenceRpm, currentPowerWatts: $currentPowerWatts, currentSensorSpeedMetersPerSecond: $currentSensorSpeedMetersPerSecond, currentRunningCadenceRpm: $currentRunningCadenceRpm, bleHeartRateNoSignal: $bleHeartRateNoSignal, bleDeviceStatuses: $bleDeviceStatuses, dashboardLayout: $dashboardLayout, hrrPhase: $hrrPhase, hrrConfig: $hrrConfig, hrrEffortEndedAt: $hrrEffortEndedAt)';
 }
 
 
@@ -676,11 +990,11 @@ abstract mixin class _$ActivityRecordingStateCopyWith<$Res> implements $Activity
   factory _$ActivityRecordingStateCopyWith(_ActivityRecordingState value, $Res Function(_ActivityRecordingState) _then) = __$ActivityRecordingStateCopyWithImpl;
 @override @useResult
 $Res call({
- ActivityRecordingStatus status, ActivityRecordingKind recordingKind, String? activityTypeId, int? exerciseType, DateTime? startTime, DateTime? endTime, DateTime? pausedStartedAt, int totalPausedMillis, List<ActivityPauseInterval> pauseIntervals, List<ExerciseRoutePoint> points, List<int> routeBreakIndexes, List<ActivityRecordingLap> manualLaps, List<ActivityRecordingMarker> markers, ExerciseRoutePoint? latestUiPoint, double distanceMeters, double elevationGainedMeters, double elevationLostMeters, double barometerElevationGainedMeters, double barometerElevationLostMeters, bool hasBarometerElevation, double? lastBarometerAltitudeMeters, double currentSpeedMetersPerSecond, double maxSpeedMetersPerSecond, ActivityGpsStatus gpsStatus, bool keepScreenOnDuringRecording, bool autoIdleEnabled, int autoIdleTimeoutMillis, DateTime? lastMovementAt, int totalIdleMillis, int repetitionCount, int currentSetRepetitionCount, List<ActivityRecordedRepetitionSet> repetitionSets, int repetitionRestSeconds, DateTime? currentSetStartedAt, DateTime? restStartedAt, int accumulatedRestMillis, double? lastAccuracyMeters, DateTime? lastLocationTime, int droppedPointCount, String? errorMessage, int? currentHeartRateBpm, int? currentCyclingCadenceRpm, double? currentPowerWatts, double? currentSensorSpeedMetersPerSecond, int? currentRunningCadenceRpm, bool bleHeartRateNoSignal, List<BleDeviceConnectionStatus> bleDeviceStatuses, ActivityRecordingDashboardLayout dashboardLayout
+ ActivityRecordingStatus status, ActivityRecordingKind recordingKind, String? activityTypeId, int? exerciseType, DateTime? startTime, DateTime? endTime, DateTime? pausedStartedAt, int totalPausedMillis, List<ActivityPauseInterval> pauseIntervals, List<ExerciseRoutePoint> points, List<int> routeBreakIndexes, List<ActivityRecordingLap> manualLaps, List<ActivityRecordingMarker> markers, ExerciseRoutePoint? latestUiPoint, double distanceMeters, double elevationGainedMeters, double elevationLostMeters, double barometerElevationGainedMeters, double barometerElevationLostMeters, bool hasBarometerElevation, double? lastBarometerAltitudeMeters, double currentSpeedMetersPerSecond, double maxSpeedMetersPerSecond, ActivityGpsStatus gpsStatus, bool keepScreenOnDuringRecording, bool autoIdleEnabled, int autoIdleTimeoutMillis, DateTime? lastMovementAt, int totalIdleMillis, int repetitionCount, int currentSetRepetitionCount, List<ActivityRecordedRepetitionSet> repetitionSets, int repetitionRestSeconds, DateTime? currentSetStartedAt, DateTime? restStartedAt, int accumulatedRestMillis, double? lastAccuracyMeters, DateTime? lastLocationTime, int droppedPointCount, String? errorMessage, int? currentHeartRateBpm, int? currentCyclingCadenceRpm, double? currentPowerWatts, double? currentSensorSpeedMetersPerSecond, int? currentRunningCadenceRpm, bool bleHeartRateNoSignal, List<BleDeviceConnectionStatus> bleDeviceStatuses, ActivityRecordingDashboardLayout dashboardLayout, ActivityRecordingHrrPhase hrrPhase, HeartRateRecoveryTestConfig hrrConfig, DateTime? hrrEffortEndedAt
 });
 
 
-@override $ExerciseRoutePointCopyWith<$Res>? get latestUiPoint;
+@override $ExerciseRoutePointCopyWith<$Res>? get latestUiPoint;@override $HeartRateRecoveryTestConfigCopyWith<$Res> get hrrConfig;
 
 }
 /// @nodoc
@@ -693,7 +1007,7 @@ class __$ActivityRecordingStateCopyWithImpl<$Res>
 
 /// Create a copy of ActivityRecordingState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? recordingKind = null,Object? activityTypeId = freezed,Object? exerciseType = freezed,Object? startTime = freezed,Object? endTime = freezed,Object? pausedStartedAt = freezed,Object? totalPausedMillis = null,Object? pauseIntervals = null,Object? points = null,Object? routeBreakIndexes = null,Object? manualLaps = null,Object? markers = null,Object? latestUiPoint = freezed,Object? distanceMeters = null,Object? elevationGainedMeters = null,Object? elevationLostMeters = null,Object? barometerElevationGainedMeters = null,Object? barometerElevationLostMeters = null,Object? hasBarometerElevation = null,Object? lastBarometerAltitudeMeters = freezed,Object? currentSpeedMetersPerSecond = null,Object? maxSpeedMetersPerSecond = null,Object? gpsStatus = null,Object? keepScreenOnDuringRecording = null,Object? autoIdleEnabled = null,Object? autoIdleTimeoutMillis = null,Object? lastMovementAt = freezed,Object? totalIdleMillis = null,Object? repetitionCount = null,Object? currentSetRepetitionCount = null,Object? repetitionSets = null,Object? repetitionRestSeconds = null,Object? currentSetStartedAt = freezed,Object? restStartedAt = freezed,Object? accumulatedRestMillis = null,Object? lastAccuracyMeters = freezed,Object? lastLocationTime = freezed,Object? droppedPointCount = null,Object? errorMessage = freezed,Object? currentHeartRateBpm = freezed,Object? currentCyclingCadenceRpm = freezed,Object? currentPowerWatts = freezed,Object? currentSensorSpeedMetersPerSecond = freezed,Object? currentRunningCadenceRpm = freezed,Object? bleHeartRateNoSignal = null,Object? bleDeviceStatuses = null,Object? dashboardLayout = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? recordingKind = null,Object? activityTypeId = freezed,Object? exerciseType = freezed,Object? startTime = freezed,Object? endTime = freezed,Object? pausedStartedAt = freezed,Object? totalPausedMillis = null,Object? pauseIntervals = null,Object? points = null,Object? routeBreakIndexes = null,Object? manualLaps = null,Object? markers = null,Object? latestUiPoint = freezed,Object? distanceMeters = null,Object? elevationGainedMeters = null,Object? elevationLostMeters = null,Object? barometerElevationGainedMeters = null,Object? barometerElevationLostMeters = null,Object? hasBarometerElevation = null,Object? lastBarometerAltitudeMeters = freezed,Object? currentSpeedMetersPerSecond = null,Object? maxSpeedMetersPerSecond = null,Object? gpsStatus = null,Object? keepScreenOnDuringRecording = null,Object? autoIdleEnabled = null,Object? autoIdleTimeoutMillis = null,Object? lastMovementAt = freezed,Object? totalIdleMillis = null,Object? repetitionCount = null,Object? currentSetRepetitionCount = null,Object? repetitionSets = null,Object? repetitionRestSeconds = null,Object? currentSetStartedAt = freezed,Object? restStartedAt = freezed,Object? accumulatedRestMillis = null,Object? lastAccuracyMeters = freezed,Object? lastLocationTime = freezed,Object? droppedPointCount = null,Object? errorMessage = freezed,Object? currentHeartRateBpm = freezed,Object? currentCyclingCadenceRpm = freezed,Object? currentPowerWatts = freezed,Object? currentSensorSpeedMetersPerSecond = freezed,Object? currentRunningCadenceRpm = freezed,Object? bleHeartRateNoSignal = null,Object? bleDeviceStatuses = null,Object? dashboardLayout = null,Object? hrrPhase = null,Object? hrrConfig = null,Object? hrrEffortEndedAt = freezed,}) {
   return _then(_ActivityRecordingState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ActivityRecordingStatus,recordingKind: null == recordingKind ? _self.recordingKind : recordingKind // ignore: cast_nullable_to_non_nullable
@@ -743,7 +1057,10 @@ as double?,currentRunningCadenceRpm: freezed == currentRunningCadenceRpm ? _self
 as int?,bleHeartRateNoSignal: null == bleHeartRateNoSignal ? _self.bleHeartRateNoSignal : bleHeartRateNoSignal // ignore: cast_nullable_to_non_nullable
 as bool,bleDeviceStatuses: null == bleDeviceStatuses ? _self._bleDeviceStatuses : bleDeviceStatuses // ignore: cast_nullable_to_non_nullable
 as List<BleDeviceConnectionStatus>,dashboardLayout: null == dashboardLayout ? _self.dashboardLayout : dashboardLayout // ignore: cast_nullable_to_non_nullable
-as ActivityRecordingDashboardLayout,
+as ActivityRecordingDashboardLayout,hrrPhase: null == hrrPhase ? _self.hrrPhase : hrrPhase // ignore: cast_nullable_to_non_nullable
+as ActivityRecordingHrrPhase,hrrConfig: null == hrrConfig ? _self.hrrConfig : hrrConfig // ignore: cast_nullable_to_non_nullable
+as HeartRateRecoveryTestConfig,hrrEffortEndedAt: freezed == hrrEffortEndedAt ? _self.hrrEffortEndedAt : hrrEffortEndedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -759,13 +1076,25 @@ $ExerciseRoutePointCopyWith<$Res>? get latestUiPoint {
   return $ExerciseRoutePointCopyWith<$Res>(_self.latestUiPoint!, (value) {
     return _then(_self.copyWith(latestUiPoint: value));
   });
+}/// Create a copy of ActivityRecordingState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$HeartRateRecoveryTestConfigCopyWith<$Res> get hrrConfig {
+  
+  return $HeartRateRecoveryTestConfigCopyWith<$Res>(_self.hrrConfig, (value) {
+    return _then(_self.copyWith(hrrConfig: value));
+  });
 }
 }
 
 /// @nodoc
 mixin _$ActivityRecordingSnapshot implements DiagnosticableTreeMixin {
 
- int get exerciseType; ActivityRecordingKind get recordingKind; String? get activityTypeId; DateTime get startTime; DateTime get endTime; List<ExerciseRoutePoint> get points; List<ActivityPauseInterval> get pauseIntervals; List<int> get routeBreakIndexes; List<ActivityRecordingLap> get manualLaps; List<ActivityRecordingMarker> get markers; double get distanceMeters; double get elevationGainedMeters; int get repetitionCount; List<ActivityRecordedRepetitionSet> get repetitionSets; BleRecordingSampleBuffer get bleSamples;
+ int get exerciseType; ActivityRecordingKind get recordingKind; String? get activityTypeId; DateTime get startTime; DateTime get endTime; List<ExerciseRoutePoint> get points; List<ActivityPauseInterval> get pauseIntervals; List<int> get routeBreakIndexes; List<ActivityRecordingLap> get manualLaps; List<ActivityRecordingMarker> get markers; double get distanceMeters; double get elevationGainedMeters; int get repetitionCount; List<ActivityRecordedRepetitionSet> get repetitionSets; BleRecordingSampleBuffer get bleSamples;/// When the effort stopped, for a heart-rate-recovery test. This is what gets written
+/// as a trailing rest segment, and it is the only thing that tells anyone reading the
+/// session back where the recovery began.
+ DateTime? get hrrEffortEndedAt;
 /// Create a copy of ActivityRecordingSnapshot
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -777,21 +1106,21 @@ $ActivityRecordingSnapshotCopyWith<ActivityRecordingSnapshot> get copyWith => _$
 void debugFillProperties(DiagnosticPropertiesBuilder properties) {
   properties
     ..add(DiagnosticsProperty('type', 'ActivityRecordingSnapshot'))
-    ..add(DiagnosticsProperty('exerciseType', exerciseType))..add(DiagnosticsProperty('recordingKind', recordingKind))..add(DiagnosticsProperty('activityTypeId', activityTypeId))..add(DiagnosticsProperty('startTime', startTime))..add(DiagnosticsProperty('endTime', endTime))..add(DiagnosticsProperty('points', points))..add(DiagnosticsProperty('pauseIntervals', pauseIntervals))..add(DiagnosticsProperty('routeBreakIndexes', routeBreakIndexes))..add(DiagnosticsProperty('manualLaps', manualLaps))..add(DiagnosticsProperty('markers', markers))..add(DiagnosticsProperty('distanceMeters', distanceMeters))..add(DiagnosticsProperty('elevationGainedMeters', elevationGainedMeters))..add(DiagnosticsProperty('repetitionCount', repetitionCount))..add(DiagnosticsProperty('repetitionSets', repetitionSets))..add(DiagnosticsProperty('bleSamples', bleSamples));
+    ..add(DiagnosticsProperty('exerciseType', exerciseType))..add(DiagnosticsProperty('recordingKind', recordingKind))..add(DiagnosticsProperty('activityTypeId', activityTypeId))..add(DiagnosticsProperty('startTime', startTime))..add(DiagnosticsProperty('endTime', endTime))..add(DiagnosticsProperty('points', points))..add(DiagnosticsProperty('pauseIntervals', pauseIntervals))..add(DiagnosticsProperty('routeBreakIndexes', routeBreakIndexes))..add(DiagnosticsProperty('manualLaps', manualLaps))..add(DiagnosticsProperty('markers', markers))..add(DiagnosticsProperty('distanceMeters', distanceMeters))..add(DiagnosticsProperty('elevationGainedMeters', elevationGainedMeters))..add(DiagnosticsProperty('repetitionCount', repetitionCount))..add(DiagnosticsProperty('repetitionSets', repetitionSets))..add(DiagnosticsProperty('bleSamples', bleSamples))..add(DiagnosticsProperty('hrrEffortEndedAt', hrrEffortEndedAt));
 }
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityRecordingSnapshot&&(identical(other.exerciseType, exerciseType) || other.exerciseType == exerciseType)&&(identical(other.recordingKind, recordingKind) || other.recordingKind == recordingKind)&&(identical(other.activityTypeId, activityTypeId) || other.activityTypeId == activityTypeId)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&const DeepCollectionEquality().equals(other.points, points)&&const DeepCollectionEquality().equals(other.pauseIntervals, pauseIntervals)&&const DeepCollectionEquality().equals(other.routeBreakIndexes, routeBreakIndexes)&&const DeepCollectionEquality().equals(other.manualLaps, manualLaps)&&const DeepCollectionEquality().equals(other.markers, markers)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.elevationGainedMeters, elevationGainedMeters) || other.elevationGainedMeters == elevationGainedMeters)&&(identical(other.repetitionCount, repetitionCount) || other.repetitionCount == repetitionCount)&&const DeepCollectionEquality().equals(other.repetitionSets, repetitionSets)&&(identical(other.bleSamples, bleSamples) || other.bleSamples == bleSamples));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityRecordingSnapshot&&(identical(other.exerciseType, exerciseType) || other.exerciseType == exerciseType)&&(identical(other.recordingKind, recordingKind) || other.recordingKind == recordingKind)&&(identical(other.activityTypeId, activityTypeId) || other.activityTypeId == activityTypeId)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&const DeepCollectionEquality().equals(other.points, points)&&const DeepCollectionEquality().equals(other.pauseIntervals, pauseIntervals)&&const DeepCollectionEquality().equals(other.routeBreakIndexes, routeBreakIndexes)&&const DeepCollectionEquality().equals(other.manualLaps, manualLaps)&&const DeepCollectionEquality().equals(other.markers, markers)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.elevationGainedMeters, elevationGainedMeters) || other.elevationGainedMeters == elevationGainedMeters)&&(identical(other.repetitionCount, repetitionCount) || other.repetitionCount == repetitionCount)&&const DeepCollectionEquality().equals(other.repetitionSets, repetitionSets)&&(identical(other.bleSamples, bleSamples) || other.bleSamples == bleSamples)&&(identical(other.hrrEffortEndedAt, hrrEffortEndedAt) || other.hrrEffortEndedAt == hrrEffortEndedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,exerciseType,recordingKind,activityTypeId,startTime,endTime,const DeepCollectionEquality().hash(points),const DeepCollectionEquality().hash(pauseIntervals),const DeepCollectionEquality().hash(routeBreakIndexes),const DeepCollectionEquality().hash(manualLaps),const DeepCollectionEquality().hash(markers),distanceMeters,elevationGainedMeters,repetitionCount,const DeepCollectionEquality().hash(repetitionSets),bleSamples);
+int get hashCode => Object.hash(runtimeType,exerciseType,recordingKind,activityTypeId,startTime,endTime,const DeepCollectionEquality().hash(points),const DeepCollectionEquality().hash(pauseIntervals),const DeepCollectionEquality().hash(routeBreakIndexes),const DeepCollectionEquality().hash(manualLaps),const DeepCollectionEquality().hash(markers),distanceMeters,elevationGainedMeters,repetitionCount,const DeepCollectionEquality().hash(repetitionSets),bleSamples,hrrEffortEndedAt);
 
 @override
 String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
-  return 'ActivityRecordingSnapshot(exerciseType: $exerciseType, recordingKind: $recordingKind, activityTypeId: $activityTypeId, startTime: $startTime, endTime: $endTime, points: $points, pauseIntervals: $pauseIntervals, routeBreakIndexes: $routeBreakIndexes, manualLaps: $manualLaps, markers: $markers, distanceMeters: $distanceMeters, elevationGainedMeters: $elevationGainedMeters, repetitionCount: $repetitionCount, repetitionSets: $repetitionSets, bleSamples: $bleSamples)';
+  return 'ActivityRecordingSnapshot(exerciseType: $exerciseType, recordingKind: $recordingKind, activityTypeId: $activityTypeId, startTime: $startTime, endTime: $endTime, points: $points, pauseIntervals: $pauseIntervals, routeBreakIndexes: $routeBreakIndexes, manualLaps: $manualLaps, markers: $markers, distanceMeters: $distanceMeters, elevationGainedMeters: $elevationGainedMeters, repetitionCount: $repetitionCount, repetitionSets: $repetitionSets, bleSamples: $bleSamples, hrrEffortEndedAt: $hrrEffortEndedAt)';
 }
 
 
@@ -802,7 +1131,7 @@ abstract mixin class $ActivityRecordingSnapshotCopyWith<$Res>  {
   factory $ActivityRecordingSnapshotCopyWith(ActivityRecordingSnapshot value, $Res Function(ActivityRecordingSnapshot) _then) = _$ActivityRecordingSnapshotCopyWithImpl;
 @useResult
 $Res call({
- int exerciseType, ActivityRecordingKind recordingKind, String? activityTypeId, DateTime startTime, DateTime endTime, List<ExerciseRoutePoint> points, List<ActivityPauseInterval> pauseIntervals, List<int> routeBreakIndexes, List<ActivityRecordingLap> manualLaps, List<ActivityRecordingMarker> markers, double distanceMeters, double elevationGainedMeters, int repetitionCount, List<ActivityRecordedRepetitionSet> repetitionSets, BleRecordingSampleBuffer bleSamples
+ int exerciseType, ActivityRecordingKind recordingKind, String? activityTypeId, DateTime startTime, DateTime endTime, List<ExerciseRoutePoint> points, List<ActivityPauseInterval> pauseIntervals, List<int> routeBreakIndexes, List<ActivityRecordingLap> manualLaps, List<ActivityRecordingMarker> markers, double distanceMeters, double elevationGainedMeters, int repetitionCount, List<ActivityRecordedRepetitionSet> repetitionSets, BleRecordingSampleBuffer bleSamples, DateTime? hrrEffortEndedAt
 });
 
 
@@ -819,7 +1148,7 @@ class _$ActivityRecordingSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of ActivityRecordingSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? exerciseType = null,Object? recordingKind = null,Object? activityTypeId = freezed,Object? startTime = null,Object? endTime = null,Object? points = null,Object? pauseIntervals = null,Object? routeBreakIndexes = null,Object? manualLaps = null,Object? markers = null,Object? distanceMeters = null,Object? elevationGainedMeters = null,Object? repetitionCount = null,Object? repetitionSets = null,Object? bleSamples = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? exerciseType = null,Object? recordingKind = null,Object? activityTypeId = freezed,Object? startTime = null,Object? endTime = null,Object? points = null,Object? pauseIntervals = null,Object? routeBreakIndexes = null,Object? manualLaps = null,Object? markers = null,Object? distanceMeters = null,Object? elevationGainedMeters = null,Object? repetitionCount = null,Object? repetitionSets = null,Object? bleSamples = null,Object? hrrEffortEndedAt = freezed,}) {
   return _then(_self.copyWith(
 exerciseType: null == exerciseType ? _self.exerciseType : exerciseType // ignore: cast_nullable_to_non_nullable
 as int,recordingKind: null == recordingKind ? _self.recordingKind : recordingKind // ignore: cast_nullable_to_non_nullable
@@ -836,7 +1165,8 @@ as double,elevationGainedMeters: null == elevationGainedMeters ? _self.elevation
 as double,repetitionCount: null == repetitionCount ? _self.repetitionCount : repetitionCount // ignore: cast_nullable_to_non_nullable
 as int,repetitionSets: null == repetitionSets ? _self.repetitionSets : repetitionSets // ignore: cast_nullable_to_non_nullable
 as List<ActivityRecordedRepetitionSet>,bleSamples: null == bleSamples ? _self.bleSamples : bleSamples // ignore: cast_nullable_to_non_nullable
-as BleRecordingSampleBuffer,
+as BleRecordingSampleBuffer,hrrEffortEndedAt: freezed == hrrEffortEndedAt ? _self.hrrEffortEndedAt : hrrEffortEndedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 /// Create a copy of ActivityRecordingSnapshot
@@ -930,10 +1260,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int exerciseType,  ActivityRecordingKind recordingKind,  String? activityTypeId,  DateTime startTime,  DateTime endTime,  List<ExerciseRoutePoint> points,  List<ActivityPauseInterval> pauseIntervals,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  double distanceMeters,  double elevationGainedMeters,  int repetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  BleRecordingSampleBuffer bleSamples)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int exerciseType,  ActivityRecordingKind recordingKind,  String? activityTypeId,  DateTime startTime,  DateTime endTime,  List<ExerciseRoutePoint> points,  List<ActivityPauseInterval> pauseIntervals,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  double distanceMeters,  double elevationGainedMeters,  int repetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  BleRecordingSampleBuffer bleSamples,  DateTime? hrrEffortEndedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ActivityRecordingSnapshot() when $default != null:
-return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_that.startTime,_that.endTime,_that.points,_that.pauseIntervals,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.distanceMeters,_that.elevationGainedMeters,_that.repetitionCount,_that.repetitionSets,_that.bleSamples);case _:
+return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_that.startTime,_that.endTime,_that.points,_that.pauseIntervals,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.distanceMeters,_that.elevationGainedMeters,_that.repetitionCount,_that.repetitionSets,_that.bleSamples,_that.hrrEffortEndedAt);case _:
   return orElse();
 
 }
@@ -951,10 +1281,10 @@ return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int exerciseType,  ActivityRecordingKind recordingKind,  String? activityTypeId,  DateTime startTime,  DateTime endTime,  List<ExerciseRoutePoint> points,  List<ActivityPauseInterval> pauseIntervals,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  double distanceMeters,  double elevationGainedMeters,  int repetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  BleRecordingSampleBuffer bleSamples)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int exerciseType,  ActivityRecordingKind recordingKind,  String? activityTypeId,  DateTime startTime,  DateTime endTime,  List<ExerciseRoutePoint> points,  List<ActivityPauseInterval> pauseIntervals,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  double distanceMeters,  double elevationGainedMeters,  int repetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  BleRecordingSampleBuffer bleSamples,  DateTime? hrrEffortEndedAt)  $default,) {final _that = this;
 switch (_that) {
 case _ActivityRecordingSnapshot():
-return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_that.startTime,_that.endTime,_that.points,_that.pauseIntervals,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.distanceMeters,_that.elevationGainedMeters,_that.repetitionCount,_that.repetitionSets,_that.bleSamples);case _:
+return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_that.startTime,_that.endTime,_that.points,_that.pauseIntervals,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.distanceMeters,_that.elevationGainedMeters,_that.repetitionCount,_that.repetitionSets,_that.bleSamples,_that.hrrEffortEndedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -971,10 +1301,10 @@ return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int exerciseType,  ActivityRecordingKind recordingKind,  String? activityTypeId,  DateTime startTime,  DateTime endTime,  List<ExerciseRoutePoint> points,  List<ActivityPauseInterval> pauseIntervals,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  double distanceMeters,  double elevationGainedMeters,  int repetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  BleRecordingSampleBuffer bleSamples)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int exerciseType,  ActivityRecordingKind recordingKind,  String? activityTypeId,  DateTime startTime,  DateTime endTime,  List<ExerciseRoutePoint> points,  List<ActivityPauseInterval> pauseIntervals,  List<int> routeBreakIndexes,  List<ActivityRecordingLap> manualLaps,  List<ActivityRecordingMarker> markers,  double distanceMeters,  double elevationGainedMeters,  int repetitionCount,  List<ActivityRecordedRepetitionSet> repetitionSets,  BleRecordingSampleBuffer bleSamples,  DateTime? hrrEffortEndedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _ActivityRecordingSnapshot() when $default != null:
-return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_that.startTime,_that.endTime,_that.points,_that.pauseIntervals,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.distanceMeters,_that.elevationGainedMeters,_that.repetitionCount,_that.repetitionSets,_that.bleSamples);case _:
+return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_that.startTime,_that.endTime,_that.points,_that.pauseIntervals,_that.routeBreakIndexes,_that.manualLaps,_that.markers,_that.distanceMeters,_that.elevationGainedMeters,_that.repetitionCount,_that.repetitionSets,_that.bleSamples,_that.hrrEffortEndedAt);case _:
   return null;
 
 }
@@ -986,7 +1316,7 @@ return $default(_that.exerciseType,_that.recordingKind,_that.activityTypeId,_tha
 
 
 class _ActivityRecordingSnapshot with DiagnosticableTreeMixin implements ActivityRecordingSnapshot {
-  const _ActivityRecordingSnapshot({required this.exerciseType, this.recordingKind = ActivityRecordingKind.gpsRoute, this.activityTypeId, required this.startTime, required this.endTime, required final  List<ExerciseRoutePoint> points, required final  List<ActivityPauseInterval> pauseIntervals, final  List<int> routeBreakIndexes = const <int>[], final  List<ActivityRecordingLap> manualLaps = const <ActivityRecordingLap>[], final  List<ActivityRecordingMarker> markers = const <ActivityRecordingMarker>[], required this.distanceMeters, required this.elevationGainedMeters, this.repetitionCount = 0, final  List<ActivityRecordedRepetitionSet> repetitionSets = const <ActivityRecordedRepetitionSet>[], this.bleSamples = const BleRecordingSampleBuffer()}): _points = points,_pauseIntervals = pauseIntervals,_routeBreakIndexes = routeBreakIndexes,_manualLaps = manualLaps,_markers = markers,_repetitionSets = repetitionSets;
+  const _ActivityRecordingSnapshot({required this.exerciseType, this.recordingKind = ActivityRecordingKind.gpsRoute, this.activityTypeId, required this.startTime, required this.endTime, required final  List<ExerciseRoutePoint> points, required final  List<ActivityPauseInterval> pauseIntervals, final  List<int> routeBreakIndexes = const <int>[], final  List<ActivityRecordingLap> manualLaps = const <ActivityRecordingLap>[], final  List<ActivityRecordingMarker> markers = const <ActivityRecordingMarker>[], required this.distanceMeters, required this.elevationGainedMeters, this.repetitionCount = 0, final  List<ActivityRecordedRepetitionSet> repetitionSets = const <ActivityRecordedRepetitionSet>[], this.bleSamples = const BleRecordingSampleBuffer(), this.hrrEffortEndedAt}): _points = points,_pauseIntervals = pauseIntervals,_routeBreakIndexes = routeBreakIndexes,_manualLaps = manualLaps,_markers = markers,_repetitionSets = repetitionSets;
   
 
 @override final  int exerciseType;
@@ -1040,6 +1370,10 @@ class _ActivityRecordingSnapshot with DiagnosticableTreeMixin implements Activit
 }
 
 @override@JsonKey() final  BleRecordingSampleBuffer bleSamples;
+/// When the effort stopped, for a heart-rate-recovery test. This is what gets written
+/// as a trailing rest segment, and it is the only thing that tells anyone reading the
+/// session back where the recovery began.
+@override final  DateTime? hrrEffortEndedAt;
 
 /// Create a copy of ActivityRecordingSnapshot
 /// with the given fields replaced by the non-null parameter values.
@@ -1052,21 +1386,21 @@ _$ActivityRecordingSnapshotCopyWith<_ActivityRecordingSnapshot> get copyWith => 
 void debugFillProperties(DiagnosticPropertiesBuilder properties) {
   properties
     ..add(DiagnosticsProperty('type', 'ActivityRecordingSnapshot'))
-    ..add(DiagnosticsProperty('exerciseType', exerciseType))..add(DiagnosticsProperty('recordingKind', recordingKind))..add(DiagnosticsProperty('activityTypeId', activityTypeId))..add(DiagnosticsProperty('startTime', startTime))..add(DiagnosticsProperty('endTime', endTime))..add(DiagnosticsProperty('points', points))..add(DiagnosticsProperty('pauseIntervals', pauseIntervals))..add(DiagnosticsProperty('routeBreakIndexes', routeBreakIndexes))..add(DiagnosticsProperty('manualLaps', manualLaps))..add(DiagnosticsProperty('markers', markers))..add(DiagnosticsProperty('distanceMeters', distanceMeters))..add(DiagnosticsProperty('elevationGainedMeters', elevationGainedMeters))..add(DiagnosticsProperty('repetitionCount', repetitionCount))..add(DiagnosticsProperty('repetitionSets', repetitionSets))..add(DiagnosticsProperty('bleSamples', bleSamples));
+    ..add(DiagnosticsProperty('exerciseType', exerciseType))..add(DiagnosticsProperty('recordingKind', recordingKind))..add(DiagnosticsProperty('activityTypeId', activityTypeId))..add(DiagnosticsProperty('startTime', startTime))..add(DiagnosticsProperty('endTime', endTime))..add(DiagnosticsProperty('points', points))..add(DiagnosticsProperty('pauseIntervals', pauseIntervals))..add(DiagnosticsProperty('routeBreakIndexes', routeBreakIndexes))..add(DiagnosticsProperty('manualLaps', manualLaps))..add(DiagnosticsProperty('markers', markers))..add(DiagnosticsProperty('distanceMeters', distanceMeters))..add(DiagnosticsProperty('elevationGainedMeters', elevationGainedMeters))..add(DiagnosticsProperty('repetitionCount', repetitionCount))..add(DiagnosticsProperty('repetitionSets', repetitionSets))..add(DiagnosticsProperty('bleSamples', bleSamples))..add(DiagnosticsProperty('hrrEffortEndedAt', hrrEffortEndedAt));
 }
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityRecordingSnapshot&&(identical(other.exerciseType, exerciseType) || other.exerciseType == exerciseType)&&(identical(other.recordingKind, recordingKind) || other.recordingKind == recordingKind)&&(identical(other.activityTypeId, activityTypeId) || other.activityTypeId == activityTypeId)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&const DeepCollectionEquality().equals(other._points, _points)&&const DeepCollectionEquality().equals(other._pauseIntervals, _pauseIntervals)&&const DeepCollectionEquality().equals(other._routeBreakIndexes, _routeBreakIndexes)&&const DeepCollectionEquality().equals(other._manualLaps, _manualLaps)&&const DeepCollectionEquality().equals(other._markers, _markers)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.elevationGainedMeters, elevationGainedMeters) || other.elevationGainedMeters == elevationGainedMeters)&&(identical(other.repetitionCount, repetitionCount) || other.repetitionCount == repetitionCount)&&const DeepCollectionEquality().equals(other._repetitionSets, _repetitionSets)&&(identical(other.bleSamples, bleSamples) || other.bleSamples == bleSamples));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityRecordingSnapshot&&(identical(other.exerciseType, exerciseType) || other.exerciseType == exerciseType)&&(identical(other.recordingKind, recordingKind) || other.recordingKind == recordingKind)&&(identical(other.activityTypeId, activityTypeId) || other.activityTypeId == activityTypeId)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&const DeepCollectionEquality().equals(other._points, _points)&&const DeepCollectionEquality().equals(other._pauseIntervals, _pauseIntervals)&&const DeepCollectionEquality().equals(other._routeBreakIndexes, _routeBreakIndexes)&&const DeepCollectionEquality().equals(other._manualLaps, _manualLaps)&&const DeepCollectionEquality().equals(other._markers, _markers)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.elevationGainedMeters, elevationGainedMeters) || other.elevationGainedMeters == elevationGainedMeters)&&(identical(other.repetitionCount, repetitionCount) || other.repetitionCount == repetitionCount)&&const DeepCollectionEquality().equals(other._repetitionSets, _repetitionSets)&&(identical(other.bleSamples, bleSamples) || other.bleSamples == bleSamples)&&(identical(other.hrrEffortEndedAt, hrrEffortEndedAt) || other.hrrEffortEndedAt == hrrEffortEndedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,exerciseType,recordingKind,activityTypeId,startTime,endTime,const DeepCollectionEquality().hash(_points),const DeepCollectionEquality().hash(_pauseIntervals),const DeepCollectionEquality().hash(_routeBreakIndexes),const DeepCollectionEquality().hash(_manualLaps),const DeepCollectionEquality().hash(_markers),distanceMeters,elevationGainedMeters,repetitionCount,const DeepCollectionEquality().hash(_repetitionSets),bleSamples);
+int get hashCode => Object.hash(runtimeType,exerciseType,recordingKind,activityTypeId,startTime,endTime,const DeepCollectionEquality().hash(_points),const DeepCollectionEquality().hash(_pauseIntervals),const DeepCollectionEquality().hash(_routeBreakIndexes),const DeepCollectionEquality().hash(_manualLaps),const DeepCollectionEquality().hash(_markers),distanceMeters,elevationGainedMeters,repetitionCount,const DeepCollectionEquality().hash(_repetitionSets),bleSamples,hrrEffortEndedAt);
 
 @override
 String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
-  return 'ActivityRecordingSnapshot(exerciseType: $exerciseType, recordingKind: $recordingKind, activityTypeId: $activityTypeId, startTime: $startTime, endTime: $endTime, points: $points, pauseIntervals: $pauseIntervals, routeBreakIndexes: $routeBreakIndexes, manualLaps: $manualLaps, markers: $markers, distanceMeters: $distanceMeters, elevationGainedMeters: $elevationGainedMeters, repetitionCount: $repetitionCount, repetitionSets: $repetitionSets, bleSamples: $bleSamples)';
+  return 'ActivityRecordingSnapshot(exerciseType: $exerciseType, recordingKind: $recordingKind, activityTypeId: $activityTypeId, startTime: $startTime, endTime: $endTime, points: $points, pauseIntervals: $pauseIntervals, routeBreakIndexes: $routeBreakIndexes, manualLaps: $manualLaps, markers: $markers, distanceMeters: $distanceMeters, elevationGainedMeters: $elevationGainedMeters, repetitionCount: $repetitionCount, repetitionSets: $repetitionSets, bleSamples: $bleSamples, hrrEffortEndedAt: $hrrEffortEndedAt)';
 }
 
 
@@ -1077,7 +1411,7 @@ abstract mixin class _$ActivityRecordingSnapshotCopyWith<$Res> implements $Activ
   factory _$ActivityRecordingSnapshotCopyWith(_ActivityRecordingSnapshot value, $Res Function(_ActivityRecordingSnapshot) _then) = __$ActivityRecordingSnapshotCopyWithImpl;
 @override @useResult
 $Res call({
- int exerciseType, ActivityRecordingKind recordingKind, String? activityTypeId, DateTime startTime, DateTime endTime, List<ExerciseRoutePoint> points, List<ActivityPauseInterval> pauseIntervals, List<int> routeBreakIndexes, List<ActivityRecordingLap> manualLaps, List<ActivityRecordingMarker> markers, double distanceMeters, double elevationGainedMeters, int repetitionCount, List<ActivityRecordedRepetitionSet> repetitionSets, BleRecordingSampleBuffer bleSamples
+ int exerciseType, ActivityRecordingKind recordingKind, String? activityTypeId, DateTime startTime, DateTime endTime, List<ExerciseRoutePoint> points, List<ActivityPauseInterval> pauseIntervals, List<int> routeBreakIndexes, List<ActivityRecordingLap> manualLaps, List<ActivityRecordingMarker> markers, double distanceMeters, double elevationGainedMeters, int repetitionCount, List<ActivityRecordedRepetitionSet> repetitionSets, BleRecordingSampleBuffer bleSamples, DateTime? hrrEffortEndedAt
 });
 
 
@@ -1094,7 +1428,7 @@ class __$ActivityRecordingSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of ActivityRecordingSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? exerciseType = null,Object? recordingKind = null,Object? activityTypeId = freezed,Object? startTime = null,Object? endTime = null,Object? points = null,Object? pauseIntervals = null,Object? routeBreakIndexes = null,Object? manualLaps = null,Object? markers = null,Object? distanceMeters = null,Object? elevationGainedMeters = null,Object? repetitionCount = null,Object? repetitionSets = null,Object? bleSamples = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? exerciseType = null,Object? recordingKind = null,Object? activityTypeId = freezed,Object? startTime = null,Object? endTime = null,Object? points = null,Object? pauseIntervals = null,Object? routeBreakIndexes = null,Object? manualLaps = null,Object? markers = null,Object? distanceMeters = null,Object? elevationGainedMeters = null,Object? repetitionCount = null,Object? repetitionSets = null,Object? bleSamples = null,Object? hrrEffortEndedAt = freezed,}) {
   return _then(_ActivityRecordingSnapshot(
 exerciseType: null == exerciseType ? _self.exerciseType : exerciseType // ignore: cast_nullable_to_non_nullable
 as int,recordingKind: null == recordingKind ? _self.recordingKind : recordingKind // ignore: cast_nullable_to_non_nullable
@@ -1111,7 +1445,8 @@ as double,elevationGainedMeters: null == elevationGainedMeters ? _self.elevation
 as double,repetitionCount: null == repetitionCount ? _self.repetitionCount : repetitionCount // ignore: cast_nullable_to_non_nullable
 as int,repetitionSets: null == repetitionSets ? _self._repetitionSets : repetitionSets // ignore: cast_nullable_to_non_nullable
 as List<ActivityRecordedRepetitionSet>,bleSamples: null == bleSamples ? _self.bleSamples : bleSamples // ignore: cast_nullable_to_non_nullable
-as BleRecordingSampleBuffer,
+as BleRecordingSampleBuffer,hrrEffortEndedAt: freezed == hrrEffortEndedAt ? _self.hrrEffortEndedAt : hrrEffortEndedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

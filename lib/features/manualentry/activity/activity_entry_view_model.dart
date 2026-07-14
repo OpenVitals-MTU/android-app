@@ -1193,6 +1193,9 @@ class ActivityEntryViewModel extends Notifier<ActivityEntryUiState> {
       recordedPauseIntervals: snapshot.pauseIntervals,
       recordedLaps: snapshot.manualLaps.map(_lapToExerciseLap).toList(),
       recordedMarkers: snapshot.markers,
+      recordedRecoveryStartTime: snapshot.hrrEffortEndedAt == null
+          ? null
+          : _clock.toZone(snapshot.hrrEffortEndedAt!),
       isRecordingDraft: true,
       startDateText: isoLocalDate(start),
       startTimeText: timeFormatterText(start),
