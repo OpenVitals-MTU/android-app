@@ -83,6 +83,16 @@ abstract final class HcPermissions {
   static final String writeRespiratoryRate = _write('RESPIRATORY_RATE');
   static final String writeBodyTemperature = _write('BODY_TEMPERATURE');
   static final String writeMindfulness = _write('MINDFULNESS');
+
+  // The sensor series a recorded activity carries alongside its session. These are
+  // already in the set the app REQUESTS ([HealthPermissionService.activityWritePermissions]);
+  // what they were missing was a name to be checked by, which is why a recording could
+  // be saved without ever asking whether its heart rate was allowed through.
+  static final String writeHeartRate = _write('HEART_RATE');
+  static final String writePower = _write('POWER');
+  static final String writeSpeed = _write('SPEED');
+  static final String writeCyclingCadence = _write('CYCLING_PEDALING_CADENCE');
+  static final String writeStepsCadence = _write('STEPS_CADENCE');
 }
 
 /// Feature-availability inputs that gate parts of the taxonomy, mirroring the

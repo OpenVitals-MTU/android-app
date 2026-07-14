@@ -321,15 +321,32 @@ class ActivityRepositoryImpl implements ActivityRepository {
       };
 
   @override
-  Set<String> activityWritePermissionsForRequest(ActivityWriteRequest request) =>
-      activityWritePermissionsFor(
+  Set<String> activityWritePermissionsForRequest(ActivityWriteRequest request) {
+    final ble = request.bleSamples;
+    return {
+      ...activityWritePermissionsFor(
         includeRoute: request.routePoints.isNotEmpty,
         includeDistance: request.distanceMeters != null,
         includeElevation: request.elevationGainedMeters != null,
         includeActiveCalories: request.activeCaloriesKcal != null,
         includeTotalCalories: request.totalCaloriesKcal != null,
         includeSteps: request.stepsCount != null,
-      );
+      ),
+      // The sensor series a recorded activity carries. These were missing, and the
+      // omission was not cosmetic: the session and every one of these records go to
+      // Health Connect in ONE atomic insertRecords call, so a user who granted
+      // WRITE_EXERCISE but not WRITE_HEART_RATE had the whole save thrown — after a
+      // permission check that had just told them everything was in order.
+      //
+      // One permission per series that actually has samples, mirroring the native
+      // writer, which skips an empty series rather than writing an empty record.
+      if (ble.heartRateSamples.isNotEmpty) HcPermissions.writeHeartRate,
+      if (ble.powerSamples.isNotEmpty) HcPermissions.writePower,
+      if (ble.speedSamples.isNotEmpty) HcPermissions.writeSpeed,
+      if (ble.cyclingCadenceSamples.isNotEmpty) HcPermissions.writeCyclingCadence,
+      if (ble.stepsCadenceSamples.isNotEmpty) HcPermissions.writeStepsCadence,
+    };
+  }
 
   @override
   Set<String> plannedWorkoutWritePermissions() =>
