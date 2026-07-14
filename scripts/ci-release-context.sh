@@ -156,9 +156,8 @@ if [ "$release_channel" = "release" ]; then
             "Versioned prerelease build from commit ${CI_COMMIT_SHA:?}." \
             "" \
             "Assets:" \
-            "- Signed release APK per ABI, named by version code:" \
-            "  - OpenVitals-$release_tag-$((version_code * 10 + 2)).apk - arm64-v8a (64-bit; almost every phone)" \
-            "  - OpenVitals-$release_tag-$((version_code * 10 + 1)).apk - armeabi-v7a (32-bit; older devices)" \
+            "- OpenVitals-$release_tag-arm64-v8a.apk - 64-bit; almost every phone made in the last decade" \
+            "- OpenVitals-$release_tag-armeabi-v7a.apk - 32-bit; older devices" \
             "- A SHA-256 checksum beside each" \
             > "$notes_file"
     fi
@@ -222,16 +221,13 @@ if [ -n "$version_code" ]; then
                 ;;
         esac
         abi_version_code=$((version_code * 10 + abi_code))
-        # A release names its APKs by version CODE, because that is the only thing
-        # F-Droid can template: its `Binaries:` URL takes the version name (%v) and the
-        # version code (%c) and knows nothing about ABIs. A nightly names them by ABI
-        # instead — its download page is a stable URL that each build overwrites, and a
-        # name that changed every night would just pile up dead assets.
-        if [ "$release_channel" = "nightly" ]; then
-            abi_apk_basename="OpenVitals-nightly-$abi.apk"
-        else
-            abi_apk_basename="OpenVitals-$release_tag-$abi_version_code.apk"
-        fi
+        # Named by ABI, not by version code, because the name is what a human reads off
+        # the releases page when choosing which file to download -- and a version code
+        # tells them nothing. F-Droid does not need the code in the name: its per-build
+        # `binary:` field gives EACH ABI its own URL (only the app-wide `Binaries:` is
+        # limited to %v and %c and so could not name an ABI). Same shape for nightly,
+        # whose stable page each build overwrites in place.
+        abi_apk_basename="OpenVitals-$release_tag-$abi.apk"
         apk_builds="$apk_builds $platform:$abi_version_code:$abi_apk_basename"
     done
     apk_builds="${apk_builds# }"
