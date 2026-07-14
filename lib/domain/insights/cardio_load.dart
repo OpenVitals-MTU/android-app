@@ -4,6 +4,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../model/activity_models.dart';
 import '../model/heart_models.dart';
+import 'max_heart_rate.dart';
 
 part 'cardio_load.freezed.dart';
 
@@ -13,8 +14,6 @@ const double _goodHeartRateCoverageRatio = 0.6;
 const double _maxHeartRateSampleGapMinutes = 5.0;
 const double _activeHeartRateReserveThreshold = 0.3;
 const double _minimumMovementFallbackLoad = 0.25;
-const int _observedMaxHeartRateMinimumBpm = 150;
-const int _observedMaxHeartRateRestingDeltaBpm = 60;
 
 enum CardioLoadConfidence {
   high('HIGH'),
@@ -265,11 +264,8 @@ _MaxHeartRateContext? _maxHeartRateContext(
   ];
   if (candidates.isEmpty) return null;
   final observedMax = candidates.reduce(math.max);
-  final observedAvailable = observedMax >=
-      math.max(
-        _observedMaxHeartRateMinimumBpm,
-        restingHeartRate + _observedMaxHeartRateRestingDeltaBpm,
-      );
+  final observedAvailable =
+      isObservedMaxHeartRateTrustworthy(observedMax, restingHeartRate);
   final estimatedMax = math.max(
     observedMax + 10,
     restingHeartRate + 70,

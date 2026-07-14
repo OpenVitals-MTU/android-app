@@ -4,6 +4,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../model/heart_models.dart';
 import 'cardio_load.dart';
+import 'max_heart_rate.dart';
 
 part 'intensity_minutes.freezed.dart';
 
@@ -18,8 +19,6 @@ const double _vigorousKcalPerMinute = 8.0;
 const double _moderateKcalPerMinute = 3.0;
 const double _dailyActiveCaloriesModerateKcalPerMinute = 5.0;
 const double _cardioLoadToModerateEquivalentMinutes = 4.0;
-const int _observedMaxHeartRateMinimumBpm = 150;
-const int _observedMaxHeartRateRestingDeltaBpm = 60;
 
 enum IntensityMinutesConfidence {
   high('HIGH'),
@@ -311,11 +310,8 @@ _IntensityMaxHeartRateContext? _maxHeartRateContext(
   ];
   if (candidates.isEmpty) return null;
   final observedMax = candidates.reduce(math.max);
-  final observedAvailable = observedMax >=
-      math.max(
-        _observedMaxHeartRateMinimumBpm,
-        restingHeartRate + _observedMaxHeartRateRestingDeltaBpm,
-      );
+  final observedAvailable =
+      isObservedMaxHeartRateTrustworthy(observedMax, restingHeartRate);
   final estimatedMax = math.max(
     observedMax + 10,
     restingHeartRate + 70,
