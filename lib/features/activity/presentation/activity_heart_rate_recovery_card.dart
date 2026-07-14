@@ -86,6 +86,8 @@ class ActivityHeartRateRecoveryCard extends StatelessWidget {
     return [
       if (issues.contains(HeartRateRecoveryIssue.noRecoverySamples))
         l10n.heartRateRecoveryNoRecoverySamples,
+      if (issues.contains(HeartRateRecoveryIssue.heartRateDidNotFall))
+        l10n.heartRateRecoveryDidNotFall,
       if (issues.contains(HeartRateRecoveryIssue.cooldownBeforeStop))
         l10n.heartRateRecoveryCooldownBeforeStop,
       if (issues.contains(HeartRateRecoveryIssue.effortNotVigorous))

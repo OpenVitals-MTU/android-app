@@ -3477,6 +3477,10 @@
   "@heartRateRecoveryNoRecoverySamples": {
     "description": "Why a recovery could not be measured at all: no samples after the workout."
   },
+  "heartRateRecoveryDidNotFall": "Your heart rate did not fall after this workout ended — at some point it was higher than the peak. The recording ended before you did, so there is no recovery here to measure.",
+  "@heartRateRecoveryDidNotFall": {
+    "description": "Why the reading is invalid: the heart rate rose after the session ended, so the effort had not actually stopped."
+  },
   "heartRateRecoveryCoarseSampling": "Your device recorded heart rate too rarely after the workout for the earliest marks to exist. A chest strap records every second.",
   "@heartRateRecoveryCoarseSampling": {
     "description": "Why the 10s and 30s marks are blank: the samples are too far apart."

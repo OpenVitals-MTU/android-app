@@ -166,6 +166,11 @@ enum HeartRateRecoveryIssue {
 
   /// Samples too far apart for the fine marks to exist.
   coarseSampling,
+
+  /// The heart rate did not fall after the "stop" — it was the same or higher at one of
+  /// the marks. Whatever ended, the effort did not: the recording stopped before the
+  /// person did. There is no recovery here, only a session boundary.
+  heartRateDidNotFall,
 }
 
 /// One mark. [heartRateBpm] is null when no sample fell within tolerance — the mark
@@ -219,9 +224,16 @@ abstract class HeartRateRecoveryReading with _$HeartRateRecoveryReading {
     return null;
   }
 
-  /// Whether this reading should be charted as a comparable data point.
-  bool get isComparable => quality == HeartRateRecoveryQuality.clean ||
-      quality == HeartRateRecoveryQuality.approximate;
+  /// Whether this reading may be charted as a point in a trend.
+  ///
+  /// Being merely "not invalid" is not enough. The trend is of the one-minute fall, so a
+  /// reading that never measured it has nothing to contribute — and on watch data, which
+  /// commonly samples once a minute, that is most of them. Charting them would be
+  /// charting the gaps.
+  bool get isComparable =>
+      (quality == HeartRateRecoveryQuality.clean ||
+          quality == HeartRateRecoveryQuality.approximate) &&
+      headlineDropBpm != null;
 }
 
 /// Where to measure from, and what to read, for one Health Connect session.
@@ -388,6 +400,16 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
     issues.add(HeartRateRecoveryIssue.cooldownBeforeStop);
   }
 
+  // Did the heart rate fall at all? If it was as high or higher at any mark than it was
+  // at the peak, then whatever the session end was, it was not the end of the effort —
+  // the recording stopped while the rider kept riding. A "recovery" of MINUS four beats
+  // is not a small recovery, it is not a recovery, and reporting it as one would be the
+  // worst thing this code could do.
+  if (marks.any(
+      (mark) => mark.dropBpm != null && mark.dropBpm! <= 0)) {
+    issues.add(HeartRateRecoveryIssue.heartRateDidNotFall);
+  }
+
   return HeartRateRecoveryReading(
     recoveryStart: recoveryStart,
     source: source,
@@ -411,7 +433,8 @@ HeartRateRecoveryQuality _quality(
   List<HeartRateRecoveryMark> marks,
 ) {
   if (issues.contains(HeartRateRecoveryIssue.effortNotVigorous) ||
-      issues.contains(HeartRateRecoveryIssue.cooldownBeforeStop)) {
+      issues.contains(HeartRateRecoveryIssue.cooldownBeforeStop) ||
+      issues.contains(HeartRateRecoveryIssue.heartRateDidNotFall)) {
     return HeartRateRecoveryQuality.invalid;
   }
   // Samples after the stop, but none of them near enough to any mark to be one. Nothing

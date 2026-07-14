@@ -212,6 +212,47 @@ void main() {
           reason: 'an invalid reading must never reach the trend');
     });
 
+    test('a heart rate that ROSE after the stop is not a recovery', () {
+      // Taken from a real ride: the watch sampled about once a minute, the session ended
+      // while the rider was still riding, and the heart rate at 2, 3 and 4 minutes came
+      // back HIGHER than the "peak" — drops of -4, -2 and -3. A recovery of minus four
+      // beats is not a small recovery. It is not a recovery.
+      final samples = <HeartRateSample>[
+        for (var t = -180; t <= 0; t += 60) _hr(t, 113),
+        _hr(60, 115),
+        _hr(120, 117),
+        _hr(180, 115),
+        _hr(240, 116),
+        _hr(300, 94),
+      ];
+
+      final reading = _calculate(samples, profileMax: 130);
+
+      expect(reading.issues, contains(HeartRateRecoveryIssue.heartRateDidNotFall));
+      expect(reading.quality, HeartRateRecoveryQuality.invalid);
+      expect(reading.isComparable, isFalse,
+          reason: 'a negative recovery must never reach the trend');
+    });
+
+    test('a reading with no one-minute mark cannot be charted', () {
+      // Also from a real ride: the only sample that landed near any mark was at 30
+      // seconds. The trend is of the ONE-minute fall, so this reading has nothing to
+      // contribute to it, however sound the 30-second figure is.
+      final samples = <HeartRateSample>[
+        for (var t = -120; t <= 0; t += 60) _hr(t, 120),
+        _hr(30, 98),
+        _hr(210, 92),
+      ];
+
+      final reading = _calculate(samples, profileMax: 130);
+
+      expect(_bpmMark(reading, const Duration(seconds: 30)), 98);
+      expect(_dropAt(reading, const Duration(seconds: 30)), 22);
+      expect(_bpmMark(reading, const Duration(minutes: 1)), isNull);
+      expect(reading.isComparable, isFalse,
+          reason: 'no one-minute fall means no point to plot');
+    });
+
     test('an effort below 70% of max has no recovery worth the name', () {
       // Peak 110 against a max of 190 == 58%.
       final samples = [
