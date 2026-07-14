@@ -182,6 +182,34 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
     _syncTicker(recording);
   }
 
+  /// Starts a guided heart-rate-recovery test. Same shape as [startRecording] — the
+  /// service decides whether it can, and puts its reason on the recording state.
+  Future<void> startHeartRateRecoveryTest(
+    ActivityEntryType activityType,
+    HeartRateRecoveryTestConfig config,
+  ) async {
+    if (state.isStarting) return;
+    final service = _service;
+    state = state.copyWith(start: const CommandState.running());
+    final started = await service.startHeartRateRecoveryTest(activityType, config);
+    if (!ref.mounted) return;
+    final recording = service.state.value;
+    state = state.copyWith(
+      recording: recording,
+      start: started
+          ? const CommandState.success(null)
+          : CommandState.failure(
+              ScreenErrorMessage(
+                recording.errorMessage ?? kNoActiveRecordingMessage,
+              ),
+            ),
+    );
+    _syncTicker(recording);
+  }
+
+  /// "I am done" — ends the effort and starts the five minutes that are the measurement.
+  void endHeartRateRecoveryEffort() => _service.endHeartRateRecoveryEffort();
+
   void pauseRecording() => _service.pauseRecording();
 
   void resumeRecording() => _service.resumeRecording();

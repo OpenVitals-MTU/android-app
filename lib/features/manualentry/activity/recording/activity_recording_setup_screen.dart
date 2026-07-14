@@ -8,6 +8,7 @@ import '../../../../ui/components/ov_surface.dart';
 import '../activity_entry_form_fields.dart';
 import '../activity_entry_state.dart';
 import '../../../../domain/model/activity_entry_types.dart';
+import '../../../../domain/model/ble_sensor_models.dart';
 import '../activity_entry_ui_text.dart';
 import 'activity_recording.dart';
 import 'activity_recording_device_support.dart';
@@ -23,6 +24,7 @@ class ActivityRecordingSetupScreen extends ConsumerStatefulWidget {
     required this.unitFormatter,
     required this.onSelectActivityType,
     required this.onStartRecording,
+    required this.onStartHeartRateRecoveryTest,
     required this.onRequestLocationPermission,
     required this.onRequestActivityRecognitionPermission,
     required this.onChooseSource,
@@ -37,6 +39,10 @@ class ActivityRecordingSetupScreen extends ConsumerStatefulWidget {
   /// Kotlin `onStartRecording(Location?, Long)`.
   final void Function(ActivityRecordingInitialFix? initialFix, int restSeconds)
       onStartRecording;
+
+  /// Starts a guided heart-rate-recovery test instead of an ordinary recording.
+  final void Function(HeartRateRecoveryTestConfig config)
+      onStartHeartRateRecoveryTest;
   final VoidCallback onRequestLocationPermission;
   final VoidCallback onRequestActivityRecognitionPermission;
   final VoidCallback onChooseSource;
@@ -50,6 +56,9 @@ class ActivityRecordingSetupScreen extends ConsumerStatefulWidget {
 class _ActivityRecordingSetupScreenState
     extends ConsumerState<ActivityRecordingSetupScreen> {
   final _restSeconds = TextEditingController();
+  final _hrrWarmupMinutes = TextEditingController(text: '3');
+  final _hrrTargetBpm = TextEditingController();
+  bool _hrrTest = false;
 
   /// Kotlin resets the field with `rememberSaveable(selectedType.id)`.
   String? _restSecondsTypeId;
@@ -57,6 +66,8 @@ class _ActivityRecordingSetupScreenState
   @override
   void dispose() {
     _restSeconds.dispose();
+    _hrrWarmupMinutes.dispose();
+    _hrrTargetBpm.dispose();
     super.dispose();
   }
 
@@ -184,9 +195,77 @@ class _ActivityRecordingSetupScreenState
       return [
         ActivityRecordingSensorStatusCard(
             deviceStatuses: widget.recordingState.bleDeviceStatuses),
+        ..._heartRateRecoverySection(baseEnabled),
       ];
     }
     return const [];
+  }
+
+  /// The heart-rate-recovery test, offered only where it can actually be measured.
+  ///
+  /// It needs a heart rate arriving live, every second, right through the five minutes
+  /// after the effort — which means a connected sensor. A watch cannot drive this: Health
+  /// Connect hands its data over long after the fact, never live, so there would be
+  /// nothing to count down against and nothing to say "stop" to. So the option is shown
+  /// only when a heart-rate sensor is actually connected, rather than offered to everyone
+  /// and then failing at the moment it matters.
+  List<Widget> _heartRateRecoverySection(bool baseEnabled) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final hasHeartRateSensor = widget.recordingState.bleDeviceStatuses.any(
+      (status) =>
+          status.status == BleConnectionStatus.connected &&
+          status.capabilities.contains(BleSensorCapability.heartRate),
+    );
+    if (!hasHeartRateSensor) return const [];
+
+    return [
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _hrrTest,
+        onChanged: baseEnabled
+            ? (value) => setState(() => _hrrTest = value)
+            : null,
+        title: Text(l10n.activityRecordingHrrTitle),
+        subtitle: Text(l10n.activityRecordingHrrBody),
+      ),
+      if (_hrrTest) ...[
+        Row(
+          spacing: 12,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _hrrWarmupMinutes,
+                enabled: baseEnabled,
+                maxLines: 1,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.activityRecordingHrrWarmupLabel,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
+            Expanded(
+              child: TextField(
+                controller: _hrrTargetBpm,
+                enabled: baseEnabled,
+                maxLines: 1,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.activityRecordingHrrTargetLabel,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+        Text(
+          l10n.activityRecordingHrrHint,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ],
+    ];
   }
 
   /// Kotlin's Start button is really three actions: ask for the permission the
@@ -205,6 +284,22 @@ class _ActivityRecordingSetupScreenState
       widget.onRequestLocationPermission();
       return;
     }
+    if (_hrrTest) {
+      final warmupMinutes = int.tryParse(_hrrWarmupMinutes.text.trim());
+      final targetBpm = int.tryParse(_hrrTargetBpm.text.trim());
+      widget.onStartHeartRateRecoveryTest(
+        HeartRateRecoveryTestConfig(
+          warmupSeconds:
+              ((warmupMinutes ?? 3) * 60).clamp(0, 60 * 60),
+          // A target is optional: the rider can always end the effort by hand, and on a
+          // day when the legs are not there they will have to.
+          targetHeartRateBpm:
+              (targetBpm != null && targetBpm > 0) ? targetBpm : null,
+        ),
+      );
+      return;
+    }
+
     final restSeconds = int.tryParse(_restSeconds.text.trim()) ?? 0;
     widget.onStartRecording(
       selectedType.supportsGpsRoute ? gpsFix.initialFix : null,

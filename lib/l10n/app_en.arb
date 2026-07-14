@@ -3421,6 +3421,46 @@
   "@settingsHealthConnectMindfulnessBody": {
     "description": "Explains why the Health Connect mindfulness integration is off by default."
   },
+  "activityRecordingHrrTitle": "Heart rate recovery test",
+  "@activityRecordingHrrTitle": {
+    "description": "Switch on the recording setup screen: run a guided HRR test instead of an ordinary recording."
+  },
+  "activityRecordingHrrBody": "Warm up, go hard, then stop dead. The app measures how far your heart rate falls over the next five minutes.",
+  "@activityRecordingHrrBody": {
+    "description": "What the guided heart-rate-recovery test does."
+  },
+  "activityRecordingHrrWarmupLabel": "Warmup (min)",
+  "@activityRecordingHrrWarmupLabel": {
+    "description": "How long to warm up before the effort. 0 to start the effort immediately."
+  },
+  "activityRecordingHrrTargetLabel": "Target (bpm)",
+  "@activityRecordingHrrTargetLabel": {
+    "description": "Optional heart rate that ends the effort and starts the measurement."
+  },
+  "activityRecordingHrrHint": "Leave the target empty to end the effort yourself. Stopping dead is what makes the measurement work — keep still once you are told to stop.",
+  "@activityRecordingHrrHint": {
+    "description": "Explains that the target is optional and that stopping abruptly is what the measurement depends on."
+  },
+  "activityRecordingHrrPhaseWarmup": "Warming up",
+  "@activityRecordingHrrPhaseWarmup": {
+    "description": "Phase banner during the warmup."
+  },
+  "activityRecordingHrrPhaseEffort": "Go hard",
+  "@activityRecordingHrrPhaseEffort": {
+    "description": "Phase banner during the effort."
+  },
+  "activityRecordingHrrPhaseRecovery": "Recovering — keep still",
+  "@activityRecordingHrrPhaseRecovery": {
+    "description": "Phase banner while the recovery is being measured."
+  },
+  "activityRecordingHrrPhaseComplete": "Recovery complete — save the workout",
+  "@activityRecordingHrrPhaseComplete": {
+    "description": "Phase banner once the five minutes are up."
+  },
+  "activityRecordingHrrEndEffort": "End effort",
+  "@activityRecordingHrrEndEffort": {
+    "description": "Button that ends the effort and starts the measurement."
+  },
   "activityRecordingHrrCueEffort": "Go hard now.",
   "@activityRecordingHrrCueEffort": {
     "description": "Spoken when the warmup ends and the effort begins."

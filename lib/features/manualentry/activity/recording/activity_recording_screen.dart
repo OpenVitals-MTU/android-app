@@ -15,6 +15,7 @@ import 'activity_recording.dart';
 import 'activity_recording_controls.dart';
 import 'activity_recording_dashboard.dart';
 import 'activity_recording_device_support.dart';
+import 'activity_heart_rate_recovery_banner.dart';
 import 'activity_recording_focus_mode.dart';
 import 'activity_recording_gps_tabs.dart';
 import 'activity_recording_splits_ui.dart';
@@ -28,6 +29,7 @@ class ActivityRecordingScreen extends ConsumerStatefulWidget {
     required this.unitFormatter,
     required this.onStartRecording,
     required this.onPauseRecording,
+    required this.onEndHeartRateRecoveryEffort,
     required this.onResumeRecording,
     required this.onAddLap,
     required this.onAddMarker,
@@ -48,6 +50,9 @@ class ActivityRecordingScreen extends ConsumerStatefulWidget {
   final UnitFormatter unitFormatter;
   final ValueChanged<ActivityRecordingInitialFix?> onStartRecording;
   final VoidCallback onPauseRecording;
+
+  /// Ends the effort and starts the five minutes that are the measurement.
+  final VoidCallback onEndHeartRateRecoveryEffort;
   final VoidCallback onResumeRecording;
   final VoidCallback onAddLap;
   final VoidCallback onAddMarker;
@@ -340,6 +345,14 @@ class _ActivityRecordingScreenState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 16,
               children: [
+                // Above everything, because during a recovery test it is the only thing
+                // on this screen the rider needs.
+                if (widget.state.isHeartRateRecoveryTest)
+                  ActivityHeartRateRecoveryPhaseBanner(
+                    state: widget.state,
+                    now: _now,
+                    onEndEffort: widget.onEndHeartRateRecoveryEffort,
+                  ),
                 RecordingStatsTab(
                   state: widget.state,
                   totalTime: totalTime,
