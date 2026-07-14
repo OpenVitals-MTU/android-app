@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'chart_axis.dart';
+import 'chart_viewport.dart';
 import 'chart_curve.dart';
 import 'chart_paint.dart';
 import 'chart_reveal.dart';
@@ -45,6 +46,7 @@ class MetricLinePlot extends StatelessWidget {
     this.guides = const <ChartGuideLine>[],
     this.markers = const <ChartMarker>[],
     this.scrubLabelBuilder,
+    this.viewport = ChartViewport.full,
   });
 
   final List<MetricLinePlotPoint> points;
@@ -74,6 +76,10 @@ class MetricLinePlot extends StatelessWidget {
   /// which is what a chart with nothing to say about a single point should be.
   final (String primary, String? secondary) Function(MetricLinePlotPoint point)?
       scrubLabelBuilder;
+
+  /// The slice of the axis on show. [ChartViewport.full] -- the whole chart -- unless a
+  /// [ChartZoom] above has been pinched.
+  final ChartViewport viewport;
 
   @override
   Widget build(BuildContext context) {
@@ -113,11 +119,18 @@ class MetricLinePlot extends StatelessWidget {
               strokeWidth: lineStrokeWidth,
               pointRadius: drawPoints ? pointRadius : 0,
               progress: t,
+              viewport: viewport,
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Whether a point at [xFraction] of the data is inside the slice on show.
+  bool _isVisible(double xFraction) {
+    final visible = viewport.visibleFraction(xFraction);
+    return visible >= 0.0 && visible <= 1.0;
   }
 
   /// Wraps the plot in a [ChartScrubber] when the caller said how to label a
@@ -132,10 +145,11 @@ class MetricLinePlot extends StatelessWidget {
       accentColor: accentColor,
       targets: [
         for (final point in points)
-          () {
+          if (_isVisible(point.xFraction))
+            () {
             final (primary, secondary) = builder(point);
             return (
-              xFraction: point.xFraction.clamp(0.0, 1.0),
+              xFraction: viewport.visibleFraction(point.xFraction),
               yFraction: ((point.value - minValue) / safeSpan).clamp(0.0, 1.0),
               primary: primary,
               secondary: secondary,
@@ -158,8 +172,10 @@ class _MetricLinePlotPainter extends CustomPainter {
     required this.strokeWidth,
     required this.pointRadius,
     required this.progress,
+    required this.viewport,
   });
 
+  final ChartViewport viewport;
   final List<MetricLinePlotPoint> points;
   final double minValue;
   final double maxValue;
@@ -175,7 +191,7 @@ class _MetricLinePlotPainter extends CustomPainter {
   final double progress;
 
   Offset _offsetFor(MetricLinePlotPoint point, Size size) {
-    final x = point.xFraction.clamp(0.0, 1.0) * size.width;
+    final x = viewport.visibleFraction(point.xFraction) * size.width;
     final normalized =
         ((point.value - minValue) / (maxValue - minValue)).clamp(0.0, 1.0);
     return Offset(x, size.height - normalized * size.height);
@@ -184,6 +200,15 @@ class _MetricLinePlotPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (points.length < 2 || size.width <= 0 || size.height <= 0) return;
+
+    // Painters CLIP; they do not clamp. A point scrolled off the left edge keeps its real
+    // position, so the line running off the plot carries on to where it actually is —
+    // clamping it to the edge instead would bend it into the corner and draw a value
+    // nobody ever recorded. The clip is what keeps that honest line inside the card.
+    if (viewport.isZoomed) {
+      canvas.save();
+      canvas.clipRect(Offset.zero & size);
+    }
 
     final baseline = Paint()
       ..color = accentColor.withValues(alpha: 0.22)
@@ -257,7 +282,8 @@ class _MetricLinePlotPainter extends CustomPainter {
     // the consequence it had.
     for (final marker in markers) {
       canvas.drawCircle(
-        Offset(marker.xFraction.clamp(0.0, 1.0) * size.width, size.height - 3),
+        Offset(viewport.visibleFraction(marker.xFraction) * size.width,
+            size.height - 3),
         3,
         Paint()..color = marker.color,
       );
@@ -275,6 +301,8 @@ class _MetricLinePlotPainter extends CustomPainter {
         }
       }
     }
+
+    if (viewport.isZoomed) canvas.restore();
   }
 
   /// The first [fraction] of [path], by length.
@@ -300,6 +328,7 @@ class _MetricLinePlotPainter extends CustomPainter {
       // animates and then costs a repaint every frame, forever, on every chart in
       // a scrolling list.
       oldDelegate.progress != progress ||
+      oldDelegate.viewport != viewport ||
       oldDelegate.points != points ||
       oldDelegate.minValue != minValue ||
       oldDelegate.maxValue != maxValue ||

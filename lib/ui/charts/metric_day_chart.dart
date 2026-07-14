@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
 import 'chart_empty_state.dart';
+import 'chart_zoom.dart';
 import 'day_axis.dart';
 import 'metric_line_plot.dart';
 
@@ -110,27 +111,39 @@ class MetricDayChart extends StatelessWidget {
                     : l10n.summaryEmptyDay(emptyLabel),
               )
             else ...[
-              MetricLinePlot(
-                points: shape.plot(ordered, axis),
-                minValue: range.min,
-                maxValue: range.max,
-                accentColor: accentColor,
-                valueFormatter: valueFormatter,
-                drawPoints: drawPoints,
-                pointRadius: pointRadius,
-                lineStrokeWidth: lineStrokeWidth,
-                // Drag along the chart and it tells you the reading and the hour
-                // it was taken. The number was always in the data and never on the
-                // screen; the only way to ask "how much, and when?" was to squint
-                // between two axis labels.
-                scrubLabelBuilder: (point) => (
-                  valueFormatter(point.value),
-                  TimeOfDay.fromDateTime(axis.timeAt(point.xFraction))
-                      .format(context),
+              // Pinch with two fingers to look closer at part of the day. The plot and
+              // its hour row are BOTH inside the zoom, and share the one viewport — a
+              // chart whose hours disagreed with its line would be worse than one that
+              // did not zoom at all.
+              ChartZoom(
+                builder: (context, viewport) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    MetricLinePlot(
+                      points: shape.plot(ordered, axis),
+                      minValue: range.min,
+                      maxValue: range.max,
+                      accentColor: accentColor,
+                      valueFormatter: valueFormatter,
+                      drawPoints: drawPoints,
+                      pointRadius: pointRadius,
+                      lineStrokeWidth: lineStrokeWidth,
+                      viewport: viewport,
+                      // Drag along the chart and it tells you the reading and the hour
+                      // it was taken. The number was always in the data and never on the
+                      // screen; the only way to ask "how much, and when?" was to squint
+                      // between two axis labels.
+                      scrubLabelBuilder: (point) => (
+                        valueFormatter(point.value),
+                        TimeOfDay.fromDateTime(axis.timeAt(point.xFraction))
+                            .format(context),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DayAxisLabels(viewport: viewport),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              const DayAxisLabels(),
               const SizedBox(height: 12),
               footer ??
                   Text(

@@ -92,6 +92,20 @@ class _ChartScrubberState extends State<ChartScrubber> {
   }
 
   @override
+  void didUpdateWidget(ChartScrubber oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The index is ours, but the list it points into is the CALLER'S, and it can change
+    // underneath us: zooming the chart shortens it to the points still on screen. An
+    // index held over from the longer list reads off the end of the shorter one and
+    // throws while building. So a scrub that no longer refers to anything is dropped.
+    final index = _index;
+    if (index != null && index >= widget.targets.length) {
+      _index = null;
+      widget.onScrub?.call(null);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (!widget.enabled || widget.targets.isEmpty) return widget.child;
 
@@ -111,7 +125,13 @@ class _ChartScrubberState extends State<ChartScrubber> {
           child: Stack(
             children: [
               widget.child,
-              if (_index case final index?)
+              // The index is held across rebuilds, but the LIST it points into is the
+              // caller's and can change under it — zooming the chart shortens it to the
+              // points still on screen. An index left over from the longer list would
+              // read off the end of the shorter one, so it is checked here rather than
+              // trusted. Everything that ever indexes another widget's list has this bug
+              // waiting in it.
+              if (_index case final index? when index < widget.targets.length)
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
