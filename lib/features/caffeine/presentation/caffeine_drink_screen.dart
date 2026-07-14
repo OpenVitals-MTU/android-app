@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../../../domain/insights/caffeine_drink_profile.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../ui/charts/chart_zoom.dart';
 import '../../../ui/charts/charts.dart';
+import '../../../ui/charts/time_axis.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
@@ -140,7 +142,14 @@ class _CurveCard extends StatelessWidget {
             Text(l10n.caffeineDrinkCurveTitle,
                 style: theme.textTheme.titleSmall),
             const SizedBox(height: 12),
-            MetricLinePlot(
+            // Pinch it. The curve runs 36 hours -- long enough to answer "when is this
+            // gone", and far too long to read the rise and the peak off, which all happen
+            // in the first two. Zoom is what makes one chart do both.
+            ChartZoom(
+              builder: (context, viewport) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  MetricLinePlot(
               points: [
                 for (final point in curve)
                   MetricLinePlotPoint(
@@ -149,6 +158,7 @@ class _CurveCard extends StatelessWidget {
                   ),
               ],
               minValue: 0,
+              viewport: viewport,
               // This drink's own scale, so a small tea fills its chart the same way a
               // double espresso fills its own. The comparison between drinks is what the
               // list is for; this chart is about the SHAPE of one of them.
@@ -165,6 +175,19 @@ class _CurveCard extends StatelessWidget {
                       .time
                       .toLocal(),
                 ),
+              ),
+                  ),
+                  const SizedBox(height: 8),
+                  // The x axis this chart never had. A drink's curve with no hours under
+                  // it can tell you it fades, and not when -- which is the only thing
+                  // anyone opened it to find out.
+                  TimeAxisLabels(
+                    start: curve.first.time,
+                    end: curve.last.time,
+                    inset: kChartPlotInset,
+                    viewport: viewport,
+                  ),
+                ],
               ),
             ),
           ],

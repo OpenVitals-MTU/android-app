@@ -8,6 +8,7 @@ import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/theme/chart_tokens.dart';
 import '../../../ui/charts/time_axis.dart';
 import '../../../ui/charts/chart_empty_state.dart';
+import '../../../ui/charts/chart_zoom.dart';
 import '../../../ui/charts/metric_line_plot.dart';
 import '../../../ui/charts/chart_skeleton.dart';
 import '../../../ui/components/loading_state.dart';
@@ -329,6 +330,14 @@ class CaffeineCurveCard extends StatelessWidget {
                 height: kChartHeightDay,
               )
             else ...[
+              // Pinch it. This card drops to the raw MetricLinePlot primitive rather than
+              // going through one of the complete chart cards, which is exactly why it
+              // never picked the zoom up: the zoom was wired into the CARDS. A caffeine
+              // curve spans 42 hours, so it is the chart that needs it most.
+              ChartZoom(
+                builder: (context, viewport) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               // The shared plot, at last. What this card gains by giving up its own
               // painter: a Y AXIS — you could not read a value off this chart,
               // there was no scale on it at all — GRIDLINES, and a curve that is
@@ -377,14 +386,20 @@ class CaffeineCurveCard extends StatelessWidget {
                       color: scheme.tertiary,
                     ),
                 ],
+                viewport: viewport,
               ),
               const SizedBox(height: 8),
               // And a TIME axis. There was none: a caffeine curve across a whole
-              // day, with no way to tell when any of it happened.
+              // day, with no way to tell when any of it happened. It shares the
+              // viewport with the plot, so the hours it names stay the hours on show.
               TimeAxisLabels(
                 start: points.first.time,
                 end: points.last.time,
                 inset: kChartPlotInset,
+                viewport: viewport,
+              ),
+                  ],
+                ),
               ),
             ],
             const SizedBox(height: 8),
