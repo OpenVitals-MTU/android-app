@@ -234,7 +234,11 @@ void main() {
       // and the user would have no way of knowing they had asked for it.
       expect(find.byType(RecordingWithoutGpsWarning), findsOneWidget);
       expect(find.textContaining('No map'), findsOneWidget);
-      expect(find.textContaining('no elevation gain'), findsOneWidget);
+      // Elevation is NOT in the list of losses, and must never creep back into it: the
+      // barometer reads air pressure and never needed a position. Same for the step
+      // detector and the heart-rate strap. Only what is genuinely derived from location
+      // is lost.
+      expect(find.textContaining('elevation gain are still recorded'), findsOneWidget);
 
       // Nothing to wait for: no satellites are being asked for.
       expect(_startButton(tester).onPressed, isNotNull);

@@ -937,7 +937,7 @@ class ActivityEntryViewModel extends Notifier<ActivityEntryUiState> {
         recordedBleSamples: snapshot.bleSamples,
       ));
     } else {
-      _applyRecordingWithoutRoute(snapshot);
+      _applyRecordingWithoutRoute(snapshot, unitSystem);
     }
     _recordingDraftStore.store(state);
   }
@@ -1160,7 +1160,10 @@ class ActivityEntryViewModel extends Notifier<ActivityEntryUiState> {
     ));
   }
 
-  void _applyRecordingWithoutRoute(ActivityRecordingSnapshot snapshot) {
+  void _applyRecordingWithoutRoute(
+    ActivityRecordingSnapshot snapshot,
+    UnitSystem unitSystem,
+  ) {
     final current = state;
     final start = _clock.toZone(snapshot.startTime);
     final durationMinutes =
@@ -1199,8 +1202,15 @@ class ActivityEntryViewModel extends Notifier<ActivityEntryUiState> {
       startDateText: isoLocalDate(start),
       startTimeText: timeFormatterText(start),
       durationMinutesText: durationMinutes.toString(),
+      // Distance is the one thing a GPS-less recording genuinely cannot know, so it is
+      // left empty for the user to fill in.
       distanceText: '',
-      elevationText: '',
+      // Elevation is NOT. It came from the barometer, which never needed a position, and
+      // blanking it here was throwing away a measurement the phone had actually taken.
+      elevationText: (selectedActivityType.supportsElevation &&
+              snapshot.elevationGainedMeters > 0.0)
+          ? toElevationInputText(snapshot.elevationGainedMeters, unitSystem)
+          : '',
       activeCaloriesText:
           calorieEstimate?.activeCaloriesText ?? current.activeCaloriesText,
       totalCaloriesText:

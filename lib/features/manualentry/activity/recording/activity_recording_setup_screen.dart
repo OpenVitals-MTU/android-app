@@ -376,8 +376,8 @@ class PreRecordingGpsFixStatus extends StatelessWidget {
 class RecordingWithoutGpsWarning extends StatelessWidget {
   const RecordingWithoutGpsWarning({super.key, required this.countsSteps});
 
-  /// Whether this activity type counts steps while recording — one more thing that goes
-  /// with the location, since the step detector only runs on the GPS path.
+  /// Whether this activity type counts steps while recording. It still does without GPS:
+  /// the step detector reads the accelerometer, and never needed a position.
   final bool countsSteps;
 
   @override
@@ -409,16 +409,18 @@ class RecordingWithoutGpsWarning extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    countsSteps
-                        ? '${l10n.activityRecordingWithoutGpsWarningBody} '
-                            '${l10n.activityRecordingWithoutGpsWarningSteps}'
-                        : l10n.activityRecordingWithoutGpsWarningBody,
+                    l10n.activityRecordingWithoutGpsWarningBody,
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 6),
+                  // The barometer and the step detector never needed a position, so they
+                  // keep running. What is lost is only what is genuinely derived from
+                  // location.
                   Text(
-                    l10n.activityRecordingWithoutGpsWarningKept,
+                    countsSteps
+                        ? l10n.activityRecordingWithoutGpsWarningKeptSteps
+                        : l10n.activityRecordingWithoutGpsWarningKept,
                     style: theme.textTheme.bodySmall,
                   ),
                 ],

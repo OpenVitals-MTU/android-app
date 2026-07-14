@@ -474,7 +474,22 @@ class ActivityRecordingService implements ActivityRecordingController {
       case ActivityRecordingKind.repetition:
         if (activityType != null) _startMotionRecognizer(activityType);
       case ActivityRecordingKind.timed:
-        break;
+        // A run recorded WITHOUT GPS still has a barometer and a step detector.
+        //
+        // Neither of them needs a position. Elevation gain comes from air pressure and
+        // steps from the accelerometer, and they were only being lost because switching
+        // GPS off routed the recording down the timed branch, which started no sensors at
+        // all. Turning down the satellites is no reason to stop counting the climb.
+        //
+        // Gated on `supportsGpsRoute`, so this reaches a run or a walk recorded without
+        // GPS and leaves the stationary bike and the strength session -- the timed
+        // recordings that never had these sensors -- exactly as they were.
+        if (activityType != null && activityType.supportsGpsRoute) {
+          _startBarometerUpdates(preferences);
+          if (activityType.supportsStepCounting) {
+            _startMotionRecognizer(activityType);
+          }
+        }
     }
   }
 
