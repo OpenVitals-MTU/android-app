@@ -47,6 +47,38 @@ ActivityWriteRequest? buildWriteRequest(
       }
     }
   }
+  // A live recording fills `recordedBleSamples` from the paired sensors. An IMPORT fills
+  // nothing -- which is why an imported activity had no graphs at all: the file's heart
+  // rate, cadence and speed were parsed but had nowhere to go, and the write path that
+  // carries a BLE session's series was sitting here unused.
+  var bleSamples = state.recordedBleSamples.isEmpty()
+      ? (state.importedRoute?.bleSamples ?? const BleRecordingSampleBuffer())
+      : state.recordedBleSamples;
+
+  // The session has to CONTAIN the samples it carries.
+  //
+  // A recording reaches this form as text, at minute granularity: the start loses its
+  // seconds, and the duration is rounded up to a whole minute. Start 10:00:59 for 120
+  // seconds therefore rebuilds as 10:00:00 -> 10:02:00, while the last sample was taken
+  // at 10:02:59. Health Connect does not drop the samples past the end -- it CLAMPS them
+  // into the session, stacking that final minute of readings onto one instant. For a
+  // bike ride that is an odd-looking tail. For a heart-rate recovery, which is measured
+  // from exactly those samples, it is the whole measurement.
+  //
+  // So the end is stretched to cover the last sample, the same way the route branch above
+  // stretches it to cover the last GPS point.
+  final lastSampleTime = bleSamples.lastSampleTime();
+  if (lastSampleTime != null && !lastSampleTime.isBefore(end)) {
+    end = lastSampleTime.add(const Duration(seconds: 1));
+  }
+  // The start cannot be stretched the same way: it is the user's, and they may have moved
+  // it forward on purpose. But samples before it would be clamped ONTO it, which invents
+  // a reading that was never taken. Rather than write that, the samples are dropped.
+  final firstSampleTime = bleSamples.firstSampleTime();
+  if (firstSampleTime != null && firstSampleTime.isBefore(start)) {
+    bleSamples = const BleRecordingSampleBuffer();
+  }
+
   final supportsDistance = state.selectedActivityType.supportsDistance;
   final supportsElevation = state.selectedActivityType.supportsElevation;
 
@@ -153,14 +185,7 @@ ActivityWriteRequest? buildWriteRequest(
     elevationGainedMeters: elevationMeters,
     activeCaloriesKcal: activeCalories,
     totalCaloriesKcal: totalCalories,
-    // A live recording fills `recordedBleSamples` from the paired sensors. An
-    // IMPORT fills nothing -- which is why an imported activity had no graphs at
-    // all: the file's heart rate, cadence and speed were parsed (now) but had
-    // nowhere to go, and the same write path that carries a BLE session's series
-    // was sitting right here unused.
-    bleSamples: state.recordedBleSamples.isEmpty()
-        ? (state.importedRoute?.bleSamples ?? const BleRecordingSampleBuffer())
-        : state.recordedBleSamples,
+    bleSamples: bleSamples,
   );
 }
 
