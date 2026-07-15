@@ -140,6 +140,37 @@ void main() {
       expect(viewport.span, lessThan(0.5));
     });
 
+    testWidgets('two fingers zoom even inside a scrolling page', (tester) async {
+      // The device bug this fixes: on a screen tall enough to scroll (the year
+      // overview stacks a dozen charts), a passive Listener never held the pinch —
+      // the parent Scrollable claimed the pointers and the second finger never
+      // reached the chart. A ScaleGestureRecognizer wins the two-finger gesture in
+      // the arena so the zoom survives inside a ListView.
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+
+      final viewport = await pumpAndRead(
+        tester,
+        (tester) async {
+          final center = tester.getCenter(find.byType(ChartZoom));
+          final left = await tester.startGesture(center - const Offset(20, 0));
+          final right = await tester.startGesture(center + const Offset(20, 0));
+          await tester.pump();
+          await left.moveBy(const Offset(-60, 0));
+          await right.moveBy(const Offset(60, 0));
+          await tester.pump();
+          await left.up();
+          await right.up();
+        },
+        inScrollable: true,
+        controller: controller,
+      );
+
+      expect(viewport.isZoomed, isTrue);
+      expect(controller.offset, 0.0,
+          reason: 'a horizontal pinch must zoom, not scroll the page');
+    });
+
     testWidgets('ONE finger dragging horizontally does not zoom', (tester) async {
       // The single-finger horizontal drag belongs to the scrubber. If the zoom took it,
       // scrubbing would be gone.

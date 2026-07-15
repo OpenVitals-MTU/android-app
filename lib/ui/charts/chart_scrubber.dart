@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/chart_tokens.dart';
+import 'chart_zoom.dart';
 
 /// A point a scrub can land on, in the plot's own fraction space.
 typedef ScrubTarget = ({
@@ -109,6 +110,18 @@ class _ChartScrubberState extends State<ChartScrubber> {
   Widget build(BuildContext context) {
     if (!widget.enabled || widget.targets.isEmpty) return widget.child;
 
+    // A pinch is a zoom, not a read. The finger that started this scrub is already
+    // routed here and cannot be handed back, so when a second finger lands (a
+    // pinch — see [ChartZoom]) the scrubber hides its crosshair and ignores
+    // further drags, leaving the two-finger gesture to the zoom.
+    final pinching = ChartZoomScope.of(context);
+    if (pinching && _index != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ChartZoomScope.of(context)) _lift();
+      });
+    }
+    final index = pinching ? null : _index;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -116,12 +129,14 @@ class _ChartScrubberState extends State<ChartScrubber> {
           behavior: HitTestBehavior.opaque,
           // HORIZONTAL only. See the class doc: onPanUpdate would claim the
           // vertical axis too and freeze the page this chart is sitting on.
-          onHorizontalDragStart: (details) =>
-              _land(details.localPosition.dx, width),
-          onHorizontalDragUpdate: (details) =>
-              _land(details.localPosition.dx, width),
-          onHorizontalDragEnd: (_) => _lift(),
-          onHorizontalDragCancel: _lift,
+          onHorizontalDragStart: pinching
+              ? null
+              : (details) => _land(details.localPosition.dx, width),
+          onHorizontalDragUpdate: pinching
+              ? null
+              : (details) => _land(details.localPosition.dx, width),
+          onHorizontalDragEnd: pinching ? null : (_) => _lift(),
+          onHorizontalDragCancel: pinching ? null : _lift,
           child: Stack(
             children: [
               widget.child,
@@ -131,23 +146,23 @@ class _ChartScrubberState extends State<ChartScrubber> {
               // read off the end of the shorter one, so it is checked here rather than
               // trusted. Everything that ever indexes another widget's list has this bug
               // waiting in it.
-              if (_index case final index? when index < widget.targets.length)
+              if (index case final i? when i < widget.targets.length)
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
                       painter: _CrosshairPainter(
-                        target: widget.targets[index],
+                        target: widget.targets[i],
                         accentColor: widget.accentColor,
                         crosshairColor: ChartTokens.read(context).crosshair,
                       ),
                     ),
                   ),
                 ),
-              if (_index case final index?)
+              if (index case final i?)
                 Positioned.fill(
                   child: IgnorePointer(
                     child: _ScrubTooltip(
-                      target: widget.targets[index],
+                      target: widget.targets[i],
                       accentColor: widget.accentColor,
                     ),
                   ),

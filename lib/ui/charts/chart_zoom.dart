@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'chart_viewport.dart';
@@ -49,6 +50,12 @@ class _ChartZoomState extends State<ChartZoom> {
   /// Where each finger currently is, by pointer id.
   final Map<int, Offset> _pointers = <int, Offset>{};
 
+  /// True while a second finger is down — a pinch, not a scrub. Published to
+  /// descendants through [ChartZoomScope] so the [ChartScrubber] stands down: the
+  /// pointer that started a one-finger scrub is already routed to it and cannot be
+  /// taken back, so the scrubber has to hide itself rather than be hit-tested away.
+  bool _multiTouch = false;
+
   /// The state the pinch started from. Every move is applied to THIS rather than to the
   /// last frame's result: compounding frame by frame accumulates the rounding, and a slow
   /// pinch would visibly drift.
@@ -68,6 +75,16 @@ class _ChartZoomState extends State<ChartZoom> {
     _pointers[event.pointer] = event.localPosition;
     _downPosition = event.localPosition;
     _restartPinch();
+    _syncMultiTouch();
+  }
+
+  /// Rebuilds only when the pinch/scrub distinction actually flips, so publishing
+  /// the flag to [ChartZoomScope] costs nothing on an ordinary one-finger touch.
+  void _syncMultiTouch() {
+    final multiTouch = _pointers.length >= 2;
+    if (multiTouch != _multiTouch) {
+      setState(() => _multiTouch = multiTouch);
+    }
   }
 
   /// A double tap, worked out from the raw pointers rather than asked of a
@@ -137,6 +154,7 @@ class _ChartZoomState extends State<ChartZoom> {
     }
     _pointers.remove(event.pointer);
     _restartPinch();
+    _syncMultiTouch();
   }
 
   /// Whether a pinch has actually happened during this touch, as opposed to two fingers
@@ -181,20 +199,71 @@ class _ChartZoomState extends State<ChartZoom> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        // A Listener, NOT a gesture recognizer. It claims nothing in the gesture arena,
-        // so it cannot take the scrubber's drag or the page's scroll away from them —
-        // they carry on competing for the single finger exactly as they did before this
-        // widget existed. The pinch is worked out from the raw pointers instead, and it
-        // only does anything at all once a second finger is down.
+        // The pinch itself is still worked out from the raw pointers below — a
+        // [Listener] claims nothing in the arena, so it never takes the scrubber's
+        // drag or the page's scroll away from a single finger. But a passive
+        // Listener cannot HOLD a two-finger gesture either: inside a scrolling
+        // page the parent Scrollable claims the pointers and the Listener never
+        // sees the second finger. So a [ScaleGestureRecognizer] rides alongside,
+        // purely to win the two-finger gesture in the arena — it computes nothing
+        // itself; with the pointers no longer stolen, the Listener's own math
+        // runs. A single finger never forms a scale, so scroll/scrub/tap are left
+        // exactly as they were.
         return Listener(
           behavior: HitTestBehavior.translucent,
           onPointerDown: _onPointerDown,
           onPointerMove: (event) => _onPointerMove(event, width),
           onPointerUp: _onPointerEnd,
           onPointerCancel: _onPointerEnd,
-          child: widget.builder(context, _viewport),
+          child: RawGestureDetector(
+            behavior: HitTestBehavior.translucent,
+            gestures: {
+              ScaleGestureRecognizer:
+                  GestureRecognizerFactoryWithHandlers<ScaleGestureRecognizer>(
+                ScaleGestureRecognizer.new,
+                (instance) {
+                  // Non-null handlers keep the recognizer live in the arena; the
+                  // zoom is driven by the Listener above, not from here.
+                  instance
+                    ..onStart = _noopScaleStart
+                    ..onUpdate = _noopScaleUpdate;
+                },
+              ),
+            },
+            child: ChartZoomScope(
+              multiTouch: _multiTouch,
+              child: widget.builder(context, _viewport),
+            ),
+          ),
         );
       },
     );
   }
+
+  static void _noopScaleStart(ScaleStartDetails _) {}
+  static void _noopScaleUpdate(ScaleUpdateDetails _) {}
+}
+
+/// Publishes whether a pinch (two or more fingers) is in progress on the chart,
+/// so a descendant [ChartScrubber] can stand down while it is: the finger that
+/// began a one-finger scrub is already routed to the scrubber and cannot be
+/// hit-tested away, so the scrubber hides itself off this flag instead.
+class ChartZoomScope extends InheritedWidget {
+  const ChartZoomScope({
+    super.key,
+    required this.multiTouch,
+    required super.child,
+  });
+
+  final bool multiTouch;
+
+  static bool of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<ChartZoomScope>()
+          ?.multiTouch ??
+      false;
+
+  @override
+  bool updateShouldNotify(ChartZoomScope oldWidget) =>
+      oldWidget.multiTouch != multiTouch;
 }
