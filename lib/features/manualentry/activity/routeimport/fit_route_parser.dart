@@ -6,6 +6,38 @@ import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import 'route_file_parser.dart';
 
+/// A Garmin sleep stage, from the FIT `sleep_level` enum (message 275, field 0):
+/// see docs/reference/garmin-fit-files.md.
+enum FitSleepLevel { unmeasurable, awake, light, deep, rem }
+
+/// One stage span within a sleep session: `[start, end)` spent at [level].
+class FitSleepStage {
+  const FitSleepStage({
+    required this.start,
+    required this.end,
+    required this.level,
+  });
+
+  final DateTime start;
+  final DateTime end;
+  final FitSleepLevel level;
+}
+
+/// A decoded Garmin sleep FIT file (file type 49): the night's bounds and its
+/// stage timeline. The bounds come from the `event`/74 (sleep) start/stop pair;
+/// each `sleep_level` message opens a stage that runs to the next one.
+class FitSleepSession {
+  const FitSleepSession({
+    required this.start,
+    required this.end,
+    required this.stages,
+  });
+
+  final DateTime start;
+  final DateTime end;
+  final List<FitSleepStage> stages;
+}
+
 /// Hand-port of the Kotlin `FitRouteParser` (Garmin FIT decoder). Ported byte
 /// for byte in pure Dart rather than delegating to a package, because the unit
 /// tests exercise hand-crafted FIT byte streams whose exact framing must be
@@ -50,6 +82,16 @@ class FitRouteParser {
             .copyWith(bleSamples: samples);
     }
   }
+
+  /// Decodes a Garmin **sleep** FIT file (file type 49) into a [FitSleepSession],
+  /// or null if the file carries no sleep timeline. Sleep files have no activity
+  /// session and no route, so [parse] rejects them — this is their path. Field
+  /// layout: docs/reference/garmin-fit-files.md.
+  static FitSleepSession? parseSleepSession(
+    Uint8List fitBytes, {
+    String? fileName,
+  }) =>
+      _FitDecoder(fitBytes).decode().sleep.toSession();
 
   static RouteFileImport _parseActivity(
     String? fileName,
@@ -199,11 +241,12 @@ class FitRouteParser {
 }
 
 class _FitDecodeResult {
-  const _FitDecodeResult(this.points, this.summary, this.samples);
+  const _FitDecodeResult(this.points, this.summary, this.samples, this.sleep);
 
   final List<ExerciseRoutePoint> points;
   final _FitActivitySummary summary;
   final _FitSamples samples;
+  final _FitSleepRaw sleep;
 }
 
 /// The per-record series, before the sport is known.
@@ -256,14 +299,74 @@ class _FitFileDecodeResult {
     this.points,
     this.summary,
     this.samples,
+    this.sleep,
     this.nextOffset,
   );
 
   final List<ExerciseRoutePoint> points;
   final _FitActivitySummary summary;
   final _FitSamples samples;
+  final _FitSleepRaw sleep;
   final int nextOffset;
 }
+
+/// The raw sleep messages a single FIT file carried: the `event`/74 session
+/// bounds and the `sleep_level` transitions. Turned into a [FitSleepSession]
+/// once the whole file (or chain of files) is decoded.
+class _FitSleepRaw {
+  const _FitSleepRaw({this.start, this.stop, this.levels = const []});
+
+  final DateTime? start;
+  final DateTime? stop;
+
+  /// Each entry is `(transitionTime, sleepLevelEnumValue)`, in file order.
+  final List<(DateTime, int)> levels;
+
+  _FitSleepRaw merge(_FitSleepRaw other) => _FitSleepRaw(
+        start: start ?? other.start,
+        stop: stop ?? other.stop,
+        levels: [...levels, ...other.levels],
+      );
+
+  FitSleepSession? toSession() {
+    if (levels.isEmpty) return null;
+    final sorted = [...levels]..sort((a, b) => a.$1.compareTo(b.$1));
+    final sessionStart = start ?? sorted.first.$1;
+    // Sleep never ends before it starts; a file that says so is unusable.
+    final sessionEnd = (stop != null && stop!.isAfter(sessionStart))
+        ? stop!
+        : sorted.last.$1;
+    if (!sessionStart.isBefore(sessionEnd)) return null;
+    final stages = <FitSleepStage>[];
+    for (var i = 0; i < sorted.length; i++) {
+      final (transition, rawLevel) = sorted[i];
+      final level = _fitSleepLevelFromRaw(rawLevel);
+      if (level == null) continue;
+      // A stage runs from its transition to the next one — the last to session
+      // end. Clamp into the session so a stray pre-start transition can't widen it.
+      final stageStart =
+          transition.isBefore(sessionStart) ? sessionStart : transition;
+      final stageEnd = i + 1 < sorted.length ? sorted[i + 1].$1 : sessionEnd;
+      if (!stageStart.isBefore(stageEnd)) continue;
+      stages.add(FitSleepStage(start: stageStart, end: stageEnd, level: level));
+    }
+    if (stages.isEmpty) return null;
+    return FitSleepSession(
+      start: sessionStart,
+      end: sessionEnd,
+      stages: stages,
+    );
+  }
+}
+
+FitSleepLevel? _fitSleepLevelFromRaw(int raw) => switch (raw) {
+      0 => FitSleepLevel.unmeasurable,
+      1 => FitSleepLevel.awake,
+      2 => FitSleepLevel.light,
+      3 => FitSleepLevel.deep,
+      4 => FitSleepLevel.rem,
+      _ => null,
+    };
 
 class _FitActivitySummary {
   const _FitActivitySummary({
@@ -356,6 +459,7 @@ class _FitDecoder {
     final points = <ExerciseRoutePoint>[];
     var summary = const _FitActivitySummary();
     var samples = const _FitSamples.empty();
+    var sleep = const _FitSleepRaw();
     var offset = 0;
     var decodedAnyFile = false;
 
@@ -370,10 +474,11 @@ class _FitDecoder {
       points.addAll(result.points);
       summary = summary.merge(result.summary);
       samples = samples.merge(result.samples);
+      sleep = sleep.merge(result.sleep);
       decodedAnyFile = true;
       offset = result.nextOffset;
     }
-    return _FitDecodeResult(points, summary, samples);
+    return _FitDecodeResult(points, summary, samples, sleep);
   }
 }
 
@@ -396,6 +501,13 @@ class _FitSingleFileDecoder {
   _FitActivitySummary _lapSummary = const _FitActivitySummary();
   int? _workoutDurationSeconds;
   int _courseRecordIndex = 0;
+
+  // Sleep (file type 49). A sleep file carries no session or route, so these are
+  // collected separately from the activity summary and only used by
+  // `parseSleepSession`. See docs/reference/garmin-fit-files.md.
+  DateTime? _sleepStart;
+  DateTime? _sleepStop;
+  final List<(DateTime, int)> _sleepLevels = [];
 
   _FitFileDecodeResult decode() {
     final headerSize = fileBytes[startOffset] & 0xFF;
@@ -422,6 +534,7 @@ class _FitSingleFileDecoder {
       _points,
       _fitSummary(),
       samples,
+      _FitSleepRaw(start: _sleepStart, stop: _sleepStop, levels: _sleepLevels),
       next > fileBytes.length ? fileBytes.length : next,
     );
   }
@@ -548,6 +661,27 @@ class _FitSingleFileDecoder {
         final sessionSubSport = _generic(values[_fitSessionSubSportFieldNumber]);
         if (_subSport == null && sessionSubSport != null) {
           _subSport = sessionSubSport;
+        }
+        break;
+      case _fitEventMessageNumber:
+        // Only the sleep event (Garmin-proprietary value 74) bounds a night;
+        // every other event (timer, lap, …) that an activity file carries is
+        // ignored here.
+        if (values[_fitEventFieldNumber] == _fitSleepEventValue &&
+            messageTimestamp != null) {
+          final at = _fitDateTimeInstant(messageTimestamp);
+          switch (values[_fitEventTypeFieldNumber]) {
+            case _fitEventTypeStart:
+              _sleepStart ??= at;
+            case _fitEventTypeStop:
+              _sleepStop = at;
+          }
+        }
+        break;
+      case _fitSleepLevelMessageNumber:
+        final level = values[_fitSleepLevelFieldNumber];
+        if (level != null && messageTimestamp != null) {
+          _sleepLevels.add((_fitDateTimeInstant(messageTimestamp), level));
         }
         break;
     }
@@ -1048,6 +1182,16 @@ const int _fitFileTypeCourse = 6;
 const int _fitRecordMessageNumber = 20;
 const int _fitLapMessageNumber = 19;
 const int _fitSessionMessageNumber = 18;
+
+// Sleep (Garmin file type 49). See docs/reference/garmin-fit-files.md.
+const int _fitEventMessageNumber = 21;
+const int _fitSleepLevelMessageNumber = 275;
+const int _fitEventFieldNumber = 0;
+const int _fitEventTypeFieldNumber = 1;
+const int _fitSleepLevelFieldNumber = 0;
+const int _fitSleepEventValue = 74; // `event` == sleep (Garmin-proprietary)
+const int _fitEventTypeStart = 0;
+const int _fitEventTypeStop = 1;
 const int _fitCourseMessageNumber = 31;
 const int _fitCourseSportFieldNumber = 4;
 const int _fitCourseNameFieldNumber = 5;
@@ -1131,4 +1275,6 @@ const Set<int> _fitParsedMessageNumbers = {
   _fitCourseMessageNumber,
   _fitWorkoutMessageNumber,
   _fitWorkoutStepMessageNumber,
+  _fitEventMessageNumber,
+  _fitSleepLevelMessageNumber,
 };
