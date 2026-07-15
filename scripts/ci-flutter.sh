@@ -134,4 +134,17 @@ fi
 flutter --version
 flutter pub get
 
+# --- Generated code (freezed + drift) ----------------------------------------
+# The *.freezed.dart / *.g.dart outputs are NOT committed (see .gitignore) -- they
+# are reproduced here from their sources, exactly as the l10n outputs already are
+# on `pub get`. Every step needs them: `analyze` and `test` fail to resolve the
+# generated symbols without this, and `build` compiles them in. build_runner is
+# incremental and its cache lives in the workspace, so only the first step of a
+# pipeline pays the full (~30s) build; later steps are a few seconds. build_runner
+# 2.15 deletes conflicting outputs by default, so no flag is needed (and the old
+# --delete-conflicting-outputs is now rejected). The pigeon bridge
+# (packages/health_connect_native) is a separate, manually-run toolchain and stays
+# committed, so it needs nothing here.
+dart run build_runner build
+
 exec flutter "$@"

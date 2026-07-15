@@ -92,5 +92,19 @@ docs/proposals/OpenVitals Design System/
 lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_*.dart
 
+# Generated code (freezed + drift). Same reasoning as the l10n outputs above:
+# `dart run build_runner build` reproduces these from their sources, CI runs it on
+# every step (scripts/ci-flutter.sh), so committing them added nothing but noise --
+# every freezed/drift/analyzer bump reformatted them and reddened unrelated PRs.
+# Scoped to the app's own lib/: the pigeon bridge under packages/*/lib is a separate,
+# manually-run toolchain (its Kotlin half is a Gradle source), so it stays committed.
+*.freezed.dart
+/lib/**/*.g.dart
+
+# Workspace fallbacks scripts/ci-flutter.sh creates when no mounted cache volume
+# exists (e.g. running the CI script locally). Never committed.
+.pub-cache-ci/
+.gradle-ci/
+
 # Golden diffs, written by flutter_test on a mismatch. Never committed.
 test/goldens/**/failures/
