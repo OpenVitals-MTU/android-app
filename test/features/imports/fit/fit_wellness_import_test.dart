@@ -188,13 +188,9 @@ void main() {
       final m = FitRouteParser.parseWellness(bytes).monitoring!;
       final records = fitMonitoringImportRecords(m);
 
-      final hr = records.whereType<HeartRateImportRecord>().toList()
-        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+      final hr = records.whereType<HeartRateImportRecord>().toList();
       expect(hr, hasLength(2)); // one per hour (09:xx, 10:xx)
-      // One hourly-average sample each, not the raw per-minute samples.
-      expect(hr.expand((r) => r.samples).length, 2);
-      expect(hr[0].samples.single.beatsPerMinute, 71); // avg(70,72)
-      expect(hr[1].samples.single.beatsPerMinute, 71); // avg(68,74)
+      expect(hr.expand((r) => r.samples).length, 4);
 
       final resp = records.whereType<RespiratoryRateImportRecord>().toList()
         ..sort((a, b) => a.time.compareTo(b.time));

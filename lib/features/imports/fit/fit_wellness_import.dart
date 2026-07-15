@@ -94,29 +94,20 @@ List<ImportRecord> fitMonitoringImportRecords(FitMonitoringSummary m) {
     ));
   }
 
-  // HR — one hourly-AVERAGE reading per hour, not every per-minute sample.
-  //
-  // Packing the ~50 raw per-minute samples of each hour left ~430k samples in a
-  // year, and Health Connect's daily-bucket aggregate (which the month/year
-  // charts use) has to scan every one of them: measured ~10s for a year, and it
-  // blocks the other reads behind it. One hourly average is ~8.7k samples/year
-  // (50x fewer), which the aggregate handles in well under a second. Recent
-  // day/week detail is unaffected — that comes from live sync, not this import.
+  // HR — one series record per hour, samples packed in.
   for (final entry in _bucketByHour(m.heartRateSamples, (s) => s.$1).entries) {
     final samples = entry.value..sort((a, b) => a.$1.compareTo(b.$1));
-    final avgBpm =
-        (samples.map((s) => s.$2).reduce((a, b) => a + b) / samples.length)
-            .round();
-    final at = samples.first.$1;
+    final start = samples.first.$1;
+    final end = samples.last.$1.isAfter(start)
+        ? samples.last.$1
+        : start.add(const Duration(seconds: 1));
     records.add(HeartRateImportRecord(
-      // Same per-hour id as before, so a re-import upserts the fatter records in
-      // place rather than leaving duplicates.
       clientRecordId: 'garmin_fit_hr_${entry.key}',
-      startTime: at,
+      startTime: start,
       startZoneOffset: null,
-      endTime: at.add(const Duration(seconds: 1)),
+      endTime: end,
       endZoneOffset: null,
-      samples: [HeartRateSampleValue(at, avgBpm)],
+      samples: [for (final s in samples) HeartRateSampleValue(s.$1, s.$2)],
     ));
   }
 
