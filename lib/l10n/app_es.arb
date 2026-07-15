@@ -1638,7 +1638,7 @@
     "bodyEnergyReasonElevatedHrDetail": "La frecuencia cardíaca en estado de vigilia, por encima del nivel en reposo, supuso un desgaste adicional debido al estrés.",
     "bodyEnergyReasonRecoveryDebtDetail": "El esfuerzo más intenso de hace poco ha provocado que siga habiendo una pequeña pérdida de líquido después.",
     "bodyEnergyReasonNoDataDetail": "Health Connect no proporcionó señal suficiente para este rango.",
-    "bodyEnergyReasonSteadyDetail": "La estimación se mantuvo prácticamente estable.",
+    "bodyEnergyReasonSteadyDetail": "El metabolismo basal consumía una cantidad constante y moderada.",
     "bodyEnergyInputsTitle": "Entradas usadas",
     "bodyEnergyInputsSummary": "Algoritmo v{arg0}, tramos de {arg1} minutos",
     "bodyEnergyInputHeartRate": "Muestras de frecuencia cardiaca",
@@ -1879,5 +1879,25 @@
     "caffeineDrinkPeakExplainer": "El pico de absorción es inferior a la cantidad que has bebido: tu cuerpo empieza a eliminar la cafeína antes de haberla absorbido por completo.",
     "@caffeineDrinkPeakExplainer": {
         "description": "Explains why peak < dose, which otherwise looks like a bug."
-    }
+    },
+    "bodyEnergyInfluenceEverydayActivity": "Actividad cotidiana",
+    "bodyEnergyReasonEverydayActivityDetail": "Caminar, hacer las tareas domésticas y moverme me quitaban energía incluso con una frecuencia cardíaca baja.",
+    "bodyEnergyFeelCheckTitle": "¿Cómo estás de energía?",
+    "bodyEnergyFeelCheckPrompt": "Valóralo del 0 al 10. Tus respuestas ajustan de forma sutil Body Energy a cómo te afectan realmente la actividad, el sueño y el estrés.",
+    "bodyEnergyFeelCheckSaved": "¡Gracias!, Body Energy lo tendrá en cuenta.",
+    "bodyEnergyFeelCheckError": "No se ha podido guardar ese registro. Por favor, inténtalo de nuevo.",
+    "bodyEnergyPersonalizationTitle": "Ajustes personales",
+    "bodyEnergyPersonalizationBody": "{count, plural, =0{Valora tu energía en «Energía corporal» para empezar a personalizarlos.} =1{Datos obtenidos de 1 registro. Cada uno es un multiplicador simple que puedes ver a continuación.} otro{Datos obtenidos de {count} registros. Cada uno es un multiplicador simple que puedes ver a continuación.}}",
+    "@bodyEnergyPersonalizationBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "bodyEnergyGainActivity": "Las actividades cotidianas te cansan",
+    "bodyEnergyGainSleep": "Dormir te recarga las pilas",
+    "bodyEnergyGainBasal": "Quema de calorías en reposo",
+    "bodyEnergyGainStress": "El estrés te cansa",
+    "bodyEnergyPersonalizationReset": "Restablecer ajustes personales"
 }
