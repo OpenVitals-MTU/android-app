@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/time/local_date.dart';
+import 'package:openvitals/ui/charts/chart_axis.dart';
 import 'package:openvitals/ui/charts/chart_zoom.dart';
 import 'package:openvitals/ui/charts/line_chart.dart';
 
@@ -62,5 +63,66 @@ void main() {
     // After: only a slice remains, so the day's ends are no longer on the row.
     expect(find.text('00:00'), findsNothing);
     expect(find.text('24:00'), findsNothing);
+  });
+
+  testWidgets('pinching a year MetricLineChart zooms it too', (tester) async {
+    final series = MetricLineSeries(
+      color: const Color(0xFF2196F3),
+      points: [
+        for (var month = 1; month <= 12; month++)
+          MetricLinePoint(
+            date: LocalDate(2024, month, 15),
+            value: 60 + (month % 4) * 3.0,
+          ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: MetricLineChart(
+              title: 'Resting heart rate',
+              series: [series],
+              selectedRange: TimeRange.year,
+              period: DatePeriod(
+                const LocalDate(2024, 1, 1),
+                const LocalDate(2024, 12, 31),
+              ),
+              accentColor: const Color(0xFF2196F3),
+              summaryText: 'Avg 63 bpm',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The year chart pinches like the day one. Unzoomed the date axis is an even
+    // Row of slots; zoomed it lays its surviving labels out in a Stack so each
+    // sits over its own slot.
+    expect(find.byType(ChartZoom), findsOneWidget);
+    expect(
+      find.descendant(
+          of: find.byType(PeriodChartXAxis), matching: find.byType(Stack)),
+      findsNothing,
+    );
+
+    final center = tester.getCenter(find.byType(ChartZoom));
+    final left = await tester.startGesture(center - const Offset(30, 0));
+    final right = await tester.startGesture(center + const Offset(30, 0));
+    await tester.pump();
+    await left.moveBy(const Offset(-90, 0));
+    await right.moveBy(const Offset(90, 0));
+    await tester.pump();
+    await left.up();
+    await right.up();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+          of: find.byType(PeriodChartXAxis), matching: find.byType(Stack)),
+      findsOneWidget,
+    );
   });
 }

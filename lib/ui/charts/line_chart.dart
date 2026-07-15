@@ -153,8 +153,11 @@ class MetricLineChart extends StatelessWidget {
           builder: (context, constraints) => GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapUp: (details) {
-              final slotWidth = constraints.maxWidth / axisDates.length;
-              final index = (details.localPosition.dx / slotWidth)
+              // Map the tap back through the viewport so a zoomed chart selects
+              // the date actually under the finger, not the unzoomed slot.
+              final visible = (details.localPosition.dx / constraints.maxWidth)
+                  .clamp(0.0, 1.0);
+              final index = (viewport.dataFraction(visible) * axisDates.length)
                   .floor()
                   .clamp(0, axisDates.length - 1);
               onDateSelected!(axisDates[index]);
@@ -185,17 +188,18 @@ class MetricLineChart extends StatelessWidget {
               child: PeriodChartXAxis(
                 dates: axisDates,
                 selectedRange: selectedRange,
+                viewport: viewport,
               ),
             ),
         ],
       );
     }
 
-    // Only the intraday (DAY) chart pinches: a period chart's x axis is a row of
-    // fixed date slots that the viewport arithmetic here does not reflow.
-    final chart = selectedRange == TimeRange.day
-        ? ChartZoom(builder: (context, viewport) => chartWithAxis(viewport))
-        : chartWithAxis(ChartViewport.full);
+    // Every range pinches: the day chart on its hour scale, the week/month/year
+    // charts on their date slots — the line maps its x through the viewport and
+    // PeriodChartXAxis reflows its labels to match.
+    final chart =
+        ChartZoom(builder: (context, viewport) => chartWithAxis(viewport));
 
     return OpenVitalsCard(
       child: Padding(
@@ -339,9 +343,10 @@ class _LinePainter extends CustomPainter {
     }
     final index = axisDates.indexOf(date);
     if (index < 0) return;
-    final slotWidth = size.width / axisDates.length;
+    final left = size.width * viewport.visibleFraction(index / axisDates.length);
+    final slotWidth = size.width / (axisDates.length * viewport.span);
     canvas.drawRect(
-      Rect.fromLTWH(index * slotWidth, 0, slotWidth, size.height),
+      Rect.fromLTWH(left, 0, slotWidth, size.height),
       Paint()..color = highlightColor,
     );
   }
