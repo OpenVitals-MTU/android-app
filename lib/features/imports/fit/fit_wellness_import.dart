@@ -57,6 +57,40 @@ List<ImportRecord> fitHrvImportRecords(FitHrvReading reading) => [
       ),
     ];
 
+/// Turns the one-per-file monitoring summaries into their Health Connect
+/// records: resting heart rate and basal metabolic rate. The high-frequency
+/// monitoring series (steps, respiration, per-sample HR) are not handled here —
+/// they need downsampling and the foreground-service importer.
+List<ImportRecord> fitMonitoringImportRecords(FitMonitoringSummary monitoring) {
+  final records = <ImportRecord>[];
+  final rhrTime = monitoring.restingHeartRateTime;
+  final rhrBpm = monitoring.restingHeartRateBpm;
+  if (rhrTime != null && rhrBpm != null) {
+    records.add(
+      RestingHeartRateImportRecord(
+        clientRecordId:
+            'garmin_fit_resting_hr_${rhrTime.millisecondsSinceEpoch}',
+        time: rhrTime,
+        zoneOffset: null,
+        beatsPerMinute: rhrBpm,
+      ),
+    );
+  }
+  final bmrTime = monitoring.bmrTime;
+  final bmr = monitoring.bmrKcalPerDay;
+  if (bmrTime != null && bmr != null) {
+    records.add(
+      BasalMetabolicRateImportRecord(
+        clientRecordId: 'garmin_fit_bmr_${bmrTime.millisecondsSinceEpoch}',
+        time: bmrTime,
+        zoneOffset: null,
+        kilocaloriesPerDay: bmr,
+      ),
+    );
+  }
+  return records;
+}
+
 /// Garmin `sleep_level` → Health Connect `SleepSessionRecord.Stage`.
 /// `unmeasurable` has no Health Connect stage, so it is dropped (the gap between
 /// stages simply carries no classification).

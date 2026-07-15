@@ -148,25 +148,27 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
     // reporting them all as broken.
     var rateLimited = false;
 
-    // Parsed wellness records (sleep) waiting to be written together, same
-    // per-call-quota reasoning as the activity batch. One sleep file yields one
-    // record, so the record count is the file count.
-    final wellnessPending = <ImportRecord>[];
+    // Parsed wellness records waiting to be written together, same per-call-quota
+    // reasoning as the activity batch. Grouped by file — a monitoring file yields
+    // both a resting-HR and a BMR record — so the file count stays right whether a
+    // batch succeeds whole or is retried file by file.
+    final wellnessPending = <List<ImportRecord>>[];
 
     Future<void> writeWellnessPending() async {
       if (wellnessPending.isEmpty) return;
-      final batch = List<ImportRecord>.of(wellnessPending);
+      final groups = List<List<ImportRecord>>.of(wellnessPending);
       wellnessPending.clear();
       try {
-        await healthDataSource.insertImportedRecords(batch);
-        importedFiles += batch.length;
+        await healthDataSource
+            .insertImportedRecords([for (final g in groups) ...g]);
+        importedFiles += groups.length;
       } catch (_) {
         // insertImportedRecords throws rather than returning a Result; a batch is
-        // all-or-nothing, so retry one record at a time to keep the good ones and
+        // all-or-nothing, so retry one FILE at a time to keep the good ones and
         // count only the guilty file.
-        for (final record in batch) {
+        for (final group in groups) {
           try {
-            await healthDataSource.insertImportedRecords([record]);
+            await healthDataSource.insertImportedRecords(group);
             importedFiles += 1;
           } catch (error) {
             failedFiles += 1;
@@ -269,13 +271,15 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
               if (wellness.sleep != null)
                 ...fitSleepImportRecords(wellness.sleep!),
               if (wellness.hrv != null) ...fitHrvImportRecords(wellness.hrv!),
+              if (wellness.monitoring != null)
+                ...fitMonitoringImportRecords(wellness.monitoring!),
             ];
             if (records.isEmpty) {
               throw const RouteImportException(
                 'Wellness file had no Health Connect-mappable data.',
               );
             }
-            wellnessPending.addAll(records);
+            wellnessPending.add(records);
             debugPrint('[FIT] queued wellness file=${file.fileName ?? "?"} '
                 'records=${records.length}');
             if (wellnessPending.length >= _maxPendingFiles) {

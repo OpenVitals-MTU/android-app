@@ -131,6 +131,38 @@ void main() {
       expect(wellness.hrv, isNull);
     });
   });
+
+  group('monitoring (type 32) summary', () {
+    final t = DateTime.utc(2024, 1, 18, 13, 42, 0);
+
+    test('reads resting HR and BMR, maps to two records', () {
+      final wellness = FitRouteParser.parseWellness(
+        _fitMonitoringBytes(time: t, restingHrBpm: 65, bmrKcalPerDay: 2265),
+      );
+      final m = wellness.monitoring!;
+      expect(m.restingHeartRateBpm, 65);
+      expect(m.bmrKcalPerDay, 2265);
+
+      final records = fitMonitoringImportRecords(m);
+      expect(records, hasLength(2));
+      final rhr = records[0] as RestingHeartRateImportRecord;
+      final bmr = records[1] as BasalMetabolicRateImportRecord;
+      expect(rhr.beatsPerMinute, 65);
+      expect(rhr.clientRecordId,
+          'garmin_fit_resting_hr_${t.millisecondsSinceEpoch}');
+      expect(bmr.kilocaloriesPerDay, 2265);
+    });
+
+    test('a file with only resting HR maps to one record', () {
+      final wellness = FitRouteParser.parseWellness(
+        _fitMonitoringBytes(time: t, restingHrBpm: 58),
+      );
+      final records = fitMonitoringImportRecords(wellness.monitoring!);
+      expect(records, hasLength(1));
+      expect((records.single as RestingHeartRateImportRecord).beatsPerMinute,
+          58);
+    });
+  });
 }
 
 // ── Minimal FIT writer (little-endian), enough for a sleep file ──────────────
@@ -254,6 +286,44 @@ Uint8List _fitHrvBytes({
     ..u8(1)
     ..u32(_fitTimestamp(time))
     ..u16(raw);
+
+  return _wrap(data.toBytes());
+}
+
+Uint8List _fitMonitoringBytes({
+  required DateTime time,
+  int? restingHrBpm,
+  int? bmrKcalPerDay,
+}) {
+  final data = _W()..def(3, 0, [
+    [0, 1, 0x00]
+  ]);
+  data
+    ..u8(3)
+    ..u8(32); // file_id type 32 (monitoring_b)
+
+  if (restingHrBpm != null) {
+    // monitoring_hr_data (211): timestamp, resting_heart_rate (field 0, uint8).
+    data.def(1, 211, [
+      [253, 4, 0x86],
+      [0, 1, 0x02], // uint8
+    ]);
+    data
+      ..u8(1)
+      ..u32(_fitTimestamp(time))
+      ..u8(restingHrBpm);
+  }
+  if (bmrKcalPerDay != null) {
+    // monitoring_info (103): timestamp, resting_metabolic_rate (field 5, uint16).
+    data.def(2, 103, [
+      [253, 4, 0x86],
+      [5, 2, 0x84], // uint16
+    ]);
+    data
+      ..u8(2)
+      ..u32(_fitTimestamp(time))
+      ..u16(bmrKcalPerDay);
+  }
 
   return _wrap(data.toBytes());
 }
