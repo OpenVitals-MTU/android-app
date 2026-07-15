@@ -3,6 +3,18 @@
 part of 'open_vitals_database.dart';
 
 // ignore_for_file: type=lint
+mixin _$FeelCheckDaoMixin on DatabaseAccessor<OpenVitalsDatabase> {
+  $FeelChecksTable get feelChecks => attachedDatabase.feelChecks;
+  FeelCheckDaoManager get managers => FeelCheckDaoManager(this);
+}
+
+class FeelCheckDaoManager {
+  final _$FeelCheckDaoMixin _db;
+  FeelCheckDaoManager(this._db);
+  $$FeelChecksTableTableManager get feelChecks =>
+      $$FeelChecksTableTableManager(_db.attachedDatabase, _db.feelChecks);
+}
+
 mixin _$BeverageDaoMixin on DatabaseAccessor<OpenVitalsDatabase> {
   $BeveragesTable get beverages => attachedDatabase.beverages;
   BeverageDaoManager get managers => BeverageDaoManager(this);
@@ -786,16 +798,274 @@ class BeveragesCompanion extends UpdateCompanion<BeverageEntity> {
   }
 }
 
+class $FeelChecksTable extends FeelChecks
+    with TableInfo<$FeelChecksTable, FeelCheck> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FeelChecksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _recordedAtMillisMeta = const VerificationMeta(
+    'recordedAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> recordedAtMillis = GeneratedColumn<int>(
+    'recorded_at_millis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ratingMeta = const VerificationMeta('rating');
+  @override
+  late final GeneratedColumn<int> rating = GeneratedColumn<int>(
+    'rating',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, recordedAtMillis, rating];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'feel_checks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FeelCheck> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('recorded_at_millis')) {
+      context.handle(
+        _recordedAtMillisMeta,
+        recordedAtMillis.isAcceptableOrUnknown(
+          data['recorded_at_millis']!,
+          _recordedAtMillisMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedAtMillisMeta);
+    }
+    if (data.containsKey('rating')) {
+      context.handle(
+        _ratingMeta,
+        rating.isAcceptableOrUnknown(data['rating']!, _ratingMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ratingMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FeelCheck map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FeelCheck(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      recordedAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}recorded_at_millis'],
+      )!,
+      rating: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rating'],
+      )!,
+    );
+  }
+
+  @override
+  $FeelChecksTable createAlias(String alias) {
+    return $FeelChecksTable(attachedDatabase, alias);
+  }
+}
+
+class FeelCheck extends DataClass implements Insertable<FeelCheck> {
+  final int id;
+  final int recordedAtMillis;
+  final int rating;
+  const FeelCheck({
+    required this.id,
+    required this.recordedAtMillis,
+    required this.rating,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['recorded_at_millis'] = Variable<int>(recordedAtMillis);
+    map['rating'] = Variable<int>(rating);
+    return map;
+  }
+
+  FeelChecksCompanion toCompanion(bool nullToAbsent) {
+    return FeelChecksCompanion(
+      id: Value(id),
+      recordedAtMillis: Value(recordedAtMillis),
+      rating: Value(rating),
+    );
+  }
+
+  factory FeelCheck.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FeelCheck(
+      id: serializer.fromJson<int>(json['id']),
+      recordedAtMillis: serializer.fromJson<int>(json['recordedAtMillis']),
+      rating: serializer.fromJson<int>(json['rating']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'recordedAtMillis': serializer.toJson<int>(recordedAtMillis),
+      'rating': serializer.toJson<int>(rating),
+    };
+  }
+
+  FeelCheck copyWith({int? id, int? recordedAtMillis, int? rating}) =>
+      FeelCheck(
+        id: id ?? this.id,
+        recordedAtMillis: recordedAtMillis ?? this.recordedAtMillis,
+        rating: rating ?? this.rating,
+      );
+  FeelCheck copyWithCompanion(FeelChecksCompanion data) {
+    return FeelCheck(
+      id: data.id.present ? data.id.value : this.id,
+      recordedAtMillis: data.recordedAtMillis.present
+          ? data.recordedAtMillis.value
+          : this.recordedAtMillis,
+      rating: data.rating.present ? data.rating.value : this.rating,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FeelCheck(')
+          ..write('id: $id, ')
+          ..write('recordedAtMillis: $recordedAtMillis, ')
+          ..write('rating: $rating')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, recordedAtMillis, rating);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FeelCheck &&
+          other.id == this.id &&
+          other.recordedAtMillis == this.recordedAtMillis &&
+          other.rating == this.rating);
+}
+
+class FeelChecksCompanion extends UpdateCompanion<FeelCheck> {
+  final Value<int> id;
+  final Value<int> recordedAtMillis;
+  final Value<int> rating;
+  const FeelChecksCompanion({
+    this.id = const Value.absent(),
+    this.recordedAtMillis = const Value.absent(),
+    this.rating = const Value.absent(),
+  });
+  FeelChecksCompanion.insert({
+    this.id = const Value.absent(),
+    required int recordedAtMillis,
+    required int rating,
+  }) : recordedAtMillis = Value(recordedAtMillis),
+       rating = Value(rating);
+  static Insertable<FeelCheck> custom({
+    Expression<int>? id,
+    Expression<int>? recordedAtMillis,
+    Expression<int>? rating,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (recordedAtMillis != null) 'recorded_at_millis': recordedAtMillis,
+      if (rating != null) 'rating': rating,
+    });
+  }
+
+  FeelChecksCompanion copyWith({
+    Value<int>? id,
+    Value<int>? recordedAtMillis,
+    Value<int>? rating,
+  }) {
+    return FeelChecksCompanion(
+      id: id ?? this.id,
+      recordedAtMillis: recordedAtMillis ?? this.recordedAtMillis,
+      rating: rating ?? this.rating,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (recordedAtMillis.present) {
+      map['recorded_at_millis'] = Variable<int>(recordedAtMillis.value);
+    }
+    if (rating.present) {
+      map['rating'] = Variable<int>(rating.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FeelChecksCompanion(')
+          ..write('id: $id, ')
+          ..write('recordedAtMillis: $recordedAtMillis, ')
+          ..write('rating: $rating')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$OpenVitalsDatabase extends GeneratedDatabase {
   _$OpenVitalsDatabase(QueryExecutor e) : super(e);
   $OpenVitalsDatabaseManager get managers => $OpenVitalsDatabaseManager(this);
   late final $BeveragesTable beverages = $BeveragesTable(this);
+  late final $FeelChecksTable feelChecks = $FeelChecksTable(this);
   late final BeverageDao beverageDao = BeverageDao(this as OpenVitalsDatabase);
+  late final FeelCheckDao feelCheckDao = FeelCheckDao(
+    this as OpenVitalsDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [beverages];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [beverages, feelChecks];
 }
 
 typedef $$BeveragesTableCreateCompanionBuilder =
@@ -1296,10 +1566,170 @@ typedef $$BeveragesTableProcessedTableManager =
       BeverageEntity,
       PrefetchHooks Function()
     >;
+typedef $$FeelChecksTableCreateCompanionBuilder =
+    FeelChecksCompanion Function({
+      Value<int> id,
+      required int recordedAtMillis,
+      required int rating,
+    });
+typedef $$FeelChecksTableUpdateCompanionBuilder =
+    FeelChecksCompanion Function({
+      Value<int> id,
+      Value<int> recordedAtMillis,
+      Value<int> rating,
+    });
+
+class $$FeelChecksTableFilterComposer
+    extends Composer<_$OpenVitalsDatabase, $FeelChecksTable> {
+  $$FeelChecksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get recordedAtMillis => $composableBuilder(
+    column: $table.recordedAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rating => $composableBuilder(
+    column: $table.rating,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$FeelChecksTableOrderingComposer
+    extends Composer<_$OpenVitalsDatabase, $FeelChecksTable> {
+  $$FeelChecksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get recordedAtMillis => $composableBuilder(
+    column: $table.recordedAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rating => $composableBuilder(
+    column: $table.rating,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FeelChecksTableAnnotationComposer
+    extends Composer<_$OpenVitalsDatabase, $FeelChecksTable> {
+  $$FeelChecksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get recordedAtMillis => $composableBuilder(
+    column: $table.recordedAtMillis,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get rating =>
+      $composableBuilder(column: $table.rating, builder: (column) => column);
+}
+
+class $$FeelChecksTableTableManager
+    extends
+        RootTableManager<
+          _$OpenVitalsDatabase,
+          $FeelChecksTable,
+          FeelCheck,
+          $$FeelChecksTableFilterComposer,
+          $$FeelChecksTableOrderingComposer,
+          $$FeelChecksTableAnnotationComposer,
+          $$FeelChecksTableCreateCompanionBuilder,
+          $$FeelChecksTableUpdateCompanionBuilder,
+          (
+            FeelCheck,
+            BaseReferences<_$OpenVitalsDatabase, $FeelChecksTable, FeelCheck>,
+          ),
+          FeelCheck,
+          PrefetchHooks Function()
+        > {
+  $$FeelChecksTableTableManager(_$OpenVitalsDatabase db, $FeelChecksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FeelChecksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FeelChecksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FeelChecksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> recordedAtMillis = const Value.absent(),
+                Value<int> rating = const Value.absent(),
+              }) => FeelChecksCompanion(
+                id: id,
+                recordedAtMillis: recordedAtMillis,
+                rating: rating,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int recordedAtMillis,
+                required int rating,
+              }) => FeelChecksCompanion.insert(
+                id: id,
+                recordedAtMillis: recordedAtMillis,
+                rating: rating,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$FeelChecksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OpenVitalsDatabase,
+      $FeelChecksTable,
+      FeelCheck,
+      $$FeelChecksTableFilterComposer,
+      $$FeelChecksTableOrderingComposer,
+      $$FeelChecksTableAnnotationComposer,
+      $$FeelChecksTableCreateCompanionBuilder,
+      $$FeelChecksTableUpdateCompanionBuilder,
+      (
+        FeelCheck,
+        BaseReferences<_$OpenVitalsDatabase, $FeelChecksTable, FeelCheck>,
+      ),
+      FeelCheck,
+      PrefetchHooks Function()
+    >;
 
 class $OpenVitalsDatabaseManager {
   final _$OpenVitalsDatabase _db;
   $OpenVitalsDatabaseManager(this._db);
   $$BeveragesTableTableManager get beverages =>
       $$BeveragesTableTableManager(_db, _db.beverages);
+  $$FeelChecksTableTableManager get feelChecks =>
+      $$FeelChecksTableTableManager(_db, _db.feelChecks);
 }
