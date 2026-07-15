@@ -258,21 +258,26 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         final bytes = await file.read();
 
         // Wellness FIT types take the import-records path, not the activity path.
-        // Sleep first: a type-49 file has no session or route, so the activity
-        // parser would (correctly) reject it — here it becomes a SleepSession.
+        // A type-49 (sleep) / type-68 (HRV) file has no session or route, so the
+        // activity parser would (correctly) reject it — here it becomes Health
+        // Connect records. One decode pass yields whichever the file carried.
         if (isFitFile(bytes)) {
-          final sleep =
-              FitRouteParser.parseSleepSession(bytes, fileName: file.fileName);
-          if (sleep != null) {
-            final records = fitSleepImportRecords(sleep);
+          final wellness =
+              FitRouteParser.parseWellness(bytes, fileName: file.fileName);
+          if (!wellness.isEmpty) {
+            final records = <ImportRecord>[
+              if (wellness.sleep != null)
+                ...fitSleepImportRecords(wellness.sleep!),
+              if (wellness.hrv != null) ...fitHrvImportRecords(wellness.hrv!),
+            ];
             if (records.isEmpty) {
               throw const RouteImportException(
-                'Sleep file had no Health Connect-mappable stages.',
+                'Wellness file had no Health Connect-mappable data.',
               );
             }
             wellnessPending.addAll(records);
-            debugPrint('[FIT] queued sleep file=${file.fileName ?? "?"} '
-                'stages=${sleep.stages.length}');
+            debugPrint('[FIT] queued wellness file=${file.fileName ?? "?"} '
+                'records=${records.length}');
             if (wellnessPending.length >= _maxPendingFiles) {
               await writeWellnessPending();
             }

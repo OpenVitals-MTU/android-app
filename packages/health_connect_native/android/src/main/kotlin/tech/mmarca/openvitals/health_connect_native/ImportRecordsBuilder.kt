@@ -16,6 +16,7 @@ import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.IntermenstrualBleedingRecord
@@ -104,6 +105,12 @@ internal object ImportRecordsBuilder {
         metadata = meta,
       )
       "RestingHeartRate" -> RestingHeartRateRecord(start, sZone, req("bpm").toLong(), meta)
+      "HeartRateVariabilityRmssd" -> HeartRateVariabilityRmssdRecord(
+        time = start,
+        zoneOffset = sZone,
+        heartRateVariabilityMillis = req("rmssdMillis"),
+        metadata = meta,
+      )
       "Weight" -> WeightRecord(start, sZone, Mass.kilograms(req("weightKg")), meta)
       "Height" -> HeightRecord(start, sZone, Length.meters(req("heightMeters")), meta)
       "BodyFat" -> BodyFatRecord(start, sZone, Percentage(req("percentage")), meta)

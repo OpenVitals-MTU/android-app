@@ -45,6 +45,18 @@ List<ImportRecord> fitSleepImportRecords(FitSleepSession session) {
   ];
 }
 
+/// Turns a decoded [FitHrvReading] into a `HeartRateVariabilityRmssdRecord`
+/// import. Deterministic [clientRecordId] so a re-import dedupes.
+List<ImportRecord> fitHrvImportRecords(FitHrvReading reading) => [
+      HeartRateVariabilityRmssdImportRecord(
+        clientRecordId:
+            'garmin_fit_hrv_${reading.time.millisecondsSinceEpoch}',
+        time: reading.time,
+        zoneOffset: null,
+        rmssdMillis: reading.rmssdMillis,
+      ),
+    ];
+
 /// Garmin `sleep_level` → Health Connect `SleepSessionRecord.Stage`.
 /// `unmeasurable` has no Health Connect stage, so it is dropped (the gap between
 /// stages simply carries no classification).

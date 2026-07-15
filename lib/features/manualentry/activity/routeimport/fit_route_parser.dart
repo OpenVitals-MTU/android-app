@@ -38,6 +38,26 @@ class FitSleepSession {
   final List<FitSleepStage> stages;
 }
 
+/// A decoded Garmin HRV nightly reading (file type 68):
+/// `hrv_status_summary.last_night_average` as an RMSSD in milliseconds.
+class FitHrvReading {
+  const FitHrvReading({required this.time, required this.rmssdMillis});
+
+  final DateTime time;
+  final double rmssdMillis;
+}
+
+/// The wellness data a FIT file carried, from one decode pass. Each Garmin file
+/// is a single type, so at most one of these is non-null (activities have none).
+class FitWellness {
+  const FitWellness({this.sleep, this.hrv});
+
+  final FitSleepSession? sleep;
+  final FitHrvReading? hrv;
+
+  bool get isEmpty => sleep == null && hrv == null;
+}
+
 /// Hand-port of the Kotlin `FitRouteParser` (Garmin FIT decoder). Ported byte
 /// for byte in pure Dart rather than delegating to a package, because the unit
 /// tests exercise hand-crafted FIT byte streams whose exact framing must be
@@ -83,15 +103,24 @@ class FitRouteParser {
     }
   }
 
-  /// Decodes a Garmin **sleep** FIT file (file type 49) into a [FitSleepSession],
-  /// or null if the file carries no sleep timeline. Sleep files have no activity
-  /// session and no route, so [parse] rejects them — this is their path. Field
-  /// layout: docs/reference/garmin-fit-files.md.
+  /// Decodes the **wellness** data a FIT file carries (sleep, HRV, …) in one
+  /// pass. Wellness files have no activity session or route, so [parse] rejects
+  /// them — this is their path. Returns an empty [FitWellness] for activity,
+  /// course and workout files. Field layout: docs/reference/garmin-fit-files.md.
+  static FitWellness parseWellness(Uint8List fitBytes, {String? fileName}) {
+    final result = _FitDecoder(fitBytes).decode();
+    return FitWellness(
+      sleep: result.sleep.toSession(),
+      hrv: result.hrv.toReading(),
+    );
+  }
+
+  /// The sleep session in [fitBytes], or null if it carries none.
   static FitSleepSession? parseSleepSession(
     Uint8List fitBytes, {
     String? fileName,
   }) =>
-      _FitDecoder(fitBytes).decode().sleep.toSession();
+      parseWellness(fitBytes, fileName: fileName).sleep;
 
   static RouteFileImport _parseActivity(
     String? fileName,
@@ -241,12 +270,19 @@ class FitRouteParser {
 }
 
 class _FitDecodeResult {
-  const _FitDecodeResult(this.points, this.summary, this.samples, this.sleep);
+  const _FitDecodeResult(
+    this.points,
+    this.summary,
+    this.samples,
+    this.sleep,
+    this.hrv,
+  );
 
   final List<ExerciseRoutePoint> points;
   final _FitActivitySummary summary;
   final _FitSamples samples;
   final _FitSleepRaw sleep;
+  final _FitHrvRaw hrv;
 }
 
 /// The per-record series, before the sport is known.
@@ -300,6 +336,7 @@ class _FitFileDecodeResult {
     this.summary,
     this.samples,
     this.sleep,
+    this.hrv,
     this.nextOffset,
   );
 
@@ -307,7 +344,26 @@ class _FitFileDecodeResult {
   final _FitActivitySummary summary;
   final _FitSamples samples;
   final _FitSleepRaw sleep;
+  final _FitHrvRaw hrv;
   final int nextOffset;
+}
+
+/// The raw HRV reading a file carried (`hrv_status_summary.last_night_average`).
+/// At most one is kept — the last seen — since a status file holds one summary.
+class _FitHrvRaw {
+  const _FitHrvRaw({this.time, this.rmssdMillis});
+
+  final DateTime? time;
+  final double? rmssdMillis;
+
+  _FitHrvRaw merge(_FitHrvRaw other) => _FitHrvRaw(
+        time: other.time ?? time,
+        rmssdMillis: other.rmssdMillis ?? rmssdMillis,
+      );
+
+  FitHrvReading? toReading() => (time != null && rmssdMillis != null)
+      ? FitHrvReading(time: time!, rmssdMillis: rmssdMillis!)
+      : null;
 }
 
 /// The raw sleep messages a single FIT file carried: the `event`/74 session
@@ -460,6 +516,7 @@ class _FitDecoder {
     var summary = const _FitActivitySummary();
     var samples = const _FitSamples.empty();
     var sleep = const _FitSleepRaw();
+    var hrv = const _FitHrvRaw();
     var offset = 0;
     var decodedAnyFile = false;
 
@@ -475,10 +532,11 @@ class _FitDecoder {
       summary = summary.merge(result.summary);
       samples = samples.merge(result.samples);
       sleep = sleep.merge(result.sleep);
+      hrv = hrv.merge(result.hrv);
       decodedAnyFile = true;
       offset = result.nextOffset;
     }
-    return _FitDecodeResult(points, summary, samples, sleep);
+    return _FitDecodeResult(points, summary, samples, sleep, hrv);
   }
 }
 
@@ -509,6 +567,10 @@ class _FitSingleFileDecoder {
   DateTime? _sleepStop;
   final List<(DateTime, int)> _sleepLevels = [];
 
+  // HRV (file type 68): the last `hrv_status_summary.last_night_average` seen.
+  DateTime? _hrvTime;
+  double? _hrvRmssdMillis;
+
   _FitFileDecodeResult decode() {
     final headerSize = fileBytes[startOffset] & 0xFF;
     if (headerSize < _fitMinimumHeaderSize ||
@@ -535,6 +597,7 @@ class _FitSingleFileDecoder {
       _fitSummary(),
       samples,
       _FitSleepRaw(start: _sleepStart, stop: _sleepStop, levels: _sleepLevels),
+      _FitHrvRaw(time: _hrvTime, rmssdMillis: _hrvRmssdMillis),
       next > fileBytes.length ? fileBytes.length : next,
     );
   }
@@ -682,6 +745,13 @@ class _FitSingleFileDecoder {
         final level = values[_fitSleepLevelFieldNumber];
         if (level != null && messageTimestamp != null) {
           _sleepLevels.add((_fitDateTimeInstant(messageTimestamp), level));
+        }
+        break;
+      case _fitHrvStatusSummaryMessageNumber:
+        final raw = values[_fitHrvLastNightAverageFieldNumber];
+        if (raw != null && raw != _fitUint16Invalid && messageTimestamp != null) {
+          _hrvTime = _fitDateTimeInstant(messageTimestamp);
+          _hrvRmssdMillis = raw / _fitHrvRmssdScale;
         }
         break;
     }
@@ -1192,6 +1262,13 @@ const int _fitSleepLevelFieldNumber = 0;
 const int _fitSleepEventValue = 74; // `event` == sleep (Garmin-proprietary)
 const int _fitEventTypeStart = 0;
 const int _fitEventTypeStop = 1;
+
+// HRV status (Garmin file type 68). `hrv_status_summary.last_night_average`
+// (field 1, uint16, scale 128) is the night's RMSSD in ms.
+const int _fitHrvStatusSummaryMessageNumber = 370;
+const int _fitHrvLastNightAverageFieldNumber = 1;
+const double _fitHrvRmssdScale = 128.0;
+const int _fitUint16Invalid = 0xFFFF;
 const int _fitCourseMessageNumber = 31;
 const int _fitCourseSportFieldNumber = 4;
 const int _fitCourseNameFieldNumber = 5;
@@ -1277,4 +1354,5 @@ const Set<int> _fitParsedMessageNumbers = {
   _fitWorkoutStepMessageNumber,
   _fitEventMessageNumber,
   _fitSleepLevelMessageNumber,
+  _fitHrvStatusSummaryMessageNumber,
 };

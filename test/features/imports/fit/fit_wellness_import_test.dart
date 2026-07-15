@@ -95,6 +95,42 @@ void main() {
       expect(record.stages.map((s) => s.stage), [SleepStageType.light]);
     });
   });
+
+  group('HRV (type 68)', () {
+    final hrvTime = DateTime.utc(2024, 1, 2, 6, 0, 0);
+
+    test('reads last_night_average as an RMSSD in ms', () {
+      final wellness = FitRouteParser.parseWellness(
+        _fitHrvBytes(time: hrvTime, rmssdMillis: 42.5),
+      );
+      expect(wellness.sleep, isNull);
+      expect(wellness.hrv, isNotNull);
+      expect(wellness.hrv!.time, hrvTime);
+      // 42.5 ms -> raw round(42.5*128)=5440 -> 5440/128 = 42.5.
+      expect(wellness.hrv!.rmssdMillis, closeTo(42.5, 0.01));
+    });
+
+    test('maps to one HeartRateVariabilityRmssd record', () {
+      final reading = FitRouteParser.parseWellness(
+        _fitHrvBytes(time: hrvTime, rmssdMillis: 42.5),
+      ).hrv!;
+      final record = fitHrvImportRecords(reading).single
+          as HeartRateVariabilityRmssdImportRecord;
+      expect(record.targetType, 'HeartRateVariabilityRmssdRecord');
+      expect(
+        record.clientRecordId,
+        'garmin_fit_hrv_${hrvTime.millisecondsSinceEpoch}',
+      );
+      expect(record.rmssdMillis, closeTo(42.5, 0.01));
+    });
+
+    test('the invalid uint16 sentinel is not read as a reading', () {
+      final wellness = FitRouteParser.parseWellness(
+        _fitHrvBytes(time: hrvTime, rawOverride: 0xFFFF),
+      );
+      expect(wellness.hrv, isNull);
+    });
+  });
 }
 
 // ── Minimal FIT writer (little-endian), enough for a sleep file ──────────────
@@ -192,6 +228,32 @@ Uint8List _fitSleepBytes({
       ..u32(_fitTimestamp(at))
       ..u8(level);
   }
+
+  return _wrap(data.toBytes());
+}
+
+Uint8List _fitHrvBytes({
+  required DateTime time,
+  double? rmssdMillis,
+  int? rawOverride,
+}) {
+  final raw = rawOverride ?? (rmssdMillis! * 128).round();
+  final data = _W()..def(3, 0, [
+    [0, 1, 0x00]
+  ]);
+  data
+    ..u8(3)
+    ..u8(68); // file_id type 68 (HRV)
+
+  // hrv_status_summary (370): timestamp, last_night_average (field 1, uint16).
+  data.def(1, 370, [
+    [253, 4, 0x86],
+    [1, 2, 0x84], // uint16
+  ]);
+  data
+    ..u8(1)
+    ..u32(_fitTimestamp(time))
+    ..u16(raw);
 
   return _wrap(data.toBytes());
 }

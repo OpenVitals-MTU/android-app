@@ -265,6 +265,21 @@ class RestingHeartRateImportRecord extends ImportRecord {
   final int beatsPerMinute;
 }
 
+/// A single-instant heart-rate-variability RMSSD reading, in milliseconds
+/// (`HeartRateVariabilityRmssdRecord.heartRateVariabilityMillis`).
+class HeartRateVariabilityRmssdImportRecord extends ImportRecord {
+  const HeartRateVariabilityRmssdImportRecord({
+    required super.clientRecordId,
+    required this.time,
+    required this.zoneOffset,
+    required this.rmssdMillis,
+  }) : super(targetType: 'HeartRateVariabilityRmssdRecord');
+
+  final DateTime time;
+  final Duration? zoneOffset;
+  final double rmssdMillis;
+}
+
 /// A single-instant mass measurement in kilograms.
 class WeightImportRecord extends ImportRecord {
   const WeightImportRecord({

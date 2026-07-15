@@ -142,6 +142,9 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
     case RestingHeartRateImportRecord r:
       return instant('RestingHeartRate', r.time, r.zoneOffset,
           doubles: {'bpm': r.beatsPerMinute.toDouble()});
+    case HeartRateVariabilityRmssdImportRecord r:
+      return instant('HeartRateVariabilityRmssd', r.time, r.zoneOffset,
+          doubles: {'rmssdMillis': r.rmssdMillis});
     case WeightImportRecord r:
       return instant('Weight', r.time, r.zoneOffset,
           doubles: {'weightKg': r.kilograms});
