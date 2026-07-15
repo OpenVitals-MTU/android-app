@@ -7,6 +7,7 @@ import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/activity_models.dart';
+import '../../../domain/model/apple_health_import_records.dart';
 import '../../../domain/preferences/unit_system.dart';
 import '../../activity/application/activities_view_model.dart';
 import '../../dashboard/application/dashboard_view_model.dart';
@@ -14,7 +15,9 @@ import '../../manualentry/activity/activity_entry_clock.dart';
 import '../../manualentry/activity/activity_entry_view_model.dart';
 import '../../manualentry/activity/activity_entry_providers.dart';
 import '../../manualentry/activity/activity_entry_write_request_builder.dart';
+import '../../manualentry/activity/routeimport/fit_route_parser.dart';
 import '../../manualentry/activity/routeimport/route_file_parser.dart';
+import '../fit/fit_wellness_import.dart';
 
 part 'route_bulk_import_view_model.freezed.dart';
 
@@ -111,6 +114,10 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
     final writeImportedActivity = ref.read(writeImportedActivityUseCaseProvider);
     final writeImportedActivities =
         ref.read(writeImportedActivitiesUseCaseProvider);
+    // Wellness FIT types (sleep, …) are not activities: they carry no route and
+    // write to their own Health Connect records through the generic import path
+    // the Apple Health importer uses, not the exercise-session path.
+    final healthDataSource = ref.read(healthDataSourceProvider);
     final preferences = ref.read(preferencesRepositoryProvider);
     final writePermissions =
         ref.read(readActivityWritePermissionsUseCaseProvider)();
@@ -140,6 +147,43 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
     // rest of the folder failing every remaining file for the same reason and
     // reporting them all as broken.
     var rateLimited = false;
+
+    // Parsed wellness records (sleep) waiting to be written together, same
+    // per-call-quota reasoning as the activity batch. One sleep file yields one
+    // record, so the record count is the file count.
+    final wellnessPending = <ImportRecord>[];
+
+    Future<void> writeWellnessPending() async {
+      if (wellnessPending.isEmpty) return;
+      final batch = List<ImportRecord>.of(wellnessPending);
+      wellnessPending.clear();
+      try {
+        await healthDataSource.insertImportedRecords(batch);
+        importedFiles += batch.length;
+      } catch (_) {
+        // insertImportedRecords throws rather than returning a Result; a batch is
+        // all-or-nothing, so retry one record at a time to keep the good ones and
+        // count only the guilty file.
+        for (final record in batch) {
+          try {
+            await healthDataSource.insertImportedRecords([record]);
+            importedFiles += 1;
+          } catch (error) {
+            failedFiles += 1;
+            lastError = _describeError(error);
+            debugPrint('[FIT] wellness write FAILED: $lastError');
+          }
+        }
+      }
+      state = state.copyWith(
+        progress: RouteBulkImportProgress(
+          totalFiles: totalFiles,
+          importedFiles: importedFiles,
+          failedFiles: failedFiles,
+          currentFileIndex: state.progress?.currentFileIndex ?? 0,
+        ),
+      );
+    }
 
     Future<void> writePending() async {
       if (pending.isEmpty || rateLimited) return;
@@ -211,11 +255,33 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         // files costs the heap one file, not four hundred. Only the parsed write
         // request is held on for the batch, which is small.
         final file = files[index];
+        final bytes = await file.read();
+
+        // Wellness FIT types take the import-records path, not the activity path.
+        // Sleep first: a type-49 file has no session or route, so the activity
+        // parser would (correctly) reject it — here it becomes a SleepSession.
+        if (isFitFile(bytes)) {
+          final sleep =
+              FitRouteParser.parseSleepSession(bytes, fileName: file.fileName);
+          if (sleep != null) {
+            final records = fitSleepImportRecords(sleep);
+            if (records.isEmpty) {
+              throw const RouteImportException(
+                'Sleep file had no Health Connect-mappable stages.',
+              );
+            }
+            wellnessPending.addAll(records);
+            debugPrint('[FIT] queued sleep file=${file.fileName ?? "?"} '
+                'stages=${sleep.stages.length}');
+            if (wellnessPending.length >= _maxPendingFiles) {
+              await writeWellnessPending();
+            }
+            continue;
+          }
+        }
+
         final routeImport = await importer.import(
-          ActivityRouteFileHandle(
-            bytes: await file.read(),
-            fileName: file.fileName,
-          ),
+          ActivityRouteFileHandle(bytes: bytes, fileName: file.fileName),
         );
         final routeState = activityStateWithRouteImport(
           initialActivityEntryState(
@@ -261,6 +327,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
     }
 
     await writePending();
+    await writeWellnessPending();
 
     // DIAGNOSTIC: the run's bottom line, matching the card's "Imported X. Failed Y."
     debugPrint('[FIT] run complete: total=$totalFiles imported=$importedFiles '
