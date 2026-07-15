@@ -3320,6 +3320,22 @@
   "bodyEnergyReasonRecoveryDebtDetail": "Recent harder effort kept a small drain active afterward.",
   "bodyEnergyReasonNoDataDetail": "Health Connect did not provide enough signal for this bucket.",
   "bodyEnergyReasonSteadyDetail": "Baseline metabolism drew a steady, gentle amount.",
+  "bodyEnergyFeelCheckTitle": "How's your energy?",
+  "bodyEnergyFeelCheckPrompt": "Rate it 0\u201310. Your answers quietly tune Body Energy to how activity, sleep and stress actually affect you.",
+  "bodyEnergyFeelCheckSaved": "Thanks \u2014 Body Energy will learn from that.",
+  "bodyEnergyFeelCheckError": "Could not save that check-in. Please try again.",
+  "bodyEnergyPersonalizationTitle": "Personal tuning",
+  "bodyEnergyPersonalizationBody": "{count, plural, =0{Rate your energy on Body Energy to start personalising these.} =1{Learned from 1 check-in. Each is a plain multiplier you can see below.} other{Learned from {count} check-ins. Each is a plain multiplier you can see below.}}",
+  "@bodyEnergyPersonalizationBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "bodyEnergyGainActivity": "Everyday activity tires you",
+  "bodyEnergyGainSleep": "Sleep recharges you",
+  "bodyEnergyGainBasal": "Baseline burn",
+  "bodyEnergyGainStress": "Stress tires you",
+  "bodyEnergyPersonalizationReset": "Reset personal tuning",
   "bodyEnergyInputsTitle": "Inputs used",
   "bodyEnergyInputsSummary": "Algorithm v{arg0}, {arg1}-minute buckets",
   "@bodyEnergyInputsSummary": {

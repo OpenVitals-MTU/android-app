@@ -46,22 +46,41 @@ class BodyEnergyCalibrationViewModel
     required String zone5,
     required bool useManualZones,
   }) {
-    final calibration = BodyEnergyCalibration(
-      manualZoneThresholdsBpm: HeartZoneThresholds(
-        zone1LowerBpm: int.tryParse(zone1.trim()) ?? 0,
-        zone2LowerBpm: int.tryParse(zone2.trim()) ?? 0,
-        zone3LowerBpm: int.tryParse(zone3.trim()) ?? 0,
-        zone4LowerBpm: int.tryParse(zone4.trim()) ?? 0,
-        zone5LowerBpm: int.tryParse(zone5.trim()) ?? 0,
-      ),
-      useManualZones: useManualZones,
-    ).normalized();
+    // Preserve the learned personal gains; only the zones change here.
+    final calibration = state.calibration
+        .copyWith(
+          manualZoneThresholdsBpm: HeartZoneThresholds(
+            zone1LowerBpm: int.tryParse(zone1.trim()) ?? 0,
+            zone2LowerBpm: int.tryParse(zone2.trim()) ?? 0,
+            zone3LowerBpm: int.tryParse(zone3.trim()) ?? 0,
+            zone4LowerBpm: int.tryParse(zone4.trim()) ?? 0,
+            zone5LowerBpm: int.tryParse(zone5.trim()) ?? 0,
+          ),
+          useManualZones: useManualZones,
+        )
+        .normalized();
     _persist(calibration);
   }
 
-  /// Kotlin `resetBodyEnergyCalibration`: back to the automatic zones, still
-  /// marked as set up.
-  void useAutomatic() => _persist(BodyEnergyCalibration.automatic);
+  /// Back to automatic zones, keeping the learned personal gains.
+  void useAutomatic() => _persist(
+    state.calibration.copyWith(
+      manualZoneThresholdsBpm: null,
+      useManualZones: false,
+    ),
+  );
+
+  /// Clears the learned personalization — every gain back to neutral 1.0 and the
+  /// feel-check count back to zero — without touching the heart-zone setup.
+  void resetPersonalization() => _persist(
+    state.calibration.copyWith(
+      sleepChargeGain: 1.0,
+      activityDrainGain: 1.0,
+      basalDrainGain: 1.0,
+      stressDrainGain: 1.0,
+      feelCheckCount: 0,
+    ),
+  );
 
   void _persist(BodyEnergyCalibration calibration) {
     ref
@@ -71,10 +90,11 @@ class BodyEnergyCalibrationViewModel
 }
 
 /// The state provider for the Body Energy calibration settings card.
-final bodyEnergyCalibrationSettingsProvider = NotifierProvider<
-    BodyEnergyCalibrationViewModel, BodyEnergyCalibrationCardState>(
-  BodyEnergyCalibrationViewModel.new,
-);
+final bodyEnergyCalibrationSettingsProvider =
+    NotifierProvider<
+      BodyEnergyCalibrationViewModel,
+      BodyEnergyCalibrationCardState
+    >(BodyEnergyCalibrationViewModel.new);
 
 /// The current calibration on its own — what the Body Energy detail screen
 /// reads. Derived, so the listenable is subscribed exactly once.
