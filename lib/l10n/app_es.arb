@@ -1899,5 +1899,23 @@
     "bodyEnergyGainSleep": "Dormir te recarga las pilas",
     "bodyEnergyGainBasal": "Quema de calorías en reposo",
     "bodyEnergyGainStress": "El estrés te cansa",
-    "bodyEnergyPersonalizationReset": "Restablecer ajustes personales"
+    "bodyEnergyPersonalizationReset": "Restablecer ajustes personales",
+    "settingsRouteImportResultWithSkipped": "Importado {arg0}. Omitido {arg1}. Falló {arg2} . Seleccionado {arg3}.",
+    "@settingsRouteImportResultWithSkipped": {
+        "description": "FIT folder import result when some files were skipped (non-activity wellness types with no Health Connect equivalent, e.g. Garmin stress or Body Battery).",
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "int"
+            },
+            "arg2": {
+                "type": "int"
+            },
+            "arg3": {
+                "type": "int"
+            }
+        }
+    }
 }
