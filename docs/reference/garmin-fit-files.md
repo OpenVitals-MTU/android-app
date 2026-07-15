@@ -256,8 +256,13 @@ reading = one record) so it must be aggregated.
 
 **Extraction, per signal:**
 
-- **HR** (`monitoring.heart_rate`, ~250/file) → `HeartRateRecord`, samples packed
-  into **one series record per hour**.
+- **HR** (`monitoring.heart_rate`, ~250/file) → `HeartRateRecord`, **one hourly
+  AVERAGE** sample per hour (not the raw per-minute samples). Health Connect's
+  daily-bucket aggregate — which the month/year charts use — must scan every
+  stored HR sample, and packing the raw per-minute samples left ~430k/year that
+  took the aggregate ~10s (blocking the other reads). One hourly average is
+  ~8.7k/year, aggregated in <1s. Recent day/week detail is unaffected: it comes
+  from live sync, not this historical import.
 - **Respiration** (`respiration_rate` msg 297, sint16 ÷100 br/min; drop ≤0 /
   invalid) → **hourly average** → one `RespiratoryRateRecord` per hour.
 - **Steps** — messy: `steps`/`cycles` are cumulative **per wear-session**, reset
