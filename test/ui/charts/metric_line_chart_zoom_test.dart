@@ -125,4 +125,62 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('switching the year resets a zoom rather than carrying it over',
+      (tester) async {
+    Widget chartForYear(int year) {
+      final series = MetricLineSeries(
+        color: const Color(0xFF2196F3),
+        points: [
+          for (var month = 1; month <= 12; month++)
+            MetricLinePoint(date: LocalDate(year, month, 15), value: 60.0 + month),
+        ],
+      );
+      return MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: MetricLineChart(
+              title: 'Resting heart rate',
+              series: [series],
+              selectedRange: TimeRange.year,
+              period:
+                  DatePeriod(LocalDate(year, 1, 1), LocalDate(year, 12, 31)),
+              accentColor: const Color(0xFF2196F3),
+              summaryText: 'Avg',
+            ),
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(chartForYear(2024));
+    await tester.pumpAndSettle();
+
+    final center = tester.getCenter(find.byType(ChartZoom));
+    final left = await tester.startGesture(center - const Offset(30, 0));
+    final right = await tester.startGesture(center + const Offset(30, 0));
+    await tester.pump();
+    await left.moveBy(const Offset(-90, 0));
+    await right.moveBy(const Offset(90, 0));
+    await tester.pump();
+    await left.up();
+    await right.up();
+    await tester.pumpAndSettle();
+
+    // Zoomed now (Stack layout).
+    expect(
+      find.descendant(
+          of: find.byType(PeriodChartXAxis), matching: find.byType(Stack)),
+      findsOneWidget,
+    );
+
+    // Switch to another year: the zoom must NOT carry over.
+    await tester.pumpWidget(chartForYear(2023));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+          of: find.byType(PeriodChartXAxis), matching: find.byType(Stack)),
+      findsNothing,
+    );
+  });
 }

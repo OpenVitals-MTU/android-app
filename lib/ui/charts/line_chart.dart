@@ -198,8 +198,17 @@ class MetricLineChart extends StatelessWidget {
     // Every range pinches: the day chart on its hour scale, the week/month/year
     // charts on their date slots — the line maps its x through the viewport and
     // PeriodChartXAxis reflows its labels to match.
-    final chart =
-        ChartZoom(builder: (context, viewport) => chartWithAxis(viewport));
+    //
+    // Keyed on the chart's data identity so a zoom does not carry over when the
+    // data underneath changes: switching year/range (or navigating to another
+    // day) rebuilds a fresh, unzoomed ChartZoom rather than stretching the old
+    // slice onto the new period.
+    final chart = ChartZoom(
+      key: ValueKey(
+        (selectedRange, period.start.epochDay, period.end.epochDay),
+      ),
+      builder: (context, viewport) => chartWithAxis(viewport),
+    );
 
     return OpenVitalsCard(
       child: Padding(
