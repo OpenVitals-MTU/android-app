@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart'; // DIAGNOSTIC: debugPrint to logcat (also re-exports Uint8List)
 
 import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
@@ -13,6 +14,11 @@ class FitRouteParser {
   const FitRouteParser._();
 
   static RouteFileImport parse(Uint8List fitBytes, {String? fileName}) {
+    // DIAGNOSTIC: log every file that reaches the decoder before it can throw, so
+    // a header/structure failure is still attributable to a filename in logcat.
+    debugPrint(
+      '[FIT] decode start file=${fileName ?? "?"} bytes=${fitBytes.length}',
+    );
     final result = _FitDecoder(fitBytes).decode();
     final samples = result.samples.resolve(
       isCycling: _fitSportIsCycling(result.summary.sport),
@@ -23,6 +29,16 @@ class FitRouteParser {
     for (final point in sorted) {
       if (seen.add(point.time.microsecondsSinceEpoch)) routePoints.add(point);
     }
+    // DIAGNOSTIC: the classification that decides pass/fail. fileType (activity vs
+    // course/workout vs monitoring/sleep/etc.), whether a session start_time was
+    // found, and how many timestamped route points survived — the three inputs the
+    // reject-at-line-46 decision reads.
+    debugPrint(
+      '[FIT] decoded file=${fileName ?? "?"} '
+      'fileType=${result.summary.fileType} sport=${result.summary.sport} '
+      'subSport=${result.summary.subSport} start=${result.summary.startTime} '
+      'end=${result.summary.endTime} routePoints=${routePoints.length}',
+    );
     switch (result.summary.fileType) {
       case _fitFileTypeCourse:
         // A course is a planned route: it has no recorded series to carry.

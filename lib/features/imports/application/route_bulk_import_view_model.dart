@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart'; // DIAGNOSTIC: debugPrint to logcat (also re-exports Uint8List)
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -155,11 +154,15 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         case Err(:final RateLimitFailure failure):
           rateLimited = true;
           lastError = _describeFailure(failure);
+          debugPrint('[FIT] batch rate-limited: $lastError',
+        );
         case Err():
           // The batch is ATOMIC: Health Connect wrote none of it, and the failure
           // does not say which record it choked on. Retry the files one by one to
           // find the bad one — the good ones still get written, exactly as they
           // did before batching, and only the guilty file is counted as failed.
+          debugPrint('[FIT] batch write refused; retrying ${batch.length} files singly',
+        );
           for (final request in batch) {
             if (rateLimited) break;
             switch (await writeImportedActivity(request)) {
@@ -174,6 +177,8 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
                 // record needs and does not have — fails one file, never the batch.
                 failedFiles += 1;
                 lastError = _describeFailure(failure);
+                debugPrint('[FIT] write FAILED for one file: $lastError',
+        );
             }
           }
       }
@@ -233,6 +238,11 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         }
         pending.add(request);
         pendingRoutePoints += request.routePoints.length;
+        // DIAGNOSTIC: a file that parsed and became a write request — the success
+        // path the UI never itemises.
+        debugPrint('[FIT] queued file=${files[index].fileName ?? "?"} '
+          'routePoints=${request.routePoints.length}',
+        );
         if (pending.length >= _maxPendingFiles ||
             pendingRoutePoints >= _maxPendingRoutePoints) {
           await writePending();
@@ -243,10 +253,19 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         // folder import can hit when a file moves between the scan and its turn.
         failedFiles += 1;
         lastError = _describeError(error);
+        // DIAGNOSTIC: the per-file failure reason the UI collapses into a single
+        // "last error" line. One line per rejected file, attributable by name.
+        debugPrint('[FIT] FAILED file=${files[index].fileName ?? "?"} reason="$lastError"',
+        );
       }
     }
 
     await writePending();
+
+    // DIAGNOSTIC: the run's bottom line, matching the card's "Imported X. Failed Y."
+    debugPrint('[FIT] run complete: total=$totalFiles imported=$importedFiles '
+      'failed=$failedFiles rateLimited=$rateLimited lastError="$lastError"',
+        );
 
     state = RouteBulkImportState(
       isImporting: false,
