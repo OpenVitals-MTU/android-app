@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$BodyEnergyTimelinePoint {
 
- DateTime get time; int get score; double get delta; BodyEnergyBucketState get state; BodyEnergyConfidence get confidence; double get charge; double get intensityDrain; double get stressDrain; double get recoveryDebtDrain; BodyEnergyPrimaryInfluence get primaryInfluence;
+ DateTime get time; int get score; double get delta; BodyEnergyBucketState get state; BodyEnergyConfidence get confidence; double get charge; double get intensityDrain; double get activityEnergyDrain; double get basalDrain; double get stressDrain; double get recoveryDebtDrain; BodyEnergyPrimaryInfluence get primaryInfluence;
 /// Create a copy of BodyEnergyTimelinePoint
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $BodyEnergyTimelinePointCopyWith<BodyEnergyTimelinePoint> get copyWith => _$Body
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BodyEnergyTimelinePoint&&(identical(other.time, time) || other.time == time)&&(identical(other.score, score) || other.score == score)&&(identical(other.delta, delta) || other.delta == delta)&&(identical(other.state, state) || other.state == state)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.charge, charge) || other.charge == charge)&&(identical(other.intensityDrain, intensityDrain) || other.intensityDrain == intensityDrain)&&(identical(other.stressDrain, stressDrain) || other.stressDrain == stressDrain)&&(identical(other.recoveryDebtDrain, recoveryDebtDrain) || other.recoveryDebtDrain == recoveryDebtDrain)&&(identical(other.primaryInfluence, primaryInfluence) || other.primaryInfluence == primaryInfluence));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BodyEnergyTimelinePoint&&(identical(other.time, time) || other.time == time)&&(identical(other.score, score) || other.score == score)&&(identical(other.delta, delta) || other.delta == delta)&&(identical(other.state, state) || other.state == state)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.charge, charge) || other.charge == charge)&&(identical(other.intensityDrain, intensityDrain) || other.intensityDrain == intensityDrain)&&(identical(other.activityEnergyDrain, activityEnergyDrain) || other.activityEnergyDrain == activityEnergyDrain)&&(identical(other.basalDrain, basalDrain) || other.basalDrain == basalDrain)&&(identical(other.stressDrain, stressDrain) || other.stressDrain == stressDrain)&&(identical(other.recoveryDebtDrain, recoveryDebtDrain) || other.recoveryDebtDrain == recoveryDebtDrain)&&(identical(other.primaryInfluence, primaryInfluence) || other.primaryInfluence == primaryInfluence));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,time,score,delta,state,confidence,charge,intensityDrain,stressDrain,recoveryDebtDrain,primaryInfluence);
+int get hashCode => Object.hash(runtimeType,time,score,delta,state,confidence,charge,intensityDrain,activityEnergyDrain,basalDrain,stressDrain,recoveryDebtDrain,primaryInfluence);
 
 @override
 String toString() {
-  return 'BodyEnergyTimelinePoint(time: $time, score: $score, delta: $delta, state: $state, confidence: $confidence, charge: $charge, intensityDrain: $intensityDrain, stressDrain: $stressDrain, recoveryDebtDrain: $recoveryDebtDrain, primaryInfluence: $primaryInfluence)';
+  return 'BodyEnergyTimelinePoint(time: $time, score: $score, delta: $delta, state: $state, confidence: $confidence, charge: $charge, intensityDrain: $intensityDrain, activityEnergyDrain: $activityEnergyDrain, basalDrain: $basalDrain, stressDrain: $stressDrain, recoveryDebtDrain: $recoveryDebtDrain, primaryInfluence: $primaryInfluence)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $BodyEnergyTimelinePointCopyWith<$Res>  {
   factory $BodyEnergyTimelinePointCopyWith(BodyEnergyTimelinePoint value, $Res Function(BodyEnergyTimelinePoint) _then) = _$BodyEnergyTimelinePointCopyWithImpl;
 @useResult
 $Res call({
- DateTime time, int score, double delta, BodyEnergyBucketState state, BodyEnergyConfidence confidence, double charge, double intensityDrain, double stressDrain, double recoveryDebtDrain, BodyEnergyPrimaryInfluence primaryInfluence
+ DateTime time, int score, double delta, BodyEnergyBucketState state, BodyEnergyConfidence confidence, double charge, double intensityDrain, double activityEnergyDrain, double basalDrain, double stressDrain, double recoveryDebtDrain, BodyEnergyPrimaryInfluence primaryInfluence
 });
 
 
@@ -62,7 +62,7 @@ class _$BodyEnergyTimelinePointCopyWithImpl<$Res>
 
 /// Create a copy of BodyEnergyTimelinePoint
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? time = null,Object? score = null,Object? delta = null,Object? state = null,Object? confidence = null,Object? charge = null,Object? intensityDrain = null,Object? stressDrain = null,Object? recoveryDebtDrain = null,Object? primaryInfluence = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? time = null,Object? score = null,Object? delta = null,Object? state = null,Object? confidence = null,Object? charge = null,Object? intensityDrain = null,Object? activityEnergyDrain = null,Object? basalDrain = null,Object? stressDrain = null,Object? recoveryDebtDrain = null,Object? primaryInfluence = null,}) {
   return _then(_self.copyWith(
 time: null == time ? _self.time : time // ignore: cast_nullable_to_non_nullable
 as DateTime,score: null == score ? _self.score : score // ignore: cast_nullable_to_non_nullable
@@ -71,6 +71,8 @@ as double,state: null == state ? _self.state : state // ignore: cast_nullable_to
 as BodyEnergyBucketState,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as BodyEnergyConfidence,charge: null == charge ? _self.charge : charge // ignore: cast_nullable_to_non_nullable
 as double,intensityDrain: null == intensityDrain ? _self.intensityDrain : intensityDrain // ignore: cast_nullable_to_non_nullable
+as double,activityEnergyDrain: null == activityEnergyDrain ? _self.activityEnergyDrain : activityEnergyDrain // ignore: cast_nullable_to_non_nullable
+as double,basalDrain: null == basalDrain ? _self.basalDrain : basalDrain // ignore: cast_nullable_to_non_nullable
 as double,stressDrain: null == stressDrain ? _self.stressDrain : stressDrain // ignore: cast_nullable_to_non_nullable
 as double,recoveryDebtDrain: null == recoveryDebtDrain ? _self.recoveryDebtDrain : recoveryDebtDrain // ignore: cast_nullable_to_non_nullable
 as double,primaryInfluence: null == primaryInfluence ? _self.primaryInfluence : primaryInfluence // ignore: cast_nullable_to_non_nullable
@@ -159,10 +161,10 @@ return build(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime time,  int score,  double delta,  BodyEnergyBucketState state,  BodyEnergyConfidence confidence,  double charge,  double intensityDrain,  double stressDrain,  double recoveryDebtDrain,  BodyEnergyPrimaryInfluence primaryInfluence)?  build,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime time,  int score,  double delta,  BodyEnergyBucketState state,  BodyEnergyConfidence confidence,  double charge,  double intensityDrain,  double activityEnergyDrain,  double basalDrain,  double stressDrain,  double recoveryDebtDrain,  BodyEnergyPrimaryInfluence primaryInfluence)?  build,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BodyEnergyTimelinePoint() when build != null:
-return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_that.charge,_that.intensityDrain,_that.stressDrain,_that.recoveryDebtDrain,_that.primaryInfluence);case _:
+return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_that.charge,_that.intensityDrain,_that.activityEnergyDrain,_that.basalDrain,_that.stressDrain,_that.recoveryDebtDrain,_that.primaryInfluence);case _:
   return orElse();
 
 }
@@ -180,10 +182,10 @@ return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime time,  int score,  double delta,  BodyEnergyBucketState state,  BodyEnergyConfidence confidence,  double charge,  double intensityDrain,  double stressDrain,  double recoveryDebtDrain,  BodyEnergyPrimaryInfluence primaryInfluence)  build,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime time,  int score,  double delta,  BodyEnergyBucketState state,  BodyEnergyConfidence confidence,  double charge,  double intensityDrain,  double activityEnergyDrain,  double basalDrain,  double stressDrain,  double recoveryDebtDrain,  BodyEnergyPrimaryInfluence primaryInfluence)  build,}) {final _that = this;
 switch (_that) {
 case _BodyEnergyTimelinePoint():
-return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_that.charge,_that.intensityDrain,_that.stressDrain,_that.recoveryDebtDrain,_that.primaryInfluence);case _:
+return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_that.charge,_that.intensityDrain,_that.activityEnergyDrain,_that.basalDrain,_that.stressDrain,_that.recoveryDebtDrain,_that.primaryInfluence);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +202,10 @@ return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime time,  int score,  double delta,  BodyEnergyBucketState state,  BodyEnergyConfidence confidence,  double charge,  double intensityDrain,  double stressDrain,  double recoveryDebtDrain,  BodyEnergyPrimaryInfluence primaryInfluence)?  build,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime time,  int score,  double delta,  BodyEnergyBucketState state,  BodyEnergyConfidence confidence,  double charge,  double intensityDrain,  double activityEnergyDrain,  double basalDrain,  double stressDrain,  double recoveryDebtDrain,  BodyEnergyPrimaryInfluence primaryInfluence)?  build,}) {final _that = this;
 switch (_that) {
 case _BodyEnergyTimelinePoint() when build != null:
-return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_that.charge,_that.intensityDrain,_that.stressDrain,_that.recoveryDebtDrain,_that.primaryInfluence);case _:
+return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_that.charge,_that.intensityDrain,_that.activityEnergyDrain,_that.basalDrain,_that.stressDrain,_that.recoveryDebtDrain,_that.primaryInfluence);case _:
   return null;
 
 }
@@ -214,8 +216,8 @@ return build(_that.time,_that.score,_that.delta,_that.state,_that.confidence,_th
 /// @nodoc
 
 
-class _BodyEnergyTimelinePoint implements BodyEnergyTimelinePoint {
-  const _BodyEnergyTimelinePoint({required this.time, required this.score, required this.delta, required this.state, required this.confidence, required this.charge, required this.intensityDrain, required this.stressDrain, required this.recoveryDebtDrain, required this.primaryInfluence});
+class _BodyEnergyTimelinePoint extends BodyEnergyTimelinePoint {
+  const _BodyEnergyTimelinePoint({required this.time, required this.score, required this.delta, required this.state, required this.confidence, required this.charge, required this.intensityDrain, required this.activityEnergyDrain, required this.basalDrain, required this.stressDrain, required this.recoveryDebtDrain, required this.primaryInfluence}): super._();
   
 
 @override final  DateTime time;
@@ -225,6 +227,8 @@ class _BodyEnergyTimelinePoint implements BodyEnergyTimelinePoint {
 @override final  BodyEnergyConfidence confidence;
 @override final  double charge;
 @override final  double intensityDrain;
+@override final  double activityEnergyDrain;
+@override final  double basalDrain;
 @override final  double stressDrain;
 @override final  double recoveryDebtDrain;
 @override final  BodyEnergyPrimaryInfluence primaryInfluence;
@@ -239,16 +243,16 @@ _$BodyEnergyTimelinePointCopyWith<_BodyEnergyTimelinePoint> get copyWith => __$B
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BodyEnergyTimelinePoint&&(identical(other.time, time) || other.time == time)&&(identical(other.score, score) || other.score == score)&&(identical(other.delta, delta) || other.delta == delta)&&(identical(other.state, state) || other.state == state)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.charge, charge) || other.charge == charge)&&(identical(other.intensityDrain, intensityDrain) || other.intensityDrain == intensityDrain)&&(identical(other.stressDrain, stressDrain) || other.stressDrain == stressDrain)&&(identical(other.recoveryDebtDrain, recoveryDebtDrain) || other.recoveryDebtDrain == recoveryDebtDrain)&&(identical(other.primaryInfluence, primaryInfluence) || other.primaryInfluence == primaryInfluence));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BodyEnergyTimelinePoint&&(identical(other.time, time) || other.time == time)&&(identical(other.score, score) || other.score == score)&&(identical(other.delta, delta) || other.delta == delta)&&(identical(other.state, state) || other.state == state)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.charge, charge) || other.charge == charge)&&(identical(other.intensityDrain, intensityDrain) || other.intensityDrain == intensityDrain)&&(identical(other.activityEnergyDrain, activityEnergyDrain) || other.activityEnergyDrain == activityEnergyDrain)&&(identical(other.basalDrain, basalDrain) || other.basalDrain == basalDrain)&&(identical(other.stressDrain, stressDrain) || other.stressDrain == stressDrain)&&(identical(other.recoveryDebtDrain, recoveryDebtDrain) || other.recoveryDebtDrain == recoveryDebtDrain)&&(identical(other.primaryInfluence, primaryInfluence) || other.primaryInfluence == primaryInfluence));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,time,score,delta,state,confidence,charge,intensityDrain,stressDrain,recoveryDebtDrain,primaryInfluence);
+int get hashCode => Object.hash(runtimeType,time,score,delta,state,confidence,charge,intensityDrain,activityEnergyDrain,basalDrain,stressDrain,recoveryDebtDrain,primaryInfluence);
 
 @override
 String toString() {
-  return 'BodyEnergyTimelinePoint.build(time: $time, score: $score, delta: $delta, state: $state, confidence: $confidence, charge: $charge, intensityDrain: $intensityDrain, stressDrain: $stressDrain, recoveryDebtDrain: $recoveryDebtDrain, primaryInfluence: $primaryInfluence)';
+  return 'BodyEnergyTimelinePoint.build(time: $time, score: $score, delta: $delta, state: $state, confidence: $confidence, charge: $charge, intensityDrain: $intensityDrain, activityEnergyDrain: $activityEnergyDrain, basalDrain: $basalDrain, stressDrain: $stressDrain, recoveryDebtDrain: $recoveryDebtDrain, primaryInfluence: $primaryInfluence)';
 }
 
 
@@ -259,7 +263,7 @@ abstract mixin class _$BodyEnergyTimelinePointCopyWith<$Res> implements $BodyEne
   factory _$BodyEnergyTimelinePointCopyWith(_BodyEnergyTimelinePoint value, $Res Function(_BodyEnergyTimelinePoint) _then) = __$BodyEnergyTimelinePointCopyWithImpl;
 @override @useResult
 $Res call({
- DateTime time, int score, double delta, BodyEnergyBucketState state, BodyEnergyConfidence confidence, double charge, double intensityDrain, double stressDrain, double recoveryDebtDrain, BodyEnergyPrimaryInfluence primaryInfluence
+ DateTime time, int score, double delta, BodyEnergyBucketState state, BodyEnergyConfidence confidence, double charge, double intensityDrain, double activityEnergyDrain, double basalDrain, double stressDrain, double recoveryDebtDrain, BodyEnergyPrimaryInfluence primaryInfluence
 });
 
 
@@ -276,7 +280,7 @@ class __$BodyEnergyTimelinePointCopyWithImpl<$Res>
 
 /// Create a copy of BodyEnergyTimelinePoint
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? time = null,Object? score = null,Object? delta = null,Object? state = null,Object? confidence = null,Object? charge = null,Object? intensityDrain = null,Object? stressDrain = null,Object? recoveryDebtDrain = null,Object? primaryInfluence = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? time = null,Object? score = null,Object? delta = null,Object? state = null,Object? confidence = null,Object? charge = null,Object? intensityDrain = null,Object? activityEnergyDrain = null,Object? basalDrain = null,Object? stressDrain = null,Object? recoveryDebtDrain = null,Object? primaryInfluence = null,}) {
   return _then(_BodyEnergyTimelinePoint(
 time: null == time ? _self.time : time // ignore: cast_nullable_to_non_nullable
 as DateTime,score: null == score ? _self.score : score // ignore: cast_nullable_to_non_nullable
@@ -285,6 +289,8 @@ as double,state: null == state ? _self.state : state // ignore: cast_nullable_to
 as BodyEnergyBucketState,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
 as BodyEnergyConfidence,charge: null == charge ? _self.charge : charge // ignore: cast_nullable_to_non_nullable
 as double,intensityDrain: null == intensityDrain ? _self.intensityDrain : intensityDrain // ignore: cast_nullable_to_non_nullable
+as double,activityEnergyDrain: null == activityEnergyDrain ? _self.activityEnergyDrain : activityEnergyDrain // ignore: cast_nullable_to_non_nullable
+as double,basalDrain: null == basalDrain ? _self.basalDrain : basalDrain // ignore: cast_nullable_to_non_nullable
 as double,stressDrain: null == stressDrain ? _self.stressDrain : stressDrain // ignore: cast_nullable_to_non_nullable
 as double,recoveryDebtDrain: null == recoveryDebtDrain ? _self.recoveryDebtDrain : recoveryDebtDrain // ignore: cast_nullable_to_non_nullable
 as double,primaryInfluence: null == primaryInfluence ? _self.primaryInfluence : primaryInfluence // ignore: cast_nullable_to_non_nullable

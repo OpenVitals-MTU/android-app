@@ -317,6 +317,14 @@ class PreferencesRepository {
     } else {
       _store.remove(_keyBodyEnergyZoneThresholdsBpm);
     }
+    _store.putDouble(_keyBodyEnergySleepChargeGain, normalized.sleepChargeGain);
+    _store.putDouble(
+      _keyBodyEnergyActivityDrainGain,
+      normalized.activityDrainGain,
+    );
+    _store.putDouble(_keyBodyEnergyBasalDrainGain, normalized.basalDrainGain);
+    _store.putDouble(_keyBodyEnergyStressDrainGain, normalized.stressDrainGain);
+    _store.putInt(_keyBodyEnergyFeelCheckCount, normalized.feelCheckCount);
     _bodyEnergyCalibration.value = normalized;
   }
 
@@ -624,6 +632,13 @@ class PreferencesRepository {
         ),
         useManualZones: _prefs.getBool(_keyBodyEnergyUseManualZones) ?? false,
         setupCompleted: _prefs.getBool(_keyBodyEnergySetupCompleted) ?? false,
+        sleepChargeGain:
+            _prefs.getDouble(_keyBodyEnergySleepChargeGain) ?? 1.0,
+        activityDrainGain:
+            _prefs.getDouble(_keyBodyEnergyActivityDrainGain) ?? 1.0,
+        basalDrainGain: _prefs.getDouble(_keyBodyEnergyBasalDrainGain) ?? 1.0,
+        stressDrainGain: _prefs.getDouble(_keyBodyEnergyStressDrainGain) ?? 1.0,
+        feelCheckCount: _prefs.getInt(_keyBodyEnergyFeelCheckCount) ?? 0,
       ).normalized();
 
   BodyProfile _readBodyProfile() => BodyProfile(
@@ -697,6 +712,16 @@ class PreferencesRepository {
       'body_energy_use_manual_zones';
   static const String _keyBodyEnergySetupCompleted =
       'body_energy_setup_completed';
+  static const String _keyBodyEnergySleepChargeGain =
+      'body_energy_sleep_charge_gain';
+  static const String _keyBodyEnergyActivityDrainGain =
+      'body_energy_activity_drain_gain';
+  static const String _keyBodyEnergyBasalDrainGain =
+      'body_energy_basal_drain_gain';
+  static const String _keyBodyEnergyStressDrainGain =
+      'body_energy_stress_drain_gain';
+  static const String _keyBodyEnergyFeelCheckCount =
+      'body_energy_feel_check_count';
   static const String _keyMindfulnessTimerDurationMinutes =
       'mindfulness_timer_duration_minutes';
   static const String _keyMindfulnessTimerIntervalMinutes =

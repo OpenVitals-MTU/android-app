@@ -137,7 +137,8 @@ BodyEnergyDisplay buildBodyEnergyDisplay(BodyEnergyTimeline? timeline) {
                 .clamp(0.0, 1.0),
         widthFraction: widthFraction,
         charge: point.charge,
-        drain: point.intensityDrain +
+        drain: point.basalDrain +
+            point.appliedActivityDrain +
             point.stressDrain +
             point.recoveryDebtDrain,
         influence: point.primaryInfluence,
@@ -196,9 +197,16 @@ List<BodyEnergyReason> _topReasons(BodyEnergyTimeline timeline) {
           (drainByInfluence[influence] ?? 0.0) + amount;
     }
 
-    add(BodyEnergyPrimaryInfluence.exertion, point.intensityDrain);
+    // The applied activity drain is everyday movement when the active-calorie
+    // estimate carried it, exertion when heart rate did.
+    final activityInfluence =
+        point.activityEnergyDrain > point.intensityDrain
+            ? BodyEnergyPrimaryInfluence.everydayActivity
+            : BodyEnergyPrimaryInfluence.exertion;
+    add(activityInfluence, point.appliedActivityDrain);
     add(BodyEnergyPrimaryInfluence.elevatedHeartRate, point.stressDrain);
     add(BodyEnergyPrimaryInfluence.recoveryDebt, point.recoveryDebtDrain);
+    add(BodyEnergyPrimaryInfluence.steady, point.basalDrain);
   }
 
   final reasons = <BodyEnergyReason>[

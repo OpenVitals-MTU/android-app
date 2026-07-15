@@ -283,7 +283,7 @@ as int,
 /// @nodoc
 mixin _$BodyEnergyCalibration {
 
- HeartZoneThresholds? get manualZoneThresholdsBpm; bool get useManualZones; bool get setupCompleted;
+ HeartZoneThresholds? get manualZoneThresholdsBpm; bool get useManualZones; bool get setupCompleted; double get sleepChargeGain; double get activityDrainGain; double get basalDrainGain; double get stressDrainGain; int get feelCheckCount;
 /// Create a copy of BodyEnergyCalibration
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -294,16 +294,16 @@ $BodyEnergyCalibrationCopyWith<BodyEnergyCalibration> get copyWith => _$BodyEner
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BodyEnergyCalibration&&(identical(other.manualZoneThresholdsBpm, manualZoneThresholdsBpm) || other.manualZoneThresholdsBpm == manualZoneThresholdsBpm)&&(identical(other.useManualZones, useManualZones) || other.useManualZones == useManualZones)&&(identical(other.setupCompleted, setupCompleted) || other.setupCompleted == setupCompleted));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BodyEnergyCalibration&&(identical(other.manualZoneThresholdsBpm, manualZoneThresholdsBpm) || other.manualZoneThresholdsBpm == manualZoneThresholdsBpm)&&(identical(other.useManualZones, useManualZones) || other.useManualZones == useManualZones)&&(identical(other.setupCompleted, setupCompleted) || other.setupCompleted == setupCompleted)&&(identical(other.sleepChargeGain, sleepChargeGain) || other.sleepChargeGain == sleepChargeGain)&&(identical(other.activityDrainGain, activityDrainGain) || other.activityDrainGain == activityDrainGain)&&(identical(other.basalDrainGain, basalDrainGain) || other.basalDrainGain == basalDrainGain)&&(identical(other.stressDrainGain, stressDrainGain) || other.stressDrainGain == stressDrainGain)&&(identical(other.feelCheckCount, feelCheckCount) || other.feelCheckCount == feelCheckCount));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,manualZoneThresholdsBpm,useManualZones,setupCompleted);
+int get hashCode => Object.hash(runtimeType,manualZoneThresholdsBpm,useManualZones,setupCompleted,sleepChargeGain,activityDrainGain,basalDrainGain,stressDrainGain,feelCheckCount);
 
 @override
 String toString() {
-  return 'BodyEnergyCalibration(manualZoneThresholdsBpm: $manualZoneThresholdsBpm, useManualZones: $useManualZones, setupCompleted: $setupCompleted)';
+  return 'BodyEnergyCalibration(manualZoneThresholdsBpm: $manualZoneThresholdsBpm, useManualZones: $useManualZones, setupCompleted: $setupCompleted, sleepChargeGain: $sleepChargeGain, activityDrainGain: $activityDrainGain, basalDrainGain: $basalDrainGain, stressDrainGain: $stressDrainGain, feelCheckCount: $feelCheckCount)';
 }
 
 
@@ -314,7 +314,7 @@ abstract mixin class $BodyEnergyCalibrationCopyWith<$Res>  {
   factory $BodyEnergyCalibrationCopyWith(BodyEnergyCalibration value, $Res Function(BodyEnergyCalibration) _then) = _$BodyEnergyCalibrationCopyWithImpl;
 @useResult
 $Res call({
- HeartZoneThresholds? manualZoneThresholdsBpm, bool useManualZones, bool setupCompleted
+ HeartZoneThresholds? manualZoneThresholdsBpm, bool useManualZones, bool setupCompleted, double sleepChargeGain, double activityDrainGain, double basalDrainGain, double stressDrainGain, int feelCheckCount
 });
 
 
@@ -331,12 +331,17 @@ class _$BodyEnergyCalibrationCopyWithImpl<$Res>
 
 /// Create a copy of BodyEnergyCalibration
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? manualZoneThresholdsBpm = freezed,Object? useManualZones = null,Object? setupCompleted = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? manualZoneThresholdsBpm = freezed,Object? useManualZones = null,Object? setupCompleted = null,Object? sleepChargeGain = null,Object? activityDrainGain = null,Object? basalDrainGain = null,Object? stressDrainGain = null,Object? feelCheckCount = null,}) {
   return _then(_self.copyWith(
 manualZoneThresholdsBpm: freezed == manualZoneThresholdsBpm ? _self.manualZoneThresholdsBpm : manualZoneThresholdsBpm // ignore: cast_nullable_to_non_nullable
 as HeartZoneThresholds?,useManualZones: null == useManualZones ? _self.useManualZones : useManualZones // ignore: cast_nullable_to_non_nullable
 as bool,setupCompleted: null == setupCompleted ? _self.setupCompleted : setupCompleted // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,sleepChargeGain: null == sleepChargeGain ? _self.sleepChargeGain : sleepChargeGain // ignore: cast_nullable_to_non_nullable
+as double,activityDrainGain: null == activityDrainGain ? _self.activityDrainGain : activityDrainGain // ignore: cast_nullable_to_non_nullable
+as double,basalDrainGain: null == basalDrainGain ? _self.basalDrainGain : basalDrainGain // ignore: cast_nullable_to_non_nullable
+as double,stressDrainGain: null == stressDrainGain ? _self.stressDrainGain : stressDrainGain // ignore: cast_nullable_to_non_nullable
+as double,feelCheckCount: null == feelCheckCount ? _self.feelCheckCount : feelCheckCount // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 /// Create a copy of BodyEnergyCalibration
@@ -433,10 +438,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( HeartZoneThresholds? manualZoneThresholdsBpm,  bool useManualZones,  bool setupCompleted)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( HeartZoneThresholds? manualZoneThresholdsBpm,  bool useManualZones,  bool setupCompleted,  double sleepChargeGain,  double activityDrainGain,  double basalDrainGain,  double stressDrainGain,  int feelCheckCount)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BodyEnergyCalibration() when $default != null:
-return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCompleted);case _:
+return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCompleted,_that.sleepChargeGain,_that.activityDrainGain,_that.basalDrainGain,_that.stressDrainGain,_that.feelCheckCount);case _:
   return orElse();
 
 }
@@ -454,10 +459,10 @@ return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCo
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( HeartZoneThresholds? manualZoneThresholdsBpm,  bool useManualZones,  bool setupCompleted)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( HeartZoneThresholds? manualZoneThresholdsBpm,  bool useManualZones,  bool setupCompleted,  double sleepChargeGain,  double activityDrainGain,  double basalDrainGain,  double stressDrainGain,  int feelCheckCount)  $default,) {final _that = this;
 switch (_that) {
 case _BodyEnergyCalibration():
-return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCompleted);case _:
+return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCompleted,_that.sleepChargeGain,_that.activityDrainGain,_that.basalDrainGain,_that.stressDrainGain,_that.feelCheckCount);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -474,10 +479,10 @@ return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCo
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( HeartZoneThresholds? manualZoneThresholdsBpm,  bool useManualZones,  bool setupCompleted)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( HeartZoneThresholds? manualZoneThresholdsBpm,  bool useManualZones,  bool setupCompleted,  double sleepChargeGain,  double activityDrainGain,  double basalDrainGain,  double stressDrainGain,  int feelCheckCount)?  $default,) {final _that = this;
 switch (_that) {
 case _BodyEnergyCalibration() when $default != null:
-return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCompleted);case _:
+return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCompleted,_that.sleepChargeGain,_that.activityDrainGain,_that.basalDrainGain,_that.stressDrainGain,_that.feelCheckCount);case _:
   return null;
 
 }
@@ -489,12 +494,17 @@ return $default(_that.manualZoneThresholdsBpm,_that.useManualZones,_that.setupCo
 
 
 class _BodyEnergyCalibration extends BodyEnergyCalibration {
-  const _BodyEnergyCalibration({this.manualZoneThresholdsBpm, this.useManualZones = false, this.setupCompleted = false}): super._();
+  const _BodyEnergyCalibration({this.manualZoneThresholdsBpm, this.useManualZones = false, this.setupCompleted = false, this.sleepChargeGain = 1.0, this.activityDrainGain = 1.0, this.basalDrainGain = 1.0, this.stressDrainGain = 1.0, this.feelCheckCount = 0}): super._();
   
 
 @override final  HeartZoneThresholds? manualZoneThresholdsBpm;
 @override@JsonKey() final  bool useManualZones;
 @override@JsonKey() final  bool setupCompleted;
+@override@JsonKey() final  double sleepChargeGain;
+@override@JsonKey() final  double activityDrainGain;
+@override@JsonKey() final  double basalDrainGain;
+@override@JsonKey() final  double stressDrainGain;
+@override@JsonKey() final  int feelCheckCount;
 
 /// Create a copy of BodyEnergyCalibration
 /// with the given fields replaced by the non-null parameter values.
@@ -506,16 +516,16 @@ _$BodyEnergyCalibrationCopyWith<_BodyEnergyCalibration> get copyWith => __$BodyE
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BodyEnergyCalibration&&(identical(other.manualZoneThresholdsBpm, manualZoneThresholdsBpm) || other.manualZoneThresholdsBpm == manualZoneThresholdsBpm)&&(identical(other.useManualZones, useManualZones) || other.useManualZones == useManualZones)&&(identical(other.setupCompleted, setupCompleted) || other.setupCompleted == setupCompleted));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BodyEnergyCalibration&&(identical(other.manualZoneThresholdsBpm, manualZoneThresholdsBpm) || other.manualZoneThresholdsBpm == manualZoneThresholdsBpm)&&(identical(other.useManualZones, useManualZones) || other.useManualZones == useManualZones)&&(identical(other.setupCompleted, setupCompleted) || other.setupCompleted == setupCompleted)&&(identical(other.sleepChargeGain, sleepChargeGain) || other.sleepChargeGain == sleepChargeGain)&&(identical(other.activityDrainGain, activityDrainGain) || other.activityDrainGain == activityDrainGain)&&(identical(other.basalDrainGain, basalDrainGain) || other.basalDrainGain == basalDrainGain)&&(identical(other.stressDrainGain, stressDrainGain) || other.stressDrainGain == stressDrainGain)&&(identical(other.feelCheckCount, feelCheckCount) || other.feelCheckCount == feelCheckCount));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,manualZoneThresholdsBpm,useManualZones,setupCompleted);
+int get hashCode => Object.hash(runtimeType,manualZoneThresholdsBpm,useManualZones,setupCompleted,sleepChargeGain,activityDrainGain,basalDrainGain,stressDrainGain,feelCheckCount);
 
 @override
 String toString() {
-  return 'BodyEnergyCalibration(manualZoneThresholdsBpm: $manualZoneThresholdsBpm, useManualZones: $useManualZones, setupCompleted: $setupCompleted)';
+  return 'BodyEnergyCalibration(manualZoneThresholdsBpm: $manualZoneThresholdsBpm, useManualZones: $useManualZones, setupCompleted: $setupCompleted, sleepChargeGain: $sleepChargeGain, activityDrainGain: $activityDrainGain, basalDrainGain: $basalDrainGain, stressDrainGain: $stressDrainGain, feelCheckCount: $feelCheckCount)';
 }
 
 
@@ -526,7 +536,7 @@ abstract mixin class _$BodyEnergyCalibrationCopyWith<$Res> implements $BodyEnerg
   factory _$BodyEnergyCalibrationCopyWith(_BodyEnergyCalibration value, $Res Function(_BodyEnergyCalibration) _then) = __$BodyEnergyCalibrationCopyWithImpl;
 @override @useResult
 $Res call({
- HeartZoneThresholds? manualZoneThresholdsBpm, bool useManualZones, bool setupCompleted
+ HeartZoneThresholds? manualZoneThresholdsBpm, bool useManualZones, bool setupCompleted, double sleepChargeGain, double activityDrainGain, double basalDrainGain, double stressDrainGain, int feelCheckCount
 });
 
 
@@ -543,12 +553,17 @@ class __$BodyEnergyCalibrationCopyWithImpl<$Res>
 
 /// Create a copy of BodyEnergyCalibration
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? manualZoneThresholdsBpm = freezed,Object? useManualZones = null,Object? setupCompleted = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? manualZoneThresholdsBpm = freezed,Object? useManualZones = null,Object? setupCompleted = null,Object? sleepChargeGain = null,Object? activityDrainGain = null,Object? basalDrainGain = null,Object? stressDrainGain = null,Object? feelCheckCount = null,}) {
   return _then(_BodyEnergyCalibration(
 manualZoneThresholdsBpm: freezed == manualZoneThresholdsBpm ? _self.manualZoneThresholdsBpm : manualZoneThresholdsBpm // ignore: cast_nullable_to_non_nullable
 as HeartZoneThresholds?,useManualZones: null == useManualZones ? _self.useManualZones : useManualZones // ignore: cast_nullable_to_non_nullable
 as bool,setupCompleted: null == setupCompleted ? _self.setupCompleted : setupCompleted // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,sleepChargeGain: null == sleepChargeGain ? _self.sleepChargeGain : sleepChargeGain // ignore: cast_nullable_to_non_nullable
+as double,activityDrainGain: null == activityDrainGain ? _self.activityDrainGain : activityDrainGain // ignore: cast_nullable_to_non_nullable
+as double,basalDrainGain: null == basalDrainGain ? _self.basalDrainGain : basalDrainGain // ignore: cast_nullable_to_non_nullable
+as double,stressDrainGain: null == stressDrainGain ? _self.stressDrainGain : stressDrainGain // ignore: cast_nullable_to_non_nullable
+as double,feelCheckCount: null == feelCheckCount ? _self.feelCheckCount : feelCheckCount // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 

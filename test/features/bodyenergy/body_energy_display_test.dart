@@ -12,11 +12,13 @@ BodyEnergyTimelinePoint _point(
   int score = 60,
   double charge = 0.0,
   double intensityDrain = 0.0,
+  double activityEnergyDrain = 0.0,
+  double basalDrain = 0.0,
   double stressDrain = 0.0,
   double recoveryDebtDrain = 0.0,
   BodyEnergyPrimaryInfluence influence = BodyEnergyPrimaryInfluence.steady,
 }) =>
-    BodyEnergyTimelinePoint.build(
+    BodyEnergyTimelinePoint(
       time: date.atTimeInstant(hour),
       score: score,
       delta: 0,
@@ -24,6 +26,8 @@ BodyEnergyTimelinePoint _point(
       confidence: BodyEnergyConfidence.high,
       charge: charge,
       intensityDrain: intensityDrain,
+      activityEnergyDrain: activityEnergyDrain,
+      basalDrain: basalDrain,
       stressDrain: stressDrain,
       recoveryDebtDrain: recoveryDebtDrain,
       primaryInfluence: influence,

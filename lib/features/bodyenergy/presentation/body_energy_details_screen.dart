@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../ui/theme/chart_colors.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
+import '../../../di/providers.dart';
 import '../../../domain/insights/body_energy_timeline.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../../../l10n/app_localizations.dart';
@@ -129,6 +131,11 @@ class _BodyEnergyBody extends ConsumerWidget {
         ),
       ),
       _CardPad(child: _SummaryCard(display: display)),
+      // Feel-check only makes sense for "right now" — today, once there's a score.
+      if (!state.canGoForward && !display.isEmpty)
+        _CardPad(
+          child: _FeelCheckCard(display: display, onRecorded: onRefresh),
+        ),
       _CardPad(child: _TimelineCard(display: display)),
       _CardPad(child: _ReasonsCard(display: display)),
       _CardPad(child: _InputsCard(display: display)),
@@ -143,10 +150,7 @@ class _BodyEnergyBody extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: _MaxWidth(
-        child: ListView(
-          padding: screenScrollPadding(context),
-          children: items,
-        ),
+        child: ListView(padding: screenScrollPadding(context), children: items),
       ),
     );
   }
@@ -159,12 +163,12 @@ class _MaxWidth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
-          child: child,
-        ),
-      );
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 920),
+      child: child,
+    ),
+  );
 }
 
 // ── Cards ────────────────────────────────────────────────────────────────────
@@ -195,12 +199,18 @@ class _SummaryCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(l10n.screenBodyEnergy,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600)),
-                      Text(l10n.bodyEnergyTimelineEstimated,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant)),
+                      Text(
+                        l10n.screenBodyEnergy,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        l10n.bodyEnergyTimelineEstimated,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -216,28 +226,45 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                _stat(theme, l10n.bodyEnergyTimelineStart,
-                    '${timeline?.startScore ?? '--'}'),
-                _stat(theme, l10n.bodyEnergyTimelineCharged,
-                    '+${timeline?.charged ?? 0}'),
-                _stat(theme, l10n.bodyEnergyTimelineDrained,
-                    '-${timeline?.drained ?? 0}'),
+                _stat(
+                  theme,
+                  l10n.bodyEnergyTimelineStart,
+                  '${timeline?.startScore ?? '--'}',
+                ),
+                _stat(
+                  theme,
+                  l10n.bodyEnergyTimelineCharged,
+                  '+${timeline?.charged ?? 0}',
+                ),
+                _stat(
+                  theme,
+                  l10n.bodyEnergyTimelineDrained,
+                  '-${timeline?.drained ?? 0}',
+                ),
               ],
             ),
             const SizedBox(height: 12),
-            Text(l10n.bodyEnergyTimelineConfidence,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            Text(
+              l10n.bodyEnergyTimelineConfidence,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
             Text(
               _confidenceLabel(
-                  timeline?.confidence ?? BodyEnergyConfidence.noData),
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+                timeline?.confidence ?? BodyEnergyConfidence.noData,
+              ),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
             if ((timeline?.confidenceReason ?? '').isNotEmpty)
-              Text(timeline!.confidenceReason,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant)),
+              Text(
+                timeline!.confidenceReason,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
           ],
         ),
       ),
@@ -245,18 +272,24 @@ class _SummaryCard extends StatelessWidget {
   }
 
   Widget _stat(ThemeData theme, String label, String value) => Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-            Text(value,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600)),
-          ],
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
-      );
+        Text(
+          value,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _TimelineCard extends StatelessWidget {
@@ -274,14 +307,20 @@ class _TimelineCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.bodyEnergyTimelineDayTitle,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              l10n.bodyEnergyTimelineDayTitle,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 12),
             if (display.isEmpty)
-              Text(l10n.bodyEnergyTimelineNoData,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant))
+              Text(
+                l10n.bodyEnergyTimelineNoData,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
             else ...[
               BodyEnergyTimelineChart(
                 points: display.chartPoints,
@@ -300,13 +339,15 @@ class _TimelineCard extends StatelessWidget {
                         Container(
                           width: 10,
                           height: 10,
-                          color:
-                              influenceColor(influence, theme.colorScheme),
+                          color: influenceColor(influence, theme.colorScheme),
                         ),
                         const SizedBox(width: 6),
-                        Text(_influenceLabel(l10n, influence),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant)),
+                        Text(
+                          _influenceLabel(l10n, influence),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
                 ],
@@ -334,14 +375,20 @@ class _ReasonsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.bodyEnergyWhyTitle,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              l10n.bodyEnergyWhyTitle,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 10),
             if (display.isEmpty || display.topReasons.isEmpty)
-              Text(l10n.bodyEnergyWhyEmpty,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant))
+              Text(
+                l10n.bodyEnergyWhyEmpty,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
             else
               for (final reason in display.topReasons)
                 Padding(
@@ -354,20 +401,27 @@ class _ReasonsCard extends StatelessWidget {
                         width: 10,
                         height: 10,
                         color: influenceColor(
-                            reason.influence, theme.colorScheme),
+                          reason.influence,
+                          theme.colorScheme,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(_influenceLabel(l10n, reason.influence),
-                                style: theme.textTheme.bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600)),
-                            Text(_reasonDetail(l10n, reason.influence),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                    color:
-                                        theme.colorScheme.onSurfaceVariant)),
+                            Text(
+                              _influenceLabel(l10n, reason.influence),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              _reasonDetail(l10n, reason.influence),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -379,12 +433,111 @@ class _ReasonsCard extends StatelessWidget {
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: influenceColor(
-                              reason.influence, theme.colorScheme),
+                            reason.influence,
+                            theme.colorScheme,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Asks the user how their energy actually feels, 0–10, and folds the answer
+/// into the personal gains. Shown only for today, where "right now" is meaningful.
+class _FeelCheckCard extends ConsumerStatefulWidget {
+  const _FeelCheckCard({required this.display, required this.onRecorded});
+
+  final BodyEnergyDisplay display;
+  final Future<void> Function() onRecorded;
+
+  @override
+  ConsumerState<_FeelCheckCard> createState() => _FeelCheckCardState();
+}
+
+class _FeelCheckCardState extends ConsumerState<_FeelCheckCard> {
+  bool _saving = false;
+
+  BodyEnergyPrimaryInfluence get _dominantInfluence {
+    for (final reason in widget.display.topReasons) {
+      if (reason.direction == BodyEnergyReasonDirection.drain) {
+        return reason.influence;
+      }
+    }
+    return BodyEnergyPrimaryInfluence.steady;
+  }
+
+  Future<void> _record(int rating) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await ref
+        .read(bodyEnergyFeelCheckRepositoryProvider)
+        .recordFeelCheck(
+          rating: rating,
+          predictedScore: widget.display.timeline?.currentScore ?? 50,
+          dominantInfluence: _dominantInfluence,
+        );
+    if (!mounted) return;
+    setState(() => _saving = false);
+    switch (result) {
+      case Ok():
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.bodyEnergyFeelCheckSaved)),
+        );
+        await widget.onRecorded();
+      case Err():
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.bodyEnergyFeelCheckError)),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.bodyEnergyFeelCheckTitle,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l10n.bodyEnergyFeelCheckPrompt,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var rating = 0; rating <= 10; rating++)
+                  OutlinedButton(
+                    onPressed: _saving ? null : () => _record(rating),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(44, 44),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: Text('$rating'),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -410,12 +563,18 @@ class _InputsCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.info_outline,
-                    color: theme.colorScheme.primary, size: 20),
+                Icon(
+                  Icons.info_outline,
+                  color: theme.colorScheme.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                Text(l10n.bodyEnergyInputsTitle,
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  l10n.bodyEnergyInputsTitle,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -424,9 +583,12 @@ class _InputsCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Text(
                   l10n.bodyEnergyInputsSummary(
-                      summary.algorithmVersion, summary.bucketMinutes),
+                    summary.algorithmVersion,
+                    summary.bucketMinutes,
+                  ),
                   style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant),
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             for (final row in display.inputRows)
@@ -441,12 +603,17 @@ class _InputsCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(_inputLabel(l10n, row.kind),
-                          style: theme.textTheme.bodyMedium),
+                      child: Text(
+                        _inputLabel(l10n, row.kind),
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     ),
-                    Text(_inputStatusText(l10n, row),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      _inputStatusText(l10n, row),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -466,17 +633,21 @@ class _CalculationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final bodyStyle = theme.textTheme.bodySmall
-        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final bodyStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.bodyEnergyCalculationTitle,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              l10n.bodyEnergyCalculationTitle,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 10),
             Text(l10n.bodyEnergyCalculationBody, style: bodyStyle),
             const SizedBox(height: 10),
@@ -501,9 +672,12 @@ class _FootnoteCard extends StatelessWidget {
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Text(text,
-            style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant)),
+        child: Text(
+          text,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ),
     );
   }
@@ -516,9 +690,9 @@ class _CardPad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: child,
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    child: child,
+  );
 }
 
 // ── Labels ───────────────────────────────────────────────────────────────────
@@ -558,12 +732,16 @@ String _confidenceLabel(BodyEnergyConfidence confidence) {
 }
 
 String _influenceLabel(
-    AppLocalizations l10n, BodyEnergyPrimaryInfluence influence) {
+  AppLocalizations l10n,
+  BodyEnergyPrimaryInfluence influence,
+) {
   switch (influence) {
     case BodyEnergyPrimaryInfluence.sleepRecovery:
       return l10n.bodyEnergyInfluenceSleepRecovery;
     case BodyEnergyPrimaryInfluence.quietRest:
       return l10n.bodyEnergyInfluenceQuietRest;
+    case BodyEnergyPrimaryInfluence.everydayActivity:
+      return l10n.bodyEnergyInfluenceEverydayActivity;
     case BodyEnergyPrimaryInfluence.exertion:
       return l10n.bodyEnergyInfluenceExertion;
     case BodyEnergyPrimaryInfluence.elevatedHeartRate:
@@ -578,12 +756,16 @@ String _influenceLabel(
 }
 
 String _reasonDetail(
-    AppLocalizations l10n, BodyEnergyPrimaryInfluence influence) {
+  AppLocalizations l10n,
+  BodyEnergyPrimaryInfluence influence,
+) {
   switch (influence) {
     case BodyEnergyPrimaryInfluence.sleepRecovery:
       return l10n.bodyEnergyReasonSleepRecoveryDetail;
     case BodyEnergyPrimaryInfluence.quietRest:
       return l10n.bodyEnergyReasonQuietRestDetail;
+    case BodyEnergyPrimaryInfluence.everydayActivity:
+      return l10n.bodyEnergyReasonEverydayActivityDetail;
     case BodyEnergyPrimaryInfluence.exertion:
       return l10n.bodyEnergyReasonExertionDetail;
     case BodyEnergyPrimaryInfluence.elevatedHeartRate:

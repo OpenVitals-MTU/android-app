@@ -60,6 +60,56 @@ class BeverageMigration {
       database.customStatement(OpenVitalsDatabase.createBeveragesTableSql);
 }
 
+/// Body Energy "feel-check" log: the user's own 0–10 energy rating at a moment
+/// in time. A local time-series (Health Connect has no equivalent record), read
+/// back in windows to fit the personal calibration gains.
+class FeelChecks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get recordedAtMillis => integer().named('recorded_at_millis')();
+  IntColumn get rating => integer()(); // 0–10
+
+  @override
+  String get tableName => 'feel_checks';
+}
+
+@DriftAccessor(tables: [FeelChecks])
+class FeelCheckDao extends DatabaseAccessor<OpenVitalsDatabase>
+    with _$FeelCheckDaoMixin {
+  FeelCheckDao(super.db);
+
+  Future<void> insertFeelCheck({
+    required int recordedAtMillis,
+    required int rating,
+  }) async {
+    await into(feelChecks).insert(
+      FeelChecksCompanion.insert(
+        recordedAtMillis: recordedAtMillis,
+        rating: rating,
+      ),
+    );
+  }
+
+  Future<List<FeelCheck>> feelChecksBetween(
+    int startMillis,
+    int endMillis,
+  ) {
+    return (select(feelChecks)
+          ..where(
+            (f) => f.recordedAtMillis.isBetweenValues(startMillis, endMillis),
+          )
+          ..orderBy([(f) => OrderingTerm(expression: f.recordedAtMillis)]))
+        .get();
+  }
+
+  Future<int> countFeelChecks() async {
+    final row = await customSelect(
+      'SELECT COUNT(*) AS c FROM feel_checks',
+      readsFrom: {feelChecks},
+    ).getSingle();
+    return row.read<int>('c');
+  }
+}
+
 @DriftAccessor(tables: [Beverages])
 class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
     with _$BeverageDaoMixin {
@@ -156,14 +206,14 @@ class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
       );
 }
 
-@DriftDatabase(tables: [Beverages], daos: [BeverageDao])
+@DriftDatabase(tables: [Beverages, FeelChecks], daos: [BeverageDao, FeelCheckDao])
 class OpenVitalsDatabase extends _$OpenVitalsDatabase {
   /// Construct with any [QueryExecutor]. Tests pass `NativeDatabase.memory()`
   /// (from `package:drift/native.dart`); the app wires a file-backed executor.
   OpenVitalsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -174,8 +224,20 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
           if (from < 3) {
             await customStatement(createBeveragesTableSql);
           }
+          // v4 adds the Body Energy feel-check log.
+          if (from < 4) {
+            await customStatement(createFeelChecksTableSql);
+          }
         },
       );
+
+  /// The `CREATE TABLE` for the feel-check log, applied on upgrade from < v4.
+  static const String createFeelChecksTableSql = '''
+CREATE TABLE IF NOT EXISTS `feel_checks` (
+    `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `recorded_at_millis` INTEGER NOT NULL,
+    `rating` INTEGER NOT NULL
+)''';
 
   static const BeverageMigration migration1To3 = BeverageMigration(1);
   static const BeverageMigration migration2To3 = BeverageMigration(2);

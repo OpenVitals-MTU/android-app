@@ -12,6 +12,7 @@ import '../../data/repository/body_energy_timeline_cache_store.dart';
 import '../../data/repository/impl/activity_marker_repository_impl.dart';
 import '../../data/repository/impl/activity_repository_impl.dart';
 import '../../data/repository/impl/body_energy_repository_impl.dart';
+import '../../data/repository/impl/body_repository_impl.dart';
 import '../../data/repository/impl/health_repository_impl.dart';
 import '../../data/repository/impl/heart_repository_impl.dart';
 import '../../data/repository/impl/sleep_repository_impl.dart';
@@ -105,6 +106,7 @@ Future<HomeWidgetRefresher> buildBackgroundHomeWidgetRefresher() async {
         markerRepository: ActivityMarkerRepositoryImpl(sharedPreferences),
       ),
       vitalsRepository: VitalsRepositoryImpl(dataSource),
+      bodyRepository: BodyRepositoryImpl(dataSource),
       healthRepository: HealthRepositoryImpl(dataSource),
       preferencesRepository: preferences,
       cacheStore: BodyEnergyTimelineCacheStore(sharedPreferences),

@@ -62,7 +62,9 @@ class _BodyEnergyCalibrationCardState
   }
 
   void _save() {
-    ref.read(bodyEnergyCalibrationSettingsProvider.notifier).save(
+    ref
+        .read(bodyEnergyCalibrationSettingsProvider.notifier)
+        .save(
           zone1: _zone1.text,
           zone2: _zone2.text,
           zone3: _zone3.text,
@@ -79,8 +81,9 @@ class _BodyEnergyCalibrationCardState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final calibration =
-        ref.watch(bodyEnergyCalibrationSettingsProvider).calibration;
+    final calibration = ref
+        .watch(bodyEnergyCalibrationSettingsProvider)
+        .calibration;
     if (_seededSignature != calibration.signature()) {
       _seed(calibration);
     }
@@ -182,6 +185,52 @@ class _BodyEnergyCalibrationCardState
                   label: l10n.bodyEnergyCalibrationZone5,
                 ),
               ],
+              if (calibration.hasPersonalGains ||
+                  calibration.feelCheckCount > 0) ...[
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.bodyEnergyPersonalizationTitle,
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.bodyEnergyPersonalizationBody(
+                    calibration.feelCheckCount,
+                  ),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _GainRow(
+                  label: l10n.bodyEnergyGainActivity,
+                  value: calibration.activityDrainGain,
+                ),
+                _GainRow(
+                  label: l10n.bodyEnergyGainSleep,
+                  value: calibration.sleepChargeGain,
+                ),
+                _GainRow(
+                  label: l10n.bodyEnergyGainBasal,
+                  value: calibration.basalDrainGain,
+                ),
+                _GainRow(
+                  label: l10n.bodyEnergyGainStress,
+                  value: calibration.stressDrainGain,
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => ref
+                        .read(bodyEnergyCalibrationSettingsProvider.notifier)
+                        .resetPersonalization(),
+                    child: Text(l10n.bodyEnergyPersonalizationReset),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
@@ -201,6 +250,34 @@ class _BodyEnergyCalibrationCardState
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// One learned gain, shown as a plain multiplier the user can read.
+class _GainRow extends StatelessWidget {
+  const _GainRow({required this.label, required this.value});
+
+  final String label;
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
+          Text(
+            '${value.toStringAsFixed(2)}×',
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
       ),
     );
   }

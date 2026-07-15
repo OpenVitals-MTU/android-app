@@ -3306,6 +3306,7 @@
   "bodyEnergyWhyEmpty": "No clear charge or drain dominated this day yet.",
   "bodyEnergyInfluenceSleepRecovery": "Sleep recovery",
   "bodyEnergyInfluenceQuietRest": "Quiet rest",
+  "bodyEnergyInfluenceEverydayActivity": "Everyday activity",
   "bodyEnergyInfluenceExertion": "Exertion",
   "bodyEnergyInfluenceElevatedHr": "Elevated heart rate",
   "bodyEnergyInfluenceRecoveryDebt": "Recovery debt",
@@ -3313,11 +3314,28 @@
   "bodyEnergyInfluenceSteady": "Steady",
   "bodyEnergyReasonSleepRecoveryDetail": "Sleep buckets charged the estimate from the previous score.",
   "bodyEnergyReasonQuietRestDetail": "Low heart rate while awake added a small recovery charge.",
+  "bodyEnergyReasonEverydayActivityDetail": "Walking, chores and moving around drained energy even at a low heart rate.",
   "bodyEnergyReasonExertionDetail": "Heart-rate intensity or recorded workouts drained the estimate.",
   "bodyEnergyReasonElevatedHrDetail": "Awake heart rate above resting level added stress drain.",
   "bodyEnergyReasonRecoveryDebtDetail": "Recent harder effort kept a small drain active afterward.",
   "bodyEnergyReasonNoDataDetail": "Health Connect did not provide enough signal for this bucket.",
-  "bodyEnergyReasonSteadyDetail": "The estimate stayed mostly stable.",
+  "bodyEnergyReasonSteadyDetail": "Baseline metabolism drew a steady, gentle amount.",
+  "bodyEnergyFeelCheckTitle": "How's your energy?",
+  "bodyEnergyFeelCheckPrompt": "Rate it 0\u201310. Your answers quietly tune Body Energy to how activity, sleep and stress actually affect you.",
+  "bodyEnergyFeelCheckSaved": "Thanks \u2014 Body Energy will learn from that.",
+  "bodyEnergyFeelCheckError": "Could not save that check-in. Please try again.",
+  "bodyEnergyPersonalizationTitle": "Personal tuning",
+  "bodyEnergyPersonalizationBody": "{count, plural, =0{Rate your energy on Body Energy to start personalising these.} =1{Learned from 1 check-in. Each is a plain multiplier you can see below.} other{Learned from {count} check-ins. Each is a plain multiplier you can see below.}}",
+  "@bodyEnergyPersonalizationBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "bodyEnergyGainActivity": "Everyday activity tires you",
+  "bodyEnergyGainSleep": "Sleep recharges you",
+  "bodyEnergyGainBasal": "Baseline burn",
+  "bodyEnergyGainStress": "Stress tires you",
+  "bodyEnergyPersonalizationReset": "Reset personal tuning",
   "bodyEnergyInputsTitle": "Inputs used",
   "bodyEnergyInputsSummary": "Algorithm v{arg0}, {arg1}-minute buckets",
   "@bodyEnergyInputsSummary": {

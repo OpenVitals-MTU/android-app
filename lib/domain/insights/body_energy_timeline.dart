@@ -13,10 +13,30 @@ import '../preferences/body_profile.dart';
 
 part 'body_energy_timeline.freezed.dart';
 
-/// Faithful port of `BodyEnergyTimeline` from the Kotlin app: the value types
-/// referenced by `DashboardData` plus the 5-minute-bucket timeline algorithm.
+/// The 5-minute-bucket Body Energy timeline algorithm.
+///
+/// Deliberate deviation from Kotlin parity (AGENTS.md): the original model was
+/// a faithful port that derived drain purely from heart-rate zones, with no
+/// basal cost and a daytime rest charge. That under-drained active days (a
+/// 20k-step, low-heart-rate day read ~75 when it felt like 10%). V3 reframes it
+/// as an energy balance — a basal waking floor plus an activity drain that is
+/// the stronger of the heart-rate-zone estimate and an active-calorie estimate,
+/// with waking rest no longer charging. See the design proposal for the reason.
 const int bodyEnergyTimelineBucketMinutes = 5;
-const int bodyEnergyTimelineAlgorithmVersion = 2;
+const int bodyEnergyTimelineAlgorithmVersion = 3;
+
+/// Points of Body Energy drained per minute of basal metabolism while awake.
+/// ~0.022 accrues roughly 20 points across a 16-hour waking day, so the line
+/// always trends gently down when nothing else is happening.
+const double _basalPointsPerMinute = 0.022;
+
+/// Reference BMR the basal drain is calibrated around; a higher measured BMR
+/// drains proportionally faster (bounded).
+const double _referenceBmrKcalPerDay = 1600.0;
+
+/// Points of Body Energy drained per kilocalorie of active energy expenditure.
+/// Chosen so a heavy ~700 active-kcal day contributes ~40 points of drain.
+const double _activeKcalToPoints = 0.06;
 
 enum BodyEnergyConfidence {
   high('HIGH'),
@@ -58,6 +78,7 @@ enum BodyEnergyBucketState {
 enum BodyEnergyPrimaryInfluence {
   sleepRecovery('SLEEP_RECOVERY'),
   quietRest('QUIET_REST'),
+  everydayActivity('EVERYDAY_ACTIVITY'),
   exertion('EXERTION'),
   elevatedHeartRate('ELEVATED_HEART_RATE'),
   recoveryDebt('RECOVERY_DEBT'),
@@ -102,7 +123,13 @@ abstract class BodyEnergyTimelinePoint with _$BodyEnergyTimelinePoint {
     required BodyEnergyBucketState state,
     required BodyEnergyConfidence confidence,
     required double charge,
+    // Heart-rate-zone estimate of the activity drain (the backstop signal).
     required double intensityDrain,
+    // Active-calorie estimate of the activity drain. The drain actually applied
+    // for activity is max(intensityDrain, activityEnergyDrain).
+    required double activityEnergyDrain,
+    // Basal metabolic drain while awake.
+    required double basalDrain,
     required double stressDrain,
     required double recoveryDebtDrain,
     required BodyEnergyPrimaryInfluence primaryInfluence,
@@ -116,6 +143,8 @@ abstract class BodyEnergyTimelinePoint with _$BodyEnergyTimelinePoint {
     required BodyEnergyConfidence confidence,
     double? charge,
     double intensityDrain = 0.0,
+    double activityEnergyDrain = 0.0,
+    double basalDrain = 0.0,
     double stressDrain = 0.0,
     double recoveryDebtDrain = 0.0,
     BodyEnergyPrimaryInfluence primaryInfluence =
@@ -129,10 +158,18 @@ abstract class BodyEnergyTimelinePoint with _$BodyEnergyTimelinePoint {
         confidence: confidence,
         charge: charge ?? math.max(delta, 0.0),
         intensityDrain: intensityDrain,
+        activityEnergyDrain: activityEnergyDrain,
+        basalDrain: basalDrain,
         stressDrain: stressDrain,
         recoveryDebtDrain: recoveryDebtDrain,
         primaryInfluence: primaryInfluence,
       );
+
+  const BodyEnergyTimelinePoint._();
+
+  /// The activity drain actually applied: the stronger of the heart-rate-zone
+  /// and active-calorie estimates (never their sum).
+  double get appliedActivityDrain => math.max(intensityDrain, activityEnergyDrain);
 }
 
 @freezed
@@ -201,6 +238,8 @@ class BodyEnergyTimelineInputs {
     this.sleepSessions = const <SleepData>[],
     this.workouts = const <ExerciseData>[],
     this.respiratoryRateSamples = const <RespiratoryRateEntry>[],
+    this.activityProgress = const <ActivityProgressPoint>[],
+    this.basalMetabolicRateKcalPerDay,
     this.restingHeartRateBpm,
     this.baselineRestingHeartRateBpm,
     this.observedMaxHeartRateBpm,
@@ -218,6 +257,13 @@ class BodyEnergyTimelineInputs {
   final List<SleepData> sleepSessions;
   final List<ExerciseData> workouts;
   final List<RespiratoryRateEntry> respiratoryRateSamples;
+
+  /// Hourly, cumulative activity progress (steps + active calories). Used to
+  /// estimate the active-calorie drain the heart-rate-zone signal misses.
+  final List<ActivityProgressPoint> activityProgress;
+
+  /// Latest basal metabolic rate in kcal/day, if the device reports it.
+  final double? basalMetabolicRateKcalPerDay;
   final int? restingHeartRateBpm;
   final int? baselineRestingHeartRateBpm;
   final int? observedMaxHeartRateBpm;
@@ -300,6 +346,20 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     );
   }
 
+  final activeKcalPerBucket = _activeCaloriesPerBucket(
+    inputs.activityProgress,
+    bucketCount: bucketCount,
+    dayStart: dayStart,
+  );
+  final basalScale = inputs.basalMetabolicRateKcalPerDay != null
+      ? (inputs.basalMetabolicRateKcalPerDay! / _referenceBmrKcalPerDay)
+          .clamp(0.5, 2.0)
+      : 1.0;
+
+  // Personal gains (clamped by normalized()); 1.0 leaves the objective model
+  // untouched.
+  final gains = inputs.calibration.normalized();
+
   var score = (inputs.previousEndScore ?? 50).clamp(0, 100).toDouble();
   final startScore = score.round();
   var charged = 0.0;
@@ -371,6 +431,17 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
       fatigueMultiplier = 1.0;
     }
     final exerciseMultiplier = workoutMinutes > 0.0 ? 1.15 : 1.0;
+    final notSleeping = sleepMinutes <= 0.0;
+    final activeKcal = index < activeKcalPerBucket.length
+        ? activeKcalPerBucket[index]
+        : 0.0;
+    // Awake-and-present: heart rate is being sampled, or active calories were
+    // burned. Data gaps (watch off) neither charge nor drain.
+    final awakePresent =
+        notSleeping && (avgHeartRate != null || activeKcal > 0.0);
+
+    // Elevated heart rate while awake and not working out. Strengthened from the
+    // original so ordinary sympathetic stress registers.
     final double rawStressDrain;
     if (avgHeartRate == null) {
       rawStressDrain = 0.0;
@@ -379,13 +450,16 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
       if (resting == null || workoutMinutes > 0.0 || sleepMinutes > 0.0) {
         rawStressDrain = 0.0;
       } else if (avgHeartRate >= resting + 25) {
-        rawStressDrain = 0.05 * bucketMinutes;
+        rawStressDrain = 0.07 * bucketMinutes;
       } else if (avgHeartRate >= resting + 15) {
-        rawStressDrain = 0.025 * bucketMinutes;
+        rawStressDrain = 0.04 * bucketMinutes;
+      } else if (avgHeartRate >= resting + 8) {
+        rawStressDrain = 0.02 * bucketMinutes;
       } else {
         rawStressDrain = 0.0;
       }
     }
+    // Heart-rate-zone estimate of the activity drain (the backstop signal).
     final double rawIntensityDrain;
     if (avgHeartRate != null) {
       rawIntensityDrain = _drainRateForZone(zone) *
@@ -397,16 +471,34 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     } else {
       rawIntensityDrain = 0.0;
     }
+    // Active-calorie estimate — captures walking, chores and other movement that
+    // never lifts heart rate out of the low zones.
+    final rawActivityEnergyDrain =
+        notSleeping ? activeKcal * _activeKcalToPoints : 0.0;
     final rawRecoveryDebtDrain =
         recoveryDebtBuckets > 0 ? 0.015 * bucketMinutes : 0.0;
+    // Baseline metabolic cost of being awake — the floor that keeps the line
+    // trending down when nothing else is happening.
+    final rawBasalDrain =
+        awakePresent ? _basalPointsPerMinute * bucketMinutes * basalScale : 0.0;
     final drainMultiplier = math.max(
       hrvFactor.drainMultiplier,
       respirationFactor.drainMultiplier,
     );
-    final intensityDrain = rawIntensityDrain * drainMultiplier;
-    final stressDrain = rawStressDrain * drainMultiplier;
+    final intensityDrain =
+        rawIntensityDrain * drainMultiplier * gains.activityDrainGain;
+    final activityEnergyDrain =
+        rawActivityEnergyDrain * drainMultiplier * gains.activityDrainGain;
+    final stressDrain =
+        rawStressDrain * drainMultiplier * gains.stressDrainGain;
     final recoveryDebtDrain = rawRecoveryDebtDrain * drainMultiplier;
-    final drain = intensityDrain + stressDrain + recoveryDebtDrain;
+    // Basal is a metabolic constant, not a stress response — no HRV/respiration
+    // modifier, just the personal gain.
+    final basalDrain = rawBasalDrain * gains.basalDrainGain;
+    // Activity is the stronger of the two estimates, never their sum.
+    final appliedActivityDrain = math.max(intensityDrain, activityEnergyDrain);
+    final drain =
+        basalDrain + appliedActivityDrain + stressDrain + recoveryDebtDrain;
 
     if (zone >= 3 && workoutMinutes > 0.0) {
       recoveryDebtBuckets =
@@ -422,25 +514,26 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
       final resting = intensityContext.restingHeartRateBpm;
       restEligible = resting != null && avgHeartRate <= resting + 8;
     }
+    // Only sleep charges now. Waking rest reads as a slow basal decline, not a
+    // climb — the pivotal fix over the previous model.
     final double charge;
     if (sleepMinutes > 0.0) {
       charge = 0.10 *
           sleepMinutes *
           hrvFactor.chargeMultiplier /
-          respirationFactor.chargePenalty;
-    } else if (restEligible && recoveryDebtBuckets == 0 && drain <= 0.05) {
-      charge = 0.015 * bucketMinutes;
+          respirationFactor.chargePenalty *
+          gains.sleepChargeGain;
     } else {
       charge = 0.0;
     }
 
     final delta = charge - drain;
     score = (score + delta).clamp(0.0, 100.0);
-    if (delta > 0) {
-      charged += delta;
-    } else {
-      drained += -delta;
-    }
+    // Gross totals: charged is all charge, drained is all drain — the same
+    // components "What moved it" breaks down. (Clamping at 0/100 means these
+    // need not net exactly to end-minus-start.)
+    charged += charge;
+    drained += drain;
 
     final BodyEnergyBucketState state;
     if (sleepMinutes > 0.0) {
@@ -458,10 +551,13 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     }
     final primaryInfluence = _primaryInfluence(
       charge: charge,
-      intensityDrain: intensityDrain,
+      appliedActivityDrain: appliedActivityDrain,
+      energyDriven: activityEnergyDrain >= intensityDrain,
       stressDrain: stressDrain,
       recoveryDebtDrain: recoveryDebtDrain,
       sleepMinutes: sleepMinutes,
+      workoutMinutes: workoutMinutes,
+      zone: zone,
       state: state,
     );
     final BodyEnergyConfidence confidence;
@@ -493,6 +589,8 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
         confidence: confidence,
         charge: charge,
         intensityDrain: intensityDrain,
+        activityEnergyDrain: activityEnergyDrain,
+        basalDrain: basalDrain,
         stressDrain: stressDrain,
         recoveryDebtDrain: recoveryDebtDrain,
         primaryInfluence: primaryInfluence,
@@ -565,10 +663,13 @@ BodyEnergyCalibrationMode _calibrationMode(
 
 BodyEnergyPrimaryInfluence _primaryInfluence({
   required double charge,
-  required double intensityDrain,
+  required double appliedActivityDrain,
+  required bool energyDriven,
   required double stressDrain,
   required double recoveryDebtDrain,
   required double sleepMinutes,
+  required double workoutMinutes,
+  required int zone,
   required BodyEnergyBucketState state,
 }) {
   if (state == BodyEnergyBucketState.unmeasurable) {
@@ -579,10 +680,22 @@ BodyEnergyPrimaryInfluence _primaryInfluence({
   }
   if (charge > 0.0) return BodyEnergyPrimaryInfluence.quietRest;
 
-  final maxDrain =
-      math.max(intensityDrain, math.max(stressDrain, recoveryDebtDrain));
+  // Basal drain is deliberately excluded from the competition: it is the
+  // ever-present floor, reported as steady, never as the notable influence.
+  final maxDrain = [
+    appliedActivityDrain,
+    stressDrain,
+    recoveryDebtDrain,
+  ].reduce(math.max);
   if (maxDrain <= 0.0) return BodyEnergyPrimaryInfluence.steady;
-  if (maxDrain == intensityDrain) return BodyEnergyPrimaryInfluence.exertion;
+  if (maxDrain == appliedActivityDrain) {
+    // Low-heart-rate movement with no workout is everyday activity; anything
+    // heart-rate- or workout-driven is exertion.
+    final everyday = energyDriven && zone < 2 && workoutMinutes <= 0.0;
+    return everyday
+        ? BodyEnergyPrimaryInfluence.everydayActivity
+        : BodyEnergyPrimaryInfluence.exertion;
+  }
   if (maxDrain == stressDrain) {
     return BodyEnergyPrimaryInfluence.elevatedHeartRate;
   }
@@ -837,3 +950,55 @@ List<double?> _bucketedAverages<T>(
 }
 
 DateTime _minInstant(DateTime a, DateTime b) => a.isBefore(b) ? a : b;
+
+/// Active kilocalories attributed to each 5-minute bucket.
+///
+/// [progress] is hourly and cumulative (each point's `totalActiveCaloriesKcal`
+/// is the running total at that hour's end). Treating the cumulative series as
+/// piecewise-linear and differencing per bucket spreads each hour's burn evenly
+/// across its buckets — the intended hourly→5-minute mapping.
+List<double> _activeCaloriesPerBucket(
+  List<ActivityProgressPoint> progress, {
+  required int bucketCount,
+  required DateTime dayStart,
+}) {
+  final result = List<double>.filled(math.max(bucketCount, 0), 0.0);
+  if (bucketCount <= 0 || progress.isEmpty) return result;
+
+  // Cumulative knots, minutes-from-start → running active kcal, starting at 0.
+  final knots = <(double, double)>[(0.0, 0.0)];
+  final sorted = progress
+      .where((point) => point.totalActiveCaloriesKcal != null)
+      .toList()
+    ..sort((a, b) => a.time.compareTo(b.time));
+  for (final point in sorted) {
+    final minute = point.time.difference(dayStart).inSeconds / 60.0;
+    if (minute <= 0.0) continue;
+    var value = math.max(0.0, point.totalActiveCaloriesKcal!);
+    // Guard against a non-monotonic cumulative series.
+    if (value < knots.last.$2) value = knots.last.$2;
+    knots.add((minute, value));
+  }
+  if (knots.length < 2) return result;
+
+  double cumulativeAt(double minute) {
+    if (minute <= knots.first.$1) return knots.first.$2;
+    if (minute >= knots.last.$1) return knots.last.$2;
+    for (var i = 1; i < knots.length; i++) {
+      if (minute <= knots[i].$1) {
+        final (t0, v0) = knots[i - 1];
+        final (t1, v1) = knots[i];
+        if (t1 <= t0) return v1;
+        return v0 + (v1 - v0) * ((minute - t0) / (t1 - t0));
+      }
+    }
+    return knots.last.$2;
+  }
+
+  for (var i = 0; i < bucketCount; i++) {
+    final start = (i * bodyEnergyTimelineBucketMinutes).toDouble();
+    final end = ((i + 1) * bodyEnergyTimelineBucketMinutes).toDouble();
+    result[i] = math.max(0.0, cumulativeAt(end) - cumulativeAt(start));
+  }
+  return result;
+}

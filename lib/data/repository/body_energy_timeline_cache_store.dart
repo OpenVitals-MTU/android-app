@@ -113,6 +113,9 @@ String _timelineToPreferenceString(BodyEnergyTimeline timeline) {
       point.stressDrain.toStringAsFixed(4),
       point.recoveryDebtDrain.toStringAsFixed(4),
       point.primaryInfluence.storageName,
+      // Appended in v3; older rows decode these as 0.0.
+      point.activityEnergyDrain.toStringAsFixed(4),
+      point.basalDrain.toStringAsFixed(4),
     ].join(',');
   }).join(';');
   return '$header\n$pointsValue';
@@ -173,6 +176,8 @@ BodyEnergyTimelinePoint? _pointOrNull(String encoded) {
     recoveryDebtDrain: _tryDouble(_elementAt(parts, 8)) ?? 0.0,
     primaryInfluence: _primaryInfluenceOrNull(_elementAt(parts, 9)) ??
         _legacyPrimaryInfluence(state, delta),
+    activityEnergyDrain: _tryDouble(_elementAt(parts, 10)) ?? 0.0,
+    basalDrain: _tryDouble(_elementAt(parts, 11)) ?? 0.0,
   );
 }
 
