@@ -621,9 +621,18 @@ class MainActivity : FlutterFragmentActivity() {
          * Guards against a pick of the storage root: a walk that deep, or a list
          * that long, is a mis-pick rather than an import, and neither the walk
          * nor the batch that follows should run for an hour because of it.
+         *
+         * The file ceiling is sized for a whole Garmin Connect account export, not
+         * a folder of a few rides: such an export is one FIT file PER wellness
+         * record (daily monitoring, sleep, HRV, metrics), so a multi-year account
+         * runs to tens of thousands of files and only ~2-3% are activities. At 2000
+         * the raw cap dropped real activities behind thousands of wellness files
+         * (see docs/reference/garmin-fit-files.md). The listing is names + URIs
+         * only, so 50k entries cost a few MB; the import itself stays bounded by the
+         * one-file-at-a-time reader and its write batching.
          */
         const val MAX_FOLDER_DEPTH = 8
-        const val MAX_FOLDER_FILES = 2000
+        const val MAX_FOLDER_FILES = 50000
 
         /** The route formats the activity-entry form can parse. */
         val ROUTE_IMPORT_EXTENSIONS = listOf(".gpx", ".kml", ".kmz", ".fit", ".tcx")
