@@ -163,6 +163,46 @@ void main() {
           58);
     });
   });
+
+  group('monitoring (type 32) high-frequency series', () {
+    test('HR packs hourly, respiration averages hourly, steps span the file',
+        () {
+      final bytes = _fitMonitoringSeriesBytes(
+        hr: [
+          (DateTime.utc(2024, 1, 18, 9, 10), 70),
+          (DateTime.utc(2024, 1, 18, 9, 40), 72),
+          (DateTime.utc(2024, 1, 18, 10, 10), 68),
+          (DateTime.utc(2024, 1, 18, 10, 40), 74),
+        ],
+        respiration: [
+          (DateTime.utc(2024, 1, 18, 9, 15), 13.0),
+          (DateTime.utc(2024, 1, 18, 9, 45), 15.0),
+          (DateTime.utc(2024, 1, 18, 10, 15), 14.0),
+        ],
+        stepsCumulative: [
+          (DateTime.utc(2024, 1, 18, 9, 0), 0),
+          (DateTime.utc(2024, 1, 18, 10, 0), 500),
+          (DateTime.utc(2024, 1, 18, 11, 0), 1200),
+        ],
+      );
+      final m = FitRouteParser.parseWellness(bytes).monitoring!;
+      final records = fitMonitoringImportRecords(m);
+
+      final hr = records.whereType<HeartRateImportRecord>().toList();
+      expect(hr, hasLength(2)); // one per hour (09:xx, 10:xx)
+      expect(hr.expand((r) => r.samples).length, 4);
+
+      final resp = records.whereType<RespiratoryRateImportRecord>().toList()
+        ..sort((a, b) => a.time.compareTo(b.time));
+      expect(resp, hasLength(2));
+      expect(resp.first.rate, closeTo(14.0, 0.001)); // avg(13,15)
+
+      final steps = records.whereType<StepsImportRecord>().single;
+      expect(steps.count, 1200); // max - min
+      expect(steps.startTime, DateTime.utc(2024, 1, 18, 9, 0));
+      expect(steps.endTime, DateTime.utc(2024, 1, 18, 11, 0));
+    });
+  });
 }
 
 // ── Minimal FIT writer (little-endian), enough for a sleep file ──────────────
@@ -323,6 +363,55 @@ Uint8List _fitMonitoringBytes({
       ..u8(2)
       ..u32(_fitTimestamp(time))
       ..u16(bmrKcalPerDay);
+  }
+
+  return _wrap(data.toBytes());
+}
+
+Uint8List _fitMonitoringSeriesBytes({
+  List<(DateTime, int)> hr = const [],
+  List<(DateTime, double)> respiration = const [],
+  List<(DateTime, int)> stepsCumulative = const [],
+}) {
+  final data = _W()..def(3, 0, [
+    [0, 1, 0x00]
+  ]);
+  data
+    ..u8(3)
+    ..u8(32); // file_id type 32
+
+  // monitoring HR (local 1, global 55): timestamp + heart_rate (uint8).
+  data.def(1, 55, [
+    [253, 4, 0x86],
+    [27, 1, 0x02],
+  ]);
+  for (final (t, bpm) in hr) {
+    data
+      ..u8(1)
+      ..u32(_fitTimestamp(t))
+      ..u8(bpm);
+  }
+  // monitoring steps (local 2, global 55): timestamp + cumulative steps (uint32).
+  data.def(2, 55, [
+    [253, 4, 0x86],
+    [3, 4, 0x86],
+  ]);
+  for (final (t, s) in stepsCumulative) {
+    data
+      ..u8(2)
+      ..u32(_fitTimestamp(t))
+      ..u32(s);
+  }
+  // respiration_rate (local 3, global 297): timestamp + rate (sint16, ×100).
+  data.def(3, 297, [
+    [253, 4, 0x86],
+    [0, 2, 0x83],
+  ]);
+  for (final (t, r) in respiration) {
+    data
+      ..u8(3)
+      ..u32(_fitTimestamp(t))
+      ..u16((r * 100).round());
   }
 
   return _wrap(data.toBytes());
