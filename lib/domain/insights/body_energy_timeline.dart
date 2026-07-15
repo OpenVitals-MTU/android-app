@@ -356,6 +356,10 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
           .clamp(0.5, 2.0)
       : 1.0;
 
+  // Personal gains (clamped by normalized()); 1.0 leaves the objective model
+  // untouched.
+  final gains = inputs.calibration.normalized();
+
   var score = (inputs.previousEndScore ?? 50).clamp(0, 100).toDouble();
   final startScore = score.round();
   var charged = 0.0;
@@ -481,12 +485,16 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
       hrvFactor.drainMultiplier,
       respirationFactor.drainMultiplier,
     );
-    final intensityDrain = rawIntensityDrain * drainMultiplier;
-    final activityEnergyDrain = rawActivityEnergyDrain * drainMultiplier;
-    final stressDrain = rawStressDrain * drainMultiplier;
+    final intensityDrain =
+        rawIntensityDrain * drainMultiplier * gains.activityDrainGain;
+    final activityEnergyDrain =
+        rawActivityEnergyDrain * drainMultiplier * gains.activityDrainGain;
+    final stressDrain =
+        rawStressDrain * drainMultiplier * gains.stressDrainGain;
     final recoveryDebtDrain = rawRecoveryDebtDrain * drainMultiplier;
-    // Basal is a metabolic constant, not a stress response — unmodified.
-    final basalDrain = rawBasalDrain;
+    // Basal is a metabolic constant, not a stress response — no HRV/respiration
+    // modifier, just the personal gain.
+    final basalDrain = rawBasalDrain * gains.basalDrainGain;
     // Activity is the stronger of the two estimates, never their sum.
     final appliedActivityDrain = math.max(intensityDrain, activityEnergyDrain);
     final drain =
@@ -513,7 +521,8 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
       charge = 0.10 *
           sleepMinutes *
           hrvFactor.chargeMultiplier /
-          respirationFactor.chargePenalty;
+          respirationFactor.chargePenalty *
+          gains.sleepChargeGain;
     } else {
       charge = 0.0;
     }

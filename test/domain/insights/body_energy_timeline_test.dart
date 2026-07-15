@@ -353,4 +353,33 @@ void main() {
 
     expect(run.drained > walk.drained, isTrue);
   });
+
+  test('a higher activity-drain gain drains more', () {
+    final start = dayStart.add(const Duration(hours: 8));
+    final end = start.add(const Duration(hours: 8));
+    final samples = heartRateSamples(start, end, 72);
+    final progress = activityProgress(List<double>.filled(8, 80.0), fromHour: 8);
+
+    final neutral = calculateBodyEnergyTimeline(
+      inputs(
+        now: end,
+        previousEndScore: 80,
+        samples: samples,
+        bodyProfile: restfulProfile,
+        progress: progress,
+      ),
+    );
+    final amplified = calculateBodyEnergyTimeline(
+      inputs(
+        now: end,
+        previousEndScore: 80,
+        samples: samples,
+        bodyProfile: restfulProfile,
+        progress: progress,
+        calibration: const BodyEnergyCalibration(activityDrainGain: 1.5),
+      ),
+    );
+
+    expect(amplified.drained > neutral.drained, isTrue);
+  });
 }
