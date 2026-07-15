@@ -1917,5 +1917,11 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "settingsChartAggregationTitle": "Gráficos agregados",
+    "settingsChartAggregationBody": "En lugar de los datos sin procesar, muestre una línea promedio con una banda de mínimo/máximo por intervalo de tiempo.",
+    "settingsChartAggregationOff": "Desactivado (datos sin procesar)",
+    "settingsChartAggregationMin5": "5 minutos",
+    "settingsChartAggregationMin10": "10 minutos",
+    "settingsChartAggregationMin30": "30 minutos"
 }
