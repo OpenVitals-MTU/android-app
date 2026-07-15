@@ -56,6 +56,7 @@ abstract class RouteBulkImportProgress with _$RouteBulkImportProgress {
     required int totalFiles,
     @Default(0) int importedFiles,
     @Default(0) int failedFiles,
+    @Default(0) int skippedFiles,
     @Default(0) int currentFileIndex,
   }) = _RouteBulkImportProgress;
 }
@@ -68,6 +69,7 @@ abstract class RouteBulkImportResult with _$RouteBulkImportResult {
     required int totalFiles,
     required int importedFiles,
     required int failedFiles,
+    @Default(0) int skippedFiles,
   }) = _RouteBulkImportResult;
 }
 
@@ -126,6 +128,10 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
     final totalFiles = files.length;
     var importedFiles = 0;
     var failedFiles = 0;
+    // Non-activity FIT files with no Health Connect-mappable data (Garmin stress,
+    // Body Battery, metrics, sleep-disruption). Skipped, not failed: nothing is
+    // wrong with them, they simply have no Health Connect home.
+    var skippedFiles = 0;
     String? lastError;
 
     state = RouteBulkImportState(
@@ -182,6 +188,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
           totalFiles: totalFiles,
           importedFiles: importedFiles,
           failedFiles: failedFiles,
+          skippedFiles: skippedFiles,
           currentFileIndex: state.progress?.currentFileIndex ?? 0,
         ),
       );
@@ -234,6 +241,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
           totalFiles: totalFiles,
           importedFiles: importedFiles,
           failedFiles: failedFiles,
+          skippedFiles: skippedFiles,
           currentFileIndex: state.progress?.currentFileIndex ?? 0,
         ),
       );
@@ -247,6 +255,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
           totalFiles: totalFiles,
           importedFiles: importedFiles,
           failedFiles: failedFiles,
+          skippedFiles: skippedFiles,
           currentFileIndex: index + 1,
         ),
       );
@@ -285,6 +294,15 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
             if (wellnessPending.length >= _maxPendingFiles) {
               await writeWellnessPending();
             }
+            continue;
+          }
+          // A non-activity FIT file with nothing this importer can map (Garmin
+          // stress / Body Battery / metrics / sleep-disruption). Skip it — it is
+          // not a broken activity, so it must not read as a failure.
+          if (!wellness.isActivityType) {
+            skippedFiles += 1;
+            debugPrint('[FIT] skipped file=${file.fileName ?? "?"} '
+                'type=${wellness.fileType} (no Health Connect-mappable data)');
             continue;
           }
         }
@@ -338,9 +356,10 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
     await writePending();
     await writeWellnessPending();
 
-    // DIAGNOSTIC: the run's bottom line, matching the card's "Imported X. Failed Y."
+    // DIAGNOSTIC: the run's bottom line, matching the card's "Imported X. …".
     debugPrint('[FIT] run complete: total=$totalFiles imported=$importedFiles '
-      'failed=$failedFiles rateLimited=$rateLimited lastError="$lastError"',
+      'skipped=$skippedFiles failed=$failedFiles rateLimited=$rateLimited '
+      'lastError="$lastError"',
         );
 
     state = RouteBulkImportState(
@@ -349,6 +368,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         totalFiles: totalFiles,
         importedFiles: importedFiles,
         failedFiles: failedFiles,
+        skippedFiles: skippedFiles,
       ),
       // Shown whenever anything went wrong, not only when a FILE failed: a run cut
       // short by the quota can have zero failed files and still owe the user an

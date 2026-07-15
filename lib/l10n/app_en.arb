@@ -2536,6 +2536,24 @@
       }
     }
   },
+  "settingsRouteImportResultWithSkipped": "Imported {arg0}. Skipped {arg1}. Failed {arg2}. Selected {arg3}.",
+  "@settingsRouteImportResultWithSkipped": {
+    "description": "FIT folder import result when some files were skipped (non-activity wellness types with no Health Connect equivalent, e.g. Garmin stress or Body Battery).",
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      }
+    }
+  },
   "settingsRouteImportError": "Route import warning: {arg0}",
   "@settingsRouteImportError": {
     "placeholders": {

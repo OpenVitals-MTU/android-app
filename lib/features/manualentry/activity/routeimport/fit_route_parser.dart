@@ -71,13 +71,21 @@ class FitMonitoringSummary {
 /// The wellness data a FIT file carried, from one decode pass. Each Garmin file
 /// is a single type, so at most one of these is populated (activities have none).
 class FitWellness {
-  const FitWellness({this.sleep, this.hrv, this.monitoring});
+  const FitWellness({this.fileType, this.sleep, this.hrv, this.monitoring});
 
+  /// `file_id.type` — lets the caller tell a non-activity file with no mappable
+  /// data (skip it) from an activity file (parse it as an exercise).
+  final int? fileType;
   final FitSleepSession? sleep;
   final FitHrvReading? hrv;
   final FitMonitoringSummary? monitoring;
 
   bool get isEmpty => sleep == null && hrv == null && monitoring == null;
+
+  /// True for `activity` (4), `workout` (5) and `course` (6) — the types the
+  /// exercise/route importer handles. Everything else is wellness data.
+  bool get isActivityType =>
+      fileType == 4 || fileType == 5 || fileType == 6;
 }
 
 /// Hand-port of the Kotlin `FitRouteParser` (Garmin FIT decoder). Ported byte
@@ -131,11 +139,11 @@ class FitRouteParser {
   /// course and workout files. Field layout: docs/reference/garmin-fit-files.md.
   static FitWellness parseWellness(Uint8List fitBytes, {String? fileName}) {
     final result = _FitDecoder(fitBytes).decode();
-    final monitoring = result.monitoring.toSummary();
     return FitWellness(
+      fileType: result.summary.fileType,
       sleep: result.sleep.toSession(),
       hrv: result.hrv.toReading(),
-      monitoring: monitoring,
+      monitoring: result.monitoring.toSummary(),
     );
   }
 
