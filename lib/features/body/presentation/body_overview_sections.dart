@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/presentation/display_value.dart';
@@ -16,6 +17,7 @@ import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/body_display.dart';
+import '../../../state/app_providers.dart';
 import '../../../ui/components/section_padding.dart';
 
 /// Ports of the Kotlin `BodyMetricSharedSections.kt` presentation helpers and the
@@ -366,7 +368,7 @@ class BmiContextCards extends StatelessWidget {
 
 // ── DAY-range intraday chart (Kotlin `BodyIntradayMetricChartCard`) ──────────
 
-class BodyIntradayMetricChartCard extends StatelessWidget {
+class BodyIntradayMetricChartCard extends ConsumerWidget {
   const BodyIntradayMetricChartCard({
     super.key,
     required this.selectedDate,
@@ -381,8 +383,9 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
   final DateTime? now;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final bucketMinutes = ref.watch(chartAggregationModeProvider).bucketMinutes;
 
     // Precomputed by the view-model, oldest first.
     final samples = metricData.daySamples;
@@ -406,6 +409,7 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
       headlineText:
           latest == null ? l10n.noData : metricData.format(latest).text,
       valueFormatter: (value) => metricData.format(value).text,
+      bucketMinutes: bucketMinutes,
     );
   }
 }

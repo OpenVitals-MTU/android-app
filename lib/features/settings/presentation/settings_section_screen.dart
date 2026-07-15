@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/preferences/activity_week_mode.dart';
 import '../../../domain/preferences/app_theme_mode.dart';
+import '../../../domain/preferences/chart_aggregation_mode.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/preferences/unit_system.dart';
 import '../../../l10n/app_localizations.dart';
@@ -109,6 +110,16 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
                 onChanged: notifier.setDynamicColor,
               ),
             ],
+          ),
+        ),
+        _SettingsCard(
+          title: l10n.settingsChartAggregationTitle,
+          body: l10n.settingsChartAggregationBody,
+          child: _ChoiceRow<ChartAggregationMode>(
+            options: ChartAggregationMode.values,
+            selected: state.chartAggregationMode,
+            labelFor: (value) => _chartAggregationLabel(l10n, value),
+            onSelect: notifier.selectChartAggregationMode,
           ),
         ),
       ];
@@ -251,6 +262,14 @@ String _sleepLabel(AppLocalizations l10n, SleepRangeMode value) =>
       SleepRangeMode.rolling24h => l10n.settingsSleepRangeRolling24h,
       SleepRangeMode.noon => l10n.settingsSleepRangeNoon,
       SleepRangeMode.evening18h => l10n.settingsSleepRangeEvening,
+    };
+
+String _chartAggregationLabel(AppLocalizations l10n, ChartAggregationMode value) =>
+    switch (value) {
+      ChartAggregationMode.off => l10n.settingsChartAggregationOff,
+      ChartAggregationMode.min5 => l10n.settingsChartAggregationMin5,
+      ChartAggregationMode.min10 => l10n.settingsChartAggregationMin10,
+      ChartAggregationMode.min30 => l10n.settingsChartAggregationMin30,
     };
 
 String _weekLabel(AppLocalizations l10n, ActivityWeekMode value) =>

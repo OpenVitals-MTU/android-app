@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/stats/bucketed_series.dart';
 import '../../l10n/app_localizations.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
@@ -48,6 +49,7 @@ class MetricDayChart extends StatelessWidget {
     this.drawPoints = false,
     this.pointRadius = 3.5,
     this.lineStrokeWidth = 3,
+    this.bucketMinutes,
   });
 
   final DayAxis axis;
@@ -78,6 +80,12 @@ class MetricDayChart extends StatelessWidget {
   final double pointRadius;
   final double lineStrokeWidth;
 
+  /// When non-null, the raw readings are aggregated into buckets this many minutes
+  /// wide and drawn as an average line with a min/max band, instead of the raw
+  /// polyline. Off (null) leaves the chart exactly as it was. Only applies to the
+  /// [DaySeriesShape.raw] shape — a running total is not something you average.
+  final int? bucketMinutes;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -85,6 +93,39 @@ class MetricDayChart extends StatelessWidget {
     final locale = Localizations.localeOf(context).toLanguageTag();
 
     final ordered = [...samples]..sort((a, b) => a.time.compareTo(b.time));
+    // Built once here, not inside the ChartZoom builder below: the plotted points
+    // do not depend on the viewport (the painter applies it), so recomputing them
+    // on every pinch frame only churned a fresh list and defeated the plot's
+    // geometry cache. One list, stable identity, reused across zoom frames.
+    //
+    // Aggregated view: when a bucket width is set (and the shape is raw readings,
+    // not a running total), the line becomes a per-bucket average with a min/max
+    // band behind it. Off leaves the raw polyline untouched.
+    final bucket = bucketMinutes;
+    final aggregating =
+        bucket != null && shape == DaySeriesShape.raw && ordered.isNotEmpty;
+    final List<MetricLinePlotPoint> points;
+    final List<ChartBandSpan> band;
+    if (aggregating) {
+      final buckets = bucketedSeries<DaySample>(
+        ordered,
+        bucketMinutes: bucket,
+        dayStart: axis.start,
+        time: (sample) => sample.time,
+        value: (sample) => sample.value,
+      );
+      points = [
+        for (final b in buckets)
+          MetricLinePlotPoint(xFraction: axis.fractionOf(b.time), value: b.average),
+      ];
+      band = [
+        for (final b in buckets)
+          (xFraction: axis.fractionOf(b.time), low: b.min, high: b.max),
+      ];
+    } else {
+      points = shape.plot(ordered, axis);
+      band = const [];
+    }
 
     return OpenVitalsCard(
       child: Padding(
@@ -120,14 +161,17 @@ class MetricDayChart extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     MetricLinePlot(
-                      points: shape.plot(ordered, axis),
+                      points: points,
                       minValue: range.min,
                       maxValue: range.max,
                       accentColor: accentColor,
                       valueFormatter: valueFormatter,
-                      drawPoints: drawPoints,
+                      // Dots on averaged points read as false precision; the band
+                      // already shows the spread.
+                      drawPoints: aggregating ? false : drawPoints,
                       pointRadius: pointRadius,
                       lineStrokeWidth: lineStrokeWidth,
+                      band: band,
                       viewport: viewport,
                       // Drag along the chart and it tells you the reading and the hour
                       // it was taken. The number was always in the data and never on the

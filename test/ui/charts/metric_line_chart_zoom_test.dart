@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/ui/charts/chart_axis.dart';
+import 'package:openvitals/ui/charts/chart_scrubber.dart';
 import 'package:openvitals/ui/charts/chart_zoom.dart';
 import 'package:openvitals/ui/charts/line_chart.dart';
 
@@ -124,6 +125,56 @@ void main() {
           of: find.byType(PeriodChartXAxis), matching: find.byType(Stack)),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a period MetricLineChart is scrubbable and reads the average line',
+      (tester) async {
+    final series = MetricLineSeries(
+      color: const Color(0xFF2196F3),
+      points: [
+        for (var month = 1; month <= 12; month++)
+          MetricLinePoint(date: LocalDate(2024, month, 15), value: 60 + month.toDouble()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: MetricLineChart(
+              title: 'Resting heart rate',
+              series: [series],
+              selectedRange: TimeRange.year,
+              period: DatePeriod(
+                const LocalDate(2024, 1, 1),
+                const LocalDate(2024, 12, 31),
+              ),
+              accentColor: const Color(0xFF2196F3),
+              summaryText: 'Avg 66 bpm',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Parity with the day chart: the period chart now carries a scrubber.
+    expect(find.byType(ChartScrubber), findsOneWidget);
+
+    // A horizontal drag lands on a real point and surfaces its value; a vertical
+    // drag would be left to the page, and a tap would still select a day.
+    final center = tester.getCenter(find.byType(ChartScrubber));
+    final gesture = await tester.startGesture(center);
+    await gesture.moveBy(const Offset(24, 0));
+    await tester.pump();
+    // The tooltip reports a value from the series (66/67 near the middle of 2024).
+    expect(
+      find.textContaining(RegExp(r'6[0-9]')),
+      findsWidgets,
+      reason: 'the scrub tooltip shows the average line value',
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('switching the year resets a zoom rather than carrying it over',

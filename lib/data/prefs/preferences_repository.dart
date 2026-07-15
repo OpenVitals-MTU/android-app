@@ -19,6 +19,7 @@ import '../../domain/preferences/app_theme_mode.dart';
 import '../../domain/preferences/body_energy_calibration.dart';
 import '../../domain/preferences/body_profile.dart';
 import '../../domain/preferences/caffeine_preferences.dart';
+import '../../domain/preferences/chart_aggregation_mode.dart';
 import '../../domain/preferences/sleep_range_mode.dart';
 import '../../domain/preferences/unit_system.dart';
 import 'device_locale.dart';
@@ -75,6 +76,8 @@ class PreferencesRepository {
         _appThemeMode = ValueNotifier(_readAppThemeMode(_prefs)),
         _dynamicColor = ValueNotifier(_readDynamicColor(_prefs)),
         _sleepRangeMode = ValueNotifier(_readSleepRangeMode(_prefs)),
+        _chartAggregationMode =
+            ValueNotifier(_readChartAggregationMode(_prefs)),
         _activityWeekMode = ValueNotifier(_readActivityWeekMode(_prefs)),
         _activitySplitDistanceMeters =
             ValueNotifier(_readActivitySplitDistanceMeters(_prefs)),
@@ -107,6 +110,7 @@ class PreferencesRepository {
   final ValueNotifier<AppThemeMode> _appThemeMode;
   final ValueNotifier<bool> _dynamicColor;
   final ValueNotifier<SleepRangeMode> _sleepRangeMode;
+  final ValueNotifier<ChartAggregationMode> _chartAggregationMode;
   final ValueNotifier<ActivityWeekMode> _activityWeekMode;
   final ValueNotifier<double> _activitySplitDistanceMeters;
   final ValueNotifier<bool> _showOpenVitalsCalculatedCalories;
@@ -123,6 +127,8 @@ class PreferencesRepository {
   ValueListenable<bool> get dynamicColorListenable => _dynamicColor;
   ValueListenable<SleepRangeMode> get sleepRangeModeListenable =>
       _sleepRangeMode;
+  ValueListenable<ChartAggregationMode> get chartAggregationModeListenable =>
+      _chartAggregationMode;
   ValueListenable<ActivityWeekMode> get activityWeekModeListenable =>
       _activityWeekMode;
   ValueListenable<double> get activitySplitDistanceMetersListenable =>
@@ -171,6 +177,12 @@ class PreferencesRepository {
   set sleepRangeMode(SleepRangeMode value) {
     _store.putString(_keySleepRangeMode, value.name);
     _sleepRangeMode.value = value;
+  }
+
+  ChartAggregationMode get chartAggregationMode => _chartAggregationMode.value;
+  set chartAggregationMode(ChartAggregationMode value) {
+    _store.putString(_keyChartAggregationMode, value.name);
+    _chartAggregationMode.value = value;
   }
 
   ActivityWeekMode get activityWeekMode => _activityWeekMode.value;
@@ -570,6 +582,7 @@ class PreferencesRepository {
     _appThemeMode.dispose();
     _dynamicColor.dispose();
     _sleepRangeMode.dispose();
+    _chartAggregationMode.dispose();
     _activityWeekMode.dispose();
     _activitySplitDistanceMeters.dispose();
     _showOpenVitalsCalculatedCalories.dispose();
@@ -603,6 +616,15 @@ class PreferencesRepository {
   static SleepRangeMode _readSleepRangeMode(SharedPreferences prefs) =>
       enumByName(SleepRangeMode.values, prefs.getString(_keySleepRangeMode)) ??
       SleepRangeMode.evening18h;
+
+  static ChartAggregationMode _readChartAggregationMode(
+    SharedPreferences prefs,
+  ) =>
+      enumByName(
+        ChartAggregationMode.values,
+        prefs.getString(_keyChartAggregationMode),
+      ) ??
+      ChartAggregationMode.off;
 
   static ActivityWeekMode _readActivityWeekMode(SharedPreferences prefs) =>
       enumByName(
@@ -674,6 +696,7 @@ class PreferencesRepository {
   static const String _keyAppThemeMode = 'app_theme_mode';
   static const String _keyDynamicColor = 'dynamic_color';
   static const String _keySleepRangeMode = 'sleep_range_mode';
+  static const String _keyChartAggregationMode = 'chart_aggregation_mode';
   static const String _keyActivityWeekMode = 'activity_week_mode';
   static const String _keyActivitySplitDistanceMeters =
       'activity_split_distance_meters';

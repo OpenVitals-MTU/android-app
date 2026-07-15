@@ -2234,6 +2234,12 @@
   "settingsSleepRangeRolling24h": "Rolling 24h",
   "settingsSleepRangeNoon": "Noon",
   "settingsSleepRangeEvening": "18:00",
+  "settingsChartAggregationTitle": "Aggregate charts",
+  "settingsChartAggregationBody": "Show an average line with a min/max band per time bucket instead of the raw data.",
+  "settingsChartAggregationOff": "Off (raw data)",
+  "settingsChartAggregationMin5": "5 minutes",
+  "settingsChartAggregationMin10": "10 minutes",
+  "settingsChartAggregationMin30": "30 minutes",
   "settingsCyclePermissionsTitle": "Cycle permissions",
   "settingsCyclePermissionsGranted": "{arg0}/{arg1} cycle permissions granted.",
   "@settingsCyclePermissionsGranted": {

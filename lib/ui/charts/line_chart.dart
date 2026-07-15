@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/period/time_range.dart';
 import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
 import 'chart_curve.dart';
+import 'chart_decimation.dart';
+import 'chart_scrubber.dart';
 import 'chart_viewport.dart';
 import 'chart_zoom.dart';
 import 'day_axis.dart';
+
+/// Above this many points the per-sample dots merge into a band and cost a
+/// `drawCircle` each — suppress them (the intraday DAY series can be dense; the
+/// period series, one point per day, stays well under this).
+const int _maxLineDots = 120;
 
 /// A single line-chart point. [time] (an instant) is used for intraday (DAY)
 /// positioning; otherwise the [date] slot is used. Port of Kotlin
@@ -128,6 +136,39 @@ class MetricLineChart extends StatelessWidget {
         onDateSelected != null &&
         axisDates.isNotEmpty;
 
+    // Drag-to-read reports one series — the average line, i.e. the one drawn in the
+    // chart's accent colour (for single-series charts, the only one). The crosshair
+    // snaps to a real point, never the interpolated curve between two.
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final primarySeries = visibleSeries.firstWhere(
+      (s) => s.color == accentColor,
+      orElse: () => visibleSeries.first,
+    );
+    final scrubRange = (axisMax - axisMin).abs() < 1e-9 ? 1.0 : axisMax - axisMin;
+
+    double xFractionOf(MetricLinePoint point) {
+      if (selectedRange == TimeRange.day) {
+        final pointMillis = (point.time ??
+                DateTime(point.date.year, point.date.month, point.date.day))
+            .millisecondsSinceEpoch;
+        final elapsed = (pointMillis - dayStart.millisecondsSinceEpoch)
+            .clamp(0, dayDurationMillis);
+        return elapsed / dayDurationMillis;
+      }
+      final daysFromStart = (point.date.epochDay - period.start.epochDay)
+          .clamp(0, periodDayCount - 1);
+      return (daysFromStart + 0.5) / periodDayCount;
+    }
+
+    String scrubWhen(MetricLinePoint point) {
+      if (selectedRange == TimeRange.day && point.time != null) {
+        return TimeOfDay.fromDateTime(point.time!.toLocal()).format(context);
+      }
+      return DateFormat.MMMd(locale).format(
+        DateTime(point.date.year, point.date.month, point.date.day),
+      );
+    }
+
     // The chart plus its x axis, drawn for a given viewport so both stay in step
     // when the day chart is pinched.
     Widget chartWithAxis(ChartViewport viewport) {
@@ -166,6 +207,27 @@ class MetricLineChart extends StatelessWidget {
           ),
         );
       }
+
+      // Drag to read the average line at any point; a tap still selects a day
+      // (the scrubber only claims horizontal drags, the tap detector the taps).
+      final scrubTargets = <ScrubTarget>[
+        for (final point in primarySeries.points)
+          if (viewport.visibleFraction(xFractionOf(point)) case final visible
+              when visible >= 0.0 && visible <= 1.0)
+            (
+              xFraction: visible,
+              yFraction:
+                  ((point.value - axisMin) / scrubRange).clamp(0.0, 1.0),
+              primary: valueFormatter(point.value),
+              secondary: scrubWhen(point),
+            ),
+      ];
+      plot = ChartScrubber(
+        accentColor: accentColor,
+        targets: scrubTargets,
+        child: plot,
+      );
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -386,8 +448,15 @@ class _LinePainter extends CustomPainter {
       positioned.add(Offset(x, y));
     }
 
+    // Cull to the visible window first, THEN decimate to ~one vertex per pixel.
+    // Culling is what lets a zoom restore detail: the narrower the pinch, the
+    // fewer points the window spans, until the decimation is a no-op and every
+    // raw point in view is drawn. A sparse period series (a handful of daily
+    // points) stays under target and is untouched.
+    final drawn = _visibleDecimated(positioned, size.width);
+
     canvas.drawPath(
-      smoothPath(positioned),
+      smoothPath(drawn),
       Paint()
         ..color = line.color
         ..style = PaintingStyle.stroke
@@ -395,10 +464,50 @@ class _LinePainter extends CustomPainter {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
-    final pointPaint = Paint()..color = line.color;
-    for (final point in positioned) {
-      canvas.drawCircle(point, 3.5, pointPaint);
+    if (drawn.length <= _maxLineDots) {
+      final pointPaint = Paint()..color = line.color;
+      for (final point in drawn) {
+        canvas.drawCircle(point, 3.5, pointPaint);
+      }
     }
+  }
+
+  /// The visible slice of [positioned] (screen-space offsets, ascending in x),
+  /// plus one point past each edge so the line reaches the borders, decimated to
+  /// ~one vertex per pixel.
+  List<Offset> _visibleDecimated(List<Offset> positioned, double width) {
+    final n = positioned.length;
+    if (n < 2) return positioned;
+
+    var firstIn = 0;
+    while (firstIn < n && positioned[firstIn].dx < 0) {
+      firstIn++;
+    }
+    var lastIn = n - 1;
+    while (lastIn >= 0 && positioned[lastIn].dx > width) {
+      lastIn--;
+    }
+
+    int lo;
+    int hi;
+    if (firstIn > lastIn) {
+      // The window falls between two points (a gap, or a deep zoom): keep just the
+      // straddling pair so the line still crosses the plot.
+      lo = firstIn > lastIn ? lastIn.clamp(0, n - 1) : firstIn;
+      hi = firstIn.clamp(0, n - 1);
+      if (lo > hi) {
+        final swap = lo;
+        lo = hi;
+        hi = swap;
+      }
+    } else {
+      lo = firstIn > 0 ? firstIn - 1 : 0;
+      hi = lastIn < n - 1 ? lastIn + 1 : n - 1;
+    }
+
+    final visible =
+        (lo == 0 && hi == n - 1) ? positioned : positioned.sublist(lo, hi + 1);
+    return decimateOffsets(visible, width.ceil());
   }
 
   @override
