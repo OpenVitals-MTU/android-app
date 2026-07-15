@@ -4,6 +4,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
+import '../../../core/presentation/period_metric_loader.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
@@ -47,9 +48,8 @@ abstract class SleepState with _$SleepState {
 ///
 /// The Kotlin `SleepDisplayState` is built here, at load time — the screen
 /// renders [SleepState.display] and derives nothing.
-class SleepViewModel extends Notifier<SleepState> {
-  int _generation = 0;
-
+class SleepViewModel extends Notifier<SleepState>
+    with PeriodMetricLoader<SleepState, SleepPeriodLoadResult> {
   @override
   SleepState build() {
     final prefs = ref.read(preferencesRepositoryProvider);
@@ -99,46 +99,61 @@ class SleepViewModel extends Notifier<SleepState> {
   Future<void> load(
     PeriodSelection selection, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
-    final generation = ++_generation;
-    final prefs = ref.read(preferencesRepositoryProvider);
-    final useCase = ref.read(loadSleepPeriodUseCaseProvider);
-    final sleepRangeMode = prefs.sleepRangeMode;
-    final weekPeriodMode = prefs.weekPeriodMode;
+  }) =>
+      runLoad(selection, refreshMode: refreshMode);
 
-    state = state.copyWith(
+  @override
+  String get loadErrorFallback => 'Unable to load sleep.';
+
+  @override
+  PeriodSelection selectionOf(SleepState state) =>
+      PeriodSelection(state.selectedRange, state.selectedDate);
+
+  @override
+  SleepState onLoadStart(
+    SleepState state,
+    PeriodSelection selection, {
+    required bool navigated,
+  }) {
+    final prefs = ref.read(preferencesRepositoryProvider);
+    final next = state.copyWith(
       selectedRange: selection.selectedRange,
       selectedDate: selection.selectedDate,
-      sleepRangeMode: sleepRangeMode,
-      weekPeriodMode: weekPeriodMode,
+      sleepRangeMode: prefs.sleepRangeMode,
+      weekPeriodMode: prefs.weekPeriodMode,
       isLoading: true,
       error: null,
     );
-
-    final query = PeriodLoadQuery(
-      range: selection.selectedRange,
-      anchorDate: selection.selectedDate,
-      weekPeriodMode: weekPeriodMode,
-    );
-
-    final result =
-        await useCase(query, sleepRangeMode, refreshMode: refreshMode);
-    if (!ref.mounted || generation != _generation) return;
-    switch (result) {
-      case Ok(:final value):
-        state = state.copyWith(
-          isLoading: false,
-          result: value,
-          display: _displayFor(value, state.dailyGoalHours),
-          error: null,
-        );
-      case Err(:final failure):
-        state = state.copyWith(
-          isLoading: false,
-          error: failure.toScreenError(fallback: 'Unable to load sleep.'),
-        );
-    }
+    return navigated ? next.copyWith(result: null, display: null) : next;
   }
+
+  @override
+  Future<Result<SleepPeriodLoadResult>> fetch(
+    PeriodLoadQuery query,
+    RefreshMode refreshMode,
+  ) =>
+      ref.read(loadSleepPeriodUseCaseProvider)(
+        query,
+        state.sleepRangeMode,
+        refreshMode: refreshMode,
+      );
+
+  @override
+  SleepState onLoadSuccess(
+    SleepState state,
+    SleepPeriodLoadResult value,
+    PeriodLoadQuery query,
+  ) =>
+      state.copyWith(
+        isLoading: false,
+        result: value,
+        display: _displayFor(value, state.dailyGoalHours),
+        error: null,
+      );
+
+  @override
+  SleepState onLoadError(SleepState state, ScreenError error) =>
+      state.copyWith(isLoading: false, error: error);
 
   /// Force-reloads the current selection (pull-to-refresh).
   Future<void> refresh() => load(
