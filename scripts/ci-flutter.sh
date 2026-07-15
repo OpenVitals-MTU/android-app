@@ -142,9 +142,21 @@ flutter pub get
 # incremental and its cache lives in the workspace, so only the first step of a
 # pipeline pays the full (~30s) build; later steps are a few seconds. build_runner
 # 2.15 deletes conflicting outputs by default, so no flag is needed (and the old
-# --delete-conflicting-outputs is now rejected). The pigeon bridge
-# (packages/health_connect_native) is a separate, manually-run toolchain and stays
-# committed, so it needs nothing here.
+# --delete-conflicting-outputs is now rejected).
 dart run build_runner build
+
+# --- Generated code (pigeon bridge) ------------------------------------------
+# messages.g.dart / Messages.g.kt are generated from pigeons/messages.dart by a
+# separate toolchain: pigeon lives in the sub-package's own dev_dependencies and
+# the @ConfigurePigeon output paths are relative to that dir, so it must run there
+# (after that package resolves its own deps -- there is no pub workspace). The Dart
+# half is needed for `analyze`/`test` (the app imports it); the Kotlin half is a
+# Gradle source needed for `build`. Output is byte-identical to the sources, so this
+# is pure regeneration.
+(
+    cd packages/health_connect_native
+    flutter pub get
+    dart run pigeon --input pigeons/messages.dart
+)
 
 exec flutter "$@"
