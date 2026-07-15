@@ -242,3 +242,47 @@ Build on the existing pipeline, do not reinvent it:
 4. **Route** — in the bulk importer, branch on `file_id.type`: activity/course/
    workout → existing route path; wellness types → the new map+write path;
    skipped types → count and log, never fail.
+
+## High-volume monitoring (type 32) — design
+
+Implemented so far: the one-per-file summaries (resting HR, BMR). The
+high-frequency series need a different approach — decided as follows.
+
+**Volume.** ~1,825 monitoring files across the export, each a ~5-hour wear
+segment carrying ~250 HR samples and ~200 valid respiration readings. Written
+naively that is ~370k respiration records. `HeartRateRecord` is a *series* (many
+samples per record) so HR is cheap; `RespiratoryRateRecord` is *instant* (one
+reading = one record) so it must be aggregated.
+
+**Extraction, per signal:**
+
+- **HR** (`monitoring.heart_rate`, ~250/file) → `HeartRateRecord`, samples packed
+  into **one series record per hour**.
+- **Respiration** (`respiration_rate` msg 297, sint16 ÷100 br/min; drop ≤0 /
+  invalid) → **hourly average** → one `RespiratoryRateRecord` per hour.
+- **Steps** — messy: `steps`/`cycles` are cumulative **per wear-session**, reset
+  unpredictably (a later file the same day can show a *lower* total), and a
+  session can span files. So use a **per-file cycles-delta**: sum within-file
+  increments of `cycles` per `activity_type` (a decrease = reset, counts as the
+  new value), ×2 (stride→step), → one `StepsRecord` per file window. Non-
+  overlapping file windows tile the timeline with no cross-file double-count.
+  Approximate by construction.
+- **Distance** (`monitoring.distance`, cumulative ÷100 m) → per-file delta →
+  one `DistanceRecord` per file.
+- **Active calories** (`monitoring.active_calories`, cumulative per
+  activity_type) → sum of per-type deltas → one `ActiveCaloriesBurnedRecord`
+  per file.
+
+Est. total with hourly aggregation: ~15–25k records.
+
+**Infrastructure.** Deterministic `clientRecordId`s make a re-run idempotent
+(Health Connect upserts), which alone gives crude resumability. The decision is
+to build a **foreground service + checkpoint store** (porting the Apple Health
+importer's `flutter_foreground_task` machinery) so the import survives
+backgrounding, shows progress, and auto-resumes — with the caveat that a
+background isolate reading SAF files needs a **persisted** tree-URI permission
+(`takePersistableUriPermission`), unlike the current in-pick read.
+
+**Build order:** (1) decode the series + aggregate (hourly HR/respiration,
+per-file steps/distance/calories) + map to records — infrastructure-independent
+and unit-testable; (2) the foreground-service + checkpoint runner.
