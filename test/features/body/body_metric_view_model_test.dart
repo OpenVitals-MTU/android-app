@@ -181,6 +181,50 @@ void main() {
     expect(state.display!.readingsNewestFirst.length, 1);
   });
 
+  test('navigating to a new range clears the stale display mid-load', () async {
+    await boot(Ok(BodyPeriodData(weightEntries: [_weight(monday, 70.5)])));
+    container.listen(bodyMetricProvider, (_, _) {});
+    final viewModel = container.read(bodyMetricProvider.notifier);
+
+    // Seed a loaded month.
+    await viewModel.load(selection);
+    expect(container.read(bodyMetricProvider).display, isNotNull);
+
+    // Switch to the week range: while the load is in flight the previous month's
+    // chart must be gone, so the screen shows its loading skeleton rather than a
+    // stale chart a pinch-zoom would draw broken.
+    repository.gated = true;
+    final navigate = viewModel.load(
+      PeriodSelection(TimeRange.week, const LocalDate(2026, 3, 2)),
+    );
+    var state = container.read(bodyMetricProvider);
+    expect(state.display, isNull);
+    expect(state.isLoading, isTrue);
+
+    repository.gates.single
+        .complete(BodyPeriodData(weightEntries: [_weight(monday, 70.5)]));
+    await navigate;
+    state = container.read(bodyMetricProvider);
+    expect(state.display, isNotNull);
+    expect(state.isLoading, isFalse);
+  });
+
+  test('a same-range refresh keeps the display (no loading flash)', () async {
+    await boot(Ok(BodyPeriodData(weightEntries: [_weight(monday, 70.5)])));
+    container.listen(bodyMetricProvider, (_, _) {});
+    final viewModel = container.read(bodyMetricProvider.notifier);
+
+    await viewModel.load(selection);
+    expect(container.read(bodyMetricProvider).display, isNotNull);
+
+    // Same range + date: a refresh must NOT blank the chart while it reloads.
+    repository.gated = true;
+    viewModel.refresh();
+    final state = container.read(bodyMetricProvider);
+    expect(state.display, isNotNull);
+    expect(state.isLoading, isTrue);
+  });
+
   test('a stale load cannot overwrite the newer one it lost to', () async {
     await boot(const Ok(BodyPeriodData()));
     container.listen(bodyMetricProvider, (_, _) {});
