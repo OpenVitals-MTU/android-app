@@ -1809,5 +1809,29 @@
     "settingsFitImportFolderScanning": "Buscando archivos FIT…",
     "settingsFitImportFolderAction": "Importar una carpeta de archivos FIT",
     "caffeineCurveEmpty": "No incluir la cafeína en el modelo.",
-    "activitySpeedSplitsLabel": "Separaciones"
+    "activitySpeedSplitsLabel": "Separaciones",
+    "activityRecordingWithoutGpsTitle": "Registrar sin GPS",
+    "@activityRecordingWithoutGpsTitle": {
+        "description": "Switch: record a running/cycling activity with no route, no location permission and no waiting for a fix."
+    },
+    "activityRecordingWithoutGpsBody": "No se utiliza ninguna ubicación ni se solicita ninguna.",
+    "@activityRecordingWithoutGpsBody": {
+        "description": "Subtitle of the record-without-GPS switch."
+    },
+    "activityRecordingWithoutGpsWarningTitle": "Lo que no incluye esta actividad",
+    "@activityRecordingWithoutGpsWarningTitle": {
+        "description": "Heading of the warning shown once the user switches GPS off for a recording."
+    },
+    "activityRecordingWithoutGpsWarningBody": "Sin mapa, sin distancia automática, sin ritmo ni velocidad, y sin tiempos parciales. Todo esto se calcula a partir de tu posición, y no habrá ninguno.",
+    "@activityRecordingWithoutGpsWarningBody": {
+        "description": "Plainly states what a GPS-less recording loses. Everything listed is derived from location; things that are not (elevation, steps, heart rate) are still recorded."
+    },
+    "activityRecordingWithoutGpsWarningKept": "La duración, la frecuencia cardíaca y el desnivel acumulado se siguen registrando, y puedes introducir tú mismo la distancia al guardar los datos.",
+    "@activityRecordingWithoutGpsWarningKept": {
+        "description": "What a GPS-less recording DOES still capture. Elevation comes from the barometer, which needs no position."
+    },
+    "activityRecordingWithoutGpsWarningKeptSteps": "La duración, la frecuencia cardíaca, el desnivel acumulado y el número de pasos siguen registrándose, y puedes introducir tú mismo la distancia al guardar los datos.",
+    "@activityRecordingWithoutGpsWarningKeptSteps": {
+        "description": "As above, for an activity type that counts steps: the step detector needs no position either."
+    }
 }
