@@ -210,6 +210,7 @@ final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
     sleepRepository: ref.watch(sleepRepositoryProvider),
     activityRepository: ref.watch(activityRepositoryProvider),
     vitalsRepository: ref.watch(vitalsRepositoryProvider),
+    bodyRepository: ref.watch(bodyRepositoryProvider),
     healthRepository: ref.watch(healthRepositoryProvider),
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
     cacheStore: ref.watch(bodyEnergyTimelineCacheStoreProvider),

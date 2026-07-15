@@ -59,6 +59,8 @@ Color influenceColor(
       return AppColors.steps;
     case BodyEnergyPrimaryInfluence.quietRest:
       return AppColors.workout;
+    case BodyEnergyPrimaryInfluence.everydayActivity:
+      return AppColors.distance;
     case BodyEnergyPrimaryInfluence.exertion:
       return AppColors.calories;
     case BodyEnergyPrimaryInfluence.elevatedHeartRate:

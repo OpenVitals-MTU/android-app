@@ -45,6 +45,30 @@ void main() {
         source: 'test',
       );
 
+  /// Hourly cumulative active-calorie progress: [hourlyActiveKcal] is the burn
+  /// during each hour from [fromHour], accumulated into the cumulative series
+  /// the algorithm expects.
+  List<ActivityProgressPoint> activityProgress(
+    List<double> hourlyActiveKcal, {
+    int fromHour = 0,
+  }) {
+    final points = <ActivityProgressPoint>[];
+    var cumulative = 0.0;
+    for (var i = 0; i < hourlyActiveKcal.length; i++) {
+      cumulative += hourlyActiveKcal[i];
+      points.add(
+        ActivityProgressPoint(
+          time: dayStart.add(Duration(hours: fromHour + i + 1)),
+          totalSteps: 0,
+          totalDistanceMeters: null,
+          totalCaloriesBurnedKcal: null,
+          totalActiveCaloriesKcal: cumulative,
+        ),
+      );
+    }
+    return points;
+  }
+
   BodyEnergyTimelineInputs inputs({
     required DateTime now,
     required int previousEndScore,
@@ -53,12 +77,16 @@ void main() {
     BodyEnergyCalibration calibration = const BodyEnergyCalibration(),
     List<ExerciseData> workouts = const <ExerciseData>[],
     List<SleepData> sleepSessions = const <SleepData>[],
+    List<ActivityProgressPoint> progress = const <ActivityProgressPoint>[],
+    double? basalMetabolicRate,
   }) =>
       BodyEnergyTimelineInputs(
         date: date,
         heartRateSamples: samples,
         sleepSessions: sleepSessions,
         workouts: workouts,
+        activityProgress: progress,
+        basalMetabolicRateKcalPerDay: basalMetabolicRate,
         restingHeartRateBpm: bodyProfile.restingHeartRateBpm,
         observedMaxHeartRateBpm: bodyProfile.maxHeartRateBpm,
         previousEndScore: previousEndScore,
@@ -224,5 +252,105 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  // ── V3 energy-balance behaviour ─────────────────────────────────────────
+
+  const restfulProfile =
+      BodyProfile(restingHeartRateBpm: 55, maxHeartRateBpm: 190);
+
+  test('an idle waking day declines rather than staying flat', () {
+    final start = dayStart.add(const Duration(hours: 8));
+    final end = start.add(const Duration(hours: 8));
+    // Calm, resting heart rate all day, no activity: only basal drain.
+    final timeline = calculateBodyEnergyTimeline(
+      inputs(
+        now: end,
+        previousEndScore: 80,
+        samples: heartRateSamples(start, end, 58),
+        bodyProfile: restfulProfile,
+      ),
+    );
+
+    expect(
+      timeline.currentScore < timeline.startScore,
+      isTrue,
+      reason: 'basal drain should pull an idle day down, never up',
+    );
+    expect(timeline.drained > 0, isTrue);
+    expect(
+      timeline.points.any((p) => p.basalDrain > 0.0),
+      isTrue,
+      reason: 'awake buckets carry a basal cost',
+    );
+  });
+
+  test('a low-heart-rate high-step day out-drains a sedentary day', () {
+    final start = dayStart.add(const Duration(hours: 8));
+    final end = start.add(const Duration(hours: 8));
+    final samples = heartRateSamples(start, end, 72); // brisk but low zone
+
+    final sedentary = calculateBodyEnergyTimeline(
+      inputs(
+        now: end,
+        previousEndScore: 80,
+        samples: heartRateSamples(start, end, 58),
+        bodyProfile: restfulProfile,
+      ),
+    );
+    // Eight hours of walking/chores: ~80 active kcal/hour, heart rate stays low.
+    final active = calculateBodyEnergyTimeline(
+      inputs(
+        now: end,
+        previousEndScore: 80,
+        samples: samples,
+        bodyProfile: restfulProfile,
+        progress: activityProgress(
+          List<double>.filled(8, 80.0),
+          fromHour: 8,
+        ),
+      ),
+    );
+
+    expect(
+      active.drained > sedentary.drained,
+      isTrue,
+      reason: 'active calories must register even without elevated heart rate',
+    );
+    expect(
+      active.points.any(
+        (p) =>
+            p.primaryInfluence == BodyEnergyPrimaryInfluence.everydayActivity,
+      ),
+      isTrue,
+      reason: 'low-heart-rate movement should read as everyday activity',
+    );
+  });
+
+  test('a run out-drains a walk of the same duration', () {
+    final start = dayStart.add(const Duration(hours: 9));
+    final end = start.add(const Duration(hours: 1));
+
+    final walk = calculateBodyEnergyTimeline(
+      inputs(
+        now: end,
+        previousEndScore: 80,
+        samples: heartRateSamples(start, end, 75),
+        bodyProfile: restfulProfile,
+        progress: activityProgress(const [120.0], fromHour: 9),
+      ),
+    );
+    final run = calculateBodyEnergyTimeline(
+      inputs(
+        now: end,
+        previousEndScore: 80,
+        samples: heartRateSamples(start, end, 165),
+        bodyProfile: restfulProfile,
+        workouts: [workout(start, end)],
+        progress: activityProgress(const [600.0], fromHour: 9),
+      ),
+    );
+
+    expect(run.drained > walk.drained, isTrue);
   });
 }

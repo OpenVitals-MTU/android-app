@@ -14,6 +14,7 @@ import '../../../domain/preferences/body_energy_calibration.dart';
 import '../../../domain/preferences/body_profile.dart';
 import '../contract/body_energy_repository.dart';
 import '../contract/activity_repository.dart';
+import '../contract/body_repository.dart';
 import '../contract/heart_repository.dart';
 import '../contract/health_repository.dart';
 import '../contract/sleep_repository.dart';
@@ -38,6 +39,7 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
     required SleepRepository sleepRepository,
     required ActivityRepository activityRepository,
     required VitalsRepository vitalsRepository,
+    required BodyRepository bodyRepository,
     required HealthRepository healthRepository,
     required PreferencesRepository preferencesRepository,
     required BodyEnergyTimelineCacheStore cacheStore,
@@ -46,6 +48,7 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
         _sleep = sleepRepository,
         _activity = activityRepository,
         _vitals = vitalsRepository,
+        _body = bodyRepository,
         _health = healthRepository,
         _preferences = preferencesRepository,
         _cache = cacheStore,
@@ -56,6 +59,7 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
   final SleepRepository _sleep;
   final ActivityRepository _activity;
   final VitalsRepository _vitals;
+  final BodyRepository _body;
   final HealthRepository _health;
   final PreferencesRepository _preferences;
   final BodyEnergyTimelineCacheStore _cache;
@@ -130,6 +134,11 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
     final sleepSessions =
         (await _sleep.loadSleepSessions(date.minusDays(1), date)).orThrow();
     final workouts = (await _activity.loadWorkouts(date, date)).orThrow();
+    // Hourly steps + active calories, and the basal rate — the energy-balance
+    // inputs the heart-rate-zone model alone was missing.
+    final activityProgress =
+        (await _activity.loadActivityProgress(date: date)).orThrow();
+    final basalMetabolicRate = (await _body.loadLatestBMR()).orThrow();
     // Kotlin loads respiratory only when a respiratory baseline exists (the
     // stress factor is inert without one).
     final List<RespiratoryRateEntry> respiratory =
@@ -149,6 +158,8 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
         sleepSessions: sleepSessions,
         workouts: workouts,
         respiratoryRateSamples: respiratory,
+        activityProgress: activityProgress,
+        basalMetabolicRateKcalPerDay: basalMetabolicRate,
         restingHeartRateBpm: restingHr,
         baselineRestingHeartRateBpm: baselines.baselineRestingHeartRateBpm,
         observedMaxHeartRateBpm: baselines.observedMaxHeartRateBpm,

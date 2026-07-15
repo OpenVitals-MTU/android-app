@@ -564,6 +564,8 @@ String _influenceLabel(
       return l10n.bodyEnergyInfluenceSleepRecovery;
     case BodyEnergyPrimaryInfluence.quietRest:
       return l10n.bodyEnergyInfluenceQuietRest;
+    case BodyEnergyPrimaryInfluence.everydayActivity:
+      return l10n.bodyEnergyInfluenceEverydayActivity;
     case BodyEnergyPrimaryInfluence.exertion:
       return l10n.bodyEnergyInfluenceExertion;
     case BodyEnergyPrimaryInfluence.elevatedHeartRate:
@@ -584,6 +586,8 @@ String _reasonDetail(
       return l10n.bodyEnergyReasonSleepRecoveryDetail;
     case BodyEnergyPrimaryInfluence.quietRest:
       return l10n.bodyEnergyReasonQuietRestDetail;
+    case BodyEnergyPrimaryInfluence.everydayActivity:
+      return l10n.bodyEnergyReasonEverydayActivityDetail;
     case BodyEnergyPrimaryInfluence.exertion:
       return l10n.bodyEnergyReasonExertionDetail;
     case BodyEnergyPrimaryInfluence.elevatedHeartRate:
