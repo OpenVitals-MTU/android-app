@@ -163,3 +163,82 @@ PY
 `type` prints a name for public values (`activity`, `monitoring_b`) and a raw
 integer for the proprietary ones — decode the `messages` histogram to see what a
 proprietary file actually contains.
+
+## Message field reference (for the importer)
+
+The Dart decoder (`fit_route_parser.dart`) reads FIT messages by **global message
+number** and **field number**, so this is the spec the wellness importer is built
+from. Numbers below were taken from the FIT SDK profile embedded in
+`garmin-fit-sdk` and confirmed against real vívoactive-5 files. Apply the field's
+**scale** (raw ÷ scale) and, for `date_time`, the FIT epoch (seconds since
+1989-12-31 00:00:00 UTC = Unix 631065600).
+
+### Sleep — file type 49 → `SleepSessionRecord`
+
+| message | num | fields (num: name) | use |
+|---------|----:|--------------------|-----|
+| `event` | 21 | 253: timestamp, 0: event, 1: event_type | session bounds |
+| `sleep_level` | 275 | 253: timestamp, 0: sleep_level | stage transitions |
+| `sleep_assessment` | 346 | scores (overall/deep/rem/…) | **skip** — no HC field |
+
+- **Session bounds:** the `event` pair with `event == 74` (`sleep`, a Garmin
+  **proprietary** value — not in the public `event` enum, which skips 73→75),
+  `event_type == 0` (start) / `1` (stop).
+- **Stages:** each `sleep_level` message marks the start of a stage; it runs until
+  the next message's timestamp (last → session stop). `sleep_level` enum:
+  `0 unmeasurable, 1 awake, 2 light, 3 deep, 4 rem`.
+- **Garmin `sleep_level` → `SleepStageType`:** awake→`awake`, light→`light`,
+  deep→`deep`, rem→`rem`, unmeasurable→drop (or `awakeInBed`).
+
+### HRV — file type 68 → `HeartRateVariabilityRmssd` *(needs the native builder branch)*
+
+| message | num | fields | use |
+|---------|----:|--------|-----|
+| `hrv_status_summary` | 370 | 253: timestamp, 1: last_night_average (uint16, **scale 128**, ms) | one nightly RMSSD value |
+| `hrv_value` | 371 | 253: timestamp, 0: value (uint16, **scale 128**, ms) | per-reading series (optional) |
+
+Health Connect's `HeartRateVariabilityRmssdRecord` is a single instant + rmssd
+(ms). Map `hrv_status_summary.last_night_average` (÷128) at its timestamp. This is
+the **only** type needing a new native branch (`ImportRecordsBuilder.kt` +
+`ImportRecordMsg` recordType `"HeartRateVariabilityRmssd"` + Pigeon regen + the
+`HeartRateVariabilityRmssd` write permission).
+
+### Monitoring — file type 32 → `Steps`, `HeartRate`, `RespiratoryRate`, `RestingHeartRate`
+
+| message | num | key fields | HC target |
+|---------|----:|-----------|-----------|
+| `monitoring` | 55 | 253: timestamp; 1: calories (kcal); 2: distance (uint32, scale 100, m); 3: cycles (scale 2) / 9: cycles_16 = steps; 4: active_time (scale 1000, s) | `Steps` (cycles→steps for walking/running activity_type), `Distance`, `ActiveCaloriesBurned` |
+| `monitoring_info` | 103 | 5: resting_metabolic_rate (kcal/day) | `BasalMetabolicRate` |
+| `monitoring_hr_data` | 211 | 253: timestamp; 0: resting_heart_rate (bpm); 1: current_day_resting_heart_rate | `RestingHeartRate` |
+| `respiration_rate` | 297 | 253: timestamp; 0: respiration_rate (sint16, scale 100, breaths/min) | `RespiratoryRate` |
+| `stress_level` | 227 | 0: stress_level_value; 1: stress_level_time | **skip** — no HC record |
+
+Monitoring is the **high-volume** family (hundreds of messages per daily file,
+thousands of files): steps arrive as cumulative `cycles`/`cycles_16` that must be
+differenced per `activity_type`, and HR arrives as `monitoring` samples. This is
+the family that needs the Apple Health importer's foreground-service +
+checkpointing rather than the in-memory loop.
+
+### Skipped (no Health Connect record exists)
+
+`stress_level` (227), Body Battery, training status/load, and the sleep-disruption
+messages (types 79: `sleep_disruption_overnight_severity`,
+`sleep_disruption_severity_period`). Log a per-type skip summary; never write.
+
+## Implementation approach
+
+Build on the existing pipeline, do not reinvent it:
+
+1. **Decode** — extend `_FitDecoder` to collect the wellness messages above
+   (add their message numbers to the parsed set; gather per-message rows).
+2. **Map** — turn decoded rows into the existing `ImportRecord` subtypes in
+   `lib/domain/model/apple_health_import_records.dart` (`SleepSessionImportRecord`,
+   `HeartRateImportRecord`, `StepsImportRecord`, `RestingHeartRateImportRecord`,
+   `RespiratoryRateImportRecord`, `Vo2MaxImportRecord`; add an HRV record). Use a
+   deterministic `clientRecordId` (e.g. `garmin_fit_<type>_<startEpochMs>`) so
+   re-imports dedupe.
+3. **Write** — feed them to `HealthDataSource.insertImportedRecords` (same call the
+   Apple Health importer uses), not the activity write path.
+4. **Route** — in the bulk importer, branch on `file_id.type`: activity/course/
+   workout → existing route path; wellness types → the new map+write path;
+   skipped types → count and log, never fail.
