@@ -5,6 +5,9 @@ import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
 import 'chart_curve.dart';
+import 'chart_viewport.dart';
+import 'chart_zoom.dart';
+import 'day_axis.dart';
 
 /// A single line-chart point. [time] (an instant) is used for intraday (DAY)
 /// positioning; otherwise the [date] slot is used. Port of Kotlin
@@ -121,41 +124,78 @@ class MetricLineChart extends StatelessWidget {
     final gridColor = accentColor.withValues(alpha: 0.12);
     final axisColor = scheme.outlineVariant.withValues(alpha: 0.8);
 
-    final painter = _LinePainter(
-      series: visibleSeries,
-      selectedRange: selectedRange,
-      period: period,
-      dayStartMillis: dayStart.millisecondsSinceEpoch,
-      dayDurationMillis: dayDurationMillis,
-      periodDayCount: periodDayCount,
-      minValue: axisMin,
-      maxValue: axisMax,
-      gridColor: gridColor,
-      axisColor: axisColor,
-      selectedDate: selectedDate,
-      axisDates: axisDates,
-      highlightColor: accentColor.withValues(alpha: 0.16),
-    );
-
-    Widget plot = CustomPaint(size: Size.infinite, painter: painter);
     final canSelect = selectedRange.supportsChartDaySelection &&
         onDateSelected != null &&
         axisDates.isNotEmpty;
-    if (canSelect) {
-      plot = LayoutBuilder(
-        builder: (context, constraints) => GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapUp: (details) {
-            final slotWidth = constraints.maxWidth / axisDates.length;
-            final index = (details.localPosition.dx / slotWidth)
-                .floor()
-                .clamp(0, axisDates.length - 1);
-            onDateSelected!(axisDates[index]);
-          },
-          child: CustomPaint(size: Size.infinite, painter: painter),
-        ),
+
+    // The chart plus its x axis, drawn for a given viewport so both stay in step
+    // when the day chart is pinched.
+    Widget chartWithAxis(ChartViewport viewport) {
+      final painter = _LinePainter(
+        series: visibleSeries,
+        selectedRange: selectedRange,
+        period: period,
+        dayStartMillis: dayStart.millisecondsSinceEpoch,
+        dayDurationMillis: dayDurationMillis,
+        periodDayCount: periodDayCount,
+        minValue: axisMin,
+        maxValue: axisMax,
+        gridColor: gridColor,
+        axisColor: axisColor,
+        selectedDate: selectedDate,
+        axisDates: axisDates,
+        highlightColor: accentColor.withValues(alpha: 0.16),
+        viewport: viewport,
+      );
+      Widget plot = CustomPaint(size: Size.infinite, painter: painter);
+      if (canSelect) {
+        plot = LayoutBuilder(
+          builder: (context, constraints) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapUp: (details) {
+              final slotWidth = constraints.maxWidth / axisDates.length;
+              final index = (details.localPosition.dx / slotWidth)
+                  .floor()
+                  .clamp(0, axisDates.length - 1);
+              onDateSelected!(axisDates[index]);
+            },
+            child: CustomPaint(size: Size.infinite, painter: painter),
+          ),
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          YAxisChart(
+            labels: chartYAxisLabels(
+              axisMin,
+              axisMax,
+              valueFormatter: valueFormatter,
+            ),
+            chartHeight: _chartHeight,
+            chart: plot,
+          ),
+          const SizedBox(height: 8),
+          if (selectedRange == TimeRange.day)
+            ChartXAxisWithYAxis(
+              child: DayAxisLabels(inset: 0, viewport: viewport),
+            )
+          else
+            ChartXAxisWithYAxis(
+              child: PeriodChartXAxis(
+                dates: axisDates,
+                selectedRange: selectedRange,
+              ),
+            ),
+        ],
       );
     }
+
+    // Only the intraday (DAY) chart pinches: a period chart's x axis is a row of
+    // fixed date slots that the viewport arithmetic here does not reflow.
+    final chart = selectedRange == TimeRange.day
+        ? ChartZoom(builder: (context, viewport) => chartWithAxis(viewport))
+        : chartWithAxis(ChartViewport.full);
 
     return OpenVitalsCard(
       child: Padding(
@@ -165,25 +205,7 @@ class MetricLineChart extends StatelessWidget {
           children: [
             Text(title, style: theme.textTheme.titleSmall),
             const SizedBox(height: 12),
-            YAxisChart(
-              labels: chartYAxisLabels(
-                axisMin,
-                axisMax,
-                valueFormatter: valueFormatter,
-              ),
-              chartHeight: _chartHeight,
-              chart: plot,
-            ),
-            const SizedBox(height: 8),
-            if (selectedRange == TimeRange.day)
-              const _DayTimeXAxis()
-            else
-              ChartXAxisWithYAxis(
-                child: PeriodChartXAxis(
-                  dates: axisDates,
-                  selectedRange: selectedRange,
-                ),
-              ),
+            chart,
             if (visibleSeries.length > 1) ...[
               const SizedBox(height: 8),
               _LineLegend(series: visibleSeries),
@@ -207,26 +229,6 @@ class MetricLineChart extends StatelessWidget {
       ? (maxValue.abs() * 0.05 > 1.0 ? maxValue.abs() * 0.05 : 1.0)
       : range * 0.08;
   return (minValue - padding, maxValue + padding);
-}
-
-class _DayTimeXAxis extends StatelessWidget {
-  const _DayTimeXAxis();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final labelStyle = theme.textTheme.labelSmall
-        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    return ChartXAxisWithYAxis(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          for (final label in ['00:00', '06:00', '12:00', '18:00', '24:00'])
-            Text(label, style: labelStyle),
-        ],
-      ),
-    );
-  }
 }
 
 class _LineLegend extends StatelessWidget {
@@ -289,6 +291,7 @@ class _LinePainter extends CustomPainter {
     required this.selectedDate,
     required this.axisDates,
     required this.highlightColor,
+    this.viewport = ChartViewport.full,
   });
 
   final List<MetricLineSeries> series;
@@ -305,13 +308,24 @@ class _LinePainter extends CustomPainter {
   final List<LocalDate> axisDates;
   final Color highlightColor;
 
+  /// The visible slice of the x range when the chart has been pinched.
+  final ChartViewport viewport;
+
   @override
   void paint(Canvas canvas, Size size) {
     drawYAxisGuides(canvas, size, gridColor: gridColor, axisColor: axisColor);
     _drawSelectedHighlight(canvas, size);
+    // Zoomed, the line runs past the plot edges; clip so it ends at the plot
+    // rather than spilling across the card.
+    final zoomed = viewport.isZoomed;
+    if (zoomed) {
+      canvas.save();
+      canvas.clipRect(Offset.zero & size);
+    }
     for (final line in series) {
       _drawSeries(canvas, size, line);
     }
+    if (zoomed) canvas.restore();
   }
 
   void _drawSelectedHighlight(Canvas canvas, Size size) {
@@ -337,20 +351,22 @@ class _LinePainter extends CustomPainter {
     final range = rawRange < 1.0 ? 1.0 : rawRange;
     final positioned = <Offset>[];
     for (final point in line.points) {
-      final double x;
+      final double xFraction;
       if (selectedRange == TimeRange.day) {
         final pointMillis = (point.time ??
                 DateTime(point.date.year, point.date.month, point.date.day))
             .millisecondsSinceEpoch;
         final elapsed =
             (pointMillis - dayStartMillis).clamp(0, dayDurationMillis);
-        x = size.width * elapsed / dayDurationMillis;
+        xFraction = elapsed / dayDurationMillis;
       } else {
-        final slotWidth = size.width / periodDayCount;
         final daysFromStart = (point.date.epochDay - period.start.epochDay)
             .clamp(0, periodDayCount - 1);
-        x = daysFromStart * slotWidth + slotWidth / 2.0;
+        xFraction = (daysFromStart + 0.5) / periodDayCount;
       }
+      // Full viewport is a no-op (visibleFraction(f) == f), so period charts and
+      // an unzoomed day chart position exactly as before.
+      final x = size.width * viewport.visibleFraction(xFraction);
       final y = size.height *
           (1.0 - ((point.value - minValue) / range).clamp(0.0, 1.0));
       positioned.add(Offset(x, y));
