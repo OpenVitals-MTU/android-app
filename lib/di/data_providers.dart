@@ -174,7 +174,10 @@ final bodyRepositoryProvider = Provider<BodyRepository>(
 );
 
 final vitalsRepositoryProvider = Provider<VitalsRepository>(
-  (ref) => VitalsRepositoryImpl(ref.watch(healthDataSourceProvider)),
+  (ref) => VitalsRepositoryImpl(
+    ref.watch(healthDataSourceProvider),
+    cacheDao: ref.watch(vitalsDailyCacheDaoProvider),
+  ),
 );
 
 final nutritionRepositoryProvider = Provider<NutritionRepository>(

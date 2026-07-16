@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:fake_async/fake_async.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
+import 'package:openvitals/data/local/open_vitals_database.dart';
 import 'package:openvitals/data/repository/contract/vitals_repository.dart';
 import 'package:openvitals/data/repository/impl/vitals_repository_impl.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
@@ -202,6 +204,34 @@ void main() {
         expect(data.timedOutMetrics, {VitalsPeriodMetric.respiratoryRate},
             reason: 'the timed-out metric is flagged so its card can say so');
       });
+    });
+
+    test('a synced metric reads daily points from the cache, not live',
+        () async {
+      final db = OpenVitalsDatabase(NativeDatabase.memory());
+      final dao = db.vitalsDailyCacheDao;
+      addTearDown(db.close);
+      const anchor = LocalDate(2026, 7, 16);
+      // Respiratory has been synced (cursor present) with one cached day inside
+      // the year window.
+      await dao.writeFullSync('respiratoryRate', 'tok', 0);
+      await dao.upsertDay(
+          metric: 'respiratoryRate',
+          epochDay: anchor.epochDay,
+          valueSum: 36,
+          sampleCount: 3);
+
+      // The live respiratory read would hang; reaching it would fail the test.
+      final source = _SlowRespiratorySource(Completer<void>());
+      final result = await VitalsRepositoryImpl(source, cacheDao: dao)
+          .loadVitalsPeriod(_yearQuery(), VitalsPeriodMetric.all);
+
+      expect(result, isA<Ok<VitalsPeriodData>>());
+      final data = (result! as Ok<VitalsPeriodData>).value;
+      expect(data.timedOutMetrics, isEmpty,
+          reason: 'the cache serves instantly, so nothing times out');
+      expect(data.respiratoryRateDaily, hasLength(1));
+      expect(data.respiratoryRateDaily.single.value, 12); // 36 / 3
     });
   });
 }

@@ -5,6 +5,7 @@ import '../../../core/time/local_date.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../domain/query/vitals_period_data.dart';
+import '../../local/open_vitals_database.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../contract/vitals_repository.dart';
@@ -19,9 +20,16 @@ import 'run_catching.dart';
 /// boundary; the private permission-gated series reads keep the original
 /// throwing flow so [loadVitalsPeriod] composes them as plain awaits.
 class VitalsRepositoryImpl implements VitalsRepository {
-  VitalsRepositoryImpl(this._dataSource);
+  VitalsRepositoryImpl(this._dataSource, {VitalsDailyCacheDao? cacheDao})
+      : _cacheDao = cacheDao;
 
   final HealthDataSource _dataSource;
+
+  /// The local daily-aggregate cache. When a metric has been synced (a cursor
+  /// exists), the non-day overview reads its daily points from here instead of
+  /// re-reading a year of raw records from Health Connect. Null in tests that
+  /// exercise the live path.
+  final VitalsDailyCacheDao? _cacheDao;
 
   @override
   Set<String> get phase3Permissions =>
@@ -441,12 +449,49 @@ class VitalsRepositoryImpl implements VitalsRepository {
   // The daily readers take LocalDate windows (they bucket by local date on the
   // native side); the latest readers return the newest reading in the window.
 
+  /// Cached daily points for a single-value metric, or null when the metric has
+  /// not been synced yet (no cursor) — the caller then reads live.
+  Future<List<DailyVitalPoint>?> _cachedDaily(
+    VitalsPeriodMetric metric,
+    LocalDate start,
+    LocalDate end,
+  ) async {
+    final dao = _cacheDao;
+    if (dao == null) return null;
+    if (await dao.cursor(metric.name) == null) return null;
+    final rows =
+        await dao.aggregatesBetween(metric.name, start.epochDay, end.epochDay);
+    return [
+      for (final r in rows)
+        DailyVitalPoint(
+          date: LocalDate.fromEpochDay(r.epochDay),
+          value: r.valueSum / r.sampleCount,
+          count: r.sampleCount,
+        ),
+    ];
+  }
+
   Future<List<DailyBloodPressurePoint>> _bloodPressureDaily(
     LocalDate start,
     LocalDate end,
     Set<String> granted,
   ) async {
     if (!granted.contains(HcPermissions.readBloodPressure)) return const [];
+    final dao = _cacheDao;
+    if (dao != null &&
+        await dao.cursor(VitalsPeriodMetric.bloodPressure.name) != null) {
+      final rows = await dao.aggregatesBetween(
+          VitalsPeriodMetric.bloodPressure.name, start.epochDay, end.epochDay);
+      return [
+        for (final r in rows)
+          DailyBloodPressurePoint(
+            date: LocalDate.fromEpochDay(r.epochDay),
+            systolic: r.valueSum / r.sampleCount,
+            diastolic: (r.secondarySum ?? 0) / r.sampleCount,
+            count: r.sampleCount,
+          ),
+      ];
+    }
     return _dataSource.readDailyBloodPressure(start, end);
   }
 
@@ -456,7 +501,8 @@ class VitalsRepositoryImpl implements VitalsRepository {
     Set<String> granted,
   ) async {
     if (!granted.contains(HcPermissions.readSpO2)) return const [];
-    return _dataSource.readDailySpO2(start, end);
+    return await _cachedDaily(VitalsPeriodMetric.spo2, start, end) ??
+        _dataSource.readDailySpO2(start, end);
   }
 
   Future<List<DailyVitalPoint>> _respiratoryRateDaily(
@@ -465,7 +511,8 @@ class VitalsRepositoryImpl implements VitalsRepository {
     Set<String> granted,
   ) async {
     if (!granted.contains(HcPermissions.readRespiratoryRate)) return const [];
-    return _dataSource.readDailyRespiratoryRate(start, end);
+    return await _cachedDaily(VitalsPeriodMetric.respiratoryRate, start, end) ??
+        _dataSource.readDailyRespiratoryRate(start, end);
   }
 
   Future<List<DailyVitalPoint>> _bodyTemperatureDaily(
@@ -474,7 +521,8 @@ class VitalsRepositoryImpl implements VitalsRepository {
     Set<String> granted,
   ) async {
     if (!granted.contains(HcPermissions.readBodyTemperature)) return const [];
-    return _dataSource.readDailyBodyTemperature(start, end);
+    return await _cachedDaily(VitalsPeriodMetric.bodyTemperature, start, end) ??
+        _dataSource.readDailyBodyTemperature(start, end);
   }
 
   Future<List<DailyVitalPoint>> _vo2MaxDaily(
@@ -483,7 +531,8 @@ class VitalsRepositoryImpl implements VitalsRepository {
     Set<String> granted,
   ) async {
     if (!granted.contains(HcPermissions.readVo2Max)) return const [];
-    return _dataSource.readDailyVo2Max(start, end);
+    return await _cachedDaily(VitalsPeriodMetric.vo2Max, start, end) ??
+        _dataSource.readDailyVo2Max(start, end);
   }
 
   Future<List<DailyVitalPoint>> _bloodGlucoseDaily(
@@ -492,7 +541,8 @@ class VitalsRepositoryImpl implements VitalsRepository {
     Set<String> granted,
   ) async {
     if (!granted.contains(HcPermissions.readBloodGlucose)) return const [];
-    return _dataSource.readDailyBloodGlucose(start, end);
+    return await _cachedDaily(VitalsPeriodMetric.bloodGlucose, start, end) ??
+        _dataSource.readDailyBloodGlucose(start, end);
   }
 
   Future<List<DailyVitalPoint>> _skinTemperatureDaily(
@@ -502,7 +552,8 @@ class VitalsRepositoryImpl implements VitalsRepository {
   ) async {
     if (!_dataSource.isSkinTemperatureAvailable()) return const [];
     if (!granted.contains(HcPermissions.readSkinTemperature)) return const [];
-    return _dataSource.readDailySkinTemperature(start, end);
+    return await _cachedDaily(VitalsPeriodMetric.skinTemperature, start, end) ??
+        _dataSource.readDailySkinTemperature(start, end);
   }
 
   Future<BloodPressureEntry?> _latestBloodPressure(
