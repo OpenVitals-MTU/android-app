@@ -4,6 +4,15 @@ import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
 import '../contract/repository_exceptions.dart';
 
+/// Upper bound on a composed period load. A single native Health Connect read
+/// that never returns (seen on very large Year windows) would otherwise leave
+/// the metric screen pinned on its "Syncing with Health Connect…" banner
+/// forever, since that banner is just the view-model's `isLoading`. Wrapping the
+/// composed body in `.timeout(healthReadBudget)` inside [runCatching] turns a
+/// stuck read into a retryable [UnexpectedFailure] → `ScreenError`. Generous on
+/// purpose: it must not fire on a legitimately slow-but-valid cold Year load.
+const Duration healthReadBudget = Duration(seconds: 30);
+
 /// The single place where thrown errors become [AppFailure]s. Repository
 /// implementations wrap each operation's body in [runCatching]; nothing above
 /// the data layer converts exceptions.

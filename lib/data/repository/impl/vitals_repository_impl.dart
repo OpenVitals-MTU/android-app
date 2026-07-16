@@ -48,7 +48,8 @@ class VitalsRepositoryImpl implements VitalsRepository {
     VitalsPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>
-      runCatching(() => _loadVitalsPeriodRaw(query, metric));
+      runCatching(
+          () => _loadVitalsPeriodRaw(query, metric).timeout(healthReadBudget));
 
   Future<VitalsPeriodData> _loadVitalsPeriodRaw(
     PeriodLoadQuery query,
@@ -58,78 +59,130 @@ class VitalsRepositoryImpl implements VitalsRepository {
     final missing = phase3Permissions.difference(granted);
     final w = query.windows;
 
+    // Each series read is independent (shares only the read-only [granted] set
+    // and pure window math), so a metric's windows run concurrently rather than
+    // one `await` after another. For Year this turns the ALL case's seven
+    // full-window reads from seven serial round-trips into one parallel wave —
+    // the fix for the "Syncing with Health Connect…" hang.
     switch (metric) {
       case VitalsPeriodMetric.all:
         // Kotlin's ALL loads only the current window (no previous/baseline).
         final c = w.current;
+        final bloodPressure = _bloodPressure(c.start, c.end, granted);
+        final spO2 = _spO2(c.start, c.end, granted);
+        final respiratoryRate = _respiratoryRate(c.start, c.end, granted);
+        final bodyTemperature = _bodyTemperature(c.start, c.end, granted);
+        final vo2Max = _vo2Max(c.start, c.end, granted);
+        final bloodGlucose = _bloodGlucose(c.start, c.end, granted);
+        final skinTemperature = _skinTemperature(c.start, c.end, granted);
+        await Future.wait([
+          bloodPressure,
+          spO2,
+          respiratoryRate,
+          bodyTemperature,
+          vo2Max,
+          bloodGlucose,
+          skinTemperature,
+        ]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          bloodPressure: await _bloodPressure(c.start, c.end, granted),
-          spO2: await _spO2(c.start, c.end, granted),
-          respiratoryRate: await _respiratoryRate(c.start, c.end, granted),
-          bodyTemperature: await _bodyTemperature(c.start, c.end, granted),
-          vo2Max: await _vo2Max(c.start, c.end, granted),
-          bloodGlucose: await _bloodGlucose(c.start, c.end, granted),
-          skinTemperature: await _skinTemperature(c.start, c.end, granted),
+          bloodPressure: await bloodPressure,
+          spO2: await spO2,
+          respiratoryRate: await respiratoryRate,
+          bodyTemperature: await bodyTemperature,
+          vo2Max: await vo2Max,
+          bloodGlucose: await bloodGlucose,
+          skinTemperature: await skinTemperature,
         );
       case VitalsPeriodMetric.bloodPressure:
+        final current = _bloodPressure(w.current.start, w.current.end, granted);
+        final previous =
+            _bloodPressure(w.previous.start, w.previous.end, granted);
+        final baseline =
+            _bloodPressure(w.baseline.start, w.baseline.end, granted);
+        await Future.wait([current, previous, baseline]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          bloodPressure: await _bloodPressure(w.current.start, w.current.end, granted),
-          previousBloodPressure:
-              await _bloodPressure(w.previous.start, w.previous.end, granted),
-          baselineBloodPressure:
-              await _bloodPressure(w.baseline.start, w.baseline.end, granted),
+          bloodPressure: await current,
+          previousBloodPressure: await previous,
+          baselineBloodPressure: await baseline,
         );
       case VitalsPeriodMetric.spo2:
+        final current = _spO2(w.current.start, w.current.end, granted);
+        final previous = _spO2(w.previous.start, w.previous.end, granted);
+        final baseline = _spO2(w.baseline.start, w.baseline.end, granted);
+        await Future.wait([current, previous, baseline]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          spO2: await _spO2(w.current.start, w.current.end, granted),
-          previousSpO2: await _spO2(w.previous.start, w.previous.end, granted),
-          baselineSpO2: await _spO2(w.baseline.start, w.baseline.end, granted),
+          spO2: await current,
+          previousSpO2: await previous,
+          baselineSpO2: await baseline,
         );
       case VitalsPeriodMetric.vo2Max:
+        final current = _vo2Max(w.current.start, w.current.end, granted);
+        final previous = _vo2Max(w.previous.start, w.previous.end, granted);
+        final baseline = _vo2Max(w.baseline.start, w.baseline.end, granted);
+        await Future.wait([current, previous, baseline]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          vo2Max: await _vo2Max(w.current.start, w.current.end, granted),
-          previousVo2Max: await _vo2Max(w.previous.start, w.previous.end, granted),
-          baselineVo2Max: await _vo2Max(w.baseline.start, w.baseline.end, granted),
+          vo2Max: await current,
+          previousVo2Max: await previous,
+          baselineVo2Max: await baseline,
         );
       case VitalsPeriodMetric.respiratoryRate:
+        final current =
+            _respiratoryRate(w.current.start, w.current.end, granted);
+        final previous =
+            _respiratoryRate(w.previous.start, w.previous.end, granted);
+        final baseline =
+            _respiratoryRate(w.baseline.start, w.baseline.end, granted);
+        await Future.wait([current, previous, baseline]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          respiratoryRate: await _respiratoryRate(w.current.start, w.current.end, granted),
-          previousRespiratoryRate:
-              await _respiratoryRate(w.previous.start, w.previous.end, granted),
-          baselineRespiratoryRate:
-              await _respiratoryRate(w.baseline.start, w.baseline.end, granted),
+          respiratoryRate: await current,
+          previousRespiratoryRate: await previous,
+          baselineRespiratoryRate: await baseline,
         );
       case VitalsPeriodMetric.bodyTemperature:
+        final current =
+            _bodyTemperature(w.current.start, w.current.end, granted);
+        final previous =
+            _bodyTemperature(w.previous.start, w.previous.end, granted);
+        final baseline =
+            _bodyTemperature(w.baseline.start, w.baseline.end, granted);
+        await Future.wait([current, previous, baseline]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          bodyTemperature: await _bodyTemperature(w.current.start, w.current.end, granted),
-          previousBodyTemperature:
-              await _bodyTemperature(w.previous.start, w.previous.end, granted),
-          baselineBodyTemperature:
-              await _bodyTemperature(w.baseline.start, w.baseline.end, granted),
+          bodyTemperature: await current,
+          previousBodyTemperature: await previous,
+          baselineBodyTemperature: await baseline,
         );
       case VitalsPeriodMetric.bloodGlucose:
+        final current = _bloodGlucose(w.current.start, w.current.end, granted);
+        final previous =
+            _bloodGlucose(w.previous.start, w.previous.end, granted);
+        final baseline =
+            _bloodGlucose(w.baseline.start, w.baseline.end, granted);
+        await Future.wait([current, previous, baseline]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          bloodGlucose: await _bloodGlucose(w.current.start, w.current.end, granted),
-          previousBloodGlucose:
-              await _bloodGlucose(w.previous.start, w.previous.end, granted),
-          baselineBloodGlucose:
-              await _bloodGlucose(w.baseline.start, w.baseline.end, granted),
+          bloodGlucose: await current,
+          previousBloodGlucose: await previous,
+          baselineBloodGlucose: await baseline,
         );
       case VitalsPeriodMetric.skinTemperature:
+        final current =
+            _skinTemperature(w.current.start, w.current.end, granted);
+        final previous =
+            _skinTemperature(w.previous.start, w.previous.end, granted);
+        final baseline =
+            _skinTemperature(w.baseline.start, w.baseline.end, granted);
+        await Future.wait([current, previous, baseline]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          skinTemperature: await _skinTemperature(w.current.start, w.current.end, granted),
-          previousSkinTemperature:
-              await _skinTemperature(w.previous.start, w.previous.end, granted),
-          baselineSkinTemperature:
-              await _skinTemperature(w.baseline.start, w.baseline.end, granted),
+          skinTemperature: await current,
+          previousSkinTemperature: await previous,
+          baselineSkinTemperature: await baseline,
         );
     }
   }
