@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/ui/charts/chart_axis.dart';
-import 'package:openvitals/ui/charts/chart_scrubber.dart';
 import 'package:openvitals/ui/charts/chart_zoom.dart';
 import 'package:openvitals/ui/charts/line_chart.dart';
 
@@ -127,8 +126,8 @@ void main() {
     );
   });
 
-  testWidgets('a period MetricLineChart is scrubbable and reads the average line',
-      (tester) async {
+  testWidgets('a period chart still pinches when one finger moves before the '
+      'other lands (real-device timing)', (tester) async {
     final series = MetricLineSeries(
       color: const Color(0xFF2196F3),
       points: [
@@ -158,23 +157,30 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Parity with the day chart: the period chart now carries a scrubber.
-    expect(find.byType(ChartScrubber), findsOneWidget);
-
-    // A horizontal drag lands on a real point and surfaces its value; a vertical
-    // drag would be left to the page, and a tap would still select a day.
-    final center = tester.getCenter(find.byType(ChartScrubber));
-    final gesture = await tester.startGesture(center);
-    await gesture.moveBy(const Offset(24, 0));
+    final center = tester.getCenter(find.byType(ChartZoom));
+    // First finger lands and drifts horizontally BEFORE the second arrives — this
+    // is what lets the scrubber's horizontal-drag recognizer claim the arena on a
+    // real device, where the two existing tests (both fingers down first) never do.
+    final f1 = await tester.startGesture(center - const Offset(20, 0));
+    await tester.pump(const Duration(milliseconds: 24));
+    await f1.moveBy(const Offset(-14, 0));
+    await tester.pump(const Duration(milliseconds: 24));
+    final f2 = await tester.startGesture(center + const Offset(20, 0));
     await tester.pump();
-    // The tooltip reports a value from the series (66/67 near the middle of 2024).
-    expect(
-      find.textContaining(RegExp(r'6[0-9]')),
-      findsWidgets,
-      reason: 'the scrub tooltip shows the average line value',
-    );
-    await gesture.up();
+    await f1.moveBy(const Offset(-90, 0));
+    await f2.moveBy(const Offset(90, 0));
+    await tester.pump();
+    await f1.up();
+    await f2.up();
     await tester.pumpAndSettle();
+
+    // The pinch must still zoom (Stack layout on the date axis).
+    expect(
+      find.descendant(
+          of: find.byType(PeriodChartXAxis), matching: find.byType(Stack)),
+      findsOneWidget,
+      reason: 'a scrubber drag on the first finger must not defeat the pinch',
+    );
   });
 
   testWidgets('switching the year resets a zoom rather than carrying it over',

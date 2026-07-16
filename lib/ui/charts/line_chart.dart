@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/period/time_range.dart';
 import '../../core/time/local_date.dart';
@@ -7,7 +6,6 @@ import '../components/ov_card.dart';
 import 'chart_axis.dart';
 import 'chart_curve.dart';
 import 'chart_decimation.dart';
-import 'chart_scrubber.dart';
 import 'chart_viewport.dart';
 import 'chart_zoom.dart';
 import 'day_axis.dart';
@@ -136,39 +134,6 @@ class MetricLineChart extends StatelessWidget {
         onDateSelected != null &&
         axisDates.isNotEmpty;
 
-    // Drag-to-read reports one series — the average line, i.e. the one drawn in the
-    // chart's accent colour (for single-series charts, the only one). The crosshair
-    // snaps to a real point, never the interpolated curve between two.
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    final primarySeries = visibleSeries.firstWhere(
-      (s) => s.color == accentColor,
-      orElse: () => visibleSeries.first,
-    );
-    final scrubRange = (axisMax - axisMin).abs() < 1e-9 ? 1.0 : axisMax - axisMin;
-
-    double xFractionOf(MetricLinePoint point) {
-      if (selectedRange == TimeRange.day) {
-        final pointMillis = (point.time ??
-                DateTime(point.date.year, point.date.month, point.date.day))
-            .millisecondsSinceEpoch;
-        final elapsed = (pointMillis - dayStart.millisecondsSinceEpoch)
-            .clamp(0, dayDurationMillis);
-        return elapsed / dayDurationMillis;
-      }
-      final daysFromStart = (point.date.epochDay - period.start.epochDay)
-          .clamp(0, periodDayCount - 1);
-      return (daysFromStart + 0.5) / periodDayCount;
-    }
-
-    String scrubWhen(MetricLinePoint point) {
-      if (selectedRange == TimeRange.day && point.time != null) {
-        return TimeOfDay.fromDateTime(point.time!.toLocal()).format(context);
-      }
-      return DateFormat.MMMd(locale).format(
-        DateTime(point.date.year, point.date.month, point.date.day),
-      );
-    }
-
     // The chart plus its x axis, drawn for a given viewport so both stay in step
     // when the day chart is pinched.
     Widget chartWithAxis(ChartViewport viewport) {
@@ -207,26 +172,6 @@ class MetricLineChart extends StatelessWidget {
           ),
         );
       }
-
-      // Drag to read the average line at any point; a tap still selects a day
-      // (the scrubber only claims horizontal drags, the tap detector the taps).
-      final scrubTargets = <ScrubTarget>[
-        for (final point in primarySeries.points)
-          if (viewport.visibleFraction(xFractionOf(point)) case final visible
-              when visible >= 0.0 && visible <= 1.0)
-            (
-              xFraction: visible,
-              yFraction:
-                  ((point.value - axisMin) / scrubRange).clamp(0.0, 1.0),
-              primary: valueFormatter(point.value),
-              secondary: scrubWhen(point),
-            ),
-      ];
-      plot = ChartScrubber(
-        accentColor: accentColor,
-        targets: scrubTargets,
-        child: plot,
-      );
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
