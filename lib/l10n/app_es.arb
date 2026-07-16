@@ -1923,5 +1923,6 @@
     "settingsChartAggregationOff": "Desactivado (datos sin procesar)",
     "settingsChartAggregationMin5": "5 minutos",
     "settingsChartAggregationMin10": "10 minutos",
-    "settingsChartAggregationMin30": "30 minutos"
+    "settingsChartAggregationMin30": "30 minutos",
+    "sleepNaps": "Siestas"
 }
