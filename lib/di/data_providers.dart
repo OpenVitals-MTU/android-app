@@ -97,6 +97,10 @@ final feelCheckDaoProvider = Provider<FeelCheckDao>(
   (ref) => ref.watch(openVitalsDatabaseProvider).feelCheckDao,
 );
 
+final vitalsDailyCacheDaoProvider = Provider<VitalsDailyCacheDao>(
+  (ref) => ref.watch(openVitalsDatabaseProvider).vitalsDailyCacheDao,
+);
+
 final bodyEnergyFeelCheckRepositoryProvider =
     Provider<BodyEnergyFeelCheckRepository>(
       (ref) => BodyEnergyFeelCheckRepositoryImpl(
