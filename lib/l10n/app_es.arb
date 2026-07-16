@@ -1924,5 +1924,6 @@
     "settingsChartAggregationMin5": "5 minutos",
     "settingsChartAggregationMin10": "10 minutos",
     "settingsChartAggregationMin30": "30 minutos",
-    "sleepNaps": "Siestas"
+    "sleepNaps": "Siestas",
+    "messageTooMuchDataRange": "Creando el historial para este rango… Por favor, inténtelo de nuevo más tarde."
 }
