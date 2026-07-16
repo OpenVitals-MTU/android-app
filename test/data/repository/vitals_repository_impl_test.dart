@@ -90,8 +90,12 @@ class _GatedVitalsSource extends HealthDataSource {
       _gated();
 }
 
-PeriodLoadQuery _yearQuery() => PeriodLoadQuery(
-      range: TimeRange.year,
+// The day view reads the seven raw vitals series (the fake gates those); the
+// non-day view reads native daily aggregates instead, which this fake does not
+// stub. Both go through the same Future.wait + timeout, so the day path is what
+// exercises the parallelism and the read budget here.
+PeriodLoadQuery _dayQuery() => PeriodLoadQuery(
+      range: TimeRange.day,
       anchorDate: const LocalDate(2026, 7, 16),
     );
 
@@ -102,7 +106,7 @@ void main() {
       final source = _GatedVitalsSource(gate);
 
       final future = VitalsRepositoryImpl(source)
-          .loadVitalsPeriod(_yearQuery(), VitalsPeriodMetric.all);
+          .loadVitalsPeriod(_dayQuery(), VitalsPeriodMetric.all);
 
       // Let the load reach the point where every read is parked on the gate.
       await pumpEventQueue();
@@ -122,7 +126,7 @@ void main() {
 
         Result<VitalsPeriodData>? result;
         VitalsRepositoryImpl(source)
-            .loadVitalsPeriod(_yearQuery(), VitalsPeriodMetric.all)
+            .loadVitalsPeriod(_dayQuery(), VitalsPeriodMetric.all)
             .then((r) => result = r);
 
         async.flushMicrotasks();

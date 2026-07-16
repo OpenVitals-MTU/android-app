@@ -446,6 +446,92 @@ class HealthDataSource {
   ) async =>
       const <SkinTemperatureEntry>[];
 
+  // Daily-bucketed vitals + window-latest reads for long-range charts (Stage 4);
+  // overridden by HealthConnectNativeDataSource, empty/null on the base.
+  Future<List<DailyBloodPressurePoint>> readDailyBloodPressure(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const <DailyBloodPressurePoint>[];
+
+  Future<List<DailyVitalPoint>> readDailySpO2(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const <DailyVitalPoint>[];
+
+  Future<List<DailyVitalPoint>> readDailyRespiratoryRate(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const <DailyVitalPoint>[];
+
+  Future<List<DailyVitalPoint>> readDailyBodyTemperature(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const <DailyVitalPoint>[];
+
+  Future<List<DailyVitalPoint>> readDailyVo2Max(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const <DailyVitalPoint>[];
+
+  Future<List<DailyVitalPoint>> readDailyBloodGlucose(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const <DailyVitalPoint>[];
+
+  Future<List<DailyVitalPoint>> readDailySkinTemperature(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const <DailyVitalPoint>[];
+
+  Future<BloodPressureEntry?> readLatestBloodPressureInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      null;
+
+  Future<SpO2Entry?> readLatestSpO2InWindow(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      null;
+
+  Future<Vo2MaxEntry?> readLatestVo2MaxInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      null;
+
+  Future<RespiratoryRateEntry?> readLatestRespiratoryRateInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      null;
+
+  Future<BodyTempEntry?> readLatestBodyTemperatureInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      null;
+
+  Future<BloodGlucoseEntry?> readLatestBloodGlucoseInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      null;
+
+  Future<SkinTemperatureEntry?> readLatestSkinTemperatureInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      null;
+
   Future<String> writeVitalsMeasurementEntry(
     VitalsMeasurementWriteRequest request,
   ) async =>

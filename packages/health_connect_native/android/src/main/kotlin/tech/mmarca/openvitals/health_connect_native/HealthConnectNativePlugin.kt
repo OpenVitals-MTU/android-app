@@ -566,6 +566,94 @@ class HealthConnectNativePlugin :
     requireVitalsReader().readSkinTemperatureEntries(instant(startEpochMs), instant(endEpochMs))
   }
 
+  override fun readDailyBloodPressure(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyBloodPressurePointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyBloodPressure(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailySpO2(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailySpO2(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyRespiratoryRate(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyRespiratoryRate(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyBodyTemperature(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyBodyTemperature(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyVo2Max(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyVo2Max(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyBloodGlucose(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyBloodGlucose(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailySkinTemperature(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailySkinTemperature(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readLatestRespiratoryRate(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<RespiratoryRateEntryMsg?>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readLatestRespiratoryRate(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readLatestBodyTemperature(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<BodyTempEntryMsg?>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readLatestBodyTemperature(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readLatestBloodGlucose(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<BloodGlucoseEntryMsg?>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readLatestBloodGlucose(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readLatestSkinTemperature(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<SkinTemperatureEntryMsg?>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readLatestSkinTemperature(instant(startEpochMs), instant(endEpochMs))
+  }
+
   override fun writeVitalsMeasurementEntry(
     request: VitalsMeasurementWriteRequestMsg,
     callback: (Result<String>) -> Unit,

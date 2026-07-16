@@ -73,6 +73,23 @@ class HeartPeriodLoadResult {
     this.skinTemperature = const [],
     this.previousSkinTemperature = const [],
     this.baselineSkinTemperature = const [],
+    // Non-day overview: one aggregated point per day + the true latest reading,
+    // so a long-range chart never carries the raw record list. Empty/null on the
+    // day view. See VitalsRepositoryImpl and heart_vitals_overview_display.dart.
+    this.bloodPressureDaily = const [],
+    this.spO2Daily = const [],
+    this.respiratoryRateDaily = const [],
+    this.bodyTemperatureDaily = const [],
+    this.vo2MaxDaily = const [],
+    this.bloodGlucoseDaily = const [],
+    this.skinTemperatureDaily = const [],
+    this.latestBloodPressureReading,
+    this.latestSpO2Reading,
+    this.latestVo2MaxReading,
+    this.latestRespiratoryRateReading,
+    this.latestBodyTemperatureReading,
+    this.latestBloodGlucoseReading,
+    this.latestSkinTemperatureReading,
   });
 
   final List<HeartRateSample> daySamples;
@@ -114,6 +131,20 @@ class HeartPeriodLoadResult {
   final List<SkinTemperatureEntry> skinTemperature;
   final List<SkinTemperatureEntry> previousSkinTemperature;
   final List<SkinTemperatureEntry> baselineSkinTemperature;
+  final List<DailyBloodPressurePoint> bloodPressureDaily;
+  final List<DailyVitalPoint> spO2Daily;
+  final List<DailyVitalPoint> respiratoryRateDaily;
+  final List<DailyVitalPoint> bodyTemperatureDaily;
+  final List<DailyVitalPoint> vo2MaxDaily;
+  final List<DailyVitalPoint> bloodGlucoseDaily;
+  final List<DailyVitalPoint> skinTemperatureDaily;
+  final BloodPressureEntry? latestBloodPressureReading;
+  final SpO2Entry? latestSpO2Reading;
+  final Vo2MaxEntry? latestVo2MaxReading;
+  final RespiratoryRateEntry? latestRespiratoryRateReading;
+  final BodyTempEntry? latestBodyTemperatureReading;
+  final BloodGlucoseEntry? latestBloodGlucoseReading;
+  final SkinTemperatureEntry? latestSkinTemperatureReading;
 
   HeartPeriodLoadResult merge(HeartPeriodLoadResult other) =>
       HeartPeriodLoadResult(
@@ -201,6 +232,34 @@ class HeartPeriodLoadResult {
           ...baselineSkinTemperature,
           ...other.baselineSkinTemperature,
         ],
+        bloodPressureDaily: [...bloodPressureDaily, ...other.bloodPressureDaily],
+        spO2Daily: [...spO2Daily, ...other.spO2Daily],
+        respiratoryRateDaily: [
+          ...respiratoryRateDaily,
+          ...other.respiratoryRateDaily,
+        ],
+        bodyTemperatureDaily: [
+          ...bodyTemperatureDaily,
+          ...other.bodyTemperatureDaily,
+        ],
+        vo2MaxDaily: [...vo2MaxDaily, ...other.vo2MaxDaily],
+        bloodGlucoseDaily: [...bloodGlucoseDaily, ...other.bloodGlucoseDaily],
+        skinTemperatureDaily: [
+          ...skinTemperatureDaily,
+          ...other.skinTemperatureDaily,
+        ],
+        latestBloodPressureReading:
+            latestBloodPressureReading ?? other.latestBloodPressureReading,
+        latestSpO2Reading: latestSpO2Reading ?? other.latestSpO2Reading,
+        latestVo2MaxReading: latestVo2MaxReading ?? other.latestVo2MaxReading,
+        latestRespiratoryRateReading:
+            latestRespiratoryRateReading ?? other.latestRespiratoryRateReading,
+        latestBodyTemperatureReading:
+            latestBodyTemperatureReading ?? other.latestBodyTemperatureReading,
+        latestBloodGlucoseReading:
+            latestBloodGlucoseReading ?? other.latestBloodGlucoseReading,
+        latestSkinTemperatureReading:
+            latestSkinTemperatureReading ?? other.latestSkinTemperatureReading,
       );
 }
 
@@ -235,6 +294,9 @@ extension HeartPeriodLoadResultVitals on HeartPeriodLoadResult {
       return items.reduce((a, b) => time(a).isAfter(time(b)) ? a : b);
     }
 
+    // On the day view the raw lists are populated and carry the latest; on the
+    // non-day overview they are empty and the true latest arrives via the
+    // `latest…Reading` fields (a window read), so prefer those when present.
     return HeartVitalsSummary(
       hasVitalsData: bloodPressure.isNotEmpty ||
           spO2.isNotEmpty ||
@@ -242,14 +304,26 @@ extension HeartPeriodLoadResultVitals on HeartPeriodLoadResult {
           bodyTemperature.isNotEmpty ||
           vo2Max.isNotEmpty ||
           bloodGlucose.isNotEmpty ||
-          skinTemperature.isNotEmpty,
-      latestBloodPressure: latest(bloodPressure, (e) => e.time),
-      latestSpO2: latest(spO2, (e) => e.time),
-      latestRespiratoryRate: latest(respiratoryRate, (e) => e.time),
-      latestBodyTemperature: latest(bodyTemperature, (e) => e.time),
-      latestVo2Max: latest(vo2Max, (e) => e.time),
-      latestBloodGlucose: latest(bloodGlucose, (e) => e.time),
-      latestSkinTemperature: latest(skinTemperature, (e) => e.time),
+          skinTemperature.isNotEmpty ||
+          bloodPressureDaily.isNotEmpty ||
+          spO2Daily.isNotEmpty ||
+          respiratoryRateDaily.isNotEmpty ||
+          bodyTemperatureDaily.isNotEmpty ||
+          vo2MaxDaily.isNotEmpty ||
+          bloodGlucoseDaily.isNotEmpty ||
+          skinTemperatureDaily.isNotEmpty,
+      latestBloodPressure:
+          latestBloodPressureReading ?? latest(bloodPressure, (e) => e.time),
+      latestSpO2: latestSpO2Reading ?? latest(spO2, (e) => e.time),
+      latestRespiratoryRate: latestRespiratoryRateReading ??
+          latest(respiratoryRate, (e) => e.time),
+      latestBodyTemperature: latestBodyTemperatureReading ??
+          latest(bodyTemperature, (e) => e.time),
+      latestVo2Max: latestVo2MaxReading ?? latest(vo2Max, (e) => e.time),
+      latestBloodGlucose:
+          latestBloodGlucoseReading ?? latest(bloodGlucose, (e) => e.time),
+      latestSkinTemperature: latestSkinTemperatureReading ??
+          latest(skinTemperature, (e) => e.time),
     );
   }
 }
@@ -337,5 +411,19 @@ class LoadHeartPeriodUseCase {
         skinTemperature: data.skinTemperature,
         previousSkinTemperature: data.previousSkinTemperature,
         baselineSkinTemperature: data.baselineSkinTemperature,
+        bloodPressureDaily: data.bloodPressureDaily,
+        spO2Daily: data.spO2Daily,
+        respiratoryRateDaily: data.respiratoryRateDaily,
+        bodyTemperatureDaily: data.bodyTemperatureDaily,
+        vo2MaxDaily: data.vo2MaxDaily,
+        bloodGlucoseDaily: data.bloodGlucoseDaily,
+        skinTemperatureDaily: data.skinTemperatureDaily,
+        latestBloodPressureReading: data.latestBloodPressure,
+        latestSpO2Reading: data.latestSpO2,
+        latestVo2MaxReading: data.latestVo2Max,
+        latestRespiratoryRateReading: data.latestRespiratoryRate,
+        latestBodyTemperatureReading: data.latestBodyTemperature,
+        latestBloodGlucoseReading: data.latestBloodGlucose,
+        latestSkinTemperatureReading: data.latestSkinTemperature,
       );
 }

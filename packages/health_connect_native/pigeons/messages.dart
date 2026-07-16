@@ -456,6 +456,33 @@ class DailyHrvMsg {
   DailyHrvMsg(this.dateEpochMs, this.rmssdMs);
 }
 
+// ── Vitals daily aggregates (Phase 3 / Stage 4) ──────────────────────────────
+// Long-range vitals charts (week/month/year) plot one point per day. Reading a
+// year of RAW records just to average them per day marshals thousands of
+// records across this channel; these carry the per-day mean already bucketed on
+// the Kotlin side. [count] is how many raw readings the day averaged, so the
+// Dart side can reconstruct a count-weighted period mean without the raw list.
+
+class DailyVitalPointMsg {
+  final int dateEpochMs;
+  final double value;
+  final int count;
+  DailyVitalPointMsg(this.dateEpochMs, this.value, this.count);
+}
+
+class DailyBloodPressurePointMsg {
+  final int dateEpochMs;
+  final double systolic;
+  final double diastolic;
+  final int count;
+  DailyBloodPressurePointMsg(
+    this.dateEpochMs,
+    this.systolic,
+    this.diastolic,
+    this.count,
+  );
+}
+
 // ── Nutrition (Phase 6) ──────────────────────────────────────────────────────
 
 enum CaloriesBurnedSourceMsg { noData, recordedTotal, estimatedActiveAndBmr }
@@ -1226,6 +1253,34 @@ abstract class HealthConnectHostApi {
   List<BloodGlucoseEntryMsg> readBloodGlucoseEntries(int startEpochMs, int endEpochMs);
   @async
   List<SkinTemperatureEntryMsg> readSkinTemperatureEntries(int startEpochMs, int endEpochMs);
+  // Daily-bucketed vitals for long-range charts (see DailyVitalPointMsg). Each
+  // averages the day's raw readings on the Kotlin side so a year of records
+  // never crosses this channel.
+  @async
+  List<DailyBloodPressurePointMsg> readDailyBloodPressure(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailySpO2(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailyRespiratoryRate(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailyBodyTemperature(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailyVo2Max(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailyBloodGlucose(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailySkinTemperature(int startEpochMs, int endEpochMs);
+  // Latest reading in a window, so a long-range card can show the true newest
+  // value/source without loading the raw list. (Blood pressure, SpO2 and VO2max
+  // already have theirs above.)
+  @async
+  RespiratoryRateEntryMsg? readLatestRespiratoryRate(int startEpochMs, int endEpochMs);
+  @async
+  BodyTempEntryMsg? readLatestBodyTemperature(int startEpochMs, int endEpochMs);
+  @async
+  BloodGlucoseEntryMsg? readLatestBloodGlucose(int startEpochMs, int endEpochMs);
+  @async
+  SkinTemperatureEntryMsg? readLatestSkinTemperature(int startEpochMs, int endEpochMs);
   @async
   String writeVitalsMeasurementEntry(VitalsMeasurementWriteRequestMsg request);
   @async

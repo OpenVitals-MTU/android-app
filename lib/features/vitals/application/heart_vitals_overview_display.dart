@@ -4,6 +4,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/period/time_range.dart';
 import '../../../core/stats/stats.dart';
+import '../../../core/time/local_date.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../domain/usecase/load_heart_period_use_case.dart';
@@ -325,14 +326,18 @@ BloodPressureOverview? _bloodPressure(
   TimeRange range,
   HeartVitalsSummary vitals,
 ) {
-  final entries = [...result.bloodPressure]
-    ..sort((a, b) => a.time.compareTo(b.time));
+  final isDay = range == TimeRange.day;
+  final entries = isDay
+      ? ([...result.bloodPressure]..sort((a, b) => a.time.compareTo(b.time)))
+      : _bpFromDaily(result.bloodPressureDaily);
   final latest = vitals.latestBloodPressure;
   if (entries.isEmpty || latest == null) return null;
   return BloodPressureOverview(
     entries: entries,
     latest: latest,
-    readings: entries.length,
+    readings: isDay
+        ? entries.length
+        : result.bloodPressureDaily.fold(0, (sum, p) => sum + p.count),
     hasChart: _hasRenderableChartData(entries, range, (e) => e.time),
   );
 }
@@ -342,13 +347,18 @@ SpO2Overview? _spO2(
   TimeRange range,
   HeartVitalsSummary vitals,
 ) {
-  final entries = [...result.spO2]..sort((a, b) => a.time.compareTo(b.time));
+  final isDay = range == TimeRange.day;
+  final entries = isDay
+      ? ([...result.spO2]..sort((a, b) => a.time.compareTo(b.time)))
+      : _spO2FromDaily(result.spO2Daily);
   final latest = vitals.latestSpO2;
   if (entries.isEmpty || latest == null) return null;
   return SpO2Overview(
     entries: entries,
     latest: latest,
-    averagePercent: averageOrZero(entries.map((e) => e.percent)),
+    averagePercent: isDay
+        ? averageOrZero(entries.map((e) => e.percent))
+        : _weightedMean(result.spO2Daily),
     hasChart: _hasRenderableChartData(entries, range, (e) => e.time),
   );
 }
@@ -358,13 +368,16 @@ Vo2MaxOverview? _vo2Max(
   TimeRange range,
   HeartVitalsSummary vitals,
 ) {
-  final entries = [...result.vo2Max]..sort((a, b) => a.time.compareTo(b.time));
+  final isDay = range == TimeRange.day;
+  final entries = isDay
+      ? ([...result.vo2Max]..sort((a, b) => a.time.compareTo(b.time)))
+      : _vo2MaxFromDaily(result.vo2MaxDaily);
   final latest = vitals.latestVo2Max;
   if (entries.isEmpty || latest == null) return null;
   return Vo2MaxOverview(
     entries: entries,
     latest: latest,
-    readings: entries.length,
+    readings: isDay ? entries.length : _readingsOf(result.vo2MaxDaily),
     hasChart: _hasRenderableChartData(entries, range, (e) => e.time),
   );
 }
@@ -374,15 +387,18 @@ BloodGlucoseOverview? _bloodGlucose(
   TimeRange range,
   HeartVitalsSummary vitals,
 ) {
-  final entries = [...result.bloodGlucose]
-    ..sort((a, b) => a.time.compareTo(b.time));
+  final isDay = range == TimeRange.day;
+  final entries = isDay
+      ? ([...result.bloodGlucose]..sort((a, b) => a.time.compareTo(b.time)))
+      : _bloodGlucoseFromDaily(result.bloodGlucoseDaily);
   final latest = vitals.latestBloodGlucose;
   if (entries.isEmpty || latest == null) return null;
   return BloodGlucoseOverview(
     entries: entries,
     latest: latest,
-    averageMmolPerLiter:
-        averageOrZero(entries.map((e) => e.millimolesPerLiter)),
+    averageMmolPerLiter: isDay
+        ? averageOrZero(entries.map((e) => e.millimolesPerLiter))
+        : _weightedMean(result.bloodGlucoseDaily),
     hasChart: _hasRenderableChartData(entries, range, (e) => e.time),
   );
 }
@@ -392,19 +408,25 @@ RespiratoryRateOverview? _respiratoryRate(
   TimeRange range,
   HeartVitalsSummary vitals,
 ) {
-  final entries = [...result.respiratoryRate]
-    ..sort((a, b) => a.time.compareTo(b.time));
-  if (entries.isEmpty) return null;
   final isDay = range == TimeRange.day;
-  final daySummaries = respiratoryRateDaySummaries(entries);
-  final periodAverage = averageOrZero(daySummaries.map((s) => s.average));
+  final entries = isDay
+      ? ([...result.respiratoryRate]..sort((a, b) => a.time.compareTo(b.time)))
+      : _respiratoryFromDaily(result.respiratoryRateDaily);
+  if (entries.isEmpty) return null;
+  // Respiratory rate prints the mean of the daily means (each day weighed
+  // equally), not the flat mean of every reading — so average the per-day values
+  // unweighted, matching respiratoryRateDaySummaries on the day path.
+  final periodAverage = isDay
+      ? averageOrZero(respiratoryRateDaySummaries(entries).map((s) => s.average))
+      : averageOrZero(result.respiratoryRateDaily.map((p) => p.value));
   return RespiratoryRateOverview(
     entries: entries,
     cardBreathsPerMinute:
         isDay ? entries.last.breathsPerMinute : periodAverage,
-    cardSource: isDay
-        ? vitals.latestRespiratoryRate?.source
-        : _singleSource(entries.map((e) => e.source)),
+    // The card names the latest reading's source. (Non-day synthetic entries
+    // carry none, as a merged aggregate has no single writer, so this is the
+    // only source the card can truthfully print for a long range.)
+    cardSource: vitals.latestRespiratoryRate?.source,
     periodAverage: periodAverage,
     hasChart: _hasRenderableChartData(entries, range, (e) => e.time),
   );
@@ -415,14 +437,16 @@ BodyTemperatureOverview? _bodyTemperature(
   TimeRange range,
   HeartVitalsSummary vitals,
 ) {
-  final entries = [...result.bodyTemperature]
-    ..sort((a, b) => a.time.compareTo(b.time));
+  final isDay = range == TimeRange.day;
+  final entries = isDay
+      ? ([...result.bodyTemperature]..sort((a, b) => a.time.compareTo(b.time)))
+      : _bodyTempFromDaily(result.bodyTemperatureDaily);
   final latest = vitals.latestBodyTemperature;
   if (entries.isEmpty || latest == null) return null;
   return BodyTemperatureOverview(
     entries: entries,
     latest: latest,
-    readings: entries.length,
+    readings: isDay ? entries.length : _readingsOf(result.bodyTemperatureDaily),
     hasChart: _hasRenderableChartData(entries, range, (e) => e.time),
   );
 }
@@ -432,10 +456,13 @@ SkinTemperatureOverview? _skinTemperature(
   TimeRange range,
   HeartVitalsSummary vitals,
 ) {
-  final chartEntries = [
-    for (final e in result.skinTemperature)
-      if (e.averageDeltaCelsius != null) e,
-  ]..sort((a, b) => a.time.compareTo(b.time));
+  final isDay = range == TimeRange.day;
+  final chartEntries = isDay
+      ? ([
+          for (final e in result.skinTemperature)
+            if (e.averageDeltaCelsius != null) e,
+        ]..sort((a, b) => a.time.compareTo(b.time)))
+      : _skinTempFromDaily(result.skinTemperatureDaily);
   final latest = vitals.latestSkinTemperature;
   if (latest == null) return null;
   // The card reads the newest entry that actually CARRIES a delta — the same
@@ -444,11 +471,14 @@ SkinTemperatureOverview? _skinTemperature(
   // while the chart underneath it went on plotting the readings that had one.
   final latestWithDelta = chartEntries.isEmpty ? null : chartEntries.last;
   return SkinTemperatureOverview(
+    // On non-day the true latest reading (with its real source) names the card;
+    // its delta may be null, which only blanks the delta value, not the source.
     chartEntries: chartEntries,
-    latest: latestWithDelta ?? latest,
+    latest: isDay ? (latestWithDelta ?? latest) : latest,
     cardDeltaCelsius: latestWithDelta?.averageDeltaCelsius,
-    averageDeltaCelsius:
-        averageOrZero(chartEntries.map((e) => e.averageDeltaCelsius!)),
+    averageDeltaCelsius: isDay
+        ? averageOrZero(chartEntries.map((e) => e.averageDeltaCelsius!))
+        : _weightedMean(result.skinTemperatureDaily),
     hasChart: _hasRenderableChartData(chartEntries, range, (e) => e.time),
   );
 }
@@ -472,3 +502,98 @@ String? _singleSource(Iterable<String> sources) {
   final distinct = sources.toSet();
   return distinct.length == 1 ? distinct.first : null;
 }
+
+// ── Long-range (non-day) aggregates ─────────────────────────────────────────
+// On week/month/year the overview plots one point per day from the native daily
+// aggregates instead of the raw record list. The chart widgets consume the raw
+// entry types, so each day becomes a synthetic entry (its aggregated value,
+// timestamped at local midnight, no source — a merged aggregate has no single
+// writer). Card scalars come straight from the daily points so counts and means
+// stay exact: [readings] is the true total, and averages are count-weighted.
+
+/// Local midnight — the representative timestamp for a day's aggregated value.
+DateTime _dayStart(LocalDate date) => DateTime(date.year, date.month, date.day);
+
+/// Count-weighted mean, so a period average equals the mean of every underlying
+/// reading rather than the unweighted mean of the daily means.
+double _weightedMean(List<DailyVitalPoint> points) {
+  var weighted = 0.0;
+  var readings = 0;
+  for (final p in points) {
+    weighted += p.value * p.count;
+    readings += p.count;
+  }
+  return readings == 0 ? 0.0 : weighted / readings;
+}
+
+int _readingsOf(List<DailyVitalPoint> points) =>
+    points.fold(0, (sum, p) => sum + p.count);
+
+List<BloodPressureEntry> _bpFromDaily(List<DailyBloodPressurePoint> points) => [
+      for (final p in points)
+        BloodPressureEntry(
+          time: _dayStart(p.date),
+          systolicMmHg: p.systolic.round(),
+          diastolicMmHg: p.diastolic.round(),
+          source: '',
+        ),
+    ];
+
+List<SpO2Entry> _spO2FromDaily(List<DailyVitalPoint> points) => [
+      for (final p in points)
+        SpO2Entry(time: _dayStart(p.date), percent: p.value, source: ''),
+    ];
+
+List<RespiratoryRateEntry> _respiratoryFromDaily(List<DailyVitalPoint> points) =>
+    [
+      for (final p in points)
+        RespiratoryRateEntry(
+          time: _dayStart(p.date),
+          breathsPerMinute: p.value,
+          source: '',
+        ),
+    ];
+
+List<BodyTempEntry> _bodyTempFromDaily(List<DailyVitalPoint> points) => [
+      for (final p in points)
+        BodyTempEntry(
+          time: _dayStart(p.date),
+          temperatureCelsius: p.value,
+          source: '',
+        ),
+    ];
+
+List<Vo2MaxEntry> _vo2MaxFromDaily(List<DailyVitalPoint> points) => [
+      for (final p in points)
+        Vo2MaxEntry(
+          time: _dayStart(p.date),
+          vo2MaxMlPerKgPerMin: p.value,
+          source: '',
+        ),
+    ];
+
+List<BloodGlucoseEntry> _bloodGlucoseFromDaily(List<DailyVitalPoint> points) => [
+      for (final p in points)
+        BloodGlucoseEntry(
+          time: _dayStart(p.date),
+          millimolesPerLiter: p.value,
+          specimenSource: 0,
+          mealType: 0,
+          relationToMeal: 0,
+          source: '',
+        ),
+    ];
+
+List<SkinTemperatureEntry> _skinTempFromDaily(List<DailyVitalPoint> points) => [
+      for (final p in points)
+        SkinTemperatureEntry(
+          startTime: _dayStart(p.date),
+          endTime: _dayStart(p.date),
+          baselineCelsius: null,
+          averageDeltaCelsius: p.value,
+          minDeltaCelsius: null,
+          maxDeltaCelsius: null,
+          measurementLocation: 0,
+          source: '',
+        ),
+    ];

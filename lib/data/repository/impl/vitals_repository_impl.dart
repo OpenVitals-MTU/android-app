@@ -1,4 +1,5 @@
 import '../../../core/period/period_load_query.dart';
+import '../../../core/period/time_range.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/refresh_mode.dart';
@@ -68,31 +69,87 @@ class VitalsRepositoryImpl implements VitalsRepository {
       case VitalsPeriodMetric.all:
         // Kotlin's ALL loads only the current window (no previous/baseline).
         final c = w.current;
-        final bloodPressure = _bloodPressure(c.start, c.end, granted);
-        final spO2 = _spO2(c.start, c.end, granted);
-        final respiratoryRate = _respiratoryRate(c.start, c.end, granted);
-        final bodyTemperature = _bodyTemperature(c.start, c.end, granted);
-        final vo2Max = _vo2Max(c.start, c.end, granted);
-        final bloodGlucose = _bloodGlucose(c.start, c.end, granted);
-        final skinTemperature = _skinTemperature(c.start, c.end, granted);
+        if (query.range == TimeRange.day) {
+          // Day: the raw samples ARE the chart, so read them directly.
+          final bloodPressure = _bloodPressure(c.start, c.end, granted);
+          final spO2 = _spO2(c.start, c.end, granted);
+          final respiratoryRate = _respiratoryRate(c.start, c.end, granted);
+          final bodyTemperature = _bodyTemperature(c.start, c.end, granted);
+          final vo2Max = _vo2Max(c.start, c.end, granted);
+          final bloodGlucose = _bloodGlucose(c.start, c.end, granted);
+          final skinTemperature = _skinTemperature(c.start, c.end, granted);
+          await Future.wait([
+            bloodPressure,
+            spO2,
+            respiratoryRate,
+            bodyTemperature,
+            vo2Max,
+            bloodGlucose,
+            skinTemperature,
+          ]);
+          return VitalsPeriodData(
+            missingVitalsPermissions: missing,
+            bloodPressure: await bloodPressure,
+            spO2: await spO2,
+            respiratoryRate: await respiratoryRate,
+            bodyTemperature: await bodyTemperature,
+            vo2Max: await vo2Max,
+            bloodGlucose: await bloodGlucose,
+            skinTemperature: await skinTemperature,
+          );
+        }
+        // Week/month/year: the chart plots one point per day, so read native
+        // daily aggregates (bucketed on the Kotlin side) plus each metric's true
+        // latest reading — a year of raw records never crosses the channel. The
+        // daily point carries its reading count, so the cards' period averages
+        // stay count-weighted (no data-quality loss). The display synthesizes
+        // its chart points from these; see heart_vitals_overview_display.dart.
+        final bpDaily = _bloodPressureDaily(c.start, c.end, granted);
+        final spo2Daily = _spO2Daily(c.start, c.end, granted);
+        final respDaily = _respiratoryRateDaily(c.start, c.end, granted);
+        final bodyDaily = _bodyTemperatureDaily(c.start, c.end, granted);
+        final vo2Daily = _vo2MaxDaily(c.start, c.end, granted);
+        final glucoseDaily = _bloodGlucoseDaily(c.start, c.end, granted);
+        final skinDaily = _skinTemperatureDaily(c.start, c.end, granted);
+        final bpLatest = _latestBloodPressure(c.start, c.end, granted);
+        final spo2Latest = _latestSpO2(c.start, c.end, granted);
+        final respLatest = _latestRespiratoryRate(c.start, c.end, granted);
+        final bodyLatest = _latestBodyTemperature(c.start, c.end, granted);
+        final vo2Latest = _latestVo2Max(c.start, c.end, granted);
+        final glucoseLatest = _latestBloodGlucose(c.start, c.end, granted);
+        final skinLatest = _latestSkinTemperature(c.start, c.end, granted);
         await Future.wait([
-          bloodPressure,
-          spO2,
-          respiratoryRate,
-          bodyTemperature,
-          vo2Max,
-          bloodGlucose,
-          skinTemperature,
+          bpDaily,
+          spo2Daily,
+          respDaily,
+          bodyDaily,
+          vo2Daily,
+          glucoseDaily,
+          skinDaily,
+          bpLatest,
+          spo2Latest,
+          respLatest,
+          bodyLatest,
+          vo2Latest,
+          glucoseLatest,
+          skinLatest,
         ]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
-          bloodPressure: await bloodPressure,
-          spO2: await spO2,
-          respiratoryRate: await respiratoryRate,
-          bodyTemperature: await bodyTemperature,
-          vo2Max: await vo2Max,
-          bloodGlucose: await bloodGlucose,
-          skinTemperature: await skinTemperature,
+          bloodPressureDaily: await bpDaily,
+          spO2Daily: await spo2Daily,
+          respiratoryRateDaily: await respDaily,
+          bodyTemperatureDaily: await bodyDaily,
+          vo2MaxDaily: await vo2Daily,
+          bloodGlucoseDaily: await glucoseDaily,
+          skinTemperatureDaily: await skinDaily,
+          latestBloodPressure: await bpLatest,
+          latestSpO2: await spo2Latest,
+          latestRespiratoryRate: await respLatest,
+          latestBodyTemperature: await bodyLatest,
+          latestVo2Max: await vo2Latest,
+          latestBloodGlucose: await glucoseLatest,
+          latestSkinTemperature: await skinLatest,
         );
       case VitalsPeriodMetric.bloodPressure:
         final current = _bloodPressure(w.current.start, w.current.end, granted);
@@ -357,5 +414,137 @@ class VitalsRepositoryImpl implements VitalsRepository {
     if (!granted.contains(HcPermissions.readSkinTemperature)) return const [];
     return _dataSource.readSkinTemperatureEntries(
         localDayStart(start), localDayEnd(end));
+  }
+
+  // ── Daily aggregates + window-latest (non-day overview) ────────────────────
+  // The daily readers take LocalDate windows (they bucket by local date on the
+  // native side); the latest readers return the newest reading in the window.
+
+  Future<List<DailyBloodPressurePoint>> _bloodPressureDaily(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readBloodPressure)) return const [];
+    return _dataSource.readDailyBloodPressure(start, end);
+  }
+
+  Future<List<DailyVitalPoint>> _spO2Daily(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readSpO2)) return const [];
+    return _dataSource.readDailySpO2(start, end);
+  }
+
+  Future<List<DailyVitalPoint>> _respiratoryRateDaily(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readRespiratoryRate)) return const [];
+    return _dataSource.readDailyRespiratoryRate(start, end);
+  }
+
+  Future<List<DailyVitalPoint>> _bodyTemperatureDaily(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readBodyTemperature)) return const [];
+    return _dataSource.readDailyBodyTemperature(start, end);
+  }
+
+  Future<List<DailyVitalPoint>> _vo2MaxDaily(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readVo2Max)) return const [];
+    return _dataSource.readDailyVo2Max(start, end);
+  }
+
+  Future<List<DailyVitalPoint>> _bloodGlucoseDaily(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readBloodGlucose)) return const [];
+    return _dataSource.readDailyBloodGlucose(start, end);
+  }
+
+  Future<List<DailyVitalPoint>> _skinTemperatureDaily(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!_dataSource.isSkinTemperatureAvailable()) return const [];
+    if (!granted.contains(HcPermissions.readSkinTemperature)) return const [];
+    return _dataSource.readDailySkinTemperature(start, end);
+  }
+
+  Future<BloodPressureEntry?> _latestBloodPressure(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readBloodPressure)) return null;
+    return _dataSource.readLatestBloodPressureInWindow(start, end);
+  }
+
+  Future<SpO2Entry?> _latestSpO2(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readSpO2)) return null;
+    return _dataSource.readLatestSpO2InWindow(start, end);
+  }
+
+  Future<RespiratoryRateEntry?> _latestRespiratoryRate(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readRespiratoryRate)) return null;
+    return _dataSource.readLatestRespiratoryRateInWindow(start, end);
+  }
+
+  Future<BodyTempEntry?> _latestBodyTemperature(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readBodyTemperature)) return null;
+    return _dataSource.readLatestBodyTemperatureInWindow(start, end);
+  }
+
+  Future<Vo2MaxEntry?> _latestVo2Max(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readVo2Max)) return null;
+    return _dataSource.readLatestVo2MaxInWindow(start, end);
+  }
+
+  Future<BloodGlucoseEntry?> _latestBloodGlucose(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!granted.contains(HcPermissions.readBloodGlucose)) return null;
+    return _dataSource.readLatestBloodGlucoseInWindow(start, end);
+  }
+
+  Future<SkinTemperatureEntry?> _latestSkinTemperature(
+    LocalDate start,
+    LocalDate end,
+    Set<String> granted,
+  ) async {
+    if (!_dataSource.isSkinTemperatureAvailable()) return null;
+    if (!granted.contains(HcPermissions.readSkinTemperature)) return null;
+    return _dataSource.readLatestSkinTemperatureInWindow(start, end);
   }
 }
