@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// The launcher icon, used as the notification's small icon. Kotlin ships
-/// per-feature `ic_stat_*` drawables; the Flutter port has none yet, so the
-/// launcher icon stands in.
-const String _androidNotificationIcon = '@mipmap/ic_launcher';
+/// The default notification small icon, a fallback for any notification that
+/// doesn't set its own. Reminders each supply a per-feature `ic_stat_*` drawable
+/// (see [ReminderNotificationSpec.androidIcon]); this monochrome app mark just
+/// keeps an unspecified icon from collapsing to a blank white square — Android
+/// tints small icons from the alpha channel, so it must be an alpha silhouette,
+/// not the full-color launcher icon.
+const String _androidNotificationIcon = 'ic_launcher_monochrome';
 
 /// Prepares [plugin] to post notifications. Must run before any `show` /
 /// `zonedSchedule`, in the UI isolate *and* in the alarm callback's isolate —
