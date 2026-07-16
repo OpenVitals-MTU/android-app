@@ -461,12 +461,11 @@ class _OverviewDay {
   final List<SleepData> sessions;
   final SleepScoreEstimate sleepScore;
 
-  /// Wall-clock time in bed for the night (Σ end − start of its segments).
-  int get sleepDurationMs =>
-      sessions.fold<int>(0, (sum, s) => sum + sleepWallClockMs(s));
+  /// Wall-clock time in bed for the night: the union of its segments, so
+  /// overlapping sessions from different sources count their shared time once.
+  int get sleepDurationMs => sleepSessionsUnionMs(sessions);
 
-  int get timeInBedMs =>
-      sessions.fold<int>(0, (sum, s) => sum + sleepWallClockMs(s));
+  int get timeInBedMs => sleepSessionsUnionMs(sessions);
 
   int _stageMs(Set<int> types) => sessions.fold<int>(
         0,

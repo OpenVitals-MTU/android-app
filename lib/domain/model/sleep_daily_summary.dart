@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import '../../core/time/local_date.dart';
 import '../preferences/sleep_range_mode.dart';
 import 'sleep_models.dart';
@@ -84,10 +82,6 @@ class SleepNightSplit {
   final List<SleepData> naps;
 }
 
-/// Wall-clock time in bed for a session: end − start, never negative.
-int sleepWallClockMs(SleepData session) =>
-    math.max(0, session.endTime.difference(session.startTime).inMilliseconds);
-
 /// Splits already-windowed sessions into the main night and daytime naps.
 ///
 /// Sessions are clustered by time: a gap larger than [napGap] between one and the
@@ -121,8 +115,7 @@ SleepNightSplit splitNightAndNaps(
   List<SleepData> night = const [];
   var bestTotal = -1;
   for (final cluster in clusters) {
-    final total =
-        cluster.fold<int>(0, (sum, s) => sum + sleepWallClockMs(s));
+    final total = sleepSessionsUnionMs(cluster);
     if (total > bestTotal) {
       bestTotal = total;
       night = cluster;
@@ -161,10 +154,11 @@ SleepData? dailySleepSummary(
   final windowed =
       sleepSessionsForRange(sessions, selectedDate, sleepRangeMode);
   // Naps are reported separately; the night's summary is the night only, and its
-  // duration is wall-clock time in bed (Σ end − start of the night's segments).
+  // duration is wall-clock time in bed — the union of the night's segments, so
+  // two overlapping sessions from different sources count their shared time once
+  // instead of summing into an impossible total.
   final dailySessions = splitNightAndNaps(windowed).night;
-  final nightDurationMs =
-      dailySessions.fold<int>(0, (sum, s) => sum + sleepWallClockMs(s));
+  final nightDurationMs = sleepSessionsUnionMs(dailySessions);
 
   if (dailySessions.isEmpty) return null;
   if (dailySessions.length == 1) {

@@ -76,5 +76,51 @@ void main() {
 
       expect(summary!.durationMs, const Duration(hours: 7).inMilliseconds);
     });
+
+    test('overlapping night sessions count shared time once (union, not sum)',
+        () {
+      // The reported pair, had it slipped past dedup: 1:15-6:40 and 1:16-7:28.
+      // Sum would be 11h37m; the union (1:15-7:28) is 6h13m.
+      final a = _s('a', _t(2026, 7, 14, 1, 15), _t(2026, 7, 14, 6, 40));
+      final b = _s('b', _t(2026, 7, 14, 1, 16), _t(2026, 7, 14, 7, 28));
+
+      final summary = dailySleepSummary([a, b], const LocalDate(2026, 7, 14));
+
+      expect(summary!.durationMs,
+          const Duration(hours: 6, minutes: 13).inMilliseconds);
+    });
+  });
+
+  group('sleepSessionsUnionMs', () {
+    test('overlapping intervals count their shared time once', () {
+      final a = _s('a', _t(2026, 7, 14, 1, 15), _t(2026, 7, 14, 6, 40));
+      final b = _s('b', _t(2026, 7, 14, 1, 16), _t(2026, 7, 14, 7, 28));
+      expect(sleepSessionsUnionMs([a, b]),
+          const Duration(hours: 6, minutes: 13).inMilliseconds);
+    });
+
+    test('disjoint intervals equal the sum of their spans', () {
+      final a = _s('a', _t(2026, 7, 14, 1, 0), _t(2026, 7, 14, 3, 0)); // 2h
+      final b = _s('b', _t(2026, 7, 14, 5, 0), _t(2026, 7, 14, 6, 30)); // 1h30
+      expect(sleepSessionsUnionMs([a, b]),
+          const Duration(hours: 3, minutes: 30).inMilliseconds);
+    });
+
+    test('adjacent (touching) intervals merge without a gap', () {
+      final a = _s('a', _t(2026, 7, 14, 1, 0), _t(2026, 7, 14, 3, 0));
+      final b = _s('b', _t(2026, 7, 14, 3, 0), _t(2026, 7, 14, 4, 0));
+      expect(sleepSessionsUnionMs([a, b]), const Duration(hours: 3).inMilliseconds);
+    });
+
+    test('a fully-contained interval adds nothing', () {
+      final outer = _s('outer', _t(2026, 7, 14, 1, 0), _t(2026, 7, 14, 9, 0));
+      final inner = _s('inner', _t(2026, 7, 14, 3, 0), _t(2026, 7, 14, 4, 0));
+      expect(sleepSessionsUnionMs([outer, inner]),
+          const Duration(hours: 8).inMilliseconds);
+    });
+
+    test('empty input is zero', () {
+      expect(sleepSessionsUnionMs(const []), 0);
+    });
   });
 }
