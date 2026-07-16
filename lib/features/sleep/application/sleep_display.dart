@@ -117,6 +117,9 @@ abstract class SleepDisplay with _$SleepDisplay {
     required DatePeriod period,
     required bool isDay,
     required List<SleepData> dailySessions,
+
+    /// Daytime naps for the selected day, reported separately from the night.
+    required List<SleepData> dayNaps,
     required SleepData? dailySummary,
     required List<SleepDurationPoint> durationPoints,
     required List<SleepDurationPoint> previousDurationPoints,
@@ -193,30 +196,26 @@ SleepDisplay buildSleepDisplay({
     weekPeriodMode: weekPeriodMode,
   );
 
-  final dailySessions = sleepSessionsForRange(
+  // Split the selected day into the night and its daytime naps: the timeline
+  // card, duration and stage breakdown are the night only, naps reported apart.
+  final daySplit = splitNightAndNaps(
+    sleepSessionsForRange(result.sessions, selectedDate, sleepRangeMode),
+  );
+  final dailySessions = daySplit.night;
+  final dayNaps = daySplit.naps;
+  final dailySummary = dailySleepSummary(
     result.sessions,
     selectedDate,
-    sleepRangeMode,
-  );
-  final dailySummary = _withDurationOverride(
-    dailySleepSummary(
-      result.sessions,
-      selectedDate,
-      sleepRangeMode: sleepRangeMode,
-    ),
-    result.dailyDurations,
-    selectedDate,
+    sleepRangeMode: sleepRangeMode,
   );
 
   final durationPoints = _sleepDurationPoints(
     result.sessions,
-    result.dailyDurations,
     selectedPeriod,
     sleepRangeMode,
   );
   final previousDurationPoints = _sleepDurationPoints(
     result.previousSessions,
-    result.previousDailyDurations,
     previousPeriod,
     sleepRangeMode,
   );
@@ -228,14 +227,12 @@ SleepDisplay buildSleepDisplay({
   final overviewDays = _overviewDays(
     result.sessions,
     scoreSessions,
-    result.dailyDurations,
     selectedPeriod,
     sleepRangeMode,
   );
 
   final baselineDurationPoints = _sleepDurationPoints(
     result.baselineSessions,
-    result.baselineDailyDurations,
     baselinePeriodBefore(selectedPeriod),
     sleepRangeMode,
   );
@@ -265,6 +262,7 @@ SleepDisplay buildSleepDisplay({
     period: selectedPeriod,
     isDay: isDay,
     dailySessions: dailySessions,
+    dayNaps: dayNaps,
     dailySummary: dailySummary,
     durationPoints: durationPoints,
     previousDurationPoints: previousDurationPoints,
@@ -438,51 +436,37 @@ List<LocalDate> _datesInPeriod(LocalDate start, LocalDate end) {
 
 List<SleepDurationPoint> _sleepDurationPoints(
   List<SleepData> sessions,
-  List<DailySleepDuration> dailyDurations,
   DatePeriod period,
   SleepRangeMode sleepRangeMode,
 ) {
-  final durationsByDate = {for (final d in dailyDurations) d.date: d};
+  // The night's wall-clock duration, grouped by the same window the sessions are.
+  // (The old Health-Connect daily aggregate keyed sleep by its START date, so a
+  // night crossing midnight landed on the wrong day — see dailySleepSummary.)
   return [
     for (final date in _datesInPeriod(period.start, period.end))
       SleepDurationPoint(
         date,
-        durationsByDate[date]?.durationHours ??
-            dailySleepSummary(
-              sessions,
-              date,
-              sleepRangeMode: sleepRangeMode,
-            )?.durationHours ??
+        dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode)
+                ?.durationHours ??
             0.0,
       ),
   ];
 }
 
-/// One overview day: the night's sessions + a sleep-score estimate.
+/// One overview day: the night's sessions (naps excluded) + a sleep-score estimate.
 class _OverviewDay {
-  const _OverviewDay(this.sessions, this.aggregateDurationMs, this.sleepScore);
+  const _OverviewDay(this.sessions, this.sleepScore);
 
+  /// The night's sessions only — daytime naps are reported separately.
   final List<SleepData> sessions;
-  final int? aggregateDurationMs;
   final SleepScoreEstimate sleepScore;
 
-  int get sleepDurationMs {
-    final aggregate = aggregateDurationMs;
-    if (aggregate != null && aggregate > 0) return aggregate;
-    return sessions.fold<int>(
-      0,
-      (sum, s) => sum + sleepDurationMsFromStages(s.stages, s.durationMs),
-    );
-  }
+  /// Wall-clock time in bed for the night (Σ end − start of its segments).
+  int get sleepDurationMs =>
+      sessions.fold<int>(0, (sum, s) => sum + sleepWallClockMs(s));
 
-  int get timeInBedMs => sessions.fold<int>(
-        0,
-        (sum, s) => sum +
-            math.max(
-              0,
-              s.endTime.difference(s.startTime).inMilliseconds,
-            ),
-      );
+  int get timeInBedMs =>
+      sessions.fold<int>(0, (sum, s) => sum + sleepWallClockMs(s));
 
   int _stageMs(Set<int> types) => sessions.fold<int>(
         0,
@@ -511,16 +495,15 @@ class _OverviewDay {
 List<_OverviewDay> _overviewDays(
   List<SleepData> sessions,
   List<SleepData> scoreSessions,
-  List<DailySleepDuration> dailyDurations,
   DatePeriod period,
   SleepRangeMode sleepRangeMode,
 ) {
-  final durationsByDate = {for (final d in dailyDurations) d.date: d};
   return [
     for (final date in _datesInPeriod(period.start, period.end))
       _OverviewDay(
-        sleepSessionsForRange(sessions, date, sleepRangeMode),
-        durationsByDate[date]?.durationMs,
+        splitNightAndNaps(
+          sleepSessionsForRange(sessions, date, sleepRangeMode),
+        ).night,
         calculateSleepScoreForDate(date, scoreSessions, sleepRangeMode),
       ),
   ];
@@ -593,22 +576,6 @@ int _circularMeanMinutes(List<int> values) {
   var angle = math.atan2(sinMean, cosMean);
   if (angle < 0) angle += 2 * math.pi;
   return (angle / (2 * math.pi) * _minutesPerDay).round() % _minutesPerDay;
-}
-
-SleepData? _withDurationOverride(
-  SleepData? summary,
-  List<DailySleepDuration> dailyDurations,
-  LocalDate date,
-) {
-  if (summary == null) return null;
-  final durationMs = dailyDurations
-      .where((d) => d.date == date)
-      .map((d) => d.durationMs)
-      .where((ms) => ms > 0)
-      .cast<int?>()
-      .firstWhere((ms) => ms != null, orElse: () => null);
-  if (durationMs == null) return summary;
-  return summary.copyWith(durationMs: durationMs);
 }
 
 List<SleepData> _distinctById(List<SleepData> sessions) {

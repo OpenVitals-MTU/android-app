@@ -188,6 +188,14 @@ class _SleepContent extends StatelessWidget {
                       shares: display.stageShares,
                       formatter: formatter,
                     )),
+                    // Daytime naps, reported apart from the night above.
+                    if (display.dayNaps.isNotEmpty)
+                      SleepSessionsSection(
+                        title: l10n.sleepNaps,
+                        sessions: display.dayNaps,
+                        formatter: formatter,
+                        onOpenSession: onOpenSession,
+                      ),
                   ],
                 ),
         ),

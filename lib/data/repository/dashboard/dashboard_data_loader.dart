@@ -401,16 +401,10 @@ class DashboardDataLoader {
       sleepRangeMode,
     );
     final sessions = data.sessions;
-    final aggregate = data.dailyAggregateDurations
-        .where((d) => d.date == date)
-        .map((d) => d.durationMs)
-        .firstOrNull ??
-        0;
-    var sleep =
+    // The night's wall-clock duration, not the Health-Connect start-date aggregate
+    // (which mis-attributed a night crossing midnight to the previous day).
+    final sleep =
         dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode);
-    if (sleep != null && aggregate > 0) {
-      sleep = sleep.copyWith(durationMs: aggregate);
-    }
     return _DashboardSleepData(
       sleep: sleep,
       sleepScore: calculateSleepScoreForDate(date, sessions, sleepRangeMode),

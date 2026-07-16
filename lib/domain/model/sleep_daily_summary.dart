@@ -67,20 +67,111 @@ List<SleepData> sleepSessionsForRange(
   return filtered;
 }
 
+/// The gap that separates the night's sleep from a daytime nap. A short
+/// early-morning wake (well under this) keeps one night together; a clearly
+/// daytime session sits on the far side of a gap this large and reads as a nap.
+const Duration kSleepNapGap = Duration(hours: 3);
+
+/// A day's sleep split into the main night and any daytime naps.
+class SleepNightSplit {
+  const SleepNightSplit({required this.night, required this.naps});
+
+  /// The sessions that make up the main nocturnal sleep, sorted by start. May be
+  /// several segments if the night was broken by a wake.
+  final List<SleepData> night;
+
+  /// Sessions outside the night — daytime naps — sorted by start.
+  final List<SleepData> naps;
+}
+
+/// Wall-clock time in bed for a session: end − start, never negative.
+int sleepWallClockMs(SleepData session) =>
+    math.max(0, session.endTime.difference(session.startTime).inMilliseconds);
+
+/// Splits already-windowed sessions into the main night and daytime naps.
+///
+/// Sessions are clustered by time: a gap larger than [napGap] between one and the
+/// next starts a new cluster. The night is the cluster with the greatest total
+/// wall-clock time; every other cluster is naps. So a night broken by a
+/// 1h40m wake stays one night, while an afternoon nap 8h later splits off.
+SleepNightSplit splitNightAndNaps(
+  List<SleepData> windowedSessions, {
+  Duration napGap = kSleepNapGap,
+}) {
+  if (windowedSessions.isEmpty) {
+    return const SleepNightSplit(night: [], naps: []);
+  }
+
+  final sorted = [...windowedSessions]..sort(_byStartThenEnd);
+  final clusters = <List<SleepData>>[];
+  var current = <SleepData>[sorted.first];
+  var clusterEnd = sorted.first.endTime;
+  for (final session in sorted.skip(1)) {
+    if (session.startTime.difference(clusterEnd) > napGap) {
+      clusters.add(current);
+      current = <SleepData>[session];
+      clusterEnd = session.endTime;
+    } else {
+      current.add(session);
+      if (session.endTime.isAfter(clusterEnd)) clusterEnd = session.endTime;
+    }
+  }
+  clusters.add(current);
+
+  List<SleepData> night = const [];
+  var bestTotal = -1;
+  for (final cluster in clusters) {
+    final total =
+        cluster.fold<int>(0, (sum, s) => sum + sleepWallClockMs(s));
+    if (total > bestTotal) {
+      bestTotal = total;
+      night = cluster;
+    }
+  }
+
+  final naps = <SleepData>[
+    for (final cluster in clusters)
+      if (!identical(cluster, night)) ...cluster,
+  ]..sort(_byStartThenEnd);
+
+  return SleepNightSplit(night: night, naps: naps);
+}
+
+int _byStartThenEnd(SleepData a, SleepData b) {
+  final byStart = a.startTime.compareTo(b.startTime);
+  if (byStart != 0) return byStart;
+  return a.endTime.compareTo(b.endTime);
+}
+
+/// The daytime naps for [selectedDate], reported separately from the night.
+List<SleepData> dailyNaps(
+  List<SleepData> sessions,
+  LocalDate selectedDate, {
+  SleepRangeMode sleepRangeMode = SleepRangeMode.evening18h,
+}) =>
+    splitNightAndNaps(
+      sleepSessionsForRange(sessions, selectedDate, sleepRangeMode),
+    ).naps;
+
 SleepData? dailySleepSummary(
   List<SleepData> sessions,
   LocalDate selectedDate, {
   SleepRangeMode sleepRangeMode = SleepRangeMode.evening18h,
 }) {
-  final dailySessions =
+  final windowed =
       sleepSessionsForRange(sessions, selectedDate, sleepRangeMode);
+  // Naps are reported separately; the night's summary is the night only, and its
+  // duration is wall-clock time in bed (Σ end − start of the night's segments).
+  final dailySessions = splitNightAndNaps(windowed).night;
+  final nightDurationMs =
+      dailySessions.fold<int>(0, (sum, s) => sum + sleepWallClockMs(s));
 
   if (dailySessions.isEmpty) return null;
   if (dailySessions.length == 1) {
     final single = dailySessions.single;
     final sortedStages = [...single.stages]
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
-    return single.copyWith(stages: sortedStages);
+    return single.copyWith(stages: sortedStages, durationMs: nightDurationMs);
   }
 
   final first = dailySessions.first;
@@ -136,10 +227,7 @@ SleepData? dailySleepSummary(
     id: 'daily:$selectedDate',
     startTime: first.startTime,
     endTime: last.endTime,
-    durationMs: dailySessions.fold<int>(
-      0,
-      (sum, session) => sum + math.max(session.durationMs, 0),
-    ),
+    durationMs: nightDurationMs,
     source: _singleOrNull(distinctSources) ?? first.source,
     title: _singleOrNull(titles) ?? first.title,
     notes: _singleOrNull(notes),
