@@ -6,6 +6,7 @@ import '../../../core/period/time_range.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../di/providers.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
@@ -26,11 +27,33 @@ import 'heart_vitals_sections.dart';
 /// It renders [HeartVitalsOverviewState.display], which the view-model derived
 /// once at load time; the widgets here format, lay out and reorder, and compute
 /// nothing.
-class HeartVitalsOverviewScreen extends ConsumerWidget {
+class HeartVitalsOverviewScreen extends ConsumerStatefulWidget {
   const HeartVitalsOverviewScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HeartVitalsOverviewScreen> createState() =>
+      _HeartVitalsOverviewScreenState();
+}
+
+class _HeartVitalsOverviewScreenState
+    extends ConsumerState<HeartVitalsOverviewScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Kick the daily-aggregate history sync once per open (deduped by the
+    // service). When it lands, re-derive so long-range charts that were reading
+    // "Building history…" pick up the freshly cached days (e.g. respiratory).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncHistory());
+  }
+
+  Future<void> _syncHistory() async {
+    await ref.read(vitalsHistorySyncServiceProvider).syncAll();
+    if (!mounted) return;
+    ref.read(heartVitalsOverviewProvider.notifier).refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(heartVitalsOverviewProvider);
     final notifier = ref.read(heartVitalsOverviewProvider.notifier);

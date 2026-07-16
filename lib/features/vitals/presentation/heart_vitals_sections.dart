@@ -6,6 +6,7 @@ import '../../../core/period/time_range.dart';
 import '../../../core/presentation/display_value.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../data/repository/contract/vitals_repository.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/charts/line_chart.dart';
@@ -237,6 +238,10 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
     final spO2 = display.spO2;
     final vo2Max = display.vo2Max;
     final bloodGlucose = display.bloodGlucose;
+    String? tooMuch(VitalsPeriodMetric m) =>
+        display.unavailableForRange.contains(m)
+            ? l10n.messageTooMuchDataRange
+            : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -254,6 +259,7 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
             icon: Icons.favorite,
             color: AppColors.vitals,
             source: bloodPressure?.latest.source,
+            emptyMessage: tooMuch(VitalsPeriodMetric.bloodPressure),
           ),
           OverviewCard(
             metric: HeartMetric.spo2,
@@ -263,6 +269,7 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
             icon: Icons.favorite,
             color: oxygenColor,
             source: spO2?.latest.source,
+            emptyMessage: tooMuch(VitalsPeriodMetric.spo2),
           ),
           OverviewCard(
             metric: HeartMetric.vo2Max,
@@ -273,6 +280,7 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
             icon: Icons.speed,
             color: vo2Color,
             source: vo2Max?.latest.source,
+            emptyMessage: tooMuch(VitalsPeriodMetric.vo2Max),
           ),
           OverviewCard(
             metric: HeartMetric.bloodGlucose,
@@ -284,6 +292,7 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
             icon: Icons.favorite,
             color: glucoseColor,
             source: bloodGlucose?.latest.source,
+            emptyMessage: tooMuch(VitalsPeriodMetric.bloodGlucose),
           ),
         ]),
         // Kotlin `CardiovascularOverviewChartsContent`.
@@ -396,6 +405,10 @@ class HeartVitalsRespiratorySection extends StatelessWidget {
     final bodyTemperature = display.bodyTemperature;
     final skinTemperature = display.skinTemperature;
     final skinDelta = skinTemperature?.cardDeltaCelsius;
+    String? tooMuch(VitalsPeriodMetric m) =>
+        display.unavailableForRange.contains(m)
+            ? l10n.messageTooMuchDataRange
+            : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -412,6 +425,7 @@ class HeartVitalsRespiratorySection extends StatelessWidget {
             icon: Icons.air,
             color: respiratoryColor,
             source: respiratoryRate?.cardSource,
+            emptyMessage: tooMuch(VitalsPeriodMetric.respiratoryRate),
           ),
           OverviewCard(
             metric: HeartMetric.bodyTemperature,
@@ -423,6 +437,7 @@ class HeartVitalsRespiratorySection extends StatelessWidget {
             icon: Icons.device_thermostat,
             color: temperatureColor,
             source: bodyTemperature?.latest.source,
+            emptyMessage: tooMuch(VitalsPeriodMetric.bodyTemperature),
           ),
           OverviewCard(
             metric: HeartMetric.skinTemperature,
@@ -432,6 +447,7 @@ class HeartVitalsRespiratorySection extends StatelessWidget {
             icon: Icons.device_thermostat,
             color: temperatureColor,
             source: skinTemperature?.latest.source,
+            emptyMessage: tooMuch(VitalsPeriodMetric.skinTemperature),
           ),
         ]),
         // Kotlin `RespiratoryOverviewChartsContent`.
@@ -524,6 +540,7 @@ class OverviewCard {
     required this.icon,
     required this.color,
     this.source,
+    this.emptyMessage,
   });
 
   final HeartMetric metric;
@@ -532,6 +549,10 @@ class OverviewCard {
   final IconData icon;
   final Color color;
   final String? source;
+
+  /// Placeholder text when [value] is null. Defaults to "no readings"; a metric
+  /// that was too large to read over the range passes its own message here.
+  final String? emptyMessage;
 }
 
 /// Kotlin `OverviewMetricRowsContent`: the metric cards laid out two per row,
@@ -576,7 +597,7 @@ class MetricCardGrid extends StatelessWidget {
         title: card.title,
         icon: card.icon,
         accentColor: card.color,
-        message: l10n.messageNoReadingsPeriod,
+        message: card.emptyMessage ?? l10n.messageNoReadingsPeriod,
         onTap: open,
       );
     }

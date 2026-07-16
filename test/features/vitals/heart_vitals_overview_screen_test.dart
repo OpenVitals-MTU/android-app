@@ -107,12 +107,19 @@ HeartPeriodData _heartData() {
   );
 }
 
-VitalsPeriodData _vitalsData(DateTime now) => VitalsPeriodData(
-      skinTemperature: [
-        _skin(now.subtract(const Duration(days: 1)), -0.3),
-        _skin(now, 0.4),
-      ],
-    );
+// The overview loads at week by default, which reads native daily aggregates
+// plus each metric's latest reading (not the raw list). Provide both so the skin
+// card renders the way the screen sees it in production.
+VitalsPeriodData _vitalsData(DateTime now) {
+  final today = LocalDate.fromDateTime(now);
+  return VitalsPeriodData(
+    skinTemperatureDaily: [
+      DailyVitalPoint(date: today.plusDays(-1), value: -0.3, count: 1),
+      DailyVitalPoint(date: today, value: 0.4, count: 1),
+    ],
+    latestSkinTemperature: _skin(now, 0.4),
+  );
+}
 
 Future<Widget> _bootstrap({
   required ProviderContainer container,
