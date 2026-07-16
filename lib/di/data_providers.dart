@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/local/beverage/beverage_store.dart';
 import '../data/local/open_vitals_database.dart';
+import '../data/sync/vitals_history_sync_service.dart';
 import '../data/prefs/preferences_repository.dart';
 import '../data/repository/body_energy_timeline_cache_store.dart';
 import '../data/repository/contract/activity_repository.dart';
@@ -99,6 +100,13 @@ final feelCheckDaoProvider = Provider<FeelCheckDao>(
 
 final vitalsDailyCacheDaoProvider = Provider<VitalsDailyCacheDao>(
   (ref) => ref.watch(openVitalsDatabaseProvider).vitalsDailyCacheDao,
+);
+
+final vitalsHistorySyncServiceProvider = Provider<VitalsHistorySyncService>(
+  (ref) => VitalsHistorySyncService(
+    ref.watch(vitalsDailyCacheDaoProvider),
+    ref.watch(healthDataSourceProvider),
+  ),
 );
 
 final bodyEnergyFeelCheckRepositoryProvider =
