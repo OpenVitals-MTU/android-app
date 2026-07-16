@@ -18,6 +18,7 @@ import '../../../../domain/model/mindfulness_models.dart';
 import '../../../../domain/model/nutrition_models.dart';
 import '../../../../domain/model/sleep_models.dart';
 import '../../../../domain/model/sleep_session_merging.dart';
+import '../../../../domain/model/vitals_change_batch.dart';
 import '../../../../domain/model/vitals_models.dart';
 import '../../../../domain/preferences/sleep_range_mode.dart';
 import '../../../../domain/model/apple_health_import_records.dart';
@@ -1914,6 +1915,40 @@ Duration? _zoneOffset(int? seconds) =>
       ),
     );
   }
+
+  // ── Vitals changes API (daily-aggregate cache) ─────────────────────────────
+
+  @override
+  Future<String> getVitalsChangesToken(String recordType) => _catch(
+        () => _api.getVitalsChangesToken(recordType),
+        '',
+        read: 'getVitalsChangesToken',
+      );
+
+  @override
+  Future<VitalsChangeBatch> getVitalsChanges(String token) => _catch(
+        () async {
+          final msg = await _api.getVitalsChanges(token);
+          return VitalsChangeBatch(
+            upsertedDays: [
+              for (final ms in msg.upsertedDayEpochMs.whereType<int>())
+                LocalDate.fromDateTime(_fromMs(ms)),
+            ],
+            hasDeletions: msg.hasDeletions,
+            nextToken: msg.nextToken,
+            tokenExpired: msg.tokenExpired,
+            hasMore: msg.hasMore,
+          );
+        },
+        VitalsChangeBatch(
+          upsertedDays: const [],
+          hasDeletions: false,
+          nextToken: token,
+          tokenExpired: false,
+          hasMore: false,
+        ),
+        read: 'getVitalsChanges',
+      );
 
   // ── Sleep (Phase 7) — typed via native SleepHealthReader; merge in Dart ─────
 

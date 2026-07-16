@@ -483,6 +483,28 @@ class DailyBloodPressurePointMsg {
   );
 }
 
+/// A batch of Health Connect changes for one record type, from a changes token.
+/// [upsertedDayEpochMs] is the deduped set of local day-starts touched by
+/// inserted/updated records (so the cache recomputes just those days).
+/// [hasDeletions] is true if any record was deleted — deletions carry only an id,
+/// not a date, so the cache full-rebuilds that metric when set. Paginate with
+/// [nextToken] while [hasMore]; [tokenExpired] means start over from a fresh
+/// token + full read.
+class VitalsChangesMsg {
+  final List<int> upsertedDayEpochMs;
+  final bool hasDeletions;
+  final String nextToken;
+  final bool tokenExpired;
+  final bool hasMore;
+  VitalsChangesMsg(
+    this.upsertedDayEpochMs,
+    this.hasDeletions,
+    this.nextToken,
+    this.tokenExpired,
+    this.hasMore,
+  );
+}
+
 // ── Nutrition (Phase 6) ──────────────────────────────────────────────────────
 
 enum CaloriesBurnedSourceMsg { noData, recordedTotal, estimatedActiveAndBmr }
@@ -1281,6 +1303,12 @@ abstract class HealthConnectHostApi {
   BloodGlucoseEntryMsg? readLatestBloodGlucose(int startEpochMs, int endEpochMs);
   @async
   SkinTemperatureEntryMsg? readLatestSkinTemperature(int startEpochMs, int endEpochMs);
+  // Changes API for the local daily-aggregate cache: register a token for one
+  // record type (by canonical name, e.g. "RespiratoryRate"), then poll changes.
+  @async
+  String getVitalsChangesToken(String recordType);
+  @async
+  VitalsChangesMsg getVitalsChanges(String token);
   @async
   String writeVitalsMeasurementEntry(VitalsMeasurementWriteRequestMsg request);
   @async

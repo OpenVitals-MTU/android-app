@@ -248,6 +248,12 @@ abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
   Future<SkinTemperatureEntryMsg?> readLatestSkinTemperature(int startEpochMs, int endEpochMs) => unimplemented('readLatestSkinTemperature');
 
   @override
+  Future<String> getVitalsChangesToken(String recordType) => unimplemented('getVitalsChangesToken');
+
+  @override
+  Future<VitalsChangesMsg> getVitalsChanges(String token) => unimplemented('getVitalsChanges');
+
+  @override
   Future<String> writeVitalsMeasurementEntry(VitalsMeasurementWriteRequestMsg request) => unimplemented('writeVitalsMeasurementEntry');
 
   @override

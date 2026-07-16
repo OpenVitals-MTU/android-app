@@ -8,6 +8,7 @@ import '../../../domain/model/health_connect_feature_status.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/mindfulness_models.dart';
 import '../../../domain/model/nutrition_models.dart';
+import '../../../domain/model/vitals_change_batch.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
@@ -531,6 +532,19 @@ class HealthDataSource {
     LocalDate end,
   ) async =>
       null;
+
+  // Changes API for the daily-aggregate cache (Stage 4 follow-up). Base returns
+  // an empty token / no-op batch; overridden by HealthConnectNativeDataSource.
+  Future<String> getVitalsChangesToken(String recordType) async => '';
+
+  Future<VitalsChangeBatch> getVitalsChanges(String token) async =>
+      VitalsChangeBatch(
+        upsertedDays: const [],
+        hasDeletions: false,
+        nextToken: token,
+        tokenExpired: false,
+        hasMore: false,
+      );
 
   Future<String> writeVitalsMeasurementEntry(
     VitalsMeasurementWriteRequest request,
