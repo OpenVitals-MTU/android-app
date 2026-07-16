@@ -5,6 +5,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/stats/stats.dart';
 import '../../../core/time/local_date.dart';
+import '../../../data/repository/contract/vitals_repository.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../domain/usecase/load_heart_period_use_case.dart';
@@ -43,6 +44,9 @@ abstract class HeartVitalsOverviewDisplay with _$HeartVitalsOverviewDisplay {
     RespiratoryRateOverview? respiratoryRate,
     BodyTemperatureOverview? bodyTemperature,
     SkinTemperatureOverview? skinTemperature,
+    // Vitals whose daily read was too large to complete over this range; their
+    // cards show an "unavailable for this range" state, not "no readings".
+    @Default(<VitalsPeriodMetric>{}) Set<VitalsPeriodMetric> unavailableForRange,
   }) = _HeartVitalsOverviewDisplay;
 }
 
@@ -227,6 +231,7 @@ HeartVitalsOverviewDisplay buildHeartVitalsOverviewDisplay(
     respiratoryRate: _respiratoryRate(result, selectedRange, vitals),
     bodyTemperature: _bodyTemperature(result, selectedRange, vitals),
     skinTemperature: _skinTemperature(result, selectedRange, vitals),
+    unavailableForRange: result.timedOutVitals,
   );
 }
 

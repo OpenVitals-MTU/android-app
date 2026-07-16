@@ -99,6 +99,47 @@ PeriodLoadQuery _dayQuery() => PeriodLoadQuery(
       anchorDate: const LocalDate(2026, 7, 16),
     );
 
+/// A source whose respiratory-rate DAILY read never returns (a year of dense
+/// data), while every other metric answers empty from the base defaults. Models
+/// the real "one metric is too large to read raw" case on the non-day overview.
+class _SlowRespiratorySource extends HealthDataSource {
+  _SlowRespiratorySource(this.gate);
+
+  final Completer<void> gate;
+
+  @override
+  HealthConnectAvailability get cachedAvailability =>
+      HealthConnectAvailability.available;
+
+  @override
+  bool isSkinTemperatureAvailable() => true;
+
+  @override
+  Future<Set<String>> grantedPermissions() async => {
+        HcPermissions.readBloodPressure,
+        HcPermissions.readSpO2,
+        HcPermissions.readRespiratoryRate,
+        HcPermissions.readBodyTemperature,
+        HcPermissions.readVo2Max,
+        HcPermissions.readBloodGlucose,
+        HcPermissions.readSkinTemperature,
+      };
+
+  @override
+  Future<List<DailyVitalPoint>> readDailyRespiratoryRate(
+    LocalDate start,
+    LocalDate end,
+  ) async {
+    await gate.future;
+    return const [];
+  }
+}
+
+PeriodLoadQuery _yearQuery() => PeriodLoadQuery(
+      range: TimeRange.year,
+      anchorDate: const LocalDate(2026, 7, 16),
+    );
+
 void main() {
   group('VitalsRepositoryImpl.loadVitalsPeriod (ALL)', () {
     test('fans the seven vitals reads out concurrently, not serially', () async {
@@ -135,6 +176,31 @@ void main() {
         async.elapse(const Duration(seconds: 31));
         expect(result, isA<Err<VitalsPeriodData>>(),
             reason: 'the read budget must surface a retryable failure');
+      });
+    });
+
+    test('a metric too large to read degrades to empty and is flagged, not fatal',
+        () {
+      fakeAsync((async) {
+        // Respiratory hangs; the other metrics answer empty immediately.
+        final source = _SlowRespiratorySource(Completer<void>());
+
+        Result<VitalsPeriodData>? result;
+        VitalsRepositoryImpl(source)
+            .loadVitalsPeriod(_yearQuery(), VitalsPeriodMetric.all)
+            .then((r) => result = r);
+
+        async.flushMicrotasks();
+        // Past the per-metric budget (6s) but well under the whole-load budget.
+        async.elapse(const Duration(seconds: 7));
+        async.flushMicrotasks();
+
+        expect(result, isA<Ok<VitalsPeriodData>>(),
+            reason: 'one slow metric must not fail the whole overview');
+        final data = (result! as Ok<VitalsPeriodData>).value;
+        expect(data.respiratoryRateDaily, isEmpty);
+        expect(data.timedOutMetrics, {VitalsPeriodMetric.respiratoryRate},
+            reason: 'the timed-out metric is flagged so its card can say so');
       });
     });
   });

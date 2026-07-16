@@ -1925,6 +1925,7 @@
   "messageNoMindfulnessPeriod": "No mindfulness sessions were recorded for this period.",
   "messageNoVitalsPeriod": "No vitals were recorded for this period.",
   "messageNoReadingsPeriod": "No readings in this period.",
+  "messageTooMuchDataRange": "Too much data to chart over this range. Try a shorter range.",
   "messageNoCyclePeriod": "No cycle data was recorded for this period.",
   "messageNoSegments": "No segments recorded.",
   "messageNoLaps": "No laps recorded.",

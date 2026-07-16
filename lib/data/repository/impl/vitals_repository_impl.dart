@@ -104,13 +104,33 @@ class VitalsRepositoryImpl implements VitalsRepository {
         // daily point carries its reading count, so the cards' period averages
         // stay count-weighted (no data-quality loss). The display synthesizes
         // its chart points from these; see heart_vitals_overview_display.dart.
-        final bpDaily = _bloodPressureDaily(c.start, c.end, granted);
-        final spo2Daily = _spO2Daily(c.start, c.end, granted);
-        final respDaily = _respiratoryRateDaily(c.start, c.end, granted);
-        final bodyDaily = _bodyTemperatureDaily(c.start, c.end, granted);
-        final vo2Daily = _vo2MaxDaily(c.start, c.end, granted);
-        final glucoseDaily = _bloodGlucoseDaily(c.start, c.end, granted);
-        final skinDaily = _skinTemperatureDaily(c.start, c.end, granted);
+        //
+        // Each daily read gets its OWN budget: a metric with no HC aggregate and
+        // a densely-sampled year (respiratory rate can be 40s+) degrades to empty
+        // and is flagged in [timedOut], instead of sinking the whole overview.
+        final timedOut = <VitalsPeriodMetric>{};
+        Future<List<T>> budgeted<T>(
+          VitalsPeriodMetric metric,
+          Future<List<T>> read,
+        ) =>
+            read.timeout(vitalsMetricBudget, onTimeout: () {
+              timedOut.add(metric);
+              return <T>[];
+            });
+        final bpDaily = budgeted(VitalsPeriodMetric.bloodPressure,
+            _bloodPressureDaily(c.start, c.end, granted));
+        final spo2Daily =
+            budgeted(VitalsPeriodMetric.spo2, _spO2Daily(c.start, c.end, granted));
+        final respDaily = budgeted(VitalsPeriodMetric.respiratoryRate,
+            _respiratoryRateDaily(c.start, c.end, granted));
+        final bodyDaily = budgeted(VitalsPeriodMetric.bodyTemperature,
+            _bodyTemperatureDaily(c.start, c.end, granted));
+        final vo2Daily = budgeted(
+            VitalsPeriodMetric.vo2Max, _vo2MaxDaily(c.start, c.end, granted));
+        final glucoseDaily = budgeted(VitalsPeriodMetric.bloodGlucose,
+            _bloodGlucoseDaily(c.start, c.end, granted));
+        final skinDaily = budgeted(VitalsPeriodMetric.skinTemperature,
+            _skinTemperatureDaily(c.start, c.end, granted));
         final bpLatest = _latestBloodPressure(c.start, c.end, granted);
         final spo2Latest = _latestSpO2(c.start, c.end, granted);
         final respLatest = _latestRespiratoryRate(c.start, c.end, granted);
@@ -136,6 +156,7 @@ class VitalsRepositoryImpl implements VitalsRepository {
         ]);
         return VitalsPeriodData(
           missingVitalsPermissions: missing,
+          timedOutMetrics: timedOut,
           bloodPressureDaily: await bpDaily,
           spO2Daily: await spo2Daily,
           respiratoryRateDaily: await respDaily,

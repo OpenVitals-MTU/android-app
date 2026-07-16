@@ -90,6 +90,7 @@ class HeartPeriodLoadResult {
     this.latestBodyTemperatureReading,
     this.latestBloodGlucoseReading,
     this.latestSkinTemperatureReading,
+    this.timedOutVitals = const {},
   });
 
   final List<HeartRateSample> daySamples;
@@ -145,6 +146,7 @@ class HeartPeriodLoadResult {
   final BodyTempEntry? latestBodyTemperatureReading;
   final BloodGlucoseEntry? latestBloodGlucoseReading;
   final SkinTemperatureEntry? latestSkinTemperatureReading;
+  final Set<VitalsPeriodMetric> timedOutVitals;
 
   HeartPeriodLoadResult merge(HeartPeriodLoadResult other) =>
       HeartPeriodLoadResult(
@@ -260,6 +262,7 @@ class HeartPeriodLoadResult {
             latestBloodGlucoseReading ?? other.latestBloodGlucoseReading,
         latestSkinTemperatureReading:
             latestSkinTemperatureReading ?? other.latestSkinTemperatureReading,
+        timedOutVitals: {...timedOutVitals, ...other.timedOutVitals},
       );
 }
 
@@ -425,5 +428,6 @@ class LoadHeartPeriodUseCase {
         latestBodyTemperatureReading: data.latestBodyTemperature,
         latestBloodGlucoseReading: data.latestBloodGlucose,
         latestSkinTemperatureReading: data.latestSkinTemperature,
+        timedOutVitals: data.timedOutMetrics,
       );
 }

@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../data/repository/contract/vitals_repository.dart';
 import '../model/vitals_models.dart';
 
 part 'vitals_period_data.freezed.dart';
@@ -8,6 +9,10 @@ part 'vitals_period_data.freezed.dart';
 abstract class VitalsPeriodData with _$VitalsPeriodData {
   const factory VitalsPeriodData({
     @Default(<String>{}) Set<String> missingVitalsPermissions,
+    // Non-day metrics whose daily read exceeded its budget (too large to read
+    // raw over this range) — the card shows an "unavailable for this range"
+    // state instead of "no readings". See VitalsRepositoryImpl.
+    @Default(<VitalsPeriodMetric>{}) Set<VitalsPeriodMetric> timedOutMetrics,
     @Default(<BloodPressureEntry>[]) List<BloodPressureEntry> bloodPressure,
     @Default(<BloodPressureEntry>[])
     List<BloodPressureEntry> previousBloodPressure,

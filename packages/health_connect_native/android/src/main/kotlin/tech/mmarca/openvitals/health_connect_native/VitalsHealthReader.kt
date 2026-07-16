@@ -144,6 +144,7 @@ internal class VitalsHealthReader(
         recordType = BloodPressureRecord::class,
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = true,
+        pageSize = DailyReadPageSize,
       ).groupBy { it.time.atZone(zone).toLocalDate() }
         .mapNotNull { (date, records) ->
           if (records.isEmpty()) return@mapNotNull null
@@ -163,6 +164,7 @@ internal class VitalsHealthReader(
         recordType = OxygenSaturationRecord::class,
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = true,
+        pageSize = DailyReadPageSize,
       ).dailyPoints({ it.time }, { it.percentage.value })
     }
 
@@ -172,6 +174,7 @@ internal class VitalsHealthReader(
         recordType = RespiratoryRateRecord::class,
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = true,
+        pageSize = DailyReadPageSize,
       ).dailyPoints({ it.time }, { it.rate })
     }
 
@@ -181,6 +184,7 @@ internal class VitalsHealthReader(
         recordType = BodyTemperatureRecord::class,
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = true,
+        pageSize = DailyReadPageSize,
       ).dailyPoints({ it.time }, { it.temperature.inCelsius })
     }
 
@@ -190,6 +194,7 @@ internal class VitalsHealthReader(
         recordType = Vo2MaxRecord::class,
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = true,
+        pageSize = DailyReadPageSize,
       ).dailyPoints({ it.time }, { it.vo2MillilitersPerMinuteKilogram })
     }
 
@@ -199,6 +204,7 @@ internal class VitalsHealthReader(
         recordType = BloodGlucoseRecord::class,
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = true,
+        pageSize = DailyReadPageSize,
       ).dailyPoints({ it.time }, { it.level.inMillimolesPerLiter })
     }
 
@@ -210,6 +216,7 @@ internal class VitalsHealthReader(
         recordType = SkinTemperatureRecord::class,
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = true,
+        pageSize = DailyReadPageSize,
       ).dailyPoints({ it.startTime }, { record -> record.deltas.map { it.delta.inCelsius }.averageOrNull() })
     }
 
@@ -516,6 +523,12 @@ internal class VitalsHealthReader(
   )
 
   private companion object {
+    // A year of a densely-sampled series (e.g. respiratory rate from a wearable)
+    // is hundreds of thousands of records. readRecordsPaged makes one Health
+    // Connect IPC round-trip per page, so the default 1000 turned a year into
+    // ~175 round-trips (~44s). The platform caps a page at 5000; using it cuts
+    // the round-trips ~5x, which is what keeps a dense Year read under budget.
+    private const val DailyReadPageSize = 5000
     private const val MinSystolicMmHg = 20.0
     private const val MaxSystolicMmHg = 200.0
     private const val MinDiastolicMmHg = 10.0
