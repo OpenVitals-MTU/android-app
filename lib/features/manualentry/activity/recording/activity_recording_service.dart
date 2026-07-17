@@ -48,6 +48,18 @@ import 'activity_recording_task_handler.dart';
 /// rest / repetition bookkeeping, snapshot building) are shared with the tested
 /// model helpers. The device I/O is best-effort and intentionally deferred from
 /// unit testing — only compile-cleanliness is required here.
+
+/// The monochrome status-bar icon for the recording notification.
+///
+/// [NotificationIcon.metaDataName] is the name of an application `<meta-data>` in
+/// AndroidManifest.xml whose `android:resource` is the drawable id. Without it the
+/// foreground service falls back to the full-colour launcher icon, which Android
+/// renders as a blank/placeholder square in the status bar and shade. Passed on
+/// every start/update, since `updateService` resets the icon when it is omitted.
+const NotificationIcon _recordingNotificationIcon = NotificationIcon(
+  metaDataName: 'tech.mmarca.openvitals.ACTIVITY_RECORDING_ICON',
+);
+
 class ActivityRecordingService implements ActivityRecordingController {
   ActivityRecordingService({
     required this.preferencesRepository,
@@ -1346,6 +1358,7 @@ class ActivityRecordingService implements ActivityRecordingController {
           await FlutterForegroundTask.updateService(
             notificationTitle: l10n.activityRecordingNotificationTitle,
             notificationText: text,
+            notificationIcon: _recordingNotificationIcon,
             notificationButtons: _notificationButtonsFor(state, l10n),
           );
           return;
@@ -1354,6 +1367,7 @@ class ActivityRecordingService implements ActivityRecordingController {
           serviceTypes: _serviceTypesFor(state),
           notificationTitle: l10n.activityRecordingNotificationTitle,
           notificationText: text,
+          notificationIcon: _recordingNotificationIcon,
           notificationButtons: _notificationButtonsFor(state, l10n),
           // Tapping the notification opens the activity entry screen, the
           // Kotlin content intent's deep link.
@@ -1390,6 +1404,7 @@ class ActivityRecordingService implements ActivityRecordingController {
         await FlutterForegroundTask.updateService(
           notificationTitle: l10n.activityRecordingNotificationTitle,
           notificationText: text,
+          notificationIcon: _recordingNotificationIcon,
           notificationButtons: buttons,
         );
       } catch (error) {
