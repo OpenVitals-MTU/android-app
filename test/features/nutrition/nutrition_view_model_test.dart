@@ -30,6 +30,15 @@ class _FakeNutritionRepository implements NutritionRepository {
   int loads = 0;
   RefreshMode? lastRefreshMode;
 
+  Result<void> deleteAnswer = const Ok(null);
+  final List<String> deletedIds = [];
+
+  @override
+  Future<Result<void>> deleteNutritionEntry(String id) async {
+    deletedIds.add(id);
+    return deleteAnswer;
+  }
+
   /// Completed by the test, so two loads can be held in flight at once.
   final List<Completer<NutritionPeriodData>> gates = [];
   bool gated = false;
@@ -199,5 +208,77 @@ void main() {
     final state = container.read(provider);
     expect(state.selectedRange, TimeRange.month);
     expect(state.display!.metricSeries.total, 1000.0);
+  });
+
+  group('deleteNutritionEntry', () {
+    NutritionEntry meal(String id, {required bool owned}) => NutritionEntry(
+          time: DateTime(2026, 3, 2, 12),
+          mealType: 0,
+          name: 'Lunch',
+          energyKcal: 700,
+          proteinGrams: 0,
+          carbsGrams: 0,
+          fatGrams: 0,
+          fiberGrams: 0,
+          sugarGrams: 0,
+          source: 'test',
+          id: id,
+          isOpenVitalsEntry: owned,
+        );
+
+    test('removes an owned meal and deletes it through the repository',
+        () async {
+      final entry = meal('m1', owned: true);
+      await boot(Ok(NutritionPeriodData(
+        dailyMacros: [_macros(monday, 700)],
+        entries: [entry],
+      )));
+      container.listen(provider, (_, _) {});
+      await container.read(provider.notifier).load(selection);
+
+      repository.answer = const Ok(NutritionPeriodData());
+      await container.read(provider.notifier).deleteNutritionEntry('m1');
+
+      expect(repository.deletedIds, ['m1']);
+      expect(container.read(provider).entries, isEmpty);
+      expect(
+        container.read(provider).display!.entriesNewestFirst,
+        isEmpty,
+      );
+    });
+
+    test('ignores a foreign meal it does not own', () async {
+      final entry = meal('m1', owned: false);
+      await boot(Ok(NutritionPeriodData(
+        dailyMacros: [_macros(monday, 700)],
+        entries: [entry],
+      )));
+      container.listen(provider, (_, _) {});
+      await container.read(provider.notifier).load(selection);
+
+      await container.read(provider.notifier).deleteNutritionEntry('m1');
+
+      expect(repository.deletedIds, isEmpty);
+      expect(container.read(provider).entries, hasLength(1));
+    });
+
+    test('rolls the row back and surfaces the error when the delete fails',
+        () async {
+      final entry = meal('m1', owned: true);
+      await boot(Ok(NutritionPeriodData(
+        dailyMacros: [_macros(monday, 700)],
+        entries: [entry],
+      )));
+      container.listen(provider, (_, _) {});
+      await container.read(provider.notifier).load(selection);
+
+      repository.deleteAnswer =
+          const Err(UnexpectedFailure('Health Connect is gone'));
+      await container.read(provider.notifier).deleteNutritionEntry('m1');
+
+      final state = container.read(provider);
+      expect(state.entries, hasLength(1));
+      expect(state.error, isNotNull);
+    });
   });
 }

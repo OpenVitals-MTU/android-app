@@ -75,6 +75,7 @@ class NutritionScreen extends ConsumerWidget {
               period: period,
               formatter: formatter,
               weekPeriodMode: weekMode,
+              onDeleteEntry: notifier.deleteNutritionEntry,
             ),
           ],
         ),
@@ -89,12 +90,14 @@ class _NutritionOverviewContent extends StatelessWidget {
     required this.period,
     required this.formatter,
     required this.weekPeriodMode,
+    required this.onDeleteEntry,
   });
 
   final NutritionState state;
   final DatePeriod period;
   final UnitFormatter formatter;
   final WeekPeriodMode weekPeriodMode;
+  final void Function(String entryId) onDeleteEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +207,7 @@ class _NutritionOverviewContent extends StatelessWidget {
             ),
             entries: selectedEntries,
             formatter: formatter,
+            onDelete: (entry) => onDeleteEntry(entry.id),
           )),
         ),
         // Kotlin section DATA_CONFIDENCE (hidden on a single-day period).
@@ -236,6 +240,7 @@ class _NutritionOverviewContent extends StatelessWidget {
             title: l10n.sectionMeals,
             entries: display.entriesNewestFirst,
             formatter: formatter,
+            onDelete: (entry) => onDeleteEntry(entry.id),
           )),
         ),
       ],

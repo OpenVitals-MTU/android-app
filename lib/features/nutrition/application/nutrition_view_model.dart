@@ -171,6 +171,46 @@ class NutritionViewModel extends Notifier<NutritionState>
         PeriodSelection(state.selectedRange, state.selectedDate),
         refreshMode: RefreshMode.force,
       );
+
+  /// Remove an OpenVitals-authored meal optimistically so the row leaves the
+  /// list at once, delete it through the repository, then force-reload the
+  /// period; restore the previous state (with an error) on failure. Nutrition
+  /// entries are delete-only — the Kotlin screens never edited them.
+  Future<void> deleteNutritionEntry(String entryId) async {
+    if (entryId.isEmpty) return;
+    final entry = _entryById(entryId);
+    if (entry == null || !entry.isOpenVitalsEntry) return;
+
+    final previous = state;
+    final remaining = [
+      for (final e in state.entries)
+        if (e.id != entryId) e,
+    ];
+    final trimmed = state.copyWith(entries: remaining, error: null);
+    state = trimmed.copyWith(display: _display(trimmed));
+
+    final deletion =
+        await ref.read(deleteNutritionEntryUseCaseProvider)(entryId);
+    if (!ref.mounted) return;
+    switch (deletion) {
+      case Ok():
+        await load(
+          PeriodSelection(state.selectedRange, state.selectedDate),
+          refreshMode: RefreshMode.force,
+        );
+      case Err(:final failure):
+        state = previous.copyWith(
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
+    }
+  }
+
+  NutritionEntry? _entryById(String entryId) {
+    for (final entry in state.entries) {
+      if (entry.id == entryId) return entry;
+    }
+    return null;
+  }
 }
 
 /// One [NotifierProvider] per keyed nutrition metric, built eagerly so each
