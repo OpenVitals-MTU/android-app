@@ -92,14 +92,17 @@ HeartPeriodData _heart({int avgBpm = 70}) => HeartPeriodData(
       ],
     );
 
+// A week load reads native daily aggregates plus the latest reading, not the
+// raw list — so seed both, the way the repository fills them for a long range.
 VitalsPeriodData _vitals() => VitalsPeriodData(
-      spO2: [
-        SpO2Entry(
-          time: DateTime.utc(2026, 3, 2, 8),
-          percent: 96,
-          source: 'Ring',
-        ),
+      spO2Daily: const [
+        DailyVitalPoint(date: LocalDate(2026, 3, 2), value: 96, count: 1),
       ],
+      latestSpO2: SpO2Entry(
+        time: DateTime.utc(2026, 3, 2, 8),
+        percent: 96,
+        source: 'Ring',
+      ),
     );
 
 void main() {

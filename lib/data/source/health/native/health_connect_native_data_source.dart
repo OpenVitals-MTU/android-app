@@ -18,6 +18,7 @@ import '../../../../domain/model/mindfulness_models.dart';
 import '../../../../domain/model/nutrition_models.dart';
 import '../../../../domain/model/sleep_models.dart';
 import '../../../../domain/model/sleep_session_merging.dart';
+import '../../../../domain/model/vitals_change_batch.dart';
 import '../../../../domain/model/vitals_models.dart';
 import '../../../../domain/preferences/sleep_range_mode.dart';
 import '../../../../domain/model/apple_health_import_records.dart';
@@ -1676,6 +1677,278 @@ Duration? _zoneOffset(int? seconds) =>
       sortBy: (e) => e.time,
     );
   }
+
+  // ── Vitals daily aggregates (Stage 4) — one point per day for long ranges ───
+
+  DailyVitalPoint _dailyVitalPoint(DailyVitalPointMsg m) => DailyVitalPoint(
+        date: LocalDate.fromDateTime(_fromMs(m.dateEpochMs)),
+        value: m.value,
+        count: m.count,
+      );
+
+  @override
+  Future<List<DailyBloodPressurePoint>> readDailyBloodPressure(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readList(
+        'readDailyBloodPressure',
+        () => _api.readDailyBloodPressure(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => DailyBloodPressurePoint(
+          date: LocalDate.fromDateTime(_fromMs(m.dateEpochMs)),
+          systolic: m.systolic,
+          diastolic: m.diastolic,
+          count: m.count,
+        ),
+      );
+
+  @override
+  Future<List<DailyVitalPoint>> readDailySpO2(LocalDate start, LocalDate end) =>
+      _readList(
+        'readDailySpO2',
+        () => _api.readDailySpO2(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _dailyVitalPoint,
+      );
+
+  @override
+  Future<List<DailyVitalPoint>> readDailyRespiratoryRate(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readList(
+        'readDailyRespiratoryRate',
+        () => _api.readDailyRespiratoryRate(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _dailyVitalPoint,
+      );
+
+  @override
+  Future<List<DailyVitalPoint>> readDailyBodyTemperature(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readList(
+        'readDailyBodyTemperature',
+        () => _api.readDailyBodyTemperature(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _dailyVitalPoint,
+      );
+
+  @override
+  Future<List<DailyVitalPoint>> readDailyVo2Max(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readList(
+        'readDailyVo2Max',
+        () => _api.readDailyVo2Max(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _dailyVitalPoint,
+      );
+
+  @override
+  Future<List<DailyVitalPoint>> readDailyBloodGlucose(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readList(
+        'readDailyBloodGlucose',
+        () => _api.readDailyBloodGlucose(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _dailyVitalPoint,
+      );
+
+  @override
+  Future<List<DailyVitalPoint>> readDailySkinTemperature(
+    LocalDate start,
+    LocalDate end,
+  ) async {
+    if (!isSkinTemperatureAvailable()) return const <DailyVitalPoint>[];
+    return _readList(
+      'readDailySkinTemperature',
+      () => _api.readDailySkinTemperature(
+        _dayStart(start).millisecondsSinceEpoch,
+        _dayEnd(end).millisecondsSinceEpoch,
+      ),
+      _dailyVitalPoint,
+    );
+  }
+
+  // Latest reading across a whole window (not a single day), so a long-range
+  // card shows the true newest value/source without loading the raw list.
+
+  @override
+  Future<BloodPressureEntry?> readLatestBloodPressureInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readOne(
+        'readLatestBloodPressureInWindow',
+        () => _api.readLatestBloodPressure(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _bloodPressureEntry,
+      );
+
+  @override
+  Future<SpO2Entry?> readLatestSpO2InWindow(LocalDate start, LocalDate end) =>
+      _readOne(
+        'readLatestSpO2InWindow',
+        () => _api.readLatestSpO2(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _spO2Entry,
+      );
+
+  @override
+  Future<Vo2MaxEntry?> readLatestVo2MaxInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readOne(
+        'readLatestVo2MaxInWindow',
+        () => _api.readLatestVo2Max(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _vo2MaxEntry,
+      );
+
+  @override
+  Future<RespiratoryRateEntry?> readLatestRespiratoryRateInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readOne(
+        'readLatestRespiratoryRateInWindow',
+        () => _api.readLatestRespiratoryRate(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => RespiratoryRateEntry(
+          time: _fromMs(m.timeEpochMs),
+          breathsPerMinute: m.breathsPerMinute,
+          source: m.source,
+          id: m.id,
+          isOpenVitalsEntry: m.isOpenVitalsEntry,
+        ),
+      );
+
+  @override
+  Future<BodyTempEntry?> readLatestBodyTemperatureInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readOne(
+        'readLatestBodyTemperatureInWindow',
+        () => _api.readLatestBodyTemperature(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => BodyTempEntry(
+          time: _fromMs(m.timeEpochMs),
+          temperatureCelsius: m.temperatureCelsius,
+          source: m.source,
+          id: m.id,
+          isOpenVitalsEntry: m.isOpenVitalsEntry,
+        ),
+      );
+
+  @override
+  Future<BloodGlucoseEntry?> readLatestBloodGlucoseInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) =>
+      _readOne(
+        'readLatestBloodGlucoseInWindow',
+        () => _api.readLatestBloodGlucose(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => BloodGlucoseEntry(
+          time: _fromMs(m.timeEpochMs),
+          millimolesPerLiter: m.millimolesPerLiter,
+          specimenSource: m.specimenSource,
+          mealType: m.mealType,
+          relationToMeal: m.relationToMeal,
+          source: m.source,
+        ),
+      );
+
+  @override
+  Future<SkinTemperatureEntry?> readLatestSkinTemperatureInWindow(
+    LocalDate start,
+    LocalDate end,
+  ) async {
+    if (!isSkinTemperatureAvailable()) return null;
+    return _readOne(
+      'readLatestSkinTemperatureInWindow',
+      () => _api.readLatestSkinTemperature(
+        _dayStart(start).millisecondsSinceEpoch,
+        _dayEnd(end).millisecondsSinceEpoch,
+      ),
+      (m) => SkinTemperatureEntry(
+        startTime: _fromMs(m.startEpochMs),
+        endTime: _fromMs(m.endEpochMs),
+        baselineCelsius: m.baselineCelsius,
+        averageDeltaCelsius: m.averageDeltaCelsius,
+        minDeltaCelsius: m.minDeltaCelsius,
+        maxDeltaCelsius: m.maxDeltaCelsius,
+        measurementLocation: m.measurementLocation,
+        source: m.source,
+      ),
+    );
+  }
+
+  // ── Vitals changes API (daily-aggregate cache) ─────────────────────────────
+
+  @override
+  Future<String> getVitalsChangesToken(String recordType) => _catch(
+        () => _api.getVitalsChangesToken(recordType),
+        '',
+        read: 'getVitalsChangesToken',
+      );
+
+  @override
+  Future<VitalsChangeBatch> getVitalsChanges(String token) => _catch(
+        () async {
+          final msg = await _api.getVitalsChanges(token);
+          return VitalsChangeBatch(
+            upsertedDays: [
+              for (final ms in msg.upsertedDayEpochMs.whereType<int>())
+                LocalDate.fromDateTime(_fromMs(ms)),
+            ],
+            hasDeletions: msg.hasDeletions,
+            nextToken: msg.nextToken,
+            tokenExpired: msg.tokenExpired,
+            hasMore: msg.hasMore,
+          );
+        },
+        VitalsChangeBatch(
+          upsertedDays: const [],
+          hasDeletions: false,
+          nextToken: token,
+          tokenExpired: false,
+          hasMore: false,
+        ),
+        read: 'getVitalsChanges',
+      );
 
   // ── Sleep (Phase 7) — typed via native SleepHealthReader; merge in Dart ─────
 

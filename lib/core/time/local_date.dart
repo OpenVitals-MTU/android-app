@@ -28,6 +28,14 @@ class LocalDate implements Comparable<LocalDate> {
   factory LocalDate.fromDateTime(DateTime dateTime) =>
       LocalDate(dateTime.year, dateTime.month, dateTime.day);
 
+  /// Inverse of [epochDay] — the calendar date [days] after the Unix epoch.
+  factory LocalDate.fromEpochDay(int days) => LocalDate.fromDateTime(
+        DateTime.fromMillisecondsSinceEpoch(
+          days * Duration.millisecondsPerDay,
+          isUtc: true,
+        ),
+      );
+
   /// Start of this day as a UTC instant (used for stable day arithmetic).
   DateTime atStartOfDayUtc() => DateTime.utc(year, month, day);
 

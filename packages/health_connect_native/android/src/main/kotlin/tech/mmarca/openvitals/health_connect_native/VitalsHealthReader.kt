@@ -118,16 +118,7 @@ internal class VitalsHealthReader(
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = false,
         pageSize = 200,
-      ).map { record ->
-        BloodGlucoseEntryMsg(
-          timeEpochMs = record.time.toEpochMilli(),
-          millimolesPerLiter = record.level.inMillimolesPerLiter,
-          specimenSource = record.specimenSource.toLong(),
-          mealType = record.mealType.toLong(),
-          relationToMeal = record.relationToMeal.toLong(),
-          source = record.metadata.dataOrigin.packageName,
-        )
-      }
+      ).map { it.toMsg() }
     }
 
   suspend fun readSkinTemperatureEntries(start: Instant, end: Instant): List<SkinTemperatureEntryMsg> =
@@ -137,20 +128,160 @@ internal class VitalsHealthReader(
         timeRangeFilter = TimeRangeFilter.between(start, end),
         ascendingOrder = false,
         pageSize = 200,
-      ).map { record ->
-        val deltasCelsius = record.deltas.map { it.delta.inCelsius }
-        SkinTemperatureEntryMsg(
-          startEpochMs = record.startTime.toEpochMilli(),
-          endEpochMs = record.endTime.toEpochMilli(),
-          baselineCelsius = record.baseline?.inCelsius,
-          averageDeltaCelsius = deltasCelsius.averageOrNull(),
-          minDeltaCelsius = deltasCelsius.minOrNull(),
-          maxDeltaCelsius = deltasCelsius.maxOrNull(),
-          measurementLocation = record.measurementLocation.toLong(),
-          source = record.metadata.dataOrigin.packageName,
+      ).map { it.toMsg() }
+    }
+
+  // ── Daily aggregates for long-range charts ─────────────────────────────────
+  // Health Connect exposes no AVG aggregate metric for these record types, so —
+  // like HeartHealthReader.readDailyHRV — we read the raw records once and bucket
+  // them by local date on this side, sending one point per day (plus its reading
+  // count) instead of a year of records across the Pigeon channel.
+
+  suspend fun readDailyBloodPressure(start: Instant, end: Instant): List<DailyBloodPressurePointMsg> =
+    support.withLogging("readDailyBloodPressure[$start..$end]", emptyList()) {
+      val zone = ZoneId.systemDefault()
+      support.client().readRecordsPaged(
+        recordType = BloodPressureRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = true,
+        pageSize = DailyReadPageSize,
+      ).groupBy { it.time.atZone(zone).toLocalDate() }
+        .mapNotNull { (date, records) ->
+          if (records.isEmpty()) return@mapNotNull null
+          DailyBloodPressurePointMsg(
+            dateEpochMs = date.atStartOfDay(zone).toInstant().toEpochMilli(),
+            systolic = records.map { it.systolic.inMillimetersOfMercury }.average(),
+            diastolic = records.map { it.diastolic.inMillimetersOfMercury }.average(),
+            count = records.size.toLong(),
+          )
+        }
+        .sortedBy { it.dateEpochMs }
+    }
+
+  suspend fun readDailySpO2(start: Instant, end: Instant): List<DailyVitalPointMsg> =
+    support.withLogging("readDailySpO2[$start..$end]", emptyList()) {
+      support.client().readRecordsPaged(
+        recordType = OxygenSaturationRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = true,
+        pageSize = DailyReadPageSize,
+      ).dailyPoints({ it.time }, { it.percentage.value })
+    }
+
+  suspend fun readDailyRespiratoryRate(start: Instant, end: Instant): List<DailyVitalPointMsg> =
+    support.withLogging("readDailyRespiratoryRate[$start..$end]", emptyList()) {
+      support.client().readRecordsPaged(
+        recordType = RespiratoryRateRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = true,
+        pageSize = DailyReadPageSize,
+      ).dailyPoints({ it.time }, { it.rate })
+    }
+
+  suspend fun readDailyBodyTemperature(start: Instant, end: Instant): List<DailyVitalPointMsg> =
+    support.withLogging("readDailyBodyTemperature[$start..$end]", emptyList()) {
+      support.client().readRecordsPaged(
+        recordType = BodyTemperatureRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = true,
+        pageSize = DailyReadPageSize,
+      ).dailyPoints({ it.time }, { it.temperature.inCelsius })
+    }
+
+  suspend fun readDailyVo2Max(start: Instant, end: Instant): List<DailyVitalPointMsg> =
+    support.withLogging("readDailyVo2Max[$start..$end]", emptyList()) {
+      support.client().readRecordsPaged(
+        recordType = Vo2MaxRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = true,
+        pageSize = DailyReadPageSize,
+      ).dailyPoints({ it.time }, { it.vo2MillilitersPerMinuteKilogram })
+    }
+
+  suspend fun readDailyBloodGlucose(start: Instant, end: Instant): List<DailyVitalPointMsg> =
+    support.withLogging("readDailyBloodGlucose[$start..$end]", emptyList()) {
+      support.client().readRecordsPaged(
+        recordType = BloodGlucoseRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = true,
+        pageSize = DailyReadPageSize,
+      ).dailyPoints({ it.time }, { it.level.inMillimolesPerLiter })
+    }
+
+  suspend fun readDailySkinTemperature(start: Instant, end: Instant): List<DailyVitalPointMsg> =
+    support.withLogging("readDailySkinTemperature[$start..$end]", emptyList()) {
+      // Match the chart, which plots (and the card reads) the per-record average
+      // delta — records with no deltas carry no value and drop out of the day.
+      support.client().readRecordsPaged(
+        recordType = SkinTemperatureRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = true,
+        pageSize = DailyReadPageSize,
+      ).dailyPoints({ it.startTime }, { record -> record.deltas.map { it.delta.inCelsius }.averageOrNull() })
+    }
+
+  suspend fun readLatestRespiratoryRate(start: Instant, end: Instant): RespiratoryRateEntryMsg? =
+    support.withNullableLogging("readLatestRespiratoryRate[$start..$end]") {
+      support.client().readRecordsPaged(
+        recordType = RespiratoryRateRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = false,
+        pageSize = 1,
+        maxRecords = 1,
+      ).firstOrNull()?.toMsg()
+    }
+
+  suspend fun readLatestBodyTemperature(start: Instant, end: Instant): BodyTempEntryMsg? =
+    support.withNullableLogging("readLatestBodyTemperature[$start..$end]") {
+      support.client().readRecordsPaged(
+        recordType = BodyTemperatureRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = false,
+        pageSize = 1,
+        maxRecords = 1,
+      ).firstOrNull()?.toMsg()
+    }
+
+  suspend fun readLatestBloodGlucose(start: Instant, end: Instant): BloodGlucoseEntryMsg? =
+    support.withNullableLogging("readLatestBloodGlucose[$start..$end]") {
+      support.client().readRecordsPaged(
+        recordType = BloodGlucoseRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = false,
+        pageSize = 1,
+        maxRecords = 1,
+      ).firstOrNull()?.toMsg()
+    }
+
+  suspend fun readLatestSkinTemperature(start: Instant, end: Instant): SkinTemperatureEntryMsg? =
+    support.withNullableLogging("readLatestSkinTemperature[$start..$end]") {
+      support.client().readRecordsPaged(
+        recordType = SkinTemperatureRecord::class,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = false,
+        pageSize = 1,
+        maxRecords = 1,
+      ).firstOrNull()?.toMsg()
+    }
+
+  /** Bucket raw records into one [DailyVitalPointMsg] per local date. */
+  private fun <T> List<T>.dailyPoints(
+    time: (T) -> Instant,
+    value: (T) -> Double?,
+  ): List<DailyVitalPointMsg> {
+    val zone = ZoneId.systemDefault()
+    return groupBy { time(it).atZone(zone).toLocalDate() }
+      .mapNotNull { (date, records) ->
+        val values = records.mapNotNull(value)
+        if (values.isEmpty()) return@mapNotNull null
+        DailyVitalPointMsg(
+          dateEpochMs = date.atStartOfDay(zone).toInstant().toEpochMilli(),
+          value = values.average(),
+          count = values.size.toLong(),
         )
       }
-    }
+      .sortedBy { it.dateEpochMs }
+  }
 
   suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequestMsg): String =
     withContext(Dispatchers.IO) {
@@ -328,6 +459,29 @@ internal class VitalsHealthReader(
     source = metadata.dataOrigin.packageName,
   )
 
+  private fun BloodGlucoseRecord.toMsg() = BloodGlucoseEntryMsg(
+    timeEpochMs = time.toEpochMilli(),
+    millimolesPerLiter = level.inMillimolesPerLiter,
+    specimenSource = specimenSource.toLong(),
+    mealType = mealType.toLong(),
+    relationToMeal = relationToMeal.toLong(),
+    source = metadata.dataOrigin.packageName,
+  )
+
+  private fun SkinTemperatureRecord.toMsg(): SkinTemperatureEntryMsg {
+    val deltasCelsius = deltas.map { it.delta.inCelsius }
+    return SkinTemperatureEntryMsg(
+      startEpochMs = startTime.toEpochMilli(),
+      endEpochMs = endTime.toEpochMilli(),
+      baselineCelsius = baseline?.inCelsius,
+      averageDeltaCelsius = deltasCelsius.averageOrNull(),
+      minDeltaCelsius = deltasCelsius.minOrNull(),
+      maxDeltaCelsius = deltasCelsius.maxOrNull(),
+      measurementLocation = measurementLocation.toLong(),
+      source = metadata.dataOrigin.packageName,
+    )
+  }
+
   private fun BloodPressureRecord.toMeasurementMsg() = VitalsMeasurementEntryMsg(
     id = metadata.id,
     type = VitalsMeasurementTypeMsg.BLOOD_PRESSURE,
@@ -369,6 +523,12 @@ internal class VitalsHealthReader(
   )
 
   private companion object {
+    // A year of a densely-sampled series (e.g. respiratory rate from a wearable)
+    // is hundreds of thousands of records. readRecordsPaged makes one Health
+    // Connect IPC round-trip per page, so the default 1000 turned a year into
+    // ~175 round-trips (~44s). The platform caps a page at 5000; using it cuts
+    // the round-trips ~5x, which is what keeps a dense Year read under budget.
+    private const val DailyReadPageSize = 5000
     private const val MinSystolicMmHg = 20.0
     private const val MaxSystolicMmHg = 200.0
     private const val MinDiastolicMmHg = 10.0

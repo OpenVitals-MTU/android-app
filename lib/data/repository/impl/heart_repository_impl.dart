@@ -32,7 +32,8 @@ class HeartRepositoryImpl implements HeartRepository {
     HeartPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>
-      runCatching(() => _loadHeartPeriodRaw(query, metric));
+      runCatching(
+          () => _loadHeartPeriodRaw(query, metric).timeout(healthReadBudget));
 
   Future<HeartPeriodData> _loadHeartPeriodRaw(
     PeriodLoadQuery query,
@@ -43,76 +44,99 @@ class HeartRepositoryImpl implements HeartRepository {
     final windows = query.windows;
     final selected = query.selectedDate;
 
+    // The windows within a metric are independent reads, so they run
+    // concurrently (start the futures, then `Future.wait`) instead of one
+    // `await` after the next — the same within-repo parallelism the vitals half
+    // gets, so a non-day load is one round-trip deep rather than three.
     switch (metric) {
       case HeartPeriodMetric.all:
         if (isDay) {
-          final daySamples = await _daySamples(selected, granted);
-          final dayResting = await _dayRestingSamples(selected, granted);
-          final dayHrv = await _dayHrvSamples(selected, granted);
+          final daySamples = _daySamples(selected, granted);
+          final dayResting = _dayRestingSamples(selected, granted);
+          final dayHrv = _dayHrvSamples(selected, granted);
+          await Future.wait([daySamples, dayResting, dayHrv]);
           return HeartPeriodData(
-            daySamples: daySamples,
-            dayRestingSamples: dayResting,
-            dayRestingBpm: _averageBpm(dayResting),
-            dayHrvSamples: dayHrv,
-            dayHrvMs: _averageRmssd(dayHrv),
+            daySamples: await daySamples,
+            dayRestingSamples: await dayResting,
+            dayRestingBpm: _averageBpm(await dayResting),
+            dayHrvSamples: await dayHrv,
+            dayHrvMs: _averageRmssd(await dayHrv),
           );
         }
+        final summaries = _dailySummaries(windows.current, granted);
+        final resting = _dailyRestingHR(windows.current, granted);
+        final hrv = _dailyHrv(windows.current, granted);
+        await Future.wait([summaries, resting, hrv]);
         return HeartPeriodData(
-          dailySummaries:
-              await _dailySummaries(windows.current, granted),
-          dailyRestingHR: await _dailyRestingHR(windows.current, granted),
-          dailyHrv: await _dailyHrv(windows.current, granted),
+          dailySummaries: await summaries,
+          dailyRestingHR: await resting,
+          dailyHrv: await hrv,
         );
 
       case HeartPeriodMetric.averageHeartRate:
         if (isDay) {
+          final current = _daySamples(selected, granted);
+          final previous = _daySamples(windows.previous.start, granted);
+          final baseline = _dailySummaries(windows.baseline, granted);
+          await Future.wait([current, previous, baseline]);
           return HeartPeriodData(
-            daySamples: await _daySamples(selected, granted),
-            previousDaySamples:
-                await _daySamples(windows.previous.start, granted),
-            baselineDailySummaries:
-                await _dailySummaries(windows.baseline, granted),
+            daySamples: await current,
+            previousDaySamples: await previous,
+            baselineDailySummaries: await baseline,
           );
         }
+        final current = _dailySummaries(windows.current, granted);
+        final previous = _dailySummaries(windows.previous, granted);
+        final baseline = _dailySummaries(windows.baseline, granted);
+        await Future.wait([current, previous, baseline]);
         return HeartPeriodData(
-          dailySummaries: await _dailySummaries(windows.current, granted),
-          previousDailySummaries:
-              await _dailySummaries(windows.previous, granted),
-          baselineDailySummaries:
-              await _dailySummaries(windows.baseline, granted),
+          dailySummaries: await current,
+          previousDailySummaries: await previous,
+          baselineDailySummaries: await baseline,
         );
 
       case HeartPeriodMetric.restingHeartRate:
         if (isDay) {
+          final current = _dayRestingSamples(selected, granted);
+          final previous = _restingBpm(windows.previous.start, granted);
+          final baseline = _dailyRestingHR(windows.baseline, granted);
+          await Future.wait([current, previous, baseline]);
           return HeartPeriodData(
-            dayRestingSamples: await _dayRestingSamples(selected, granted),
-            previousDayRestingBpm:
-                await _restingBpm(windows.previous.start, granted),
-            baselineDailyRestingHR:
-                await _dailyRestingHR(windows.baseline, granted),
+            dayRestingSamples: await current,
+            previousDayRestingBpm: await previous,
+            baselineDailyRestingHR: await baseline,
           );
         }
+        final current = _dailyRestingHR(windows.current, granted);
+        final previous = _dailyRestingHR(windows.previous, granted);
+        final baseline = _dailyRestingHR(windows.baseline, granted);
+        await Future.wait([current, previous, baseline]);
         return HeartPeriodData(
-          dailyRestingHR: await _dailyRestingHR(windows.current, granted),
-          previousDailyRestingHR:
-              await _dailyRestingHR(windows.previous, granted),
-          baselineDailyRestingHR:
-              await _dailyRestingHR(windows.baseline, granted),
+          dailyRestingHR: await current,
+          previousDailyRestingHR: await previous,
+          baselineDailyRestingHR: await baseline,
         );
 
       case HeartPeriodMetric.hrv:
         if (isDay) {
-          final dayHrv = await _dayHrvSamples(selected, granted);
+          final dayHrvFuture = _dayHrvSamples(selected, granted);
+          final baseline = _dailyHrv(windows.baseline, granted);
+          await Future.wait([dayHrvFuture, baseline]);
+          final dayHrv = await dayHrvFuture;
           return HeartPeriodData(
             dayHrvSamples: dayHrv,
             dayHrvMs: _averageRmssd(dayHrv),
-            baselineDailyHrv: await _dailyHrv(windows.baseline, granted),
+            baselineDailyHrv: await baseline,
           );
         }
+        final current = _dailyHrv(windows.current, granted);
+        final previous = _dailyHrv(windows.previous, granted);
+        final baseline = _dailyHrv(windows.baseline, granted);
+        await Future.wait([current, previous, baseline]);
         return HeartPeriodData(
-          dailyHrv: await _dailyHrv(windows.current, granted),
-          previousDailyHrv: await _dailyHrv(windows.previous, granted),
-          baselineDailyHrv: await _dailyHrv(windows.baseline, granted),
+          dailyHrv: await current,
+          previousDailyHrv: await previous,
+          baselineDailyHrv: await baseline,
         );
     }
   }
