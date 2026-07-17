@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart' show openAppSettings;
 
 /// The default notification small icon, a fallback for any notification that
 /// doesn't set its own. Reminders each supply a per-feature `ic_stat_*` drawable
@@ -77,4 +78,9 @@ class ReminderNotificationPermissions {
   Future<bool> isEnabled() => areReminderNotificationsEnabled(_plugin);
 
   Future<bool> request() => requestReminderNotificationPermission(_plugin);
+
+  /// Opens the OS app-notification settings. The only recourse once the user has
+  /// permanently denied POST_NOTIFICATIONS: Android then refuses to prompt again,
+  /// so [request] returns false without showing anything.
+  Future<bool> openSettings() => openAppSettings();
 }

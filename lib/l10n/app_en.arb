@@ -64,6 +64,7 @@
   "actionGetStarted": "Get started",
   "actionGrant": "Grant",
   "actionGrantPermission": "Grant permission",
+  "actionOpenNotificationSettings": "Open notification settings",
   "actionLoadMoreEntries": "Load 10 more",
   "actionShowCalculation": "Show calculation",
   "actionHideCalculation": "Hide calculation",

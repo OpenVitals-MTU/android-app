@@ -50,6 +50,7 @@ class _FakePermissions implements ReminderNotificationPermissions {
   bool enabled;
   bool grantOnRequest;
   int requestCount = 0;
+  int openSettingsCount = 0;
 
   @override
   Future<bool> isEnabled() async => enabled;
@@ -59,6 +60,12 @@ class _FakePermissions implements ReminderNotificationPermissions {
     requestCount++;
     enabled = grantOnRequest;
     return enabled;
+  }
+
+  @override
+  Future<bool> openSettings() async {
+    openSettingsCount++;
+    return true;
   }
 }
 

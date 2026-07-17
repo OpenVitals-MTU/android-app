@@ -88,6 +88,11 @@ class HydrationReminderSettingsViewModel
     return granted;
   }
 
+  /// Opens system notification settings — the escape hatch when POST_NOTIFICATIONS
+  /// is permanently denied and [requestPermission] can no longer prompt.
+  Future<void> openNotificationSettings() =>
+      ref.read(reminderNotificationPermissionsProvider).openSettings();
+
   Future<void> increaseInterval() => _update(
         state.config.copyWith(
           intervalMinutes: state.config.intervalMinutes +

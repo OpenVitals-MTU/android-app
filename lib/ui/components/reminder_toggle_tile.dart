@@ -19,6 +19,7 @@ class ReminderToggleTile extends StatelessWidget {
     required this.hasNotificationPermission,
     required this.onToggle,
     required this.onRequestPermission,
+    this.onOpenSettings,
   });
 
   final IconData icon;
@@ -32,6 +33,11 @@ class ReminderToggleTile extends StatelessWidget {
   final bool hasNotificationPermission;
   final void Function(bool enabled) onToggle;
   final VoidCallback onRequestPermission;
+
+  /// Opens system notification settings, shown alongside "grant permission" as
+  /// the fallback when the OS will no longer prompt (permanently denied). Null
+  /// hides it.
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -71,9 +77,19 @@ class ReminderToggleTile extends StatelessWidget {
         if (enabled && !hasNotificationPermission)
           Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: OutlinedButton(
-              onPressed: onRequestPermission,
-              child: Text(l10n.actionGrantPermission),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                OutlinedButton(
+                  onPressed: onRequestPermission,
+                  child: Text(l10n.actionGrantPermission),
+                ),
+                if (onOpenSettings != null)
+                  TextButton(
+                    onPressed: onOpenSettings,
+                    child: Text(l10n.actionOpenNotificationSettings),
+                  ),
+              ],
             ),
           ),
       ],

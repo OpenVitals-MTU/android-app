@@ -54,6 +54,7 @@ class _FakePermissions implements ReminderNotificationPermissions {
   bool enabled;
   bool grantOnRequest;
   int requestCount = 0;
+  int openSettingsCount = 0;
 
   @override
   Future<bool> isEnabled() async => enabled;
@@ -63,6 +64,12 @@ class _FakePermissions implements ReminderNotificationPermissions {
     requestCount++;
     enabled = grantOnRequest;
     return enabled;
+  }
+
+  @override
+  Future<bool> openSettings() async {
+    openSettingsCount++;
+    return true;
   }
 }
 
@@ -196,6 +203,18 @@ void main() {
 
     expect(stateOf(container).isBlockedByPermission, isFalse);
     expect(scheduler.scheduled, hasLength(1));
+  });
+
+  test('openNotificationSettings opens the OS settings — the permanently-denied '
+      'escape hatch', () async {
+    final container = await newContainer(
+      initial: const HydrationReminderConfig(enabled: true),
+    );
+    final subject = await settled(container);
+
+    await subject.openNotificationSettings();
+
+    expect(permissions.openSettingsCount, 1);
   });
 
   group('interval', () {

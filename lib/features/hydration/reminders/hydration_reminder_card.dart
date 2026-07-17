@@ -79,6 +79,7 @@ class _HydrationReminderCardState extends ConsumerState<HydrationReminderCard> {
               hasNotificationPermission: state.hasNotificationPermission,
               onToggle: notifier.setEnabled,
               onRequestPermission: notifier.requestPermission,
+              onOpenSettings: notifier.openNotificationSettings,
             ),
             if (config.enabled) ...[
               const SizedBox(height: 12),
