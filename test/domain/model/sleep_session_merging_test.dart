@@ -194,6 +194,59 @@ void main() {
     expect(merged.single.id, 'watch');
   });
 
+  test(
+      'mergeSleepSessions removes a near-total cross-source duplicate whose end drifts past the old tolerance',
+      () {
+    // The reported bug: Fitbit + Sleep-as-Android autodetect for one night.
+    // ~100% overlap of the shorter session, but the ends differ by 48 min —
+    // the old 30-min boundary gate wrongly kept both, summing to ~11h26m.
+    final fitbit = _sleep(
+      id: 'fitbit',
+      source: 'com.fitbit.FitbitMobile',
+      start: '2026-07-14T01:16:00Z',
+      end: '2026-07-14T07:28:00Z',
+      stages: [
+        _stage('2026-07-14T01:16:00Z', '2026-07-14T07:28:00Z',
+            SleepStage.stageLight),
+      ],
+    );
+    final sleepAsAndroid = _sleep(
+      id: 'sleep-as-android',
+      source: 'com.urbandroid.sleep',
+      start: '2026-07-14T01:15:00Z',
+      end: '2026-07-14T06:40:00Z',
+    );
+
+    final merged = mergeSleepSessions([sleepAsAndroid, fitbit]);
+
+    expect(merged.length, 1);
+    // The richer session (Fitbit, with a hypnogram) is kept.
+    expect(merged.single.id, 'fitbit');
+    expect(merged.single.durationMs, fitbit.durationMs);
+  });
+
+  test(
+      'mergeSleepSessions keeps two different-source sessions that overlap under the ratio',
+      () {
+    // Only ~50% of the shorter session overlaps — genuinely distinct, kept.
+    final first = _sleep(
+      id: 'source-a',
+      source: 'source-a',
+      start: '2026-05-06T00:00:00Z',
+      end: '2026-05-06T02:00:00Z',
+    );
+    final second = _sleep(
+      id: 'source-b',
+      source: 'source-b',
+      start: '2026-05-06T01:00:00Z',
+      end: '2026-05-06T03:00:00Z',
+    );
+
+    final merged = mergeSleepSessions([first, second]);
+
+    expect(merged.length, 2);
+  });
+
   test('mergeSleepSessions does not merge sessions beyond the max gap', () {
     final first = _sleep(
       id: 'nap',

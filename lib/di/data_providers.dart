@@ -15,11 +15,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/local/beverage/beverage_store.dart';
 import '../data/local/open_vitals_database.dart';
+import '../data/sync/vitals_history_sync_service.dart';
 import '../data/prefs/preferences_repository.dart';
 import '../data/repository/body_energy_timeline_cache_store.dart';
 import '../data/repository/contract/activity_repository.dart';
 import '../data/repository/contract/apple_health_import_repository.dart';
 import '../data/repository/contract/ble_device_repository.dart';
+import '../data/repository/contract/body_energy_feel_check_repository.dart';
 import '../data/repository/contract/body_energy_repository.dart';
 import '../data/repository/contract/body_repository.dart';
 import '../data/repository/contract/caffeine_repository.dart';
@@ -35,6 +37,7 @@ import '../data/repository/impl/activity_marker_repository_impl.dart';
 import '../data/repository/impl/activity_repository_impl.dart';
 import '../data/repository/impl/apple_health_import_repository_impl.dart';
 import '../data/repository/impl/ble_device_repository_impl.dart';
+import '../data/repository/impl/body_energy_feel_check_repository_impl.dart';
 import '../data/repository/impl/body_energy_repository_impl.dart';
 import '../data/repository/impl/body_repository_impl.dart';
 import '../data/repository/impl/caffeine_repository_impl.dart';
@@ -76,10 +79,10 @@ final sharedPreferencesProvider = Provider<SharedPreferences>(
 );
 
 QueryExecutor _openDatabaseConnection() => LazyDatabase(() async {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File(p.join(dir.path, 'openvitals.db'));
-      return NativeDatabase.createInBackground(file);
-    });
+  final dir = await getApplicationDocumentsDirectory();
+  final file = File(p.join(dir.path, 'openvitals.db'));
+  return NativeDatabase.createInBackground(file);
+});
 
 final openVitalsDatabaseProvider = Provider<OpenVitalsDatabase>((ref) {
   final db = OpenVitalsDatabase(_openDatabaseConnection());
@@ -90,6 +93,29 @@ final openVitalsDatabaseProvider = Provider<OpenVitalsDatabase>((ref) {
 final beverageDaoProvider = Provider<BeverageDao>(
   (ref) => ref.watch(openVitalsDatabaseProvider).beverageDao,
 );
+
+final feelCheckDaoProvider = Provider<FeelCheckDao>(
+  (ref) => ref.watch(openVitalsDatabaseProvider).feelCheckDao,
+);
+
+final vitalsDailyCacheDaoProvider = Provider<VitalsDailyCacheDao>(
+  (ref) => ref.watch(openVitalsDatabaseProvider).vitalsDailyCacheDao,
+);
+
+final vitalsHistorySyncServiceProvider = Provider<VitalsHistorySyncService>(
+  (ref) => VitalsHistorySyncService(
+    ref.watch(vitalsDailyCacheDaoProvider),
+    ref.watch(healthDataSourceProvider),
+  ),
+);
+
+final bodyEnergyFeelCheckRepositoryProvider =
+    Provider<BodyEnergyFeelCheckRepository>(
+      (ref) => BodyEnergyFeelCheckRepositoryImpl(
+        feelCheckDao: ref.watch(feelCheckDaoProvider),
+        preferencesRepository: ref.watch(preferencesRepositoryProvider),
+      ),
+    );
 
 final preferencesRepositoryProvider = Provider<PreferencesRepository>(
   (ref) => PreferencesRepository(ref.watch(sharedPreferencesProvider)),
@@ -104,15 +130,17 @@ final beverageStoreProvider = Provider<BeverageStore>(
 
 final bodyEnergyTimelineCacheStoreProvider =
     Provider<BodyEnergyTimelineCacheStore>(
-  (ref) => BodyEnergyTimelineCacheStore(ref.watch(sharedPreferencesProvider)),
-);
+      (ref) =>
+          BodyEnergyTimelineCacheStore(ref.watch(sharedPreferencesProvider)),
+    );
 
 final healthDataSourceProvider = Provider<HealthDataSource>((ref) {
   if (defaultTargetPlatform == TargetPlatform.android) {
     return HealthConnectNativeDataSource(
       appPackageName: openVitalsPackageName,
-      mindfulnessIntegrationEnabled: () =>
-          ref.read(preferencesRepositoryProvider).healthConnectMindfulnessEnabled,
+      mindfulnessIntegrationEnabled: () => ref
+          .read(preferencesRepositoryProvider)
+          .healthConnectMindfulnessEnabled,
     );
   }
   // iOS / other platforms have no native health bridge yet.
@@ -146,7 +174,10 @@ final bodyRepositoryProvider = Provider<BodyRepository>(
 );
 
 final vitalsRepositoryProvider = Provider<VitalsRepository>(
-  (ref) => VitalsRepositoryImpl(ref.watch(healthDataSourceProvider)),
+  (ref) => VitalsRepositoryImpl(
+    ref.watch(healthDataSourceProvider),
+    cacheDao: ref.watch(vitalsDailyCacheDaoProvider),
+  ),
 );
 
 final nutritionRepositoryProvider = Provider<NutritionRepository>(
@@ -191,8 +222,9 @@ final bleDeviceRepositoryProvider = Provider<BleDeviceRepository>(
 
 final appleHealthImportRepositoryProvider =
     Provider<AppleHealthImportRepository>(
-  (ref) => AppleHealthImportRepositoryImpl(ref.watch(healthDataSourceProvider)),
-);
+      (ref) =>
+          AppleHealthImportRepositoryImpl(ref.watch(healthDataSourceProvider)),
+    );
 
 final appleHealthImportServiceProvider = Provider<AppleHealthImportService>(
   (ref) =>
@@ -201,8 +233,8 @@ final appleHealthImportServiceProvider = Provider<AppleHealthImportService>(
 
 final appleHealthImportReportStoreProvider =
     Provider<AppleHealthImportReportStore>(
-  (ref) => AppleHealthImportReportStore(ref.watch(sharedPreferencesProvider)),
-);
+      (ref) => AppleHealthImportReportStore(),
+    );
 
 final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
   (ref) => BodyEnergyRepositoryImpl(
@@ -210,6 +242,7 @@ final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
     sleepRepository: ref.watch(sleepRepositoryProvider),
     activityRepository: ref.watch(activityRepositoryProvider),
     vitalsRepository: ref.watch(vitalsRepositoryProvider),
+    bodyRepository: ref.watch(bodyRepositoryProvider),
     healthRepository: ref.watch(healthRepositoryProvider),
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
     cacheStore: ref.watch(bodyEnergyTimelineCacheStoreProvider),
@@ -221,8 +254,9 @@ final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
 /// The app-lifetime BLE coordinator (Kotlin `@Singleton`), bound to its
 /// contract so features never name the service class.
 final bleSensorRepositoryProvider = Provider<BleSensorRepository>((ref) {
-  final coordinator =
-      BleSensorCoordinator(ref.watch(bleDeviceRepositoryProvider));
+  final coordinator = BleSensorCoordinator(
+    ref.watch(bleDeviceRepositoryProvider),
+  );
   ref.onDispose(coordinator.dispose);
   return coordinator;
 });
@@ -233,8 +267,9 @@ final bleMetricsProvider = StreamProvider<BleRecordingMetrics>((ref) {
 });
 
 /// Live scan results (Kotlin `StateFlow<List<BleDiscoveredDevice>>`).
-final bleDiscoveredDevicesProvider =
-    StreamProvider<List<BleDiscoveredDevice>>((ref) {
+final bleDiscoveredDevicesProvider = StreamProvider<List<BleDiscoveredDevice>>((
+  ref,
+) {
   return ref.watch(bleSensorRepositoryProvider).discoveredDevicesStream;
 });
 
@@ -263,13 +298,15 @@ final nutritionWritePermissionsProvider = Provider<Set<String>>(
 
 final bodyWritePermissionsProvider =
     Provider.family<Set<String>, BodyMeasurementType>(
-  (ref, type) => ref.watch(bodyRepositoryProvider).bodyWritePermissions(type),
-);
+      (ref, type) =>
+          ref.watch(bodyRepositoryProvider).bodyWritePermissions(type),
+    );
 
 final vitalsWritePermissionsProvider =
     Provider.family<Set<String>, VitalsMeasurementType>(
-  (ref, type) => ref.watch(vitalsRepositoryProvider).vitalsWritePermissions(type),
-);
+      (ref, type) =>
+          ref.watch(vitalsRepositoryProvider).vitalsWritePermissions(type),
+    );
 
 /// Every permission OpenVitals manages, and whether the device can store a
 /// mindfulness session at all — what the add-entry picker needs to decide which

@@ -5,6 +5,15 @@ import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
 import 'chart_curve.dart';
+import 'chart_decimation.dart';
+import 'chart_viewport.dart';
+import 'chart_zoom.dart';
+import 'day_axis.dart';
+
+/// Above this many points the per-sample dots merge into a band and cost a
+/// `drawCircle` each — suppress them (the intraday DAY series can be dense; the
+/// period series, one point per day, stays well under this).
+const int _maxLineDots = 120;
 
 /// A single line-chart point. [time] (an instant) is used for intraday (DAY)
 /// positioning; otherwise the [date] slot is used. Port of Kotlin
@@ -121,41 +130,92 @@ class MetricLineChart extends StatelessWidget {
     final gridColor = accentColor.withValues(alpha: 0.12);
     final axisColor = scheme.outlineVariant.withValues(alpha: 0.8);
 
-    final painter = _LinePainter(
-      series: visibleSeries,
-      selectedRange: selectedRange,
-      period: period,
-      dayStartMillis: dayStart.millisecondsSinceEpoch,
-      dayDurationMillis: dayDurationMillis,
-      periodDayCount: periodDayCount,
-      minValue: axisMin,
-      maxValue: axisMax,
-      gridColor: gridColor,
-      axisColor: axisColor,
-      selectedDate: selectedDate,
-      axisDates: axisDates,
-      highlightColor: accentColor.withValues(alpha: 0.16),
-    );
-
-    Widget plot = CustomPaint(size: Size.infinite, painter: painter);
     final canSelect = selectedRange.supportsChartDaySelection &&
         onDateSelected != null &&
         axisDates.isNotEmpty;
-    if (canSelect) {
-      plot = LayoutBuilder(
-        builder: (context, constraints) => GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapUp: (details) {
-            final slotWidth = constraints.maxWidth / axisDates.length;
-            final index = (details.localPosition.dx / slotWidth)
-                .floor()
-                .clamp(0, axisDates.length - 1);
-            onDateSelected!(axisDates[index]);
-          },
-          child: CustomPaint(size: Size.infinite, painter: painter),
-        ),
+
+    // The chart plus its x axis, drawn for a given viewport so both stay in step
+    // when the day chart is pinched.
+    Widget chartWithAxis(ChartViewport viewport) {
+      final painter = _LinePainter(
+        series: visibleSeries,
+        selectedRange: selectedRange,
+        period: period,
+        dayStartMillis: dayStart.millisecondsSinceEpoch,
+        dayDurationMillis: dayDurationMillis,
+        periodDayCount: periodDayCount,
+        minValue: axisMin,
+        maxValue: axisMax,
+        gridColor: gridColor,
+        axisColor: axisColor,
+        selectedDate: selectedDate,
+        axisDates: axisDates,
+        highlightColor: accentColor.withValues(alpha: 0.16),
+        viewport: viewport,
+      );
+      Widget plot = CustomPaint(size: Size.infinite, painter: painter);
+      if (canSelect) {
+        plot = LayoutBuilder(
+          builder: (context, constraints) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapUp: (details) {
+              // Map the tap back through the viewport so a zoomed chart selects
+              // the date actually under the finger, not the unzoomed slot.
+              final visible = (details.localPosition.dx / constraints.maxWidth)
+                  .clamp(0.0, 1.0);
+              final index = (viewport.dataFraction(visible) * axisDates.length)
+                  .floor()
+                  .clamp(0, axisDates.length - 1);
+              onDateSelected!(axisDates[index]);
+            },
+            child: CustomPaint(size: Size.infinite, painter: painter),
+          ),
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          YAxisChart(
+            labels: chartYAxisLabels(
+              axisMin,
+              axisMax,
+              valueFormatter: valueFormatter,
+            ),
+            chartHeight: _chartHeight,
+            chart: plot,
+          ),
+          const SizedBox(height: 8),
+          if (selectedRange == TimeRange.day)
+            ChartXAxisWithYAxis(
+              child: DayAxisLabels(inset: 0, viewport: viewport),
+            )
+          else
+            ChartXAxisWithYAxis(
+              child: PeriodChartXAxis(
+                dates: axisDates,
+                selectedRange: selectedRange,
+                viewport: viewport,
+              ),
+            ),
+        ],
       );
     }
+
+    // Every range pinches: the day chart on its hour scale, the week/month/year
+    // charts on their date slots — the line maps its x through the viewport and
+    // PeriodChartXAxis reflows its labels to match.
+    //
+    // Keyed on the chart's data identity so a zoom does not carry over when the
+    // data underneath changes: switching year/range (or navigating to another
+    // day) rebuilds a fresh, unzoomed ChartZoom rather than stretching the old
+    // slice onto the new period.
+    final chart = ChartZoom(
+      key: ValueKey(
+        (selectedRange, period.start.epochDay, period.end.epochDay),
+      ),
+      builder: (context, viewport) => chartWithAxis(viewport),
+    );
 
     return OpenVitalsCard(
       child: Padding(
@@ -165,25 +225,7 @@ class MetricLineChart extends StatelessWidget {
           children: [
             Text(title, style: theme.textTheme.titleSmall),
             const SizedBox(height: 12),
-            YAxisChart(
-              labels: chartYAxisLabels(
-                axisMin,
-                axisMax,
-                valueFormatter: valueFormatter,
-              ),
-              chartHeight: _chartHeight,
-              chart: plot,
-            ),
-            const SizedBox(height: 8),
-            if (selectedRange == TimeRange.day)
-              const _DayTimeXAxis()
-            else
-              ChartXAxisWithYAxis(
-                child: PeriodChartXAxis(
-                  dates: axisDates,
-                  selectedRange: selectedRange,
-                ),
-              ),
+            chart,
             if (visibleSeries.length > 1) ...[
               const SizedBox(height: 8),
               _LineLegend(series: visibleSeries),
@@ -207,26 +249,6 @@ class MetricLineChart extends StatelessWidget {
       ? (maxValue.abs() * 0.05 > 1.0 ? maxValue.abs() * 0.05 : 1.0)
       : range * 0.08;
   return (minValue - padding, maxValue + padding);
-}
-
-class _DayTimeXAxis extends StatelessWidget {
-  const _DayTimeXAxis();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final labelStyle = theme.textTheme.labelSmall
-        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    return ChartXAxisWithYAxis(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          for (final label in ['00:00', '06:00', '12:00', '18:00', '24:00'])
-            Text(label, style: labelStyle),
-        ],
-      ),
-    );
-  }
 }
 
 class _LineLegend extends StatelessWidget {
@@ -289,6 +311,7 @@ class _LinePainter extends CustomPainter {
     required this.selectedDate,
     required this.axisDates,
     required this.highlightColor,
+    this.viewport = ChartViewport.full,
   });
 
   final List<MetricLineSeries> series;
@@ -305,13 +328,24 @@ class _LinePainter extends CustomPainter {
   final List<LocalDate> axisDates;
   final Color highlightColor;
 
+  /// The visible slice of the x range when the chart has been pinched.
+  final ChartViewport viewport;
+
   @override
   void paint(Canvas canvas, Size size) {
     drawYAxisGuides(canvas, size, gridColor: gridColor, axisColor: axisColor);
     _drawSelectedHighlight(canvas, size);
+    // Zoomed, the line runs past the plot edges; clip so it ends at the plot
+    // rather than spilling across the card.
+    final zoomed = viewport.isZoomed;
+    if (zoomed) {
+      canvas.save();
+      canvas.clipRect(Offset.zero & size);
+    }
     for (final line in series) {
       _drawSeries(canvas, size, line);
     }
+    if (zoomed) canvas.restore();
   }
 
   void _drawSelectedHighlight(Canvas canvas, Size size) {
@@ -325,9 +359,10 @@ class _LinePainter extends CustomPainter {
     }
     final index = axisDates.indexOf(date);
     if (index < 0) return;
-    final slotWidth = size.width / axisDates.length;
+    final left = size.width * viewport.visibleFraction(index / axisDates.length);
+    final slotWidth = size.width / (axisDates.length * viewport.span);
     canvas.drawRect(
-      Rect.fromLTWH(index * slotWidth, 0, slotWidth, size.height),
+      Rect.fromLTWH(left, 0, slotWidth, size.height),
       Paint()..color = highlightColor,
     );
   }
@@ -337,27 +372,36 @@ class _LinePainter extends CustomPainter {
     final range = rawRange < 1.0 ? 1.0 : rawRange;
     final positioned = <Offset>[];
     for (final point in line.points) {
-      final double x;
+      final double xFraction;
       if (selectedRange == TimeRange.day) {
         final pointMillis = (point.time ??
                 DateTime(point.date.year, point.date.month, point.date.day))
             .millisecondsSinceEpoch;
         final elapsed =
             (pointMillis - dayStartMillis).clamp(0, dayDurationMillis);
-        x = size.width * elapsed / dayDurationMillis;
+        xFraction = elapsed / dayDurationMillis;
       } else {
-        final slotWidth = size.width / periodDayCount;
         final daysFromStart = (point.date.epochDay - period.start.epochDay)
             .clamp(0, periodDayCount - 1);
-        x = daysFromStart * slotWidth + slotWidth / 2.0;
+        xFraction = (daysFromStart + 0.5) / periodDayCount;
       }
+      // Full viewport is a no-op (visibleFraction(f) == f), so period charts and
+      // an unzoomed day chart position exactly as before.
+      final x = size.width * viewport.visibleFraction(xFraction);
       final y = size.height *
           (1.0 - ((point.value - minValue) / range).clamp(0.0, 1.0));
       positioned.add(Offset(x, y));
     }
 
+    // Cull to the visible window first, THEN decimate to ~one vertex per pixel.
+    // Culling is what lets a zoom restore detail: the narrower the pinch, the
+    // fewer points the window spans, until the decimation is a no-op and every
+    // raw point in view is drawn. A sparse period series (a handful of daily
+    // points) stays under target and is untouched.
+    final drawn = _visibleDecimated(positioned, size.width);
+
     canvas.drawPath(
-      smoothPath(positioned),
+      smoothPath(drawn),
       Paint()
         ..color = line.color
         ..style = PaintingStyle.stroke
@@ -365,10 +409,50 @@ class _LinePainter extends CustomPainter {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
-    final pointPaint = Paint()..color = line.color;
-    for (final point in positioned) {
-      canvas.drawCircle(point, 3.5, pointPaint);
+    if (drawn.length <= _maxLineDots) {
+      final pointPaint = Paint()..color = line.color;
+      for (final point in drawn) {
+        canvas.drawCircle(point, 3.5, pointPaint);
+      }
     }
+  }
+
+  /// The visible slice of [positioned] (screen-space offsets, ascending in x),
+  /// plus one point past each edge so the line reaches the borders, decimated to
+  /// ~one vertex per pixel.
+  List<Offset> _visibleDecimated(List<Offset> positioned, double width) {
+    final n = positioned.length;
+    if (n < 2) return positioned;
+
+    var firstIn = 0;
+    while (firstIn < n && positioned[firstIn].dx < 0) {
+      firstIn++;
+    }
+    var lastIn = n - 1;
+    while (lastIn >= 0 && positioned[lastIn].dx > width) {
+      lastIn--;
+    }
+
+    int lo;
+    int hi;
+    if (firstIn > lastIn) {
+      // The window falls between two points (a gap, or a deep zoom): keep just the
+      // straddling pair so the line still crosses the plot.
+      lo = firstIn > lastIn ? lastIn.clamp(0, n - 1) : firstIn;
+      hi = firstIn.clamp(0, n - 1);
+      if (lo > hi) {
+        final swap = lo;
+        lo = hi;
+        hi = swap;
+      }
+    } else {
+      lo = firstIn > 0 ? firstIn - 1 : 0;
+      hi = lastIn < n - 1 ? lastIn + 1 : n - 1;
+    }
+
+    final visible =
+        (lo == 0 && hi == n - 1) ? positioned : positioned.sublist(lo, hi + 1);
+    return decimateOffsets(visible, width.ceil());
   }
 
   @override

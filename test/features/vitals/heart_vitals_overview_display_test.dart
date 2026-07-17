@@ -55,6 +55,22 @@ SkinTemperatureEntry _skin(int hour, double? delta) => SkinTemperatureEntry(
       source: 'Ring',
     );
 
+DailyVitalPoint _pt(LocalDate date, double value, int count) =>
+    DailyVitalPoint(date: date, value: value, count: count);
+
+DailyBloodPressurePoint _bpPt(
+  LocalDate date,
+  double systolic,
+  double diastolic,
+  int count,
+) =>
+    DailyBloodPressurePoint(
+      date: date,
+      systolic: systolic,
+      diastolic: diastolic,
+      count: count,
+    );
+
 HeartVitalsOverviewDisplay _display(
   HeartPeriodLoadResult result, {
   TimeRange selectedRange = TimeRange.week,
@@ -204,11 +220,14 @@ void main() {
     });
   });
 
-  group('cardiovascular', () {
+  group('cardiovascular (day, raw samples)', () {
     test('blood pressure sorts, counts and takes the latest reading', () {
-      final display = _display(HeartPeriodLoadResult(
-        bloodPressure: [_bp(18, 128, 82), _bp(8, 118, 76)],
-      ));
+      final display = _display(
+        HeartPeriodLoadResult(
+          bloodPressure: [_bp(18, 128, 82), _bp(8, 118, 76)],
+        ),
+        selectedRange: TimeRange.day,
+      );
 
       final bp = display.bloodPressure!;
       expect([for (final e in bp.entries) e.systolicMmHg], [118, 128]);
@@ -218,30 +237,67 @@ void main() {
     });
 
     test('SpO2 and blood glucose average every reading', () {
-      final display = _display(HeartPeriodLoadResult(
-        spO2: [_spO2(9, 97), _spO2(8, 95)],
-        bloodGlucose: [
-          BloodGlucoseEntry(
-            time: DateTime.utc(2026, 3, 2, 8),
-            millimolesPerLiter: 5.0,
-            specimenSource: 0,
-            mealType: 0,
-            relationToMeal: 0,
-            source: 'Meter',
-          ),
-          BloodGlucoseEntry(
-            time: DateTime.utc(2026, 3, 2, 12),
-            millimolesPerLiter: 6.0,
-            specimenSource: 0,
-            mealType: 0,
-            relationToMeal: 0,
-            source: 'Meter',
-          ),
-        ],
-      ));
+      final display = _display(
+        HeartPeriodLoadResult(
+          spO2: [_spO2(9, 97), _spO2(8, 95)],
+          bloodGlucose: [
+            BloodGlucoseEntry(
+              time: DateTime.utc(2026, 3, 2, 8),
+              millimolesPerLiter: 5.0,
+              specimenSource: 0,
+              mealType: 0,
+              relationToMeal: 0,
+              source: 'Meter',
+            ),
+            BloodGlucoseEntry(
+              time: DateTime.utc(2026, 3, 2, 12),
+              millimolesPerLiter: 6.0,
+              specimenSource: 0,
+              mealType: 0,
+              relationToMeal: 0,
+              source: 'Meter',
+            ),
+          ],
+        ),
+        selectedRange: TimeRange.day,
+      );
 
       expect(display.spO2!.averagePercent, 96.0);
       expect(display.spO2!.latest.percent, 97.0);
+      expect(display.bloodGlucose!.averageMmolPerLiter, 5.5);
+      expect(display.bloodGlucose!.latest.millimolesPerLiter, 6.0);
+    });
+
+    test('a long-range overview reads native daily aggregates', () {
+      final display = _display(HeartPeriodLoadResult(
+        bloodPressureDaily: [
+          _bpPt(monday, 118, 76, 3),
+          _bpPt(tuesday, 128, 82, 5),
+        ],
+        latestBloodPressureReading: _bp(18, 132, 84),
+        spO2Daily: [_pt(monday, 95, 1), _pt(tuesday, 98, 3)],
+        latestSpO2Reading: _spO2(9, 98),
+        bloodGlucoseDaily: [_pt(monday, 5.0, 1), _pt(tuesday, 6.0, 1)],
+        latestBloodGlucoseReading: BloodGlucoseEntry(
+          time: DateTime.utc(2026, 3, 3, 12),
+          millimolesPerLiter: 6.0,
+          specimenSource: 0,
+          mealType: 0,
+          relationToMeal: 0,
+          source: 'Meter',
+        ),
+      ));
+
+      final bp = display.bloodPressure!;
+      // One synthetic point per day, ordered; the card's readings total the raw
+      // counts (3 + 5) and its latest is the true newest reading, not a mean.
+      expect([for (final e in bp.entries) e.systolicMmHg], [118, 128]);
+      expect(bp.readings, 8);
+      expect(bp.latest.systolicMmHg, 132);
+      expect(bp.hasChart, isTrue);
+      // "Average every reading" → count-weighted: (95*1 + 98*3) / 4 = 97.25.
+      expect(display.spO2!.averagePercent, closeTo(97.25, 1e-9));
+      expect(display.spO2!.latest.percent, 98.0);
       expect(display.bloodGlucose!.averageMmolPerLiter, 5.5);
       expect(display.bloodGlucose!.latest.millimolesPerLiter, 6.0);
     });
@@ -264,25 +320,20 @@ void main() {
   });
 
   group('respiratory', () {
-    // The card and the chart summary print two different means over unevenly
-    // sampled days, and both are what the screen printed before.
-    final entries = [
-      _breaths(DateTime.utc(2026, 3, 2, 8), 12),
-      _breaths(DateTime.utc(2026, 3, 2, 12), 12),
-      _breaths(DateTime.utc(2026, 3, 2, 20), 12),
-      _breaths(DateTime.utc(2026, 3, 3, 12), 20),
-    ];
-
     test('a period card and chart both print the mean of the daily means', () {
-      final display =
-          _display(HeartPeriodLoadResult(respiratoryRate: entries));
+      // Non-day reads native per-day aggregates; the period average weighs each
+      // day equally: (12 + 20) / 2 = 16, NOT the flat (12*3 + 20) / 4 = 14.
+      final display = _display(HeartPeriodLoadResult(
+        respiratoryRateDaily: [_pt(monday, 12, 3), _pt(tuesday, 20, 1)],
+        latestRespiratoryRateReading:
+            _breaths(DateTime.utc(2026, 3, 3, 12), 20),
+      ));
 
       final rate = display.respiratoryRate!;
-      // (12 + 20) / 2 = 16, NOT the flat (12*3 + 20) / 4 = 14.
       expect(rate.periodAverage, 16.0);
       expect(rate.cardBreathsPerMinute, 16.0);
       expect(rate.cardSource, 'Ring');
-      expect([for (final e in rate.entries) e.time.day], [2, 2, 2, 3]);
+      expect([for (final e in rate.entries) e.time.day], [2, 3]);
     });
 
     test('a day card prints the latest reading, the chart the daily mean', () {
@@ -299,19 +350,42 @@ void main() {
       expect(rate.periodAverage, 13.0);
     });
 
-    test('a mixed-source period names no source', () {
-      final display = _display(HeartPeriodLoadResult(respiratoryRate: [
-        _breaths(DateTime.utc(2026, 3, 2, 8), 12),
-        _breaths(DateTime.utc(2026, 3, 3, 8), 14, source: 'Watch'),
-      ]));
+    test('a long-range card names the latest reading source', () {
+      // The per-day aggregates carry no source (a merged mean has no single
+      // writer), so the card prints the true latest reading's source.
+      final display = _display(HeartPeriodLoadResult(
+        respiratoryRateDaily: [_pt(monday, 12, 1), _pt(tuesday, 14, 1)],
+        latestRespiratoryRateReading:
+            _breaths(DateTime.utc(2026, 3, 3, 8), 14, source: 'Watch'),
+      ));
 
-      expect(display.respiratoryRate!.cardSource, isNull);
+      expect(display.respiratoryRate!.cardSource, 'Watch');
     });
 
-    test('skin temperature charts only the entries that carry a delta', () {
+    test('skin temperature charts a daily delta point per day, weighted mean',
+        () {
       final display = _display(HeartPeriodLoadResult(
-        skinTemperature: [_skin(20, 0.4), _skin(8, null), _skin(12, -0.2)],
+        skinTemperatureDaily: [_pt(monday, -0.2, 2), _pt(tuesday, 0.4, 1)],
+        latestSkinTemperatureReading: _skin(20, 0.4),
       ));
+
+      final skin = display.skinTemperature!;
+      expect(skin.chartEntries.length, 2);
+      expect([for (final e in skin.chartEntries) e.averageDeltaCelsius],
+          [-0.2, 0.4]);
+      // Count-weighted over the days: (-0.2*2 + 0.4*1) / 3 = 0.0.
+      expect(skin.averageDeltaCelsius, closeTo(0.0, 1e-9));
+      // The card reads the newest day's delta.
+      expect(skin.cardDeltaCelsius, 0.4);
+    });
+
+    test('day view charts only the raw entries that carry a delta', () {
+      final display = _display(
+        HeartPeriodLoadResult(
+          skinTemperature: [_skin(20, 0.4), _skin(8, null), _skin(12, -0.2)],
+        ),
+        selectedRange: TimeRange.day,
+      );
 
       final skin = display.skinTemperature!;
       expect(skin.chartEntries.length, 2);
@@ -323,50 +397,76 @@ void main() {
       expect(skin.latest.averageDeltaCelsius, 0.4);
     });
 
-    test('a delta-less newest entry does not blank the card', () {
+    test('a delta-less newest entry does not blank the card (day)', () {
       // This test used to assert the opposite — that the card blanked while the
       // chart below it went on drawing. The card read the newest entry of the
       // UNFILTERED list, so one reading arriving without a delta emptied it
       // while its own chart still plotted the readings that had one. The card
       // now reads the newest entry that actually carries a delta: the same
       // population the chart draws.
-      final display = _display(HeartPeriodLoadResult(
-        skinTemperature: [_skin(8, 0.4), _skin(20, null)],
-      ));
+      final display = _display(
+        HeartPeriodLoadResult(
+          skinTemperature: [_skin(8, 0.4), _skin(20, null)],
+        ),
+        selectedRange: TimeRange.day,
+      );
 
       final skin = display.skinTemperature!;
       expect(skin.cardDeltaCelsius, 0.4);
-      expect(skin.hasChart, isTrue);
       expect(skin.chartEntries.single.averageDeltaCelsius, 0.4);
     });
 
-    test('a period with no delta anywhere shows nothing, card or chart', () {
-      final display = _display(HeartPeriodLoadResult(
-        skinTemperature: [_skin(8, null), _skin(20, null)],
-      ));
+    test('a day with no delta anywhere shows nothing, card or chart', () {
+      final display = _display(
+        HeartPeriodLoadResult(
+          skinTemperature: [_skin(8, null), _skin(20, null)],
+        ),
+        selectedRange: TimeRange.day,
+      );
 
       final skin = display.skinTemperature!;
       expect(skin.cardDeltaCelsius, isNull);
       expect(skin.chartEntries, isEmpty);
     });
 
-    test('body temperature counts its readings and takes the latest', () {
-      final display = _display(HeartPeriodLoadResult(bodyTemperature: [
-        BodyTempEntry(
-          time: DateTime.utc(2026, 3, 2, 20),
-          temperatureCelsius: 36.9,
-          source: 'Thermometer',
-        ),
-        BodyTempEntry(
-          time: DateTime.utc(2026, 3, 2, 8),
-          temperatureCelsius: 36.4,
-          source: 'Thermometer',
-        ),
-      ]));
+    test('body temperature counts its readings and takes the latest (day)', () {
+      final display = _display(
+        HeartPeriodLoadResult(bodyTemperature: [
+          BodyTempEntry(
+            time: DateTime.utc(2026, 3, 2, 20),
+            temperatureCelsius: 36.9,
+            source: 'Thermometer',
+          ),
+          BodyTempEntry(
+            time: DateTime.utc(2026, 3, 2, 8),
+            temperatureCelsius: 36.4,
+            source: 'Thermometer',
+          ),
+        ]),
+        selectedRange: TimeRange.day,
+      );
 
       final temp = display.bodyTemperature!;
       expect(temp.readings, 2);
       expect(temp.latest.temperatureCelsius, 36.9);
+      expect([for (final e in temp.entries) e.temperatureCelsius],
+          [36.4, 36.9]);
+    });
+
+    test('body temperature over a long range totals its daily reading counts',
+        () {
+      final display = _display(HeartPeriodLoadResult(
+        bodyTemperatureDaily: [_pt(monday, 36.4, 2), _pt(tuesday, 36.9, 4)],
+        latestBodyTemperatureReading: BodyTempEntry(
+          time: DateTime.utc(2026, 3, 3, 20),
+          temperatureCelsius: 37.1,
+          source: 'Thermometer',
+        ),
+      ));
+
+      final temp = display.bodyTemperature!;
+      expect(temp.readings, 6);
+      expect(temp.latest.temperatureCelsius, 37.1);
       expect([for (final e in temp.entries) e.temperatureCelsius],
           [36.4, 36.9]);
     });
@@ -389,24 +489,44 @@ void main() {
     expect(display, const HeartVitalsOverviewDisplay());
   });
 
-  test('vo2 max sorts, counts and takes the latest reading', () {
-    final display = _display(HeartPeriodLoadResult(vo2Max: [
-      Vo2MaxEntry(
-        time: DateTime.utc(2026, 3, 3),
-        vo2MaxMlPerKgPerMin: 44.0,
-        source: 'Watch',
-      ),
-      Vo2MaxEntry(
-        time: DateTime.utc(2026, 3, 2),
-        vo2MaxMlPerKgPerMin: 42.0,
-        source: 'Watch',
-      ),
-    ]));
+  test('vo2 max sorts, counts and takes the latest reading (day)', () {
+    final display = _display(
+      HeartPeriodLoadResult(vo2Max: [
+        Vo2MaxEntry(
+          time: DateTime.utc(2026, 3, 3),
+          vo2MaxMlPerKgPerMin: 44.0,
+          source: 'Watch',
+        ),
+        Vo2MaxEntry(
+          time: DateTime.utc(2026, 3, 2),
+          vo2MaxMlPerKgPerMin: 42.0,
+          source: 'Watch',
+        ),
+      ]),
+      selectedRange: TimeRange.day,
+    );
 
     final vo2 = display.vo2Max!;
     expect([for (final e in vo2.entries) e.vo2MaxMlPerKgPerMin], [42.0, 44.0]);
     expect(vo2.latest.vo2MaxMlPerKgPerMin, 44.0);
     expect(vo2.readings, 2);
+    expect(vo2.hasChart, isTrue);
+  });
+
+  test('vo2 max over a long range totals its daily reading counts', () {
+    final display = _display(HeartPeriodLoadResult(
+      vo2MaxDaily: [_pt(monday, 42.0, 1), _pt(tuesday, 44.0, 2)],
+      latestVo2MaxReading: Vo2MaxEntry(
+        time: DateTime.utc(2026, 3, 3),
+        vo2MaxMlPerKgPerMin: 45.0,
+        source: 'Watch',
+      ),
+    ));
+
+    final vo2 = display.vo2Max!;
+    expect([for (final e in vo2.entries) e.vo2MaxMlPerKgPerMin], [42.0, 44.0]);
+    expect(vo2.latest.vo2MaxMlPerKgPerMin, 45.0);
+    expect(vo2.readings, 3);
     expect(vo2.hasChart, isTrue);
   });
 }

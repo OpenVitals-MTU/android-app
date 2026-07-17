@@ -4,12 +4,14 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
+import '../../../core/presentation/period_metric_loader.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/activity_period_data.dart';
+import '../../../domain/usecase/load_calories_use_case.dart';
 import 'calories_display.dart';
 
 part 'calories_view_model.freezed.dart';
@@ -35,51 +37,64 @@ abstract class CaloriesState with _$CaloriesState {
 /// The Riverpod port of the Kotlin `CaloriesViewModel`: loads the activity
 /// period (steps + nutrition) alongside the latest basal metabolic rate. Driven
 /// by the [MetricDetailScaffold] like the movement metrics.
-class CaloriesViewModel extends Notifier<CaloriesState> {
-  int _generation = 0;
-
+class CaloriesViewModel extends Notifier<CaloriesState>
+    with PeriodMetricLoader<CaloriesState, CaloriesLoadResult> {
   @override
   CaloriesState build() => CaloriesState(selectedDate: LocalDate.now());
 
   Future<void> load(
     PeriodSelection selection, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
-    final generation = ++_generation;
-    final prefs = ref.read(preferencesRepositoryProvider);
-    final loadCalories = ref.read(loadCaloriesUseCaseProvider);
+  }) =>
+      runLoad(selection, refreshMode: refreshMode);
 
-    state = state.copyWith(
+  @override
+  PeriodSelection selectionOf(CaloriesState state) =>
+      PeriodSelection(state.selectedRange, state.selectedDate);
+
+  @override
+  CaloriesState onLoadStart(
+    CaloriesState state,
+    PeriodSelection selection, {
+    required bool navigated,
+  }) {
+    final next = state.copyWith(
       selectedRange: selection.selectedRange,
       selectedDate: selection.selectedDate,
       isLoading: true,
       error: null,
     );
-
-    final query = PeriodLoadQuery(
-      range: selection.selectedRange,
-      anchorDate: selection.selectedDate,
-      weekPeriodMode: prefs.weekPeriodMode,
-    );
-
-    final result = await loadCalories(query, refreshMode: refreshMode);
-    if (!ref.mounted || generation != _generation) return;
-    switch (result) {
-      case Ok(:final value):
-        state = state.copyWith(
-          isLoading: false,
-          data: value.data,
-          display: buildCaloriesDisplay(value.data),
-          latestBmrKcal: value.latestBmrKcal,
-          error: null,
-        );
-      case Err(:final failure):
-        state = state.copyWith(
-          isLoading: false,
-          error: failure.toScreenError(fallback: 'Unable to load data.'),
-        );
-    }
+    // The BMR reading belongs to the old window too — null it so no stale number
+    // shows under the skeleton.
+    return navigated
+        ? next.copyWith(data: null, display: null, latestBmrKcal: null)
+        : next;
   }
+
+  @override
+  Future<Result<CaloriesLoadResult>> fetch(
+    PeriodLoadQuery query,
+    RefreshMode refreshMode,
+  ) =>
+      ref.read(loadCaloriesUseCaseProvider)(query, refreshMode: refreshMode);
+
+  @override
+  CaloriesState onLoadSuccess(
+    CaloriesState state,
+    CaloriesLoadResult value,
+    PeriodLoadQuery query,
+  ) =>
+      state.copyWith(
+        isLoading: false,
+        data: value.data,
+        display: buildCaloriesDisplay(value.data),
+        latestBmrKcal: value.latestBmrKcal,
+        error: null,
+      );
+
+  @override
+  CaloriesState onLoadError(CaloriesState state, ScreenError error) =>
+      state.copyWith(isLoading: false, error: error);
 
   Future<void> refresh() => load(
         PeriodSelection(state.selectedRange, state.selectedDate),

@@ -156,5 +156,44 @@ void main() {
       expect(find.text('07:12 – 22:40'), findsOneWidget);
       expect(find.byType(DayChartHeader), findsNothing);
     });
+
+    MetricDayChart rawCard({
+      required List<DaySample> samples,
+      int? bucketMinutes,
+    }) =>
+        MetricDayChart(
+          axis: pastDay,
+          samples: samples,
+          shape: DaySeriesShape.raw,
+          range: const ChartRange(40, 200),
+          accentColor: Colors.red,
+          metricName: 'Heart rate',
+          emptyLabel: 'Heart rate',
+          bucketMinutes: bucketMinutes,
+        );
+
+    testWidgets('off draws the raw readings and no band', (tester) async {
+      final samples = [for (var h = 0; h < 24; h++) sample(h, 60 + h.toDouble())];
+      await pump(tester, rawCard(samples: samples));
+
+      final plot = tester.widget<MetricLinePlot>(find.byType(MetricLinePlot));
+      expect(plot.band, isEmpty);
+      expect(plot.points, hasLength(24));
+    });
+
+    testWidgets('aggregated buckets the readings into an average line with a band',
+        (tester) async {
+      // 24 hourly readings, bucketed 3 hours wide → 8 buckets.
+      final samples = [for (var h = 0; h < 24; h++) sample(h, 60 + h.toDouble())];
+      await pump(tester, rawCard(samples: samples, bucketMinutes: 180));
+
+      final plot = tester.widget<MetricLinePlot>(find.byType(MetricLinePlot));
+      expect(plot.points, hasLength(8), reason: '24h / 3h buckets');
+      expect(plot.band, hasLength(8));
+      // The first bucket spans 60,61,62 → avg 61, min 60, max 62.
+      expect(plot.points.first.value, closeTo(61, 1e-9));
+      expect(plot.band.first.low, 60);
+      expect(plot.band.first.high, 62);
+    });
   });
 }

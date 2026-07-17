@@ -156,8 +156,9 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         appleHealthImportServiceProvider
             .overrideWithValue(service ?? _FakeService()),
-        appleHealthImportReportStoreProvider
-            .overrideWithValue(AppleHealthImportReportStore(prefs)),
+        appleHealthImportReportStoreProvider.overrideWithValue(
+          AppleHealthImportReportStore(directoryResolver: directory),
+        ),
         appleHealthImportStagingStoreProvider.overrideWithValue(
           AppleHealthImportStagingStore(directory: directory),
         ),

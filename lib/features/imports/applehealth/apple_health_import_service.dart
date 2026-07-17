@@ -27,6 +27,7 @@ import 'dart:io';
 import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
 import '../../../data/repository/contract/apple_health_import_repository.dart';
+import 'apple_health_import_batch_channel.dart';
 import 'apple_health_import_categories.dart';
 import 'apple_health_import_checkpoint_store.dart';
 import 'apple_health_import_converter.dart';
@@ -46,8 +47,19 @@ typedef AppleHealthImportCheckpointCallback = void Function(
     AppleHealthImportCheckpoint checkpoint);
 
 const int _convertedBatchSize = 300;
+const int _bufferedRecordBatchSize = 2000;
 const int _maxRawDiagnostics = 1000;
 const int _maxDuplicateCheckSpanSeconds = 6 * 60 * 60;
+
+/// Kotlin `MaxConcurrentDuplicateCheckQueries`: how many per-type/per-window
+/// duplicate-check reads a single batch runs at once. Bounded so the burst stays
+/// friendly to Health Connect's API rate limit.
+const int _maxConcurrentDuplicateCheckQueries = 4;
+
+/// Kotlin `BatchChannelCapacity`: how many converted batches may sit between the
+/// parse/convert producer and the writer before the producer has to wait — the
+/// backpressure that lets parsing overlap writing without unbounded memory.
+const int _batchChannelCapacity = 2;
 
 /// Unwraps an import write, raising a *typed* permission exception when that is
 /// what went wrong.
@@ -87,7 +99,12 @@ class AppleHealthImportService {
     final mindfulnessAvailable = _repository.isMindfulnessAvailable();
     log('Apple Health analysis requested');
 
-    final parsed = _parseExport(
+    // Stream the export through a consumer that categorises and counts each
+    // element then immediately drops it, so a multi-gigabyte export is never
+    // accumulated in RAM. This pass is the one the user hit an OOM on: the old
+    // code materialised every record into `parsed.records` and looped over it.
+    final consumer = _AnalyzeConsumer(mindfulnessAvailable);
+    final parsed = await _parseExport(
       file,
       importLogs,
       onProgress,
@@ -102,73 +119,19 @@ class AppleHealthImportService {
             ? null
             : (parsedElements) => onProgress(_scanProgress(parsedElements)),
       ),
+      consumer: consumer,
     );
 
-    final typeStats = <String, MutableAppleImportTypeStats>{};
-    final categoryStats = <AppleHealthImportCategory, _MutableCategorySummary>{};
-    final diagnostics = <AppleHealthImportDiagnostic>[];
-    final diagnosticSummaries = <String, AppleHealthImportDiagnosticSummary>{};
-    final rawDiagnosticTypes = <String>{};
+    final typeStats = consumer.typeStats;
+    final categoryStats = consumer.categoryStats;
+    final diagnostics = consumer.diagnostics;
+    final diagnosticSummaries = consumer.diagnosticSummaries;
 
+    // Parsed totals still come from the handler's aggregate type counts (it tracks
+    // them even when the consumer drops the records), so seed `.parsed` as before.
     parsed.parsedTypeCounts.forEach((type, count) {
       _stat(typeStats, type).parsed += count;
     });
-
-    void markUnsupported(String appleType, String detail) {
-      _stat(typeStats, appleType).unsupported += 1;
-      final diagnostic = AppleHealthImportDiagnostic(
-        appleType: appleType,
-        targetType: null,
-        reasonCode: 'unsupported',
-        timeRange: null,
-        unit: null,
-        value: null,
-        detail: detail,
-      );
-      addToDiagnosticSummaries(diagnosticSummaries, diagnostic);
-      if (rawDiagnosticTypes.add(appleType)) diagnostics.add(diagnostic);
-    }
-
-    for (final record in parsed.records) {
-      final category = analysisCategory(record, mindfulnessAvailable);
-      if (category != null) {
-        _stat(typeStats, record.type).converted += 1;
-        _addCategory(categoryStats, category, 1);
-      } else {
-        markUnsupported(
-          record.type,
-          'No direct Health Connect mapping is implemented for this Apple '
-              'record type.',
-        );
-      }
-    }
-    for (final workout in parsed.workouts) {
-      _stat(typeStats, workout.workoutActivityType).converted += 1;
-      _addCategory(
-        categoryStats,
-        AppleHealthImportCategory.workouts,
-        1,
-        routeSessions: workout.routeReferences > 0 ? 1 : 0,
-      );
-    }
-    for (final correlation in parsed.correlations) {
-      if (correlation.type == appleBloodPressureCorrelation) {
-        _stat(typeStats, correlation.type).converted += 1;
-        _addCategory(categoryStats, AppleHealthImportCategory.vitals, 1);
-      } else {
-        markUnsupported(
-          correlation.type,
-          'Correlation type has no direct Health Connect import mapping.',
-        );
-      }
-    }
-    for (var i = 0; i < parsed.parsedActivitySummaries; i++) {
-      markUnsupported(
-        'ActivitySummary',
-        'Apple activity rings and stand hours have no direct writable Health '
-            'Connect record.',
-      );
-    }
 
     final summaries = _toTypeSummaries(typeStats);
     final totals = _totals(summaries);
@@ -235,91 +198,18 @@ class AppleHealthImportService {
     );
     final typeStats = converter.typeStats;
 
-    // Category stats include not-selected records (Kotlin), early-skipped ones
-    // included — so this has to exist before the parse that skips them.
+    // Category stats include not-selected and early-skipped records (Kotlin), so
+    // the streaming consumer that books them owns this map.
     final categoryStats = <AppleHealthImportCategory, _MutableCategorySummary>{};
-    var earlySkippedUnselectedRecords = 0;
-
-    final parsed = _parseExport(
-      file,
-      importLogs,
-      onProgress,
-      // Kotlin 1.9.0 (a852d4e): don't read the workout-routes/*.gpx entries at
-      // all when Workouts is deselected. A sleep/body/vitals-only import is much
-      // faster, and a damaged route entry can no longer fail an import that never
-      // wanted routes.
-      AppleHealthParseOptions(
-        parseRouteFiles: workoutsSelected,
-        // Kotlin 1.9.0 (415f2fe): a known record type whose category is not
-        // selected never gets materialized. Kotlin only saves the allocations;
-        // here the whole export is buffered in RAM before conversion, so this is
-        // the difference between OOM and not on a multi-gigabyte HeartRate export
-        // with only Body selected. Only the *import* pass may filter — analysis
-        // has to see everything, and its options deliberately carry no hooks.
-        shouldMaterializeRecord: (type) => _shouldMaterializeRecord(
-          type,
-          converter.mindfulnessAvailable,
-          selectedCategories,
-        ),
-        // The scan's numerator. `expectedParsedElements` is re-seeded onto every
-        // progress by `runAppleHealthImportJob`, so these ticks are what make the
-        // scan percent climb 0 → 88 instead of standing still until the parse
-        // returns. Kotlin gets them for free from its streaming consumer.
-        onElementsParsed: onProgress == null
-            ? null
-            : (parsedElements) => onProgress(_scanProgress(parsedElements)),
-        onRecordSkipped: (type) {
-          // Every total the materialize-everything path would have produced has
-          // to be booked here instead: the record never reaches the converter,
-          // nor the selection loop below.
-          final category =
-              analysisCategoryForType(type, converter.mindfulnessAvailable);
-          if (category == null) return;
-          converter.markCompatibleNotSelected(type);
-          earlySkippedUnselectedRecords += 1;
-          _addCategory(categoryStats, category, 1);
-        },
-      ),
-    );
-
-    onProgress?.call(_progress(AppleHealthImportPhase.converting, parsed: parsed));
-    log('Stage started: Converting records');
-    final conversion = converter.convert(parsed);
-    // Kotlin's `convertedRecords` counter books the early-skipped records too,
-    // and the progress snapshots below derive `selectedPreparedRecords` from
-    // `converted - notSelected` — where `notSelected` already includes them.
-    final convertedCount =
-        conversion.converted.length + earlySkippedUnselectedRecords;
-    final conversionTotals = _totals(_toTypeSummaries(typeStats));
-    log('Stage finished: Converting records converted=${conversionTotals.converted} '
-        'unsupported=${conversionTotals.unsupported} skipped=${conversionTotals.skipped} '
-        'failed=${conversionTotals.failed} '
-        'earlySkippedUnselectedRecords=$earlySkippedUnselectedRecords');
-
-    // Classify + select.
-    final selected = <ConvertedAppleRecord>[];
-    for (final converted in conversion.converted) {
-      final category = importCategory(converted);
-      _addCategory(
-        categoryStats,
-        category,
-        1,
-        routeSessions: convertedHasExerciseRoute(converted) ? 1 : 0,
-      );
-      if (!selectedCategories.contains(category)) {
-        _stat(typeStats, converted.appleType).notSelected += 1;
-        continue;
-      }
-      selected.add(converted);
-    }
 
     final serviceDiagnostics = <AppleHealthImportDiagnostic>[];
     final serviceDiagnosticSummaries =
         <String, AppleHealthImportDiagnosticSummary>{};
 
-    // Resume state (Kotlin `ConvertedBatchWriter`): the previous run's write
-    // totals are carried forward, and the first `committedSelectedRecords`
-    // converted+selected records are dropped instead of being written twice.
+    // Resume state (Kotlin `ConvertedBatchWriter`): the previous run's write totals
+    // are carried forward, and the first `committedSelectedRecords` converted+
+    // selected records are dropped instead of being written twice. Seeded *before*
+    // the parse because batches are now written during it (streamed off disk).
     resumeCheckpoint?.typeStats.forEach((appleType, stats) {
       final stat = _stat(typeStats, appleType);
       stat.imported = stats.imported;
@@ -332,7 +222,6 @@ class AppleHealthImportService {
     final recordsToSkip = resumeCheckpoint?.committedSelectedRecords ?? 0;
     var skipRemaining = recordsToSkip;
     var committedSelectedRecords = recordsToSkip;
-    var notSelected = _totals(_toTypeSummaries(typeStats)).notSelected;
 
     void saveCheckpoint() {
       final checkpoint = resumeCheckpoint;
@@ -358,7 +247,41 @@ class AppleHealthImportService {
       ));
     }
 
-    for (final rawBatch in _chunked(selected, _convertedBatchSize)) {
+    // The streaming import pipeline (Kotlin's producer/consumer + `Channel`): the
+    // consumer converts + selects records as they are parsed and hands full
+    // 300-record batches to [channel]; a separate writer future drains it,
+    // writing to Health Connect. The two overlap — the writer's Health Connect
+    // I/O runs while the next chunk is parsed — bounded to [_batchChannelCapacity]
+    // batches in flight so memory stays roughly one parse chunk plus the channel.
+    final channel = AppleHealthImportBatchChannel(_batchChannelCapacity);
+    final consumer = _ImportConsumer(
+      converter: converter,
+      selectedCategories: selectedCategories,
+      categoryStats: categoryStats,
+      typeStats: typeStats,
+      onReadyBatch: channel.add,
+    );
+
+    // Progress snapshots read the consumer's live counters (Kotlin's writing-state
+    // `progressSnapshot`), since the parse — and therefore `parsed` — has not
+    // finished while batches are being written.
+    AppleHealthImportProgress writeProgress(AppleHealthImportPhase phase) =>
+        AppleHealthImportProgress(
+          phase: phase,
+          parsedRecords: consumer.parsedRecords,
+          parsedWorkouts: consumer.parsedWorkouts,
+          parsedCorrelations: consumer.parsedCorrelations,
+          parsedActivitySummaries: consumer.parsedActivitySummaries,
+          convertedRecords: consumer.convertedRecords,
+          importedRecords: imported,
+          duplicateSkippedRecords: duplicate,
+          notSelectedRecords: consumer.notSelectedRecords,
+          unsupportedElements: converter.unsupportedCount,
+          skippedRecords: converter.skippedCount,
+          failedRecords: converter.invalidCount + failed,
+        );
+
+    Future<void> processReadyBatch(List<ConvertedAppleRecord> rawBatch) async {
       // Kotlin `withResumeSkip`: drop records an earlier run already committed.
       final List<ConvertedAppleRecord> batch;
       if (skipRemaining <= 0) {
@@ -369,7 +292,7 @@ class AppleHealthImportService {
           log('Finished skipping previously committed selected records from '
               'checkpoint count=$recordsToSkip');
         }
-        continue;
+        return;
       } else {
         final partialSkip = skipRemaining;
         skipRemaining = 0;
@@ -378,15 +301,7 @@ class AppleHealthImportService {
         batch = rawBatch.sublist(partialSkip);
       }
 
-      onProgress?.call(_progress(
-        AppleHealthImportPhase.checkingDuplicates,
-        parsed: parsed,
-        converted: convertedCount,
-        imported: imported,
-        duplicate: duplicate,
-        notSelected: notSelected,
-        failed: failed,
-      ));
+      onProgress?.call(writeProgress(AppleHealthImportPhase.checkingDuplicates));
       log('Stage started: Checking duplicates batchRecords=${batch.length}');
       final deduplicated = _deduplicateWithinImport(
         batch,
@@ -427,15 +342,7 @@ class AppleHealthImportService {
           'unique=${deduplicated.length} toInsert=${toInsert.length} '
           'inFileDuplicates=$inFileDuplicates existingDuplicates=$existingDuplicates');
 
-      onProgress?.call(_progress(
-        AppleHealthImportPhase.writing,
-        parsed: parsed,
-        converted: convertedCount,
-        imported: imported,
-        duplicate: duplicate,
-        notSelected: notSelected,
-        failed: failed,
-      ));
+      onProgress?.call(writeProgress(AppleHealthImportPhase.writing));
       log('Stage started: Writing records attempted=${toInsert.length}');
       final result = await _insertConvertedRecords(
         toInsert,
@@ -452,20 +359,79 @@ class AppleHealthImportService {
           'failed=${result.failed}');
       committedSelectedRecords += batch.length;
       saveCheckpoint();
-      onProgress?.call(_progress(
-        AppleHealthImportPhase.writing,
-        parsed: parsed,
-        converted: convertedCount,
-        imported: imported,
-        duplicate: duplicate,
-        notSelected: notSelected,
-        failed: failed,
-      ));
+      onProgress?.call(writeProgress(AppleHealthImportPhase.writing));
     }
+
+    // The writer future: pulls one batch at a time, in order, so batch N's insert
+    // still completes before batch N+1's duplicate lookup — cross-batch
+    // duplicates inside one export are caught by the existing-id query, exactly
+    // as when this ran serially. It just now runs concurrently with the parse.
+    final writerFuture =
+        drainAppleHealthImportBatches(channel, processReadyBatch);
+    // The writer's error is surfaced to the parse through channel.throwIfFailed
+    // at the next chunk boundary (and awaited below); this guard just keeps it
+    // from being reported as unhandled in the gap before then. A later `await`
+    // still sees the same error.
+    unawaited(writerFuture.then((_) {}, onError: (Object _, StackTrace _) {}));
+
+    final AppleParsedExport parsed;
+    try {
+      parsed = await _parseExport(
+        file,
+        importLogs,
+        onProgress,
+        // Kotlin 1.9.0 (a852d4e): don't read the workout-routes/*.gpx entries at all
+        // when Workouts is deselected — a sleep/body/vitals-only import is faster and
+        // a damaged route entry can no longer fail an import that never wanted routes.
+        AppleHealthParseOptions(
+          parseRouteFiles: workoutsSelected,
+          // Kotlin 1.9.0 (415f2fe): a known record type whose category is not selected
+          // is never materialized — the difference between OOM and not on a
+          // multi-gigabyte HeartRate export with only Body selected.
+          shouldMaterializeRecord: consumer.shouldMaterializeRecord,
+          // The scan's numerator; makes the scan percent climb instead of standing
+          // still until the parse returns.
+          onElementsParsed: onProgress == null
+              ? null
+              : (parsedElements) => onProgress(_scanProgress(parsedElements)),
+          onRecordSkipped: consumer.onRecordSkipped,
+        ),
+        consumer: consumer,
+        // At each chunk boundary: stop early if the writer has died, then wait if
+        // the writer is more than [_batchChannelCapacity] batches behind. The wait
+        // is where the writer's Health Connect I/O overlaps the next chunk's parse.
+        onChunkBoundary: () async {
+          channel.throwIfFailed();
+          await channel.awaitCapacity();
+        },
+      );
+
+      // Convert the final buffered groups (blood-pressure pairs, sleep sessions,
+      // nutrition, workouts, and the additive-overlap dedup that needs the whole
+      // set); their batches flow through the channel too. Then close it and wait
+      // for the writer to finish draining.
+      onProgress?.call(writeProgress(AppleHealthImportPhase.converting));
+      log('Stage started: Converting records');
+      consumer.finishBuffered();
+      consumer.finishConverted();
+      channel.close();
+      await writerFuture;
+    } catch (_) {
+      // A parse failure (or a writer failure re-thrown at a chunk boundary) must
+      // still let the writer settle so its error is not left unhandled.
+      channel.close();
+      await writerFuture.catchError((Object _) {});
+      rethrow;
+    }
+    final convertedCount = consumer.convertedRecords;
+    final conversionTotals = _totals(_toTypeSummaries(typeStats));
+    log('Stage finished: Converting records converted=${conversionTotals.converted} '
+        'unsupported=${conversionTotals.unsupported} skipped=${conversionTotals.skipped} '
+        'failed=${conversionTotals.failed} '
+        'earlySkippedUnselectedRecords=${consumer.earlySkippedUnselectedRecords}');
 
     final summaries = _toTypeSummaries(typeStats);
     final totals = _totals(summaries);
-    notSelected = totals.notSelected;
     final routeArchiveDiagnostics = [
       if (parsed.workoutRouteArchiveFailure != null)
         _routeArchiveDiagnostic(parsed.workoutRouteArchiveFailure!),
@@ -528,12 +494,14 @@ class AppleHealthImportService {
     );
   }
 
-  AppleParsedExport _parseExport(
+  Future<AppleParsedExport> _parseExport(
     File file,
     List<String> importLogs,
     AppleHealthImportProgressCallback? onProgress,
-    AppleHealthParseOptions options,
-  ) {
+    AppleHealthParseOptions options, {
+    AppleHealthXmlEventConsumer? consumer,
+    Future<void> Function()? onChunkBoundary,
+  }) async {
     onProgress?.call(const AppleHealthImportProgress(
       phase: AppleHealthImportPhase.parsing,
     ));
@@ -542,7 +510,12 @@ class AppleHealthImportService {
       'parseRouteFiles=${options.parseRouteFiles} '
       'parseRecordDetails=${options.parseRecordDetails}',
     ));
-    final parsed = AppleHealthImportParser.parseFile(file, options: options);
+    final parsed = await AppleHealthImportParser.parseFile(
+      file,
+      consumer: consumer,
+      options: options,
+      onChunkBoundary: onChunkBoundary,
+    );
     importLogs.add(_infoLog(
       'Stage finished: Scanning export records=${parsed.parsedRecords} '
       'workouts=${parsed.parsedWorkouts} correlations=${parsed.parsedCorrelations} '
@@ -573,48 +546,87 @@ class AppleHealthImportService {
       if (record.clientRecordId == null) continue;
       byType.putIfAbsent(record.recordType, () => []).add(record);
     }
-    final result = <String>{};
+    // The batch's disjoint (recordType, ≤6h window) lookups (Kotlin's
+    // `queries`). They read independent windows, so they run concurrently —
+    // bounded to [_maxConcurrentDuplicateCheckQueries] — instead of one at a
+    // time, which is most of the writer's wall-clock on a dense export.
+    final queries = <(String, List<ConvertedAppleRecord>)>[];
     for (final entry in byType.entries) {
       for (final chunk
           in _chunkForDuplicateCheck(entry.value, _maxDuplicateCheckSpanSeconds)) {
-        final wantedIds =
-            chunk.map((it) => it.clientRecordId!).toSet();
-        if (wantedIds.isEmpty) continue;
-        final start = chunk
-            .map((it) => it.sourceTimeRange.start)
-            .reduce((a, b) => a.isBefore(b) ? a : b)
-            .subtract(const Duration(seconds: 1));
-        final end = chunk
-            .map((it) => it.sourceTimeRange.end)
-            .reduce((a, b) => a.isAfter(b) ? a : b)
-            .add(const Duration(seconds: 1));
-        try {
-          // orThrow stays ON PURPOSE. The catch below writes the *original*
-          // throwable into the shareable report through
-          // `AppleHealthImportErrorFormatter`, which reads its runtime type,
-          // message and `cause` chain. Switching on the Result here would hand
-          // the formatter an `AppFailure` instead, silently rewriting every
-          // lookup-failure line of the report the user is asked to file bugs
-          // with. The report is the product; the bridge is not in its way.
-          final matched = _orThrowImport(
-            await _repository.findMatchingImportedClientRecordIds(
-              entry.key,
-              start,
-              end,
-              wantedIds,
-            ),
-          );
-          result.addAll(matched);
-        } catch (error) {
-          importLogs.add(_errorLog(
-            'Existing clientRecordId lookup failed recordType=${entry.key} '
-            'wanted=${wantedIds.length}',
-            error,
-          ));
-        }
+        if (chunk.isEmpty) continue;
+        queries.add((entry.key, chunk));
       }
     }
+
+    final result = <String>{};
+    await _runBounded(queries.length, _maxConcurrentDuplicateCheckQueries,
+        (index) async {
+      final (recordType, chunk) = queries[index];
+      final wantedIds = chunk.map((it) => it.clientRecordId!).toSet();
+      if (wantedIds.isEmpty) return;
+      final start = chunk
+          .map((it) => it.sourceTimeRange.start)
+          .reduce((a, b) => a.isBefore(b) ? a : b)
+          .subtract(const Duration(seconds: 1));
+      final end = chunk
+          .map((it) => it.sourceTimeRange.end)
+          .reduce((a, b) => a.isAfter(b) ? a : b)
+          .add(const Duration(seconds: 1));
+      try {
+        // orThrow stays ON PURPOSE. The catch below writes the *original*
+        // throwable into the shareable report through
+        // `AppleHealthImportErrorFormatter`, which reads its runtime type,
+        // message and `cause` chain. Switching on the Result here would hand
+        // the formatter an `AppFailure` instead, silently rewriting every
+        // lookup-failure line of the report the user is asked to file bugs
+        // with. The report is the product; the bridge is not in its way.
+        final matched = _orThrowImport(
+          await _repository.findMatchingImportedClientRecordIds(
+            recordType,
+            start,
+            end,
+            wantedIds,
+          ),
+        );
+        // Single isolate: the union and the log append below run between
+        // awaits, so concurrent lookups never race on these.
+        result.addAll(matched);
+      } catch (error, stackTrace) {
+        importLogs.add(_errorLog(
+          'Existing clientRecordId lookup failed recordType=$recordType '
+          'wanted=${wantedIds.length}',
+          error,
+          stackTrace,
+        ));
+      }
+    });
     return result;
+  }
+
+  /// Runs [taskCount] tasks with at most [maxConcurrent] in flight, awaiting all.
+  /// A single-isolate analogue of Kotlin's `async` + `Semaphore(n)` + `awaitAll`
+  /// — [run] is called with each index `0..taskCount-1`, exactly once.
+  static Future<void> _runBounded(
+    int taskCount,
+    int maxConcurrent,
+    Future<void> Function(int index) run,
+  ) async {
+    if (taskCount <= 0) return;
+    var next = 0;
+    Future<void> worker() async {
+      while (true) {
+        // Claiming an index is synchronous, so two workers never take the same
+        // one despite running "concurrently".
+        final index = next;
+        if (index >= taskCount) return;
+        next = index + 1;
+        await run(index);
+      }
+    }
+
+    final workerCount = maxConcurrent < taskCount ? maxConcurrent : taskCount;
+    await Future.wait([for (var i = 0; i < workerCount; i++) worker()]);
   }
 
   Future<_InsertionResult> _insertConvertedRecords(
@@ -649,10 +661,11 @@ class AppleHealthImportService {
         _stat(typeStats, converted.appleType).imported += 1;
       }
       return _InsertionResult(imported: records.length);
-    } catch (error) {
+    } catch (error, stackTrace) {
       importLogs.add(_errorLog(
         'Batch insert failed count=${records.length}; retrying individually',
         error,
+        stackTrace,
       ));
     }
 
@@ -665,7 +678,7 @@ class AppleHealthImportService {
             await _repository.insertImportedRecords([converted.record]));
         _stat(typeStats, converted.appleType).imported += 1;
         imported += 1;
-      } catch (error) {
+      } catch (error, stackTrace) {
         if (_isDuplicateClientRecordFailure(error)) {
           _stat(typeStats, converted.appleType).duplicateSkipped += 1;
           _addServiceDiagnostic(
@@ -682,13 +695,14 @@ class AppleHealthImportService {
             'Record insert failed appleType=${converted.appleType} '
             'target=${converted.targetType} timeRange=${converted.sourceTimeRange}',
             error,
+            stackTrace,
           ));
           _addServiceDiagnostic(
             diagnostics,
             diagnosticSummaries,
             converted,
             'insert_failed',
-            AppleHealthImportErrorFormatter.details(error),
+            AppleHealthImportErrorFormatter.details(error, stackTrace),
           );
           failed += 1;
         }
@@ -699,6 +713,245 @@ class AppleHealthImportService {
       duplicates: duplicates,
       failed: failed,
     );
+  }
+}
+
+// ── Streaming consumers ──────────────────────────────────────────────────────
+
+/// Streaming consumer for [AppleHealthImportService.analyzeAppleHealthExport]:
+/// categorises and counts each element, then drops it so nothing accumulates.
+/// Mirrors Kotlin's `StreamingAppleHealthScanAnalysisState`.
+class _AnalyzeConsumer implements AppleHealthXmlEventConsumer {
+  _AnalyzeConsumer(this.mindfulnessAvailable);
+
+  final bool mindfulnessAvailable;
+
+  final Map<String, MutableAppleImportTypeStats> typeStats = {};
+  final Map<AppleHealthImportCategory, _MutableCategorySummary> categoryStats = {};
+  final List<AppleHealthImportDiagnostic> diagnostics = [];
+  final Map<String, AppleHealthImportDiagnosticSummary> diagnosticSummaries = {};
+  final Set<String> _rawDiagnosticTypes = {};
+
+  @override
+  void onParsedType(String type) {
+    // Parsed totals are seeded from the handler's aggregate counts after the parse.
+  }
+
+  @override
+  void onRecord(AppleRecord record) {
+    final category = analysisCategory(record, mindfulnessAvailable);
+    if (category != null) {
+      _stat(typeStats, record.type).converted += 1;
+      _addCategory(categoryStats, category, 1);
+    } else {
+      _markUnsupported(
+        record.type,
+        'No direct Health Connect mapping is implemented for this Apple record '
+            'type.',
+      );
+    }
+  }
+
+  @override
+  void onWorkout(AppleWorkout workout) {
+    _stat(typeStats, workout.workoutActivityType).converted += 1;
+    _addCategory(
+      categoryStats,
+      AppleHealthImportCategory.workouts,
+      1,
+      routeSessions: workout.routeReferences > 0 ? 1 : 0,
+    );
+  }
+
+  @override
+  void onCorrelation(AppleCorrelation correlation) {
+    if (correlation.type == appleBloodPressureCorrelation) {
+      _stat(typeStats, correlation.type).converted += 1;
+      _addCategory(categoryStats, AppleHealthImportCategory.vitals, 1);
+    } else {
+      _markUnsupported(
+        correlation.type,
+        'Correlation type has no direct Health Connect import mapping.',
+      );
+    }
+  }
+
+  @override
+  void onActivitySummary() {
+    _markUnsupported(
+      'ActivitySummary',
+      'Apple activity rings and stand hours have no direct writable Health '
+          'Connect record.',
+    );
+  }
+
+  void _markUnsupported(String appleType, String detail) {
+    _stat(typeStats, appleType).unsupported += 1;
+    final diagnostic = AppleHealthImportDiagnostic(
+      appleType: appleType,
+      targetType: null,
+      reasonCode: 'unsupported',
+      timeRange: null,
+      unit: null,
+      value: null,
+      detail: detail,
+    );
+    addToDiagnosticSummaries(diagnosticSummaries, diagnostic);
+    if (_rawDiagnosticTypes.add(appleType)) diagnostics.add(diagnostic);
+  }
+}
+
+/// Streaming consumer for [AppleHealthImportService.importAppleHealthExport]:
+/// converts + selects records as they are parsed and hands full 300-record
+/// batches to [_onReadyBatch], buffering only the records whose conversion needs
+/// cross-record context (blood-pressure pairing, sleep sessions, nutrition,
+/// additive-overlap dedup). Mirrors Kotlin's `StreamingAppleHealthWritingState`.
+class _ImportConsumer implements AppleHealthXmlEventConsumer {
+  _ImportConsumer({
+    required this.converter,
+    required this.selectedCategories,
+    required this.categoryStats,
+    required this.typeStats,
+    required this.onReadyBatch,
+  });
+
+  final AppleHealthImportConverter converter;
+  final Set<AppleHealthImportCategory> selectedCategories;
+  final Map<AppleHealthImportCategory, _MutableCategorySummary> categoryStats;
+  final Map<String, MutableAppleImportTypeStats> typeStats;
+  final void Function(List<ConvertedAppleRecord>) onReadyBatch;
+
+  final List<AppleRecord> _bufferedRecords = [];
+  final List<AppleRecord> _overlapDedupRecords = [];
+  final List<AppleWorkout> _bufferedWorkouts = [];
+  final List<ConvertedAppleRecord> _convertedBatch = [];
+
+  int parsedRecords = 0;
+  int parsedWorkouts = 0;
+  int parsedCorrelations = 0;
+  int parsedActivitySummaries = 0;
+  int convertedRecords = 0;
+  int notSelectedRecords = 0;
+  int earlySkippedUnselectedRecords = 0;
+
+  /// Wired onto [AppleHealthParseOptions.shouldMaterializeRecord].
+  bool shouldMaterializeRecord(String type) => _shouldMaterializeRecord(
+        type,
+        converter.mindfulnessAvailable,
+        selectedCategories,
+      );
+
+  /// Wired onto [AppleHealthParseOptions.onRecordSkipped]: a compatible record
+  /// whose category is not selected is booked here without ever being converted.
+  void onRecordSkipped(String type) {
+    parsedRecords += 1;
+    final category = analysisCategoryForType(type, converter.mindfulnessAvailable);
+    if (category == null) return;
+    converter.markCompatibleNotSelected(type);
+    earlySkippedUnselectedRecords += 1;
+    convertedRecords += 1;
+    notSelectedRecords += 1;
+    _addCategory(categoryStats, category, 1);
+  }
+
+  @override
+  void onParsedType(String type) => converter.markParsed(type);
+
+  @override
+  void onRecord(AppleRecord record) {
+    parsedRecords += 1;
+    converter.noteWorkoutOverlap(record);
+    if (converter.shouldBufferForOverlapDedup(record)) {
+      _overlapDedupRecords.add(record);
+    } else if (converter.shouldBufferRecord(record)) {
+      _bufferedRecords.add(record);
+      if (_bufferedRecords.length >= _bufferedRecordBatchSize) {
+        _flushBufferedRecords();
+      }
+    } else {
+      final converted = converter.convertStreamingRecord(record);
+      if (converted != null) _acceptConverted(converted);
+    }
+  }
+
+  @override
+  void onWorkout(AppleWorkout workout) {
+    parsedWorkouts += 1;
+    _bufferedWorkouts.add(workout);
+  }
+
+  @override
+  void onCorrelation(AppleCorrelation correlation) {
+    parsedCorrelations += 1;
+    converter.convertBufferedGroups(
+      records: const [],
+      workouts: const [],
+      correlations: [correlation],
+      parsedActivitySummaries: 0,
+      emit: _acceptConverted,
+    );
+  }
+
+  @override
+  void onActivitySummary() {
+    parsedActivitySummaries += 1;
+  }
+
+  /// Flush the remaining grouped buffers after the parse (Kotlin
+  /// `finishBufferedGroups`): the leftover buffered records, then the workouts and
+  /// the whole additive-overlap set.
+  void finishBuffered() {
+    _flushBufferedRecords();
+    converter.convertBufferedGroups(
+      records: _overlapDedupRecords,
+      workouts: _bufferedWorkouts,
+      correlations: const [],
+      parsedActivitySummaries: parsedActivitySummaries,
+      emit: _acceptConverted,
+    );
+    _overlapDedupRecords.clear();
+    _bufferedWorkouts.clear();
+  }
+
+  /// Hand the final partial batch to the writer (Kotlin `finishConverted`).
+  void finishConverted() => _sendConvertedBatch();
+
+  void _flushBufferedRecords() {
+    if (_bufferedRecords.isEmpty) return;
+    converter.convertBufferedGroups(
+      records: _bufferedRecords,
+      workouts: const [],
+      correlations: const [],
+      parsedActivitySummaries: 0,
+      emit: _acceptConverted,
+    );
+    _bufferedRecords.clear();
+  }
+
+  void _acceptConverted(ConvertedAppleRecord converted) {
+    convertedRecords += 1;
+    final category = importCategory(converted);
+    _addCategory(
+      categoryStats,
+      category,
+      1,
+      routeSessions: convertedHasExerciseRoute(converted) ? 1 : 0,
+    );
+    if (!selectedCategories.contains(category)) {
+      _stat(typeStats, converted.appleType).notSelected += 1;
+      notSelectedRecords += 1;
+      return;
+    }
+    _convertedBatch.add(converted);
+    if (_convertedBatch.length >= _convertedBatchSize) {
+      _sendConvertedBatch();
+    }
+  }
+
+  void _sendConvertedBatch() {
+    if (_convertedBatch.isEmpty) return;
+    onReadyBatch(List.of(_convertedBatch));
+    _convertedBatch.clear();
   }
 }
 
@@ -930,25 +1183,35 @@ List<List<ConvertedAppleRecord>> _chunkForDuplicateCheck(
   return chunks;
 }
 
-List<List<T>> _chunked<T>(List<T> items, int size) {
-  final chunks = <List<T>>[];
-  for (var index = 0; index < items.length; index += size) {
-    chunks.add(items.sublist(
-      index,
-      index + size > items.length ? items.length : index + size,
-    ));
-  }
-  return chunks;
-}
-
 bool _isDuplicateClientRecordFailure(Object error) {
-  final text = error.toString().toLowerCase();
+  final text = _errorChainMatchText(error);
   return text.contains('clientrecordid') ||
       text.contains('client record id') ||
       ((text.contains('duplicate') ||
               text.contains('already exist') ||
               text.contains('already exists')) &&
           text.contains('record'));
+}
+
+/// The lower-cased match text for [_isDuplicateClientRecordFailure], built from
+/// the whole `cause` chain plus each link's runtime type name — the Dart analogue
+/// of Kotlin's `generateSequence(this){it.cause}.joinToString{ message + simpleName }`.
+/// The duplicate signal can live in a nested cause or only in a class name (e.g. a
+/// `DuplicateRecordException` with a generic message); inspecting just the
+/// top-level `toString()` misses those and miscounts a duplicate as a hard failure.
+String _errorChainMatchText(Object error) {
+  final buffer = StringBuffer();
+  final seen = <Object>{};
+  Object? current = error;
+  while (current != null && seen.add(current)) {
+    buffer
+      ..write(current.toString())
+      ..write(' ')
+      ..write(current.runtimeType.toString())
+      ..write(' ');
+    current = current is AppleHealthImportException ? current.cause : null;
+  }
+  return buffer.toString().toLowerCase();
 }
 
 /// A progress snapshot from *inside* the scan, where no [AppleParsedExport]
@@ -1026,9 +1289,9 @@ String _infoLog(String message) =>
 String _warnLog(String message) =>
     '${DateTime.now().toUtc().toIso8601String()} [WARN] $message';
 
-String _errorLog(String message, Object error) =>
+String _errorLog(String message, Object error, [StackTrace? stackTrace]) =>
     '${DateTime.now().toUtc().toIso8601String()} [ERROR] $message\n'
-    '${AppleHealthImportErrorFormatter.details(error)}';
+    '${AppleHealthImportErrorFormatter.details(error, stackTrace)}';
 
 class _InsertionResult {
   const _InsertionResult({

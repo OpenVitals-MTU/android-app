@@ -60,6 +60,200 @@ class BeverageMigration {
       database.customStatement(OpenVitalsDatabase.createBeveragesTableSql);
 }
 
+/// Body Energy "feel-check" log: the user's own 0–10 energy rating at a moment
+/// in time. A local time-series (Health Connect has no equivalent record), read
+/// back in windows to fit the personal calibration gains.
+class FeelChecks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get recordedAtMillis => integer().named('recorded_at_millis')();
+  IntColumn get rating => integer()(); // 0–10
+
+  @override
+  String get tableName => 'feel_checks';
+}
+
+@DriftAccessor(tables: [FeelChecks])
+class FeelCheckDao extends DatabaseAccessor<OpenVitalsDatabase>
+    with _$FeelCheckDaoMixin {
+  FeelCheckDao(super.db);
+
+  Future<void> insertFeelCheck({
+    required int recordedAtMillis,
+    required int rating,
+  }) async {
+    await into(feelChecks).insert(
+      FeelChecksCompanion.insert(
+        recordedAtMillis: recordedAtMillis,
+        rating: rating,
+      ),
+    );
+  }
+
+  Future<List<FeelCheck>> feelChecksBetween(
+    int startMillis,
+    int endMillis,
+  ) {
+    return (select(feelChecks)
+          ..where(
+            (f) => f.recordedAtMillis.isBetweenValues(startMillis, endMillis),
+          )
+          ..orderBy([(f) => OrderingTerm(expression: f.recordedAtMillis)]))
+        .get();
+  }
+
+  Future<int> countFeelChecks() async {
+    final row = await customSelect(
+      'SELECT COUNT(*) AS c FROM feel_checks',
+      readsFrom: {feelChecks},
+    ).getSingle();
+    return row.read<int>('c');
+  }
+}
+
+/// Cached per-day aggregate of a Health Connect vitals series, keyed by metric
+/// name + [epochDay]. Densely-sampled metrics with no HC aggregate metric
+/// (respiratory rate) take 40s+ to read a year raw; this table holds the daily
+/// means so a long-range chart reads ~365 rows instead. [valueSum]/[sampleCount]
+/// (not the mean) are stored so incremental day recomputes stay exact and the
+/// mean reconstructs as valueSum/sampleCount. [secondarySum] carries blood
+/// pressure's diastolic sum (null for single-value metrics). Kept in sync via
+/// the Health Connect Changes API — see VitalsHistorySyncService.
+class VitalsDailyAggregates extends Table {
+  TextColumn get metric => text()();
+  IntColumn get epochDay => integer().named('epoch_day')();
+  RealColumn get valueSum => real().named('value_sum')();
+  RealColumn get secondarySum => real().named('secondary_sum').nullable()();
+  IntColumn get sampleCount => integer().named('sample_count')();
+
+  @override
+  Set<Column> get primaryKey => {metric, epochDay};
+
+  @override
+  String get tableName => 'vitals_daily_aggregates';
+}
+
+/// Per-metric sync bookkeeping: the Health Connect changes token to resume from,
+/// and when the last full rebuild ran.
+class VitalsSyncCursors extends Table {
+  TextColumn get metric => text()();
+  TextColumn get changesToken => text().named('changes_token').nullable()();
+  IntColumn get lastFullSyncMillis =>
+      integer().named('last_full_sync_millis').nullable()();
+
+  @override
+  Set<Column> get primaryKey => {metric};
+
+  @override
+  String get tableName => 'vitals_sync_cursors';
+}
+
+@DriftAccessor(tables: [VitalsDailyAggregates, VitalsSyncCursors])
+class VitalsDailyCacheDao extends DatabaseAccessor<OpenVitalsDatabase>
+    with _$VitalsDailyCacheDaoMixin {
+  VitalsDailyCacheDao(super.db);
+
+  Future<List<VitalsDailyAggregate>> aggregatesBetween(
+    String metric,
+    int startEpochDay,
+    int endEpochDay,
+  ) {
+    return (select(vitalsDailyAggregates)
+          ..where((a) =>
+              a.metric.equals(metric) &
+              a.epochDay.isBetweenValues(startEpochDay, endEpochDay))
+          ..orderBy([(a) => OrderingTerm(expression: a.epochDay)]))
+        .get();
+  }
+
+  /// Reactive variant, so the overview can refresh when a background sync writes.
+  Stream<List<VitalsDailyAggregate>> watchAggregatesBetween(
+    String metric,
+    int startEpochDay,
+    int endEpochDay,
+  ) {
+    return (select(vitalsDailyAggregates)
+          ..where((a) =>
+              a.metric.equals(metric) &
+              a.epochDay.isBetweenValues(startEpochDay, endEpochDay))
+          ..orderBy([(a) => OrderingTerm(expression: a.epochDay)]))
+        .watch();
+  }
+
+  Future<void> upsertDay({
+    required String metric,
+    required int epochDay,
+    required double valueSum,
+    required int sampleCount,
+    double? secondarySum,
+  }) {
+    return into(vitalsDailyAggregates).insertOnConflictUpdate(
+      VitalsDailyAggregatesCompanion.insert(
+        metric: metric,
+        epochDay: epochDay,
+        valueSum: valueSum,
+        sampleCount: sampleCount,
+        secondarySum: Value(secondarySum),
+      ),
+    );
+  }
+
+  Future<void> deleteDay(String metric, int epochDay) {
+    return (delete(vitalsDailyAggregates)
+          ..where((a) => a.metric.equals(metric) & a.epochDay.equals(epochDay)))
+        .go();
+  }
+
+  /// Atomically replace every cached day for [metric] — the full-rebuild write.
+  Future<void> replaceMetric(
+    String metric,
+    List<VitalsDailyAggregatesCompanion> days,
+  ) async {
+    await transaction(() async {
+      await (delete(vitalsDailyAggregates)..where((a) => a.metric.equals(metric)))
+          .go();
+      await batch((b) => b.insertAll(vitalsDailyAggregates, days));
+    });
+  }
+
+  Future<VitalsSyncCursor?> cursor(String metric) {
+    return (select(vitalsSyncCursors)
+          ..where((c) => c.metric.equals(metric))
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Full-sync bookkeeping: set the resume token and the rebuild timestamp.
+  Future<void> writeFullSync(
+    String metric,
+    String? changesToken,
+    int lastFullSyncMillis,
+  ) {
+    return into(vitalsSyncCursors).insertOnConflictUpdate(
+      VitalsSyncCursorsCompanion.insert(
+        metric: metric,
+        changesToken: Value(changesToken),
+        lastFullSyncMillis: Value(lastFullSyncMillis),
+      ),
+    );
+  }
+
+  /// Advance only the resume token (an incremental sync), preserving the row's
+  /// last-full-sync stamp.
+  Future<void> writeToken(String metric, String? changesToken) async {
+    final updated = await (update(vitalsSyncCursors)
+          ..where((c) => c.metric.equals(metric)))
+        .write(VitalsSyncCursorsCompanion(changesToken: Value(changesToken)));
+    if (updated == 0) {
+      await into(vitalsSyncCursors).insert(
+        VitalsSyncCursorsCompanion.insert(
+          metric: metric,
+          changesToken: Value(changesToken),
+        ),
+      );
+    }
+  }
+}
+
 @DriftAccessor(tables: [Beverages])
 class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
     with _$BeverageDaoMixin {
@@ -156,14 +350,17 @@ class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
       );
 }
 
-@DriftDatabase(tables: [Beverages], daos: [BeverageDao])
+@DriftDatabase(
+  tables: [Beverages, FeelChecks, VitalsDailyAggregates, VitalsSyncCursors],
+  daos: [BeverageDao, FeelCheckDao, VitalsDailyCacheDao],
+)
 class OpenVitalsDatabase extends _$OpenVitalsDatabase {
   /// Construct with any [QueryExecutor]. Tests pass `NativeDatabase.memory()`
   /// (from `package:drift/native.dart`); the app wires a file-backed executor.
   OpenVitalsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -174,8 +371,44 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
           if (from < 3) {
             await customStatement(createBeveragesTableSql);
           }
+          // v4 adds the Body Energy feel-check log.
+          if (from < 4) {
+            await customStatement(createFeelChecksTableSql);
+          }
+          // v5 adds the cached daily vitals aggregates + their sync cursors.
+          if (from < 5) {
+            await customStatement(createVitalsDailyAggregatesTableSql);
+            await customStatement(createVitalsSyncCursorsTableSql);
+          }
         },
       );
+
+  /// The `CREATE TABLE`s for the daily vitals cache, applied on upgrade from < v5.
+  static const String createVitalsDailyAggregatesTableSql = '''
+CREATE TABLE IF NOT EXISTS `vitals_daily_aggregates` (
+    `metric` TEXT NOT NULL,
+    `epoch_day` INTEGER NOT NULL,
+    `value_sum` REAL NOT NULL,
+    `secondary_sum` REAL,
+    `sample_count` INTEGER NOT NULL,
+    PRIMARY KEY(`metric`, `epoch_day`)
+)''';
+
+  static const String createVitalsSyncCursorsTableSql = '''
+CREATE TABLE IF NOT EXISTS `vitals_sync_cursors` (
+    `metric` TEXT NOT NULL,
+    `changes_token` TEXT,
+    `last_full_sync_millis` INTEGER,
+    PRIMARY KEY(`metric`)
+)''';
+
+  /// The `CREATE TABLE` for the feel-check log, applied on upgrade from < v4.
+  static const String createFeelChecksTableSql = '''
+CREATE TABLE IF NOT EXISTS `feel_checks` (
+    `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `recorded_at_millis` INTEGER NOT NULL,
+    `rating` INTEGER NOT NULL
+)''';
 
   static const BeverageMigration migration1To3 = BeverageMigration(1);
   static const BeverageMigration migration2To3 = BeverageMigration(2);

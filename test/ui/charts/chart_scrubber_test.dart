@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/ui/charts/chart_scrubber.dart';
+import 'package:openvitals/ui/charts/chart_zoom.dart';
 
 /// Scrubbing a chart, and — far more importantly — still being able to scroll the
 /// page it is sitting on.
@@ -96,6 +97,50 @@ void main() {
 
     // 0.9 is nearer the last sample (1.0) than the middle one (0.5).
     expect(find.text('11,200 steps'), findsOneWidget);
+    await gesture.up();
+  });
+
+  testWidgets('it stands down while a pinch is in progress', (tester) async {
+    // A pinch is a zoom, not a read. The finger that began this scrub is already
+    // routed to the scrubber and cannot be handed back once a second finger lands,
+    // so the scrubber hides itself off [ChartZoomScope] rather than fight the zoom.
+    Widget scoped(bool pinching) => MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              children: [
+                const SizedBox(height: 400),
+                ChartZoomScope(
+                  multiTouch: pinching,
+                  child: const ChartScrubber(
+                    targets: targets,
+                    accentColor: Colors.green,
+                    child: SizedBox(height: 200, width: 300),
+                  ),
+                ),
+                const SizedBox(height: 1200),
+              ],
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(scoped(false));
+    final chart = find.byType(ChartScrubber);
+    final gesture = await tester.startGesture(tester.getCenter(chart));
+    await gesture.moveBy(const Offset(40, 0));
+    await tester.pump();
+    // One finger reads the chart as usual.
+    expect(find.text('5,100 steps'), findsOneWidget);
+
+    // A second finger lands (a pinch): the tooltip is dropped and the scrubber
+    // ignores further drags, leaving the two-finger gesture to the zoom.
+    await tester.pumpWidget(scoped(true));
+    await tester.pump();
+    expect(find.text('5,100 steps'), findsNothing);
+
+    await gesture.moveBy(const Offset(40, 0));
+    await tester.pump();
+    expect(find.textContaining('steps'), findsNothing);
+
     await gesture.up();
   });
 

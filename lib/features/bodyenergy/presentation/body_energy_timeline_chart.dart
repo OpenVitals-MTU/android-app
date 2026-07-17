@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/insights/body_energy_timeline.dart';
 import '../../../ui/charts/chart_curve.dart';
+import '../../../ui/charts/chart_viewport.dart';
+import '../../../ui/charts/chart_zoom.dart';
 import '../../../ui/charts/day_axis.dart';
 import '../../../ui/charts/metric_line_plot.dart';
 import '../../../ui/theme/chart_colors.dart';
@@ -32,56 +34,66 @@ class BodyEnergyTimelineChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // The shared plot, at last. This chart was drawing its own line, with its
-        // own spline, its own grid and no y axis at all — a 0-to-100 score with no
-        // scale beside it, which is a number you cannot read. It now gets what
-        // every other line in the app gets: a scale, a gradient, a reveal, and a
-        // finger you can drag along it.
-        MetricLinePlot(
-          points: [
-            for (final point in _dampened(points))
-              MetricLinePlotPoint(xFraction: point.dx, value: point.dy),
-          ],
-          // A score DEFINED as 0 to 100. Not `ChartRange.padded`: padding it would
-          // invent headroom above a ceiling and depth below a floor.
-          minValue: 0,
-          maxValue: 100,
-          accentColor: scheme.primary,
-          chartHeight: kChartHeightBodyEnergy,
-          lineStrokeWidth: 2.5,
-          valueFormatter: (value) => value.round().toString(),
-          scrubLabelBuilder: (point) => (
-            point.value.round().toString(),
-            _clockAt(point.xFraction, context),
+    // Pinch with two fingers to look closer at part of the day, exactly as the
+    // other day charts do. The line, the influence strip and the hour row are all
+    // inside the zoom and share the one viewport — if the strip's bars kept the
+    // whole day's scale while the line stretched, the card would say a period
+    // happened at a time it did not.
+    return ChartZoom(
+      enabled: points.isNotEmpty,
+      builder: (context, viewport) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // The shared plot, at last. This chart was drawing its own line, with its
+          // own spline, its own grid and no y axis at all — a 0-to-100 score with no
+          // scale beside it, which is a number you cannot read. It now gets what
+          // every other line in the app gets: a scale, a gradient, a reveal, and a
+          // finger you can drag along it.
+          MetricLinePlot(
+            points: [
+              for (final point in _dampened(points))
+                MetricLinePlotPoint(xFraction: point.dx, value: point.dy),
+            ],
+            // A score DEFINED as 0 to 100. Not `ChartRange.padded`: padding it would
+            // invent headroom above a ceiling and depth below a floor.
+            minValue: 0,
+            maxValue: 100,
+            accentColor: scheme.primary,
+            chartHeight: kChartHeightBodyEnergy,
+            lineStrokeWidth: 2.5,
+            viewport: viewport,
+            valueFormatter: (value) => value.round().toString(),
+            scrubLabelBuilder: (point) => (
+              point.value.round().toString(),
+              _clockAt(point.xFraction, context),
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        // Inset to match the plot above. The line's x, the bar's x and the hour
-        // row's 12:00 all have to come from the same fraction of the same day — if
-        // one drifts, the card says the workout happened at a time it did not.
-        Padding(
-          padding: const EdgeInsets.only(left: kChartPlotInset),
-          child: SizedBox(
-            height: kChartHeightInfluenceStrip,
-            child: CustomPaint(
-              painter: _InfluenceBarsPainter(
-              bars: influenceBars,
-              maxMagnitude: maxMagnitude,
-              axisColor: scheme.outlineVariant.withValues(alpha: 0.8),
-              noDataColor: scheme.outline.withValues(alpha: 0.36),
-                colorFor: (influence) => influenceColor(influence, scheme),
+          const SizedBox(height: 6),
+          // Inset to match the plot above. The line's x, the bar's x and the hour
+          // row's 12:00 all have to come from the same fraction of the same day — if
+          // one drifts, the card says the workout happened at a time it did not.
+          Padding(
+            padding: const EdgeInsets.only(left: kChartPlotInset),
+            child: SizedBox(
+              height: kChartHeightInfluenceStrip,
+              child: CustomPaint(
+                painter: _InfluenceBarsPainter(
+                  bars: influenceBars,
+                  maxMagnitude: maxMagnitude,
+                  viewport: viewport,
+                  axisColor: scheme.outlineVariant.withValues(alpha: 0.8),
+                  noDataColor: scheme.outline.withValues(alpha: 0.36),
+                  colorFor: (influence) => influenceColor(influence, scheme),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 6),
-        // The plot NOW has a y-axis label column, so the hour row insets to match
-        // it — it used to be 0 precisely because the old painters had no gutter.
-        const DayAxisLabels(),
-      ],
+          const SizedBox(height: 6),
+          // The plot NOW has a y-axis label column, so the hour row insets to match
+          // it — it used to be 0 precisely because the old painters had no gutter.
+          DayAxisLabels(viewport: viewport),
+        ],
+      ),
     );
   }
 }
@@ -92,9 +104,9 @@ class BodyEnergyTimelineChart extends StatelessWidget {
 /// [movingAverageY] damps it before the curve is drawn — a DATA decision, and one
 /// that has to survive the move onto the shared plot, or the line goes back to
 /// tracing the steps.
-List<Offset> _dampened(List<BodyEnergyChartPoint> points) => movingAverageY(
-      [for (final point in points) Offset(point.xFraction, point.score)],
-    );
+List<Offset> _dampened(List<BodyEnergyChartPoint> points) => movingAverageY([
+  for (final point in points) Offset(point.xFraction, point.score),
+]);
 
 /// The clock time a fraction of the way through the day. The score points carry no
 /// timestamp of their own — only where they sit across the day — which is all the
@@ -111,6 +123,7 @@ class _InfluenceBarsPainter extends CustomPainter {
   _InfluenceBarsPainter({
     required this.bars,
     required this.maxMagnitude,
+    required this.viewport,
     required this.axisColor,
     required this.noDataColor,
     required this.colorFor,
@@ -118,6 +131,10 @@ class _InfluenceBarsPainter extends CustomPainter {
 
   final List<BodyEnergyInfluenceBar> bars;
   final double maxMagnitude;
+
+  /// The visible slice of the day, shared with the line above so the strip
+  /// zooms and pans in lock-step with it.
+  final ChartViewport viewport;
   final Color axisColor;
   final Color noDataColor;
   final Color Function(BodyEnergyPrimaryInfluence) colorFor;
@@ -134,22 +151,43 @@ class _InfluenceBarsPainter extends CustomPainter {
     );
     if (bars.isEmpty) return;
 
+    // When zoomed, bars slide past the edges; clip so they end at the plot
+    // rather than spilling into the gutter or the card.
+    final zoomed = viewport.isZoomed;
+    if (zoomed) {
+      canvas.save();
+      canvas.clipRect(Offset.zero & size);
+    }
+
     const minBarWidth = 2.0;
 
     for (final bar in bars) {
-      final x = size.width * bar.xFraction.clamp(0.0, 1.0);
-      final width = (size.width * bar.widthFraction * 0.82)
+      final visibleFraction = viewport.visibleFraction(bar.xFraction);
+      // Cheap cull: a bar well outside the window contributes nothing.
+      if (visibleFraction < -0.05 || visibleFraction > 1.05) continue;
+      final x = size.width * visibleFraction;
+      // The bar keeps its share of the DAY, so it grows as the day is stretched:
+      // its plot width is that share divided by the visible span.
+      final width = (size.width * (bar.widthFraction / viewport.span) * 0.82)
           .clamp(minBarWidth, size.width);
-      final left =
-          (x - width / 2).clamp(0.0, (size.width - width).clamp(0.0, size.width));
+      // Only pin bars inside the edges when not zoomed; zoomed, the clip handles
+      // the overflow and pinning would misplace them.
+      final left = zoomed
+          ? x - width / 2
+          : (x - width / 2).clamp(
+              0.0,
+              (size.width - width).clamp(0.0, size.width),
+            );
       // The one bar-corner rule, instead of this strip's own flat 2px — which made
       // it the only bar in the app with square-ish shoulders.
       final radius = Radius.circular(chartBarRadius(width));
       final color = colorFor(bar.influence);
       final barPaint = Paint()..color = color;
       if (bar.charge > 0.0) {
-        final height =
-            ((bar.charge / maxMagnitude) * centerY).clamp(1.0, centerY);
+        final height = ((bar.charge / maxMagnitude) * centerY).clamp(
+          1.0,
+          centerY,
+        );
         canvas.drawRRect(
           RRect.fromRectAndCorners(
             Rect.fromLTWH(left, centerY - height, width, height),
@@ -162,8 +200,10 @@ class _InfluenceBarsPainter extends CustomPainter {
         );
       }
       if (bar.drain > 0.0) {
-        final height =
-            ((bar.drain / maxMagnitude) * centerY).clamp(1.0, centerY);
+        final height = ((bar.drain / maxMagnitude) * centerY).clamp(
+          1.0,
+          centerY,
+        );
         canvas.drawRRect(
           RRect.fromRectAndCorners(
             Rect.fromLTWH(left, centerY, width, height),
@@ -190,8 +230,13 @@ class _InfluenceBarsPainter extends CustomPainter {
         );
       }
     }
+
+    if (zoomed) canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant _InfluenceBarsPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _InfluenceBarsPainter oldDelegate) =>
+      oldDelegate.viewport != viewport ||
+      oldDelegate.bars != bars ||
+      oldDelegate.maxMagnitude != maxMagnitude;
 }

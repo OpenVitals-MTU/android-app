@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/time/local_date.dart';
 import '../../l10n/app_localizations.dart';
 import 'chart_axis.dart';
+import 'chart_viewport.dart';
 import 'metric_line_plot.dart';
 
 /// Where a moment sits on a chart of ONE day, and the axis that says so.
@@ -97,10 +98,23 @@ class DayAxis {
 ///
 /// Painters that draw no y axis (the body-energy strip) pass `inset: 0`.
 class DayAxisLabels extends StatelessWidget {
-  const DayAxisLabels({super.key, this.inset = kChartPlotInset});
+  const DayAxisLabels({
+    super.key,
+    this.inset = kChartPlotInset,
+    this.viewport = ChartViewport.full,
+  });
 
   /// How far the plot above starts from the left edge of the card.
   final double inset;
+
+  /// The slice of the day on show, when the chart above has been pinched.
+  ///
+  /// The row is no longer five fixed labels once a chart can be zoomed: an hour row that
+  /// still said `00:00 … 24:00` over a plot showing half past seven to nine would be the
+  /// very bug this class was written to kill, back again. The labels are computed from
+  /// the visible slice instead — and at full zoom that arithmetic gives back exactly the
+  /// same five it always drew.
+  final ChartViewport viewport;
 
   @override
   Widget build(BuildContext context) {
@@ -112,13 +126,7 @@ class DayAxisLabels extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (final label in const [
-                '00:00',
-                '06:00',
-                '12:00',
-                '18:00',
-                '24:00',
-              ])
+              for (final label in dayAxisLabelsFor(viewport))
                 Text(
                   label,
                   style: theme.textTheme.labelSmall
@@ -172,4 +180,21 @@ class DayChartHeader extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The five evenly-spaced labels under a day chart, for the slice of the day on show.
+///
+/// Evenly spaced across the PLOT, so each one says what time it is at that point — which
+/// at full zoom is `00:00 / 06:00 / 12:00 / 18:00 / 24:00`, exactly as it always was, and
+/// zoomed in is the hours actually under the plot.
+List<String> dayAxisLabelsFor(ChartViewport viewport) => [
+      for (var tick = 0; tick <= 4; tick++)
+        _hhmm(viewport.dataFraction(tick / 4) * Duration.minutesPerDay),
+    ];
+
+String _hhmm(double minutesIntoDay) {
+  final total = minutesIntoDay.round().clamp(0, Duration.minutesPerDay);
+  final hours = total ~/ 60;
+  final minutes = total % 60;
+  return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
 }

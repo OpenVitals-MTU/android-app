@@ -68,11 +68,18 @@ class FitImportCard extends ConsumerWidget {
               if (bulk.result case final result?) ...[
                 const SizedBox(height: 12),
                 Text(
-                  l10n.settingsRouteImportResult(
-                    result.importedFiles,
-                    result.failedFiles,
-                    result.totalFiles,
-                  ),
+                  result.skippedFiles > 0
+                      ? l10n.settingsRouteImportResultWithSkipped(
+                          result.importedFiles,
+                          result.skippedFiles,
+                          result.failedFiles,
+                          result.totalFiles,
+                        )
+                      : l10n.settingsRouteImportResult(
+                          result.importedFiles,
+                          result.failedFiles,
+                          result.totalFiles,
+                        ),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.primary),
                 ),

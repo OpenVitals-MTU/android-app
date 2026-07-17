@@ -92,5 +92,21 @@ docs/proposals/OpenVitals Design System/
 lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_*.dart
 
+# Generated code. Same reasoning as the l10n outputs above: these are reproduced
+# from their sources, so committing them added nothing but noise -- every
+# freezed / drift / pigeon / analyzer bump reformatted them and reddened unrelated
+# PRs. CI regenerates them on every step (scripts/ci-flutter.sh):
+#   *.freezed.dart, *.g.dart -- freezed + drift, via build_runner.
+#   messages.g.dart, *.g.kt  -- the pigeon bridge (packages/health_connect_native),
+#                               incl. its Kotlin half, which is a Gradle source.
+*.freezed.dart
+*.g.dart
+*.g.kt
+
+# Workspace fallbacks scripts/ci-flutter.sh creates when no mounted cache volume
+# exists (e.g. running the CI script locally). Never committed.
+.pub-cache-ci/
+.gradle-ci/
+
 # Golden diffs, written by flutter_test on a mismatch. Never committed.
 test/goldens/**/failures/

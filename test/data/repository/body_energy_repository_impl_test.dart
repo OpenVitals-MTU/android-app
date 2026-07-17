@@ -7,6 +7,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/body_energy_timeline_cache_store.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
+import 'package:openvitals/data/repository/contract/body_repository.dart';
 import 'package:openvitals/data/repository/contract/body_energy_repository.dart';
 import 'package:openvitals/data/repository/contract/health_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
@@ -67,10 +68,15 @@ class _FakeHeart implements HeartRepository {
       throw UnimplementedError('${i.memberName}');
 }
 
-/// Empty stubs for the sleep / activity / vitals collaborators — the timeline
-/// algorithm tolerates no data (the tests exercise caching, not the algorithm).
+/// Empty stubs for the sleep / activity / vitals / body collaborators — the
+/// timeline algorithm tolerates no data (the tests exercise caching, not the
+/// algorithm).
 class _Empty
-    implements SleepRepository, ActivityRepository, VitalsRepository {
+    implements
+        SleepRepository,
+        ActivityRepository,
+        VitalsRepository,
+        BodyRepository {
   @override
   Future<Result<List<SleepData>>> loadSleepSessions(
           LocalDate a, LocalDate b) async =>
@@ -83,6 +89,13 @@ class _Empty
   Future<Result<List<RespiratoryRateEntry>>> loadRespiratoryRate(
           LocalDate a, LocalDate b) async =>
       const Ok([]);
+  @override
+  Future<Result<List<ActivityProgressPoint>>> loadActivityProgress({
+    LocalDate? date,
+  }) async =>
+      const Ok([]);
+  @override
+  Future<Result<double?>> loadLatestBMR() async => const Ok(null);
   @override
   dynamic noSuchMethod(Invocation i) =>
       throw UnimplementedError('${i.memberName}');
@@ -124,6 +137,7 @@ void main() {
       sleepRepository: empty,
       activityRepository: empty,
       vitalsRepository: empty,
+      bodyRepository: empty,
       healthRepository: _FakeHealth(),
       preferencesRepository: prefs,
       cacheStore: cache,

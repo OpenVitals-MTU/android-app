@@ -36,9 +36,13 @@ class ActivityRecordingSetupScreen extends ConsumerStatefulWidget {
   final UnitFormatter unitFormatter;
   final ValueChanged<ActivityEntryType> onSelectActivityType;
 
-  /// Kotlin `onStartRecording(Location?, Long)`.
-  final void Function(ActivityRecordingInitialFix? initialFix, int restSeconds)
-      onStartRecording;
+  /// Kotlin `onStartRecording(Location?, Long)`, plus whether the user asked to record
+  /// this GPS-capable activity WITHOUT GPS.
+  final void Function(
+    ActivityRecordingInitialFix? initialFix,
+    int restSeconds,
+    bool withoutGps,
+  ) onStartRecording;
 
   /// Starts a guided heart-rate-recovery test instead of an ordinary recording.
   final void Function(HeartRateRecoveryTestConfig config)
@@ -59,6 +63,7 @@ class _ActivityRecordingSetupScreenState
   final _hrrWarmupMinutes = TextEditingController(text: '3');
   final _hrrTargetBpm = TextEditingController();
   bool _hrrTest = false;
+  bool _withoutGps = false;
 
   /// Kotlin resets the field with `rememberSaveable(selectedType.id)`.
   String? _restSecondsTypeId;
@@ -101,10 +106,17 @@ class _ActivityRecordingSetupScreenState
 
     // Kotlin: a GPS activity needs either a precise fix or no permission yet (so
     // the button can ask for one); everything else needs its sensor.
+    // Recording without GPS waits for nothing: there is no fix to acquire, no location
+    // permission to ask for, and no sensor to require. A duration IS a recording -- which
+    // is the whole point, and the reason this was worth doing rather than telling people
+    // to keep calling their runs treadmills.
+    final recordingWithoutGps = selectedType.supportsGpsRoute && _withoutGps;
     final enabled = baseEnabled &&
-        (selectedType.supportsGpsRoute
-            ? !gpsFix.hasPrecisePermission || gpsFix.latestPreciseFix != null
-            : readiness?.hasRequiredSensor ?? false);
+        (recordingWithoutGps
+            ? true
+            : selectedType.supportsGpsRoute
+                ? !gpsFix.hasPrecisePermission || gpsFix.latestPreciseFix != null
+                : readiness?.hasRequiredSensor ?? false);
 
     return OpenVitalsCard(
       child: Padding(
@@ -164,11 +176,49 @@ class _ActivityRecordingSetupScreenState
     final l10n = AppLocalizations.of(context);
 
     if (selectedType.supportsGpsRoute) {
+      final theme = Theme.of(context);
       return [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: PreRecordingGpsFixStatus(state: gpsFix),
+        // Compact on purpose. As a full-size SwitchListTile this was the loudest thing on
+        // the card — a headline-sized title and a two-line subtitle for a setting most
+        // people will never touch, sitting above the activity they actually came to
+        // record. It is an option, and it should read like one.
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          value: _withoutGps,
+          onChanged: baseEnabled
+              ? (value) => setState(() => _withoutGps = value)
+              : null,
+          title: Text(
+            l10n.activityRecordingWithoutGpsTitle,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            l10n.activityRecordingWithoutGpsBody,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
         ),
+        // Shown once the switch is ON, so it reads as the consequence of a choice the
+        // user has just made rather than as a scare in front of one they have not.
+        //
+        // It says what will be LOST, in full, because everything in that list is worked
+        // out from a position and there will not be one: no map, no distance, no pace, no
+        // elevation, no splits, and no steps for a type that counts them. A recording
+        // that quietly came back missing half its statistics would feel like the app had
+        // failed, and the user would have no way of knowing they had asked for it.
+        if (_withoutGps)
+          RecordingWithoutGpsWarning(countsSteps: selectedType.supportsStepCounting),
+        // The fix status is about GPS, so it goes away with GPS. Leaving "waiting for a
+        // fix" on screen under a recording that will never use one would be telling the
+        // user to wait for something that is not coming.
+        if (!_withoutGps)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: PreRecordingGpsFixStatus(state: gpsFix),
+          ),
         ActivityRecordingLiveSensorStats(
           state: widget.recordingState,
           unitFormatter: widget.unitFormatter,
@@ -275,12 +325,19 @@ class _ActivityRecordingSetupScreenState
     RecordingSensorReadiness? readiness,
     PreRecordingGpsFixState gpsFix,
   ) {
+    final withoutGps = selectedType.supportsGpsRoute && _withoutGps;
+
     if (selectedType.supportsStepCounting &&
         !(readiness?.hasActivityRecognitionPermission ?? false)) {
       widget.onRequestActivityRecognitionPermission();
       return;
     }
-    if (selectedType.supportsGpsRoute && !gpsFix.hasPrecisePermission) {
+    // Not asked for when the user has said they do not want GPS. Demanding the location
+    // permission for a recording that will never look at a location is exactly the kind
+    // of thing that makes people distrust a health app.
+    if (selectedType.supportsGpsRoute &&
+        !withoutGps &&
+        !gpsFix.hasPrecisePermission) {
       widget.onRequestLocationPermission();
       return;
     }
@@ -302,8 +359,9 @@ class _ActivityRecordingSetupScreenState
 
     final restSeconds = int.tryParse(_restSeconds.text.trim()) ?? 0;
     widget.onStartRecording(
-      selectedType.supportsGpsRoute ? gpsFix.initialFix : null,
+      (selectedType.supportsGpsRoute && !withoutGps) ? gpsFix.initialFix : null,
       restSeconds < 0 ? 0 : restSeconds,
+      withoutGps,
     );
   }
 }
@@ -392,24 +450,103 @@ class PreRecordingGpsFixStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final isReady = state.latestPreciseFix != null;
-    return OpenVitalsSurface(
-      style: OpenVitalsSurfaceStyle.metric,
-      borderRadius: const BorderRadius.all(Radius.circular(999)),
-      contentPadding: const EdgeInsets.all(10),
-      child: Tooltip(
-        message: isReady
-            ? l10n.activityEntryRecordingGpsFix
-            : l10n.activityEntryRecordingGpsWaiting,
-        child: Icon(
+    final label = isReady
+        ? l10n.activityEntryRecordingGpsFix
+        : l10n.activityEntryRecordingGpsWaiting;
+    final color =
+        isReady ? activityRecordingAccentColor() : theme.colorScheme.error;
+
+    // A LABEL, not a lone icon in a circle.
+    //
+    // It used to be a 44px pill holding a red target and nothing else, with the meaning
+    // hidden in a tooltip — on a touch screen, where a tooltip is a thing almost nobody
+    // will ever see. It read as a mystery symbol floating in the middle of the card, and
+    // the one thing it needed to say — that the app is waiting for a fix, and that this
+    // is why Start is greyed out — it did not say at all.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
           Icons.my_location_outlined,
-          size: 24,
-          semanticLabel: isReady
-              ? l10n.activityEntryRecordingGpsFix
-              : l10n.activityEntryRecordingGpsWaiting,
-          color: isReady
-              ? activityRecordingAccentColor()
-              : Theme.of(context).colorScheme.error,
+          size: 16,
+          color: color,
+          semanticLabel: label,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: theme.textTheme.labelMedium?.copyWith(color: color),
+        ),
+      ],
+    );
+  }
+}
+
+/// What an activity recorded without GPS will not have.
+///
+/// Every line of this is derived from a position, and there will not be one. Saying so
+/// before the run rather than discovering it after is the difference between a choice the
+/// user made and an app that looks like it lost half their data.
+///
+/// It is not framed as an error. Recording without GPS is a legitimate thing to want —
+/// people were already doing it by calling their runs treadmills — so the card states the
+/// cost and ends with what survives, rather than trying to talk them out of it.
+class RecordingWithoutGpsWarning extends StatelessWidget {
+  const RecordingWithoutGpsWarning({super.key, required this.countsSteps});
+
+  /// Whether this activity type counts steps while recording. It still does without GPS:
+  /// the step detector reads the accelerometer, and never needed a position.
+  final bool countsSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final scheme = theme.colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 12,
+          children: [
+            Icon(Icons.info_outline, size: 20, color: scheme.onSurfaceVariant),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.activityRecordingWithoutGpsWarningTitle,
+                    style: theme.textTheme.labelLarge
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.activityRecordingWithoutGpsWarningBody,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  // The barometer and the step detector never needed a position, so they
+                  // keep running. What is lost is only what is genuinely derived from
+                  // location.
+                  Text(
+                    countsSteps
+                        ? l10n.activityRecordingWithoutGpsWarningKeptSteps
+                        : l10n.activityRecordingWithoutGpsWarningKept,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

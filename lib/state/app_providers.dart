@@ -6,6 +6,7 @@ import '../core/presentation/unit_formatter.dart';
 import '../di/providers.dart';
 import '../domain/preferences/app_language.dart';
 import '../domain/preferences/app_theme_mode.dart';
+import '../domain/preferences/chart_aggregation_mode.dart';
 import '../domain/preferences/unit_system.dart';
 
 /// App-shell state providers.
@@ -51,6 +52,13 @@ final unitSystemProvider = Provider<UnitSystem>((ref) {
 final activitySplitDistanceMetersProvider = Provider<double>((ref) {
   final repo = ref.watch(preferencesRepositoryProvider);
   return _watchListenable(ref, repo.activitySplitDistanceMetersListenable);
+});
+
+/// How the intraday vitals charts summarise their data (raw or bucketed).
+/// Reactive: changing it in settings rebuilds the charts on the next read.
+final chartAggregationModeProvider = Provider<ChartAggregationMode>((ref) {
+  final repo = ref.watch(preferencesRepositoryProvider);
+  return _watchListenable(ref, repo.chartAggregationModeListenable);
 });
 
 /// A [UnitFormatter] bound to the current [unitSystemProvider]. Rebuilds (and so

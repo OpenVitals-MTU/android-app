@@ -428,6 +428,11 @@ abstract interface class ActivityRecordingController {
     ActivityEntryType activityType,
     ActivityRecordingInitialFix? initialFix, {
     int repetitionRestSeconds = 0,
+
+    /// Record a GPS-capable activity WITHOUT GPS: duration and heart rate, no route, no
+    /// location permission, no waiting for a fix. A run is a run whether or not the phone
+    /// was listening to satellites.
+    bool withoutGps = false,
   });
 
   /// Starts a guided heart-rate-recovery test: warm up, go hard, then stop dead and let

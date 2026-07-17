@@ -11,6 +11,7 @@ const mindfulnessReminderNotificationSpec = ReminderNotificationSpec(
   channelName: 'Mindfulness reminders',
   channelDescription: 'A daily nudge to take mindful minutes.',
   title: 'Take a mindful moment',
+  androidIcon: 'ic_stat_mindfulness_reminder',
   scheduledBody: 'A few mindful minutes can reset your day.',
   body: _mindfulnessReminderBody,
 );

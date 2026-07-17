@@ -13,6 +13,7 @@ const hydrationReminderNotificationSpec = ReminderNotificationSpec(
   channelName: 'Hydration reminders',
   channelDescription: 'Reminders to drink water throughout the day.',
   title: 'Time to hydrate',
+  androidIcon: 'ic_stat_hydration_reminder',
   scheduledBody: 'Log some water to stay on track with your daily goal.',
   body: _hydrationReminderBody,
 );

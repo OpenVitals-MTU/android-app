@@ -1,9 +1,132 @@
 import 'dart:convert';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart'; // DIAGNOSTIC: debugPrint to logcat (also re-exports Uint8List)
 
 import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import 'route_file_parser.dart';
+
+/// A Garmin sleep stage, from the FIT `sleep_level` enum (message 275, field 0):
+/// see docs/reference/garmin-fit-files.md.
+enum FitSleepLevel { unmeasurable, awake, light, deep, rem }
+
+/// One stage span within a sleep session: `[start, end)` spent at [level].
+class FitSleepStage {
+  const FitSleepStage({
+    required this.start,
+    required this.end,
+    required this.level,
+  });
+
+  final DateTime start;
+  final DateTime end;
+  final FitSleepLevel level;
+}
+
+/// A decoded Garmin sleep FIT file (file type 49): the night's bounds and its
+/// stage timeline. The bounds come from the `event`/74 (sleep) start/stop pair;
+/// each `sleep_level` message opens a stage that runs to the next one.
+class FitSleepSession {
+  const FitSleepSession({
+    required this.start,
+    required this.end,
+    required this.stages,
+  });
+
+  final DateTime start;
+  final DateTime end;
+  final List<FitSleepStage> stages;
+}
+
+/// A decoded Garmin HRV nightly reading (file type 68):
+/// `hrv_status_summary.last_night_average` as an RMSSD in milliseconds.
+class FitHrvReading {
+  const FitHrvReading({required this.time, required this.rmssdMillis});
+
+  final DateTime time;
+  final double rmssdMillis;
+}
+
+/// A cumulative monitoring counter reading: a `[value]` for `[activityType]`
+/// at `[time]`. Cumulative within a wear-session and per activity type, so a
+/// per-file total is a sum of per-type within-file deltas (see the mapper).
+class FitMonitoringPoint {
+  const FitMonitoringPoint({
+    required this.time,
+    required this.activityType,
+    required this.value,
+  });
+
+  final DateTime time;
+
+  /// FIT `activity_type` enum (walking 6, running 1, generic 0, …), or -1 when
+  /// the message did not carry one.
+  final int activityType;
+  final int value;
+}
+
+/// Everything a monitoring file (type 32) carried. The one-per-file summaries
+/// (resting HR, BMR) plus the high-frequency series (per-minute HR, breathing,
+/// and the cumulative step/distance/calorie counters). Aggregation into Health
+/// Connect records happens in the mapper.
+class FitMonitoringSummary {
+  const FitMonitoringSummary({
+    this.restingHeartRateTime,
+    this.restingHeartRateBpm,
+    this.bmrTime,
+    this.bmrKcalPerDay,
+    this.heartRateSamples = const [],
+    this.respiration = const [],
+    this.stepPoints = const [],
+    this.distancePoints = const [],
+    this.caloriePoints = const [],
+  });
+
+  final DateTime? restingHeartRateTime;
+  final int? restingHeartRateBpm;
+  final DateTime? bmrTime;
+  final double? bmrKcalPerDay;
+
+  /// Per-minute heart-rate samples `(time, bpm)`.
+  final List<(DateTime, int)> heartRateSamples;
+
+  /// Breathing-rate readings `(time, breathsPerMinute)`.
+  final List<(DateTime, double)> respiration;
+
+  /// Cumulative step (walk/run), distance (m) and active-calorie counters.
+  final List<FitMonitoringPoint> stepPoints;
+  final List<FitMonitoringPoint> distancePoints;
+  final List<FitMonitoringPoint> caloriePoints;
+
+  bool get isEmpty =>
+      restingHeartRateBpm == null &&
+      bmrKcalPerDay == null &&
+      heartRateSamples.isEmpty &&
+      respiration.isEmpty &&
+      stepPoints.isEmpty &&
+      distancePoints.isEmpty &&
+      caloriePoints.isEmpty;
+}
+
+/// The wellness data a FIT file carried, from one decode pass. Each Garmin file
+/// is a single type, so at most one of these is populated (activities have none).
+class FitWellness {
+  const FitWellness({this.fileType, this.sleep, this.hrv, this.monitoring});
+
+  /// `file_id.type` — lets the caller tell a non-activity file with no mappable
+  /// data (skip it) from an activity file (parse it as an exercise).
+  final int? fileType;
+  final FitSleepSession? sleep;
+  final FitHrvReading? hrv;
+  final FitMonitoringSummary? monitoring;
+
+  bool get isEmpty => sleep == null && hrv == null && monitoring == null;
+
+  /// True for `activity` (4), `workout` (5) and `course` (6) — the types the
+  /// exercise/route importer handles. Everything else is wellness data.
+  bool get isActivityType =>
+      fileType == 4 || fileType == 5 || fileType == 6;
+}
 
 /// Hand-port of the Kotlin `FitRouteParser` (Garmin FIT decoder). Ported byte
 /// for byte in pure Dart rather than delegating to a package, because the unit
@@ -13,6 +136,11 @@ class FitRouteParser {
   const FitRouteParser._();
 
   static RouteFileImport parse(Uint8List fitBytes, {String? fileName}) {
+    // DIAGNOSTIC: log every file that reaches the decoder before it can throw, so
+    // a header/structure failure is still attributable to a filename in logcat.
+    debugPrint(
+      '[FIT] decode start file=${fileName ?? "?"} bytes=${fitBytes.length}',
+    );
     final result = _FitDecoder(fitBytes).decode();
     final samples = result.samples.resolve(
       isCycling: _fitSportIsCycling(result.summary.sport),
@@ -23,6 +151,16 @@ class FitRouteParser {
     for (final point in sorted) {
       if (seen.add(point.time.microsecondsSinceEpoch)) routePoints.add(point);
     }
+    // DIAGNOSTIC: the classification that decides pass/fail. fileType (activity vs
+    // course/workout vs monitoring/sleep/etc.), whether a session start_time was
+    // found, and how many timestamped route points survived — the three inputs the
+    // reject-at-line-46 decision reads.
+    debugPrint(
+      '[FIT] decoded file=${fileName ?? "?"} '
+      'fileType=${result.summary.fileType} sport=${result.summary.sport} '
+      'subSport=${result.summary.subSport} start=${result.summary.startTime} '
+      'end=${result.summary.endTime} routePoints=${routePoints.length}',
+    );
     switch (result.summary.fileType) {
       case _fitFileTypeCourse:
         // A course is a planned route: it has no recorded series to carry.
@@ -34,6 +172,27 @@ class FitRouteParser {
             .copyWith(bleSamples: samples);
     }
   }
+
+  /// Decodes the **wellness** data a FIT file carries (sleep, HRV, …) in one
+  /// pass. Wellness files have no activity session or route, so [parse] rejects
+  /// them — this is their path. Returns an empty [FitWellness] for activity,
+  /// course and workout files. Field layout: docs/reference/garmin-fit-files.md.
+  static FitWellness parseWellness(Uint8List fitBytes, {String? fileName}) {
+    final result = _FitDecoder(fitBytes).decode();
+    return FitWellness(
+      fileType: result.summary.fileType,
+      sleep: result.sleep.toSession(),
+      hrv: result.hrv.toReading(),
+      monitoring: result.monitoring.toSummary(),
+    );
+  }
+
+  /// The sleep session in [fitBytes], or null if it carries none.
+  static FitSleepSession? parseSleepSession(
+    Uint8List fitBytes, {
+    String? fileName,
+  }) =>
+      parseWellness(fitBytes, fileName: fileName).sleep;
 
   static RouteFileImport _parseActivity(
     String? fileName,
@@ -183,11 +342,21 @@ class FitRouteParser {
 }
 
 class _FitDecodeResult {
-  const _FitDecodeResult(this.points, this.summary, this.samples);
+  const _FitDecodeResult(
+    this.points,
+    this.summary,
+    this.samples,
+    this.sleep,
+    this.hrv,
+    this.monitoring,
+  );
 
   final List<ExerciseRoutePoint> points;
   final _FitActivitySummary summary;
   final _FitSamples samples;
+  final _FitSleepRaw sleep;
+  final _FitHrvRaw hrv;
+  final _FitMonitoringRaw monitoring;
 }
 
 /// The per-record series, before the sport is known.
@@ -240,14 +409,149 @@ class _FitFileDecodeResult {
     this.points,
     this.summary,
     this.samples,
+    this.sleep,
+    this.hrv,
+    this.monitoring,
     this.nextOffset,
   );
 
   final List<ExerciseRoutePoint> points;
   final _FitActivitySummary summary;
   final _FitSamples samples;
+  final _FitSleepRaw sleep;
+  final _FitHrvRaw hrv;
+  final _FitMonitoringRaw monitoring;
   final int nextOffset;
 }
+
+/// The raw HRV reading a file carried (`hrv_status_summary.last_night_average`).
+/// At most one is kept — the last seen — since a status file holds one summary.
+class _FitHrvRaw {
+  const _FitHrvRaw({this.time, this.rmssdMillis});
+
+  final DateTime? time;
+  final double? rmssdMillis;
+
+  _FitHrvRaw merge(_FitHrvRaw other) => _FitHrvRaw(
+        time: other.time ?? time,
+        rmssdMillis: other.rmssdMillis ?? rmssdMillis,
+      );
+
+  FitHrvReading? toReading() => (time != null && rmssdMillis != null)
+      ? FitHrvReading(time: time!, rmssdMillis: rmssdMillis!)
+      : null;
+}
+
+/// The one-per-file monitoring summaries (resting HR, BMR) collected from a
+/// type-32 file. The last seen of each wins.
+class _FitMonitoringRaw {
+  const _FitMonitoringRaw({
+    this.restingHrTime,
+    this.restingHrBpm,
+    this.bmrTime,
+    this.bmrKcalPerDay,
+    this.heartRate = const [],
+    this.respiration = const [],
+    this.steps = const [],
+    this.distance = const [],
+    this.calories = const [],
+  });
+
+  final DateTime? restingHrTime;
+  final int? restingHrBpm;
+  final DateTime? bmrTime;
+  final double? bmrKcalPerDay;
+  final List<(DateTime, int)> heartRate;
+  final List<(DateTime, double)> respiration;
+  final List<FitMonitoringPoint> steps;
+  final List<FitMonitoringPoint> distance;
+  final List<FitMonitoringPoint> calories;
+
+  _FitMonitoringRaw merge(_FitMonitoringRaw other) => _FitMonitoringRaw(
+        restingHrTime: other.restingHrTime ?? restingHrTime,
+        restingHrBpm: other.restingHrBpm ?? restingHrBpm,
+        bmrTime: other.bmrTime ?? bmrTime,
+        bmrKcalPerDay: other.bmrKcalPerDay ?? bmrKcalPerDay,
+        heartRate: [...heartRate, ...other.heartRate],
+        respiration: [...respiration, ...other.respiration],
+        steps: [...steps, ...other.steps],
+        distance: [...distance, ...other.distance],
+        calories: [...calories, ...other.calories],
+      );
+
+  FitMonitoringSummary? toSummary() {
+    final summary = FitMonitoringSummary(
+      restingHeartRateTime: restingHrTime,
+      restingHeartRateBpm: restingHrBpm,
+      bmrTime: bmrTime,
+      bmrKcalPerDay: bmrKcalPerDay,
+      heartRateSamples: heartRate,
+      respiration: respiration,
+      stepPoints: steps,
+      distancePoints: distance,
+      caloriePoints: calories,
+    );
+    return summary.isEmpty ? null : summary;
+  }
+}
+
+/// The raw sleep messages a single FIT file carried: the `event`/74 session
+/// bounds and the `sleep_level` transitions. Turned into a [FitSleepSession]
+/// once the whole file (or chain of files) is decoded.
+class _FitSleepRaw {
+  const _FitSleepRaw({this.start, this.stop, this.levels = const []});
+
+  final DateTime? start;
+  final DateTime? stop;
+
+  /// Each entry is `(transitionTime, sleepLevelEnumValue)`, in file order.
+  final List<(DateTime, int)> levels;
+
+  _FitSleepRaw merge(_FitSleepRaw other) => _FitSleepRaw(
+        start: start ?? other.start,
+        stop: stop ?? other.stop,
+        levels: [...levels, ...other.levels],
+      );
+
+  FitSleepSession? toSession() {
+    if (levels.isEmpty) return null;
+    final sorted = [...levels]..sort((a, b) => a.$1.compareTo(b.$1));
+    final sessionStart = start ?? sorted.first.$1;
+    // Sleep never ends before it starts; a file that says so is unusable.
+    final sessionEnd = (stop != null && stop!.isAfter(sessionStart))
+        ? stop!
+        : sorted.last.$1;
+    if (!sessionStart.isBefore(sessionEnd)) return null;
+    final stages = <FitSleepStage>[];
+    for (var i = 0; i < sorted.length; i++) {
+      final (transition, rawLevel) = sorted[i];
+      final level = _fitSleepLevelFromRaw(rawLevel);
+      if (level == null) continue;
+      // A stage runs from its transition to the next one — the last to session
+      // end. Clamp into the session so a stray pre-start transition can't widen it.
+      final stageStart =
+          transition.isBefore(sessionStart) ? sessionStart : transition;
+      final stageEnd = i + 1 < sorted.length ? sorted[i + 1].$1 : sessionEnd;
+      if (!stageStart.isBefore(stageEnd)) continue;
+      stages.add(FitSleepStage(start: stageStart, end: stageEnd, level: level));
+    }
+    if (stages.isEmpty) return null;
+    return FitSleepSession(
+      start: sessionStart,
+      end: sessionEnd,
+      stages: stages,
+    );
+  }
+}
+
+FitSleepLevel? _fitSleepLevelFromRaw(int raw) => switch (raw) {
+      0 => FitSleepLevel.unmeasurable,
+      1 => FitSleepLevel.awake,
+      2 => FitSleepLevel.light,
+      3 => FitSleepLevel.deep,
+      4 => FitSleepLevel.rem,
+      _ => null,
+    };
 
 class _FitActivitySummary {
   const _FitActivitySummary({
@@ -340,6 +644,9 @@ class _FitDecoder {
     final points = <ExerciseRoutePoint>[];
     var summary = const _FitActivitySummary();
     var samples = const _FitSamples.empty();
+    var sleep = const _FitSleepRaw();
+    var hrv = const _FitHrvRaw();
+    var monitoring = const _FitMonitoringRaw();
     var offset = 0;
     var decodedAnyFile = false;
 
@@ -354,10 +661,14 @@ class _FitDecoder {
       points.addAll(result.points);
       summary = summary.merge(result.summary);
       samples = samples.merge(result.samples);
+      sleep = sleep.merge(result.sleep);
+      hrv = hrv.merge(result.hrv);
+      monitoring = monitoring.merge(result.monitoring);
       decodedAnyFile = true;
       offset = result.nextOffset;
     }
-    return _FitDecodeResult(points, summary, samples);
+    return _FitDecodeResult(
+        points, summary, samples, sleep, hrv, monitoring);
   }
 }
 
@@ -380,6 +691,35 @@ class _FitSingleFileDecoder {
   _FitActivitySummary _lapSummary = const _FitActivitySummary();
   int? _workoutDurationSeconds;
   int _courseRecordIndex = 0;
+
+  // Sleep (file type 49). A sleep file carries no session or route, so these are
+  // collected separately from the activity summary and only used by
+  // `parseSleepSession`. See docs/reference/garmin-fit-files.md.
+  DateTime? _sleepStart;
+  DateTime? _sleepStop;
+  final List<(DateTime, int)> _sleepLevels = [];
+
+  // HRV (file type 68): the last `hrv_status_summary.last_night_average` seen.
+  DateTime? _hrvTime;
+  double? _hrvRmssdMillis;
+
+  // Monitoring (file type 32): the last one-per-file summary values seen.
+  DateTime? _restingHrTime;
+  int? _restingHrBpm;
+  DateTime? _bmrTime;
+  double? _bmrKcalPerDay;
+
+  // Monitoring high-frequency series, and the running full timestamp used to
+  // reconstruct each message's `timestamp_16`.
+  int? _monLastTimestampRaw;
+  // The last-declared activity type, carried forward: the cumulative-counter
+  // messages don't repeat it, they inherit the context set by an earlier message.
+  int? _monCurrentActivityType;
+  final List<(DateTime, int)> _monHeartRate = [];
+  final List<(DateTime, double)> _respiration = [];
+  final List<FitMonitoringPoint> _monSteps = [];
+  final List<FitMonitoringPoint> _monDistance = [];
+  final List<FitMonitoringPoint> _monCalories = [];
 
   _FitFileDecodeResult decode() {
     final headerSize = fileBytes[startOffset] & 0xFF;
@@ -406,6 +746,19 @@ class _FitSingleFileDecoder {
       _points,
       _fitSummary(),
       samples,
+      _FitSleepRaw(start: _sleepStart, stop: _sleepStop, levels: _sleepLevels),
+      _FitHrvRaw(time: _hrvTime, rmssdMillis: _hrvRmssdMillis),
+      _FitMonitoringRaw(
+        restingHrTime: _restingHrTime,
+        restingHrBpm: _restingHrBpm,
+        bmrTime: _bmrTime,
+        bmrKcalPerDay: _bmrKcalPerDay,
+        heartRate: _monHeartRate,
+        respiration: _respiration,
+        steps: _monSteps,
+        distance: _monDistance,
+        calories: _monCalories,
+      ),
       next > fileBytes.length ? fileBytes.length : next,
     );
   }
@@ -534,6 +887,115 @@ class _FitSingleFileDecoder {
           _subSport = sessionSubSport;
         }
         break;
+      case _fitEventMessageNumber:
+        // Only the sleep event (Garmin-proprietary value 74) bounds a night;
+        // every other event (timer, lap, …) that an activity file carries is
+        // ignored here.
+        if (values[_fitEventFieldNumber] == _fitSleepEventValue &&
+            messageTimestamp != null) {
+          final at = _fitDateTimeInstant(messageTimestamp);
+          switch (values[_fitEventTypeFieldNumber]) {
+            case _fitEventTypeStart:
+              _sleepStart ??= at;
+            case _fitEventTypeStop:
+              _sleepStop = at;
+          }
+        }
+        break;
+      case _fitSleepLevelMessageNumber:
+        final level = values[_fitSleepLevelFieldNumber];
+        if (level != null && messageTimestamp != null) {
+          _sleepLevels.add((_fitDateTimeInstant(messageTimestamp), level));
+        }
+        break;
+      case _fitHrvStatusSummaryMessageNumber:
+        final raw = values[_fitHrvLastNightAverageFieldNumber];
+        if (raw != null && raw != _fitUint16Invalid && messageTimestamp != null) {
+          _hrvTime = _fitDateTimeInstant(messageTimestamp);
+          _hrvRmssdMillis = raw / _fitHrvRmssdScale;
+        }
+        break;
+      case _fitMonitoringHrDataMessageNumber:
+        final bpm = values[_fitRestingHeartRateFieldNumber];
+        if (bpm != null && bpm != _fitUint8Invalid && bpm > 0) {
+          _restingHrBpm = bpm;
+          if (messageTimestamp != null) {
+            _restingHrTime = _fitDateTimeInstant(messageTimestamp);
+          }
+        }
+        break;
+      case _fitMonitoringInfoMessageNumber:
+        // monitoring_info carries a full timestamp that anchors the following
+        // messages' timestamp_16 values.
+        if (messageTimestamp != null) _monLastTimestampRaw = messageTimestamp;
+        final rmr = values[_fitRestingMetabolicRateFieldNumber];
+        if (rmr != null && rmr != _fitUint16Invalid && rmr > 0) {
+          _bmrKcalPerDay = rmr.toDouble();
+          if (messageTimestamp != null) {
+            _bmrTime = _fitDateTimeInstant(messageTimestamp);
+          }
+        }
+        break;
+      case _fitMonitoringMessageNumber:
+        _readMonitoring(values, messageTimestamp);
+        break;
+      case _fitRespirationRateMessageNumber:
+        final rateRaw = values[_fitRespirationRateFieldNumber];
+        if (rateRaw != null && messageTimestamp != null) {
+          final rate = rateRaw / _fitRespirationScale;
+          // Negative / zero is the "not measuring" sentinel.
+          if (rate > 0 && rate < 100) {
+            _respiration.add((_fitDateTimeInstant(messageTimestamp), rate));
+          }
+        }
+        break;
+    }
+  }
+
+  /// One `monitoring` message: resolve its timestamp (full or `timestamp_16`
+  /// relative to the running anchor) and pull HR + the cumulative counters.
+  void _readMonitoring(Map<int, int> values, int? fullTimestamp) {
+    int? tsRaw;
+    if (fullTimestamp != null) {
+      tsRaw = fullTimestamp;
+      _monLastTimestampRaw = fullTimestamp;
+    } else {
+      final ts16 = values[_fitMonitoringTimestamp16FieldNumber];
+      final anchor = _monLastTimestampRaw;
+      if (ts16 != null && anchor != null) {
+        // Roll the low 16 bits forward from the anchor (FIT timestamp_16).
+        tsRaw = anchor + ((ts16 - (anchor & 0xFFFF)) & 0xFFFF);
+        _monLastTimestampRaw = tsRaw;
+      }
+    }
+    if (tsRaw == null) return;
+    final time = _fitDateTimeInstant(tsRaw);
+
+    final hr = values[_fitMonitoringHeartRateFieldNumber];
+    if (hr != null && hr != _fitUint8Invalid && hr > 0) {
+      _monHeartRate.add((time, hr));
+    }
+    final intensityByte = values[_fitMonitoringActivityTypeIntensityFieldNumber];
+    final declaredType = values[_fitMonitoringActivityTypeFieldNumber] ??
+        (intensityByte != null
+            ? intensityByte & _fitMonitoringActivityTypeMask
+            : null);
+    if (declaredType != null) _monCurrentActivityType = declaredType;
+    final activityType = _monCurrentActivityType ?? -1;
+    final steps = values[_fitMonitoringStepsFieldNumber];
+    if (steps != null) {
+      _monSteps.add(FitMonitoringPoint(
+          time: time, activityType: activityType, value: steps));
+    }
+    final distance = values[_fitMonitoringDistanceFieldNumber];
+    if (distance != null) {
+      _monDistance.add(FitMonitoringPoint(
+          time: time, activityType: activityType, value: distance));
+    }
+    final calories = values[_fitMonitoringActiveCaloriesFieldNumber];
+    if (calories != null) {
+      _monCalories.add(FitMonitoringPoint(
+          time: time, activityType: activityType, value: calories));
     }
   }
 
@@ -1032,6 +1494,50 @@ const int _fitFileTypeCourse = 6;
 const int _fitRecordMessageNumber = 20;
 const int _fitLapMessageNumber = 19;
 const int _fitSessionMessageNumber = 18;
+
+// Sleep (Garmin file type 49). See docs/reference/garmin-fit-files.md.
+const int _fitEventMessageNumber = 21;
+const int _fitSleepLevelMessageNumber = 275;
+const int _fitEventFieldNumber = 0;
+const int _fitEventTypeFieldNumber = 1;
+const int _fitSleepLevelFieldNumber = 0;
+const int _fitSleepEventValue = 74; // `event` == sleep (Garmin-proprietary)
+const int _fitEventTypeStart = 0;
+const int _fitEventTypeStop = 1;
+
+// HRV status (Garmin file type 68). `hrv_status_summary.last_night_average`
+// (field 1, uint16, scale 128) is the night's RMSSD in ms.
+const int _fitHrvStatusSummaryMessageNumber = 370;
+const int _fitHrvLastNightAverageFieldNumber = 1;
+const double _fitHrvRmssdScale = 128.0;
+const int _fitUint16Invalid = 0xFFFF;
+
+// Monitoring (Garmin file type 32). One-per-file summaries:
+const int _fitMonitoringHrDataMessageNumber = 211;
+const int _fitRestingHeartRateFieldNumber = 0;
+const int _fitMonitoringInfoMessageNumber = 103;
+const int _fitRestingMetabolicRateFieldNumber = 5;
+const int _fitUint8Invalid = 0xFF;
+
+// Monitoring high-frequency series. `monitoring` (55) carries per-minute HR and
+// the cumulative step/distance/calorie counters; `respiration_rate` (297) the
+// breathing series. Most `monitoring` messages timestamp with `timestamp_16`
+// (field 26) — the low 16 bits relative to the last full timestamp — not a full
+// `timestamp` (253). See docs/reference/garmin-fit-files.md.
+const int _fitMonitoringMessageNumber = 55;
+const int _fitRespirationRateMessageNumber = 297;
+const int _fitMonitoringDistanceFieldNumber = 2; // uint32, ÷100 m, cumulative
+const int _fitMonitoringStepsFieldNumber = 3; // uint32, raw == steps (walk/run)
+const int _fitMonitoringActivityTypeFieldNumber = 5;
+const int _fitMonitoringActiveCaloriesFieldNumber = 19; // uint16, cumulative
+// current_activity_type_intensity (byte): activity_type in the low 5 bits. Most
+// monitoring messages carry the type here, not in field 5.
+const int _fitMonitoringActivityTypeIntensityFieldNumber = 24;
+const int _fitMonitoringActivityTypeMask = 0x1F;
+const int _fitMonitoringTimestamp16FieldNumber = 26;
+const int _fitMonitoringHeartRateFieldNumber = 27; // uint8, bpm
+const int _fitRespirationRateFieldNumber = 0; // sint16, ÷100 breaths/min
+const double _fitRespirationScale = 100.0;
 const int _fitCourseMessageNumber = 31;
 const int _fitCourseSportFieldNumber = 4;
 const int _fitCourseNameFieldNumber = 5;
@@ -1115,4 +1621,11 @@ const Set<int> _fitParsedMessageNumbers = {
   _fitCourseMessageNumber,
   _fitWorkoutMessageNumber,
   _fitWorkoutStepMessageNumber,
+  _fitEventMessageNumber,
+  _fitSleepLevelMessageNumber,
+  _fitHrvStatusSummaryMessageNumber,
+  _fitMonitoringHrDataMessageNumber,
+  _fitMonitoringInfoMessageNumber,
+  _fitMonitoringMessageNumber,
+  _fitRespirationRateMessageNumber,
 };

@@ -1,5 +1,94 @@
 # Changelog
 
+## 2.2.7 - 2026-07-17
+
+### English
+
+- Editing and deleting the entries you logged in OpenVitals is back. Swipe a hydration, nutrition, caffeine, or mindfulness entry to delete it, tap the pencil to edit a hydration or mindfulness entry, and edit or delete an activity from its detail screen. These were lost when the app moved to Flutter.
+- Importing a large Apple Health export is dramatically faster, and the report you can copy or save when it finishes works again. The duplicate check no longer scans your whole history on every batch, and the report is saved to a file instead of a store too small to hold it.
+- The rest-timer bell during a workout now lowers your music or podcast for the chime and brings it back, instead of stopping playback.
+- Logging a drink from the 1x1 home-screen widget now clears an active hydration reminder, the same as logging it in the app.
+- Sleep chart fixes: the day view no longer draws the stage graph over its own labels at large font sizes, and a day with a nap keeps the same rounded bars as every other day in the month view.
+
+### Espanol
+
+- Vuelve la posibilidad de editar y borrar las entradas que registraste en OpenVitals. Desliza una entrada de hidratacion, nutricion, cafeina o mindfulness para borrarla, toca el lapiz para editar una entrada de hidratacion o mindfulness, y edita o borra una actividad desde su pantalla de detalle. Se perdieron al pasar la app a Flutter.
+- Importar una exportacion grande de Apple Health es mucho mas rapido, y el informe que puedes copiar o guardar al terminar vuelve a funcionar. La comprobacion de duplicados ya no recorre todo tu historial en cada lote, y el informe se guarda en un archivo en lugar de en un almacen demasiado pequeno.
+- El timbre del temporizador de descanso durante un entrenamiento ahora baja tu musica o podcast para el sonido y lo restaura, en vez de detener la reproduccion.
+- Registrar una bebida desde el widget 1x1 de la pantalla de inicio ahora borra un recordatorio de hidratacion activo, igual que al registrarla en la app.
+- Correcciones del grafico de sueno: la vista de dia ya no dibuja el grafico de fases sobre sus propias etiquetas con fuentes grandes, y un dia con siesta mantiene las mismas barras redondeadas que los demas dias en la vista de mes.
+
+### Deutsch
+
+- Das Bearbeiten und Loeschen der Eintraege, die du in OpenVitals erfasst hast, ist zurueck. Wische einen Eintrag fuer Fluessigkeit, Ernaehrung, Koffein oder Achtsamkeit, um ihn zu loeschen, tippe auf den Stift, um einen Fluessigkeits- oder Achtsamkeitseintrag zu bearbeiten, und bearbeite oder loesche eine Aktivitaet auf ihrem Detailbildschirm. Das ging beim Wechsel zu Flutter verloren.
+- Der Import eines grossen Apple-Health-Exports ist deutlich schneller, und der Bericht, den du am Ende kopieren oder speichern kannst, funktioniert wieder. Die Dublettenpruefung durchsucht nicht mehr bei jedem Stapel den gesamten Verlauf, und der Bericht wird in eine Datei geschrieben statt in einen zu kleinen Speicher.
+- Der Ton des Pausen-Timers waehrend eines Trainings senkt jetzt deine Musik oder deinen Podcast fuer den Ton und stellt ihn danach wieder her, statt die Wiedergabe zu stoppen.
+- Ein Getraenk ueber das 1x1-Startbildschirm-Widget zu erfassen loescht jetzt eine aktive Trinkerinnerung, genau wie beim Erfassen in der App.
+- Korrekturen am Schlafdiagramm: Die Tagesansicht zeichnet das Phasendiagramm bei grossen Schriften nicht mehr ueber die eigenen Beschriftungen, und ein Tag mit Nickerchen behaelt in der Monatsansicht dieselben abgerundeten Balken wie jeder andere Tag.
+
+### Italiano
+
+- Torna la possibilita di modificare ed eliminare le voci che hai registrato in OpenVitals. Scorri una voce di idratazione, nutrizione, caffeina o mindfulness per eliminarla, tocca la matita per modificare una voce di idratazione o mindfulness, e modifica o elimina un'attivita dalla sua schermata di dettaglio. Erano andate perse nel passaggio a Flutter.
+- Importare una grande esportazione di Apple Health e molto piu veloce, e il rapporto che puoi copiare o salvare al termine funziona di nuovo. Il controllo dei duplicati non scorre piu tutta la cronologia a ogni lotto, e il rapporto viene scritto su un file invece che in un archivio troppo piccolo.
+- Il segnale del timer di riposo durante un allenamento ora abbassa la tua musica o il tuo podcast per il suono e lo ripristina, invece di fermare la riproduzione.
+- Registrare una bevanda dal widget 1x1 della schermata home ora cancella un promemoria di idratazione attivo, come quando la registri nell'app.
+- Correzioni al grafico del sonno: la vista giornaliera non disegna piu il grafico delle fasi sopra le proprie etichette con caratteri grandi, e un giorno con un pisolino mantiene le stesse barre arrotondate degli altri giorni nella vista mensile.
+
+### Eesti
+
+- Sinu OpenVitalsis lisatud kirjete muutmine ja kustutamine on tagasi. Kustutamiseks nipsa hudratatsiooni, toitumise, kofeiini voi teadveloleku kirjet, koputa pliiatsit, et muuta hudratatsiooni voi teadveloleku kirjet, ning muuda voi kustuta tegevus selle uksikasjade ekraanilt. Need laksid Flutterile ulemineku kaigus kaduma.
+- Suure Apple Healthi ekspordi importimine on marksa kiirem ja aruanne, mille saad lopus kopeerida voi salvestada, tootab jalle. Duplikaatide kontroll ei skanni enam iga partii puhul kogu ajalugu ja aruanne kirjutatakse faili, mitte liiga vaiksesse hoidlasse.
+- Treeningu ajal antud puhketaimeri heli vahendab nuud su muusikat voi taskuhaalingut heli ajaks ja taastab selle, selle asemel et esitus peatada.
+- Joogi lisamine avaekraani 1x1 vidinast kustutab nuud aktiivse joomise meeldetuletuse, nagu ka rakenduses lisades.
+- Uneulevaate graafiku parandused: paevavaade ei joonista enam suurte fontidega faasigraafikut ule oma siltide ja uinakuga paev sailitab kuuvaates samad umarad ribad nagu koik teised paevad.
+
+## 2.2.6 - 2026-07-17
+
+### English
+
+- Importing a large Apple Health export no longer runs out of memory. The file is read a piece at a time instead of all at once, so a multi-gigabyte export that used to crash the analysis now imports. Re-importing the same export no longer creates duplicate entries.
+- New Body Energy screen: a recovery-side score (0-100) for how much energy your body signals support today, based on sleep, heart-rate variability, resting heart rate, stress, temperature, hydration, nutrition, and mindfulness.
+- Garmin .fit files can be imported from a folder: sleep, heart-rate variability, resting heart rate, and basal metabolic rate. Files that cannot be mapped are skipped instead of failing the whole import.
+- The Year and other long-range overviews are much faster. They cache daily summaries and update only what changed since the last sync, instead of re-reading a year of records every time.
+- Sleep is more accurate: daytime naps are split from the night, and overlapping sessions recorded by more than one source are de-duplicated.
+- Charts pinch to zoom on every range, and the zoom keeps working while you scroll the page.
+
+### Espanol
+
+- Importar una exportacion grande de Apple Health ya no se queda sin memoria. El archivo se lee por partes en lugar de todo de una vez, asi que una exportacion de varios gigabytes que antes bloqueaba el analisis ahora se importa. Volver a importar la misma exportacion ya no crea entradas duplicadas.
+- Nueva pantalla Body Energy: una puntuacion de recuperacion (0-100) de cuanta energia respaldan hoy tus senales corporales, segun sueno, variabilidad de la frecuencia cardiaca, frecuencia cardiaca en reposo, estres, temperatura, hidratacion, nutricion y mindfulness.
+- Los archivos .fit de Garmin se pueden importar desde una carpeta: sueno, variabilidad de la frecuencia cardiaca, frecuencia cardiaca en reposo y metabolismo basal. Los archivos que no se pueden asignar se omiten en lugar de hacer fallar toda la importacion.
+- El resumen anual y otros rangos largos son mucho mas rapidos. Guardan resumenes diarios y solo actualizan lo que cambio desde la ultima sincronizacion, en vez de releer un ano de registros cada vez.
+- El sueno es mas preciso: las siestas diurnas se separan de la noche y las sesiones superpuestas registradas por mas de una fuente se desduplican.
+- Los graficos hacen zoom con dos dedos en cualquier rango, y el zoom sigue funcionando mientras te desplazas por la pagina.
+
+### Deutsch
+
+- Beim Import eines grossen Apple-Health-Exports geht nicht mehr der Speicher aus. Die Datei wird stueckweise gelesen statt komplett auf einmal, sodass ein mehrere Gigabyte grosser Export, der die Analyse frueher zum Absturz brachte, jetzt importiert. Ein erneuter Import desselben Exports erzeugt keine doppelten Eintraege mehr.
+- Neuer Bildschirm Body Energy: ein Erholungswert (0-100) dafuer, wie viel Energie deine Koerpersignale heute stuetzen, basierend auf Schlaf, Herzfrequenzvariabilitaet, Ruhepuls, Stress, Temperatur, Fluessigkeitszufuhr, Ernaehrung und Achtsamkeit.
+- Garmin-.fit-Dateien lassen sich aus einem Ordner importieren: Schlaf, Herzfrequenzvariabilitaet, Ruhepuls und Grundumsatz. Dateien, die sich nicht zuordnen lassen, werden uebersprungen, statt den ganzen Import scheitern zu lassen.
+- Die Jahresuebersicht und andere lange Zeitraeume sind viel schneller. Sie speichern Tageswerte zwischen und aktualisieren nur, was sich seit der letzten Synchronisierung geaendert hat, statt jedes Mal ein ganzes Jahr an Datensaetzen neu zu lesen.
+- Der Schlaf ist genauer: Nickerchen am Tag werden von der Nacht getrennt, und ueberlappende Sitzungen aus mehr als einer Quelle werden entdoppelt.
+- Diagramme lassen sich in jedem Zeitraum mit zwei Fingern zoomen, und der Zoom funktioniert weiter, waehrend du die Seite scrollst.
+
+### Italiano
+
+- Importare una grande esportazione di Apple Health non esaurisce piu la memoria. Il file viene letto un pezzo alla volta invece che tutto in una volta, cosi una esportazione di piu gigabyte che prima bloccava l'analisi ora si importa. Reimportare la stessa esportazione non crea piu voci duplicate.
+- Nuova schermata Body Energy: un punteggio di recupero (0-100) di quanta energia i tuoi segnali corporei supportano oggi, basato su sonno, variabilita della frequenza cardiaca, frequenza cardiaca a riposo, stress, temperatura, idratazione, nutrizione e mindfulness.
+- I file .fit di Garmin si possono importare da una cartella: sonno, variabilita della frequenza cardiaca, frequenza cardiaca a riposo e metabolismo basale. I file che non si riescono a mappare vengono saltati invece di far fallire l'intera importazione.
+- La panoramica annuale e gli altri intervalli lunghi sono molto piu veloci. Memorizzano i riepiloghi giornalieri e aggiornano solo cio che e cambiato dall'ultima sincronizzazione, invece di rileggere un anno di dati ogni volta.
+- Il sonno e piu preciso: i sonnellini diurni sono separati dalla notte e le sessioni sovrapposte registrate da piu di una fonte vengono deduplicate.
+- I grafici si ingrandiscono con due dita in ogni intervallo, e lo zoom continua a funzionare mentre scorri la pagina.
+
+### Eesti
+
+- Suure Apple Healthi ekspordi importimisel ei saa enam malu otsa. Fail loetakse tukkhaaval, mitte korraga, nii et mitme gigabaidine eksport, mis varem analuusi kokku jooksutas, importub nuud. Sama ekspordi uuesti importimine ei loo enam topeltkirjeid.
+- Uus Body Energy ekraan: taastumispohine skoor (0-100) selle kohta, kui palju energiat su keha signaalid tana toetavad, tuginedes unele, sudame loogisageduse varieeruvusele, puhkeoleku sudame loogisagedusele, stressile, temperatuurile, hudratatsioonile, toitumisele ja teadvelolekule.
+- Garmini .fit-faile saab importida kaustast: uni, sudame loogisageduse varieeruvus, puhkeoleku sudame loogisagedus ja pohiainevahetus. Failid, mida ei onnestu vastendada, jaetakse vahele, selle asemel et kogu import nurjuks.
+- Aastaulevaade ja muud pikad vahemikud on palju kiiremad. Nad salvestavad paevased kokkuvotted ja uuendavad ainult seda, mis on parast viimast sunkroonimist muutunud, selle asemel et iga kord aasta jagu andmeid uuesti lugeda.
+- Uni on tapsem: paevased uinakud eraldatakse oost ja mitmest allikast parit kattuvad seansid deduplitseeritakse.
+- Graafikuid saab igas vahemikus kahe sormega suumida ja suum tootab edasi ka lehe kerimise ajal.
+
 ## 2.2.5 - 2026-07-14
 
 ### English

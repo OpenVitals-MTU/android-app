@@ -171,6 +171,53 @@
   },
   "mindfulnessEntrySubtitle": "Mindfulness sessions are saved directly to Health Connect.",
   "mindfulnessEntryPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.",
+  "activityRecordingWithoutGpsTitle": "Record without GPS",
+  "@activityRecordingWithoutGpsTitle": {
+    "description": "Switch: record a running/cycling activity with no route, no location permission and no waiting for a fix."
+  },
+  "activityRecordingWithoutGpsBody": "No location is used, and none is asked for.",
+  "@activityRecordingWithoutGpsBody": {
+    "description": "Subtitle of the record-without-GPS switch."
+  },
+  "activityRecordingWithoutGpsWarningTitle": "What this activity will not have",
+  "@activityRecordingWithoutGpsWarningTitle": {
+    "description": "Heading of the warning shown once the user switches GPS off for a recording."
+  },
+  "activityRecordingWithoutGpsWarningBody": "No map, no automatic distance, no pace or speed, and no splits. These are all worked out from your position, and there will not be one.",
+  "@activityRecordingWithoutGpsWarningBody": {
+    "description": "Plainly states what a GPS-less recording loses. Everything listed is derived from location; things that are not (elevation, steps, heart rate) are still recorded."
+  },
+  "activityRecordingWithoutGpsWarningKept": "Duration, heart rate and elevation gain are still recorded, and you can type the distance in yourself when you save.",
+  "@activityRecordingWithoutGpsWarningKept": {
+    "description": "What a GPS-less recording DOES still capture. Elevation comes from the barometer, which needs no position."
+  },
+  "activityRecordingWithoutGpsWarningKeptSteps": "Duration, heart rate, elevation gain and your step count are still recorded, and you can type the distance in yourself when you save.",
+  "@activityRecordingWithoutGpsWarningKeptSteps": {
+    "description": "As above, for an activity type that counts steps: the step detector needs no position either."
+  },
+  "caffeineEntriesTitle": "Drinks",
+  "@caffeineEntriesTitle": { "description": "Section listing the caffeinated drinks logged." },
+  "caffeineEntriesEmpty": "No caffeinated drinks logged for this day.",
+  "@caffeineEntriesEmpty": { "description": "Empty state for the drinks list." },
+  "caffeineDrinkTitle": "Drink",
+  "@caffeineDrinkTitle": { "description": "Title of the per-drink detail screen." },
+  "caffeineDrinkPeak": "Peak",
+  "@caffeineDrinkPeak": { "description": "The most of this drink that was in the body at once." },
+  "caffeineDrinkNow": "Right now",
+  "@caffeineDrinkNow": { "description": "How much of this drink is still in the body." },
+  "caffeineDrinkHalfGone": "Half gone",
+  "@caffeineDrinkHalfGone": { "description": "When half of this drink's peak has been eliminated." },
+  "caffeineDrinkGone": "Effectively gone",
+  "@caffeineDrinkGone": { "description": "When what remains of this drink stops mattering." },
+  "caffeineDrinkStillGoing": "Still going after {hours}h",
+  "@caffeineDrinkStillGoing": {
+    "description": "Shown when the drink has not faded within the horizon.",
+    "placeholders": { "hours": { "type": "String", "example": "36" } }
+  },
+  "caffeineDrinkCurveTitle": "This drink on its own",
+  "@caffeineDrinkCurveTitle": { "description": "Chart of one drink's rise and decline, separate from the day's total." },
+  "caffeineDrinkPeakExplainer": "The peak is lower than the amount you drank: your body starts clearing caffeine before it has finished absorbing it.",
+  "@caffeineDrinkPeakExplainer": { "description": "Explains why peak < dose, which otherwise looks like a bug." },
   "activityEntrySubtitle": "Create a Health Connect activity session. Imported route or activity details are written only when you save.",
   "activityEntryPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add activities, we need Health Connect write permissions for sessions, routes, distance, elevation, calories, and recorded sensor metrics such as heart rate; treadmill entries ask for steps when needed. OpenVitals will not store these entries; they are saved in Health Connect.",
   "activityEntrySourceBody": "Create an activity manually, use an existing plan, or record a GPS route.",
@@ -1070,6 +1117,7 @@
   "cardioLoadReferenceTrainingLoad": "Training-load monitoring review",
   "cardioLoadReferenceHealthConnect": "Health Connect workout HR mapping",
   "sectionSleepSessions": "Sleep sessions",
+  "sleepNaps": "Naps",
   "sectionWeight": "Weight",
   "sectionEntries": "Entries",
   "sectionMeals": "Meals",
@@ -1877,6 +1925,7 @@
   "messageNoMindfulnessPeriod": "No mindfulness sessions were recorded for this period.",
   "messageNoVitalsPeriod": "No vitals were recorded for this period.",
   "messageNoReadingsPeriod": "No readings in this period.",
+  "messageTooMuchDataRange": "Building history for this range… check back shortly.",
   "messageNoCyclePeriod": "No cycle data was recorded for this period.",
   "messageNoSegments": "No segments recorded.",
   "messageNoLaps": "No laps recorded.",
@@ -2187,6 +2236,12 @@
   "settingsSleepRangeRolling24h": "Rolling 24h",
   "settingsSleepRangeNoon": "Noon",
   "settingsSleepRangeEvening": "18:00",
+  "settingsChartAggregationTitle": "Aggregate charts",
+  "settingsChartAggregationBody": "Show an average line with a min/max band per time bucket instead of the raw data.",
+  "settingsChartAggregationOff": "Off (raw data)",
+  "settingsChartAggregationMin5": "5 minutes",
+  "settingsChartAggregationMin10": "10 minutes",
+  "settingsChartAggregationMin30": "30 minutes",
   "settingsCyclePermissionsTitle": "Cycle permissions",
   "settingsCyclePermissionsGranted": "{arg0}/{arg1} cycle permissions granted.",
   "@settingsCyclePermissionsGranted": {
@@ -2485,6 +2540,24 @@
         "type": "int"
       },
       "arg2": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRouteImportResultWithSkipped": "Imported {arg0}. Skipped {arg1}. Failed {arg2}. Selected {arg3}.",
+  "@settingsRouteImportResultWithSkipped": {
+    "description": "FIT folder import result when some files were skipped (non-activity wellness types with no Health Connect equivalent, e.g. Garmin stress or Body Battery).",
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
         "type": "int"
       }
     }
@@ -3259,6 +3332,7 @@
   "bodyEnergyWhyEmpty": "No clear charge or drain dominated this day yet.",
   "bodyEnergyInfluenceSleepRecovery": "Sleep recovery",
   "bodyEnergyInfluenceQuietRest": "Quiet rest",
+  "bodyEnergyInfluenceEverydayActivity": "Everyday activity",
   "bodyEnergyInfluenceExertion": "Exertion",
   "bodyEnergyInfluenceElevatedHr": "Elevated heart rate",
   "bodyEnergyInfluenceRecoveryDebt": "Recovery debt",
@@ -3266,11 +3340,28 @@
   "bodyEnergyInfluenceSteady": "Steady",
   "bodyEnergyReasonSleepRecoveryDetail": "Sleep buckets charged the estimate from the previous score.",
   "bodyEnergyReasonQuietRestDetail": "Low heart rate while awake added a small recovery charge.",
+  "bodyEnergyReasonEverydayActivityDetail": "Walking, chores and moving around drained energy even at a low heart rate.",
   "bodyEnergyReasonExertionDetail": "Heart-rate intensity or recorded workouts drained the estimate.",
   "bodyEnergyReasonElevatedHrDetail": "Awake heart rate above resting level added stress drain.",
   "bodyEnergyReasonRecoveryDebtDetail": "Recent harder effort kept a small drain active afterward.",
   "bodyEnergyReasonNoDataDetail": "Health Connect did not provide enough signal for this bucket.",
-  "bodyEnergyReasonSteadyDetail": "The estimate stayed mostly stable.",
+  "bodyEnergyReasonSteadyDetail": "Baseline metabolism drew a steady, gentle amount.",
+  "bodyEnergyFeelCheckTitle": "How's your energy?",
+  "bodyEnergyFeelCheckPrompt": "Rate it 0\u201310. Your answers quietly tune Body Energy to how activity, sleep and stress actually affect you.",
+  "bodyEnergyFeelCheckSaved": "Thanks \u2014 Body Energy will learn from that.",
+  "bodyEnergyFeelCheckError": "Could not save that check-in. Please try again.",
+  "bodyEnergyPersonalizationTitle": "Personal tuning",
+  "bodyEnergyPersonalizationBody": "{count, plural, =0{Rate your energy on Body Energy to start personalising these.} =1{Learned from 1 check-in. Each is a plain multiplier you can see below.} other{Learned from {count} check-ins. Each is a plain multiplier you can see below.}}",
+  "@bodyEnergyPersonalizationBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "bodyEnergyGainActivity": "Everyday activity tires you",
+  "bodyEnergyGainSleep": "Sleep recharges you",
+  "bodyEnergyGainBasal": "Baseline burn",
+  "bodyEnergyGainStress": "Stress tires you",
+  "bodyEnergyPersonalizationReset": "Reset personal tuning",
   "bodyEnergyInputsTitle": "Inputs used",
   "bodyEnergyInputsSummary": "Algorithm v{arg0}, {arg1}-minute buckets",
   "@bodyEnergyInputsSummary": {

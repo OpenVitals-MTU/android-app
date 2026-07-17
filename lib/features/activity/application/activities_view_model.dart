@@ -7,12 +7,14 @@ import '../../../core/period/period_calculations.dart';
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/period_selection.dart';
 import '../../../core/period/time_range.dart';
+import '../../../core/presentation/period_metric_loader.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/heart_models.dart';
+import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/usecase/load_activities_use_case.dart';
 import '../../../domain/insights/activity_metrics.dart';
 import '../presentation/exercise_labels.dart';
@@ -92,8 +94,8 @@ abstract class ActivitiesState with _$ActivitiesState {
 /// The display model is built here — at load time, and again whenever the filter
 /// or the daily goal moves the slice it was cut from. The screen renders
 /// [ActivitiesState.display] and derives nothing.
-class ActivitiesViewModel extends Notifier<ActivitiesState> {
-  int _generation = 0;
+class ActivitiesViewModel extends Notifier<ActivitiesState>
+    with PeriodMetricLoader<ActivitiesState, ActivitiesLoadResult> {
   ActivitiesLoadResult? _latestResult;
 
   @override
@@ -104,43 +106,57 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
             .dailyGoalFor(activitiesGoalKey),
       );
 
-  Future<void> load(PeriodSelection selection) async {
-    final generation = ++_generation;
-    final prefs = ref.read(preferencesRepositoryProvider);
-    final loadActivities = ref.read(loadActivitiesUseCaseProvider);
+  Future<void> load(PeriodSelection selection) => runLoad(selection);
 
-    state = state.copyWith(
+  @override
+  String get loadErrorFallback => 'Unable to load workouts.';
+
+  @override
+  PeriodSelection selectionOf(ActivitiesState state) =>
+      PeriodSelection(state.selectedRange, state.selectedDate);
+
+  @override
+  ActivitiesState onLoadStart(
+    ActivitiesState state,
+    PeriodSelection selection, {
+    required bool navigated,
+  }) {
+    final next = state.copyWith(
       selectedRange: selection.selectedRange,
       selectedDate: selection.selectedDate,
       isLoading: true,
       error: null,
     );
-
-    final query = PeriodLoadQuery(
-      range: selection.selectedRange,
-      anchorDate: selection.selectedDate,
-      weekPeriodMode: prefs.weekPeriodMode,
-    );
-
-    // Which repositories the overview needs, and how the per-day cardio-load
-    // is composed out of them, is domain knowledge and lives in the use case.
-    final result = await loadActivities(query);
-    if (!ref.mounted || generation != _generation) return;
-    switch (result) {
-      case Ok(:final value):
-        _latestResult = value;
-        state = _stateWithResult(
-          state.copyWith(isLoading: false, error: null),
-          value,
-          state.selectedActivityType,
-        );
-      case Err(:final failure):
-        state = state.copyWith(
-          isLoading: false,
-          error: failure.toScreenError(fallback: 'Unable to load workouts.'),
-        );
-    }
+    return navigated ? next.copyWith(display: null) : next;
   }
+
+  @override
+  Future<Result<ActivitiesLoadResult>> fetch(
+    PeriodLoadQuery query,
+    RefreshMode refreshMode,
+  ) =>
+      // This use case has no incremental refresh, so [refreshMode] is unused.
+      // Which repositories the overview needs, and how the per-day cardio-load
+      // is composed out of them, is domain knowledge and lives in the use case.
+      ref.read(loadActivitiesUseCaseProvider)(query);
+
+  @override
+  ActivitiesState onLoadSuccess(
+    ActivitiesState state,
+    ActivitiesLoadResult value,
+    PeriodLoadQuery query,
+  ) {
+    _latestResult = value;
+    return _stateWithResult(
+      state.copyWith(isLoading: false, error: null),
+      value,
+      state.selectedActivityType,
+    );
+  }
+
+  @override
+  ActivitiesState onLoadError(ActivitiesState state, ScreenError error) =>
+      state.copyWith(isLoading: false, error: error);
 
   Future<void> refresh() =>
       load(PeriodSelection(state.selectedRange, state.selectedDate));

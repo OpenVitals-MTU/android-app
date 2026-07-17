@@ -31,37 +31,51 @@ class NutritionRepositoryImpl implements NutritionRepository {
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>
-      runCatching(() async {
-        final granted = await _dataSource.grantedIfAvailable();
-        final hasPerm = granted.contains(HcPermissions.readNutrition);
-        final w = query.windows;
-        final isDay = query.range == TimeRange.day;
+      runCatching(
+          () => _loadNutritionPeriodRaw(query).timeout(healthReadBudget));
 
-        final entries = hasPerm
-            ? await _dataSource.readNutritionEntries(
-                localDayStart(w.current.start), localDayEnd(w.current.end))
-            : const <NutritionEntry>[];
+  Future<NutritionPeriodData> _loadNutritionPeriodRaw(
+    PeriodLoadQuery query,
+  ) async {
+    final granted = await _dataSource.grantedIfAvailable();
+    final hasPerm = granted.contains(HcPermissions.readNutrition);
+    final w = query.windows;
+    final isDay = query.range == TimeRange.day;
 
-        final dailyMacros = isDay
-            ? _macrosForDay(entries, query.selectedDate)
-            : (hasPerm
-                ? await _dataSource.readDailyMacros(
-                    w.current.start, w.current.end)
-                : const <DailyMacros>[]);
-        final previous = hasPerm
-            ? await _dataSource.readDailyMacros(w.previous.start, w.previous.end)
-            : const <DailyMacros>[];
-        final baseline = hasPerm
-            ? await _dataSource.readDailyMacros(w.baseline.start, w.baseline.end)
-            : const <DailyMacros>[];
+    // The four window reads are independent, so they run concurrently instead of
+    // one `await` after the next. Day derives its dailyMacros from the raw
+    // entries via [_macrosForDay], so only the non-day branch issues a current
+    // readDailyMacros — but it launches alongside previous/baseline rather than
+    // serially.
+    final entriesFuture = hasPerm
+        ? _dataSource.readNutritionEntries(
+            localDayStart(w.current.start), localDayEnd(w.current.end))
+        : Future.value(const <NutritionEntry>[]);
+    final currentMacrosFuture = (!isDay && hasPerm)
+        ? _dataSource.readDailyMacros(w.current.start, w.current.end)
+        : Future.value(const <DailyMacros>[]);
+    final previousFuture = hasPerm
+        ? _dataSource.readDailyMacros(w.previous.start, w.previous.end)
+        : Future.value(const <DailyMacros>[]);
+    final baselineFuture = hasPerm
+        ? _dataSource.readDailyMacros(w.baseline.start, w.baseline.end)
+        : Future.value(const <DailyMacros>[]);
 
-        return NutritionPeriodData(
-          dailyMacros: dailyMacros,
-          previousDailyMacros: previous,
-          baselineDailyMacros: baseline,
-          entries: entries,
-        );
-      });
+    await Future.wait(
+        [entriesFuture, currentMacrosFuture, previousFuture, baselineFuture]);
+
+    final entries = await entriesFuture;
+    final dailyMacros = isDay
+        ? _macrosForDay(entries, query.selectedDate)
+        : await currentMacrosFuture;
+
+    return NutritionPeriodData(
+      dailyMacros: dailyMacros,
+      previousDailyMacros: await previousFuture,
+      baselineDailyMacros: await baselineFuture,
+      entries: entries,
+    );
+  }
 
   @override
   Future<Result<List<DailyMacros>>> loadDailyMacros(

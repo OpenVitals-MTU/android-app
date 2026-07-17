@@ -29,6 +29,15 @@ class _FakeMindfulnessRepository implements MindfulnessRepository {
   int loads = 0;
   RefreshMode? lastRefreshMode;
 
+  Result<void> deleteAnswer = const Ok(null);
+  final List<String> deletedIds = [];
+
+  @override
+  Future<Result<void>> deleteMindfulnessSessionEntry(String id) async {
+    deletedIds.add(id);
+    return deleteAnswer;
+  }
+
   /// Completed by the test, so two loads can be held in flight at once.
   final List<Completer<MindfulnessPeriodData>> gates = [];
   bool gated = false;
@@ -52,7 +61,8 @@ class _FakeMindfulnessRepository implements MindfulnessRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-MindfulnessSession _session(DateTime start, Duration duration) =>
+MindfulnessSession _session(DateTime start, Duration duration,
+        {bool owned = false}) =>
     MindfulnessSession(
       id: start.toIso8601String(),
       title: null,
@@ -60,6 +70,7 @@ MindfulnessSession _session(DateTime start, Duration duration) =>
       endTime: start.add(duration),
       durationMs: duration.inMilliseconds,
       source: 'Test',
+      isOpenVitalsEntry: owned,
     );
 
 void main() {
@@ -165,5 +176,59 @@ void main() {
     final state = container.read(mindfulnessProvider);
     expect(state.selectedRange, TimeRange.month);
     expect(state.display!.totalMinutes, 10);
+  });
+
+  group('deleteMindfulnessSession', () {
+    test('removes an owned session and deletes it through the repository',
+        () async {
+      final session = _session(monday, const Duration(minutes: 10), owned: true);
+      await boot(Ok(MindfulnessPeriodData(sessions: [session])));
+      container.listen(mindfulnessProvider, (_, _) {});
+      await container.read(mindfulnessProvider.notifier).load(selection);
+
+      repository.answer = const Ok(MindfulnessPeriodData());
+      await container
+          .read(mindfulnessProvider.notifier)
+          .deleteMindfulnessSession(session.id);
+
+      expect(repository.deletedIds, [session.id]);
+      expect(container.read(mindfulnessProvider).data!.sessions, isEmpty);
+      expect(
+        container.read(mindfulnessProvider).display!.sortedSessions,
+        isEmpty,
+      );
+    });
+
+    test('ignores a foreign session it does not own', () async {
+      final session = _session(monday, const Duration(minutes: 10));
+      await boot(Ok(MindfulnessPeriodData(sessions: [session])));
+      container.listen(mindfulnessProvider, (_, _) {});
+      await container.read(mindfulnessProvider.notifier).load(selection);
+
+      await container
+          .read(mindfulnessProvider.notifier)
+          .deleteMindfulnessSession(session.id);
+
+      expect(repository.deletedIds, isEmpty);
+      expect(container.read(mindfulnessProvider).data!.sessions, hasLength(1));
+    });
+
+    test('rolls the row back and surfaces the error when the delete fails',
+        () async {
+      final session = _session(monday, const Duration(minutes: 10), owned: true);
+      await boot(Ok(MindfulnessPeriodData(sessions: [session])));
+      container.listen(mindfulnessProvider, (_, _) {});
+      await container.read(mindfulnessProvider.notifier).load(selection);
+
+      repository.deleteAnswer =
+          const Err(UnexpectedFailure('Health Connect is gone'));
+      await container
+          .read(mindfulnessProvider.notifier)
+          .deleteMindfulnessSession(session.id);
+
+      final state = container.read(mindfulnessProvider);
+      expect(state.data!.sessions, hasLength(1));
+      expect(state.error, isNotNull);
+    });
   });
 }

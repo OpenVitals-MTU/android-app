@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'chart_viewport.dart';
 import 'package:intl/intl.dart';
 
 import '../theme/chart_tokens.dart';
@@ -22,10 +24,15 @@ class TimeAxisLabels extends StatelessWidget {
     required this.start,
     required this.end,
     this.inset = 0,
+    this.viewport = ChartViewport.full,
   });
 
   final DateTime start;
   final DateTime end;
+
+  /// The slice of the span on show, when the chart above has been pinched. At full zoom
+  /// the arithmetic gives back exactly the three labels it always drew.
+  final ChartViewport viewport;
 
   /// How far the plot above starts from the card's edge. Zero for a chart that
   /// draws no y-axis label column — the hypnogram labels its lanes instead.
@@ -36,7 +43,14 @@ class TimeAxisLabels extends StatelessWidget {
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toString();
     final timeFormat = DateFormat.jm(locale);
-    final midpoint = start.add(end.difference(start) ~/ 2);
+    final spanMs = end.difference(start).inMilliseconds;
+
+    /// Where a label sits, in real time, for a point [fraction] across the PLOT.
+    DateTime at(double fraction) => start.add(
+          Duration(
+            milliseconds: (viewport.dataFraction(fraction) * spanMs).round(),
+          ),
+        );
 
     return Row(
       children: [
@@ -45,7 +59,7 @@ class TimeAxisLabels extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (final time in [start, midpoint, end])
+              for (final time in [at(0), at(0.5), at(1)])
                 Text(
                   timeFormat.format(time.toLocal()),
                   style: theme.textTheme.labelSmall

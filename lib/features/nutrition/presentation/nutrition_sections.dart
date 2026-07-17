@@ -18,6 +18,7 @@ import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_interpretation_card.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/paginated_entry_list.dart';
+import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/nutrition_display.dart';
 import 'nutrition_formatting.dart';
@@ -161,24 +162,40 @@ String nutritionEntryListTitle(
 }
 
 /// Kotlin `NutritionEntriesContent`: a paginated list of meal rows.
+///
+/// An OpenVitals-authored meal swipes to delete; nutrition entries are never
+/// edited (the Kotlin screens offered no edit). Foreign records stay read-only.
 class NutritionEntriesContent extends StatelessWidget {
   const NutritionEntriesContent({
     super.key,
     required this.title,
     required this.entries,
     required this.formatter,
+    this.onDelete,
   });
 
   final String title;
   final List<NutritionEntry> entries;
   final UnitFormatter formatter;
+  final void Function(NutritionEntry entry)? onDelete;
 
   @override
   Widget build(BuildContext context) => PaginatedEntryList<NutritionEntry>(
         title: title,
         entries: entries,
-        rowBuilder: (context, entry) =>
-            NutritionEntryRow(entry: entry, formatter: formatter),
+        rowBuilder: (context, entry) {
+          final row = NutritionEntryRow(entry: entry, formatter: formatter);
+          if (onDelete == null ||
+              !entry.isOpenVitalsEntry ||
+              entry.id.isEmpty) {
+            return row;
+          }
+          return SwipeToDeleteEntryRow(
+            key: ValueKey('nutrition-${entry.id}'),
+            onDelete: () => onDelete!(entry),
+            child: row,
+          );
+        },
       );
 }
 

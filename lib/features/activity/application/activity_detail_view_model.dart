@@ -9,6 +9,7 @@ import '../../../domain/insights/heart_rate_recovery.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../state/app_providers.dart';
+import 'activities_view_model.dart';
 import 'activity_detail_display.dart';
 
 part 'activity_detail_view_model.freezed.dart';
@@ -22,6 +23,7 @@ abstract class ActivityDetailState with _$ActivityDetailState {
 
   const factory ActivityDetailState({
     @Default(true) bool isLoading,
+    @Default(false) bool isDeleting,
     ScreenError? error,
     ExerciseData? workout,
     @Default(<HeartRateSample>[]) List<HeartRateSample> heartRateSamples,
@@ -59,6 +61,39 @@ class ActivityDetailViewModel extends Notifier<ActivityDetailState> {
   }
 
   Future<void> refresh() => _load();
+
+  /// Port of the Kotlin `ActivityDetailViewModel.deleteActivity`: delete the open
+  /// workout — only if this app wrote it — then invoke [onDeleted] so the screen
+  /// can pop back to the list. Deleting an activity also clears its paired manual
+  /// metric records and recording markers (handled in the repository/native
+  /// layer). The activities list is refreshed so the popped-to screen does not
+  /// still show the row. A failure keeps the screen open and records why, for the
+  /// screen to surface.
+  Future<void> deleteActivity(void Function() onDeleted) async {
+    final workout = state.workout;
+    if (workout == null || !workout.isOpenVitalsEntry || workout.id.isEmpty) {
+      return;
+    }
+    if (state.isDeleting) return;
+    state = state.copyWith(isDeleting: true, error: null);
+
+    final deletion =
+        await ref.read(deleteActivityEntryUseCaseProvider)(workout.id);
+    if (!ref.mounted) return;
+    switch (deletion) {
+      case Ok():
+        state = state.copyWith(isDeleting: false);
+        // The list is period-scoped and may be showing this activity; reload it
+        // so the row is gone when the user lands back on it.
+        ref.read(activitiesProvider.notifier).refresh();
+        onDeleted();
+      case Err(:final failure):
+        state = state.copyWith(
+          isDeleting: false,
+          error: failure.toScreenError(fallback: 'Unable to delete activity.'),
+        );
+    }
+  }
 
   Future<void> _load() async {
     if (activityId.isEmpty) {

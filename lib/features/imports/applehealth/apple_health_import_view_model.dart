@@ -118,8 +118,9 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
   AppleHealthImportUiState build() {
     // Read the last persisted report/failure back on card open so the Save
     // report action has content even before a fresh import runs this session.
-    _lastReportText = _reportStore.readReport();
-    _lastFailureText = _reportStore.readFailure();
+    // The store is file-backed, so this is async; the card only needs it by the
+    // time the user taps Save.
+    unawaited(_loadPersistedReports());
     // Progress from the service isolate (and, on a relaunch, from an import that
     // is still in flight) arrives here.
     FlutterForegroundTask.addTaskDataCallback(_onTaskData);
@@ -128,6 +129,11 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
     );
     unawaited(_attachToRunningImport());
     return const AppleHealthImportUiState();
+  }
+
+  Future<void> _loadPersistedReports() async {
+    _lastReportText = await _reportStore.readReport();
+    _lastFailureText = await _reportStore.readFailure();
   }
 
   /// The best available report text for the Save action, favouring the live
@@ -285,7 +291,7 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
     }
     // The job kept the staged copy and the checkpoint, so a retry resumes.
     final error = outcome.error!;
-    _lastFailureText = _reportStore.readFailure();
+    _lastFailureText = await _reportStore.readFailure();
     if (!ref.mounted) return;
     state = AppleHealthImportUiState(
       analysis: analysis,
@@ -338,22 +344,33 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
   }
 
   Future<void> _onImportResult(Map<Object?, Object?> data) async {
-    // The report was written by the *other* isolate, so this isolate's
-    // SharedPreferences snapshot is stale until it is reloaded.
-    await _reportStore.refresh();
-    _lastReportText = _reportStore.readReport();
-    final result = decodeAppleHealthImportResult(data, _lastReportText);
-    if (result == null || !ref.mounted) return;
+    // Render the counts from the payload right away — they do not depend on the
+    // report text, and reading that back is file I/O we should not make the
+    // result wait on.
+    final analysis = state.analysis;
+    final selectedCategories = state.selectedCategories;
+    final immediate = decodeAppleHealthImportResult(data, '');
+    if (immediate == null || !ref.mounted) return;
     state = AppleHealthImportUiState(
-      analysis: state.analysis,
-      selectedCategories: state.selectedCategories,
-      result: result,
+      analysis: analysis,
+      selectedCategories: selectedCategories,
+      result: immediate,
+    );
+
+    // The report was written to a file by the *other* isolate; the filesystem is
+    // shared, so reading it back needs no reload. Patch it onto the result so
+    // Copy/Save have the full text.
+    _lastReportText = await _reportStore.readReport();
+    if (_lastReportText.isEmpty || !ref.mounted) return;
+    state = AppleHealthImportUiState(
+      analysis: analysis,
+      selectedCategories: selectedCategories,
+      result: decodeAppleHealthImportResult(data, _lastReportText),
     );
   }
 
   Future<void> _onImportError(Map<Object?, Object?> data) async {
-    await _reportStore.refresh();
-    _lastFailureText = _reportStore.readFailure();
+    // Show the error right away; the failure report (for Save) loads after.
     if (!ref.mounted) return;
     state = AppleHealthImportUiState(
       analysis: state.analysis,
@@ -361,6 +378,7 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
       error: '${data['error']}',
       permissionDenied: data['permissionDenied'] == true,
     );
+    _lastFailureText = await _reportStore.readFailure();
   }
 
   /// A staging failure: nothing has been imported, so this is reported exactly

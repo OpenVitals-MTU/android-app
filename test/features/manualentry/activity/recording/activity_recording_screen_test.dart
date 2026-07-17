@@ -162,7 +162,7 @@ void main() {
           recordingState: const ActivityRecordingState(),
           unitFormatter: formatter(),
           onSelectActivityType: (_) {},
-          onStartRecording: (_, _) {},
+          onStartRecording: (_, _, _) {},
           onRequestLocationPermission: () {},
           onRequestActivityRecognitionPermission: () {},
           onChooseSource: () {},
@@ -189,6 +189,73 @@ void main() {
       expect(_startButton(tester).onPressed, isNotNull);
     });
 
+    testWidgets(
+        'switched to record without GPS, a run starts at once — no fix, no permission',
+        (tester) async {
+      // GPS held but no fix: without the switch this run cannot start at all (the test
+      // above). The whole point of the switch is that there is nothing to wait for.
+      final support = _FakeDeviceSupport(hasLocationPermission: true);
+      var askedForLocation = false;
+      ActivityRecordingInitialFix? startedWithFix;
+      bool? startedWithoutGps;
+
+      await pump(
+        tester,
+        ActivityRecordingSetupScreen(
+          state: ActivityEntryUiState(
+            mode: ActivityEntryFormMode.recording,
+            selectedActivityType: gpsType(),
+            canWrite: true,
+            isCheckingPermission: false,
+          ),
+          recordingState: const ActivityRecordingState(),
+          unitFormatter: formatter(),
+          onSelectActivityType: (_) {},
+          onStartRecording: (fix, _, withoutGps) {
+            startedWithFix = fix;
+            startedWithoutGps = withoutGps;
+          },
+          onStartHeartRateRecoveryTest: (_) {},
+          onRequestLocationPermission: () => askedForLocation = true,
+          onRequestActivityRecognitionPermission: () {},
+          onChooseSource: () {},
+          onRequestWritePermission: () {},
+        ),
+        support: support,
+      );
+
+      expect(_startButton(tester).onPressed, isNull, reason: 'no fix yet');
+      expect(find.byType(RecordingWithoutGpsWarning), findsNothing,
+          reason: 'no warning before the user has chosen anything to be warned about');
+
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pump();
+
+      // The cost, stated before the run rather than discovered after it. A recording that
+      // quietly came back missing half its statistics would feel like the app had failed,
+      // and the user would have no way of knowing they had asked for it.
+      expect(find.byType(RecordingWithoutGpsWarning), findsOneWidget);
+      expect(find.textContaining('No map'), findsOneWidget);
+      // Elevation is NOT in the list of losses, and must never creep back into it: the
+      // barometer reads air pressure and never needed a position. Same for the step
+      // detector and the heart-rate strap. Only what is genuinely derived from location
+      // is lost.
+      expect(find.textContaining('elevation gain are still recorded'), findsOneWidget);
+
+      // Nothing to wait for: no satellites are being asked for.
+      expect(_startButton(tester).onPressed, isNotNull);
+
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+
+      expect(startedWithoutGps, isTrue);
+      expect(startedWithFix, isNull,
+          reason: 'a recording that will never look at a location must not carry one');
+      expect(askedForLocation, isFalse,
+          reason: 'asking for the location permission for a recording that will never '
+              'use it is exactly what makes people distrust a health app');
+    });
+
     testWidgets('without the location permission Start is enabled, to ask for it',
         (tester) async {
       final support = _FakeDeviceSupport(hasLocationPermission: false);
@@ -206,7 +273,7 @@ void main() {
           recordingState: const ActivityRecordingState(),
           unitFormatter: formatter(),
           onSelectActivityType: (_) {},
-          onStartRecording: (_, _) {},
+          onStartRecording: (_, _, _) {},
           onRequestLocationPermission: () => askedForLocation = true,
           onRequestActivityRecognitionPermission: () {},
           onChooseSource: () {},

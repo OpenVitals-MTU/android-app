@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/presentation/screen_error.dart';
@@ -8,6 +9,7 @@ import '../../../domain/insights/heart_rate_recovery.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
@@ -184,9 +186,76 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
               route: workout.route,
               distanceMeters: display.routeDistanceMeters,
             )),
+          // Only a workout this app wrote can be edited or deleted; Health
+          // Connect refuses to touch another app's records (Kotlin gated the
+          // same two buttons on `isOpenVitalsEntry`).
+          if (workout.isOpenVitalsEntry && workout.id.isNotEmpty)
+            sectionPadded(_ActivityActions(
+              isDeleting: state.isDeleting,
+              onEdit: () => context
+                  .push(AppRoutes.activityEntryEditLocation(workout.id)),
+              onDelete: _deleteActivity,
+            )),
           const SizedBox(height: 16),
         ],
       ),
+    );
+  }
+
+  Future<void> _deleteActivity() async {
+    final messenger = ScaffoldMessenger.of(context);
+    await ref.read(_provider.notifier).deleteActivity(() {
+      if (mounted) context.pop();
+    });
+    // On success the screen has popped; only a failure leaves it mounted, and
+    // then the error is worth a line the user cannot miss.
+    if (!mounted) return;
+    final error = ref.read(_provider).error;
+    if (error != null) {
+      messenger.showSnackBar(SnackBar(content: Text(_errorText(error))));
+    }
+  }
+}
+
+/// The edit / delete actions at the foot of an owned activity — Edit filled,
+/// Delete outlined in the error color, both disabled mid-delete. Port of the
+/// Kotlin `ActivityDetailContent` action buttons (no confirmation dialog).
+class _ActivityActions extends StatelessWidget {
+  const _ActivityActions({
+    required this.isDeleting,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final bool isDeleting;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: isDeleting ? null : onEdit,
+            icon: const Icon(Icons.edit_outlined),
+            label: Text(l10n.actionEdit),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: isDeleting ? null : onDelete,
+            icon: const Icon(Icons.delete_outline),
+            label: Text(l10n.actionDelete),
+            style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
+          ),
+        ),
+      ],
     );
   }
 }

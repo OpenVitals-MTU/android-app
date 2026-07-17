@@ -19,6 +19,7 @@ import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/paginated_entry_list.dart';
+import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../domain/health/health_permissions.dart';
 import 'hydration_intraday_chart.dart';
@@ -70,7 +71,7 @@ class HydrationScreen extends ConsumerWidget {
           syncPaused: syncPaused,
           onSelectionChanged: (selection) => notifier.load(selection),
           content: (period) =>
-              _content(context, state, formatter, period, weekMode),
+              _content(context, state, formatter, period, weekMode, notifier),
         ),
       ),
     );
@@ -83,6 +84,7 @@ List<Widget> _content(
   UnitFormatter formatter,
   DatePeriod period,
   WeekPeriodMode weekPeriodMode,
+  HydrationViewModel notifier,
 ) {
   final display = state.display;
   if (display == null || !display.hasData) {
@@ -110,7 +112,11 @@ List<Widget> _content(
       // hold nutrition-only beverages (a drink with nutrients but no volume),
       // which log no litres yet still belong in the history.
       if (entries.isNotEmpty)
-        _HydrationEntriesContent(entries: entries, formatter: formatter),
+        _HydrationEntriesContent(
+          entries: entries,
+          formatter: formatter,
+          notifier: notifier,
+        ),
     ];
   }
 
@@ -191,6 +197,7 @@ List<Widget> _content(
       _HydrationEntriesContent(
         entries: display.entriesNewestFirst,
         formatter: formatter,
+        notifier: notifier,
       ),
   ];
 }
@@ -398,26 +405,42 @@ class _HydrationStatisticsCard extends StatelessWidget {
 /// Kotlin `HydrationEntriesContent`: the beverage history, newest first (the
 /// view-model sorted it), as a paginated list of rows.
 ///
-/// DEVIATION from Kotlin, which makes each row swipe-to-delete and (for an
-/// OpenVitals hydration record) edit-tappable. The Dart screen has no delete or
-/// edit path yet — the same Phase 6 gap the "+ add drink" action already routes
-/// around — so the rows are read-only. Restoring the *information* is what was
-/// missing; the affordances follow with the rest of Phase 6.
+/// Each OpenVitals-authored row swipes to delete, and a hydration record (not a
+/// nutrition-only one) is edit-tappable — the same affordances the Kotlin screen
+/// offered, gated on `isOpenVitalsEntry && id.isNotEmpty`. Foreign records from
+/// other providers stay read-only.
 class _HydrationEntriesContent extends StatelessWidget {
   const _HydrationEntriesContent({
     required this.entries,
     required this.formatter,
+    required this.notifier,
   });
 
   final List<HydrationEntry> entries;
   final UnitFormatter formatter;
+  final HydrationViewModel notifier;
 
   @override
   Widget build(BuildContext context) => PaginatedEntryList<HydrationEntry>(
         title: AppLocalizations.of(context).sectionEntries,
         entries: entries,
-        rowBuilder: (context, entry) =>
-            _HydrationEntryRow(entry: entry, formatter: formatter),
+        rowBuilder: (context, entry) {
+          final owned = entry.isOpenVitalsEntry && entry.id.isNotEmpty;
+          // Nutrition-only rows (a drink logged with nutrients but no volume)
+          // can be deleted but not edited, exactly as in Kotlin.
+          final editable =
+              owned && entry.recordType == HydrationEntryRecordType.hydration;
+          return _HydrationEntryRow(
+            entry: entry,
+            formatter: formatter,
+            onEdit: editable
+                ? () => context.push(
+                    AppRoutes.hydrationEntryEditLocation(entry.id))
+                : null,
+            onDelete:
+                owned ? () => notifier.deleteHydrationEntry(entry.id) : null,
+          );
+        },
       );
 }
 
@@ -427,10 +450,17 @@ class _HydrationEntriesContent extends StatelessWidget {
 /// A nutrition-only entry (a drink logged with nutrients but no volume) is
 /// titled by its name and reports no hydration impact, exactly as in Kotlin.
 class _HydrationEntryRow extends StatelessWidget {
-  const _HydrationEntryRow({required this.entry, required this.formatter});
+  const _HydrationEntryRow({
+    required this.entry,
+    required this.formatter,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final HydrationEntry entry;
   final UnitFormatter formatter;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -461,7 +491,7 @@ class _HydrationEntryRow extends StatelessWidget {
         ? l10n.hydrationEntryNoHydration
         : formatter.hydration(entry.liters).text;
 
-    return OpenVitalsCard(
+    final content = OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -489,9 +519,27 @@ class _HydrationEntryRow extends StatelessWidget {
                     isNutritionOnly ? scheme.secondary : AppColors.hydration,
               ),
             ),
+            if (onEdit != null) ...[
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: onEdit,
+                tooltip: l10n.cdEditEntry,
+                icon: Icon(
+                  Icons.edit_outlined,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+
+    if (onDelete == null) return content;
+    return SwipeToDeleteEntryRow(
+      key: ValueKey('hydration-${entry.id}'),
+      onDelete: onDelete!,
+      child: content,
     );
   }
 }

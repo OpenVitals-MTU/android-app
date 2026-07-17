@@ -1,0 +1,1 @@
+Suured Apple Healthi ekspordid importuvad nuud ilma malu otsa saamata ja uuesti importimine ei loo enam topeltkirjeid. Uus Body Energy ekraan: taastumispohine skoor unest, HRV-st, puhkeoleku sudame loogisagedusest ja muust. Garmini .fit-faile saab importida kaustast. Aastaulevaade ja pikad vahemikud on palju kiiremad. Uni on tapsem: paevased uinakud eraldatakse oost.

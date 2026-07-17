@@ -89,7 +89,7 @@ abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
   Future<List<String>> aggregateGroupByDurationJson(List<String> aggregateMetrics, int startEpochMs, int endEpochMs, int bucketMinutes) => unimplemented('aggregateGroupByDurationJson');
 
   @override
-  Future<List<String>> filterExistingClientIds(String recordType, List<String> clientRecordIds) => unimplemented('filterExistingClientIds');
+  Future<List<String>> filterExistingClientIds(String recordType, int startEpochMs, int endEpochMs, List<String> clientRecordIds) => unimplemented('filterExistingClientIds');
 
   @override
   Future<List<WeightEntryMsg>> readWeightEntries(int startEpochMs, int endEpochMs) => unimplemented('readWeightEntries');
@@ -213,6 +213,45 @@ abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
 
   @override
   Future<List<SkinTemperatureEntryMsg>> readSkinTemperatureEntries(int startEpochMs, int endEpochMs) => unimplemented('readSkinTemperatureEntries');
+
+  @override
+  Future<List<DailyBloodPressurePointMsg>> readDailyBloodPressure(int startEpochMs, int endEpochMs) => unimplemented('readDailyBloodPressure');
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailySpO2(int startEpochMs, int endEpochMs) => unimplemented('readDailySpO2');
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailyRespiratoryRate(int startEpochMs, int endEpochMs) => unimplemented('readDailyRespiratoryRate');
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailyBodyTemperature(int startEpochMs, int endEpochMs) => unimplemented('readDailyBodyTemperature');
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailyVo2Max(int startEpochMs, int endEpochMs) => unimplemented('readDailyVo2Max');
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailyBloodGlucose(int startEpochMs, int endEpochMs) => unimplemented('readDailyBloodGlucose');
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailySkinTemperature(int startEpochMs, int endEpochMs) => unimplemented('readDailySkinTemperature');
+
+  @override
+  Future<RespiratoryRateEntryMsg?> readLatestRespiratoryRate(int startEpochMs, int endEpochMs) => unimplemented('readLatestRespiratoryRate');
+
+  @override
+  Future<BodyTempEntryMsg?> readLatestBodyTemperature(int startEpochMs, int endEpochMs) => unimplemented('readLatestBodyTemperature');
+
+  @override
+  Future<BloodGlucoseEntryMsg?> readLatestBloodGlucose(int startEpochMs, int endEpochMs) => unimplemented('readLatestBloodGlucose');
+
+  @override
+  Future<SkinTemperatureEntryMsg?> readLatestSkinTemperature(int startEpochMs, int endEpochMs) => unimplemented('readLatestSkinTemperature');
+
+  @override
+  Future<String> getVitalsChangesToken(String recordType) => unimplemented('getVitalsChangesToken');
+
+  @override
+  Future<VitalsChangesMsg> getVitalsChanges(String token) => unimplemented('getVitalsChanges');
 
   @override
   Future<String> writeVitalsMeasurementEntry(VitalsMeasurementWriteRequestMsg request) => unimplemented('writeVitalsMeasurementEntry');

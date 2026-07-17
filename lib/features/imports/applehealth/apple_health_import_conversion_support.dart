@@ -121,6 +121,42 @@ List<List<SleepStageCandidate>> splitSleepSessions(
   return sessions;
 }
 
+/// Stable in-place sort. Dart's `List.sort` is **not** stable (it falls back to a
+/// quicksort above a small-list threshold), whereas Kotlin's `sortedBy`/`sortWith`
+/// are (TimSort). The importer relies on that stability: when two candidates tie on
+/// every comparator key, the parse-order-first one must survive — otherwise a
+/// different source's value can be imported for the same window, and sleep-stage
+/// output/fingerprints can drift from the Kotlin build. Ties break on original index.
+void stableSort<T>(List<T> list, int Function(T a, T b) compare) {
+  if (list.length < 2) return;
+  final order = List<int>.generate(list.length, (index) => index);
+  order.sort((a, b) {
+    final cmp = compare(list[a], list[b]);
+    return cmp != 0 ? cmp : a.compareTo(b);
+  });
+  final sorted = [for (final index in order) list[index]];
+  for (var index = 0; index < list.length; index++) {
+    list[index] = sorted[index];
+  }
+}
+
+/// Serialises a UTC instant the way Kotlin's `java.time.Instant.toString()` does
+/// — **dropping the fractional part when it is zero** (`2011-12-03T18:15:30Z`,
+/// not `...30.000Z`). This is load-bearing: every `clientRecordId`/fingerprint is
+/// a SHA-256 over [stableParts], and Health Connect dedups inserts on that id. The
+/// Kotlin build wrote ids using this format; Dart's `DateTime.toIso8601String()`
+/// *always* prints milliseconds, so routing every fingerprint instant through here
+/// keeps the id byte-identical across the Kotlin→Flutter migration — without it, a
+/// re-import of a Kotlin-era export produces duplicate rows. Apple exports are
+/// whole-second, so in practice this only ever strips a `.000`.
+String appleInstantToStableString(DateTime instant) {
+  final iso = instant.toUtc().toIso8601String();
+  if (iso.endsWith('.000Z')) {
+    return '${iso.substring(0, iso.length - '.000Z'.length)}Z';
+  }
+  return iso;
+}
+
 const String _hexDigits = '0123456789abcdef';
 
 String buildStableClientRecordId(String prefix, Object parts) {
@@ -145,9 +181,9 @@ extension AppleRecordFingerprints on AppleRecord {
         sourceName ?? '',
         sourceVersion ?? '',
         device ?? '',
-        creationDate?.instant.toIso8601String() ?? '',
-        startDate?.instant.toIso8601String() ?? '',
-        endDate?.instant.toIso8601String() ?? '',
+        creationDate == null ? '' : appleInstantToStableString(creationDate!.instant),
+        startDate == null ? '' : appleInstantToStableString(startDate!.instant),
+        endDate == null ? '' : appleInstantToStableString(endDate!.instant),
         unit ?? '',
         rawValue ?? '',
         correlationType ?? '',
@@ -206,9 +242,9 @@ extension AppleWorkoutFingerprints on AppleWorkout {
         sourceName ?? '',
         sourceVersion ?? '',
         device ?? '',
-        creationDate?.instant.toIso8601String() ?? '',
-        startDate?.instant.toIso8601String() ?? '',
-        endDate?.instant.toIso8601String() ?? '',
+        creationDate == null ? '' : appleInstantToStableString(creationDate!.instant),
+        startDate == null ? '' : appleInstantToStableString(startDate!.instant),
+        endDate == null ? '' : appleInstantToStableString(endDate!.instant),
         duration?.toString() ?? '',
         durationUnit ?? '',
         totalDistance?.toString() ?? '',
@@ -225,9 +261,9 @@ extension AppleCorrelationFingerprints on AppleCorrelation {
         sourceName ?? '',
         sourceVersion ?? '',
         device ?? '',
-        creationDate?.instant.toIso8601String() ?? '',
-        startDate?.instant.toIso8601String() ?? '',
-        endDate?.instant.toIso8601String() ?? '',
+        creationDate == null ? '' : appleInstantToStableString(creationDate!.instant),
+        startDate == null ? '' : appleInstantToStableString(startDate!.instant),
+        endDate == null ? '' : appleInstantToStableString(endDate!.instant),
         records.map((it) => it.stableParts()).join(';'),
       ].join('|');
 

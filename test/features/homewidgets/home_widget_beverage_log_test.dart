@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
+import 'package:openvitals/core/reminders/reminder_controller.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/hydration_repository.dart';
 import 'package:openvitals/data/repository/contract/nutrition_repository.dart';
@@ -85,6 +86,17 @@ class _ThrowingHydrationRepository extends _FakeHydrationRepository {
       throw StateError('Health Connect is unavailable');
 }
 
+/// Records how often the hydration reminder was dismissed after a log.
+class _RecordingReminderNotifier implements ReminderNotifier {
+  int cancels = 0;
+
+  @override
+  Future<void> cancel() async => cancels++;
+
+  @override
+  Future<void> show(ReminderGoalProgress progress) async {}
+}
+
 void main() {
   late AppLocalizations l10n;
 
@@ -115,6 +127,7 @@ void main() {
     HydrationRepository? hydration,
     NutritionRepository? nutrition,
     FakeHealthRepository? health,
+    ReminderNotifier? hydrationReminder,
   }) =>
       QuickBeverageWidgetLogger(
         service: HomeWidgetService(client: client),
@@ -124,6 +137,7 @@ void main() {
         unitFormatter:
             UnitFormatter(unitSystemProvider: () => UnitSystem.metric),
         localizations: l10n,
+        hydrationReminder: hydrationReminder ?? _RecordingReminderNotifier(),
         // The real 1200ms confirmation would make every test wait for it.
         savedConfirmationDuration: Duration.zero,
       );
@@ -210,6 +224,30 @@ void main() {
       );
       // Kotlin remembers the tapped volume for the entry screen.
       expect(hydration.lastCustomAmounts, [30.0]);
+    });
+
+    test('dismisses an active hydration reminder once water is logged',
+        () async {
+      // The day-view save hides the reminder; the widget tap must do the same,
+      // or the "time to hydrate" notification lingers after you have logged.
+      final client = configuredClient(drink: _espresso);
+      final reminder = _RecordingReminderNotifier();
+
+      await logger(client, hydrationReminder: reminder).log(_appWidgetId);
+
+      expect(reminder.cancels, 1);
+    });
+
+    test('leaves the reminder alone for a nutrition-only drink', () async {
+      // No water was recorded, so a HYDRATION reminder has nothing to clear.
+      final client = configuredClient(
+        drink: _espresso.copyWith(hydrationMultiplier: 0.0),
+      );
+      final reminder = _RecordingReminderNotifier();
+
+      await logger(client, hydrationReminder: reminder).log(_appWidgetId);
+
+      expect(reminder.cancels, 0);
     });
 
     test('confirms with "Saved now", then falls back to "Tap to log"', () async {

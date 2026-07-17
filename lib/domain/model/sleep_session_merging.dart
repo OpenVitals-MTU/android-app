@@ -6,7 +6,6 @@ import 'sleep_models.dart';
 const String _mergedSleepSessionIdPrefix = 'merged:';
 const String _mergedSleepSessionIdSeparator = '.';
 const double _duplicateSleepOverlapRatio = 0.85;
-const Duration _duplicateSleepBoundaryTolerance = Duration(minutes: 30);
 // Mirrors Gadgetbridge's sleep-session analysis: short quiet wake/no-data gaps
 // keep one night together.
 const Duration _defaultSleepSessionMergeGap = Duration(minutes: 60);
@@ -192,11 +191,12 @@ bool _isDuplicateSleepSession(SleepData session, SleepData other) {
       );
   if (overlapMs <= 0) return false;
 
-  final startDiff = session.startTime.difference(other.startTime).abs();
-  final endDiff = session.endTime.difference(other.endTime).abs();
-  return overlapMs / shorterDuration >= _duplicateSleepOverlapRatio &&
-      startDiff <= _duplicateSleepBoundaryTolerance &&
-      endDiff <= _duplicateSleepBoundaryTolerance;
+  // A high overlap of the *shorter* session is enough on its own: two
+  // different-source sessions covering the same physical sleep are duplicates
+  // even when their boundaries drift (accelerometer autodetect and a wearable
+  // rarely agree on the exact wake time). The old symmetric boundary tolerance
+  // wrongly kept such pairs, so their durations were summed.
+  return overlapMs / shorterDuration >= _duplicateSleepOverlapRatio;
 }
 
 SleepData _richerSleepSession(SleepData first, SleepData second) =>

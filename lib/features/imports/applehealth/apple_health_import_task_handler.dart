@@ -28,7 +28,6 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/result/app_failure.dart';
 import '../../../bootstrap/background_health_access.dart';
@@ -115,8 +114,7 @@ class AppleHealthImportTaskHandler extends TaskHandler {
           ),
           stagingStore: AppleHealthImportStagingStore(),
           checkpointStore: AppleHealthImportCheckpointStore(),
-          reportStore:
-              AppleHealthImportReportStore(await SharedPreferences.getInstance()),
+          reportStore: AppleHealthImportReportStore(),
           // MUST resolve access before any write: `cachedAvailability` starts at
           // `notSupported` and the import repository gates every insert on it,
           // so without this the import writes nothing and still reports success.

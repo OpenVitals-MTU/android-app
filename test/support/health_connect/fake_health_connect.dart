@@ -414,6 +414,77 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
   ) async =>
       const [];
 
+  // Long-range daily aggregates + window-latest reads — the golden week carries
+  // no vitals, so "there are none" is the honest answer here too.
+  @override
+  Future<List<DailyBloodPressurePointMsg>> readDailyBloodPressure(
+          int startEpochMs, int endEpochMs) async =>
+      const [];
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailySpO2(
+          int startEpochMs, int endEpochMs) async =>
+      const [];
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailyRespiratoryRate(
+          int startEpochMs, int endEpochMs) async =>
+      const [];
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailyBodyTemperature(
+          int startEpochMs, int endEpochMs) async =>
+      const [];
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailyVo2Max(
+          int startEpochMs, int endEpochMs) async =>
+      const [];
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailyBloodGlucose(
+          int startEpochMs, int endEpochMs) async =>
+      const [];
+
+  @override
+  Future<List<DailyVitalPointMsg>> readDailySkinTemperature(
+          int startEpochMs, int endEpochMs) async =>
+      const [];
+
+  @override
+  Future<BloodPressureEntryMsg?> readLatestBloodPressure(
+          int startEpochMs, int endEpochMs) async =>
+      null;
+
+  @override
+  Future<SpO2EntryMsg?> readLatestSpO2(int startEpochMs, int endEpochMs) async =>
+      null;
+
+  @override
+  Future<Vo2MaxEntryMsg?> readLatestVo2Max(
+          int startEpochMs, int endEpochMs) async =>
+      null;
+
+  @override
+  Future<RespiratoryRateEntryMsg?> readLatestRespiratoryRate(
+          int startEpochMs, int endEpochMs) async =>
+      null;
+
+  @override
+  Future<BodyTempEntryMsg?> readLatestBodyTemperature(
+          int startEpochMs, int endEpochMs) async =>
+      null;
+
+  @override
+  Future<BloodGlucoseEntryMsg?> readLatestBloodGlucose(
+          int startEpochMs, int endEpochMs) async =>
+      null;
+
+  @override
+  Future<SkinTemperatureEntryMsg?> readLatestSkinTemperature(
+          int startEpochMs, int endEpochMs) async =>
+      null;
+
   @override
   Future<List<HeartRateSummaryMsg>> readDailyHeartRateSummaries(
     int startEpochMs,

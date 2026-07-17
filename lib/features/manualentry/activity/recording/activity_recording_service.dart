@@ -206,9 +206,23 @@ class ActivityRecordingService implements ActivityRecordingController {
     ActivityEntryType activityType,
     ActivityRecordingInitialFix? initialFix, {
     int repetitionRestSeconds = 0,
+    bool withoutGps = false,
   }) async {
-    if (activityType.supportsGpsRoute) {
+    // A run is a run whether or not the phone was listening to satellites.
+    //
+    // GPS was a property of the TYPE, so running and cycling were GPS-or-nothing: to
+    // record a run without it you had to lie and call it a treadmill. Now it is a
+    // property of the RECORDING, and a run with no route is recorded as a timed session
+    // -- duration and heart rate, and the distance typed in on the form afterwards.
+    //
+    // No location permission is asked for, no fix is waited on, and the saved session
+    // simply has no route. There is nothing here that could give anyone the impression
+    // that GPS was working: they turned it off themselves.
+    if (activityType.supportsGpsRoute && !withoutGps) {
       return _startGpsRecording(activityType, initialFix);
+    }
+    if (activityType.supportsGpsRoute && withoutGps) {
+      return _startTimedRecording(activityType);
     }
     if (activityType.isRepetitionLike) {
       return _startRepetitionRecording(activityType, repetitionRestSeconds);
@@ -598,7 +612,22 @@ class ActivityRecordingService implements ActivityRecordingController {
       case ActivityRecordingKind.repetition:
         if (activityType != null) _startMotionRecognizer(activityType);
       case ActivityRecordingKind.timed:
-        break;
+        // A run recorded WITHOUT GPS still has a barometer and a step detector.
+        //
+        // Neither of them needs a position. Elevation gain comes from air pressure and
+        // steps from the accelerometer, and they were only being lost because switching
+        // GPS off routed the recording down the timed branch, which started no sensors at
+        // all. Turning down the satellites is no reason to stop counting the climb.
+        //
+        // Gated on `supportsGpsRoute`, so this reaches a run or a walk recorded without
+        // GPS and leaves the stationary bike and the strength session -- the timed
+        // recordings that never had these sensors -- exactly as they were.
+        if (activityType != null && activityType.supportsGpsRoute) {
+          _startBarometerUpdates(preferences);
+          if (activityType.supportsStepCounting) {
+            _startMotionRecognizer(activityType);
+          }
+        }
     }
   }
 
@@ -1404,6 +1433,15 @@ class ActivityRecordingService implements ActivityRecordingController {
   /// Kotlin `RestTimerBellVolume`.
   static const double _restTimerBellVolume = 0.42;
 
+  /// The bell asks the OS to *duck* other audio rather than take it outright:
+  /// `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` on Android, `duckOthers` on iOS. A
+  /// runner listening to music or a podcast then hears it dip for the bell and
+  /// come straight back, instead of having playback stopped as full audio focus
+  /// (the audioplayers default) would do.
+  static final AudioContext _duckingAudioContext = AudioContextConfig(
+    focus: AudioContextConfigFocus.duckOthers,
+  ).build();
+
   /// Kotlin `playRestTimerBellIfEnabled`: the same struck-bowl sample the
   /// mindfulness timer uses, not a spoken phrase.
   void _playRestTimerBellIfEnabled() {
@@ -1426,6 +1464,9 @@ class ActivityRecordingService implements ActivityRecordingController {
           (_) => player.dispose(),
           onError: (Object _) => player.dispose(),
         );
+        // Duck other audio for the bell; disposing on completion releases the
+        // transient focus and restores the music/podcast to full volume.
+        await player.setAudioContext(_duckingAudioContext);
         await player.setVolume(_restTimerBellVolume);
         await player.play(AssetSource('sounds/bowl_struck.ogg'));
       } catch (_) {

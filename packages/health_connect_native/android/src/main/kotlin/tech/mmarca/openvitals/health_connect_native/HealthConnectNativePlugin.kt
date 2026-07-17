@@ -71,6 +71,7 @@ class HealthConnectNativePlugin :
   private var hydrationReader: HydrationHealthReader? = null
   private var mindfulnessReader: MindfulnessHealthReader? = null
   private var vitalsReader: VitalsHealthReader? = null
+  private var changesReader: HealthConnectChangesReader? = null
   private var cycleReader: CycleHealthReader? = null
   private var heartReader: HeartHealthReader? = null
   private var nutritionReader: NutritionHealthReader? = null
@@ -88,6 +89,9 @@ class HealthConnectNativePlugin :
 
   private fun requireVitalsReader(): VitalsHealthReader =
     vitalsReader ?: throw IllegalStateException("Plugin not attached to an engine")
+
+  private fun requireChangesReader(): HealthConnectChangesReader =
+    changesReader ?: throw IllegalStateException("Plugin not attached to an engine")
 
   private fun requireCycleReader(): CycleHealthReader =
     cycleReader ?: throw IllegalStateException("Plugin not attached to an engine")
@@ -141,6 +145,7 @@ class HealthConnectNativePlugin :
     hydrationReader = HydrationHealthReader(support, context.packageName)
     mindfulnessReader = MindfulnessHealthReader(support, context.packageName)
     vitalsReader = VitalsHealthReader(support, context.packageName)
+    changesReader = HealthConnectChangesReader(support)
     cycleReader = CycleHealthReader(support)
     heartReader = HeartHealthReader(support)
     nutritionReader = NutritionHealthReader(support, context.packageName)
@@ -159,6 +164,7 @@ class HealthConnectNativePlugin :
     hydrationReader = null
     mindfulnessReader = null
     vitalsReader = null
+    changesReader = null
     cycleReader = null
     heartReader = null
     nutritionReader = null
@@ -564,6 +570,108 @@ class HealthConnectNativePlugin :
     callback: (Result<List<SkinTemperatureEntryMsg>>) -> Unit,
   ) = launchCatching(callback) {
     requireVitalsReader().readSkinTemperatureEntries(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyBloodPressure(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyBloodPressurePointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyBloodPressure(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailySpO2(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailySpO2(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyRespiratoryRate(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyRespiratoryRate(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyBodyTemperature(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyBodyTemperature(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyVo2Max(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyVo2Max(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailyBloodGlucose(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailyBloodGlucose(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readDailySkinTemperature(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<DailyVitalPointMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readDailySkinTemperature(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readLatestRespiratoryRate(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<RespiratoryRateEntryMsg?>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readLatestRespiratoryRate(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readLatestBodyTemperature(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<BodyTempEntryMsg?>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readLatestBodyTemperature(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readLatestBloodGlucose(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<BloodGlucoseEntryMsg?>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readLatestBloodGlucose(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun readLatestSkinTemperature(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<SkinTemperatureEntryMsg?>) -> Unit,
+  ) = launchCatching(callback) {
+    requireVitalsReader().readLatestSkinTemperature(instant(startEpochMs), instant(endEpochMs))
+  }
+
+  override fun getVitalsChangesToken(
+    recordType: String,
+    callback: (Result<String>) -> Unit,
+  ) = launchCatching(callback) {
+    requireChangesReader().getChangesToken(recordType)
+  }
+
+  override fun getVitalsChanges(
+    token: String,
+    callback: (Result<VitalsChangesMsg>) -> Unit,
+  ) = launchCatching(callback) {
+    requireChangesReader().getChanges(token)
   }
 
   override fun writeVitalsMeasurementEntry(
@@ -1208,6 +1316,8 @@ class HealthConnectNativePlugin :
 
   override fun filterExistingClientIds(
     recordType: String,
+    startEpochMs: Long,
+    endEpochMs: Long,
     clientRecordIds: List<String>,
     callback: (Result<List<String>>) -> Unit,
   ) {
@@ -1218,10 +1328,14 @@ class HealthConnectNativePlugin :
 
       val wanted = clientRecordIds.toSet()
       // Health Connect cannot query directly by clientRecordId, so read the
-      // record type over a wide window and match on metadata.clientRecordId.
+      // record type and match on metadata.clientRecordId — but ONLY over the
+      // batch's own time window. An imported record's clientRecordId sits at its
+      // own timestamp, so a re-import's duplicate is in this window; reading the
+      // whole history here instead is an O(n²) scan over a large import (the
+      // caller already narrows the window per 6-hour chunk).
       val timeRangeFilter = TimeRangeFilter.between(
-        Instant.EPOCH,
-        Instant.now().plus(Duration.ofDays(1)),
+        Instant.ofEpochMilli(startEpochMs),
+        Instant.ofEpochMilli(endEpochMs),
       )
       withContext(Dispatchers.IO) {
         val found = mutableSetOf<String>()

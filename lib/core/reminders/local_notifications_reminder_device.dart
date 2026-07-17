@@ -13,6 +13,7 @@ class ReminderNotificationSpec {
     required this.channelName,
     required this.channelDescription,
     required this.title,
+    required this.androidIcon,
     required this.scheduledBody,
     required this.body,
   });
@@ -24,6 +25,12 @@ class ReminderNotificationSpec {
   final String channelName;
   final String channelDescription;
   final String title;
+
+  /// The `res/drawable` name of this reminder's monochrome status-bar icon.
+  /// Android tints the small icon from its alpha channel, so this must be an
+  /// alpha-only silhouette (e.g. `ic_stat_hydration_reminder`); a full-color
+  /// launcher icon here renders as a blank white square.
+  final String androidIcon;
 
   /// Used only by [ZonedNotificationReminderScheduler], which posts a
   /// notification ahead of time and so cannot know the user's progress.
@@ -40,6 +47,7 @@ NotificationDetails _detailsFor(ReminderNotificationSpec spec) =>
         spec.channelId,
         spec.channelName,
         channelDescription: spec.channelDescription,
+        icon: spec.androidIcon,
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
       ),

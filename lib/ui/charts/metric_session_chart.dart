@@ -7,6 +7,7 @@ import '../../core/presentation/elapsed_format.dart';
 import '../../l10n/app_localizations.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
+import 'chart_zoom.dart';
 import 'metric_line_plot.dart';
 import 'session_axis.dart';
 
@@ -108,32 +109,48 @@ class MetricSessionChart extends StatelessWidget {
                 (label: countLabel ?? l10n.summarySamples, value: countText),
               ],
             ),
-            MetricLinePlot(
-              points: [
-                for (final sample in ordered)
-                  MetricLinePlotPoint(
-                    xFraction: axis.fractionOf(sample.time),
-                    value: sample.value,
+            // Pinch to look closer at part of the session — the sprint, the climb, the
+            // minute the heart rate spiked. The plot and its elapsed-time row are BOTH
+            // inside the zoom and share the one viewport.
+            ChartZoom(
+              builder: (context, viewport) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  MetricLinePlot(
+                    points: [
+                      for (final sample in ordered)
+                        MetricLinePlotPoint(
+                          xFraction: axis.fractionOf(sample.time),
+                          value: sample.value,
+                        ),
+                    ],
+                    // Drag it: the reading, and how far into the session it was taken.
+                    // A session chart with no scrub is a chart that can tell you your
+                    // heart hit 171 and never where.
+                    scrubLabelBuilder: (point) => (
+                      valueFormatter(point.value),
+                      formatRecordingElapsed(axis.elapsedAt(point.xFraction)),
+                    ),
+                    minValue: range.min,
+                    maxValue: range.max,
+                    accentColor: accentColor,
+                    chartHeight: chartHeight,
+                    valueFormatter: valueFormatter,
+                    pointRadius: drawPoints ? 2 : 0,
+                    lineStrokeWidth: 2,
+                    drawPoints: drawPoints,
+                    viewport: viewport,
                   ),
-              ],
-              // Drag it: the reading, and how far into the session it was taken.
-              // A session chart with no scrub is a chart that can tell you your
-              // heart hit 171 and never where.
-              scrubLabelBuilder: (point) => (
-                valueFormatter(point.value),
-                formatRecordingElapsed(axis.elapsedAt(point.xFraction)),
+                  // 28, not 4. The card's Column spaces its children by 12, and the plot
+                  // and the label row used to be two of them with a 4px box between —
+                  // 12 + 4 + 12. Folding them into one child to share a viewport took
+                  // both of those 12s away, and the goldens caught the row jumping up
+                  // under the trace.
+                  const SizedBox(height: 28),
+                  SessionAxisLabels(axis: axis, viewport: viewport),
+                ],
               ),
-              minValue: range.min,
-              maxValue: range.max,
-              accentColor: accentColor,
-              chartHeight: chartHeight,
-              valueFormatter: valueFormatter,
-              pointRadius: drawPoints ? 2 : 0,
-              lineStrokeWidth: 2,
-              drawPoints: drawPoints,
             ),
-            const SizedBox(height: 4),
-            SessionAxisLabels(axis: axis),
             Text(
               l10n.summaryRecorded(
                 timeFormat.format(ordered.first.time.toLocal()),

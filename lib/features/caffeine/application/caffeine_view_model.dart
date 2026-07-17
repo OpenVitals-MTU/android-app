@@ -55,6 +55,13 @@ abstract class CaffeineState with _$CaffeineState {
     CaffeineAnalyticsRange analyticsRange,
     @Default(CaffeineInsights()) CaffeineInsights homeDisplay,
     @Default(CaffeineInsights()) CaffeineInsights analyticsDisplay,
+
+    /// The drinks themselves, as Health Connect holds them.
+    ///
+    /// The insights are a SUM of these, and a sum cannot be tapped. Keeping the entries
+    /// is what lets the screen list them and open one -- the difference between knowing
+    /// you had 240mg today and knowing which coffee is still keeping you awake.
+    @Default(<CaffeineEntry>[]) List<CaffeineEntry> entries,
     CaffeineDisplay? display,
     ScreenError? error,
   }) = _CaffeineState;
@@ -123,6 +130,7 @@ class CaffeineViewModel extends Notifier<CaffeineState> {
           bodyProfile: bodyProfile,
         );
         state = state.copyWith(
+          entries: value.entries,
           isLoading: false,
           homeDisplay: home,
           analyticsDisplay: analytics,
@@ -135,6 +143,45 @@ class CaffeineViewModel extends Notifier<CaffeineState> {
           error: failure.toScreenError(fallback: 'Unable to load data.'),
         );
     }
+  }
+
+  /// Remove an OpenVitals-authored drink optimistically so the row leaves the
+  /// list at once, delete it, then force-reload; restore the previous state
+  /// (with an error) on failure. A caffeine entry IS a nutrition record — Health
+  /// Connect has no caffeine record — so deleting the backing nutrition record
+  /// removes the drink. Delete-only, like nutrition.
+  Future<void> deleteCaffeineEntry(String entryId) async {
+    if (entryId.isEmpty) return;
+    final entry = _entryById(entryId);
+    if (entry == null || !entry.isOpenVitalsEntry) return;
+
+    final previous = state;
+    state = state.copyWith(
+      entries: [
+        for (final e in state.entries)
+          if (e.id != entryId) e,
+      ],
+      error: null,
+    );
+
+    final deletion =
+        await ref.read(deleteNutritionEntryUseCaseProvider)(entryId);
+    if (!ref.mounted) return;
+    switch (deletion) {
+      case Ok():
+        await load(refreshMode: RefreshMode.force);
+      case Err(:final failure):
+        state = previous.copyWith(
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
+    }
+  }
+
+  CaffeineEntry? _entryById(String entryId) {
+    for (final entry in state.entries) {
+      if (entry.id == entryId) return entry;
+    }
+    return null;
   }
 }
 

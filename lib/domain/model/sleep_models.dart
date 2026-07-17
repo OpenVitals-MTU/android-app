@@ -103,6 +103,34 @@ extension SleepStageDurations on List<SleepStage> {
       ).fold<int>(0, (sum, stage) => sum + math.max(stage.durationMs, 0));
 }
 
+/// Wall-clock milliseconds covered by [sessions], counting overlapping time
+/// once. Sweep-merges each session's `[startTime, endTime]` interval, so two
+/// overlapping sessions from different sources yield the real time in bed, not
+/// the sum of their durations. For non-overlapping input this equals the sum.
+int sleepSessionsUnionMs(Iterable<SleepData> sessions) {
+  final intervals = [
+    for (final session in sessions)
+      if (session.endTime.isAfter(session.startTime))
+        (session.startTime, session.endTime),
+  ]..sort((a, b) => a.$1.compareTo(b.$1));
+  if (intervals.isEmpty) return 0;
+
+  var totalMs = 0;
+  var currentStart = intervals.first.$1;
+  var currentEnd = intervals.first.$2;
+  for (final interval in intervals.skip(1)) {
+    if (interval.$1.isAfter(currentEnd)) {
+      totalMs += currentEnd.difference(currentStart).inMilliseconds;
+      currentStart = interval.$1;
+      currentEnd = interval.$2;
+    } else if (interval.$2.isAfter(currentEnd)) {
+      currentEnd = interval.$2;
+    }
+  }
+  totalMs += currentEnd.difference(currentStart).inMilliseconds;
+  return totalMs;
+}
+
 int sleepDurationMsFromStages(
   List<SleepStage> stages,
   int fallbackDurationMs,

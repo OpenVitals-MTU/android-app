@@ -45,7 +45,7 @@ List<int> streamingZip(Map<String, String> entries) {
   return out.toBytes();
 }
 
-AppleParsedExport parseXml(String xml) =>
+Future<AppleParsedExport> parseXml(String xml) =>
     AppleHealthImportParser.parse(utf8.encode(xml));
 
 AppleHealthConversionResult convertParsed(AppleParsedExport parsed) =>
@@ -72,7 +72,7 @@ List<int> zipExport(
 void main() {
   group('AppleHealthImportParser streaming zip', () {
     test('reads entries whose local header has no sizes (data descriptors)',
-        () {
+        () async {
       final zip = streamingZip({
         'apple_health_export/export.xml': '''
           <HealthData>
@@ -91,7 +91,7 @@ void main() {
                 '</trkseg></trk></gpx>',
       });
 
-      final parsed = AppleHealthImportParser.parse(zip);
+      final parsed = await AppleHealthImportParser.parse(zip);
 
       expect(parsed.parsedWorkouts, 1);
       final workout = parsed.workouts.single;
@@ -103,8 +103,8 @@ void main() {
   });
 
   group('AppleHealthImportParser + converter', () {
-    test('imports sleep category values as sleep stages', () {
-      final parsed = parseXml('''
+    test('imports sleep category values as sleep stages', () async {
+      final parsed = await parseXml('''
         <HealthData>
           <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Apple Watch"
             startDate="2026-01-01 22:00:00 +0000" endDate="2026-01-02 06:00:00 +0000"
@@ -120,8 +120,9 @@ void main() {
       expect(sleep.stages.single.stage, SleepStageType.light);
     });
 
-    test('handles an apple export DOCTYPE without loading DTD grammar', () {
-      final parsed = parseXml('''<?xml version="1.0" encoding="UTF-8"?>
+    test('handles an apple export DOCTYPE without loading DTD grammar',
+        () async {
+      final parsed = await parseXml('''<?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE HealthData [
           <!ELEMENT HealthData (Record*)>
           <!ELEMENT Record EMPTY>
@@ -137,13 +138,16 @@ void main() {
       expect(parsed.parsedRecords, 1);
     });
 
-    test('repairs raw control characters and unescaped ampersands', () {
+    test('repairs raw control characters and unescaped ampersands', () async {
+      // A raw 0x07 (BEL) control char inside a free-text field, plus a bare `&` —
+      // the two things Apple's exporter most often leaves un-escaped.
+      final bell = String.fromCharCode(0x07);
       final xml = '<HealthData><Record type="HKQuantityTypeIdentifierStepCount" '
-          'sourceName="NotesApp" device="AT&T Watch" '
+          'sourceName="Notes${bell}App" device="AT&T Watch" '
           'startDate="2026-01-01 00:00:00 +0000" endDate="2026-01-01 00:01:00 +0000" '
           'unit="count" value="10" /></HealthData>';
 
-      final parsed = parseXml(xml);
+      final parsed = await parseXml(xml);
 
       expect(parsed.parsedRecords, 1);
       expect(parsed.sanitizedControlChars, 1);
@@ -153,14 +157,15 @@ void main() {
       expect(record.device, 'AT&T Watch');
     });
 
-    test('wraps a genuine well-formedness failure with surrounding text', () {
+    test('wraps a genuine well-formedness failure with surrounding text',
+        () async {
       final xml = '<HealthData><Record type="HKQuantityTypeIdentifierStepCount" '
           'startDate="2026-01-01 00:00:00 +0000" endDate="2026-01-01 00:01:00 +0000">'
           '</MismatchedClosingTag></HealthData>';
 
       Object? caught;
       try {
-        parseXml(xml);
+        await parseXml(xml);
       } catch (error) {
         caught = error;
       }
@@ -171,8 +176,8 @@ void main() {
       expect(message.contains('Text leading up to the error'), isTrue);
     });
 
-    test('preserves timezone offsets on apple date strings', () {
-      final parsed = parseXml('''
+    test('preserves timezone offsets on apple date strings', () async {
+      final parsed = await parseXml('''
         <HealthData>
           <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone"
             startDate="2023-12-13 20:48:49 +0100" endDate="2023-12-13 20:58:49 +0100"
@@ -187,8 +192,8 @@ void main() {
       expect(record.endDate!.offset, const Duration(hours: 1));
     });
 
-    test('imports walking speed as speed samples (km/hr → m/s)', () {
-      final parsed = parseXml('''
+    test('imports walking speed as speed samples (km/hr → m/s)', () async {
+      final parsed = await parseXml('''
         <HealthData>
           <Record type="HKQuantityTypeIdentifierWalkingSpeed" sourceName="Phone"
             startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:05 +0000"
@@ -203,8 +208,8 @@ void main() {
       expect(speed.samples.single.metersPerSecond, closeTo(1.0, 1e-9));
     });
 
-    test('prefers blood pressure correlations', () {
-      final parsed = parseXml('''
+    test('prefers blood pressure correlations', () async {
+      final parsed = await parseXml('''
         <HealthData>
           <Correlation type="HKCorrelationTypeIdentifierBloodPressure" sourceName="Test"
             startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:00 +0000">
@@ -228,8 +233,8 @@ void main() {
       expect(bp.diastolicMmHg, 80.0);
     });
 
-    test('reads workout statistics as workout distance and energy', () {
-      final parsed = parseXml('''
+    test('reads workout statistics as workout distance and energy', () async {
+      final parsed = await parseXml('''
         <HealthData>
           <Workout workoutActivityType="HKWorkoutActivityTypeCycling" sourceName="Apple Watch"
             startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:45:00 +0000"
@@ -266,8 +271,8 @@ void main() {
     });
 
     test('drops workout energy totals when overlapping records exist from '
-        'another source', () {
-      final parsed = parseXml('''
+        'another source', () async {
+      final parsed = await parseXml('''
         <HealthData>
           <Record type="HKQuantityTypeIdentifierActiveEnergyBurned" sourceName="iPhone"
             startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:45:00 +0000"
@@ -291,8 +296,8 @@ void main() {
     });
 
     test('skips lower priority additive records mostly covered by another '
-        'source', () {
-      final parsed = parseXml('''
+        'source', () async {
+      final parsed = await parseXml('''
         <HealthData>
           <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Alesia's iPhone"
             startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000"
@@ -312,8 +317,9 @@ void main() {
       expect(result.diagnostics.single.reasonCode, 'overlap_cross_source');
     });
 
-    test('synthetic export fixture covers supported converter targets', () {
-      final parsed = parseFixture('synthetic_supported_export.xml');
+    test('synthetic export fixture covers supported converter targets',
+        () async {
+      final parsed = await parseFixture('synthetic_supported_export.xml');
 
       final result = convertParsed(parsed);
       final targetTypes = result.converted.map((it) => it.targetType).toSet();
@@ -367,8 +373,8 @@ void main() {
       );
     });
 
-    test('reads a zipped apple export', () {
-      final parsed = AppleHealthImportParser.parse(zipExport('''
+    test('reads a zipped apple export', () async {
+      final parsed = await AppleHealthImportParser.parse(zipExport('''
         <HealthData>
           <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone"
             startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000"
@@ -381,7 +387,7 @@ void main() {
       expect(result.converted.single.targetType, 'StepsRecord');
     });
 
-    test('imports an apple workout route with synthesized times', () {
+    test('imports an apple workout route with synthesized times', () async {
       const xml = '''
         <HealthData>
           <Workout workoutActivityType="HKWorkoutActivityTypeRunning" sourceName="Apple Watch"
@@ -403,7 +409,7 @@ void main() {
           </trkseg></trk>
         </gpx>''';
 
-      final parsed = AppleHealthImportParser.parse(zipExport(
+      final parsed = await AppleHealthImportParser.parse(zipExport(
         xml,
         extraFiles: {
           'apple_health_export/workout-routes/route_2026-01-01_8.00am.gpx': gpx,
@@ -431,7 +437,7 @@ void main() {
     });
 
     test('synthesized route times stay strictly increasing at millisecond '
-        'precision', () {
+        'precision', () async {
       final pausedPoints = List.generate(
         50,
         (_) =>
@@ -456,7 +462,7 @@ void main() {
           '<time>2026-07-05T08:35:11Z</time></trkpt>'
           '</trkseg></trk></gpx>';
 
-      final parsed = AppleHealthImportParser.parse(zipExport(
+      final parsed = await AppleHealthImportParser.parse(zipExport(
         xml,
         extraFiles: {
           'apple_health_export/workout-routes/route_2026-01-01_8.00am.gpx': gpx,
@@ -484,7 +490,7 @@ void main() {
     });
 
     test('light mode keeps counts but skips dates, metadata and numeric '
-        'values', () {
+        'values', () async {
       const xml = '''
         <HealthData>
           <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Watch"
@@ -503,11 +509,11 @@ void main() {
       final lightRecords = <AppleRecord>[];
       final lightWorkouts = <AppleWorkout>[];
 
-      final fullParsed = AppleHealthImportParser.parse(
+      final fullParsed = await AppleHealthImportParser.parse(
         utf8.encode(xml),
         consumer: _CollectingConsumer(fullRecords, null),
       );
-      final lightParsed = AppleHealthImportParser.parse(
+      final lightParsed = await AppleHealthImportParser.parse(
         utf8.encode(xml),
         consumer: _CollectingConsumer(lightRecords, lightWorkouts),
         options: const AppleHealthParseOptions(
@@ -542,7 +548,7 @@ void main() {
   });
 }
 
-AppleParsedExport parseFixture(String name) {
+Future<AppleParsedExport> parseFixture(String name) {
   final file = File(
     'test/features/imports/applehealth/fixtures/$name',
   );

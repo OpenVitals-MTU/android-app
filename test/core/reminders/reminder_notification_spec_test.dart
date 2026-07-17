@@ -23,6 +23,14 @@ void main() {
     expect(channels.toSet(), hasLength(channels.length));
   });
 
+  test('every spec sets a monochrome small icon', () {
+    // A missing/blank icon falls back to the launcher icon, which Android
+    // renders as a solid white square in the status bar.
+    for (final spec in _allSpecs) {
+      expect(spec.androidIcon, isNotEmpty, reason: spec.channelId);
+    }
+  });
+
   group('body copy', () {
     test('hydration reports progress against a real goal', () {
       final body = hydrationReminderNotificationSpec.body(

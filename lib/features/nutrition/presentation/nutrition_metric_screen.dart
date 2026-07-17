@@ -84,6 +84,7 @@ class NutritionMetricScreen extends ConsumerWidget {
               weekPeriodMode: weekMode,
               onDecreaseGoal: notifier.decreaseDailyGoal,
               onIncreaseGoal: notifier.increaseDailyGoal,
+              onDeleteEntry: notifier.deleteNutritionEntry,
             ),
           ],
         ),
@@ -101,6 +102,7 @@ class _NutritionMetricContent extends StatelessWidget {
     required this.weekPeriodMode,
     required this.onDecreaseGoal,
     required this.onIncreaseGoal,
+    required this.onDeleteEntry,
   });
 
   final NutritionMetric metric;
@@ -110,6 +112,7 @@ class _NutritionMetricContent extends StatelessWidget {
   final WeekPeriodMode weekPeriodMode;
   final VoidCallback onDecreaseGoal;
   final VoidCallback onIncreaseGoal;
+  final void Function(String entryId) onDeleteEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +216,7 @@ class _NutritionMetricContent extends StatelessWidget {
             ),
             entries: selectedEntries,
             formatter: formatter,
+            onDelete: (entry) => onDeleteEntry(entry.id),
           )),
         ),
         // Kotlin section DATA_CONFIDENCE (hidden on a single-day period).
@@ -323,6 +327,7 @@ class _NutritionMetricContent extends StatelessWidget {
             title: l10n.sectionMeals,
             entries: display.entriesNewestFirst,
             formatter: formatter,
+            onDelete: (entry) => onDeleteEntry(entry.id),
           )),
         ),
       ],

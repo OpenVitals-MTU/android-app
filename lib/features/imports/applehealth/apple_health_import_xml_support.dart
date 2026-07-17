@@ -1,56 +1,159 @@
-/// XML hardening + character repair for the Apple Health export parser, ported
-/// from the Kotlin `AppleHealthImportXmlSupport.kt`.
+/// Streaming XML hardening + character repair for the Apple Health export parser,
+/// ported from the Kotlin `XmlCharacterSanitizingReader` in
+/// `AppleHealthImportXmlSupport.kt`.
 ///
 /// Apple's exporter occasionally emits the two things that most often break XML
 /// 1.0 well-formedness in free-text fields: raw control characters and bare `&`
-/// that were never escaped. [sanitizeAppleHealthXml] repairs both in place (and
-/// counts them) before the streaming parser sees the document. DTD declarations
-/// are stripped so no external grammar is loaded (matching the Kotlin hardened
-/// SAX factory).
+/// that were never escaped. [AppleHealthXmlSanitizer] repairs both **as a stream
+/// transformer** — so the whole multi-gigabyte document is never held in memory —
+/// and counts them so the report and the parse-error message can mention the
+/// repairs.
+///
+/// Unlike the retired whole-string `sanitizeAppleHealthXml`, the DOCTYPE is NOT
+/// stripped: the `package:xml` event parser tolerates Apple's
+/// `<!DOCTYPE HealthData [ … ]>` (it emits a doctype event the handler ignores),
+/// and stripping it would need unbounded cross-chunk state for the internal subset.
 library;
 
+import 'dart:async';
+
 const int _maxEntityLookahead = 12;
+const int _maxContextChars = 200;
+const int _ampersand = 0x26;
+const int _semicolon = 0x3B;
+const int _hash = 0x23;
 const Set<String> _namedXmlEntities = {'amp', 'lt', 'gt', 'quot', 'apos'};
 
-class SanitizedAppleHealthXml {
-  const SanitizedAppleHealthXml({
-    required this.text,
-    required this.strippedControlChars,
-    required this.escapedAmpersands,
-  });
+/// The classification of a just-seen `&`: it begins a valid entity (pass it
+/// through), it does not (escape to `&amp;`), or there is not yet enough lookahead
+/// in the current chunk to tell (defer to the next chunk).
+enum _EntityAhead { isEntity, notEntity, needMore }
 
-  final String text;
-  final int strippedControlChars;
-  final int escapedAmpersands;
-}
+/// A stateful, chunk-boundary-safe port of the Kotlin `XmlCharacterSanitizingReader`.
+///
+/// Wire it into a byte/char stream with `stream.transform(sanitizer.transformer)`.
+/// [strippedControlChars] / [escapedAmpersands] are valid once the stream has
+/// drained; [recentContext] returns the last [_maxContextChars] emitted characters
+/// (non-printables escaped) for the parse-error message — the streaming analogue of
+/// the old whole-string `substring` around the failure position.
+class AppleHealthXmlSanitizer {
+  int strippedControlChars = 0;
+  int escapedAmpersands = 0;
 
-SanitizedAppleHealthXml sanitizeAppleHealthXml(String input) {
-  final buffer = StringBuffer();
-  var strippedControlChars = 0;
-  var escapedAmpersands = 0;
-  final length = input.length;
-  var index = 0;
-  while (index < length) {
-    final code = input.codeUnitAt(index);
-    if (_isDisallowedXmlChar(code)) {
-      strippedControlChars++;
-      index++;
-      continue;
+  /// A deferred tail — always beginning at a `&` whose entity lookahead ran past
+  /// the end of the previous chunk — prepended to the next chunk.
+  String _pending = '';
+
+  /// Rolling window of the most recently emitted characters, trimmed to
+  /// [_maxContextChars]. Maintained per chunk (not per character) so it adds no
+  /// per-character cost to a multi-gigabyte parse.
+  String _context = '';
+
+  StreamTransformer<String, String> get transformer =>
+      StreamTransformer<String, String>.fromHandlers(
+        handleData: (chunk, sink) {
+          final out = _process(chunk, isLast: false);
+          if (out.isNotEmpty) sink.add(out);
+        },
+        handleDone: (sink) {
+          final out = _flushPending();
+          if (out.isNotEmpty) sink.add(out);
+          sink.close();
+        },
+        handleError: (error, stackTrace, sink) =>
+            sink.addError(error, stackTrace),
+      );
+
+  /// Approximate text the parser last consumed before failing (Kotlin
+  /// `recentContext`), with non-printable characters shown as `\uXXXX`.
+  String recentContext() {
+    final buffer = StringBuffer();
+    for (final code in _context.codeUnits) {
+      buffer.write(_toDisplayable(code));
     }
-    if (code == 0x26 /* & */ && !_isEntityReferenceAhead(input, index + 1)) {
-      escapedAmpersands++;
-      buffer.write('&amp;');
-      index++;
-      continue;
-    }
-    buffer.writeCharCode(code);
-    index++;
+    return buffer.toString();
   }
-  return SanitizedAppleHealthXml(
-    text: _stripDoctype(buffer.toString()),
-    strippedControlChars: strippedControlChars,
-    escapedAmpersands: escapedAmpersands,
-  );
+
+  String _process(String chunk, {required bool isLast}) {
+    final input = _pending.isEmpty ? chunk : '$_pending$chunk';
+    _pending = '';
+    final out = StringBuffer();
+    final length = input.length;
+    var index = 0;
+    while (index < length) {
+      final code = input.codeUnitAt(index);
+      if (_isDisallowedXmlChar(code)) {
+        strippedControlChars++;
+        index++;
+        continue;
+      }
+      if (code == _ampersand) {
+        final decision = _entityReferenceAhead(input, index + 1, isLast);
+        if (decision == _EntityAhead.needMore) {
+          // Not enough lookahead in this chunk to classify the `&`; carry it (and
+          // its partial lookahead) to the next chunk and stop here.
+          _pending = input.substring(index);
+          break;
+        }
+        if (decision == _EntityAhead.notEntity) {
+          escapedAmpersands++;
+          out.write('&amp;');
+        } else {
+          out.writeCharCode(_ampersand);
+        }
+        index++;
+        continue;
+      }
+      out.writeCharCode(code);
+      index++;
+    }
+    final produced = out.toString();
+    _appendContext(produced);
+    return produced;
+  }
+
+  String _flushPending() {
+    if (_pending.isEmpty) return '';
+    final tail = _pending;
+    _pending = '';
+    // End of stream: no more lookahead will ever arrive, so decide now.
+    return _process(tail, isLast: true);
+  }
+
+  void _appendContext(String produced) {
+    if (produced.isEmpty) return;
+    final combined = _context.isEmpty ? produced : '$_context$produced';
+    _context = combined.length <= _maxContextChars
+        ? combined
+        : combined.substring(combined.length - _maxContextChars);
+  }
+
+  /// Peeks past a just-read `&` (starting at [start]) to classify it, mirroring the
+  /// Kotlin `isEntityReferenceAhead` 12-char lookahead. Returns
+  /// [_EntityAhead.needMore] when the lookahead runs off the end of the current
+  /// chunk and more input may still follow ([isLast] false).
+  _EntityAhead _entityReferenceAhead(String input, int start, bool isLast) {
+    final length = input.length;
+    final body = StringBuffer();
+    var terminated = false;
+    var index = start;
+    while (body.length < _maxEntityLookahead) {
+      if (index >= length) {
+        if (!isLast) return _EntityAhead.needMore;
+        break;
+      }
+      final code = input.codeUnitAt(index);
+      body.writeCharCode(code);
+      index++;
+      if (code == _semicolon) {
+        terminated = true;
+        break;
+      }
+      if (code != _hash && !_isLetterOrDigit(code)) break;
+    }
+    final isEntity = terminated && _isValidXmlEntityBody(body.toString());
+    return isEntity ? _EntityAhead.isEntity : _EntityAhead.notEntity;
+  }
 }
 
 bool _isDisallowedXmlChar(int code) =>
@@ -61,29 +164,10 @@ bool _isDisallowedXmlChar(int code) =>
     code == 0xFFFE ||
     code == 0xFFFF;
 
-bool _isEntityReferenceAhead(String input, int start) {
-  final builder = StringBuffer();
-  var terminated = false;
-  var index = start;
-  while (builder.length < _maxEntityLookahead && index < input.length) {
-    final ch = input[index];
-    index++;
-    builder.write(ch);
-    if (ch == ';') {
-      terminated = true;
-      break;
-    }
-    if (ch != '#' && !_isLetterOrDigit(ch)) break;
-  }
-  return terminated && _isValidXmlEntityBody(builder.toString());
-}
-
-bool _isLetterOrDigit(String ch) {
-  final code = ch.codeUnitAt(0);
-  return (code >= 0x30 && code <= 0x39) || // 0-9
-      (code >= 0x41 && code <= 0x5A) || // A-Z
-      (code >= 0x61 && code <= 0x7A); // a-z
-}
+bool _isLetterOrDigit(int code) =>
+    (code >= 0x30 && code <= 0x39) || // 0-9
+    (code >= 0x41 && code <= 0x5A) || // A-Z
+    (code >= 0x61 && code <= 0x7A); // a-z
 
 bool _isValidXmlEntityBody(String value) {
   final body = value.endsWith(';') ? value.substring(0, value.length - 1) : value;
@@ -109,25 +193,13 @@ bool _isValidXmlEntityBody(String value) {
   return false;
 }
 
-/// Removes a leading `<!DOCTYPE ...>` declaration (including any internal `[...]`
-/// subset) so the parser never loads DTD grammar.
-String _stripDoctype(String input) {
-  final startTag = input.indexOf('<!DOCTYPE');
-  if (startTag < 0) return input;
-  var index = startTag + '<!DOCTYPE'.length;
-  var depth = 0;
-  while (index < input.length) {
-    final ch = input[index];
-    if (ch == '[') {
-      depth++;
-    } else if (ch == ']') {
-      if (depth > 0) depth--;
-    } else if (ch == '>' && depth == 0) {
-      return input.substring(0, startTag) + input.substring(index + 1);
-    }
-    index++;
+/// Kotlin `Char.toDisplayable`: printable ASCII (plus `\n`/`\t`) verbatim,
+/// everything else as `\uXXXX`.
+String _toDisplayable(int code) {
+  if ((code >= 0x20 && code <= 0x7E) || code == 0x0A || code == 0x09) {
+    return String.fromCharCode(code);
   }
-  return input.substring(0, startTag);
+  return '\\u${code.toRadixString(16).padLeft(4, '0')}';
 }
 
 /// Thrown when export.xml still fails to parse after character sanitization,

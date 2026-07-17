@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/period/time_range.dart';
@@ -12,6 +13,7 @@ import '../../../ui/charts/day_axis.dart';
 import '../../../ui/charts/metric_day_chart.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../../../state/app_providers.dart';
 
 /// Cards used across the heart + vitals detail screens, ported from the Kotlin
 /// `HeartCards.kt`, `HeartMetricContent.kt` (threshold checks) and
@@ -382,7 +384,7 @@ class HeartDayValueCard extends StatelessWidget {
 /// Kotlin `HeartRateTimelineCard` / `HrvTimelineCard`: the intraday sample
 /// timeline — avg/range/samples header, a normalized-x line plot over the day,
 /// hour marks and a recorded-window footnote.
-class HeartTimelineCard extends StatelessWidget {
+class HeartTimelineCard extends ConsumerWidget {
   const HeartTimelineCard({
     super.key,
     required this.date,
@@ -411,8 +413,9 @@ class HeartTimelineCard extends StatelessWidget {
   final double? maxValue;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (points.isEmpty) return const SizedBox.shrink();
+    final bucketMinutes = ref.watch(chartAggregationModeProvider).bucketMinutes;
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
@@ -441,6 +444,7 @@ class HeartTimelineCard extends StatelessWidget {
       valueFormatter: valueFormatter,
       drawPoints: true,
       pointRadius: 3,
+      bucketMinutes: bucketMinutes,
       // Statistics, not a headline: the useful thing about a day of heart rate is
       // its spread, not its last reading.
       header: Row(

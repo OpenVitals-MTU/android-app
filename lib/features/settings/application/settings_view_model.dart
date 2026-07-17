@@ -7,6 +7,7 @@ import '../../../di/providers.dart';
 import '../../../domain/preferences/activity_week_mode.dart';
 import '../../../domain/preferences/app_language.dart';
 import '../../../domain/preferences/app_theme_mode.dart';
+import '../../../domain/preferences/chart_aggregation_mode.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/preferences/unit_system.dart';
 
@@ -24,6 +25,7 @@ abstract class SettingsState with _$SettingsState {
     @Default(AppThemeMode.system) AppThemeMode appThemeMode,
     @Default(false) bool dynamicColor,
     @Default(SleepRangeMode.evening18h) SleepRangeMode sleepRangeMode,
+    @Default(ChartAggregationMode.off) ChartAggregationMode chartAggregationMode,
     @Default(ActivityWeekMode.mondayToSunday) ActivityWeekMode activityWeekMode,
     @Default(false) bool showOpenVitalsCalculatedCalories,
     @Default(true) bool healthConnectSyncEnabled,
@@ -52,6 +54,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
       appThemeMode: prefs.appThemeMode,
       dynamicColor: prefs.dynamicColor,
       sleepRangeMode: prefs.sleepRangeMode,
+      chartAggregationMode: prefs.chartAggregationMode,
       activityWeekMode: prefs.activityWeekMode,
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
       healthConnectSyncEnabled: prefs.healthConnectSyncEnabled,
@@ -86,6 +89,11 @@ class SettingsViewModel extends Notifier<SettingsState> {
   void selectSleepRangeMode(SleepRangeMode value) {
     _prefs.sleepRangeMode = value;
     state = state.copyWith(sleepRangeMode: value);
+  }
+
+  void selectChartAggregationMode(ChartAggregationMode value) {
+    _prefs.chartAggregationMode = value;
+    state = state.copyWith(chartAggregationMode: value);
   }
 
   void selectActivityWeekMode(ActivityWeekMode value) {

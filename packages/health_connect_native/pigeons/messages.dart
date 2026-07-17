@@ -456,6 +456,55 @@ class DailyHrvMsg {
   DailyHrvMsg(this.dateEpochMs, this.rmssdMs);
 }
 
+// ── Vitals daily aggregates (Phase 3 / Stage 4) ──────────────────────────────
+// Long-range vitals charts (week/month/year) plot one point per day. Reading a
+// year of RAW records just to average them per day marshals thousands of
+// records across this channel; these carry the per-day mean already bucketed on
+// the Kotlin side. [count] is how many raw readings the day averaged, so the
+// Dart side can reconstruct a count-weighted period mean without the raw list.
+
+class DailyVitalPointMsg {
+  final int dateEpochMs;
+  final double value;
+  final int count;
+  DailyVitalPointMsg(this.dateEpochMs, this.value, this.count);
+}
+
+class DailyBloodPressurePointMsg {
+  final int dateEpochMs;
+  final double systolic;
+  final double diastolic;
+  final int count;
+  DailyBloodPressurePointMsg(
+    this.dateEpochMs,
+    this.systolic,
+    this.diastolic,
+    this.count,
+  );
+}
+
+/// A batch of Health Connect changes for one record type, from a changes token.
+/// [upsertedDayEpochMs] is the deduped set of local day-starts touched by
+/// inserted/updated records (so the cache recomputes just those days).
+/// [hasDeletions] is true if any record was deleted — deletions carry only an id,
+/// not a date, so the cache full-rebuilds that metric when set. Paginate with
+/// [nextToken] while [hasMore]; [tokenExpired] means start over from a fresh
+/// token + full read.
+class VitalsChangesMsg {
+  final List<int> upsertedDayEpochMs;
+  final bool hasDeletions;
+  final String nextToken;
+  final bool tokenExpired;
+  final bool hasMore;
+  VitalsChangesMsg(
+    this.upsertedDayEpochMs,
+    this.hasDeletions,
+    this.nextToken,
+    this.tokenExpired,
+    this.hasMore,
+  );
+}
+
 // ── Nutrition (Phase 6) ──────────────────────────────────────────────────────
 
 enum CaloriesBurnedSourceMsg { noData, recordedTotal, estimatedActiveAndBmr }
@@ -1124,9 +1173,17 @@ abstract class HealthConnectHostApi {
 
   /// Import dedup helper: of the supplied [clientRecordIds], returns the subset
   /// that ALREADY exist in Health Connect for [recordType].
+  ///
+  /// The read is bounded to [startEpochMs]..[endEpochMs] — an imported record's
+  /// clientRecordId sits at its own timestamp, so a re-import's duplicate is
+  /// found in the same window the batch spans. Without the window the reader
+  /// scans the type's whole history on every batch, which is O(n²) over a large
+  /// import.
   @async
   List<String> filterExistingClientIds(
     String recordType,
+    int startEpochMs,
+    int endEpochMs,
     List<String> clientRecordIds,
   );
 
@@ -1226,6 +1283,40 @@ abstract class HealthConnectHostApi {
   List<BloodGlucoseEntryMsg> readBloodGlucoseEntries(int startEpochMs, int endEpochMs);
   @async
   List<SkinTemperatureEntryMsg> readSkinTemperatureEntries(int startEpochMs, int endEpochMs);
+  // Daily-bucketed vitals for long-range charts (see DailyVitalPointMsg). Each
+  // averages the day's raw readings on the Kotlin side so a year of records
+  // never crosses this channel.
+  @async
+  List<DailyBloodPressurePointMsg> readDailyBloodPressure(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailySpO2(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailyRespiratoryRate(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailyBodyTemperature(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailyVo2Max(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailyBloodGlucose(int startEpochMs, int endEpochMs);
+  @async
+  List<DailyVitalPointMsg> readDailySkinTemperature(int startEpochMs, int endEpochMs);
+  // Latest reading in a window, so a long-range card can show the true newest
+  // value/source without loading the raw list. (Blood pressure, SpO2 and VO2max
+  // already have theirs above.)
+  @async
+  RespiratoryRateEntryMsg? readLatestRespiratoryRate(int startEpochMs, int endEpochMs);
+  @async
+  BodyTempEntryMsg? readLatestBodyTemperature(int startEpochMs, int endEpochMs);
+  @async
+  BloodGlucoseEntryMsg? readLatestBloodGlucose(int startEpochMs, int endEpochMs);
+  @async
+  SkinTemperatureEntryMsg? readLatestSkinTemperature(int startEpochMs, int endEpochMs);
+  // Changes API for the local daily-aggregate cache: register a token for one
+  // record type (by canonical name, e.g. "RespiratoryRate"), then poll changes.
+  @async
+  String getVitalsChangesToken(String recordType);
+  @async
+  VitalsChangesMsg getVitalsChanges(String token);
   @async
   String writeVitalsMeasurementEntry(VitalsMeasurementWriteRequestMsg request);
   @async

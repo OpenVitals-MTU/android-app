@@ -16,6 +16,7 @@ import 'package:openvitals/features/imports/applehealth/apple_health_import_fore
 import 'package:openvitals/features/imports/applehealth/apple_health_import_models.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_checkpoint_store.dart';
+import 'package:openvitals/features/imports/applehealth/apple_health_import_report_store.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_view_model.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_service.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_staging_store.dart';
@@ -241,6 +242,26 @@ late FakeStagingStore stagingStore;
 late FakeCheckpointStore checkpointStore;
 late FakeImportServiceController serviceController;
 late SharedPreferences prefs;
+late FakeReportStore reportStore;
+
+/// In-memory stand-in that completes on a microtask, so the report round-trip
+/// does not depend on real file I/O the widget test cannot settle.
+class FakeReportStore implements AppleHealthImportReportStore {
+  String report = '';
+  String failure = '';
+
+  @override
+  Future<void> writeReport(String reportText) async => report = reportText;
+
+  @override
+  Future<String> readReport() async => report;
+
+  @override
+  Future<void> writeFailure(String reportText) async => failure = reportText;
+
+  @override
+  Future<String> readFailure() async => failure;
+}
 
 /// Delivers a payload the way the service isolate's `sendDataToMain` would.
 void emitTaskData(Object payload) {
@@ -265,6 +286,11 @@ Future<Widget> _bootstrap(
       appleHealthImportStagingStoreProvider.overrideWithValue(stagingStore),
       appleHealthImportCheckpointStoreProvider
           .overrideWithValue(checkpointStore),
+      // An in-memory store: real dart:io file I/O does not settle under
+      // pumpAndSettle, and the report round-trip is exercised by the non-widget
+      // background/view-model tests. Microtask-completing here keeps the widget
+      // tests deterministic.
+      appleHealthImportReportStoreProvider.overrideWithValue(reportStore),
       appleHealthImportServiceControllerProvider
           .overrideWithValue(serviceController),
       healthConnectAvailabilityProvider.overrideWith(
@@ -297,6 +323,7 @@ void main() {
         Directory.systemTemp.createTempSync('apple_health_card_test');
     stagingStore = FakeStagingStore();
     checkpointStore = FakeCheckpointStore();
+    reportStore = FakeReportStore();
     // Default: no foreground service (the desktop/test case), so the import runs
     // in-process exactly as it did before it was moved to a service isolate.
     serviceController = FakeImportServiceController();
@@ -545,7 +572,7 @@ void main() {
 
     // The report is written by the *other* isolate, so it comes back from the
     // store, not over the port.
-    await prefs.setString('apple_health_import_report', 'BG_REPORT');
+    reportStore.report = 'BG_REPORT';
     emitTaskData(encodeAppleHealthImportProgress(
       const AppleHealthImportProgress(
         phase: AppleHealthImportPhase.complete,

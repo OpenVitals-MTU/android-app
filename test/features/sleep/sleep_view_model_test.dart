@@ -179,6 +179,47 @@ void main() {
     expect(repository.loads, 1);
   });
 
+  test('navigating to a new range clears the stale display mid-load', () async {
+    await boot(Ok(SleepPeriodData(sessions: [_night(wednesday)])));
+    container.listen(sleepProvider, (_, _) {});
+    final viewModel = container.read(sleepProvider.notifier);
+
+    // Seed a loaded week.
+    await viewModel.load(selection);
+    expect(container.read(sleepProvider).display, isNotNull);
+
+    // Switch to the day range: while the load is in flight the previous week's
+    // chart must be gone, so the screen shows its loading skeleton rather than a
+    // stale chart a pinch-zoom would draw broken.
+    repository.gated = true;
+    final navigate = viewModel.load(PeriodSelection(TimeRange.day, wednesday));
+    var state = container.read(sleepProvider);
+    expect(state.display, isNull);
+    expect(state.isLoading, isTrue);
+
+    repository.gates.single.complete(SleepPeriodData(sessions: [_night(wednesday)]));
+    await navigate;
+    state = container.read(sleepProvider);
+    expect(state.display, isNotNull);
+    expect(state.isLoading, isFalse);
+  });
+
+  test('a same-range refresh keeps the display (no loading flash)', () async {
+    await boot(Ok(SleepPeriodData(sessions: [_night(wednesday)])));
+    container.listen(sleepProvider, (_, _) {});
+    final viewModel = container.read(sleepProvider.notifier);
+
+    await viewModel.load(selection);
+    expect(container.read(sleepProvider).display, isNotNull);
+
+    // Same range + date: a refresh must NOT blank the chart while it reloads.
+    repository.gated = true;
+    viewModel.refresh();
+    final state = container.read(sleepProvider);
+    expect(state.display, isNotNull);
+    expect(state.isLoading, isTrue);
+  });
+
   test('a stale load cannot overwrite the newer one it lost to', () async {
     await boot(const Ok(SleepPeriodData()));
     container.listen(sleepProvider, (_, _) {});

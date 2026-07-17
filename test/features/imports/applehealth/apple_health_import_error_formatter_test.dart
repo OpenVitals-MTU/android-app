@@ -1,7 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_error_formatter.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_report_store.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -77,18 +78,19 @@ void main() {
       expect(report, contains('Caused by: AppleHealthImportException: Root cause'));
     });
 
-    test('round-trips the last report and failure via SharedPreferences',
+    test('round-trips the last report and failure via its file store',
         () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final store = AppleHealthImportReportStore(prefs);
+      final dir = await Directory.systemTemp.createTemp('ah_report_fmt_test');
+      addTearDown(() => dir.delete(recursive: true));
+      final store =
+          AppleHealthImportReportStore(directoryResolver: () async => dir);
 
-      expect(store.readReport(), '');
-      expect(store.readFailure(), '');
+      expect(await store.readReport(), '');
+      expect(await store.readFailure(), '');
       await store.writeReport('hello report');
       await store.writeFailure('boom');
-      expect(store.readReport(), 'hello report');
-      expect(store.readFailure(), 'boom');
+      expect(await store.readReport(), 'hello report');
+      expect(await store.readFailure(), 'boom');
     });
   });
 }

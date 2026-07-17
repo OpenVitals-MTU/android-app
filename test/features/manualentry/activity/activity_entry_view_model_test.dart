@@ -1608,6 +1608,7 @@ class _FakeRecordingController implements ActivityRecordingController {
     ActivityEntryType activityType,
     ActivityRecordingInitialFix? initialFix, {
     int repetitionRestSeconds = 0,
+    bool withoutGps = false,
   }) async =>
       true;
 
