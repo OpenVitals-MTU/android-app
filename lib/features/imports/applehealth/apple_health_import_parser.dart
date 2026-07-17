@@ -1,8 +1,12 @@
 /// Streaming Apple Health `export.xml` / `export.zip` parser, ported from the
 /// Kotlin `AppleHealthImportParser.kt`.
 ///
-/// Uses `package:xml`'s event API (`parseEvents`) so the document is consumed as
-/// a stream of start/end/text events without materializing a DOM.
+/// The document is read **off disk as a byte stream** (`file.openRead()` → chunked
+/// UTF-8 decode → [AppleHealthXmlSanitizer] → `package:xml`'s streaming
+/// `toXmlEvents`) and consumed as start/end events without ever materializing the
+/// whole file or a DOM. A multi-gigabyte `export.xml` therefore never lands in RAM
+/// — the bug that made a 7.6 GB import OOM was reading the entire file into a
+/// `Uint8List` + Dart `String` before parsing.
 ///
 /// The ZIP is read **sequentially** from local file headers over an
 /// `InputFileStream` — the Dart analogue of Kotlin's `ZipInputStream`, and the
@@ -18,6 +22,7 @@
 /// `apple_health_import_xml_support.dart` before any event is emitted.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -93,34 +98,53 @@ class AppleHealthImportParser {
   /// Parses a staged export [file] — a `.zip` (read sequentially) or a bare
   /// `export.xml`. This is the production entry point; the export never has to
   /// exist as a `List<int>`.
-  static AppleParsedExport parseFile(
+  ///
+  /// [onChunkBoundary], when supplied, is awaited after each decoded block of XML
+  /// events, giving a streaming import consumer a suspension point to flush its
+  /// ready batches to the database (bounding live memory and providing
+  /// backpressure onto the file read).
+  static Future<AppleParsedExport> parseFile(
     File file, {
     AppleHealthXmlEventConsumer? consumer,
     AppleHealthParseOptions options = const AppleHealthParseOptions(),
     Map<String, AppleWorkoutRouteFile> routeFiles = const {},
-  }) {
+    Future<void> Function()? onChunkBoundary,
+  }) async {
     if (_fileHasZipHeader(file)) {
-      return _parseZipFile(file, consumer, routeFiles, options);
+      return _parseZipFile(
+        file,
+        consumer,
+        routeFiles,
+        options,
+        onChunkBoundary: onChunkBoundary,
+      );
     }
-    final xml = utf8.decode(file.readAsBytesSync(), allowMalformed: true);
-    return _parseXmlExport(xml, consumer, routeFiles, options);
+    return _parseXmlExport(
+      file.openRead(),
+      consumer,
+      routeFiles,
+      options,
+      onChunkBoundary: onChunkBoundary,
+    );
   }
 
   /// Byte-oriented entry point kept for XML fixtures and callers that already
   /// hold the document. A zipped payload is spilled to a temp file so it goes
-  /// through exactly the same sequential reader as [parseFile].
-  static AppleParsedExport parse(
+  /// through exactly the same sequential reader as [parseFile]; a bare document
+  /// is streamed from a single-value stream so it flows through the identical
+  /// decode → sanitize → event pipeline.
+  static Future<AppleParsedExport> parse(
     List<int> bytes, {
     AppleHealthXmlEventConsumer? consumer,
     AppleHealthParseOptions options = const AppleHealthParseOptions(),
     Map<String, AppleWorkoutRouteFile> routeFiles = const {},
-  }) {
+  }) async {
     if (_hasZipHeader(bytes)) {
       final directory = Directory.systemTemp.createTempSync('apple_health_zip');
       final file = File('${directory.path}/export.zip')
         ..writeAsBytesSync(bytes);
       try {
-        return _parseZipFile(file, consumer, routeFiles, options);
+        return await _parseZipFile(file, consumer, routeFiles, options);
       } finally {
         try {
           directory.deleteSync(recursive: true);
@@ -129,18 +153,23 @@ class AppleHealthImportParser {
         }
       }
     }
-    final xml = utf8.decode(bytes, allowMalformed: true);
-    return _parseXmlExport(xml, consumer, routeFiles, options);
+    return _parseXmlExport(
+      Stream<List<int>>.value(bytes),
+      consumer,
+      routeFiles,
+      options,
+    );
   }
 
   /// Walks the ZIP's local file headers front-to-back (Kotlin `ZipInputStream`),
   /// extracting `export.xml` to a temp file and streaming each route GPX.
-  static AppleParsedExport _parseZipFile(
+  static Future<AppleParsedExport> _parseZipFile(
     File file,
     AppleHealthXmlEventConsumer? consumer,
     Map<String, AppleWorkoutRouteFile> routeFiles,
-    AppleHealthParseOptions options,
-  ) {
+    AppleHealthParseOptions options, {
+    Future<void> Function()? onChunkBoundary,
+  }) async {
     final resolvedRouteFiles = Map<String, AppleWorkoutRouteFile>.of(routeFiles);
     final fileLength = file.lengthSync();
     final input = InputFileStream(file.path);
@@ -190,7 +219,18 @@ class AppleHealthImportParser {
             break;
           }
         }
-        if (truncated) break;
+        if (truncated) {
+          // Damage in an entry that is neither export.xml (fatal above) nor a
+          // recoverable route file. Kotlin's `closeEntryOrThrow` makes this fatal
+          // in every case except the routes-not-needed streaming path, which
+          // returns as soon as export.xml is parsed and so never reaches an entry
+          // that comes after it. Mirror that: fatal before export.xml is found, or
+          // whenever routes are being parsed; otherwise stop (success).
+          if (!foundExportXml || options.parseRouteFiles) {
+            throw AppleHealthZipReadException(entryName: entry.name);
+          }
+          break;
+        }
         // Always strictly greater than `position`: an entry is at least a
         // 30-byte header, so the walk cannot stall.
         position = entry.nextEntryOffset;
@@ -200,8 +240,13 @@ class AppleHealthImportParser {
         throw ArgumentError('Apple Health export.zip must contain export.xml.');
       }
 
-      final xml = utf8.decode(exportXml.readAsBytesSync(), allowMalformed: true);
-      final parsed = _parseXmlExport(xml, consumer, resolvedRouteFiles, options);
+      final parsed = await _parseXmlExport(
+        exportXml.openRead(),
+        consumer,
+        resolvedRouteFiles,
+        options,
+        onChunkBoundary: onChunkBoundary,
+      );
       return parsed.copyWithRouteArchiveFailure(routeArchiveFailure);
     } finally {
       input.closeSync();
@@ -213,44 +258,50 @@ class AppleHealthImportParser {
     }
   }
 
-  static AppleParsedExport _parseXmlExport(
-    String rawXml,
+  /// Drives the streaming pipeline: raw bytes → chunked UTF-8 (repairing malformed
+  /// sequences) → [AppleHealthXmlSanitizer] → `package:xml` events → the handler.
+  /// Never holds the whole document; [onChunkBoundary] is awaited between decoded
+  /// event blocks so an import consumer can flush batches under backpressure.
+  static Future<AppleParsedExport> _parseXmlExport(
+    Stream<List<int>> byteStream,
     AppleHealthXmlEventConsumer? consumer,
     Map<String, AppleWorkoutRouteFile> routeFiles,
-    AppleHealthParseOptions options,
-  ) {
-    final sanitized = sanitizeAppleHealthXml(rawXml);
+    AppleHealthParseOptions options, {
+    Future<void> Function()? onChunkBoundary,
+  }) async {
+    final sanitizer = AppleHealthXmlSanitizer();
     final handler = _AppleHealthXmlHandler(consumer, routeFiles, options);
+    final events = byteStream
+        .transform(const Utf8Decoder(allowMalformed: true))
+        .transform(sanitizer.transformer)
+        .toXmlEvents(validateNesting: true);
     try {
-      for (final event in parseEvents(
-        sanitized.text,
-        validateNesting: true,
-        withBuffer: true,
-      )) {
-        if (event is XmlStartElementEvent) {
-          handler.startElement(event.name, event.attributes);
-          if (event.isSelfClosing) handler.endElement(event.name);
-        } else if (event is XmlEndElementEvent) {
-          handler.endElement(event.name);
+      await for (final block in events) {
+        for (final event in block) {
+          if (event is XmlStartElementEvent) {
+            handler.startElement(event.name, event.attributes);
+            if (event.isSelfClosing) handler.endElement(event.name);
+          } else if (event is XmlEndElementEvent) {
+            handler.endElement(event.name);
+          }
         }
+        if (onChunkBoundary != null) await onChunkBoundary();
       }
     } on XmlException catch (error) {
-      final position = error is XmlParserException
-          ? (error.position ?? sanitized.text.length)
-          : sanitized.text.length;
-      final start = position - 200 < 0 ? 0 : position - 200;
-      final end = position > sanitized.text.length ? sanitized.text.length : position;
+      final location = error is XmlParserException && error.position != null
+          ? 'position ${error.position}'
+          : 'end of document';
       throw AppleHealthXmlParseException(buildAppleHealthXmlParseMessage(
-        location: 'position $position',
+        location: location,
         causeMessage: error.message,
-        recentContext: sanitized.text.substring(start, end),
-        strippedControlChars: sanitized.strippedControlChars,
-        escapedAmpersands: sanitized.escapedAmpersands,
+        recentContext: sanitizer.recentContext(),
+        strippedControlChars: sanitizer.strippedControlChars,
+        escapedAmpersands: sanitizer.escapedAmpersands,
       ));
     }
     return handler.result(
-      sanitizedControlChars: sanitized.strippedControlChars,
-      sanitizedAmpersands: sanitized.escapedAmpersands,
+      sanitizedControlChars: sanitizer.strippedControlChars,
+      sanitizedAmpersands: sanitizer.escapedAmpersands,
     );
   }
 }
@@ -938,16 +989,35 @@ AppleWorkoutRouteArchiveFailure? _readRouteEntry(
   try {
     final routeFile = AppleHealthImportRouteParser.parse(entry.name, gpx);
     if (routeFile != null) routeFiles[routeFile.path] = routeFile;
-  } catch (_) {
-    // A GPX that does not parse as XML at all means the entry's bytes are not
-    // what the archive claimed (Kotlin maps an unexpected XML end inside an
-    // archived entry onto the same ZIP-read failure).
-    return AppleWorkoutRouteArchiveFailure(
-      entryName: entry.name,
-      decompressedBytesRead: bytes.length,
-    );
+  } catch (error) {
+    // Kotlin (`asZipReadException` / `isUnexpectedZipXmlEnd`) only *recovers* from
+    // a route GPX whose XML ends unexpectedly — i.e. the archived bytes were cut
+    // short. A genuinely malformed-but-complete GPX (an invalid token, not a
+    // premature end) is NOT recoverable there and fails the whole import; anything
+    // else here would silently keep a broken archive that Kotlin rejected.
+    if (_isUnexpectedXmlEndError(error)) {
+      return AppleWorkoutRouteArchiveFailure(
+        entryName: entry.name,
+        decompressedBytesRead: bytes.length,
+      );
+    }
+    rethrow;
   }
   return null;
+}
+
+/// Kotlin `UnexpectedXmlEndMessages`: the SAX/Expat wordings that mean an archived
+/// XML entry was cut short (recoverable) rather than genuinely malformed (fatal).
+const List<String> _unexpectedXmlEndMessages = [
+  'unexpected end',
+  'premature end',
+  'must start and end within the same entity',
+  'no element found',
+];
+
+bool _isUnexpectedXmlEndError(Object error) {
+  final message = error.toString().toLowerCase();
+  return _unexpectedXmlEndMessages.any(message.contains);
 }
 
 bool _fileHasZipHeader(File file) {
