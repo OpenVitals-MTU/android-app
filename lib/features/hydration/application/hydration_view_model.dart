@@ -123,6 +123,69 @@ class HydrationViewModel extends Notifier<HydrationState>
         PeriodSelection(state.selectedRange, state.selectedDate),
         refreshMode: RefreshMode.force,
       );
+
+  /// Port of the Kotlin `HydrationViewModel.deleteHydrationEntry`: remove the
+  /// entry optimistically so the row leaves the list at once, delete it through
+  /// the repository — a hydration record (which also clears its paired nutrition
+  /// record) or a nutrition-only record, by the entry's own type — then
+  /// force-reload the period; restore the previous state (with an error) on
+  /// failure.
+  Future<void> deleteHydrationEntry(String entryId) async {
+    if (entryId.isEmpty) return;
+    final entry = _entryById(entryId);
+    if (entry == null || !entry.isOpenVitalsEntry) return;
+
+    final previous = state;
+    final remaining = [
+      for (final e in state.entries)
+        if (e.id != entryId) e,
+    ];
+    // Rebuild the display off the trimmed list so the beverage history the
+    // screen renders drops the row synchronously — the Dismissible requires it
+    // gone before the next frame. The daily totals stay until the force-reload
+    // below corrects them, the same as the other metrics.
+    final query = PeriodLoadQuery(
+      range: state.selectedRange,
+      anchorDate: state.selectedDate,
+      weekPeriodMode: ref.read(preferencesRepositoryProvider).weekPeriodMode,
+    );
+    state = state.copyWith(
+      entries: remaining,
+      error: null,
+      display: buildHydrationDisplay(
+        state.dailyHydration,
+        remaining,
+        dailyGoalLiters: state.dailyGoalLiters,
+        period: query.windows.current,
+        today: LocalDate.now(),
+      ),
+    );
+
+    final deletion = switch (entry.recordType) {
+      HydrationEntryRecordType.nutritionOnly =>
+        await ref.read(deleteNutritionEntryUseCaseProvider)(entryId),
+      _ => await ref.read(deleteHydrationEntryUseCaseProvider)(entryId),
+    };
+    if (!ref.mounted) return;
+    switch (deletion) {
+      case Ok():
+        await load(
+          PeriodSelection(state.selectedRange, state.selectedDate),
+          refreshMode: RefreshMode.force,
+        );
+      case Err(:final failure):
+        state = previous.copyWith(
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
+    }
+  }
+
+  HydrationEntry? _entryById(String entryId) {
+    for (final entry in state.entries) {
+      if (entry.id == entryId) return entry;
+    }
+    return null;
+  }
 }
 
 /// The hydration screen's state provider. A manually-declared [NotifierProvider]

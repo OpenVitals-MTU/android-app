@@ -30,6 +30,16 @@ class _FakeHydrationRepository implements HydrationRepository {
   int loads = 0;
   RefreshMode? lastRefreshMode;
 
+  /// What a delete returns, and the ids it was asked to remove.
+  Result<void> deleteAnswer = const Ok(null);
+  final List<String> deletedIds = [];
+
+  @override
+  Future<Result<void>> deleteHydrationEntry(String id) async {
+    deletedIds.add(id);
+    return deleteAnswer;
+  }
+
   /// Completed by the test, so two loads can be held in flight at once.
   final List<Completer<HydrationPeriodData>> gates = [];
   bool gated = false;
@@ -69,12 +79,15 @@ class _FakeNutritionRepository implements NutritionRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-HydrationEntry _drink(DateTime start, double liters) => HydrationEntry(
+HydrationEntry _drink(DateTime start, double liters,
+        {bool owned = false}) =>
+    HydrationEntry(
       id: start.toIso8601String(),
       startTime: start,
       endTime: start.add(const Duration(minutes: 1)),
       liters: liters,
       source: 'test',
+      isOpenVitalsEntry: owned,
     );
 
 void main() {
@@ -182,5 +195,71 @@ void main() {
     final state = container.read(hydrationProvider);
     expect(state.selectedRange, TimeRange.month);
     expect(state.display!.summary.totalLiters, 1.0);
+  });
+
+  group('deleteHydrationEntry', () {
+    test('removes an owned entry and deletes it through the repository',
+        () async {
+      final drink = _drink(morning, 2.5, owned: true);
+      await boot(Ok(HydrationPeriodData(
+        dailyHydration: [DailyHydration(date: monday, liters: 2.5)],
+        hydrationEntries: [drink],
+      )));
+      container.listen(hydrationProvider, (_, _) {});
+      await container.read(hydrationProvider.notifier).load(selection);
+
+      // After the delete the reload returns an empty period.
+      repository.answer = const Ok(HydrationPeriodData());
+      await container.read(hydrationProvider.notifier).deleteHydrationEntry(
+            drink.id,
+          );
+
+      expect(repository.deletedIds, [drink.id]);
+      expect(container.read(hydrationProvider).entries, isEmpty);
+      expect(
+        container.read(hydrationProvider).display!.entriesNewestFirst,
+        isEmpty,
+      );
+    });
+
+    test('ignores a foreign entry it does not own', () async {
+      final foreign = _drink(morning, 2.5); // owned: false
+      await boot(Ok(HydrationPeriodData(
+        dailyHydration: [DailyHydration(date: monday, liters: 2.5)],
+        hydrationEntries: [foreign],
+      )));
+      container.listen(hydrationProvider, (_, _) {});
+      await container.read(hydrationProvider.notifier).load(selection);
+
+      await container.read(hydrationProvider.notifier).deleteHydrationEntry(
+            foreign.id,
+          );
+
+      expect(repository.deletedIds, isEmpty);
+      expect(container.read(hydrationProvider).entries, hasLength(1));
+    });
+
+    test('rolls the row back and surfaces the error when the delete fails',
+        () async {
+      final drink = _drink(morning, 2.5, owned: true);
+      await boot(Ok(HydrationPeriodData(
+        dailyHydration: [DailyHydration(date: monday, liters: 2.5)],
+        hydrationEntries: [drink],
+      )));
+      container.listen(hydrationProvider, (_, _) {});
+      await container.read(hydrationProvider.notifier).load(selection);
+
+      repository.deleteAnswer =
+          const Err(UnexpectedFailure('Health Connect is gone'));
+      await container.read(hydrationProvider.notifier).deleteHydrationEntry(
+            drink.id,
+          );
+
+      // Optimistic removal is undone; the entry is back and an error is shown.
+      final state = container.read(hydrationProvider);
+      expect(state.entries, hasLength(1));
+      expect(state.display!.entriesNewestFirst, hasLength(1));
+      expect(state.error, isNotNull);
+    });
   });
 }
