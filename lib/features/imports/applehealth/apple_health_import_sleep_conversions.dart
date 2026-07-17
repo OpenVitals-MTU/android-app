@@ -47,8 +47,9 @@ extension AppleHealthImportSleepConversions on AppleHealthImportConverter {
 
     final result = <ConvertedAppleRecord>[];
     for (final candidates in groups.values) {
-      final sorted = List<SleepStageCandidate>.of(candidates)
-        ..sort((a, b) => a.start.instant.compareTo(b.start.instant));
+      final sorted = List<SleepStageCandidate>.of(candidates);
+      // Stable: Kotlin `sortedBy { it.start.instant }` keeps parse order on ties.
+      stableSort(sorted, (a, b) => a.start.instant.compareTo(b.start.instant));
       for (final session in splitSleepSessions(sorted)) {
         final converted = _buildSleepSession(session);
         if (converted != null) result.add(converted);
@@ -78,8 +79,9 @@ extension AppleHealthImportSleepConversions on AppleHealthImportConverter {
     }
 
     var detailedStages = session.where((it) => !it.inBedOnly).toList();
-    if (detailedStages.isEmpty) detailedStages = session;
-    detailedStages.sort((a, b) => a.start.instant.compareTo(b.start.instant));
+    if (detailedStages.isEmpty) detailedStages = List.of(session);
+    // Stable: Kotlin `sortedBy { it.start.instant }` keeps parse order on ties.
+    stableSort(detailedStages, (a, b) => a.start.instant.compareTo(b.start.instant));
 
     final stages = <SleepStageValue>[];
     for (final candidate in detailedStages) {
@@ -110,8 +112,8 @@ extension AppleHealthImportSleepConversions on AppleHealthImportConverter {
     final first = session.first.record;
     final fingerprint = buildStableClientRecordId('sleep', [
       'sleep',
-      sessionStart.toIso8601String(),
-      sessionEnd.toIso8601String(),
+      appleInstantToStableString(sessionStart),
+      appleInstantToStableString(sessionEnd),
       session.map((it) => it.record.stableParts()).join(';'),
     ]);
     markConverted(appleSleepAnalysis);

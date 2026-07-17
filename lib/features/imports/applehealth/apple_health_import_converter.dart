@@ -63,6 +63,15 @@ class AppleHealthImportConverter {
 
   final Set<String> consumedRecordFingerprints = {};
 
+  /// Workout-overlap candidates gathered incrementally during a streaming import
+  /// (Kotlin `workoutOverlapCandidates`), so [convertWorkouts] can protect a
+  /// selected workout from additive samples that overlap it even though those
+  /// samples stream past before the workout is converted. Bounded by
+  /// [maxWorkoutOverlapCandidates]; the one-shot [convert] path uses its own local
+  /// list instead.
+  final List<AppleWorkoutOverlapCandidate> _workoutOverlapCandidates = [];
+  bool _workoutOverlapCandidatesLimitReached = false;
+
   AppleHealthConversionResult convert(AppleParsedExport export) {
     export.parsedTypeCounts.forEach((type, count) {
       _stats(type).parsed += count;
@@ -130,6 +139,88 @@ class AppleHealthImportConverter {
     final stats = _stats(appleType);
     stats.converted += 1;
     stats.notSelected += 1;
+  }
+
+  // ── Streaming import surface (Kotlin's per-record consumer path) ────────────
+  //
+  // These let the import service convert the export as it is parsed, instead of
+  // handing `convert()` a fully materialized [AppleParsedExport]. Records that
+  // need cross-record context (grouping, overlap dedup) are buffered by the
+  // caller and handed back through [convertBufferedGroups]; everything else
+  // converts one at a time via [convertStreamingRecord].
+
+  /// Records whose conversion depends on grouping with their neighbours (blood
+  /// pressure pairing, sleep-session synthesis, nutrition aggregation) and so must
+  /// be buffered until a flush (Kotlin `shouldBufferRecord`). Dietary water is a
+  /// plain single-record conversion and is deliberately excluded.
+  bool shouldBufferRecord(AppleRecord record) =>
+      record.type == appleBloodPressureSystolic ||
+      record.type == appleBloodPressureDiastolic ||
+      record.type == appleSleepAnalysis ||
+      (appleNutritionTypes.contains(record.type) &&
+          record.type != appleDietaryWater);
+
+  /// Additive samples (steps / distance / active energy) that take part in the
+  /// cross-source overlap dedup, which needs the whole set sorted (Kotlin
+  /// `shouldBufferForOverlapDedup`).
+  bool shouldBufferForOverlapDedup(AppleRecord record) =>
+      appleAdditiveOverlapSensitiveTypes.contains(record.type);
+
+  /// Remembers a distance/active-energy sample as a workout-overlap candidate
+  /// (Kotlin `noteWorkoutOverlap`), bounded by [maxWorkoutOverlapCandidates].
+  void noteWorkoutOverlap(AppleRecord record) {
+    final candidate = record.toWorkoutOverlapCandidate();
+    if (candidate == null) return;
+    if (_workoutOverlapCandidates.length < maxWorkoutOverlapCandidates) {
+      _workoutOverlapCandidates.add(candidate);
+    } else {
+      _workoutOverlapCandidatesLimitReached = true;
+    }
+  }
+
+  /// Converts a single non-buffered record immediately (Kotlin
+  /// `convertStreamingRecord`).
+  ConvertedAppleRecord? convertStreamingRecord(AppleRecord record) =>
+      convertSingleRecord(record);
+
+  /// Emit-based buffered-group conversion (Kotlin `convertBufferedGroups`).
+  /// Converted records are handed to [emit] as they are produced rather than
+  /// gathered into one list, so the caller can stream them into its batch writer;
+  /// for step/energy-heavy exports the additive group alone can span hundreds of
+  /// thousands of records.
+  void convertBufferedGroups({
+    required List<AppleRecord> records,
+    required List<AppleWorkout> workouts,
+    required List<AppleCorrelation> correlations,
+    required int parsedActivitySummaries,
+    required void Function(ConvertedAppleRecord) emit,
+  }) {
+    convertBloodPressureCorrelations(correlations).forEach(emit);
+    convertStandaloneBloodPressure(records).forEach(emit);
+    convertSleep(records, trackConsumedRecords: false).forEach(emit);
+    convertNutrition(records, trackConsumedRecords: false).forEach(emit);
+    convertWorkouts(
+      workouts,
+      _workoutOverlapCandidates,
+      _workoutOverlapCandidatesLimitReached,
+    ).forEach(emit);
+    convertAdditiveOverlapSensitiveRecords(records, emit);
+    for (final correlation in correlations) {
+      if (correlation.type == appleBloodPressureCorrelation) continue;
+      unsupported(
+        correlation.type,
+        'Correlation type has no direct Health Connect import mapping.',
+        correlation.timeRangeOrNull()?.toString(),
+      );
+    }
+    if (parsedActivitySummaries > 0) {
+      unsupported(
+        'ActivitySummary',
+        'Apple activity rings and stand hours have no direct writable Health '
+            'Connect record.',
+        null,
+      );
+    }
   }
 
   List<AppleHealthImportDiagnostic> diagnosticsSnapshot() =>
@@ -264,7 +355,9 @@ class AppleHealthImportConverter {
         candidates.add(candidate);
       }
     }
-    candidates.sort((a, b) {
+    // Stable sort: Kotlin uses `sortWith(compareBy … thenBy …)` (stable), so a
+    // tie on all four keys keeps the parse-order-first candidate.
+    stableSort(candidates, (a, b) {
       var cmp = a.record.type.compareTo(b.record.type);
       if (cmp != 0) return cmp;
       cmp = a.sourcePriority.compareTo(b.sourcePriority);
