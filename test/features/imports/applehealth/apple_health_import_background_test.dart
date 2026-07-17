@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/apple_health_import_repository.dart';
@@ -180,8 +179,10 @@ void main() {
   late AppleHealthImportReportStore reports;
 
   Future<void> seedReportStore() async {
-    SharedPreferences.setMockInitialValues(const <String, Object>{});
-    reports = AppleHealthImportReportStore(await SharedPreferences.getInstance());
+    final dir = await Directory.systemTemp.createTemp('ah_report_store_test');
+    addTearDown(() => dir.delete(recursive: true));
+    reports =
+        AppleHealthImportReportStore(directoryResolver: () async => dir);
   }
 
   setUp(() async {
@@ -266,7 +267,7 @@ void main() {
     );
 
     expect(outcome.result?.importedRecords, 9);
-    expect(reports.readReport(), 'IMPORT_REPORT');
+    expect(await reports.readReport(), 'IMPORT_REPORT');
     expect(staging.clearCalls, 1);
     expect(checkpoints.clearCalls, 1);
     // The last checkpoint write must land before the checkpoint is cleared, or a
@@ -291,9 +292,9 @@ void main() {
     // The batches that *did* commit are still on record.
     expect(checkpoints.saved.length, 2);
     // The failure report replaces the worker's `Result.failure` output data.
-    expect(reports.readFailure(), contains('Status: failed'));
-    expect(reports.readFailure(), contains('boom'));
-    expect(reports.readReport(), isEmpty);
+    expect(await reports.readFailure(), contains('Status: failed'));
+    expect(await reports.readFailure(), contains('boom'));
+    expect(await reports.readReport(), isEmpty);
   });
 
   test('a failure while resolving Health Connect access never imports', () async {

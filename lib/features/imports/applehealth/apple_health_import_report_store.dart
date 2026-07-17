@@ -1,39 +1,66 @@
 /// Persists the last Apple Health import report, ported from the Kotlin
 /// `AppleHealthImportReportStore.kt`.
 ///
-/// The Kotlin version writes the report to a file under `filesDir`; the Dart
-/// port persists it (and the last failure report) in [SharedPreferences], which
-/// the Settings "Data import" screen can read back to show the last result.
+/// Written to a FILE under the app-support dir, exactly like Kotlin's `filesDir`
+/// report — NOT SharedPreferences. A large import's report reaches tens of
+/// megabytes (a stage line per batch, ~47k batches for a 14M-record export), and
+/// a value that size is not something SharedPreferences can reliably hold; the
+/// prior prefs-backed store silently came back empty, so the finished import had
+/// no report to copy or save. A file has no such ceiling and is visible to the
+/// UI isolate the moment the foreground-service isolate writes it — no snapshot
+/// to reload.
 library;
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 
 import 'apple_health_import_error_formatter.dart';
+import 'apple_health_import_staging_store.dart'
+    show AppleHealthImportDirectoryResolver, defaultAppleHealthImportDirectory;
 
 class AppleHealthImportReportStore {
-  AppleHealthImportReportStore(this._prefs);
+  AppleHealthImportReportStore({
+    AppleHealthImportDirectoryResolver? directoryResolver,
+  }) : _directoryResolver =
+            directoryResolver ?? defaultAppleHealthImportDirectory;
 
-  final SharedPreferences _prefs;
+  final AppleHealthImportDirectoryResolver _directoryResolver;
 
-  static const String _reportKey = 'apple_health_import_report';
-  static const String _errorReportKey = 'apple_health_import_error_report';
+  static const String _reportFileName = 'import_report.txt';
+  static const String _errorReportFileName = 'import_error_report.txt';
 
-  /// Re-reads the backing store. The background import writes its report from
-  /// the foreground-service **isolate**, whose [SharedPreferences] is a separate
-  /// in-memory snapshot — without this the UI would keep reading the stale
-  /// report it loaded at startup (Kotlin reads the report back from a file path
-  /// the worker returns, so it never had this problem).
-  Future<void> refresh() => _prefs.reload();
+  Future<File> _file(String name) async {
+    final directory = await _directoryResolver();
+    return File('${directory.path}/$name');
+  }
 
-  Future<void> writeReport(String reportText) =>
-      _prefs.setString(_reportKey, reportText);
+  Future<void> writeReport(String reportText) async {
+    final file = await _file(_reportFileName);
+    await file.parent.create(recursive: true);
+    await file.writeAsString(reportText, flush: true);
+  }
 
-  String readReport() => _prefs.getString(_reportKey) ?? '';
+  Future<String> readReport() => _read(_reportFileName);
 
-  Future<void> writeFailure(String reportText) =>
-      _prefs.setString(_errorReportKey, reportText);
+  Future<void> writeFailure(String reportText) async {
+    final file = await _file(_errorReportFileName);
+    await file.parent.create(recursive: true);
+    await file.writeAsString(reportText, flush: true);
+  }
 
-  String readFailure() => _prefs.getString(_errorReportKey) ?? '';
+  Future<String> readFailure() => _read(_errorReportFileName);
+
+  Future<String> _read(String name) async {
+    // Reading the last report is best-effort — it feeds the Copy/Save actions,
+    // not correctness — so a missing file, an I/O error, or an unavailable
+    // directory (e.g. no path_provider host under test) degrades to "no report"
+    // rather than throwing into the caller.
+    try {
+      final file = await _file(name);
+      return await file.exists() ? await file.readAsString() : '';
+    } catch (_) {
+      return '';
+    }
+  }
 }
 
 /// The report header lines (Kotlin `appendAppleHealthReportHeader`). The Kotlin

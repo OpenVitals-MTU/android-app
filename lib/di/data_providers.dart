@@ -233,8 +233,7 @@ final appleHealthImportServiceProvider = Provider<AppleHealthImportService>(
 
 final appleHealthImportReportStoreProvider =
     Provider<AppleHealthImportReportStore>(
-      (ref) =>
-          AppleHealthImportReportStore(ref.watch(sharedPreferencesProvider)),
+      (ref) => AppleHealthImportReportStore(),
     );
 
 final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
