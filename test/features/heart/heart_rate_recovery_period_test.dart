@@ -7,6 +7,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
 import 'package:openvitals/domain/insights/heart_rate_recovery.dart';
+import 'package:openvitals/domain/model/activity_entry_types.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/domain/preferences/body_profile.dart';
@@ -26,15 +27,45 @@ final LocalDate _today = LocalDate(2026, 7, 14);
 DateTime _sessionStart(int dayOffset) =>
     DateTime.utc(2026, 7, 14 - dayOffset, 18, 0);
 
-ExerciseData _workout(int dayOffset, {Duration duration = const Duration(minutes: 40)}) {
+/// A guided recovery test: an effort, then a trailing rest segment running to the
+/// session end — the only shape that produces a reading. The samples build off the
+/// effort end (the recovery start), which the fake repository recovers from the read
+/// window it is handed.
+ExerciseData _workout(int dayOffset,
+    {Duration effort = const Duration(minutes: 40)}) {
   final start = _sessionStart(dayOffset);
+  final effortEnd = start.add(effort);
+  final sessionEnd = effortEnd.add(const Duration(minutes: 6));
   return ExerciseData(
     id: 'w$dayOffset',
     title: 'Ride',
     exerciseType: 8,
     startTime: start,
-    endTime: start.add(duration),
-    durationMs: duration.inMilliseconds,
+    endTime: sessionEnd,
+    durationMs: sessionEnd.difference(start).inMilliseconds,
+    source: 'test',
+    segments: [
+      ExerciseSegmentData(
+        startTime: effortEnd,
+        endTime: sessionEnd,
+        segmentType: ExerciseSegmentType.rest,
+        repetitions: 0,
+      ),
+    ],
+  );
+}
+
+/// An ordinary workout with no cessation mark — not measurable.
+ExerciseData _ordinary(int dayOffset) {
+  final start = _sessionStart(dayOffset);
+  final end = start.add(const Duration(minutes: 40));
+  return ExerciseData(
+    id: 'w$dayOffset',
+    title: 'Ride',
+    exerciseType: 8,
+    startTime: start,
+    endTime: end,
+    durationMs: end.difference(start).inMilliseconds,
     source: 'test',
   );
 }
@@ -163,20 +194,18 @@ void main() {
     }
   });
 
-  test('a session too short to have a recovery is never even read', () async {
+  test('an ordinary workout with no cessation mark is never even read', () async {
     final heart = _FakeHeartRepository(_strapSamples);
     final data = await _load(
-      [
-        _workout(1, duration: const Duration(minutes: 2)),
-        _workout(2),
-      ],
+      [_ordinary(1), _workout(2)],
       _strapSamples,
       heart: heart,
     );
 
     expect(data.readings, hasLength(1),
-        reason: 'a two-minute session has no recovery worth reading heart rate for');
-    expect(heart.reads, 1, reason: 'and no Health Connect call was spent on it');
+        reason: 'only the guided test is measurable');
+    expect(heart.reads, 1,
+        reason: 'and no Health Connect call is spent on the ordinary workout');
   });
 
   test('a period bigger than the cap says so rather than quietly showing less',

@@ -26,8 +26,13 @@ part 'heart_rate_recovery.freezed.dart';
 /// never guessed from an average. A number that was not measured is worse than a blank.
 
 /// The marks, in the order they are always returned.
+///
+/// No 10-second mark: optical sensors smooth over several seconds and even an
+/// arm/chest strap is borderline that early, so a ten-second figure is unreliable
+/// across the monitors people actually wear. The one-minute drop leads (it is the
+/// mark with a body of normative literature behind it) and is fine for every
+/// monitor type.
 const List<Duration> heartRateRecoveryOffsets = [
-  Duration(seconds: 10),
   Duration(seconds: 30),
   Duration(minutes: 1),
   Duration(minutes: 2),
@@ -36,62 +41,56 @@ const List<Duration> heartRateRecoveryOffsets = [
   Duration(minutes: 5),
 ];
 
-/// The headline mark. Not the 10-second one: optical sensors smooth over several
-/// seconds, so ten seconds after cessation the reported figure is still substantially
-/// the effort heart rate — and the one-minute drop is the only mark with a body of
-/// normative literature behind it.
+/// The headline mark — the one-minute drop, the only mark with a body of normative
+/// literature behind it.
 const Duration heartRateRecoveryHeadlineOffset = Duration(minutes: 1);
 
 /// How far from a mark a sample may sit and still be taken as that mark.
 ///
-/// Tight where the curve is steep, loose where it is flat. Heart rate falls fastest
-/// immediately after cessation — on the order of 0.5-1.0 bpm per second in the first
-/// half minute — so being 10 seconds out at the 10-second mark could cost ~10 bpm,
-/// which is most of the number being reported. By two minutes the decay is nearer
-/// 0.1-0.2 bpm/s and a 20-second error costs a couple of beats, inside sensor noise.
+/// Kept tight: heart rate falls fast right after cessation (roughly 0.5-1.0 bpm/s
+/// in the first half minute), so a loose window at 30s could cost several bpm — a
+/// large fraction of the number reported. Monitors sample often enough while and
+/// just after hard effort that a small window still finds a sample.
 // Not `const`: Duration overrides `==`, which Dart forbids as a const map key.
 final Map<Duration, Duration> heartRateRecoveryTolerances = {
-  Duration(seconds: 10): Duration(seconds: 5),
-  Duration(seconds: 30): Duration(seconds: 8),
-  Duration(minutes: 1): Duration(seconds: 10),
-  Duration(minutes: 2): Duration(seconds: 15),
-  Duration(minutes: 3): Duration(seconds: 20),
-  Duration(minutes: 4): Duration(seconds: 20),
-  Duration(minutes: 5): Duration(seconds: 20),
+  Duration(seconds: 30): Duration(seconds: 3),
+  Duration(minutes: 1): Duration(seconds: 5),
+  Duration(minutes: 2): Duration(seconds: 5),
+  Duration(minutes: 3): Duration(seconds: 5),
+  Duration(minutes: 4): Duration(seconds: 5),
+  Duration(minutes: 5): Duration(seconds: 5),
 };
 
-/// Windows tried, in order, when looking for the peak behind the stop. See
-/// [HeartRateRecoveryIssue.peakWindowWidened].
-const List<Duration> _peakWindows = [
-  Duration(seconds: 10),
-  Duration(seconds: 30),
-  Duration(seconds: 60),
-];
+/// The peak heart rate must come from a HARD window of the last ten seconds before
+/// the stop. A wider window would let an effort that eased off earlier read a peak
+/// from when it was still going, inflating the recovery. Monitors sample fast during
+/// hard effort, so a sample is there.
+const Duration _peakWindow = Duration(seconds: 10);
 
 /// How far either side of the recovery start a sample may sit and still count as "the
 /// heart rate when they stopped", for the cool-down check.
 const Duration _recoveryStartTolerance = Duration(seconds: 15);
 
-/// A fall of this much between the last real high point and the stop means the heart
-/// rate was ALREADY coming down before the "stop" — they eased off before they pressed
-/// the button. Beat-to-beat noise is 3-4 bpm, so 8 clears it without a long baseline.
-const int _cooldownBeforeStopDropBpm = 8;
+/// A fall of more than this between the last real high point and the stop means the
+/// heart rate was ALREADY coming down before the "stop" — they eased off before they
+/// pressed the button, which invalidates the recovery. Beat-to-beat noise is 3-4 bpm,
+/// so 4 sits just above it: a genuine pre-stop cool-down of even a few beats matters.
+const int _cooldownBeforeStopDropBpm = 4;
 
 /// How far back the cool-down check looks for that high point.
 const Duration _cooldownLookback = Duration(seconds: 60);
 
-/// Above this median gap between samples, the fine marks cannot exist and the coarse
-/// ones are approximations.
-const int _coarseSamplingGapSeconds = 20;
-
-/// Fraction of maximum heart rate at or above which an effort is near-maximal, and a
-/// recovery reading is comparable with another. HRR norms come from graded tests taken
-/// to volitional maximum; readings from efforts of unlike intensity say little.
-const double _nearMaximalEffortFraction = 0.85;
-
-/// Below this, there is no vigorous effort to recover from — roughly the floor of the
-/// conventional vigorous band.
-const double _vigorousEffortFraction = 0.70;
+/// How far below the maximum the peak may sit and the effort still count as
+/// near-maximal (so the recovery is comparable with another). A fixed BAND, not a
+/// fraction: HR-max estimates carry a roughly constant absolute uncertainty, so a
+/// percentage floor is too low for the young and too high for the old.
+///
+/// [_estimatedMaxNearBandBpm] is the ~95% confidence interval of the age formula
+/// (208 - 0.7*age): a peak within ~22 bpm of the estimate is consistent with a
+/// near-maximal effort. When the maximum is KNOWN (the user stated it, or we have a
+/// trustworthy observed max) there is no such uncertainty, so the band is tighter.
+const int _estimatedMaxNearBandBpm = 22;
+const int _knownMaxNearBandBpm = 10;
 
 /// A trailing rest segment shorter than this is an inter-set breather, not a recovery.
 ///
@@ -112,12 +111,13 @@ const Duration _readHeadPadding = Duration(seconds: 60);
 /// Where the recovery began, and what told us.
 enum HeartRateRecoveryStartSource {
   /// A qualifying rest segment at the end of the session — written by the app's own
-  /// guided test, which is the only thing that knows the true instant of cessation.
+  /// guided test, which is the only thing that knows the true instant of cessation. The
+  /// only source a reading with data ever carries: without such a mark there is no
+  /// reading (see [heartRateRecoveryWindowFor]).
   trailingRestSegment,
 
-  /// Nothing marked it, so the session's end is taken as the moment effort stopped.
-  /// True when someone stops their watch the moment they stop; a lie when they walk it
-  /// off first, which is what [HeartRateRecoveryIssue.cooldownBeforeStop] catches.
+  /// The default on a [HeartRateRecoveryReading.noData] reading. No session's end is ever
+  /// taken as a stop any more — an ordinary workout gives no guarantee effort ceased.
   sessionEnd,
 }
 
@@ -145,9 +145,6 @@ enum HeartRateRecoveryIssue {
   /// stopped recording heart rate when the workout ended.
   noRecoverySamples,
 
-  /// Nothing in the 10 seconds before the stop, so the peak came from further back.
-  peakWindowWidened,
-
   /// Exactly one sample stood behind the peak; a single spurious reading would be it.
   peakFromSingleSample,
 
@@ -158,14 +155,8 @@ enum HeartRateRecoveryIssue {
   /// Hard, but not near-maximal. The drop is real; it is not comparable.
   submaximalEffort,
 
-  /// Not a vigorous effort. There is no recovery to speak of.
-  effortNotVigorous,
-
   /// No maximum heart rate could be resolved, so effort could not be judged.
   unknownMaxHeartRate,
-
-  /// Samples too far apart for the fine marks to exist.
-  coarseSampling,
 
   /// The heart rate did not fall after the "stop" — it was the same or higher at one of
   /// the marks. Whatever ended, the effort did not: the recording stopped before the
@@ -204,7 +195,6 @@ abstract class HeartRateRecoveryReading with _$HeartRateRecoveryReading {
     int? maxHeartRateBpmUsed,
     @Default(false) bool maxHeartRateEstimated,
     double? peakFractionOfMax,
-    double? medianRecoveryGapSeconds,
     @Default(0) int recoverySampleCount,
     @Default(HeartRateRecoveryQuality.noData) HeartRateRecoveryQuality quality,
     @Default(<HeartRateRecoveryIssue>{}) Set<HeartRateRecoveryIssue> issues,
@@ -248,21 +238,25 @@ abstract class HeartRateRecoveryWindow with _$HeartRateRecoveryWindow {
 }
 
 /// The instant effort stopped, for [session], and the window of heart-rate samples that
-/// has to be read to measure the recovery from it.
+/// has to be read to measure the recovery from it — or null when the session carries no
+/// mark of a deliberate stop.
 ///
-/// One rule serves both the app's guided test and a workout that came from a watch: the
-/// recovery begins at a qualifying trailing rest segment if the session carries one, and
-/// otherwise at the session's end.
+/// Heart-rate recovery is only meaningful when the person drove their heart rate near
+/// its maximum and then ABRUPTLY stopped and rested. An ordinary recorded session gives
+/// no such guarantee — you slow down but keep moving — so the session's end cannot be
+/// taken as the moment effort stopped. The recovery therefore begins only at a
+/// qualifying trailing rest segment, which the app's guided test writes at the true
+/// instant of cessation (a watch that genuinely recorded a trailing rest qualifies too).
+/// No segment, no reading.
 ///
 /// "Qualifying" is doing real work. The app writes a rest segment after every set of a
 /// strength session, the last one included, so a bare "ends with a rest segment" test
 /// would read every set-based workout as an HRR test with a one-minute recovery. A
 /// segment therefore qualifies only if it is at least [_minimumRecoverySegmentDuration]
 /// long AND ends within [_trailingSegmentSlack] of the session end.
-HeartRateRecoveryWindow heartRateRecoveryWindowFor(ExerciseData session) {
+HeartRateRecoveryWindow? heartRateRecoveryWindowFor(ExerciseData session) {
   final sessionEnd = session.endTime;
-  var recoveryStart = sessionEnd;
-  var source = HeartRateRecoveryStartSource.sessionEnd;
+  DateTime? recoveryStart;
 
   for (final segment in session.segments) {
     if (segment.segmentType != ExerciseSegmentType.rest) continue;
@@ -276,12 +270,12 @@ HeartRateRecoveryWindow heartRateRecoveryWindowFor(ExerciseData session) {
     }
     // The last qualifying one wins, so a session that somehow carries two takes the
     // one nearest the end.
-    if (source == HeartRateRecoveryStartSource.sessionEnd ||
-        segment.startTime.isAfter(recoveryStart)) {
+    if (recoveryStart == null || segment.startTime.isAfter(recoveryStart)) {
       recoveryStart = segment.startTime;
-      source = HeartRateRecoveryStartSource.trailingRestSegment;
     }
   }
+
+  if (recoveryStart == null) return null;
 
   return HeartRateRecoveryWindow(
     recoveryStart: recoveryStart,
@@ -289,7 +283,7 @@ HeartRateRecoveryWindow heartRateRecoveryWindowFor(ExerciseData session) {
     readEnd: recoveryStart
         .add(heartRateRecoveryOffsets.last)
         .add(_readTailPadding),
-    source: source,
+    source: HeartRateRecoveryStartSource.trailingRestSegment,
   );
 }
 
@@ -314,9 +308,6 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
 
   final peak = _peak(ordered, recoveryStart);
   if (peak == null) return HeartRateRecoveryReading.noData;
-  if (peak.windowSeconds > _peakWindows.first.inSeconds) {
-    issues.add(HeartRateRecoveryIssue.peakWindowWidened);
-  }
   if (peak.sampleCount == 1) {
     issues.add(HeartRateRecoveryIssue.peakFromSingleSample);
   }
@@ -359,12 +350,6 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
       _markAt(ordered, recoveryStart, offset, peak.bpm),
   ];
 
-  final medianGapSeconds = _medianGapSeconds(recoverySamples);
-  if (medianGapSeconds != null &&
-      medianGapSeconds > _coarseSamplingGapSeconds) {
-    issues.add(HeartRateRecoveryIssue.coarseSampling);
-  }
-
   final maxContext = _resolveMaxHeartRate(
     profileMaxHeartRateBpm: profileMaxHeartRateBpm,
     observedMaxHeartRateBpm: observedMaxHeartRateBpm,
@@ -375,12 +360,18 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
     issues.add(HeartRateRecoveryIssue.unknownMaxHeartRate);
   }
 
+  // Near-maximal effort, judged as an absolute distance below the maximum, not a
+  // fraction of it — a fixed band, wider when the maximum was estimated from age
+  // (which carries that much uncertainty) than when it is known. A peak more than the
+  // band below the maximum is a real recovery from a submaximal effort: shown, but not
+  // comparable across days.
   final peakFraction =
       maxContext == null ? null : peak.bpm / maxContext.bpm;
-  if (peakFraction != null) {
-    if (peakFraction < _vigorousEffortFraction) {
-      issues.add(HeartRateRecoveryIssue.effortNotVigorous);
-    } else if (peakFraction < _nearMaximalEffortFraction) {
+  if (maxContext != null) {
+    final band = maxContext.estimated
+        ? _estimatedMaxNearBandBpm
+        : _knownMaxNearBandBpm;
+    if (peak.bpm < maxContext.bpm - band) {
       issues.add(HeartRateRecoveryIssue.submaximalEffort);
     }
   }
@@ -421,7 +412,6 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
     maxHeartRateBpmUsed: maxContext?.bpm,
     maxHeartRateEstimated: maxContext?.estimated ?? false,
     peakFractionOfMax: peakFraction,
-    medianRecoveryGapSeconds: medianGapSeconds,
     recoverySampleCount: recoverySamples.length,
     quality: _quality(issues, marks),
     issues: issues,
@@ -432,8 +422,7 @@ HeartRateRecoveryQuality _quality(
   Set<HeartRateRecoveryIssue> issues,
   List<HeartRateRecoveryMark> marks,
 ) {
-  if (issues.contains(HeartRateRecoveryIssue.effortNotVigorous) ||
-      issues.contains(HeartRateRecoveryIssue.cooldownBeforeStop) ||
+  if (issues.contains(HeartRateRecoveryIssue.cooldownBeforeStop) ||
       issues.contains(HeartRateRecoveryIssue.heartRateDidNotFall)) {
     return HeartRateRecoveryQuality.invalid;
   }
@@ -452,9 +441,7 @@ HeartRateRecoveryQuality _quality(
   // be dressed up as authoritative however good the rest of it looks.
   final headlineMissing = headline?.heartRateBpm == null;
   if (headlineMissing ||
-      issues.contains(HeartRateRecoveryIssue.peakWindowWidened) ||
       issues.contains(HeartRateRecoveryIssue.peakFromSingleSample) ||
-      issues.contains(HeartRateRecoveryIssue.coarseSampling) ||
       issues.contains(HeartRateRecoveryIssue.unknownMaxHeartRate)) {
     return HeartRateRecoveryQuality.approximate;
   }
@@ -491,32 +478,30 @@ class _Peak {
   final int sampleCount;
 }
 
-/// The highest heart rate in the run-up to the stop.
+/// The highest heart rate in the hard [_peakWindow] before the stop, or null if nothing
+/// sits there.
 ///
-/// Ten seconds is what the definition wants and what a strap can give. A watch may have
-/// nothing at all in that window, and a hard 10-second rule would then return no-data for
-/// almost every workout anybody has ever recorded — the feature would ship permanently
-/// empty. So the window widens, and says that it widened.
+/// A hard ten-second window on purpose: a wider one would let an effort that eased off
+/// earlier draw its "peak" from when it was still going, inflating the recovery. The
+/// guided test is the only thing that reaches this code now, and monitors sample fast
+/// during hard effort, so a sample is there.
 _Peak? _peak(List<HeartRateSample> ordered, DateTime recoveryStart) {
-  for (final window in _peakWindows) {
-    final start = recoveryStart.subtract(window);
-    final inWindow = ordered
-        .where((sample) =>
-            !sample.time.isBefore(start) && !sample.time.isAfter(recoveryStart))
-        .toList();
-    if (inWindow.isEmpty) continue;
-    var best = inWindow.first;
-    for (final sample in inWindow) {
-      if (sample.beatsPerMinute > best.beatsPerMinute) best = sample;
-    }
-    return _Peak(
-      best.beatsPerMinute,
-      best.time,
-      window.inSeconds,
-      inWindow.length,
-    );
+  final start = recoveryStart.subtract(_peakWindow);
+  final inWindow = ordered
+      .where((sample) =>
+          !sample.time.isBefore(start) && !sample.time.isAfter(recoveryStart))
+      .toList();
+  if (inWindow.isEmpty) return null;
+  var best = inWindow.first;
+  for (final sample in inWindow) {
+    if (sample.beatsPerMinute > best.beatsPerMinute) best = sample;
   }
-  return null;
+  return _Peak(
+    best.beatsPerMinute,
+    best.time,
+    _peakWindow.inSeconds,
+    inWindow.length,
+  );
 }
 
 /// The highest reading in the [lookback] before [recoveryStart], or null if there is
@@ -588,23 +573,6 @@ HeartRateSample? _nearest(
   return best;
 }
 
-double? _medianGapSeconds(List<HeartRateSample> recoverySamples) {
-  if (recoverySamples.length < 2) return null;
-  final gaps = <double>[];
-  for (var index = 1; index < recoverySamples.length; index++) {
-    gaps.add(recoverySamples[index]
-            .time
-            .difference(recoverySamples[index - 1].time)
-            .inMilliseconds /
-        1000.0);
-  }
-  gaps.sort();
-  final middle = gaps.length ~/ 2;
-  return gaps.length.isOdd
-      ? gaps[middle]
-      : (gaps[middle - 1] + gaps[middle]) / 2.0;
-}
-
 class _MaxHeartRate {
   const _MaxHeartRate(this.bpm, this.estimated);
 
@@ -642,7 +610,8 @@ _MaxHeartRate? _resolveMaxHeartRate({
 
   final age = ageYears;
   if (age != null) {
-    return _MaxHeartRate(math.max(1, 220 - age), true);
+    // Tanaka (208 - 0.7*age): more accurate across ages than the old 220 - age.
+    return _MaxHeartRate(math.max(1, (208 - 0.7 * age).round()), true);
   }
 
   return null;

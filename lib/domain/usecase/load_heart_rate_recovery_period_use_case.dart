@@ -88,10 +88,14 @@ class LoadHeartRateRecoveryPeriodUseCase {
         await _activityRepository.loadWorkouts(window.start, window.end);
 
     return loadedWorkouts.flatMap((workouts) async {
+      // Only guided recovery tests are measurable: a workout with no abrupt-stop mark
+      // (a qualifying trailing rest segment) is not a recovery reading and must not
+      // count towards the "unmeasured" tally or cost a heart-rate read.
       final candidates = workouts
           .where((workout) =>
               workout.endTime.difference(workout.startTime) >=
-              minimumHeartRateRecoverySessionDuration)
+                  minimumHeartRateRecoverySessionDuration &&
+              heartRateRecoveryWindowFor(workout) != null)
           .toList()
         ..sort((a, b) => b.startTime.compareTo(a.startTime));
 
@@ -133,15 +137,19 @@ class LoadHeartRateRecoveryPeriodUseCase {
     int? observedMaxHeartRateBpm,
   ) async {
     final window = heartRateRecoveryWindowFor(workout);
-    final samples = (await _heartRepository.loadHeartRateSamplesInstant(
-      window.readStart,
-      window.readEnd,
-    ))
-        .getOrNull();
+    // No cessation mark, no recovery: an ordinary workout without a guided-test rest
+    // segment is not measured (and its heart-rate read is skipped).
+    final samples = window == null
+        ? null
+        : (await _heartRepository.loadHeartRateSamplesInstant(
+            window.readStart,
+            window.readEnd,
+          ))
+            .getOrNull();
 
     // A failed or empty read is not an error here: it is the ordinary answer for a watch
     // that stopped recording when the workout ended.
-    final reading = (samples == null || samples.isEmpty)
+    final reading = (window == null || samples == null || samples.isEmpty)
         ? HeartRateRecoveryReading.noData
         : calculateHeartRateRecovery(
             recoveryStart: window.recoveryStart,

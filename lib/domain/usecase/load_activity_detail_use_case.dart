@@ -151,7 +151,10 @@ class LoadActivityDetailUseCase {
     BodyProfile profile,
     LocalDate? today,
   ) async {
+    // No cessation mark, no recovery: an ordinary workout gives no guarantee effort
+    // stopped, so heart-rate recovery is only measured for the guided test.
     final window = heartRateRecoveryWindowFor(workout);
+    if (window == null) return HeartRateRecoveryReading.noData;
     final samples = (await _heartRepository.loadHeartRateSamplesInstant(
       window.readStart,
       window.readEnd,

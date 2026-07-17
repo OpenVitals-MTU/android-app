@@ -3572,17 +3572,17 @@
   "@heartRateRecoveryTrendTitle": {
     "description": "Chart title: the drop one minute after each effort stopped."
   },
-  "heartRateRecoveryEmpty": "No workout in this period had a recovery that could be measured.",
+  "heartRateRecoveryEmpty": "No recovery test in this period.",
   "@heartRateRecoveryEmpty": {
     "description": "Shown when the period holds no comparable readings at all."
   },
-  "heartRateRecoveryEmptyWatch": "This is normal with a watch: most stop recording heart rate the moment a workout ends, and the fall cannot be measured from readings that were never taken. A chest strap records every second, and the guided recovery test uses one.",
+  "heartRateRecoveryEmptyWatch": "Heart-rate recovery is measured from a deliberate test: warm up, push your heart rate near its maximum, then stop and rest for one to five minutes. Start one from the activity recorder. An ordinary workout, where you slow down but keep moving, cannot be measured.",
   "@heartRateRecoveryEmptyWatch": {
     "description": "Explains why a watch user's history is empty, and what would fix it."
   },
-  "heartRateRecoveryUnmeasured": "{count} workouts could not be measured",
+  "heartRateRecoveryUnmeasured": "{count} tests could not be compared",
   "@heartRateRecoveryUnmeasured": {
-    "description": "How many hard workouts in the period had no measurable recovery.",
+    "description": "How many recovery tests in the period were not comparable (submaximal or unmeasured).",
     "placeholders": {
       "count": {
         "type": "String",
@@ -3660,17 +3660,9 @@
   "@heartRateRecoveryDidNotFall": {
     "description": "Why the reading is invalid: the heart rate rose after the session ended, so the effort had not actually stopped."
   },
-  "heartRateRecoveryCoarseSampling": "Your device recorded heart rate too rarely after the workout for the earliest marks to exist. A chest strap records every second.",
-  "@heartRateRecoveryCoarseSampling": {
-    "description": "Why the 10s and 30s marks are blank: the samples are too far apart."
-  },
   "heartRateRecoveryCooldownBeforeStop": "Your heart rate was already falling before the workout ended, so this is not a recovery reading. Recovery is measured from the moment hard effort stops.",
   "@heartRateRecoveryCooldownBeforeStop": {
     "description": "Why the reading is invalid: the user eased off before stopping the recording."
-  },
-  "heartRateRecoveryEffortNotVigorous": "This effort was not hard enough to have a recovery worth measuring.",
-  "@heartRateRecoveryEffortNotVigorous": {
-    "description": "Why the reading is invalid: the peak was well below the user's maximum."
   },
   "heartRateRecoverySubmaximalEffort": "Hard, but not near your maximum — so this reading cannot be compared with the others.",
   "@heartRateRecoverySubmaximalEffort": {
@@ -3679,10 +3671,6 @@
   "heartRateRecoveryUnknownMaxHeartRate": "Set your maximum heart rate in your profile, and we can tell you whether the effort was hard enough for this reading to count.",
   "@heartRateRecoveryUnknownMaxHeartRate": {
     "description": "No maximum heart rate is known, so effort could not be judged."
-  },
-  "heartRateRecoveryPeakWindowWidened": "No reading exists in the last ten seconds of effort, so the peak was taken from further back.",
-  "@heartRateRecoveryPeakWindowWidened": {
-    "description": "The peak came from a wider window than the definition wants."
   },
   "heartRateRecoveryPeakFromSingleSample": "One single reading stands behind the peak.",
   "@heartRateRecoveryPeakFromSingleSample": {

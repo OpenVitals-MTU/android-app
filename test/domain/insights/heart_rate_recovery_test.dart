@@ -97,6 +97,17 @@ ExerciseSegmentData _rest(int fromSeconds, int toSeconds) => ExerciseSegmentData
 
 void main() {
   group('calculateHeartRateRecovery', () {
+    test('the offsets are 30s..5min, no 10s mark', () {
+      expect(heartRateRecoveryOffsets, const [
+        Duration(seconds: 30),
+        Duration(minutes: 1),
+        Duration(minutes: 2),
+        Duration(minutes: 3),
+        Duration(minutes: 4),
+        Duration(minutes: 5),
+      ]);
+    });
+
     test('a chest strap at 1Hz measures every mark and reads clean', () {
       final reading = _calculate(_strapSamples());
 
@@ -117,8 +128,8 @@ void main() {
     });
 
     test(
-        'a watch that samples once a minute after the workout cannot give 10s or 30s, '
-        'and they come back BLANK rather than interpolated', () {
+        'a watch that samples once a minute after the workout leaves the 30s mark '
+        'BLANK rather than interpolated', () {
       final samples = <HeartRateSample>[
         // Dense during the effort...
         for (var t = -60; t <= 0; t += 5) _hr(t, _bpmAt(t), source: 'watch'),
@@ -128,31 +139,24 @@ void main() {
 
       final reading = _calculate(samples);
 
-      // The two marks nobody can produce from this data.
-      expect(_bpmMark(reading, const Duration(seconds: 10)), isNull);
-      expect(_dropAt(reading, const Duration(seconds: 10)), isNull);
+      // The 30s mark cannot be produced from this data — and is never invented.
       expect(_bpmMark(reading, const Duration(seconds: 30)), isNull);
       expect(_dropAt(reading, const Duration(seconds: 30)), isNull);
 
-      // The ones it can.
+      // The one-minute mark it can, so the reading still charts.
       expect(_bpmMark(reading, const Duration(minutes: 1)), 145);
       expect(_dropAt(reading, const Duration(minutes: 1)), 35);
       expect(_bpmMark(reading, const Duration(minutes: 5)), 110);
-
-      expect(reading.issues, contains(HeartRateRecoveryIssue.coarseSampling));
-      expect(reading.medianRecoveryGapSeconds, 60);
-      expect(reading.quality, HeartRateRecoveryQuality.approximate);
-      // Still worth charting: the headline mark survives.
       expect(reading.isComparable, isTrue);
     });
 
-    test('a watch every 5 seconds keeps all seven marks', () {
+    test('a watch every 5 seconds keeps all six marks', () {
       final reading = _calculate(_strapSamples(everySeconds: 5));
 
       for (final offset in heartRateRecoveryOffsets) {
         expect(_bpmMark(reading, offset), isNotNull, reason: 'missing $offset');
       }
-      expect(reading.issues, isNot(contains(HeartRateRecoveryIssue.coarseSampling)));
+      expect(reading.marks, hasLength(6));
       expect(reading.quality, HeartRateRecoveryQuality.clean);
     });
 
@@ -166,7 +170,7 @@ void main() {
       expect(reading.quality, HeartRateRecoveryQuality.noData);
       expect(reading.issues, contains(HeartRateRecoveryIssue.noRecoverySamples));
       expect(reading.recoverySampleCount, 0);
-      expect(reading.marks, hasLength(7));
+      expect(reading.marks, hasLength(6));
       for (final mark in reading.marks) {
         expect(mark.heartRateBpm, isNull);
         expect(mark.dropBpm, isNull);
@@ -180,24 +184,24 @@ void main() {
       expect(reading.peakBpm, isNull);
     });
 
-    test('a peak 45s back widens the window and says so', () {
+    test('nothing in the hard last-10s window means no peak, and noData', () {
+      // Effort ends early: nothing at all in the last 40 seconds before the stop. A wider
+      // peak window would draw the peak from when the effort was still going and inflate
+      // the recovery; the hard window instead refuses to measure.
       final samples = <HeartRateSample>[
-        // Effort ends early; nothing in the last 40 seconds before the stop.
         for (var t = -60; t <= -40; t += 5) _hr(t, t == -45 ? 180 : 176),
         for (var t = 60; t <= 300; t += 60) _hr(t, _bpmAt(t)),
       ];
 
       final reading = _calculate(samples);
 
-      expect(reading.peakBpm, 180);
-      expect(reading.peakWindowSeconds, 60);
-      expect(reading.issues, contains(HeartRateRecoveryIssue.peakWindowWidened));
-      expect(reading.quality, HeartRateRecoveryQuality.approximate);
+      expect(reading.peakBpm, isNull);
+      expect(reading.quality, HeartRateRecoveryQuality.noData);
     });
 
     test('easing off before pressing stop is caught, not rewarded', () {
-      // Peak 180 at -45s, walked down to 160 by the stop. A naive reading would take
-      // the peak from the last ten seconds (~163) and report a modest, flattering drop.
+      // Peak 180 at -45s, walked down to 160 by the stop. The fall from the last real
+      // high point (180) to the reading at the stop (160) is 20 bpm — well over the gate.
       final samples = <HeartRateSample>[
         for (var t = -60; t <= 0; t++)
           _hr(t, t <= -45 ? 180 : (180 - ((t + 45) * 20 / 45)).round()),
@@ -212,11 +216,21 @@ void main() {
           reason: 'an invalid reading must never reach the trend');
     });
 
+    test('a fall of just five bpm before the stop still counts as a cool-down', () {
+      // The gate is now 4 bpm, just above beat-to-beat noise. High of 176 in the last
+      // minute, 171 at the stop: a 5-bpm easing-off that the old 8-bpm gate would miss.
+      final samples = <HeartRateSample>[
+        for (var t = -60; t <= 0; t++) _hr(t, t <= -20 ? 176 : 171),
+        for (var t = 1; t <= 300; t++) _hr(t, (171 - t ~/ 6).clamp(120, 171)),
+      ];
+
+      final reading = _calculate(samples);
+
+      expect(reading.issues, contains(HeartRateRecoveryIssue.cooldownBeforeStop));
+      expect(reading.quality, HeartRateRecoveryQuality.invalid);
+    });
+
     test('a heart rate that ROSE after the stop is not a recovery', () {
-      // Taken from a real ride: the watch sampled about once a minute, the session ended
-      // while the rider was still riding, and the heart rate at 2, 3 and 4 minutes came
-      // back HIGHER than the "peak" — drops of -4, -2 and -3. A recovery of minus four
-      // beats is not a small recovery. It is not a recovery.
       final samples = <HeartRateSample>[
         for (var t = -180; t <= 0; t += 60) _hr(t, 113),
         _hr(60, 115),
@@ -235,9 +249,6 @@ void main() {
     });
 
     test('a reading with no one-minute mark cannot be charted', () {
-      // Also from a real ride: the only sample that landed near any mark was at 30
-      // seconds. The trend is of the ONE-minute fall, so this reading has nothing to
-      // contribute to it, however sound the 30-second figure is.
       final samples = <HeartRateSample>[
         for (var t = -120; t <= 0; t += 60) _hr(t, 120),
         _hr(30, 98),
@@ -253,20 +264,9 @@ void main() {
           reason: 'no one-minute fall means no point to plot');
     });
 
-    test('an effort below 70% of max has no recovery worth the name', () {
-      // Peak 110 against a max of 190 == 58%.
-      final samples = [
-        for (var t = -60; t <= 300; t += 5) _hr(t, t <= 0 ? 110 : 100),
-      ];
-
-      final reading = _calculate(samples);
-
-      expect(reading.issues, contains(HeartRateRecoveryIssue.effortNotVigorous));
-      expect(reading.quality, HeartRateRecoveryQuality.invalid);
-    });
-
-    test('a hard-but-submaximal effort is real, and not comparable', () {
-      // Peak 152 against 190 == 80%: between the vigorous floor and near-maximal.
+    test('a submaximal effort is shown, flagged not-comparable, never hidden', () {
+      // Peak 152 against a stated max of 190: more than 10 bpm below a KNOWN maximum, so
+      // submaximal. The drop is still measured; it just cannot be compared across days.
       final samples = [
         for (var t = -60; t <= 300; t += 5)
           _hr(t, t <= 0 ? 152 : (152 - t ~/ 6).clamp(110, 152)),
@@ -276,9 +276,32 @@ void main() {
 
       expect(reading.issues, contains(HeartRateRecoveryIssue.submaximalEffort));
       expect(reading.quality, HeartRateRecoveryQuality.notComparable);
-      // The drop is still measured — we just refuse to compare it.
+      // There is no separate "not vigorous" hide-gate: even a weak effort is shown.
       expect(_dropAt(reading, const Duration(minutes: 1)), isNotNull);
       expect(reading.isComparable, isFalse);
+    });
+
+    test('near-max is an absolute band, wider for an ESTIMATED max', () {
+      // A 40-year-old's estimated max is 208 - 0.7*40 = 180. A peak of 160 is 20 below it
+      // — inside the 22-bpm confidence band, so NOT flagged submaximal.
+      final samples = [for (var t = -60; t <= 300; t += 5) _hr(t, t <= 0 ? 160 : 150)];
+      final reading = _calculate(samples, profileMax: null, age: 40);
+
+      expect(reading.maxHeartRateBpmUsed, 180);
+      expect(reading.maxHeartRateEstimated, isTrue);
+      expect(reading.issues,
+          isNot(contains(HeartRateRecoveryIssue.submaximalEffort)));
+    });
+
+    test('the same peak against a KNOWN max is submaximal (tighter band)', () {
+      // Peak 160 against a STATED max of 180 is 20 below it — beyond the 10-bpm band that
+      // applies when the maximum is known rather than estimated.
+      final samples = [for (var t = -60; t <= 300; t += 5) _hr(t, t <= 0 ? 160 : 150)];
+      final reading = _calculate(samples, profileMax: 180, age: 40);
+
+      expect(reading.maxHeartRateEstimated, isFalse);
+      expect(reading.issues, contains(HeartRateRecoveryIssue.submaximalEffort));
+      expect(reading.quality, HeartRateRecoveryQuality.notComparable);
     });
 
     test('an unknown max heart rate still reports every mark', () {
@@ -293,20 +316,21 @@ void main() {
       expect(reading.issues, contains(HeartRateRecoveryIssue.unknownMaxHeartRate));
       expect(reading.maxHeartRateBpmUsed, isNull);
       expect(reading.quality, HeartRateRecoveryQuality.approximate);
-      // The point: no birth year must not mean a blank screen.
       expect(_dropAt(reading, const Duration(minutes: 1)), 35);
     });
 
-    test('max heart rate falls back to the age formula, flagged as estimated', () {
-      final reading = _calculate(_strapSamples(), profileMax: null, age: 40);
+    test('the age formula is Tanaka (208 - 0.7*age), flagged estimated', () {
+      // 20yo: 208 - 0.7*20 = 194 (the old 220-age gave 200).
+      final young = _calculate(_strapSamples(), profileMax: null, age: 20);
+      expect(young.maxHeartRateBpmUsed, 194);
+      expect(young.maxHeartRateEstimated, isTrue);
 
-      expect(reading.maxHeartRateBpmUsed, 180);
-      expect(reading.maxHeartRateEstimated, isTrue);
+      // 40yo: 208 - 28 = 180.
+      final middle = _calculate(_strapSamples(), profileMax: null, age: 40);
+      expect(middle.maxHeartRateBpmUsed, 180);
     });
 
     test('an observed max below the trust bar is not used as a maximum', () {
-      // 140 is the ceiling of an easy week, not a maximum: under 150, and only 85
-      // above a resting rate of 55. The age formula should win instead.
       final reading = _calculate(
         _strapSamples(),
         profileMax: null,
@@ -315,23 +339,20 @@ void main() {
         age: 40,
       );
 
-      expect(reading.maxHeartRateBpmUsed, 180, reason: '220 - 40, not the observed 140');
+      expect(reading.maxHeartRateBpmUsed, 180,
+          reason: 'the age estimate, not the untrustworthy observed 140');
       expect(reading.maxHeartRateEstimated, isTrue);
     });
 
     test('two sources on the same instant collapse to the higher reading', () {
       final samples = <HeartRateSample>[
         ..._strapSamples(),
-        // A watch, recording the same session, one beat adrift.
         for (var t = -60; t <= 300; t += 1)
           _hr(t, _bpmAt(t) - 3, source: 'watch'),
       ];
 
       final reading = _calculate(samples);
 
-      // The duplicates must not read as zero-second gaps and mask coarse sampling.
-      expect(reading.medianRecoveryGapSeconds, 1);
-      expect(reading.issues, isNot(contains(HeartRateRecoveryIssue.coarseSampling)));
       // Higher of the two kept: the strap's 145, not the watch's 142. That reports the
       // SMALLER drop, which is the conservative direction.
       expect(_bpmMark(reading, const Duration(minutes: 1)), 145);
@@ -346,24 +367,24 @@ void main() {
       expect(reading.quality, HeartRateRecoveryQuality.clean);
     });
 
-    test('a sample exactly on the tolerance boundary counts', () {
-      // The 1-minute tolerance is +-10s. Put the only recovery sample at 70s.
+    test('a sample exactly on the tighter 1-minute tolerance boundary counts', () {
+      // The 1-minute tolerance is now +-5s. The only recovery sample sits at 65s.
       final samples = <HeartRateSample>[
         for (var t = -60; t <= 0; t++) _hr(t, _bpmAt(t)),
-        _hr(70, 144),
+        _hr(65, 144),
       ];
 
       final reading = _calculate(samples);
 
       expect(_bpmMark(reading, const Duration(minutes: 1)), 144);
       expect(reading.markAt(const Duration(minutes: 1))!.sampleSkew,
-          const Duration(seconds: 10));
+          const Duration(seconds: 5));
     });
 
     test('a sample one second beyond the tolerance does not', () {
       final samples = <HeartRateSample>[
         for (var t = -60; t <= 0; t++) _hr(t, _bpmAt(t)),
-        _hr(71, 144),
+        _hr(66, 144),
       ];
 
       final reading = _calculate(samples);
@@ -372,31 +393,27 @@ void main() {
     });
 
     test('a tie between two samples goes to the earlier, higher one', () {
-      // Equidistant either side of the 2-minute mark (+-15s tolerance).
+      // Equidistant either side of the 2-minute mark (now +-5s tolerance).
       final samples = <HeartRateSample>[
         for (var t = -60; t <= 0; t++) _hr(t, _bpmAt(t)),
         _hr(60, 145),
-        _hr(110, 133),
-        _hr(130, 128),
+        _hr(118, 133),
+        _hr(122, 128),
       ];
 
       final reading = _calculate(samples);
 
-      // 110 and 130 are both 10s from 120. The earlier wins: on a falling curve it is
-      // the higher reading, so it reports the smaller drop.
+      // 118 and 122 are both 2s from 120. The earlier wins: on a falling curve it is the
+      // higher reading, so it reports the smaller drop.
       expect(_bpmMark(reading, const Duration(minutes: 2)), 133);
     });
   });
 
   group('heartRateRecoveryWindowFor', () {
-    test('a session with no segments measures from its end', () {
-      final window = heartRateRecoveryWindowFor(_session());
-
-      expect(window.recoveryStart, _stop);
-      expect(window.source, HeartRateRecoveryStartSource.sessionEnd);
-      // Reads a minute back for the peak, and past the last mark for the tail.
-      expect(window.readStart, _at(-60));
-      expect(window.readEnd, _at(330));
+    test('a session with no rest segment has no recovery window', () {
+      // The core change: an ordinary workout gives no guarantee effort ceased, so its end
+      // is NOT taken as a stop. No cessation mark, no reading.
+      expect(heartRateRecoveryWindowFor(_session()), isNull);
     });
 
     test('a qualifying trailing rest segment is the moment effort stopped', () {
@@ -404,32 +421,35 @@ void main() {
         _session(segments: [_rest(-300, 0)]),
       );
 
-      expect(window.recoveryStart, _at(-300));
+      expect(window, isNotNull);
+      expect(window!.recoveryStart, _at(-300));
       expect(window.source, HeartRateRecoveryStartSource.trailingRestSegment);
+      // Reads a minute back for the peak, and past the last mark for the tail.
+      expect(window.readStart, _at(-360));
+      expect(window.readEnd, _at(30));
     });
 
     test(
         'the rest segment after the last set of a strength workout is NOT a recovery',
         () {
-      // The app writes a rest segment after every set, the last one included. A bare
-      // "ends with a rest segment" rule would read this 60s breather as an HRR test.
-      final window = heartRateRecoveryWindowFor(
-        _session(segments: [_rest(-600, -540), _rest(-60, 0)]),
+      // The app writes a rest segment after every set. A 60s breather is too short to
+      // qualify, so there is no recovery window at all.
+      expect(
+        heartRateRecoveryWindowFor(
+          _session(segments: [_rest(-600, -540), _rest(-60, 0)]),
+        ),
+        isNull,
       );
-
-      expect(window.recoveryStart, _stop,
-          reason: '60s is an inter-set rest, not a recovery');
-      expect(window.source, HeartRateRecoveryStartSource.sessionEnd);
     });
 
     test('a long rest that is not at the end is not a recovery either', () {
       // Five minutes of rest, but the session ran on for four more minutes afterwards.
-      final window = heartRateRecoveryWindowFor(
-        _session(segments: [_rest(-540, -240)]),
+      expect(
+        heartRateRecoveryWindowFor(
+          _session(segments: [_rest(-540, -240)]),
+        ),
+        isNull,
       );
-
-      expect(window.recoveryStart, _stop);
-      expect(window.source, HeartRateRecoveryStartSource.sessionEnd);
     });
 
     test('a rest ending just shy of the session end still qualifies', () {
@@ -437,7 +457,8 @@ void main() {
         _session(segments: [_rest(-300, -20)]),
       );
 
-      expect(window.recoveryStart, _at(-300));
+      expect(window, isNotNull);
+      expect(window!.recoveryStart, _at(-300));
       expect(window.source, HeartRateRecoveryStartSource.trailingRestSegment);
     });
   });

@@ -10,6 +10,7 @@ import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/insights/heart_rate_recovery.dart';
+import 'package:openvitals/domain/model/activity_entry_types.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/exercise_session_metrics.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
@@ -24,47 +25,81 @@ import 'package:openvitals/state/app_providers.dart';
 /// Heart-rate recovery on the activity detail screen.
 ///
 /// The measurement itself is proved in test/domain/insights/heart_rate_recovery_test.dart.
-/// What is guarded here is the plumbing around it, where the mistakes would be:
+/// What is guarded here is the plumbing around it:
 ///
-///  - the recovery needs its OWN read, running past the end of the session, and the
-///    session's heart-rate chart must NOT be widened by it;
+///  - the recovery needs its OWN read (a bounded window around the cessation mark),
+///    separate from the read that feeds the session heart-rate chart;
 ///  - a recovery that cannot be read costs one card, never the screen;
-///  - an easy session shows no card at all.
+///  - only a guided test (a workout with a trailing rest segment) shows the card; an
+///    ordinary workout shows none.
 
 final DateTime _start = DateTime.utc(2026, 7, 14, 18, 0);
-final DateTime _end = DateTime.utc(2026, 7, 14, 18, 30);
 
-DateTime _fromEnd(int seconds) => _end.add(Duration(seconds: seconds));
+/// When hard effort stopped in the guided test — where the recovery is measured from.
+final DateTime _effortEnd = DateTime.utc(2026, 7, 14, 18, 30);
 
-ExerciseData _workout() => ExerciseData(
+/// The session runs on past the effort while the person rests.
+final DateTime _sessionEnd = _effortEnd.add(const Duration(minutes: 6));
+
+DateTime _fromEffort(int seconds) => _effortEnd.add(Duration(seconds: seconds));
+
+/// A guided recovery test: a workout carrying a trailing rest segment from the effort
+/// end to the session end. Only such a workout has a recovery to read.
+ExerciseData _guidedWorkout() => ExerciseData(
       id: 'w1',
       title: 'Bike',
       exerciseType: 0,
       startTime: _start,
-      endTime: _end,
-      durationMs: _end.difference(_start).inMilliseconds,
+      endTime: _sessionEnd,
+      durationMs: _sessionEnd.difference(_start).inMilliseconds,
+      source: 'test',
+      segments: [
+        ExerciseSegmentData(
+          startTime: _effortEnd,
+          endTime: _sessionEnd,
+          segmentType: ExerciseSegmentType.rest,
+          repetitions: 0,
+        ),
+      ],
+    );
+
+/// An ordinary workout: no cessation mark, so no recovery is measurable.
+ExerciseData _ordinaryWorkout() => ExerciseData(
+      id: 'w1',
+      title: 'Bike',
+      exerciseType: 0,
+      startTime: _start,
+      endTime: _sessionEnd,
+      durationMs: _sessionEnd.difference(_start).inMilliseconds,
       source: 'test',
     );
 
 HeartRateSample _hr(DateTime time, int bpm) =>
     HeartRateSample(time: time, beatsPerMinute: bpm, source: 'strap');
 
-/// A hard effort, stopping dead at the session end, sampled every second through the
+/// A hard effort stopping dead at the effort end, sampled every second through the
 /// recovery — a chest strap.
 List<HeartRateSample> _strapSamples({int peak = 180}) => [
-      for (var t = -120; t <= 0; t++) _hr(_fromEnd(t), t == -5 ? peak : peak - 2),
+      for (var t = -120; t <= 0; t++)
+        _hr(_fromEffort(t), t == -5 ? peak : peak - 2),
       for (var t = 1; t <= 330; t++)
-        _hr(_fromEnd(t), (peak - 2 - (t * 0.35)).round().clamp(110, peak)),
+        _hr(_fromEffort(t), (peak - 2 - (t * 0.35)).round().clamp(110, peak)),
     ];
 
-/// An easy session: nothing worth calling a recovery.
+/// An easy effort: a real but submaximal recovery.
 List<HeartRateSample> _easySamples() => [
-      for (var t = -120; t <= 330; t++) _hr(_fromEnd(t), t <= 0 ? 105 : 95),
+      for (var t = -120; t <= 0; t++) _hr(_fromEffort(t), 105),
+      for (var t = 1; t <= 330; t++)
+        _hr(_fromEffort(t), (105 - (t * 0.15)).round().clamp(80, 105)),
     ];
 
 class _FakeActivityRepository implements ActivityRepository {
+  _FakeActivityRepository(this.workout);
+
+  final ExerciseData workout;
+
   @override
-  Future<Result<ExerciseData?>> loadWorkout(String id) async => Ok(_workout());
+  Future<Result<ExerciseData?>> loadWorkout(String id) async => Ok(workout);
 
   @override
   Future<Result<ExerciseSessionMetrics>> loadWorkoutMetrics(
@@ -105,8 +140,9 @@ class _FakeHeartRepository implements HeartRepository {
     DateTime end,
   ) async {
     reads.add((start: start, end: end));
-    // The recovery read is the one that runs past the session end.
-    final isRecoveryRead = end.isAfter(_end);
+    // The recovery read is the narrow one around the cessation mark; the session chart
+    // read starts at the session start.
+    final isRecoveryRead = start.isAfter(_start);
     if (isRecoveryRead && recoveryReadFails) {
       return Err(UnexpectedFailure(
         'HEART_RATE permission denied',
@@ -138,19 +174,21 @@ class _FakeHeartRepository implements HeartRepository {
 Future<ActivityDetailLoadResult?> _load(
   _FakeHeartRepository heart, {
   BodyProfile profile = const BodyProfile(maxHeartRateBpm: 190),
+  ExerciseData? workout,
 }) async {
-  final useCase = LoadActivityDetailUseCase(_FakeActivityRepository(), heart);
+  final useCase = LoadActivityDetailUseCase(
+    _FakeActivityRepository(workout ?? _guidedWorkout()),
+    heart,
+  );
   final result = await useCase('w1', profile: profile);
   return result.getOrNull();
 }
 
 Future<void> _pumpScreen(
   WidgetTester tester,
-  _FakeHeartRepository heart,
-) async {
-  // Tall enough to build the whole list. The recovery card sits below several others,
-  // and a ListView does not build what it cannot show — on a default 600x800 surface the
-  // card would be absent from the tree whether or not the code put it there.
+  _FakeHeartRepository heart, {
+  ExerciseData? workout,
+}) async {
   tester.view.physicalSize = const Size(1200, 4000);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -163,7 +201,7 @@ Future<void> _pumpScreen(
         sharedPreferencesProvider.overrideWithValue(prefs),
         unitSystemProvider.overrideWithValue(UnitSystem.metric),
         activityRepositoryProvider
-            .overrideWithValue(_FakeActivityRepository()),
+            .overrideWithValue(_FakeActivityRepository(workout ?? _guidedWorkout())),
         heartRepositoryProvider.overrideWithValue(heart),
       ],
       child: MaterialApp(
@@ -178,26 +216,29 @@ Future<void> _pumpScreen(
 
 void main() {
   group('LoadActivityDetailUseCase heart-rate recovery', () {
-    test('reads the recovery on its own, WITHOUT widening the session chart', () async {
+    test('an ordinary workout with no cessation mark is not measured', () async {
       final heart = _FakeHeartRepository(samples: _strapSamples());
 
-      final result = await _load(heart);
+      final result = await _load(heart, workout: _ordinaryWorkout());
 
-      // Two reads: the session, then the recovery.
+      expect(result!.heartRateRecovery, HeartRateRecoveryReading.noData);
+      // No recovery read at all — only the session chart read.
+      expect(heart.reads.every((r) => !r.start.isAfter(_start)), isTrue,
+          reason: 'no recovery window means no recovery read');
+    });
+
+    test('a guided test reads the recovery on its own window', () async {
+      final heart = _FakeHeartRepository(samples: _strapSamples());
+
+      await _load(heart);
+
+      // Two reads: the session chart, then the recovery, and the recovery read is the
+      // bounded window around the cessation mark, not the whole session.
       expect(heart.reads, hasLength(2));
       expect(heart.reads.first.start, _start);
-      expect(heart.reads.first.end, _end,
-          reason: 'the session read must stay the session');
-      expect(heart.reads.last.end.isAfter(_end), isTrue,
-          reason: 'the recovery happens after the workout is over');
-
-      // The samples the chart draws are the session's, not the session plus five
-      // minutes of the rider sitting down.
-      expect(
-        result!.heartRateSamples.every((s) => !s.time.isAfter(_end)),
-        isTrue,
-        reason: 'a recovery tail must never leak into the session heart-rate chart',
-      );
+      final recovery = heart.reads.last;
+      expect(recovery.start.isAfter(_start), isTrue);
+      expect(recovery.start, _effortEnd.subtract(const Duration(seconds: 60)));
     });
 
     test('measures the fall for a strap that kept recording', () async {
@@ -224,23 +265,15 @@ void main() {
 
     test('the observed maximum is only fetched when the user has not set one',
         () async {
-      final withProfileMax = _FakeHeartRepository(
-        samples: _strapSamples(),
-        observedMaxBpm: 200,
-      );
       final stated = await _load(
-        withProfileMax,
+        _FakeHeartRepository(samples: _strapSamples(), observedMaxBpm: 200),
         profile: const BodyProfile(maxHeartRateBpm: 190),
       );
       expect(stated!.heartRateRecovery.maxHeartRateBpmUsed, 190,
           reason: 'a stated maximum outranks an observed one');
 
-      final withoutProfileMax = _FakeHeartRepository(
-        samples: _strapSamples(),
-        observedMaxBpm: 200,
-      );
       final observed = await _load(
-        withoutProfileMax,
+        _FakeHeartRepository(samples: _strapSamples(), observedMaxBpm: 200),
         profile: const BodyProfile(restingHeartRateBpm: 55),
       );
       expect(observed!.heartRateRecovery.maxHeartRateBpmUsed, 200);
@@ -249,7 +282,7 @@ void main() {
   });
 
   group('ActivityHeartRateRecoveryCard', () {
-    testWidgets('shows the fall after a hard effort', (tester) async {
+    testWidgets('shows the fall after a guided test', (tester) async {
       await _pumpScreen(tester, _FakeHeartRepository(samples: _strapSamples()));
 
       expect(find.byType(ActivityHeartRateRecoveryCard), findsOneWidget);
@@ -262,7 +295,7 @@ void main() {
         (tester) async {
       // Dense during the effort, nothing at all afterwards.
       final samples = [
-        for (var t = -120; t <= 0; t++) _hr(_fromEnd(t), t == -5 ? 180 : 178),
+        for (var t = -120; t <= 0; t++) _hr(_fromEffort(t), t == -5 ? 180 : 178),
       ];
 
       await _pumpScreen(tester, _FakeHeartRepository(samples: samples));
@@ -273,32 +306,36 @@ void main() {
         findsOneWidget,
         reason: 'a blank with no explanation reads as a bug',
       );
-      // Seven marks, every one of them a dash. Nothing is invented.
-      expect(find.text('—'), findsNWidgets(7));
+      // Six marks, every one of them a dash. Nothing is invented.
+      expect(find.text('—'), findsNWidgets(6));
     });
 
-    testWidgets('an easy session shows no card at all', (tester) async {
-      // No maximum is set in the profile, so the effort is judged against the highest
-      // heart rate on record from the past three months — 185, from the days this rider
-      // went hard. A 105 bpm plod is 57% of that: nothing to recover from.
+    testWidgets('an ordinary workout shows no card at all', (tester) async {
+      await _pumpScreen(
+        tester,
+        _FakeHeartRepository(samples: _strapSamples()),
+        workout: _ordinaryWorkout(),
+      );
+
+      expect(find.byType(ActivityHeartRateRecoveryCard), findsNothing,
+          reason: 'only a guided recovery test produces a reading');
+    });
+
+    testWidgets('a submaximal guided test still shows the card, flagged', (tester) async {
+      // An easy effort against a known observed max: submaximal, but shown (not hidden)
+      // with a "not comparable" note.
       await _pumpScreen(
         tester,
         _FakeHeartRepository(samples: _easySamples(), observedMaxBpm: 185),
       );
 
-      expect(find.byType(ActivityHeartRateRecoveryCard), findsNothing,
-          reason: 'a walk has no recovery worth reporting, and the card would be '
-              'noise on every one of them');
+      expect(find.byType(ActivityHeartRateRecoveryCard), findsOneWidget);
+      expect(find.textContaining('not near your maximum'), findsOneWidget);
     });
 
     testWidgets(
         'with no maximum knowable at all, the card appears and asks for one',
         (tester) async {
-      // Nothing stated, no birth year, and no heart-rate history to observe a maximum
-      // from. Effort cannot be judged, so the easy session is NOT filtered out — the
-      // card appears and says what it needs to stop guessing. Rare in practice: anyone
-      // with a workout in Health Connect usually has three months of heart rate behind
-      // it, which is exactly what the observed maximum is read from.
       await _pumpScreen(tester, _FakeHeartRepository(samples: _easySamples()));
 
       expect(find.byType(ActivityHeartRateRecoveryCard), findsOneWidget);

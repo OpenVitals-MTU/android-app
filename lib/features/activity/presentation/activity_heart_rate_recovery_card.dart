@@ -90,14 +90,8 @@ class ActivityHeartRateRecoveryCard extends StatelessWidget {
         l10n.heartRateRecoveryDidNotFall,
       if (issues.contains(HeartRateRecoveryIssue.cooldownBeforeStop))
         l10n.heartRateRecoveryCooldownBeforeStop,
-      if (issues.contains(HeartRateRecoveryIssue.effortNotVigorous))
-        l10n.heartRateRecoveryEffortNotVigorous,
       if (issues.contains(HeartRateRecoveryIssue.submaximalEffort))
         l10n.heartRateRecoverySubmaximalEffort,
-      if (issues.contains(HeartRateRecoveryIssue.coarseSampling))
-        l10n.heartRateRecoveryCoarseSampling,
-      if (issues.contains(HeartRateRecoveryIssue.peakWindowWidened))
-        l10n.heartRateRecoveryPeakWindowWidened,
       if (issues.contains(HeartRateRecoveryIssue.peakFromSingleSample))
         l10n.heartRateRecoveryPeakFromSingleSample,
       if (issues.contains(HeartRateRecoveryIssue.unknownMaxHeartRate))

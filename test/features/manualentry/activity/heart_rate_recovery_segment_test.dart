@@ -93,7 +93,8 @@ void main() {
 
     // And now the half that matters: the reader finds it.
     final window = heartRateRecoveryWindowFor(_readBack(request));
-    expect(window.source, HeartRateRecoveryStartSource.trailingRestSegment);
+    expect(window, isNotNull);
+    expect(window!.source, HeartRateRecoveryStartSource.trailingRestSegment);
     expect(window.recoveryStart, _effortEnded);
   });
 
@@ -131,8 +132,8 @@ void main() {
           .where((s) => s.segmentType == ExerciseSegmentType.rest),
       isEmpty,
     );
-    // And the reader measures from the session end, as it does for any watch workout.
-    final window = heartRateRecoveryWindowFor(_readBack(request));
-    expect(window.source, HeartRateRecoveryStartSource.sessionEnd);
+    // And the reader has no recovery window at all — an ordinary recording carries no
+    // abrupt-stop mark, so it is not measured.
+    expect(heartRateRecoveryWindowFor(_readBack(request)), isNull);
   });
 }
