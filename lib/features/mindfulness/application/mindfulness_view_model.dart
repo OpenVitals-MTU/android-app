@@ -9,6 +9,7 @@ import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
+import '../../../domain/model/mindfulness_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/mindfulness_period_data.dart';
 import 'mindfulness_display.dart';
@@ -104,6 +105,51 @@ class MindfulnessViewModel extends Notifier<MindfulnessMetricState>
         PeriodSelection(state.selectedRange, state.selectedDate),
         refreshMode: RefreshMode.force,
       );
+
+  /// Remove an OpenVitals-authored session optimistically so the row leaves the
+  /// list at once, delete it through the repository, then force-reload the
+  /// period; restore the previous state (with an error) on failure.
+  Future<void> deleteMindfulnessSession(String sessionId) async {
+    if (sessionId.isEmpty) return;
+    final data = state.data;
+    if (data == null) return;
+    final session = _sessionById(data, sessionId);
+    if (session == null || !session.isOpenVitalsEntry) return;
+
+    final previous = state;
+    final remaining = [
+      for (final s in data.sessions)
+        if (s.id != sessionId) s,
+    ];
+    final trimmed = data.copyWith(sessions: remaining);
+    state = state.copyWith(
+      data: trimmed,
+      display: buildMindfulnessDisplay(trimmed),
+      error: null,
+    );
+
+    final deletion =
+        await ref.read(deleteMindfulnessSessionUseCaseProvider)(sessionId);
+    if (!ref.mounted) return;
+    switch (deletion) {
+      case Ok():
+        await load(
+          PeriodSelection(state.selectedRange, state.selectedDate),
+          refreshMode: RefreshMode.force,
+        );
+      case Err(:final failure):
+        state = previous.copyWith(
+          error: failure.toScreenError(fallback: 'Unable to load data.'),
+        );
+    }
+  }
+
+  MindfulnessSession? _sessionById(MindfulnessPeriodData data, String id) {
+    for (final session in data.sessions) {
+      if (session.id == id) return session;
+    }
+    return null;
+  }
 }
 
 /// The state provider for the mindfulness period detail screen.

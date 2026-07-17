@@ -13,6 +13,7 @@ import '../domain/usecase/check_vitals_write_permission_use_case.dart';
 import '../domain/usecase/delete_activity_entry_use_case.dart';
 import '../domain/usecase/delete_body_measurement_entry_use_case.dart';
 import '../domain/usecase/delete_hydration_entry_use_case.dart';
+import '../domain/usecase/delete_mindfulness_session_use_case.dart';
 import '../domain/usecase/delete_nutrition_entry_use_case.dart';
 import '../domain/usecase/delete_vitals_measurement_entry_use_case.dart';
 import '../domain/usecase/discover_ble_device_capabilities_use_case.dart';
@@ -343,6 +344,12 @@ final loadMindfulnessSessionForEditUseCaseProvider =
   (ref) => LoadMindfulnessSessionForEditUseCase(
     ref.watch(mindfulnessRepositoryProvider),
   ),
+);
+
+final deleteMindfulnessSessionUseCaseProvider =
+    Provider<DeleteMindfulnessSessionUseCase>(
+  (ref) =>
+      DeleteMindfulnessSessionUseCase(ref.watch(mindfulnessRepositoryProvider)),
 );
 
 final loadHydrationEntryForEditUseCaseProvider =

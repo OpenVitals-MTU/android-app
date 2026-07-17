@@ -19,6 +19,7 @@ import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/metric_detail_scaffold.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/theme/app_colors.dart';
 import 'mindfulness_intraday_chart.dart';
 import '../application/mindfulness_view_model.dart';
@@ -63,7 +64,7 @@ class MindfulnessScreen extends ConsumerWidget {
           syncPaused: syncPaused,
           onSelectionChanged: notifier.load,
           content: (period) =>
-              _content(context, state, formatter, period, weekMode),
+              _content(context, state, formatter, period, weekMode, notifier),
         ),
       ),
     );
@@ -76,6 +77,7 @@ List<Widget> _content(
   UnitFormatter formatter,
   DatePeriod period,
   WeekPeriodMode weekPeriodMode,
+  MindfulnessViewModel notifier,
 ) {
   final display = state.display;
   if (display == null || display.sessionCount == 0) {
@@ -169,25 +171,43 @@ List<Widget> _content(
     const SectionHeader('Sessions'),
     for (final session in display.sortedSessions)
       sectionPadded(
-        _MindfulnessSessionRow(session: session, formatter: formatter),
+        _MindfulnessSessionRow(
+          session: session,
+          formatter: formatter,
+          onEdit: session.isOpenVitalsEntry && session.id.isNotEmpty
+              ? () => context
+                  .push(AppRoutes.mindfulnessEntryEditLocation(session.id))
+              : null,
+          onDelete: session.isOpenVitalsEntry && session.id.isNotEmpty
+              ? () => notifier.deleteMindfulnessSession(session.id)
+              : null,
+        ),
       ),
     sectionPadded(const MindfulnessReminderCard()),
   ];
 }
 
 class _MindfulnessSessionRow extends StatelessWidget {
-  const _MindfulnessSessionRow({required this.session, required this.formatter});
+  const _MindfulnessSessionRow({
+    required this.session,
+    required this.formatter,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final MindfulnessSession session;
   final UnitFormatter formatter;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final start = session.startTime.toLocal();
     final dateLabel = DateFormat('EEE d MMM').format(start);
     final timeLabel = DateFormat.jm().format(start);
-    return OpenVitalsCard(
+    final content = OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -224,9 +244,27 @@ class _MindfulnessSessionRow extends StatelessWidget {
                 SourceChip(source: session.source),
               ],
             ),
+            if (onEdit != null) ...[
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: onEdit,
+                tooltip: l10n.cdEditEntry,
+                icon: Icon(
+                  Icons.edit_outlined,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+
+    if (onDelete == null) return content;
+    return SwipeToDeleteEntryRow(
+      key: ValueKey('mindfulness-${session.id}'),
+      onDelete: onDelete!,
+      child: content,
     );
   }
 }
