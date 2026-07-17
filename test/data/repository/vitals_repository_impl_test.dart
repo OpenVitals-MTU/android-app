@@ -227,7 +227,7 @@ void main() {
           .loadVitalsPeriod(_yearQuery(), VitalsPeriodMetric.all);
 
       expect(result, isA<Ok<VitalsPeriodData>>());
-      final data = (result! as Ok<VitalsPeriodData>).value;
+      final data = (result as Ok<VitalsPeriodData>).value;
       expect(data.timedOutMetrics, isEmpty,
           reason: 'the cache serves instantly, so nothing times out');
       expect(data.respiratoryRateDaily, hasLength(1));

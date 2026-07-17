@@ -177,6 +177,9 @@ dev_dependencies:
   # contract test can compare the two field sets (test/contract/). Already present
   # transitively via build_runner; declared here because we import it directly.
   analyzer: ^12.1.0
+  # Drives virtual time in vitals-repository/sync tests. Transitive via
+  # flutter_test; declared here because those tests import it directly.
+  fake_async: ^1.3.3
   # tool/health_fixture/build.dart only — reads the gitignored Health Connect
   # export to generate the committed test fixture. Never in the app's runtime graph.
   sqlite3: ^3.1.5

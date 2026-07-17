@@ -24,8 +24,12 @@ class VitalsHistorySyncService {
     this._dataSource, {
     DateTime Function() clock = DateTime.now,
     int historyLookbackDays = 730,
-  })  : _clock = clock,
-        _historyLookbackDays = historyLookbackDays;
+    // Private fields backing public named parameters (`clock:`,
+    // `historyLookbackDays:`) cannot be initializing formals without renaming the
+    // parameters.
+  })  : _clock = clock, // ignore: prefer_initializing_formals
+        _historyLookbackDays = // ignore: prefer_initializing_formals
+            historyLookbackDays;
 
   final VitalsDailyCacheDao _cacheDao;
   final HealthDataSource _dataSource;

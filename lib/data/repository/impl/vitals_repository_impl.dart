@@ -21,6 +21,10 @@ import 'run_catching.dart';
 /// throwing flow so [loadVitalsPeriod] composes them as plain awaits.
 class VitalsRepositoryImpl implements VitalsRepository {
   VitalsRepositoryImpl(this._dataSource, {VitalsDailyCacheDao? cacheDao})
+      // A private field backing a public named parameter (`cacheDao:`, used by
+      // data_providers and tests) cannot be an initializing formal — that would
+      // rename the parameter `_cacheDao`.
+      // ignore: prefer_initializing_formals
       : _cacheDao = cacheDao;
 
   final HealthDataSource _dataSource;
