@@ -340,7 +340,10 @@ class VitalsRepositoryImpl implements VitalsRepository {
   ) =>
       runCatching(() async {
         await _requireWrite(request.type);
-        return _dataSource.writeVitalsMeasurementEntry(request);
+        final id = await _dataSource.writeVitalsMeasurementEntry(request);
+        await _patchCachedDays(
+            request.type, {LocalDate.fromDateTime(request.time)});
+        return id;
       });
 
   @override
@@ -357,7 +360,14 @@ class VitalsRepositoryImpl implements VitalsRepository {
   ) =>
       runCatching(() async {
         await _requireWrite(request.type);
-        return _dataSource.updateVitalsMeasurementEntry(id, request);
+        // Capture the pre-edit day before the update: an edit can move a reading
+        // across midnight, leaving the old day's cached mean stale otherwise.
+        final oldDay = await _dayOfEntry(request.type, id);
+        await _dataSource.updateVitalsMeasurementEntry(id, request);
+        await _patchCachedDays(request.type, {
+          LocalDate.fromDateTime(request.time),
+          ?oldDay,
+        });
       });
 
   @override
@@ -367,7 +377,10 @@ class VitalsRepositoryImpl implements VitalsRepository {
   ) =>
       runCatching(() async {
         await _requireWrite(type);
-        return _dataSource.deleteVitalsMeasurementEntry(type, id);
+        // Delete carries no timestamp, so capture the day before removing it.
+        final day = await _dayOfEntry(type, id);
+        await _dataSource.deleteVitalsMeasurementEntry(type, id);
+        await _patchCachedDays(type, {?day});
       });
 
   Future<void> _requireWrite(VitalsMeasurementType type) async {
@@ -378,6 +391,111 @@ class VitalsRepositoryImpl implements VitalsRepository {
         'Missing Health Connect write permission for ${type.storageName}.',
       );
     }
+  }
+
+  // ── Daily-cache write-through ──────────────────────────────────────────────
+  // After the app's own write/update/delete, refresh only the affected day(s) in
+  // the daily-aggregate cache so long-range charts reflect the edit immediately,
+  // instead of waiting for the next Changes-API drain when the overview reopens.
+  // This is layered on top of that drain, which stays the source of truth: it
+  // never touches the changes token, so the next incremental sync recomputes the
+  // same day identically (or full-rebuilds on a deletion, as it already does).
+
+  static VitalsPeriodMetric _cacheMetricFor(VitalsMeasurementType type) =>
+      switch (type) {
+        VitalsMeasurementType.bloodPressure => VitalsPeriodMetric.bloodPressure,
+        VitalsMeasurementType.spo2 => VitalsPeriodMetric.spo2,
+        VitalsMeasurementType.respiratoryRate =>
+          VitalsPeriodMetric.respiratoryRate,
+        VitalsMeasurementType.bodyTemperature =>
+          VitalsPeriodMetric.bodyTemperature,
+      };
+
+  /// The local day an existing entry sits on, or null when there is no cache to
+  /// patch (skips the extra read on the live/test path) or the entry is gone.
+  Future<LocalDate?> _dayOfEntry(VitalsMeasurementType type, String id) async {
+    if (_cacheDao == null) return null;
+    final entry = await _dataSource.readVitalsMeasurementEntry(type, id);
+    return entry == null ? null : LocalDate.fromDateTime(entry.time);
+  }
+
+  /// Best-effort: a failure here must never fail the write (a surfaced failure
+  /// could drive a retry and duplicate the record); the drain reconciles later.
+  Future<void> _patchCachedDays(
+    VitalsMeasurementType type,
+    Set<LocalDate> days,
+  ) async {
+    final dao = _cacheDao;
+    if (dao == null || days.isEmpty) return;
+    try {
+      final metric = _cacheMetricFor(type);
+      // Only patch a metric that has already been synced once — mirrors
+      // [_cachedDaily]; otherwise we'd seed partial rows the reader would trust.
+      if (await dao.cursor(metric.name) == null) return;
+      for (final day in days) {
+        await _recomputeCachedDay(dao, metric, type, day);
+      }
+    } catch (_) {
+      // Swallowed: the write already succeeded and the Changes-API drain will
+      // reconcile this day on the next overview open.
+    }
+  }
+
+  /// Re-read one day's aggregate from Health Connect and upsert it (or drop the
+  /// row when the day is now empty) — the single-day form of
+  /// [VitalsHistorySyncService]'s recompute, using the same sum mapping so cached
+  /// and drained rows are identical.
+  Future<void> _recomputeCachedDay(
+    VitalsDailyCacheDao dao,
+    VitalsPeriodMetric metric,
+    VitalsMeasurementType type,
+    LocalDate day,
+  ) async {
+    final epochDay = day.epochDay;
+    switch (type) {
+      case VitalsMeasurementType.bloodPressure:
+        final points = await _dataSource.readDailyBloodPressure(day, day);
+        if (points.isEmpty) {
+          await dao.deleteDay(metric.name, epochDay);
+          return;
+        }
+        final p = points.first;
+        await dao.upsertDay(
+          metric: metric.name,
+          epochDay: epochDay,
+          valueSum: p.systolic * p.count,
+          secondarySum: p.diastolic * p.count,
+          sampleCount: p.count,
+        );
+      case VitalsMeasurementType.spo2:
+        await _upsertSingleDay(
+            dao, metric, epochDay, await _dataSource.readDailySpO2(day, day));
+      case VitalsMeasurementType.respiratoryRate:
+        await _upsertSingleDay(dao, metric, epochDay,
+            await _dataSource.readDailyRespiratoryRate(day, day));
+      case VitalsMeasurementType.bodyTemperature:
+        await _upsertSingleDay(dao, metric, epochDay,
+            await _dataSource.readDailyBodyTemperature(day, day));
+    }
+  }
+
+  Future<void> _upsertSingleDay(
+    VitalsDailyCacheDao dao,
+    VitalsPeriodMetric metric,
+    int epochDay,
+    List<DailyVitalPoint> points,
+  ) async {
+    if (points.isEmpty) {
+      await dao.deleteDay(metric.name, epochDay);
+      return;
+    }
+    final p = points.first;
+    await dao.upsertDay(
+      metric: metric.name,
+      epochDay: epochDay,
+      valueSum: p.value * p.count,
+      sampleCount: p.count,
+    );
   }
 
   // ── Gated series reads ────────────────────────────────────────────────────

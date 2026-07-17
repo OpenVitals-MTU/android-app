@@ -142,6 +142,101 @@ PeriodLoadQuery _yearQuery() => PeriodLoadQuery(
       anchorDate: const LocalDate(2026, 7, 16),
     );
 
+/// A source for the write-through tests: it accepts writes/updates/deletes and
+/// serves programmable single-day daily aggregates keyed by [LocalDate.epochDay],
+/// so a test can say what Health Connect returns for a given day after the write.
+class _WriteThroughSource extends HealthDataSource {
+  /// Returned by [readVitalsMeasurementEntry] — the entry the repository looks up
+  /// to find the day of an update/delete.
+  VitalsMeasurementEntry? entry;
+
+  final Map<int, List<DailyVitalPoint>> singleByDay = {};
+  final Map<int, List<DailyBloodPressurePoint>> bpByDay = {};
+
+  /// When set, every daily read throws — models the recompute read failing.
+  bool dailyThrows = false;
+
+  int writes = 0;
+  int updates = 0;
+  int deletes = 0;
+
+  @override
+  HealthConnectAvailability get cachedAvailability =>
+      HealthConnectAvailability.available;
+
+  @override
+  bool isSkinTemperatureAvailable() => true;
+
+  @override
+  Future<Set<String>> grantedPermissions() async => {
+        HcPermissions.readBloodPressure,
+        HcPermissions.readSpO2,
+        HcPermissions.readRespiratoryRate,
+        HcPermissions.readBodyTemperature,
+        HcPermissions.writeBloodPressure,
+        HcPermissions.writeSpO2,
+        HcPermissions.writeRespiratoryRate,
+        HcPermissions.writeBodyTemperature,
+      };
+
+  @override
+  Future<String> writeVitalsMeasurementEntry(
+    VitalsMeasurementWriteRequest request,
+  ) async {
+    writes++;
+    return 'new-id';
+  }
+
+  @override
+  Future<void> updateVitalsMeasurementEntry(
+    String id,
+    VitalsMeasurementWriteRequest request,
+  ) async {
+    updates++;
+  }
+
+  @override
+  Future<void> deleteVitalsMeasurementEntry(
+    VitalsMeasurementType type,
+    String id,
+  ) async {
+    deletes++;
+  }
+
+  @override
+  Future<VitalsMeasurementEntry?> readVitalsMeasurementEntry(
+    VitalsMeasurementType type,
+    String id,
+  ) async =>
+      entry;
+
+  List<DailyVitalPoint> _single(LocalDate start) {
+    if (dailyThrows) throw StateError('daily read failed');
+    return singleByDay[start.epochDay] ?? const [];
+  }
+
+  @override
+  Future<List<DailyVitalPoint>> readDailySpO2(LocalDate s, LocalDate e) async =>
+      _single(s);
+
+  @override
+  Future<List<DailyVitalPoint>> readDailyRespiratoryRate(
+          LocalDate s, LocalDate e) async =>
+      _single(s);
+
+  @override
+  Future<List<DailyVitalPoint>> readDailyBodyTemperature(
+          LocalDate s, LocalDate e) async =>
+      _single(s);
+
+  @override
+  Future<List<DailyBloodPressurePoint>> readDailyBloodPressure(
+      LocalDate s, LocalDate e) async {
+    if (dailyThrows) throw StateError('daily read failed');
+    return bpByDay[s.epochDay] ?? const [];
+  }
+}
+
 void main() {
   group('VitalsRepositoryImpl.loadVitalsPeriod (ALL)', () {
     test('fans the seven vitals reads out concurrently, not serially', () async {
@@ -232,6 +327,202 @@ void main() {
           reason: 'the cache serves instantly, so nothing times out');
       expect(data.respiratoryRateDaily, hasLength(1));
       expect(data.respiratoryRateDaily.single.value, 12); // 36 / 3
+    });
+  });
+
+  group('VitalsRepositoryImpl daily-cache write-through', () {
+    const anchor = LocalDate(2026, 7, 16);
+
+    VitalsMeasurementWriteRequest req(
+      VitalsMeasurementType type,
+      LocalDate day, {
+      double value = 18,
+      double? secondary,
+    }) =>
+        VitalsMeasurementWriteRequest(
+          type: type,
+          time: DateTime(day.year, day.month, day.day, 8),
+          value: value,
+          secondaryValue: secondary,
+        );
+
+    VitalsMeasurementEntry entryOn(VitalsMeasurementType type, LocalDate day) =>
+        VitalsMeasurementEntry(
+          id: 'e1',
+          type: type,
+          time: DateTime(day.year, day.month, day.day, 8),
+          value: 18,
+          source: 'tech.mmarca.openvitals',
+          isOpenVitalsEntry: true,
+        );
+
+    (OpenVitalsDatabase, VitalsDailyCacheDao) buildDb() {
+      final db = OpenVitalsDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      return (db, db.vitalsDailyCacheDao);
+    }
+
+    test('a write refreshes the affected day in the cache', () async {
+      final (_, dao) = buildDb();
+      await dao.writeFullSync('respiratoryRate', 'tok', 0);
+      final source = _WriteThroughSource()
+        ..singleByDay[anchor.epochDay] = [
+          DailyVitalPoint(date: anchor, value: 12, count: 3),
+        ];
+
+      final result = await VitalsRepositoryImpl(source, cacheDao: dao)
+          .writeVitalsMeasurementEntry(
+              req(VitalsMeasurementType.respiratoryRate, anchor));
+
+      expect(result, isA<Ok<String>>());
+      final rows = await dao.aggregatesBetween(
+          'respiratoryRate', anchor.epochDay, anchor.epochDay);
+      expect(rows, hasLength(1));
+      expect(rows.single.valueSum, 36); // 12 mean × 3 readings
+      expect(rows.single.sampleCount, 3);
+    });
+
+    test('a delete that empties the day removes its cached row', () async {
+      final (_, dao) = buildDb();
+      await dao.writeFullSync('respiratoryRate', 'tok', 0);
+      await dao.upsertDay(
+          metric: 'respiratoryRate',
+          epochDay: anchor.epochDay,
+          valueSum: 36,
+          sampleCount: 3);
+      final source = _WriteThroughSource()
+        ..entry = entryOn(VitalsMeasurementType.respiratoryRate, anchor)
+        ..singleByDay[anchor.epochDay] = const []; // empty once removed
+
+      final result = await VitalsRepositoryImpl(source, cacheDao: dao)
+          .deleteVitalsMeasurementEntry(
+              VitalsMeasurementType.respiratoryRate, 'e1');
+
+      expect(result, isA<Ok<void>>());
+      expect(source.deletes, 1);
+      final rows = await dao.aggregatesBetween(
+          'respiratoryRate', anchor.epochDay, anchor.epochDay);
+      expect(rows, isEmpty);
+    });
+
+    test('a delete leaving other readings recomputes the day', () async {
+      final (_, dao) = buildDb();
+      await dao.writeFullSync('respiratoryRate', 'tok', 0);
+      await dao.upsertDay(
+          metric: 'respiratoryRate',
+          epochDay: anchor.epochDay,
+          valueSum: 100,
+          sampleCount: 5);
+      final source = _WriteThroughSource()
+        ..entry = entryOn(VitalsMeasurementType.respiratoryRate, anchor)
+        ..singleByDay[anchor.epochDay] = [
+          DailyVitalPoint(date: anchor, value: 10, count: 1),
+        ];
+
+      await VitalsRepositoryImpl(source, cacheDao: dao)
+          .deleteVitalsMeasurementEntry(
+              VitalsMeasurementType.respiratoryRate, 'e1');
+
+      final rows = await dao.aggregatesBetween(
+          'respiratoryRate', anchor.epochDay, anchor.epochDay);
+      expect(rows.single.valueSum, 10);
+      expect(rows.single.sampleCount, 1);
+    });
+
+    test('an edit across midnight recomputes both the old and new day',
+        () async {
+      final (_, dao) = buildDb();
+      await dao.writeFullSync('respiratoryRate', 'tok', 0);
+      final oldDay = anchor.plusDays(-1);
+      // A stale cached mean on the old day the reading is moving away from.
+      await dao.upsertDay(
+          metric: 'respiratoryRate',
+          epochDay: oldDay.epochDay,
+          valueSum: 999,
+          sampleCount: 1);
+      final source = _WriteThroughSource()
+        ..entry = entryOn(VitalsMeasurementType.respiratoryRate, oldDay)
+        ..singleByDay[oldDay.epochDay] = const [] // old day now empty
+        ..singleByDay[anchor.epochDay] = [
+          DailyVitalPoint(date: anchor, value: 12, count: 2),
+        ];
+
+      final result = await VitalsRepositoryImpl(source, cacheDao: dao)
+          .updateVitalsMeasurementEntry(
+              'e1', req(VitalsMeasurementType.respiratoryRate, anchor));
+
+      expect(result, isA<Ok<void>>());
+      final oldRows = await dao.aggregatesBetween(
+          'respiratoryRate', oldDay.epochDay, oldDay.epochDay);
+      expect(oldRows, isEmpty, reason: 'the vacated old day is recomputed away');
+      final newRows = await dao.aggregatesBetween(
+          'respiratoryRate', anchor.epochDay, anchor.epochDay);
+      expect(newRows.single.valueSum, 24); // 12 × 2
+    });
+
+    test('a blood-pressure write carries diastolic into secondarySum', () async {
+      final (_, dao) = buildDb();
+      await dao.writeFullSync('bloodPressure', 'tok', 0);
+      final source = _WriteThroughSource()
+        ..bpByDay[anchor.epochDay] = [
+          DailyBloodPressurePoint(
+              date: anchor, systolic: 120, diastolic: 80, count: 2),
+        ];
+
+      await VitalsRepositoryImpl(source, cacheDao: dao)
+          .writeVitalsMeasurementEntry(req(
+              VitalsMeasurementType.bloodPressure, anchor,
+              value: 120, secondary: 80));
+
+      final rows = await dao.aggregatesBetween(
+          'bloodPressure', anchor.epochDay, anchor.epochDay);
+      expect(rows.single.valueSum, 240); // 120 × 2
+      expect(rows.single.secondarySum, 160); // 80 × 2
+      expect(rows.single.sampleCount, 2);
+    });
+
+    test('a write is not cached until the metric has had its first sync',
+        () async {
+      final (_, dao) = buildDb();
+      // No writeFullSync ⇒ no cursor.
+      final source = _WriteThroughSource()
+        ..singleByDay[anchor.epochDay] = [
+          DailyVitalPoint(date: anchor, value: 12, count: 3),
+        ];
+
+      final result = await VitalsRepositoryImpl(source, cacheDao: dao)
+          .writeVitalsMeasurementEntry(
+              req(VitalsMeasurementType.respiratoryRate, anchor));
+
+      expect(result, isA<Ok<String>>());
+      final rows = await dao.aggregatesBetween(
+          'respiratoryRate', anchor.epochDay, anchor.epochDay);
+      expect(rows, isEmpty, reason: 'partial rows would be trusted by the reader');
+    });
+
+    test('with no cache wired, a write still succeeds', () async {
+      final source = _WriteThroughSource();
+      final result = await VitalsRepositoryImpl(source)
+          .writeVitalsMeasurementEntry(
+              req(VitalsMeasurementType.respiratoryRate, anchor));
+      expect(result, isA<Ok<String>>());
+      expect(source.writes, 1);
+    });
+
+    test('a cache-patch failure never fails the write', () async {
+      final (_, dao) = buildDb();
+      await dao.writeFullSync('respiratoryRate', 'tok', 0);
+      final source = _WriteThroughSource()..dailyThrows = true;
+
+      final result = await VitalsRepositoryImpl(source, cacheDao: dao)
+          .writeVitalsMeasurementEntry(
+              req(VitalsMeasurementType.respiratoryRate, anchor));
+
+      expect(result, isA<Ok<String>>(),
+          reason: 'the write succeeded; the drain will reconcile the cache');
+      final rows = await dao.aggregatesBetween(
+          'respiratoryRate', anchor.epochDay, anchor.epochDay);
+      expect(rows, isEmpty);
     });
   });
 }
