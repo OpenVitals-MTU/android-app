@@ -89,7 +89,7 @@ abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
   Future<List<String>> aggregateGroupByDurationJson(List<String> aggregateMetrics, int startEpochMs, int endEpochMs, int bucketMinutes) => unimplemented('aggregateGroupByDurationJson');
 
   @override
-  Future<List<String>> filterExistingClientIds(String recordType, List<String> clientRecordIds) => unimplemented('filterExistingClientIds');
+  Future<List<String>> filterExistingClientIds(String recordType, int startEpochMs, int endEpochMs, List<String> clientRecordIds) => unimplemented('filterExistingClientIds');
 
   @override
   Future<List<WeightEntryMsg>> readWeightEntries(int startEpochMs, int endEpochMs) => unimplemented('readWeightEntries');

@@ -44,7 +44,13 @@ class FakeHostApi extends HealthConnectHostApi {
   final List<({int startEpochMs, int endEpochMs})> durationQueries = [];
   List<String> existingClientIds = const [];
 
-  final List<({String type, List<String> ids})> filterQueries = [];
+  final List<
+      ({
+        String type,
+        int startEpochMs,
+        int endEpochMs,
+        List<String> ids
+      })> filterQueries = [];
 
   @override
   Future<int> getSdkStatus() async => sdkStatus;
@@ -134,9 +140,16 @@ class FakeHostApi extends HealthConnectHostApi {
   @override
   Future<List<String>> filterExistingClientIds(
     String recordType,
+    int startEpochMs,
+    int endEpochMs,
     List<String> clientRecordIds,
   ) async {
-    filterQueries.add((type: recordType, ids: clientRecordIds));
+    filterQueries.add((
+      type: recordType,
+      startEpochMs: startEpochMs,
+      endEpochMs: endEpochMs,
+      ids: clientRecordIds,
+    ));
     return existingClientIds;
   }
 
@@ -1148,6 +1161,12 @@ void main() {
       expect(matched, {'apple_health_a'});
       // SleepSessionRecord maps to the schema record type "Sleep".
       expect(api.filterQueries.single.type, 'Sleep');
+      // The batch window is forwarded so the native read stays bounded instead
+      // of scanning the whole history (the O(n²) import regression).
+      expect(api.filterQueries.single.startEpochMs,
+          DateTime.utc(2026, 1, 1).millisecondsSinceEpoch);
+      expect(api.filterQueries.single.endEpochMs,
+          DateTime.utc(2026, 1, 3).millisecondsSinceEpoch);
     });
   });
 
