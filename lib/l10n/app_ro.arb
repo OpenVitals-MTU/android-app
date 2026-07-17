@@ -1,0 +1,643 @@
+{
+    "appName": "OpenVitals",
+    "cdBack": "Înapoi",
+    "cdSettings": "Setări",
+    "cdAchievements": "Realizări",
+    "cdDailyReadiness": "Pregătire zilnică",
+    "cdSensorBatteryStatus": "Starea bateriei senzorului",
+    "cdEditDashboard": "Editează rezumatul",
+    "cdFinishDashboardEditing": "Finalizează editarea rezumatului",
+    "cdEditSavedDrinks": "Editează băuturile salvate",
+    "cdDoneEditingSavedDrinks": "Finalizare editare băuturi salvate",
+    "cdEditDrink": "Editează băutura",
+    "cdDeleteDrink": "Șterge băutura",
+    "cdMoveDrinkCategory": "Mută categoria băuturi",
+    "cdExpandDrinkCategory": "Extinde {arg0}",
+    "@cdExpandDrinkCategory": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "cdCollapseDrinkCategory": "Restrânge {arg0}",
+    "@cdCollapseDrinkCategory": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "cdEditManualEntryWidgets": "Editează widget-urile de adăugare a intrărilor",
+    "cdFinishManualEntryEditing": "Finalizează editarea widget-urilor pentru introducere",
+    "cdEditRecordingDashboard": "Editează tabloul de bord pentru înregistrare",
+    "cdFinishRecordingDashboardEditing": "Finalizează editarea tabloului de bord pentru înregistrare",
+    "cdMoveWidgetUp": "Mută widget-ul în sus",
+    "cdMoveWidgetDown": "Mută widget-ul în jos",
+    "cdEditMetricSections": "Editează secțiunile de valori",
+    "cdFinishMetricSectionEditing": "Finalizează editarea secțiunilor de valori",
+    "cdMoveSectionUp": "Mută secțiunea în sus",
+    "cdMoveSectionDown": "Mută secțiunea în jos",
+    "cdRemoveWidget": "Elimină widget-ul",
+    "cdDecreaseRecordingDashboardWidgetSize": "Fă widget-ul mai mic",
+    "cdIncreaseRecordingDashboardWidgetSize": "Fă widget-ul mai mare",
+    "cdExitRecordingFocusMode": "Ieși din modul de focalizare",
+    "cdToggleRecordingOutdoorMode": "Comută modul de citire în exterior",
+    "cdRecenterMap": "Recentrează harta",
+    "cdDeleteEntry": "Șterge înregistrarea",
+    "cdEditEntry": "Editează înregistrarea",
+    "cdPreviousDay": "Ziua anterioară",
+    "cdNextDay": "Ziua următoare",
+    "cdPreviousPeriod": "Perioada anterioară",
+    "cdNextPeriod": "Perioada următoare",
+    "cdOpenCalendar": "Deschide calendarul",
+    "actionCancel": "Renunță",
+    "actionAdd": "Adaugă",
+    "actionAddCustom": "Adaugă personalizat",
+    "actionSave": "Salvează",
+    "actionClose": "închide",
+    "actionContinue": "Continuă",
+    "actionDelete": "Şterge",
+    "actionDetails": "Detalii",
+    "actionEdit": "Editează",
+    "actionEnable": "Activează",
+    "actionGetStarted": "Începe",
+    "actionGrant": "Acordă",
+    "actionGrantPermission": "Acordă permisiunea",
+    "actionLoadMoreEntries": "Încarcă încă 10",
+    "actionShowCalculation": "Arată calculul",
+    "actionHideCalculation": "Ascunde calculul",
+    "actionNotNow": "Nu acum",
+    "actionAccept": "Accept",
+    "actionOpen": "Deschide",
+    "actionPause": "Întrerupe",
+    "actionReview": "Recenzie",
+    "actionResume": "Reia",
+    "actionRefresh": "Actualizează",
+    "actionSelect": "Selectează",
+    "actionStart": "Pornește",
+    "actionFinish": "Finalizează",
+    "actionDiscard": "Renunță",
+    "unknownError": "Eroare necunoscută",
+    "screenErrorNotFound": "Articolul solicitat nu a fost găsit.",
+    "screenErrorMissingArgument": "Lipsesc informațiile necesare.",
+    "screenErrorPermissionDenied": "Este necesară permisiunea pentru a încărca aceste date.",
+    "screenErrorHealthConnectUnavailable": "Health Connect nu este disponibil pe acest dispozitiv.",
+    "screenErrorLoadSleepSession": "Nu se poate încărca sesiunea de somn.",
+    "screenErrorLoadSleepPeriod": "Nu se pot încărca datele despre somn.",
+    "notAvailable": "Indisponibil",
+    "notRecorded": "Neînregistrat",
+    "noData": "Fără date",
+    "loading": "Se încarcă...",
+    "homeMetricWidgetDescription": "Valori OpenVitals",
+    "homeMetricWidgetConfigTitle": "Alege metrica",
+    "homeMetricWidgetConfigPrompt": "Alege valoarea pentru widget:",
+    "homeMetricWidgetNoMetrics": "Nu există valori disponibile.",
+    "homeMetricWidgetPermissionNeeded": "Acordă permisiunea în OpenVitals",
+    "homeMetricWidgetUpdateFailed": "Nu se poate actualiza",
+    "homeMetricWidgetOpenForDetails": "Deschide pentru detalii",
+    "homeMetricWidgetNotConfigured": "Selectează o valoare",
+    "homeQuickBeverageWidgetDescription": "Băutură rapidă",
+    "homeQuickBeverageOneTapWidgetDescription": "Băutură rapidă 1x1",
+    "homeQuickBeverageWidgetConfigTitle": "Alege băutura",
+    "homeQuickBeverageWidgetConfigPrompt": "Alege băutura pentru widget:",
+    "homeQuickBeverageWidgetNoDrinks": "Nu există băuturi disponibile.",
+    "homeQuickBeverageWidgetNotConfigured": "Selectează o băutură",
+    "homeQuickBeverageWidgetTapToLog": "Atinge pentru a înregistra",
+    "homeQuickBeverageWidgetSaved": "Salvat acum",
+    "homeQuickBeverageWidgetSavedNutrition": "Salvat ca nutriție",
+    "homeDailyReadinessWidgetDescription": "OpenVitals pregătirea zilnică",
+    "homeBodyEnergyWidgetDescription": "Energia corpului OpenVitals",
+    "homeTodayVitalsWidgetDescription": "OpenVitals date vitale astăzi",
+    "homeWidgetTodayTitle": "Azi",
+    "homeWidgetContext": "Context",
+    "homeWidgetHrvShort": "HRV",
+    "homeWidgetBodyEnergyCharged": "Încărcat",
+    "homeWidgetBodyEnergySteady": "Stabil",
+    "homeWidgetBodyEnergyLimited": "Limitat",
+    "homeWidgetBodyEnergyLow": "Scăzut",
+    "screenSteps": "Pași",
+    "screenActivities": "Activități",
+    "screenCalories": "Calorii",
+    "screenActivityDetail": "Detalii activitate",
+    "screenSleep": "Somn",
+    "screenSleepDetail": "Detalii somn",
+    "screenHeartVitals": "Inimă și date vitale",
+    "screenStressTracking": "Urmărirea stresului",
+    "screenBodyEnergy": "Energia corpului",
+    "screenTrainingReadiness": "Pregătirea pentru antrenament",
+    "screenBody": "Corp",
+    "screenHydration": "Băuturi",
+    "screenNutrition": "Nutriţie",
+    "screenMindfulness": "Atenție susținută",
+    "screenCycle": "Ciclu",
+    "screenDailyReadiness": "Pregătirea zilnică",
+    "screenSettings": "Configurări",
+    "screenAchievements": "Realizări",
+    "screenManualEntry": "Adaugă înscriere",
+    "screenHydrationEntry": "Înscriere băutură",
+    "screenActivityEntry": "Înscriere activitate",
+    "screenMindfulnessEntry": "Înscriere Atenție susținută",
+    "screenCarbsEntry": "Înscriere carbohidrați",
+    "screenBodyMeasurementEntry": "Înscriere pentru măsurarea corpului",
+    "screenVitalsMeasurementEntry": "Înscriere date vitale",
+    "bottomNavDashboard": "Rezumat",
+    "manualEntryHydrationTitle": "Băuturi",
+    "manualEntryActivityTitle": "Activitate",
+    "manualEntryDateLabel": "Data înscrierii",
+    "manualEntryTimeLabel": "Ora înscrierii",
+    "manualEntrySelectTime": "Selectează ora înscrierii",
+    "manualEntryAddWidgets": "Adaugă widget-uri de înscriere",
+    "manualEntryAllWidgetsAdded": "Toate widget-urile de introducere sunt deja afișate.",
+    "manualEntryWritePermissionTitle": "Permisiune de scriere pentru băuturi",
+    "manualEntryActivityWritePermissionTitle": "Permisiuni de scriere a activității",
+    "manualEntryMindfulnessWritePermissionTitle": "Permisiune de scriere Atenție susținută",
+    "manualEntryCarbsWritePermissionTitle": "Permisiune de scriere pentru carbohidrați",
+    "manualEntryBodyWritePermissionTitle": "Permisiunea de scriere pentru {arg0}",
+    "@manualEntryBodyWritePermissionTitle": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "manualEntryVitalsWritePermissionTitle": "Permisiunea de scriere pentru {arg0}",
+    "@manualEntryVitalsWritePermissionTitle": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "mindfulnessEntrySubtitle": "Sesiunile de Atenție susținută sunt salvate direct în Health Connect.",
+    "mindfulnessEntryPermissionNeeded": "Pentru rezumat, OpenVitals cere doar permisiuni de vizualizare. Pentru a adăuga înscrieri de Atenție susținută, avem nevoie de permisiunea de scriere. OpenVitals nu va stoca aceste sesiuni; înregistrările sunt salvate în Health Connect.",
+    "activityRecordingWithoutGpsTitle": "Înregistrează fără GPS",
+    "@activityRecordingWithoutGpsTitle": {
+        "description": "Switch: record a running/cycling activity with no route, no location permission and no waiting for a fix."
+    },
+    "activityRecordingWithoutGpsBody": "Nu se folosește nicio locație și nu se solicită niciuna.",
+    "@activityRecordingWithoutGpsBody": {
+        "description": "Subtitle of the record-without-GPS switch."
+    },
+    "activityRecordingWithoutGpsWarningTitle": "Ce nu va avea această activitate",
+    "@activityRecordingWithoutGpsWarningTitle": {
+        "description": "Heading of the warning shown once the user switches GPS off for a recording."
+    },
+    "activityRecordingWithoutGpsWarningBody": "Fără hartă, fără distanță automată, fără ritm sau viteză și fără divizări. Toate acestea sunt generate din poziția ta și nu va exista una.",
+    "@activityRecordingWithoutGpsWarningBody": {
+        "description": "Plainly states what a GPS-less recording loses. Everything listed is derived from location; things that are not (elevation, steps, heart rate) are still recorded."
+    },
+    "activityRecordingWithoutGpsWarningKept": "Durata, ritmul cardiac și creșterea în altitudine sunt încă înregistrate și poți introduce distanța atunci când salvezi.",
+    "@activityRecordingWithoutGpsWarningKept": {
+        "description": "What a GPS-less recording DOES still capture. Elevation comes from the barometer, which needs no position."
+    },
+    "activityRecordingWithoutGpsWarningKeptSteps": "Durata, ritmul cardiac, creșterea în altitudine și numărul de pași sunt încă înregistrate și poți introduce distanța atunci când salvezi.",
+    "@activityRecordingWithoutGpsWarningKeptSteps": {
+        "description": "As above, for an activity type that counts steps: the step detector needs no position either."
+    },
+    "caffeineEntriesTitle": "Băuturi",
+    "@caffeineEntriesTitle": {
+        "description": "Section listing the caffeinated drinks logged."
+    },
+    "caffeineEntriesEmpty": "Nu au fost înregistrate băuturi cu cofeină pentru această zi.",
+    "@caffeineEntriesEmpty": {
+        "description": "Empty state for the drinks list."
+    },
+    "caffeineDrinkTitle": "Băutură",
+    "@caffeineDrinkTitle": {
+        "description": "Title of the per-drink detail screen."
+    },
+    "caffeineDrinkPeak": "Vârf",
+    "@caffeineDrinkPeak": {
+        "description": "The most of this drink that was in the body at once."
+    },
+    "caffeineDrinkNow": "Acum",
+    "@caffeineDrinkNow": {
+        "description": "How much of this drink is still in the body."
+    },
+    "caffeineDrinkHalfGone": "Pe jumătate ieșit",
+    "@caffeineDrinkHalfGone": {
+        "description": "When half of this drink's peak has been eliminated."
+    },
+    "caffeineDrinkGone": "Dispărut efectiv",
+    "@caffeineDrinkGone": {
+        "description": "When what remains of this drink stops mattering."
+    },
+    "caffeineDrinkStillGoing": "Încă merge după {hours}h",
+    "@caffeineDrinkStillGoing": {
+        "description": "Shown when the drink has not faded within the horizon.",
+        "placeholders": {
+            "hours": {
+                "type": "String",
+                "example": "36"
+            }
+        }
+    },
+    "caffeineDrinkCurveTitle": "Această băutură singură",
+    "@caffeineDrinkCurveTitle": {
+        "description": "Chart of one drink's rise and decline, separate from the day's total."
+    },
+    "caffeineDrinkPeakExplainer": "Vârful este mai mic decât cantitatea pe care ai băut-o: corpul tău începe să elimine cofeina înainte de a o termina de absorbit.",
+    "@caffeineDrinkPeakExplainer": {
+        "description": "Explains why peak < dose, which otherwise looks like a bug."
+    },
+    "activityEntrySubtitle": "Creează o sesiune de activitate Health Connect. Detaliile de traseu sau activitate importate sunt scrise numai atunci când salvezi.",
+    "activityEntryPermissionNeeded": "Pentru rezumat, OpenVitals cere doar permisiuni de vizualizare. Pentru a adăuga activități, avem nevoie de permisiuni de scriere Health Connect pentru sesiuni, trasee, distanță, altitudine, calorii și valori înregistrate de senzori, cum ar fi ritmul cardiac; intrările pe banda de alergare solicită pași atunci când este necesar. OpenVitals nu va stoca aceste intrări; sunt salvate în Health Connect.",
+    "activityEntrySourceBody": "Creează o activitate manual, utilizează un plan existent sau înregistrează o rută GPS.",
+    "activityEntryCreateManual": "Creează manual",
+    "activityEntryCreateFromExistingPlan": "Creează din planul existent",
+    "activityEntryRecordGps": "Înregistrează activitatea",
+    "activityEntryChooseAnotherSource": "Alege o altă metodă",
+    "activityEntryTypeLabel": "Tipul activității",
+    "activityEntryTitleLabel": "Titlu",
+    "activityEntryStartDateLabel": "Dată de început",
+    "activityEntryStartTimeLabel": "Ora de început",
+    "activityEntrySelectTime": "Selectează ora de începere",
+    "activityEntryDurationLabel": "Durata min",
+    "activityEntryRepetitionsTitle": "Repetiții",
+    "activityEntryStepsTitle": "Pași",
+    "activityEntryRepetitionModeTotal": "Total",
+    "activityEntryRepetitionModeSets": "Seturi",
+    "activityEntryRepetitionsLabel": "Repetări",
+    "activityEntryStepsLabel": "Pași",
+    "activityEntrySetRepetitionsLabel": "Setează {arg0} repetări",
+    "@activityEntrySetRepetitionsLabel": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntrySetRestLabel": "Timp de odihnă",
+    "activityEntryAddSet": "Adaugă set",
+    "activityEntryTrainingPlansTitle": "Planuri de antrenament",
+    "activityEntryTrainingPlansLoading": "Se încarcă planurile Health Connect",
+    "activityEntryTrainingPlansEmpty": "Nu există planuri Health Connect pentru această dată și tip de activitate",
+    "activityEntryTrainingPlanLabel": "Plan de antrenament",
+    "activityEntryTrainingPlanSelect": "Selectează un plan",
+    "activityEntryTrainingPlanNew": "Plan nou",
+    "activityEntryTrainingPlanUnnamed": "Plan fără nume",
+    "activityEntrySaveTrainingPlan": "Salvează planul",
+    "activityEntryUpdateTrainingPlan": "Actualizează planul",
+    "activityEntryPlanActivityPickerTitle": "Activități cu planuri",
+    "activityEntryPlanActivityPickerEmpty": "Nu s-au găsit planuri Health Connect",
+    "activityEntryPlanPickerTitle": "Alege un plan",
+    "activityEntryPlanPickerEmpty": "Nu s-au găsit planuri pentru această activitate",
+    "activityEntryPlanChooseActivity": "Alege o altă activitate",
+    "activityEntryPlanOneSetSummary": "1 set • {arg0} repetări",
+    "@activityEntryPlanOneSetSummary": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryPlanSummary": "{arg0} seturi • {arg1} repetări",
+    "@activityEntryPlanSummary": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryPlanPreviewReps": "{arg0} repetări",
+    "@activityEntryPlanPreviewReps": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryPlanPreviewRest": "odihnă {arg0} sec",
+    "@activityEntryPlanPreviewRest": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryPlanPreviewMore": "+{arg0} mai mult",
+    "@activityEntryPlanPreviewMore": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryDistanceLabel": "Distanță {arg0}",
+    "@activityEntryDistanceLabel": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityEntryElevationLabel": "Urcare {arg0}",
+    "@activityEntryElevationLabel": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityEntryNotesLabel": "Note",
+    "activityEntryFeelingLabel": "Cum s-a simțit?",
+    "activityEntryFeelingGreat": "Minunat",
+    "activityEntryFeelingGood": "Bun",
+    "activityEntryFeelingHard": "Dificil",
+    "activityEntryFeelingRough": "Neplăcut",
+    "activityEntryImportedRoute": "Rută importată",
+    "activityEntryRecordingTitle": "Înregistrare activitate",
+    "activityEntryRecordingReadyBody": "Alege tipul de activitate, apoi începe când ești gata. După finalizare, poți examina și adăuga detalii înainte de a salva.",
+    "activityEntryRecordingGoToActivityScreen": "Accesează ecranul de activitate",
+    "activityEntryRecordingActive": "Înregistrare",
+    "activityEntryRecordingPaused": "Întrerupt",
+    "activityEntryRecordingIdle": "Inactiv",
+    "activityEntryRecordingResting": "Odihnă",
+    "activityEntryRecordingGpsFix": "GPS pregătit",
+    "activityEntryRecordingGpsPoor": "GPS slab",
+    "activityEntryRecordingGpsLost": "GPS pierdut",
+    "activityEntryRecordingGpsOff": "GPS oprit",
+    "activityEntryRecordingTabMap": "Hartă",
+    "activityEntryRecordingTabStats": "Statistici",
+    "activityEntryRecordingTabIntervals": "Intervale",
+    "activityEntryRecordingTabByTime": "După timp",
+    "activityEntryRecordingTabByDistance": "După distanță",
+    "activityEntryRecordingTimeSplit": "Timp împărțit",
+    "activityEntryRecordingDistanceSplit": "Distanță împărțită",
+    "activityEntryRecordingSplitMinutes": "{arg0} min",
+    "@activityEntryRecordingSplitMinutes": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryRecordingSplitInterval": "Interval {arg0}",
+    "@activityEntryRecordingSplitInterval": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryRecordingSplitTimeRange": "{arg0}-{arg1} min",
+    "@activityEntryRecordingSplitTimeRange": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryRecordingSplitElapsed": "S-a scurs",
+    "activityEntryRecordingSplitAvg": "Mediu",
+    "activityEntryRecordingSplitMax": "Maxim",
+    "activityEntryRecordingNoIntervals": "Încă nu există intervale",
+    "activityEntryRecordingLap": "Tur",
+    "activityEntryRecordingMarkersTitle": "Marcatori",
+    "activityEntryRecordingMarkerName": "Nume",
+    "activityEntryRecordingMarkerNote": "Notă",
+    "activityEntryRecordingWaitingForGps": "În așteptarea unei poziționări GPS precisă",
+    "activityEntryRecordingGpsReady": "GPS pregătit • precizie {arg0}",
+    "@activityEntryRecordingGpsReady": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityEntryRecordingGpsDisabled": "Pornește GPS-ul pentru a începe înregistrarea.",
+    "activityEntryRecordingDistance": "Distanță",
+    "activityEntryRecordingTotalTime": "Durata totală",
+    "activityEntryRecordingMovingTime": "Timp în mișcare",
+    "activityEntryRecordingRestTime": "Timp de odihnă",
+    "activityEntryRecordingSpeed": "Viteză",
+    "activityEntryRecordingMaxSpeed": "Viteza maximă",
+    "activityEntryRecordingAverageSpeed": "Viteza medie",
+    "activityEntryRecordingAverageMovingSpeed": "Viteza medie de mișcare",
+    "activityEntryRecordingElevationGain": "Cățărare",
+    "activityEntryRecordingPoints": "Puncte",
+    "activityEntryRecordingRestSecondsLabel": "Secunde de odihnă",
+    "activityEntryRecordingRestRemaining": "Odihnă {arg0}",
+    "@activityEntryRecordingRestRemaining": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityEntryRecordingFocus": "Focalizare",
+    "activityEntryRecordingDashboardLayoutTwoByFour": "2x4",
+    "activityEntryRecordingDashboardLayoutThreeByFour": "3x4",
+    "activityEntryRouteSummary": "{arg0} • {arg1} • {arg2} câștig • {arg3} puncte",
+    "@activityEntryRouteSummary": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            },
+            "arg1": {
+                "type": "String"
+            },
+            "arg2": {
+                "type": "String"
+            },
+            "arg3": {
+                "type": "int"
+            }
+        }
+    },
+    "activityEntryAdd": "Salvează activitatea",
+    "activityEntryInvalidValue": "Remediază câmpurile evidențiate înainte de a salva activitatea.",
+    "activityEntryErrorActivityTypeRoute": "Alege un tip de activitate care acceptă rutele GPS.",
+    "activityEntryErrorTrainingPlanTitleRequired": "Introdu un titlu pentru a salva acest plan de antrenament.",
+    "activityEntryErrorStartDate": "Alege o dată de începere validă.",
+    "activityEntryErrorStartTime": "Alege o oră de începere validă.",
+    "activityEntryErrorStartTimeAfterRoute": "Ora de începere trebuie să fie la sau înainte de începerea rutei importate.",
+    "activityEntryErrorDuration": "Durata trebuie să fie între 1 minut și 7 zile.",
+    "activityEntryNotificationPermissionNeeded": "Este necesară permisiunea de notificare, astfel încât OpenVitals să poată afișa o notificare de înregistrare în curs.",
+    "activityEntryActivityRecognitionPermissionNeeded": "Este necesară permisiunea de recunoaștere a activității pentru a număra pașii pe banda de alergare.",
+    "activityDetailTabMarkers": "Marcatori",
+    "activityRecordingVoiceIdle": "Inactiv.",
+    "activityRecordingNotificationTitle": "Înregistrare activitate",
+    "activityRecordingSensorReady": "Senzor pregătit",
+    "activityRecordingActivityRecognitionMissing": "Acordă recunoașterea activității pentru a număra pașii pe banda de alergare.",
+    "exerciseTypeRunning": "Alergare",
+    "exerciseTypeBiking": "Ciclism",
+    "exerciseTypeWalking": "Mers",
+    "exerciseTypeHiking": "Drumeție",
+    "exerciseTypeWheelchair": "Scaun cu rotile",
+    "exerciseTypeRowing": "Canotaj",
+    "exerciseTypeSkiing": "Schi",
+    "exerciseTypeSnowboarding": "Snowboard",
+    "exerciseTypeSnowshoeing": "Mers cu rachete de zăpadă",
+    "exerciseTypeSkating": "Patinaj",
+    "exerciseTypeGolf": "Golf",
+    "exerciseTypeStrengthTraining": "Antrenament de forță",
+    "exerciseTypeTreadmill": "Bandă de alergare",
+    "mindfulnessEntryTimerTitle": "Temporizator",
+    "mindfulnessEntryManualTitle": "Introducere manuală",
+    "mindfulnessEntryIntervalMinutes": "Interval (min)",
+    "mindfulnessBackgroundNone": "Nimic",
+    "mindfulnessBackgroundMeditation": "Meditație",
+    "mindfulnessEntryResumeTimer": "Reia",
+    "mindfulnessEntryDiscardTimer": "Renunţă",
+    "mindfulnessEntryMinutes": "Minute",
+    "mindfulnessRemindersSummaryOn": "Zilnic la {arg0}",
+    "@mindfulnessRemindersSummaryOn": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "vitalsEntryAddSelected": "Adaugă {arg0}",
+    "@vitalsEntryAddSelected": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "rangeDay": "Zi",
+    "rangeWeek": "Săptămână",
+    "rangeMonth": "Lună",
+    "rangeYear": "An",
+    "periodToday": "Astăzi",
+    "periodYesterday": "Ieri",
+    "periodThisWeek": "Săptămâna aceasta",
+    "periodThisMonth": "Luna aceasta",
+    "periodThisYear": "Anul acesta",
+    "periodLast7Days": "Ultimele 7 zile",
+    "periodLast30Days": "Ultimele 30 de zile",
+    "periodLast365Days": "Ultimele 365 de zile",
+    "periodSelected": "Perioada selectată",
+    "metricSteps": "Pași",
+    "metricDistance": "Distanţa",
+    "metricAveragePace": "Ritm mediu",
+    "metricAverageSpeed": "Viteza medie",
+    "metricCaloriesBurned": "Total calorii arse",
+    "metricCaloriesOut": "Total calorii",
+    "metricCaloriesIn": "Calorii în",
+    "metricActiveCalories": "Calorii active",
+    "metricElevation": "Altitudine",
+    "metricElevationGained": "Altitudine atinsă",
+    "metricWorkout": "Antrenament",
+    "metricSleep": "Somn",
+    "metricHydration": "Băuturi",
+    "metricLoggedDays": "Zile înregistrate",
+    "metricLatestWeight": "Ultima greutate",
+    "metricBodyFat": "Grăsime corporală",
+    "metricAvgHeartRate": "Puls mediu",
+    "metricRestingHeartRate": "Puls în repaus",
+    "metricEnergyBurned": "Total calorii",
+    "metricBloodPressure": "Tensiunea arterială",
+    "metricMindfulness": "Atenție susținută",
+    "metricCycle": "Ciclu",
+    "metricCycleTracking": "Urmărirea ciclului",
+    "metricPeriodDays": "Zilele perioadei",
+    "metricOvulationTests": "Testele de ovulație",
+    "metricWeight": "Greutate",
+    "metricHeight": "Înălţime",
+    "metricBoneMass": "Masă osoasă",
+    "metricLatest": "Ultimul",
+    "metricChange": "Schimbă",
+    "metricProtein": "Proteină",
+    "metricCarbs": "Carbohidrați",
+    "metricFat": "Grăsime",
+    "metricSugar": "Zahăr",
+    "metricFolicAcid": "Acid folic",
+    "metricVitaminC": "Vitamina C",
+    "metricVitaminD": "Vitamina D",
+    "metricVitaminE": "Vitamina E",
+    "metricVitaminK": "Vitamian K",
+    "metricCalcium": "Calciu",
+    "metricChloride": "Clorură",
+    "metricChromium": "Crom",
+    "metricCopper": "Cupru",
+    "metricIodine": "Iod",
+    "metricIron": "Fier",
+    "metricMagnesium": "Magneziu",
+    "metricManganese": "Mangan",
+    "metricMolybdenum": "Molibden",
+    "metricPhosphorus": "Fosfor",
+    "metricPotassium": "Potasiu",
+    "metricSelenium": "Seleniu",
+    "metricSodium": "Sodiu",
+    "metricZinc": "Zinc",
+    "metricCaffeine": "Cofeină",
+    "unitSteps": "pași",
+    "unitReps": "repetări",
+    "unitPushes": "împingeri",
+    "unitFloors": "etaje",
+    "unitDays": "zile",
+    "unitNights": "nopți",
+    "unitTests": "teste",
+    "unitTotal": "total",
+    "unitGrams": "g",
+    "sectionActivities": "Activități",
+    "sectionActivityTypeStats": "După tipul activității",
+    "sectionPlannedWorkouts": "Antrenamente planificate",
+    "activitiesFilterActivityTypeLabel": "Tipul activității",
+    "activitiesFilterAll": "Toate activitățile",
+    "recoverySleepScore": "Scor de somn",
+    "recoverySleepDuration": "Durata somnului",
+    "recoveryRemSleep": "Somn REM",
+    "recoveryDeepSleep": "Somn profund",
+    "recoverySleepEfficiency": "Eficiența somnului",
+    "sleepScoreConfidenceNoData": "Fără date",
+    "sleepScoreRatingExcellent": "Excelent",
+    "sleepScoreRatingGood": "Bun",
+    "sleepScoreRatingFair": "Acceptabil",
+    "sleepScoreRatingPoor": "Slab",
+    "sleepScoreComponentDuration": "Durata",
+    "sleepScoreComponentEfficiency": "Eficienţă",
+    "sleepScoreComponentContinuity": "Continuitate",
+    "sleepScoreComponentRegularity": "Regularitate",
+    "sleepScoreTotalSleep": "Somn total",
+    "sleepScoreTimeInBed": "Timp în pat",
+    "sleepScoreEfficiency": "Eficienţă",
+    "sleepEfficiencyConfidenceNoData": "Fără date",
+    "cardioLoadConfidenceNoData": "Fără date",
+    "cardioLoadDayNumbersTitle": "Valorile de azi",
+    "cardioLoadReferencesTitle": "Linkuri susținute",
+    "cardioLoadMethod": "Metodă",
+    "cardioLoadRestingHr": "Puls în repaus",
+    "cardioLoadMaxHr": "Puls maxim",
+    "cardioLoadMethodNoData": "Date insuficiente",
+    "sectionSleepSessions": "Sesiuni de somn",
+    "sectionWeight": "Greutate",
+    "sectionEntries": "Înscrieri",
+    "sectionSessions": "Sesiuni",
+    "sectionHeart": "Inimă",
+    "sectionDisplay": "Afișaj",
+    "sectionPrivacy": "Confidenţialitate",
+    "sectionCycleCalendar": "Calendarul ciclului",
+    "sectionStatistics": "Statistici",
+    "sectionCarbohydrates": "Carbohidrați",
+    "sectionFats": "Grăsimi",
+    "sectionVitamins": "Vitamine",
+    "sectionMinerals": "Minerale",
+    "sectionOtherNutrients": "Alți nutrienți",
+    "summaryAverage": "Mediu",
+    "summaryAvgValue": "Mediu {arg0}",
+    "@summaryAvgValue": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "summaryRange": "Interval",
+    "summarySamples": "Eșantioane",
+    "summaryNow": "Acum",
+    "statTotal": "Total",
+    "statTime": "Timp",
+    "statAverage": "Medie",
+    "statLowest": "Cel mai scăzut"
+}
