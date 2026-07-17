@@ -48,11 +48,49 @@ NotificationDetails _detailsFor(ReminderNotificationSpec spec) =>
         spec.channelName,
         channelDescription: spec.channelDescription,
         icon: spec.androidIcon,
-        importance: Importance.defaultImportance,
-        priority: Priority.defaultPriority,
+        // High so the reminder heads-up instead of appearing silently in the
+        // shade. Must match the channel created by [ensureReminderChannel] — once
+        // Android creates a channel its importance is fixed, and details cannot
+        // raise it above the channel's level.
+        importance: Importance.high,
+        priority: Priority.high,
       ),
       iOS: const DarwinNotificationDetails(),
     );
+
+/// Creates [spec]'s Android notification channel with high importance so the
+/// reminder heads-up, deleting a superseded [oldChannelId] first.
+///
+/// A channel's importance is locked once Android creates it, so raising it for
+/// existing installs — which may already hold the old default-importance channel —
+/// requires a NEW channel id and deleting the old one. Best-effort, idempotent,
+/// and Android-only (a no-op elsewhere, and safe to call from a background
+/// isolate). Run it before the first `show()` on either isolate.
+Future<void> ensureReminderChannel(
+  FlutterLocalNotificationsPlugin plugin,
+  ReminderNotificationSpec spec, {
+  String? oldChannelId,
+}) async {
+  try {
+    final android = plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return;
+    if (oldChannelId != null && oldChannelId != spec.channelId) {
+      await android.deleteNotificationChannel(channelId: oldChannelId);
+    }
+    await android.createNotificationChannel(
+      AndroidNotificationChannel(
+        spec.channelId,
+        spec.channelName,
+        description: spec.channelDescription,
+        importance: Importance.high,
+      ),
+    );
+  } catch (_) {
+    // Best-effort: a host without the channel API (a unit test) must not break
+    // startup. The channel is also created lazily on first show() as a fallback.
+  }
+}
 
 /// Posts and clears a reminder notification via `flutter_local_notifications`.
 /// A feature wires one of these with its own [ReminderNotificationSpec].

@@ -6,6 +6,8 @@ import '../core/reminders/reminder_notifications.dart';
 import '../core/reminders/reminder_time_zone.dart';
 import '../di/providers.dart';
 import '../features/homewidgets/home_widget_alarm.dart';
+import '../features/hydration/reminders/hydration_reminder_device.dart';
+import '../features/mindfulness/reminders/mindfulness_reminder_device.dart';
 
 /// Brings the reminder subsystem up at app start, standing in for the Kotlin
 /// boot receivers and `Application.onCreate` wiring.
@@ -34,9 +36,16 @@ Future<ReminderBootstrapResult> bootstrapReminders(
 
   final timeZone = await _guard(initializeTimeZone, 'time zone');
   final notifications = await _guard(
-    () => initializeReminderNotifications(
-      container.read(flutterLocalNotificationsProvider),
-    ),
+    () async {
+      final plugin = container.read(flutterLocalNotificationsProvider);
+      final ready = await initializeReminderNotifications(plugin);
+      // Create the high-importance channels up front, so the first reminder is a
+      // heads-up rather than a silent shade entry, and so existing installs get
+      // the upgraded channel without waiting for the first fire.
+      await ensureHydrationReminderChannel(plugin);
+      await ensureMindfulnessReminderChannel(plugin);
+      return ready;
+    },
     'notifications',
   );
   final alarmService =

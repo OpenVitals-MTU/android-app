@@ -9,7 +9,10 @@ import '../../../core/reminders/reminder_controller.dart';
 /// [ReminderNotificationSpec.notificationId] must stay unique across features.
 const hydrationReminderNotificationSpec = ReminderNotificationSpec(
   notificationId: 5001,
-  channelId: 'hydration_reminders',
+  // `_v2`: the original `hydration_reminders` channel was created at default
+  // importance, which is locked once set. A new id lets existing installs get the
+  // high-importance (heads-up) channel — see [ensureHydrationReminderChannel].
+  channelId: 'hydration_reminders_v2',
   channelName: 'Hydration reminders',
   channelDescription: 'Reminders to drink water throughout the day.',
   title: 'Time to hydrate',
@@ -17,6 +20,21 @@ const hydrationReminderNotificationSpec = ReminderNotificationSpec(
   scheduledBody: 'Log some water to stay on track with your daily goal.',
   body: _hydrationReminderBody,
 );
+
+/// The pre-`_v2` channel id, deleted when the high-importance channel is created.
+const _legacyHydrationChannelId = 'hydration_reminders';
+
+/// Creates the hydration reminder's high-importance channel and removes the
+/// legacy default-importance one. Call before the first `show()` (startup + the
+/// alarm isolate).
+Future<void> ensureHydrationReminderChannel(
+  FlutterLocalNotificationsPlugin plugin,
+) =>
+    ensureReminderChannel(
+      plugin,
+      hydrationReminderNotificationSpec,
+      oldChannelId: _legacyHydrationChannelId,
+    );
 
 String _hydrationReminderBody(ReminderGoalProgress progress) =>
     progress.target > 0.0
