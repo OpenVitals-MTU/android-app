@@ -2426,8 +2426,15 @@ Duration? _zoneOffset(int? seconds) =>
     if (wantedIds.isEmpty) return const <String>{};
     final schemaType = HealthRecordJson.schemaTypeForImport(recordType);
     if (schemaType == null) return const <String>{};
+    // Pass the batch's window so the native read stays bounded — otherwise it
+    // scans the record type's whole history on every batch (an O(n²) import).
     final existing = await _catch(
-      () => _api.filterExistingClientIds(schemaType, wantedIds.toList()),
+      () => _api.filterExistingClientIds(
+        schemaType,
+        start.millisecondsSinceEpoch,
+        end.millisecondsSinceEpoch,
+        wantedIds.toList(),
+      ),
       const <String>[],
     );
     return existing.toSet();

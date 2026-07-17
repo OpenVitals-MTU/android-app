@@ -1316,6 +1316,8 @@ class HealthConnectNativePlugin :
 
   override fun filterExistingClientIds(
     recordType: String,
+    startEpochMs: Long,
+    endEpochMs: Long,
     clientRecordIds: List<String>,
     callback: (Result<List<String>>) -> Unit,
   ) {
@@ -1326,10 +1328,14 @@ class HealthConnectNativePlugin :
 
       val wanted = clientRecordIds.toSet()
       // Health Connect cannot query directly by clientRecordId, so read the
-      // record type over a wide window and match on metadata.clientRecordId.
+      // record type and match on metadata.clientRecordId — but ONLY over the
+      // batch's own time window. An imported record's clientRecordId sits at its
+      // own timestamp, so a re-import's duplicate is in this window; reading the
+      // whole history here instead is an O(n²) scan over a large import (the
+      // caller already narrows the window per 6-hour chunk).
       val timeRangeFilter = TimeRangeFilter.between(
-        Instant.EPOCH,
-        Instant.now().plus(Duration.ofDays(1)),
+        Instant.ofEpochMilli(startEpochMs),
+        Instant.ofEpochMilli(endEpochMs),
       )
       withContext(Dispatchers.IO) {
         val found = mutableSetOf<String>()

@@ -1173,9 +1173,17 @@ abstract class HealthConnectHostApi {
 
   /// Import dedup helper: of the supplied [clientRecordIds], returns the subset
   /// that ALREADY exist in Health Connect for [recordType].
+  ///
+  /// The read is bounded to [startEpochMs]..[endEpochMs] — an imported record's
+  /// clientRecordId sits at its own timestamp, so a re-import's duplicate is
+  /// found in the same window the batch spans. Without the window the reader
+  /// scans the type's whole history on every batch, which is O(n²) over a large
+  /// import.
   @async
   List<String> filterExistingClientIds(
     String recordType,
+    int startEpochMs,
+    int endEpochMs,
     List<String> clientRecordIds,
   );
 
