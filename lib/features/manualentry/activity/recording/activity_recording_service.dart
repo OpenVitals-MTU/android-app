@@ -1288,6 +1288,15 @@ class ActivityRecordingService implements ActivityRecordingController {
   /// Kotlin `RestTimerBellVolume`.
   static const double _restTimerBellVolume = 0.42;
 
+  /// The bell asks the OS to *duck* other audio rather than take it outright:
+  /// `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` on Android, `duckOthers` on iOS. A
+  /// runner listening to music or a podcast then hears it dip for the bell and
+  /// come straight back, instead of having playback stopped as full audio focus
+  /// (the audioplayers default) would do.
+  static final AudioContext _duckingAudioContext = AudioContextConfig(
+    focus: AudioContextConfigFocus.duckOthers,
+  ).build();
+
   /// Kotlin `playRestTimerBellIfEnabled`: the same struck-bowl sample the
   /// mindfulness timer uses, not a spoken phrase.
   void _playRestTimerBellIfEnabled() {
@@ -1303,6 +1312,9 @@ class ActivityRecordingService implements ActivityRecordingController {
           (_) => player.dispose(),
           onError: (Object _) => player.dispose(),
         );
+        // Duck other audio for the bell; disposing on completion releases the
+        // transient focus and restores the music/podcast to full volume.
+        await player.setAudioContext(_duckingAudioContext);
         await player.setVolume(_restTimerBellVolume);
         await player.play(AssetSource('sounds/bowl_struck.ogg'));
       } catch (_) {
