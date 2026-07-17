@@ -5,10 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/core/period/period_load_query.dart';
 import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
+import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/di/providers.dart';
+import 'package:openvitals/domain/insights/heart_rate_recovery.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
+import 'package:openvitals/domain/preferences/body_profile.dart';
 import 'package:openvitals/domain/usecase/delete_activity_entry_use_case.dart';
 import 'package:openvitals/domain/usecase/load_activities_use_case.dart';
 import 'package:openvitals/domain/usecase/load_activity_detail_use_case.dart';
@@ -30,12 +33,17 @@ class _FakeLoadDetail implements LoadActivityDetailUseCase {
   final ExerciseData workout;
 
   @override
-  Future<Result<ActivityDetailLoadResult?>> call(String activityId) async =>
+  Future<Result<ActivityDetailLoadResult?>> call(
+    String activityId, {
+    BodyProfile profile = const BodyProfile(),
+    LocalDate? today,
+  }) async =>
       Ok(ActivityDetailLoadResult(
         workout: workout,
         heartRateSamples: const <HeartRateSample>[],
         speedSamples: const <SpeedSample>[],
         cadenceSamples: const <ActivityCadenceSample>[],
+        heartRateRecovery: HeartRateRecoveryReading.noData,
       ));
 
   @override

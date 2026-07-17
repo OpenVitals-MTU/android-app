@@ -152,6 +152,7 @@ void main() {
       bool canWrite = true,
     }) =>
         ActivityRecordingSetupScreen(
+          onStartHeartRateRecoveryTest: (_) {},
           state: ActivityEntryUiState(
             mode: ActivityEntryFormMode.recording,
             selectedActivityType: type,
@@ -214,6 +215,7 @@ void main() {
             startedWithFix = fix;
             startedWithoutGps = withoutGps;
           },
+          onStartHeartRateRecoveryTest: (_) {},
           onRequestLocationPermission: () => askedForLocation = true,
           onRequestActivityRecognitionPermission: () {},
           onChooseSource: () {},
@@ -261,6 +263,7 @@ void main() {
       await pump(
         tester,
         ActivityRecordingSetupScreen(
+          onStartHeartRateRecoveryTest: (_) {},
           state: ActivityEntryUiState(
             mode: ActivityEntryFormMode.recording,
             selectedActivityType: gpsType(),
@@ -691,6 +694,7 @@ class _RecordingHostState extends State<_RecordingHost> {
         isFocusMode: _isFocusMode,
         onFocusModeChanged: (value) => setState(() => _isFocusMode = value),
         onStartRecording: (_) {},
+      onEndHeartRateRecoveryEffort: () {},
         onPauseRecording: () {},
         onResumeRecording: () {},
         onAddLap: () {},

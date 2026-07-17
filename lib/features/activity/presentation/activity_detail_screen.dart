@@ -18,6 +18,7 @@ import '../../../ui/theme/app_colors.dart';
 import '../application/activity_detail_display.dart';
 import '../application/activity_detail_view_model.dart';
 import 'activity_heart_rate_chart_card.dart';
+import 'activity_heart_rate_recovery_card.dart';
 import 'activity_metric_relevance.dart';
 import 'activity_session_metric_chart_cards.dart';
 import 'activity_splits_card.dart';
@@ -110,6 +111,16 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 sessionStart: workout.startTime,
                 sessionEnd: workout.endTime,
                 unitFormatter: formatter,
+              ),
+            ),
+          // Only a guided recovery test produces a reading (an ordinary workout has no
+          // abrupt-stop mark), so this shows exactly for those. A measured but
+          // submaximal effort is still shown, flagged "not comparable" rather than
+          // hidden.
+          if (state.heartRateRecovery.peakBpm != null)
+            sectionPadded(
+              ActivityHeartRateRecoveryCard(
+                reading: state.heartRateRecovery,
               ),
             ),
           if (state.speedSamples.isNotEmpty)

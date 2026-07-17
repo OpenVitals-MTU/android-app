@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -384,6 +385,11 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
           restSeconds: restSeconds,
           withoutGps: withoutGps,
         ),
+        onStartHeartRateRecoveryTest: (config) => unawaited(
+          ref
+              .read(activityRecordingViewModelProvider.notifier)
+              .startHeartRateRecoveryTest(state.selectedActivityType, config),
+        ),
         onRequestLocationPermission: onRequestLocationPermission,
         onRequestActivityRecognitionPermission:
             onRequestActivityRecognitionPermission,
@@ -399,6 +405,9 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
       onFocusModeChanged: onFocusModeChanged,
       onStartRecording: (initialFix) =>
           viewModel.startGpsRecording(initialFix: initialFix),
+      onEndHeartRateRecoveryEffort: ref
+          .read(activityRecordingViewModelProvider.notifier)
+          .endHeartRateRecoveryEffort,
       onPauseRecording: viewModel.pauseGpsRecording,
       onResumeRecording: viewModel.resumeGpsRecording,
       onAddLap: viewModel.addRecordingLap,

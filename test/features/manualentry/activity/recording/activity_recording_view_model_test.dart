@@ -329,6 +329,32 @@ class _FakeRecordingService implements ActivityRecordingController {
   }
 
   @override
+  Future<bool> startHeartRateRecoveryTest(
+    ActivityEntryType activityType,
+    HeartRateRecoveryTestConfig config,
+  ) async {
+    startCalls += 1;
+    if (startResult) {
+      emit(ActivityRecordingState(
+        status: ActivityRecordingStatus.recording,
+        hrrPhase: config.warmupSeconds > 0
+            ? ActivityRecordingHrrPhase.warmup
+            : ActivityRecordingHrrPhase.effort,
+        hrrConfig: config,
+      ));
+    }
+    return startResult;
+  }
+
+  @override
+  void endHeartRateRecoveryEffort() {
+    emit(state.value.copyWith(
+      hrrPhase: ActivityRecordingHrrPhase.recovery,
+      hrrEffortEndedAt: DateTime.utc(2026, 7, 14, 18),
+    ));
+  }
+
+  @override
   void pauseRecording() {
     pauseCalls += 1;
     emit(state.value.copyWith(status: ActivityRecordingStatus.paused));

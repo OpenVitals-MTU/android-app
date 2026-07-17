@@ -5,6 +5,7 @@ import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/activity_splits.dart';
+import '../../../domain/insights/heart_rate_recovery.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../state/app_providers.dart';
@@ -30,6 +31,8 @@ abstract class ActivityDetailState with _$ActivityDetailState {
     @Default(<ActivityCadenceSample>[])
     List<ActivityCadenceSample> cadenceSamples,
     @Default(ActivitySplits.none()) ActivitySplits splits,
+    @Default(HeartRateRecoveryReading.noData)
+    HeartRateRecoveryReading heartRateRecovery,
     ActivityDetailDisplay? display,
   }) = _ActivityDetailState;
 }
@@ -104,13 +107,17 @@ class ActivityDetailViewModel extends Notifier<ActivityDetailState> {
     final generation = ++_generation;
     final loadActivityDetail = ref.read(loadActivityDetailUseCaseProvider);
     final splitDistanceMeters = ref.read(activitySplitDistanceMetersProvider);
+    // The user's own maximum and resting heart rate are a preference, not health data,
+    // so they are read here and handed down rather than reached for by the use case.
+    final bodyProfile =
+        ref.read(preferencesRepositoryProvider).bodyProfileListenable.value;
     state = state.copyWith(isLoading: true, error: null);
 
     // Reassembling the workout — which repositories to ask, in what order, and
     // that Health Connect's own totals outrank the ones derived from samples —
     // is domain knowledge, and lives in the use case. What stays here is the
     // view's business: the generation guard, and turning a result into state.
-    final result = await loadActivityDetail(activityId);
+    final result = await loadActivityDetail(activityId, profile: bodyProfile);
     if (!ref.mounted || generation != _generation) return;
     switch (result) {
       case Ok(:final value):
@@ -136,6 +143,7 @@ class ActivityDetailViewModel extends Notifier<ActivityDetailState> {
           speedSamples: value.speedSamples,
           cadenceSamples: value.cadenceSamples,
           splits: splits,
+          heartRateRecovery: value.heartRateRecovery,
           display: buildActivityDetailDisplay(
             workout: value.workout,
             cadenceSamples: value.cadenceSamples,

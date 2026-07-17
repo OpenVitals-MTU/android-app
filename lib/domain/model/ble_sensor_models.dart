@@ -153,6 +153,31 @@ abstract class BleRecordingSampleBuffer with _$BleRecordingSampleBuffer {
       speedSamples.isEmpty &&
       stepsCadenceSamples.isEmpty;
 
+  /// The span the recorded samples actually cover, or null when there are none.
+  ///
+  /// The session written to Health Connect has to CONTAIN this. Health Connect clamps a
+  /// sample that falls outside its session into the session's bounds, so a session that
+  /// ends even a second early does not drop the samples past its end — it stacks every
+  /// one of them onto the closing instant, which is worse than losing them.
+  DateTime? firstSampleTime() => _sampleTimes().fold<DateTime?>(
+        null,
+        (earliest, time) =>
+            earliest == null || time.isBefore(earliest) ? time : earliest,
+      );
+
+  DateTime? lastSampleTime() => _sampleTimes().fold<DateTime?>(
+        null,
+        (latest, time) => latest == null || time.isAfter(latest) ? time : latest,
+      );
+
+  Iterable<DateTime> _sampleTimes() => [
+        ...heartRateSamples.map((sample) => sample.time),
+        ...powerSamples.map((sample) => sample.time),
+        ...cyclingCadenceSamples.map((sample) => sample.time),
+        ...speedSamples.map((sample) => sample.time),
+        ...stepsCadenceSamples.map((sample) => sample.time),
+      ];
+
   int? averageHeartRateBpm() {
     if (heartRateSamples.isEmpty) return null;
     final total = heartRateSamples

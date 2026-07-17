@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/section_padding.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
@@ -65,6 +67,23 @@ class HeartMetricScreen extends ConsumerWidget {
           syncPaused: syncPaused,
           onSelectionChanged: (selection) => notifier.load(selection),
           content: (period) => [
+            // This screen is shared by every heart AND vitals metric, so the way through
+            // to heart-rate recovery belongs on the heart-rate one alone — it has nothing
+            // to do with blood pressure or blood oxygen.
+            if (metric == HeartMetric.averageHeartRate)
+              sectionPadded(
+                OpenVitalsCard(
+                  child: ListTile(
+                    leading: const Icon(Icons.trending_down),
+                    title: Text(AppLocalizations.of(context)
+                        .heartRateRecoveryHistoryTitle),
+                    subtitle: Text(
+                        AppLocalizations.of(context).heartRateRecoveryTrendTitle),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.heartRateRecoveryDetail),
+                  ),
+                ),
+              ),
             HeartMetricContentView(
               metric: metric,
               state: state,

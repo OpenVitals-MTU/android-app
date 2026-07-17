@@ -4,6 +4,7 @@ import 'dart:ui' show Locale, PlatformDispatcher;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
@@ -104,6 +105,7 @@ class ActivityRecordingService implements ActivityRecordingController {
     _stepSub?.cancel();
     _bleSub?.cancel();
     _restCompletionTimer?.cancel();
+    _hrrPhaseTimer?.cancel();
     _gpsLostTimer?.cancel();
     _state.dispose();
   }
@@ -395,6 +397,140 @@ class ActivityRecordingService implements ActivityRecordingController {
     return true;
   }
 
+  // ── Heart-rate recovery test ─────────────────────────────────────────────
+  //
+  // A timed recording underneath -- same foreground service, same sensors, same write
+  // path -- with a protocol laid over it: warm up, go hard, then stop DEAD. The abrupt,
+  // recorded stop is the whole point. It is what a workout read back from a watch can
+  // never give us, because nothing in the data says where the effort ended.
+
+  Timer? _hrrPhaseTimer;
+
+  /// Consecutive samples at or above the target. One spurious reading must not end an
+  /// effort the rider is still in the middle of.
+  int _hrrTargetHits = 0;
+
+  static const int _hrrTargetHitsToEndEffort = 2;
+
+  @override
+  Future<bool> startHeartRateRecoveryTest(
+    ActivityEntryType activityType,
+    HeartRateRecoveryTestConfig config,
+  ) async {
+    if (!await _startTimedRecording(activityType)) return false;
+    _hrrTargetHits = 0;
+    _updateAndPersist(_state.value.copyWith(
+      hrrPhase: config.warmupSeconds > 0
+          ? ActivityRecordingHrrPhase.warmup
+          : ActivityRecordingHrrPhase.effort,
+      hrrConfig: config,
+    ));
+    _scheduleHrrPhase(_state.value);
+    return true;
+  }
+
+  @override
+  void endHeartRateRecoveryEffort() {
+    final current = _state.value;
+    if (current.hrrPhase != ActivityRecordingHrrPhase.warmup &&
+        current.hrrPhase != ActivityRecordingHrrPhase.effort) {
+      return;
+    }
+    _enterHrrRecovery(current);
+  }
+
+  /// The instant that matters. Everything the measurement says is relative to it, so it
+  /// is stamped BEFORE the cue is fired rather than after: a text-to-speech engine taking
+  /// half a second to warm up must not push the recovery clock half a second late.
+  void _enterHrrRecovery(ActivityRecordingState current) {
+    _hrrTargetHits = 0;
+    _updateAndPersist(current.copyWith(
+      hrrPhase: ActivityRecordingHrrPhase.recovery,
+      hrrEffortEndedAt: DateTime.now().toUtc(),
+    ));
+    _cueHrr(_l10n().activityRecordingHrrCueSlowDown);
+    _scheduleHrrPhase(_state.value);
+  }
+
+  void _scheduleHrrPhase(ActivityRecordingState state) {
+    _hrrPhaseTimer?.cancel();
+    _hrrPhaseTimer = null;
+
+    DateTime? deadline;
+    if (state.hrrPhase == ActivityRecordingHrrPhase.warmup) {
+      deadline = state.startTime
+          ?.add(Duration(seconds: state.hrrConfig.warmupSeconds));
+    } else if (state.hrrPhase == ActivityRecordingHrrPhase.recovery) {
+      deadline = state.hrrEffortEndedAt
+          ?.add(Duration(seconds: state.hrrConfig.recoverySeconds));
+    }
+    // The effort has no deadline: it ends when the rider does, or when their heart rate
+    // says so. And `complete` is the end of the road.
+    if (deadline == null) return;
+
+    final now = DateTime.now().toUtc();
+    final delayMillis =
+        (deadline.millisecondsSinceEpoch - now.millisecondsSinceEpoch)
+            .clamp(0, 1 << 62);
+    final scheduledPhase = state.hrrPhase;
+    final scheduledEffortEnd = state.hrrEffortEndedAt;
+
+    _hrrPhaseTimer = Timer(Duration(milliseconds: delayMillis), () {
+      final current = _state.value;
+      // The state that scheduled this timer must still be the state we are in, or the
+      // timer belongs to a test that has already moved on (or been discarded).
+      if (current.hrrPhase != scheduledPhase ||
+          current.hrrEffortEndedAt != scheduledEffortEnd) {
+        return;
+      }
+      _hrrPhaseTimer = null;
+
+      if (scheduledPhase == ActivityRecordingHrrPhase.warmup) {
+        _updateAndPersist(
+            current.copyWith(hrrPhase: ActivityRecordingHrrPhase.effort));
+        _cueHrr(_l10n().activityRecordingHrrCueEffort);
+      } else if (scheduledPhase == ActivityRecordingHrrPhase.recovery) {
+        // NOT auto-finished. The recording keeps running and the rider saves it -- and
+        // because the rest segment is written to the session's end rather than to a fixed
+        // five minutes, taking a while to press save cannot break the measurement.
+        _updateAndPersist(
+            current.copyWith(hrrPhase: ActivityRecordingHrrPhase.complete));
+        _cueHrr(_l10n().activityRecordingHrrCueComplete);
+      }
+    });
+  }
+
+  /// Ends the effort when the heart rate reaches the target, if one was set.
+  void _maybeEndHrrEffortOnTarget(ActivityRecordingState state) {
+    if (state.hrrPhase != ActivityRecordingHrrPhase.effort) {
+      _hrrTargetHits = 0;
+      return;
+    }
+    final target = state.hrrConfig.targetHeartRateBpm;
+    final bpm = state.currentHeartRateBpm;
+    if (target == null || bpm == null) return;
+    if (bpm < target) {
+      _hrrTargetHits = 0;
+      return;
+    }
+    _hrrTargetHits += 1;
+    if (_hrrTargetHits >= _hrrTargetHitsToEndEffort) {
+      _enterHrrRecovery(state);
+    }
+  }
+
+  /// Bell, voice and a hard buzz, all four channels at once.
+  ///
+  /// Not behind a preference. The phone is on a bike mount or in a pocket, the rider is
+  /// at their limit and is not looking at the screen — and the cue IS the protocol. A
+  /// heart-rate recovery test whose "stop now" went unheard has measured nothing. The
+  /// pace announcer is optional because a ride works without it; this does not.
+  void _cueHrr(String text) {
+    _playBell();
+    unawaited(_speak(text));
+    unawaited(HapticFeedback.heavyImpact());
+  }
+
   // ── BLE ──────────────────────────────────────────────────────────────────
 
   void acceptBleMetrics(BleRecordingMetrics metrics) {
@@ -414,6 +550,8 @@ class ActivityRecordingService implements ActivityRecordingController {
             : metrics.deviceStatuses,
       ),
     );
+    // Against the heart rate we just took, not the one before it.
+    _maybeEndHrrEffortOnTarget(_state.value);
   }
 
   // ── Pause / resume ─────────────────────────────────────────────────────────
@@ -655,6 +793,13 @@ class ActivityRecordingService implements ActivityRecordingController {
       repetitionCount: current.repetitionCount,
       repetitionSets: repetitionSets,
       bleSamples: bleSamples,
+      // Only when there is heart rate to go with it. A rest segment saying "the recovery
+      // began here" with no heart-rate series behind it is a claim to a measurement that
+      // was never taken -- and anything reading the session back later, this app
+      // included, would believe it.
+      hrrEffortEndedAt: bleSamples.heartRateSamples.isEmpty
+          ? null
+          : current.hrrEffortEndedAt,
     );
     _clearRecording();
     _stopForegroundService();
@@ -1305,6 +1450,13 @@ class ActivityRecordingService implements ActivityRecordingController {
         .restTimerBellEnabled) {
       return;
     }
+    _playBell();
+  }
+
+  /// The bell itself, with no preference in front of it — the heart-rate-recovery cue
+  /// rings whatever the rest-timer setting says, because a cue nobody heard has cost the
+  /// rider the measurement they went out to take.
+  void _playBell() {
     unawaited(() async {
       final player = AudioPlayer();
       try {
@@ -1328,6 +1480,8 @@ class ActivityRecordingService implements ActivityRecordingController {
   void _clearRecording() {
     _stopDeviceStreams();
     _restCompletionTimer?.cancel();
+    _hrrPhaseTimer?.cancel();
+    _hrrTargetHits = 0;
     _recordingGeneration += 1;
     _announcementTracker.reset();
     _lastNotificationSignature = null;

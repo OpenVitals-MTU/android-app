@@ -3511,5 +3511,169 @@
   },
   "@settingsHealthConnectMindfulnessBody": {
     "description": "Explains why the Health Connect mindfulness integration is off by default."
+  },
+  "activityRecordingHrrTitle": "Heart rate recovery test",
+  "@activityRecordingHrrTitle": {
+    "description": "Switch on the recording setup screen: run a guided HRR test instead of an ordinary recording."
+  },
+  "activityRecordingHrrBody": "Warm up, go hard, then stop dead. The app measures how far your heart rate falls over the next five minutes.",
+  "@activityRecordingHrrBody": {
+    "description": "What the guided heart-rate-recovery test does."
+  },
+  "activityRecordingHrrWarmupLabel": "Warmup (min)",
+  "@activityRecordingHrrWarmupLabel": {
+    "description": "How long to warm up before the effort. 0 to start the effort immediately."
+  },
+  "activityRecordingHrrTargetLabel": "Target (bpm)",
+  "@activityRecordingHrrTargetLabel": {
+    "description": "Optional heart rate that ends the effort and starts the measurement."
+  },
+  "activityRecordingHrrHint": "Leave the target empty to end the effort yourself. Stopping dead is what makes the measurement work — keep still once you are told to stop.",
+  "@activityRecordingHrrHint": {
+    "description": "Explains that the target is optional and that stopping abruptly is what the measurement depends on."
+  },
+  "activityRecordingHrrPhaseWarmup": "Warming up",
+  "@activityRecordingHrrPhaseWarmup": {
+    "description": "Phase banner during the warmup."
+  },
+  "activityRecordingHrrPhaseEffort": "Go hard",
+  "@activityRecordingHrrPhaseEffort": {
+    "description": "Phase banner during the effort."
+  },
+  "activityRecordingHrrPhaseRecovery": "Recovering — keep still",
+  "@activityRecordingHrrPhaseRecovery": {
+    "description": "Phase banner while the recovery is being measured."
+  },
+  "activityRecordingHrrPhaseComplete": "Recovery complete — save the workout",
+  "@activityRecordingHrrPhaseComplete": {
+    "description": "Phase banner once the five minutes are up."
+  },
+  "activityRecordingHrrEndEffort": "End effort",
+  "@activityRecordingHrrEndEffort": {
+    "description": "Button that ends the effort and starts the measurement."
+  },
+  "activityRecordingHrrCueEffort": "Go hard now.",
+  "@activityRecordingHrrCueEffort": {
+    "description": "Spoken when the warmup ends and the effort begins."
+  },
+  "activityRecordingHrrCueSlowDown": "Slow down and stop. Stay still.",
+  "@activityRecordingHrrCueSlowDown": {
+    "description": "Spoken the instant the effort ends and the recovery is being measured. The one cue the whole test depends on."
+  },
+  "activityRecordingHrrCueComplete": "Recovery complete. You can save the workout.",
+  "@activityRecordingHrrCueComplete": {
+    "description": "Spoken when the five minutes of recovery are up."
+  },
+  "heartRateRecoveryHistoryTitle": "Heart rate recovery",
+  "@heartRateRecoveryHistoryTitle": {
+    "description": "Title of the heart-rate-recovery history screen."
+  },
+  "heartRateRecoveryTrendTitle": "One-minute fall",
+  "@heartRateRecoveryTrendTitle": {
+    "description": "Chart title: the drop one minute after each effort stopped."
+  },
+  "heartRateRecoveryEmpty": "No recovery test in this period.",
+  "@heartRateRecoveryEmpty": {
+    "description": "Shown when the period holds no comparable readings at all."
+  },
+  "heartRateRecoveryEmptyWatch": "Heart-rate recovery is measured from a deliberate test: warm up, push your heart rate near its maximum, then stop and rest for one to five minutes. Start one from the activity recorder. An ordinary workout, where you slow down but keep moving, cannot be measured.",
+  "@heartRateRecoveryEmptyWatch": {
+    "description": "Explains why a watch user's history is empty, and what would fix it."
+  },
+  "heartRateRecoveryUnmeasured": "{count} tests could not be compared",
+  "@heartRateRecoveryUnmeasured": {
+    "description": "How many recovery tests in the period were not comparable (submaximal or unmeasured).",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "6"
+      }
+    }
+  },
+  "heartRateRecoveryTruncated": "Only the most recent {count} workouts in this period were read.",
+  "@heartRateRecoveryTruncated": {
+    "description": "The period held more sessions than the app will read; says so rather than showing a quietly short chart.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "400"
+      }
+    }
+  },
+  "heartRateRecoveryTitle": "Heart rate recovery",
+  "@heartRateRecoveryTitle": {
+    "description": "Card title: how far the heart rate fell after the effort stopped."
+  },
+  "heartRateRecoveryHeadline": "Down {drop} bpm in a minute",
+  "@heartRateRecoveryHeadline": {
+    "description": "The headline figure: the fall one minute after the effort stopped.",
+    "placeholders": {
+      "drop": {
+        "type": "String",
+        "example": "35"
+      }
+    }
+  },
+  "heartRateRecoveryHeadlineUnavailable": "The one-minute fall was not measured",
+  "@heartRateRecoveryHeadlineUnavailable": {
+    "description": "Shown instead of the headline when no sample landed near the one-minute mark."
+  },
+  "heartRateRecoveryPeak": "Peak {bpm} bpm",
+  "@heartRateRecoveryPeak": {
+    "description": "The highest heart rate found just before the effort stopped.",
+    "placeholders": {
+      "bpm": {
+        "type": "String",
+        "example": "180"
+      }
+    }
+  },
+  "heartRateRecoveryMarkSeconds": "{seconds}s",
+  "@heartRateRecoveryMarkSeconds": {
+    "description": "A mark measured in seconds after the effort stopped.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "30"
+      }
+    }
+  },
+  "heartRateRecoveryMarkMinutes": "{minutes} min",
+  "@heartRateRecoveryMarkMinutes": {
+    "description": "A mark measured in minutes after the effort stopped.",
+    "placeholders": {
+      "minutes": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "heartRateRecoveryNoSample": "Not measured",
+  "@heartRateRecoveryNoSample": {
+    "description": "Shown for a mark where no heart-rate reading exists. It is never guessed."
+  },
+  "heartRateRecoveryNoRecoverySamples": "Your device stopped recording heart rate when the workout ended, so there was nothing to measure.",
+  "@heartRateRecoveryNoRecoverySamples": {
+    "description": "Why a recovery could not be measured at all: no samples after the workout."
+  },
+  "heartRateRecoveryDidNotFall": "Your heart rate did not fall after this workout ended — at some point it was higher than the peak. The recording ended before you did, so there is no recovery here to measure.",
+  "@heartRateRecoveryDidNotFall": {
+    "description": "Why the reading is invalid: the heart rate rose after the session ended, so the effort had not actually stopped."
+  },
+  "heartRateRecoveryCooldownBeforeStop": "Your heart rate was already falling before the workout ended, so this is not a recovery reading. Recovery is measured from the moment hard effort stops.",
+  "@heartRateRecoveryCooldownBeforeStop": {
+    "description": "Why the reading is invalid: the user eased off before stopping the recording."
+  },
+  "heartRateRecoverySubmaximalEffort": "Hard, but not near your maximum — so this reading cannot be compared with the others.",
+  "@heartRateRecoverySubmaximalEffort": {
+    "description": "Why the reading is not comparable: a submaximal effort."
+  },
+  "heartRateRecoveryUnknownMaxHeartRate": "Set your maximum heart rate in your profile, and we can tell you whether the effort was hard enough for this reading to count.",
+  "@heartRateRecoveryUnknownMaxHeartRate": {
+    "description": "No maximum heart rate is known, so effort could not be judged."
+  },
+  "heartRateRecoveryPeakFromSingleSample": "One single reading stands behind the peak.",
+  "@heartRateRecoveryPeakFromSingleSample": {
+    "description": "The peak rests on one sample, so a spurious reading would be it."
   }
 }

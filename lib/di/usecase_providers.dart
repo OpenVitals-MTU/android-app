@@ -40,6 +40,7 @@ import '../domain/usecase/write_imported_activity_use_case.dart';
 import '../domain/usecase/load_achievement_history_use_case.dart';
 import '../domain/usecase/load_activities_use_case.dart';
 import '../domain/usecase/load_activity_detail_use_case.dart';
+import '../domain/usecase/load_heart_rate_recovery_period_use_case.dart';
 import '../domain/usecase/load_activity_metric_period_use_case.dart';
 import '../domain/usecase/load_body_energy_timeline_use_case.dart';
 import '../domain/usecase/load_body_measurement_for_edit_use_case.dart';
@@ -92,6 +93,14 @@ final loadHeartPeriodUseCaseProvider = Provider<LoadHeartPeriodUseCase>(
 
 final loadActivityDetailUseCaseProvider = Provider<LoadActivityDetailUseCase>(
   (ref) => LoadActivityDetailUseCase(
+    ref.watch(activityRepositoryProvider),
+    ref.watch(heartRepositoryProvider),
+  ),
+);
+
+final loadHeartRateRecoveryPeriodUseCaseProvider =
+    Provider<LoadHeartRateRecoveryPeriodUseCase>(
+  (ref) => LoadHeartRateRecoveryPeriodUseCase(
     ref.watch(activityRepositoryProvider),
     ref.watch(heartRepositoryProvider),
   ),
