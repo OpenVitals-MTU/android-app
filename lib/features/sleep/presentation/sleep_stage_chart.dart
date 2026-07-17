@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -46,8 +47,16 @@ String localizedSleepStageLabel(AppLocalizations l10n, int stageType) {
 // Kotlin `SleepStagesLaneChart` geometry (all in logical pixels / dp). The lane
 // sizes are tokens now — the chart is still the only thing that draws lanes, but
 // a number nobody else can see is a number nobody else can keep in step.
+//
+// [_labelHeight] and [_laneHeight] are the BASE (text scale 1.0) sizes; the band
+// under the label — the track and its air — is [_trackBandHeight], and it is the
+// part that stays fixed. When the user runs a larger system font the label text
+// grows past its base box, so the lane grows with it (see `build`), keeping the
+// track a constant distance below the label instead of letting the label overrun
+// the track and draw the hypnogram on top of its own axis.
 const double _laneHeight = kSleepLaneHeight;
 const double _labelHeight = kSleepLaneLabelHeight;
+const double _trackBandHeight = _laneHeight - _labelHeight;
 const double _trackCenterOffset = 18;
 const double _trackHeight = kSleepLaneTrackHeight;
 const double _transitionStroke = kChartTraceStroke;
@@ -99,6 +108,19 @@ class SleepStagesLaneChart extends StatelessWidget {
     final lanes = _sleepStageLanes(orderedStages);
     final trackColor = sleepLaneTrackColor(context);
 
+    // The label sits above the track in a band of its own; at a large system font
+    // the label text is taller than its base box, so grow the band to fit it and
+    // the whole lane with it. Otherwise the label overflows downward onto the
+    // track and the graph reads as drawn on top of its labels.
+    final labelStyle = theme.textTheme.titleSmall;
+    final labelPainter = TextPainter(
+      text: TextSpan(text: 'Ag', style: labelStyle),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final labelHeight = math.max(_labelHeight, labelPainter.height);
+    final laneHeight = labelHeight + _trackBandHeight;
+
     int laneDurationMs(_SleepStageLane lane) => orderedStages
         .where((stage) => lane.stageTypes.contains(stage.stageType))
         .fold<int>(
@@ -111,7 +133,7 @@ class SleepStagesLaneChart extends StatelessWidget {
       children: [
         SizedBox(
           width: double.infinity,
-          height: _laneHeight * lanes.length,
+          height: laneHeight * lanes.length,
           child: Stack(
             children: [
               Positioned.fill(
@@ -122,6 +144,8 @@ class SleepStagesLaneChart extends StatelessWidget {
                     timelineStart: timelineStart,
                     timelineEnd: timelineEnd,
                     trackColor: trackColor,
+                    labelHeight: labelHeight,
+                    laneHeight: laneHeight,
                   ),
                 ),
               ),
@@ -132,17 +156,17 @@ class SleepStagesLaneChart extends StatelessWidget {
                 children: [
                   for (final lane in lanes) ...[
                     SizedBox(
-                      height: _labelHeight,
+                      height: labelHeight,
                       width: double.infinity,
                       child: Text(
                         showInlineLabels
                             ? '${localizedSleepStageLabel(l10n, lane.labelStageType)} - '
                                 '${formatter.duration(laneDurationMs(lane))}'
                             : localizedSleepStageLabel(l10n, lane.labelStageType),
-                        style: theme.textTheme.titleSmall,
+                        style: labelStyle,
                       ),
                     ),
-                    const SizedBox(height: _laneHeight - _labelHeight),
+                    const SizedBox(height: _trackBandHeight),
                   ],
                 ],
               ),
@@ -230,6 +254,8 @@ class _LaneChartPainter extends CustomPainter {
     required this.timelineStart,
     required this.timelineEnd,
     required this.trackColor,
+    required this.labelHeight,
+    required this.laneHeight,
   });
 
   final List<SleepStage> stages;
@@ -238,8 +264,13 @@ class _LaneChartPainter extends CustomPainter {
   final DateTime timelineEnd;
   final Color trackColor;
 
-  static double _laneCenterY(int index) =>
-      index * _laneHeight + _labelHeight + _trackCenterOffset;
+  /// The label band and full lane height, grown from their base sizes to fit a
+  /// larger system font. Kept in step with the label overlay in `build`.
+  final double labelHeight;
+  final double laneHeight;
+
+  double _laneCenterY(int index) =>
+      index * laneHeight + labelHeight + _trackCenterOffset;
 
   int _laneIndex(int stageType) {
     for (var i = 0; i < lanes.length; i++) {
@@ -367,7 +398,9 @@ class _LaneChartPainter extends CustomPainter {
       oldDelegate.lanes != lanes ||
       oldDelegate.timelineStart != timelineStart ||
       oldDelegate.timelineEnd != timelineEnd ||
-      oldDelegate.trackColor != trackColor;
+      oldDelegate.trackColor != trackColor ||
+      oldDelegate.labelHeight != labelHeight ||
+      oldDelegate.laneHeight != laneHeight;
 }
 
 // ── Session details card ─────────────────────────────────────────────────────
