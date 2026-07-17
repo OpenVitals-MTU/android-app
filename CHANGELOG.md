@@ -1,5 +1,47 @@
 # Changelog
 
+## 2.2.7 - 2026-07-17
+
+### English
+
+- Editing and deleting the entries you logged in OpenVitals is back. Swipe a hydration, nutrition, caffeine, or mindfulness entry to delete it, tap the pencil to edit a hydration or mindfulness entry, and edit or delete an activity from its detail screen. These were lost when the app moved to Flutter.
+- Importing a large Apple Health export is dramatically faster, and the report you can copy or save when it finishes works again. The duplicate check no longer scans your whole history on every batch, and the report is saved to a file instead of a store too small to hold it.
+- The rest-timer bell during a workout now lowers your music or podcast for the chime and brings it back, instead of stopping playback.
+- Logging a drink from the 1x1 home-screen widget now clears an active hydration reminder, the same as logging it in the app.
+- Sleep chart fixes: the day view no longer draws the stage graph over its own labels at large font sizes, and a day with a nap keeps the same rounded bars as every other day in the month view.
+
+### Espanol
+
+- Vuelve la posibilidad de editar y borrar las entradas que registraste en OpenVitals. Desliza una entrada de hidratacion, nutricion, cafeina o mindfulness para borrarla, toca el lapiz para editar una entrada de hidratacion o mindfulness, y edita o borra una actividad desde su pantalla de detalle. Se perdieron al pasar la app a Flutter.
+- Importar una exportacion grande de Apple Health es mucho mas rapido, y el informe que puedes copiar o guardar al terminar vuelve a funcionar. La comprobacion de duplicados ya no recorre todo tu historial en cada lote, y el informe se guarda en un archivo en lugar de en un almacen demasiado pequeno.
+- El timbre del temporizador de descanso durante un entrenamiento ahora baja tu musica o podcast para el sonido y lo restaura, en vez de detener la reproduccion.
+- Registrar una bebida desde el widget 1x1 de la pantalla de inicio ahora borra un recordatorio de hidratacion activo, igual que al registrarla en la app.
+- Correcciones del grafico de sueno: la vista de dia ya no dibuja el grafico de fases sobre sus propias etiquetas con fuentes grandes, y un dia con siesta mantiene las mismas barras redondeadas que los demas dias en la vista de mes.
+
+### Deutsch
+
+- Das Bearbeiten und Loeschen der Eintraege, die du in OpenVitals erfasst hast, ist zurueck. Wische einen Eintrag fuer Fluessigkeit, Ernaehrung, Koffein oder Achtsamkeit, um ihn zu loeschen, tippe auf den Stift, um einen Fluessigkeits- oder Achtsamkeitseintrag zu bearbeiten, und bearbeite oder loesche eine Aktivitaet auf ihrem Detailbildschirm. Das ging beim Wechsel zu Flutter verloren.
+- Der Import eines grossen Apple-Health-Exports ist deutlich schneller, und der Bericht, den du am Ende kopieren oder speichern kannst, funktioniert wieder. Die Dublettenpruefung durchsucht nicht mehr bei jedem Stapel den gesamten Verlauf, und der Bericht wird in eine Datei geschrieben statt in einen zu kleinen Speicher.
+- Der Ton des Pausen-Timers waehrend eines Trainings senkt jetzt deine Musik oder deinen Podcast fuer den Ton und stellt ihn danach wieder her, statt die Wiedergabe zu stoppen.
+- Ein Getraenk ueber das 1x1-Startbildschirm-Widget zu erfassen loescht jetzt eine aktive Trinkerinnerung, genau wie beim Erfassen in der App.
+- Korrekturen am Schlafdiagramm: Die Tagesansicht zeichnet das Phasendiagramm bei grossen Schriften nicht mehr ueber die eigenen Beschriftungen, und ein Tag mit Nickerchen behaelt in der Monatsansicht dieselben abgerundeten Balken wie jeder andere Tag.
+
+### Italiano
+
+- Torna la possibilita di modificare ed eliminare le voci che hai registrato in OpenVitals. Scorri una voce di idratazione, nutrizione, caffeina o mindfulness per eliminarla, tocca la matita per modificare una voce di idratazione o mindfulness, e modifica o elimina un'attivita dalla sua schermata di dettaglio. Erano andate perse nel passaggio a Flutter.
+- Importare una grande esportazione di Apple Health e molto piu veloce, e il rapporto che puoi copiare o salvare al termine funziona di nuovo. Il controllo dei duplicati non scorre piu tutta la cronologia a ogni lotto, e il rapporto viene scritto su un file invece che in un archivio troppo piccolo.
+- Il segnale del timer di riposo durante un allenamento ora abbassa la tua musica o il tuo podcast per il suono e lo ripristina, invece di fermare la riproduzione.
+- Registrare una bevanda dal widget 1x1 della schermata home ora cancella un promemoria di idratazione attivo, come quando la registri nell'app.
+- Correzioni al grafico del sonno: la vista giornaliera non disegna piu il grafico delle fasi sopra le proprie etichette con caratteri grandi, e un giorno con un pisolino mantiene le stesse barre arrotondate degli altri giorni nella vista mensile.
+
+### Eesti
+
+- Sinu OpenVitalsis lisatud kirjete muutmine ja kustutamine on tagasi. Kustutamiseks nipsa hudratatsiooni, toitumise, kofeiini voi teadveloleku kirjet, koputa pliiatsit, et muuta hudratatsiooni voi teadveloleku kirjet, ning muuda voi kustuta tegevus selle uksikasjade ekraanilt. Need laksid Flutterile ulemineku kaigus kaduma.
+- Suure Apple Healthi ekspordi importimine on marksa kiirem ja aruanne, mille saad lopus kopeerida voi salvestada, tootab jalle. Duplikaatide kontroll ei skanni enam iga partii puhul kogu ajalugu ja aruanne kirjutatakse faili, mitte liiga vaiksesse hoidlasse.
+- Treeningu ajal antud puhketaimeri heli vahendab nuud su muusikat voi taskuhaalingut heli ajaks ja taastab selle, selle asemel et esitus peatada.
+- Joogi lisamine avaekraani 1x1 vidinast kustutab nuud aktiivse joomise meeldetuletuse, nagu ka rakenduses lisades.
+- Uneulevaate graafiku parandused: paevavaade ei joonista enam suurte fontidega faasigraafikut ule oma siltide ja uinakuga paev sailitab kuuvaates samad umarad ribad nagu koik teised paevad.
+
 ## 2.2.6 - 2026-07-17
 
 ### English
