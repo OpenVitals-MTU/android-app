@@ -14,8 +14,8 @@ import 'package:openvitals/features/manualentry/activity/activity_entry_write_re
 /// These two halves are the feature. The recording knows the instant of cessation and
 /// nothing else does — Health Connect has no field for it, so it goes in as a trailing
 /// REST segment. If the segment the writer produces is not one the reader accepts, the
-/// whole guided test silently degrades to an ordinary workout, measured from the session
-/// end, and nobody would notice until the numbers were wrong.
+/// guided test silently degrades to an ordinary workout — which is now not measured at
+/// all — and nobody would notice until the recovery went missing.
 
 final DateTime _start = DateTime(2026, 7, 14, 10, 0);
 final DateTime _effortEnded = DateTime(2026, 7, 14, 10, 20);
@@ -94,8 +94,7 @@ void main() {
     // And now the half that matters: the reader finds it.
     final window = heartRateRecoveryWindowFor(_readBack(request));
     expect(window, isNotNull);
-    expect(window!.source, HeartRateRecoveryStartSource.trailingRestSegment);
-    expect(window.recoveryStart, _effortEnded);
+    expect(window!.recoveryStart, _effortEnded);
   });
 
   test('pauses during the effort survive alongside the recovery mark', () {

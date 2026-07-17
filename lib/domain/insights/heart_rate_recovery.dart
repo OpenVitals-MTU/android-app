@@ -12,18 +12,18 @@ part 'heart_rate_recovery.freezed.dart';
 /// Heart-rate recovery: how far the heart rate falls in the minutes after hard
 /// effort stops. A fitter heart falls faster.
 ///
+/// It is only meaningful when the heart rate was driven near its maximum and effort
+/// then stopped ABRUPTLY. Ease off gradually — slow down but keep moving — and the
+/// number is a lie. So HRR is measured only for the app's guided recovery test, which
+/// marks the instant of cessation with a trailing rest segment; an ordinary workout,
+/// which carries no such mark, is not measured at all (see [heartRateRecoveryWindowFor]).
+///
 /// Health Connect has no record type for it, and the app stores no health data of its
 /// own, so nothing here is persisted: HRR is DERIVED, on read, from the heart-rate
 /// samples Health Connect already holds — the same standing as cardio load or stress.
-///
-/// It does not matter who wrote those samples. A chest strap the app recorded and a
-/// watch that synced afterwards produce the same arithmetic; they differ only in how
-/// densely they sampled, and that is reported ([HeartRateRecoveryIssue.coarseSampling])
-/// rather than hidden. Which is the whole difficulty: a watch commonly samples every
-/// second or so DURING a workout and then reverts to a reading every few minutes the
-/// moment it ends — exactly when heart-rate recovery is measured. So a mark for which
-/// no sample exists is reported as absent. It is never interpolated, and the drop is
-/// never guessed from an average. A number that was not measured is worse than a blank.
+/// A mark for which no sample exists is reported as absent: it is never interpolated,
+/// and the drop is never guessed from an average. A number that was not measured is
+/// worse than a blank.
 
 /// The marks, in the order they are always returned.
 ///
@@ -108,19 +108,6 @@ const Duration _readTailPadding = Duration(seconds: 30);
 /// How far before the recovery start we keep reading, to find the peak.
 const Duration _readHeadPadding = Duration(seconds: 60);
 
-/// Where the recovery began, and what told us.
-enum HeartRateRecoveryStartSource {
-  /// A qualifying rest segment at the end of the session — written by the app's own
-  /// guided test, which is the only thing that knows the true instant of cessation. The
-  /// only source a reading with data ever carries: without such a mark there is no
-  /// reading (see [heartRateRecoveryWindowFor]).
-  trailingRestSegment,
-
-  /// The default on a [HeartRateRecoveryReading.noData] reading. No session's end is ever
-  /// taken as a stop any more — an ordinary workout gives no guarantee effort ceased.
-  sessionEnd,
-}
-
 /// One verdict on a reading, for the UI to lead with.
 enum HeartRateRecoveryQuality {
   /// Near-maximal effort, a peak taken close to the stop, and at least the one-minute
@@ -185,8 +172,6 @@ abstract class HeartRateRecoveryReading with _$HeartRateRecoveryReading {
 
   const factory HeartRateRecoveryReading({
     required DateTime? recoveryStart,
-    @Default(HeartRateRecoveryStartSource.sessionEnd)
-    HeartRateRecoveryStartSource source,
     int? peakBpm,
     DateTime? peakTime,
     @Default(0) int peakWindowSeconds,
@@ -233,7 +218,6 @@ abstract class HeartRateRecoveryWindow with _$HeartRateRecoveryWindow {
     required DateTime recoveryStart,
     required DateTime readStart,
     required DateTime readEnd,
-    required HeartRateRecoveryStartSource source,
   }) = _HeartRateRecoveryWindow;
 }
 
@@ -283,7 +267,6 @@ HeartRateRecoveryWindow? heartRateRecoveryWindowFor(ExerciseData session) {
     readEnd: recoveryStart
         .add(heartRateRecoveryOffsets.last)
         .add(_readTailPadding),
-    source: HeartRateRecoveryStartSource.trailingRestSegment,
   );
 }
 
@@ -299,7 +282,6 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
   required int? restingHeartRateBpm,
   required int? ageYears,
   required int? observedMaxHeartRateBpm,
-  HeartRateRecoveryStartSource source = HeartRateRecoveryStartSource.sessionEnd,
 }) {
   final ordered = _ordered(samples);
   if (ordered.isEmpty) return HeartRateRecoveryReading.noData;
@@ -324,7 +306,6 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
   if (recoverySamples.isEmpty) {
     return HeartRateRecoveryReading(
       recoveryStart: recoveryStart,
-      source: source,
       peakBpm: peak.bpm,
       peakTime: peak.time,
       peakWindowSeconds: peak.windowSeconds,
@@ -403,7 +384,6 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
 
   return HeartRateRecoveryReading(
     recoveryStart: recoveryStart,
-    source: source,
     peakBpm: peak.bpm,
     peakTime: peak.time,
     peakWindowSeconds: peak.windowSeconds,

@@ -423,7 +423,6 @@ void main() {
 
       expect(window, isNotNull);
       expect(window!.recoveryStart, _at(-300));
-      expect(window.source, HeartRateRecoveryStartSource.trailingRestSegment);
       // Reads a minute back for the peak, and past the last mark for the tail.
       expect(window.readStart, _at(-360));
       expect(window.readEnd, _at(30));
@@ -459,7 +458,6 @@ void main() {
 
       expect(window, isNotNull);
       expect(window!.recoveryStart, _at(-300));
-      expect(window.source, HeartRateRecoveryStartSource.trailingRestSegment);
     });
   });
 }

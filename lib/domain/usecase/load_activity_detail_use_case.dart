@@ -137,15 +137,14 @@ class LoadActivityDetailUseCase {
 
   /// How the heart rate fell once the effort stopped.
   ///
-  /// This needs its OWN heart-rate read, over a window that runs past the end of the
-  /// session — the recovery happens after the workout is over, so the session's own
-  /// samples cannot contain it. The existing read is deliberately left alone: the
-  /// heart-rate chart on the screen shows the workout, and must not grow a five-minute
-  /// tail of the user sitting down.
+  /// Only the guided recovery test is measured: without its trailing rest segment
+  /// there is no cessation mark, so [heartRateRecoveryWindowFor] returns null and this
+  /// answers [HeartRateRecoveryReading.noData] without spending a read. When there is a
+  /// mark, the recovery gets its OWN heart-rate read over the bounded window around it,
+  /// separate from the read that feeds the session's heart-rate chart.
   ///
-  /// Every read here degrades. A recovery that cannot be worked out costs one card, and
-  /// [HeartRateRecoveryReading.noData] is an ordinary, expected answer — a watch that
-  /// stops recording when the workout ends leaves nothing to measure.
+  /// Every read here degrades: a recovery that cannot be worked out costs one card,
+  /// never the screen.
   Future<HeartRateRecoveryReading> _heartRateRecovery(
     ExerciseData workout,
     BodyProfile profile,
@@ -171,7 +170,6 @@ class LoadActivityDetailUseCase {
       restingHeartRateBpm: profile.restingHeartRateBpm,
       ageYears: profile.ageYears(today: today),
       observedMaxHeartRateBpm: await _observedMaxHeartRate(workout, profile),
-      source: window.source,
     );
   }
 

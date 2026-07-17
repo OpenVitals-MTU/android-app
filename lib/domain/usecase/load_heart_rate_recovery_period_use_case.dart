@@ -65,11 +65,12 @@ class HeartRateRecoveryPeriodData {
       readings.where((entry) => entry.reading.isComparable).toList();
 }
 
-/// Every workout in the period, and how the heart rate fell after each one.
+/// Every guided recovery test in the period, and how the heart rate fell after each.
 ///
 /// Nothing is stored: each reading is computed on the spot from the heart-rate samples
 /// Health Connect already holds, exactly as the single-workout card does — the same pure
-/// function, on the same rule for where the recovery began.
+/// function. Only sessions carrying a cessation mark are read; an ordinary workout is
+/// skipped entirely.
 class LoadHeartRateRecoveryPeriodUseCase {
   const LoadHeartRateRecoveryPeriodUseCase(
     this._activityRepository,
@@ -158,7 +159,6 @@ class LoadHeartRateRecoveryPeriodUseCase {
             restingHeartRateBpm: profile.restingHeartRateBpm,
             ageYears: profile.ageYears(),
             observedMaxHeartRateBpm: observedMaxHeartRateBpm,
-            source: window.source,
           );
 
     return HeartRateRecoverySessionReading(
