@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
+import '../../../domain/model/sleep_daily_summary.dart';
 import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/chart_paint.dart';
 import '../../../ui/charts/schedule_axis.dart';
@@ -242,14 +243,6 @@ class _ScheduleChartPainter extends CustomPainter {
       if (endMinute <= startMinute) continue;
 
       final left = slotLeft + (slotWidth - barWidth) / 2;
-      final barRect = Rect.fromLTRB(
-        left,
-        yFor(startMinute),
-        left + barWidth,
-        yFor(endMinute),
-      );
-      final barRRect =
-          RRect.fromRectAndRadius(barRect, Radius.circular(cornerRadius));
 
       // Stage segments, measured from this night's start so they stay ordered.
       final segments = <(int, double, double)>[];
@@ -266,21 +259,45 @@ class _ScheduleChartPainter extends CustomPainter {
 
       if (segments.isEmpty) {
         // A night with no stage detail is a solid bar, not an empty slot.
-        canvas.drawRRect(barRRect, Paint()..color = emptyBarColor);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTRB(
+                left, yFor(startMinute), left + barWidth, yFor(endMinute)),
+            Radius.circular(cornerRadius),
+          ),
+          Paint()..color = emptyBarColor,
+        );
         continue;
       }
 
-      canvas.save();
-      canvas.clipRRect(barRRect);
-      for (final (stageType, segStart, segEnd) in segments) {
-        final top = yFor(segStart);
-        final bottom = yFor(segEnd);
-        canvas.drawRect(
-          Rect.fromLTWH(left, top, barWidth, math.max(0.0, bottom - top)),
-          Paint()..color = sleepStageColor(stageType),
+      // Split the night from any daytime nap: a gap wider than the nap
+      // threshold starts a new bar. Otherwise one bar spans from the night's
+      // bedtime all the way down to the nap's end, and clipping it squares off
+      // the night's rounded bottom edge at the empty middle. Each block instead
+      // keeps its own rounded top and bottom, like a day without a nap.
+      for (final block in _stageBlocks(segments)) {
+        final blockTop = block.first.$2;
+        var blockBottom = block.first.$3;
+        for (final seg in block) {
+          if (seg.$3 > blockBottom) blockBottom = seg.$3;
+        }
+        final blockRRect = RRect.fromRectAndRadius(
+          Rect.fromLTRB(
+              left, yFor(blockTop), left + barWidth, yFor(blockBottom)),
+          Radius.circular(cornerRadius),
         );
+        canvas.save();
+        canvas.clipRRect(blockRRect);
+        for (final (stageType, segStart, segEnd) in block) {
+          final top = yFor(segStart);
+          final bottom = yFor(segEnd);
+          canvas.drawRect(
+            Rect.fromLTWH(left, top, barWidth, math.max(0.0, bottom - top)),
+            Paint()..color = sleepStageColor(stageType),
+          );
+        }
+        canvas.restore();
       }
-      canvas.restore();
     }
 
     _paintAverageMarkers(canvas, size, barsWidth, yFor);
@@ -321,6 +338,31 @@ class _ScheduleChartPainter extends CustomPainter {
 
   /// Flutter has no `PathEffect.dashPathEffect`, so the 8-on/6-off dash is
   /// stepped by hand.
+
+  /// Groups start-ordered `(stageType, startMinute, endMinute)` segments into
+  /// contiguous blocks, breaking wherever a gap wider than [kSleepNapGap] sits
+  /// between one segment's end and the next's start — the same threshold the
+  /// domain uses to tell a daytime nap from the night ([splitNightAndNaps]).
+  static List<List<(int, double, double)>> _stageBlocks(
+    List<(int, double, double)> segments,
+  ) {
+    final gapMinutes = kSleepNapGap.inMinutes.toDouble();
+    final blocks = <List<(int, double, double)>>[];
+    var block = <(int, double, double)>[segments.first];
+    var blockEnd = segments.first.$3;
+    for (final seg in segments.skip(1)) {
+      if (seg.$2 - blockEnd > gapMinutes) {
+        blocks.add(block);
+        block = <(int, double, double)>[seg];
+        blockEnd = seg.$3;
+      } else {
+        block.add(seg);
+        if (seg.$3 > blockEnd) blockEnd = seg.$3;
+      }
+    }
+    blocks.add(block);
+    return blocks;
+  }
 
   static DateTime _clampTime(DateTime value, DateTime low, DateTime high) {
     if (value.isBefore(low)) return low;

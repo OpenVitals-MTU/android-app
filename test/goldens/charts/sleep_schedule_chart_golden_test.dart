@@ -117,6 +117,46 @@ void main() {
     );
   });
 
+  testWidgets('a night with a daytime nap keeps both bars rounded',
+      (tester) async {
+    // The night's in-bed window ends at the NAP's end, hours after the night's
+    // own last stage. One clipped bar spanning the whole window would square off
+    // the night's rounded bottom edge at the empty afternoon gap; each block
+    // gets its own rounded bar instead. Regression guard for that fix.
+    SleepScheduleDay napNight(LocalDate date, int napHour) {
+      final bed = DateTime(date.year, date.month, date.day, 23, 20)
+          .subtract(const Duration(days: 1));
+      final wake = bed.add(const Duration(hours: 7, minutes: 40));
+      final napStart = DateTime(date.year, date.month, date.day, napHour, 0);
+      return SleepScheduleDay(
+        date: date,
+        inBedStart: bed,
+        inBedEnd: napStart.add(const Duration(minutes: 40)),
+        stages: [
+          ...stagesFrom(bed, wake.difference(bed)),
+          stage(SleepStage.stageLight, napStart, const Duration(minutes: 25)),
+          stage(SleepStage.stageRem, napStart.add(const Duration(minutes: 25)),
+              const Duration(minutes: 15)),
+        ],
+      );
+    }
+
+    await expectChartGoldenBothThemes(
+      tester,
+      () => SleepScheduleStageChart(
+        title: 'Sleep schedule',
+        summaryText: 'This week · with naps',
+        days: [
+          napNight(monday, 14),
+          night(monday.plusDays(1), 23, 5, const Duration(hours: 7, minutes: 55)),
+          napNight(monday.plusDays(2), 13),
+        ],
+        selectedRange: TimeRange.week,
+      ),
+      name: 'sleep_schedule_chart_nap',
+    );
+  });
+
   testWidgets('a week with the average bedtime and wake-up marked',
       (tester) async {
     await expectChartGoldenBothThemes(
