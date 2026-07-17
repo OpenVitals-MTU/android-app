@@ -22,12 +22,12 @@
 library;
 
 import 'dart:async';
-import 'dart:collection';
 import 'dart:io';
 
 import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
 import '../../../data/repository/contract/apple_health_import_repository.dart';
+import 'apple_health_import_batch_channel.dart';
 import 'apple_health_import_categories.dart';
 import 'apple_health_import_checkpoint_store.dart';
 import 'apple_health_import_converter.dart';
@@ -50,6 +50,16 @@ const int _convertedBatchSize = 300;
 const int _bufferedRecordBatchSize = 2000;
 const int _maxRawDiagnostics = 1000;
 const int _maxDuplicateCheckSpanSeconds = 6 * 60 * 60;
+
+/// Kotlin `MaxConcurrentDuplicateCheckQueries`: how many per-type/per-window
+/// duplicate-check reads a single batch runs at once. Bounded so the burst stays
+/// friendly to Health Connect's API rate limit.
+const int _maxConcurrentDuplicateCheckQueries = 4;
+
+/// Kotlin `BatchChannelCapacity`: how many converted batches may sit between the
+/// parse/convert producer and the writer before the producer has to wait — the
+/// backpressure that lets parsing overlap writing without unbounded memory.
+const int _batchChannelCapacity = 2;
 
 /// Unwraps an import write, raising a *typed* permission exception when that is
 /// what went wrong.
@@ -237,20 +247,19 @@ class AppleHealthImportService {
       ));
     }
 
-    // The streaming import pipeline: the consumer converts + selects records as
-    // they are parsed and hands full 300-record batches to [readyBatches]; the
-    // drain (run at every XML chunk boundary and after the final flush) writes them
-    // to Health Connect. Nothing accumulates the whole export — memory stays
-    // bounded to roughly one parse chunk of records plus one batch in flight. This
-    // replaces `converter.convert(parsed)` + a `selected` list, both of which
-    // materialised the entire export before writing.
-    final readyBatches = Queue<List<ConvertedAppleRecord>>();
+    // The streaming import pipeline (Kotlin's producer/consumer + `Channel`): the
+    // consumer converts + selects records as they are parsed and hands full
+    // 300-record batches to [channel]; a separate writer future drains it,
+    // writing to Health Connect. The two overlap — the writer's Health Connect
+    // I/O runs while the next chunk is parsed — bounded to [_batchChannelCapacity]
+    // batches in flight so memory stays roughly one parse chunk plus the channel.
+    final channel = AppleHealthImportBatchChannel(_batchChannelCapacity);
     final consumer = _ImportConsumer(
       converter: converter,
       selectedCategories: selectedCategories,
       categoryStats: categoryStats,
       typeStats: typeStats,
-      onReadyBatch: readyBatches.add,
+      onReadyBatch: channel.add,
     );
 
     // Progress snapshots read the consumer's live counters (Kotlin's writing-state
@@ -353,48 +362,67 @@ class AppleHealthImportService {
       onProgress?.call(writeProgress(AppleHealthImportPhase.writing));
     }
 
-    // Batch N's insert completes before batch N+1's duplicate lookup (a plain
-    // sequential await), so cross-batch duplicates inside one export are still
-    // caught by the existing-id query.
-    Future<void> drain() async {
-      while (readyBatches.isNotEmpty) {
-        await processReadyBatch(readyBatches.removeFirst());
-      }
+    // The writer future: pulls one batch at a time, in order, so batch N's insert
+    // still completes before batch N+1's duplicate lookup — cross-batch
+    // duplicates inside one export are caught by the existing-id query, exactly
+    // as when this ran serially. It just now runs concurrently with the parse.
+    final writerFuture =
+        drainAppleHealthImportBatches(channel, processReadyBatch);
+    // The writer's error is surfaced to the parse through channel.throwIfFailed
+    // at the next chunk boundary (and awaited below); this guard just keeps it
+    // from being reported as unhandled in the gap before then. A later `await`
+    // still sees the same error.
+    unawaited(writerFuture.then((_) {}, onError: (Object _, StackTrace _) {}));
+
+    final AppleParsedExport parsed;
+    try {
+      parsed = await _parseExport(
+        file,
+        importLogs,
+        onProgress,
+        // Kotlin 1.9.0 (a852d4e): don't read the workout-routes/*.gpx entries at all
+        // when Workouts is deselected — a sleep/body/vitals-only import is faster and
+        // a damaged route entry can no longer fail an import that never wanted routes.
+        AppleHealthParseOptions(
+          parseRouteFiles: workoutsSelected,
+          // Kotlin 1.9.0 (415f2fe): a known record type whose category is not selected
+          // is never materialized — the difference between OOM and not on a
+          // multi-gigabyte HeartRate export with only Body selected.
+          shouldMaterializeRecord: consumer.shouldMaterializeRecord,
+          // The scan's numerator; makes the scan percent climb instead of standing
+          // still until the parse returns.
+          onElementsParsed: onProgress == null
+              ? null
+              : (parsedElements) => onProgress(_scanProgress(parsedElements)),
+          onRecordSkipped: consumer.onRecordSkipped,
+        ),
+        consumer: consumer,
+        // At each chunk boundary: stop early if the writer has died, then wait if
+        // the writer is more than [_batchChannelCapacity] batches behind. The wait
+        // is where the writer's Health Connect I/O overlaps the next chunk's parse.
+        onChunkBoundary: () async {
+          channel.throwIfFailed();
+          await channel.awaitCapacity();
+        },
+      );
+
+      // Convert the final buffered groups (blood-pressure pairs, sleep sessions,
+      // nutrition, workouts, and the additive-overlap dedup that needs the whole
+      // set); their batches flow through the channel too. Then close it and wait
+      // for the writer to finish draining.
+      onProgress?.call(writeProgress(AppleHealthImportPhase.converting));
+      log('Stage started: Converting records');
+      consumer.finishBuffered();
+      consumer.finishConverted();
+      channel.close();
+      await writerFuture;
+    } catch (_) {
+      // A parse failure (or a writer failure re-thrown at a chunk boundary) must
+      // still let the writer settle so its error is not left unhandled.
+      channel.close();
+      await writerFuture.catchError((Object _) {});
+      rethrow;
     }
-
-    final parsed = await _parseExport(
-      file,
-      importLogs,
-      onProgress,
-      // Kotlin 1.9.0 (a852d4e): don't read the workout-routes/*.gpx entries at all
-      // when Workouts is deselected — a sleep/body/vitals-only import is faster and
-      // a damaged route entry can no longer fail an import that never wanted routes.
-      AppleHealthParseOptions(
-        parseRouteFiles: workoutsSelected,
-        // Kotlin 1.9.0 (415f2fe): a known record type whose category is not selected
-        // is never materialized — the difference between OOM and not on a
-        // multi-gigabyte HeartRate export with only Body selected.
-        shouldMaterializeRecord: consumer.shouldMaterializeRecord,
-        // The scan's numerator; makes the scan percent climb instead of standing
-        // still until the parse returns.
-        onElementsParsed: onProgress == null
-            ? null
-            : (parsedElements) => onProgress(_scanProgress(parsedElements)),
-        onRecordSkipped: consumer.onRecordSkipped,
-      ),
-      consumer: consumer,
-      onChunkBoundary: drain,
-    );
-
-    // Convert the final buffered groups (blood-pressure pairs, sleep sessions,
-    // nutrition, workouts, and the additive-overlap dedup that needs the whole
-    // set) and drain the batches they produce.
-    onProgress?.call(writeProgress(AppleHealthImportPhase.converting));
-    log('Stage started: Converting records');
-    consumer.finishBuffered();
-    await drain();
-    consumer.finishConverted();
-    await drain();
     final convertedCount = consumer.convertedRecords;
     final conversionTotals = _totals(_toTypeSummaries(typeStats));
     log('Stage finished: Converting records converted=${conversionTotals.converted} '
@@ -518,49 +546,87 @@ class AppleHealthImportService {
       if (record.clientRecordId == null) continue;
       byType.putIfAbsent(record.recordType, () => []).add(record);
     }
-    final result = <String>{};
+    // The batch's disjoint (recordType, ≤6h window) lookups (Kotlin's
+    // `queries`). They read independent windows, so they run concurrently —
+    // bounded to [_maxConcurrentDuplicateCheckQueries] — instead of one at a
+    // time, which is most of the writer's wall-clock on a dense export.
+    final queries = <(String, List<ConvertedAppleRecord>)>[];
     for (final entry in byType.entries) {
       for (final chunk
           in _chunkForDuplicateCheck(entry.value, _maxDuplicateCheckSpanSeconds)) {
-        final wantedIds =
-            chunk.map((it) => it.clientRecordId!).toSet();
-        if (wantedIds.isEmpty) continue;
-        final start = chunk
-            .map((it) => it.sourceTimeRange.start)
-            .reduce((a, b) => a.isBefore(b) ? a : b)
-            .subtract(const Duration(seconds: 1));
-        final end = chunk
-            .map((it) => it.sourceTimeRange.end)
-            .reduce((a, b) => a.isAfter(b) ? a : b)
-            .add(const Duration(seconds: 1));
-        try {
-          // orThrow stays ON PURPOSE. The catch below writes the *original*
-          // throwable into the shareable report through
-          // `AppleHealthImportErrorFormatter`, which reads its runtime type,
-          // message and `cause` chain. Switching on the Result here would hand
-          // the formatter an `AppFailure` instead, silently rewriting every
-          // lookup-failure line of the report the user is asked to file bugs
-          // with. The report is the product; the bridge is not in its way.
-          final matched = _orThrowImport(
-            await _repository.findMatchingImportedClientRecordIds(
-              entry.key,
-              start,
-              end,
-              wantedIds,
-            ),
-          );
-          result.addAll(matched);
-        } catch (error, stackTrace) {
-          importLogs.add(_errorLog(
-            'Existing clientRecordId lookup failed recordType=${entry.key} '
-            'wanted=${wantedIds.length}',
-            error,
-            stackTrace,
-          ));
-        }
+        if (chunk.isEmpty) continue;
+        queries.add((entry.key, chunk));
       }
     }
+
+    final result = <String>{};
+    await _runBounded(queries.length, _maxConcurrentDuplicateCheckQueries,
+        (index) async {
+      final (recordType, chunk) = queries[index];
+      final wantedIds = chunk.map((it) => it.clientRecordId!).toSet();
+      if (wantedIds.isEmpty) return;
+      final start = chunk
+          .map((it) => it.sourceTimeRange.start)
+          .reduce((a, b) => a.isBefore(b) ? a : b)
+          .subtract(const Duration(seconds: 1));
+      final end = chunk
+          .map((it) => it.sourceTimeRange.end)
+          .reduce((a, b) => a.isAfter(b) ? a : b)
+          .add(const Duration(seconds: 1));
+      try {
+        // orThrow stays ON PURPOSE. The catch below writes the *original*
+        // throwable into the shareable report through
+        // `AppleHealthImportErrorFormatter`, which reads its runtime type,
+        // message and `cause` chain. Switching on the Result here would hand
+        // the formatter an `AppFailure` instead, silently rewriting every
+        // lookup-failure line of the report the user is asked to file bugs
+        // with. The report is the product; the bridge is not in its way.
+        final matched = _orThrowImport(
+          await _repository.findMatchingImportedClientRecordIds(
+            recordType,
+            start,
+            end,
+            wantedIds,
+          ),
+        );
+        // Single isolate: the union and the log append below run between
+        // awaits, so concurrent lookups never race on these.
+        result.addAll(matched);
+      } catch (error, stackTrace) {
+        importLogs.add(_errorLog(
+          'Existing clientRecordId lookup failed recordType=$recordType '
+          'wanted=${wantedIds.length}',
+          error,
+          stackTrace,
+        ));
+      }
+    });
     return result;
+  }
+
+  /// Runs [taskCount] tasks with at most [maxConcurrent] in flight, awaiting all.
+  /// A single-isolate analogue of Kotlin's `async` + `Semaphore(n)` + `awaitAll`
+  /// — [run] is called with each index `0..taskCount-1`, exactly once.
+  static Future<void> _runBounded(
+    int taskCount,
+    int maxConcurrent,
+    Future<void> Function(int index) run,
+  ) async {
+    if (taskCount <= 0) return;
+    var next = 0;
+    Future<void> worker() async {
+      while (true) {
+        // Claiming an index is synchronous, so two workers never take the same
+        // one despite running "concurrently".
+        final index = next;
+        if (index >= taskCount) return;
+        next = index + 1;
+        await run(index);
+      }
+    }
+
+    final workerCount = maxConcurrent < taskCount ? maxConcurrent : taskCount;
+    await Future.wait([for (var i = 0; i < workerCount; i++) worker()]);
   }
 
   Future<_InsertionResult> _insertConvertedRecords(
