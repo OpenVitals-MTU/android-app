@@ -1887,7 +1887,7 @@
     "bodyEnergyFeelCheckSaved": "¡Gracias!, Body Energy lo tendrá en cuenta.",
     "bodyEnergyFeelCheckError": "No se ha podido guardar ese registro. Por favor, inténtalo de nuevo.",
     "bodyEnergyPersonalizationTitle": "Ajustes personales",
-    "bodyEnergyPersonalizationBody": "{count, plural, =0{Valora tu energía en «Energía corporal» para empezar a personalizarlos.} =1{Datos obtenidos de 1 registro. Cada uno es un multiplicador simple que puedes ver a continuación.} otro{Datos obtenidos de {count} registros. Cada uno es un multiplicador simple que puedes ver a continuación.}}",
+    "bodyEnergyPersonalizationBody": "{count, plural, =0{Valora tu energía en «Energía corporal» para empezar a personalizarlos.} =1{Datos obtenidos de 1 registro. Cada uno es un multiplicador simple que puedes ver a continuación.} other{Datos obtenidos de {count} registros. Cada uno es un multiplicador simple que puedes ver a continuación.}}",
     "@bodyEnergyPersonalizationBody": {
         "placeholders": {
             "count": {
