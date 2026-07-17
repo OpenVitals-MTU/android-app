@@ -77,6 +77,105 @@ Each reading carries a verdict and, where relevant, a note:
 
 Invalid readings are never charted.
 
+## Calculation reference
+
+The measurement is a pure, deterministic function — `calculateHeartRateRecovery` in `lib/domain/insights/heart_rate_recovery.dart` — over the heart-rate samples read for the test's window. Nothing is interpolated; a value that was not measured is left blank.
+
+### 1. Inputs
+
+- `recoveryStart` — the instant effort stopped (the start of the trailing rest segment).
+- `samples` — heart-rate samples over the read window `[recoveryStart − 60s, recoveryStart + 5min + 30s]`.
+- The maximum-heart-rate context (see step 5).
+
+### 2. Prepare the samples
+
+- Collapse samples that share the same instant to the single **higher** bpm. A strap and a watch can both stamp the same second; keeping the higher one is conservative in both directions (a higher peak is harder to clear the near-max band, and a higher recovery reading reports a *smaller* drop).
+- Sort ascending by time.
+- If there are no samples → **noData**.
+
+### 3. Peak
+
+- `peak = max(bpm)` over the hard window `[recoveryStart − 10s, recoveryStart]` (inclusive).
+- If no sample sits in that window → **noData**. The window never widens: a wider one could take the peak from while effort was still going and inflate the drop.
+- If exactly one sample stands behind it → flag `peakFromSingleSample`.
+
+### 4. Recovery samples and marks
+
+- `recoverySamples` = samples **strictly after** `recoveryStart`, up to `recoveryStart + 5min`. (A sample exactly at `recoveryStart` is the value *at* cessation — the thing the fall is measured from — not part of the fall.)
+- If there are none → **noData** with `noRecoverySamples`.
+- For each offset `o` in {30s, 1, 2, 3, 4, 5 min}:
+  - `target = recoveryStart + o`.
+  - Take the sample nearest `target` within `tolerance(o)` (30s → ±3s, the minute marks → ±5s). A tie goes to the **earlier** sample (on a falling curve the higher reading, so the smaller drop).
+  - If a sample `s` is found: `heartRateBpm = s.bpm`, `dropBpm = peak − s.bpm`, `sampleSkew = |s.time − target|`.
+  - Otherwise the mark is blank (`heartRateBpm = null`) — never invented.
+- **Headline** = the one-minute mark's `dropBpm`.
+
+### 5. Maximum heart rate
+
+Resolved in order (`_resolveMaxHeartRate`):
+
+1. The **stated** maximum from the profile (if `> 0`) → *known*.
+2. The highest **observed** heart rate in the last 90 days, if trustworthy: `observed ≥ max(150, resting + 60)` (or `observed ≥ 150` when the resting rate is unknown) → *known*.
+3. The **age estimate** `round(208 − 0.7 × age)`, floored at 1 → *estimated*.
+4. Otherwise none → flag `unknownMaxHeartRate` (the marks still compute; only the effort judgement is lost).
+
+### 6. Effort strength (the near-max band)
+
+- `band = 22` bpm when the maximum is estimated (the ~95% confidence interval of the age formula), `10` bpm when it is known.
+- If `peak < max − band` → flag `submaximalEffort`.
+- `peakFractionOfMax = peak / max` is stored for display.
+
+### 7. Cool-down before the stop
+
+- `recentHigh = max(bpm)` over `[recoveryStart − 60s, recoveryStart]`.
+- `atStop` = the sample nearest `recoveryStart` within ±15s.
+- If `recentHigh − atStop.bpm > 4` → flag `cooldownBeforeStop`. (Compared against the last-minute high, not the peak, so an easing-off before a hard-window peak is still caught.)
+
+### 8. Heart rate did not fall
+
+- If any mark has `dropBpm ≤ 0` → flag `heartRateDidNotFall` (the recording ended before the effort did).
+
+### 9. Verdict (`quality`)
+
+Evaluated in order:
+
+1. `cooldownBeforeStop` or `heartRateDidNotFall` → **invalid**.
+2. All marks blank → **noData**.
+3. `submaximalEffort` → **notComparable**.
+4. One-minute mark blank, or `peakFromSingleSample`, or `unknownMaxHeartRate` → **approximate**.
+5. Otherwise → **clean**.
+
+### 10. Chartable
+
+`isComparable = quality ∈ {clean, approximate} AND the one-minute drop is present`. Only comparable readings enter the trend; invalid ones never do.
+
+### Constants
+
+| Constant | Value | Meaning |
+|---|---|---|
+| offsets | 30s, 1, 2, 3, 4, 5 min | the recovery marks |
+| headline | 1 min | the figure to lead with |
+| tolerance | 30s → ±3s; 1–5 min → ±5s | nearest-sample snap per mark |
+| peak window | 10s (hard) | run-up before the stop |
+| read padding | head 60s, tail 30s | window read around the marks |
+| cool-down gate | > 4 bpm | pre-stop fall that invalidates |
+| cool-down lookback | 60s | the recent-high window |
+| stop tolerance | ±15s | "heart rate at the stop" |
+| near-max band | 22 bpm estimated / 10 bpm known | submaximal below it |
+| age formula | `round(208 − 0.7·age)`, min 1 | estimated maximum |
+| observed-max trust | `≥ max(150, resting + 60)` | when to believe an observed max |
+| min rest segment | 90s | qualifies the cessation mark |
+| trailing slack | 30s | the rest must end near the session end |
+
+### Worked example
+
+A 40-year-old with no stated maximum runs a guided test that peaks at 178 bpm and reads 145 bpm one minute after stopping:
+
+- Maximum = `round(208 − 0.7 × 40)` = **180 bpm** (estimated).
+- Near-max band = 22 → `178 ≥ 180 − 22 = 158` → **not** submaximal.
+- One-minute drop = `178 − 145` = **33 bpm** (the headline).
+- No pre-stop cool-down and no non-positive drop → verdict **clean**, and it charts.
+
 ## Data and privacy
 
 HRR is a local, derived wellness estimate. It is not written to Health Connect and is not stored by the app — only the guided test's exercise session (and its rest segment) is saved, like any other recording. See [Privacy, support, and diagnostics](privacy-support-diagnostics.md).
