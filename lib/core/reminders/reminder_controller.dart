@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'reminder_schedule.dart';
 
 /// Today's progress toward a reminder's daily goal. A reminder stops nagging
@@ -102,18 +104,34 @@ class ReminderController {
 
   /// Runs when an alarm fires: notifies unless the goal is already met or the
   /// schedule is in quiet hours, then arms the next alarm either way.
+  ///
+  /// The re-arm is in a `finally`, and reading progress / posting is best-effort:
+  /// this is a self-perpetuating one-shot chain, so a transient failure in the
+  /// read or the post must NEVER stop the next alarm from being armed. It used to
+  /// re-arm last, so any throw (a momentary Health Connect read error, a plugin
+  /// error) killed the chain until the app was reopened — the "reminders just
+  /// stopped" bug.
   Future<void> handleAlarm() async {
     final settings = loadSettings();
     if (!settings.enabled || !await hasNotificationPermission()) {
       await clear();
       return;
     }
-    final progress = await readProgress();
-    if (!progress.isMet && settings.schedule.allowsNotificationAt(now())) {
-      await notifier.show(progress);
+    var goalMet = false;
+    try {
+      final progress = await readProgress();
+      goalMet = progress.isMet;
+      if (!goalMet && settings.schedule.allowsNotificationAt(now())) {
+        await notifier.show(progress);
+      }
+    } catch (error, stack) {
+      debugPrint('Reminder fire failed (chain kept alive): $error\n$stack');
+    } finally {
+      // Armed even while quiet or goal-met (so the chain survives to tomorrow),
+      // and even if the read/post above threw (goalMet defaults false, so the
+      // next fire is now+interval — it retries soon rather than going silent).
+      await _scheduleNext(settings.schedule, goalMet: goalMet);
     }
-    // Armed even while quiet or goal-met, so the chain survives to tomorrow.
-    await _scheduleNext(settings.schedule, goalMet: progress.isMet);
   }
 
   /// Re-arms (or clears) the schedule, e.g. after a device reboot or app update.

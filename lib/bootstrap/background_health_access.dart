@@ -1,6 +1,8 @@
-import '../data/prefs/preferences_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../core/result/result.dart';
+import '../data/prefs/preferences_repository.dart';
 import '../data/repository/impl/health_repository_impl.dart';
 import '../data/source/health/health_data_source.dart';
 import '../data/source/health/native/health_connect_native_data_source.dart';
@@ -25,18 +27,48 @@ import '../di/providers.dart';
 /// Use this from every isolate entrypoint. Do not construct
 /// [HealthConnectNativeDataSource] directly.
 Future<Result<HealthDataSource>> openBackgroundHealthAccess() async {
-  // The isolate must read the mindfulness opt-in the same way the app does. If
-  // it did not, the mindfulness reminder would resolve the feature as
-  // unavailable, read today's minutes as zero, decide the goal was never met,
-  // and nag forever — the silent-empty failure this whole file exists to
-  // prevent (AGENTS.md §1).
+  final dataSource = await _buildBackgroundHealthDataSource();
+  final refreshed = await HealthRepositoryImpl(dataSource).refreshAvailability();
+  return refreshed.map((_) => dataSource);
+}
+
+/// Like [openBackgroundHealthAccess], but it NEVER fails: it returns the data
+/// source even when the availability refresh failed, having logged it.
+///
+/// For the reminder alarm isolates only. Their self-rearming one-shot alarm chain
+/// must keep going even when Health Connect is momentarily unavailable at fire
+/// time — otherwise the builder throws, the alarm callback swallows it, and the
+/// chain is never re-armed, so reminders die silently until the app is reopened.
+/// On a failed refresh, reads degrade to empty (a transient over-notify) until HC
+/// recovers next fire, which is far better than the chain dying. Writers must keep
+/// using [openBackgroundHealthAccess] and abort on failure — an empty read there
+/// would silently drop data.
+Future<HealthDataSource> openBackgroundHealthAccessResilient() async {
+  final dataSource = await _buildBackgroundHealthDataSource();
+  final refreshed = await HealthRepositoryImpl(dataSource).refreshAvailability();
+  if (refreshed case Err(:final failure)) {
+    debugPrint(
+      'Background HC availability refresh failed; the reminder will read empty '
+      'until HC recovers, but the alarm chain is kept alive: $failure',
+    );
+  }
+  return dataSource;
+}
+
+/// Builds the background Health Connect data source WITHOUT refreshing
+/// availability. Private so no isolate can construct one that skips the refresh —
+/// the whole reason this file exists.
+///
+/// The isolate must read the mindfulness opt-in the same way the app does. If it
+/// did not, the mindfulness reminder would resolve the feature as unavailable,
+/// read today's minutes as zero, decide the goal was never met, and nag forever —
+/// the silent-empty failure this whole file exists to prevent (AGENTS.md §1).
+Future<HealthDataSource> _buildBackgroundHealthDataSource() async {
   final prefs = await SharedPreferences.getInstance();
   final preferences = PreferencesRepository(prefs);
-  final dataSource = HealthConnectNativeDataSource(
+  return HealthConnectNativeDataSource(
     appPackageName: openVitalsPackageName,
     mindfulnessIntegrationEnabled: () =>
         preferences.healthConnectMindfulnessEnabled,
   );
-  final refreshed = await HealthRepositoryImpl(dataSource).refreshAvailability();
-  return refreshed.map((_) => dataSource);
 }

@@ -8,7 +8,6 @@ import '../../../bootstrap/background_health_access.dart';
 import '../../../core/reminders/alarm_manager_reminder_scheduler.dart';
 import '../../../core/reminders/local_notifications_reminder_device.dart';
 import '../../../core/reminders/reminder_notifications.dart';
-import '../../../core/result/result.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../data/repository/impl/hydration_repository_impl.dart';
 import '../../../data/source/health/health_data_source.dart';
@@ -64,9 +63,12 @@ Future<HydrationReminderController>
       PreferencesRepository(await SharedPreferences.getInstance());
   final plugin = FlutterLocalNotificationsPlugin();
   await initializeReminderNotifications(plugin);
+  await ensureHydrationReminderChannel(plugin);
 
-  final HealthDataSource dataSource =
-      (await openBackgroundHealthAccess()).orThrow();
+  // Resilient, not `.orThrow()`: a momentary HC failure here must not throw
+  // before the controller exists, or the alarm never re-arms and the reminder
+  // chain dies silently. A degraded read just means a possible extra nag.
+  final HealthDataSource dataSource = await openBackgroundHealthAccessResilient();
   final repository = HydrationRepositoryImpl(
     dataSource,
     preferencesRepository: preferences,

@@ -25,6 +25,17 @@ class _RecordingNotifier implements ReminderNotifier {
   Future<void> cancel() async => cancelCount++;
 }
 
+/// A notifier whose post fails, standing in for a flaky notification plugin at
+/// fire time.
+class _ThrowingNotifier implements ReminderNotifier {
+  @override
+  Future<void> show(ReminderGoalProgress progress) async =>
+      throw StateError('notification post failed');
+
+  @override
+  Future<void> cancel() async {}
+}
+
 /// 07:00–23:00, every two hours — the hydration defaults.
 final _window = IntervalWindowReminderSchedule(
   intervalMinutes: 120,
@@ -173,6 +184,45 @@ void main() {
       expect(notifier.shown, isEmpty);
       expect(scheduler.cancelCount, 1);
       expect(notifier.cancelCount, 1);
+    });
+
+    // The chain is a self-perpetuating one-shot: each fire arms the next. A
+    // transient failure reading progress or posting must never break that, or the
+    // reminder goes silent until the app is reopened (the "reminders stopped" bug).
+    test('re-arms even when reading progress throws', () async {
+      final c = ReminderController(
+        loadSettings: () =>
+            ReminderSettings(enabled: true, schedule: _window),
+        readProgress: () async => throw StateError('HC read failed'),
+        scheduler: scheduler,
+        notifier: notifier,
+        now: () => _at(10),
+        hasNotificationPermission: () async => true,
+      );
+
+      await c.handleAlarm();
+
+      expect(notifier.shown, isEmpty);
+      // goalMet defaults false on a failed read, so the next fire is now+interval
+      // (retry soon) rather than rolling to tomorrow.
+      expect(scheduler.scheduled, [_at(12)]);
+    });
+
+    test('re-arms even when posting the notification throws', () async {
+      final c = ReminderController(
+        loadSettings: () =>
+            ReminderSettings(enabled: true, schedule: _window),
+        readProgress: () async =>
+            const ReminderGoalProgress(current: 1, target: 2),
+        scheduler: scheduler,
+        notifier: _ThrowingNotifier(),
+        now: () => _at(10),
+        hasNotificationPermission: () async => true,
+      );
+
+      await c.handleAlarm();
+
+      expect(scheduler.scheduled, [_at(12)]);
     });
   });
 
