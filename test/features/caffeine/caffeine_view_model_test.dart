@@ -13,6 +13,7 @@ import 'package:openvitals/data/repository/contract/caffeine_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/caffeine_models.dart';
 import 'package:openvitals/domain/model/refresh_mode.dart';
+import 'package:openvitals/domain/usecase/delete_nutrition_entry_use_case.dart';
 import 'package:openvitals/features/caffeine/application/caffeine_display.dart';
 import 'package:openvitals/features/caffeine/application/caffeine_view_model.dart';
 
@@ -49,7 +50,24 @@ class _FakeCaffeineRepository implements CaffeineRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-CaffeineEntry _entry(DateTime start, double mg) => CaffeineEntry(
+/// A caffeine entry is a nutrition record; its delete goes through the nutrition
+/// delete use case, which this fake stands in for.
+class _FakeDeleteNutrition implements DeleteNutritionEntryUseCase {
+  Result<void> answer = const Ok(null);
+  final List<String> deletedIds = [];
+
+  @override
+  Future<Result<void>> call(String entryId) async {
+    deletedIds.add(entryId);
+    return answer;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+CaffeineEntry _entry(DateTime start, double mg, {bool owned = false}) =>
+    CaffeineEntry(
       id: 'entry-${start.millisecondsSinceEpoch}',
       startTime: start,
       endTime: start.add(const Duration(minutes: 10)),
@@ -57,23 +75,27 @@ CaffeineEntry _entry(DateTime start, double mg) => CaffeineEntry(
       name: 'Coffee',
       source: 'Test source',
       mealType: 0,
+      isOpenVitalsEntry: owned,
     );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _FakeCaffeineRepository repository;
+  late _FakeDeleteNutrition delete;
   late ProviderContainer container;
 
   Future<ProviderContainer> boot(Result<CaffeinePeriodData> answer) async {
     SharedPreferences.setMockInitialValues(const <String, Object>{});
     final prefs = await SharedPreferences.getInstance();
     repository = _FakeCaffeineRepository(answer);
+    delete = _FakeDeleteNutrition();
     container = ProviderContainer(overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
       preferencesRepositoryProvider
           .overrideWithValue(PreferencesRepository(prefs)),
       caffeineRepositoryProvider.overrideWithValue(repository),
+      deleteNutritionEntryUseCaseProvider.overrideWithValue(delete),
     ]);
     addTearDown(container.dispose);
     return container;
@@ -180,5 +202,57 @@ void main() {
     expect(display.home.sleepImpactStatus, CaffeineSleepImpactStatus.unlikely);
     expect(display.analytics.sourceBars, isEmpty);
     expect(display.home.curveMaxMg, greaterThan(0));
+  });
+
+  group('deleteCaffeineEntry', () {
+    test('removes an owned drink and deletes its nutrition record', () async {
+      final entry = _entry(earlierToday(const Duration(hours: 2)), 95,
+          owned: true);
+      await boot(Ok(CaffeinePeriodData(entries: [entry])));
+      container.listen(caffeineProvider, (_, _) {});
+      await container.read(caffeineProvider.notifier).load();
+      await pumpEventQueue();
+
+      repository.answer = const Ok(CaffeinePeriodData(entries: []));
+      await container
+          .read(caffeineProvider.notifier)
+          .deleteCaffeineEntry(entry.id);
+
+      expect(delete.deletedIds, [entry.id]);
+      expect(container.read(caffeineProvider).entries, isEmpty);
+    });
+
+    test('ignores a foreign drink it does not own', () async {
+      final entry = _entry(earlierToday(const Duration(hours: 2)), 95);
+      await boot(Ok(CaffeinePeriodData(entries: [entry])));
+      container.listen(caffeineProvider, (_, _) {});
+      await container.read(caffeineProvider.notifier).load();
+      await pumpEventQueue();
+
+      await container
+          .read(caffeineProvider.notifier)
+          .deleteCaffeineEntry(entry.id);
+
+      expect(delete.deletedIds, isEmpty);
+      expect(container.read(caffeineProvider).entries, hasLength(1));
+    });
+
+    test('rolls the row back and surfaces the error on failure', () async {
+      final entry = _entry(earlierToday(const Duration(hours: 2)), 95,
+          owned: true);
+      await boot(Ok(CaffeinePeriodData(entries: [entry])));
+      container.listen(caffeineProvider, (_, _) {});
+      await container.read(caffeineProvider.notifier).load();
+      await pumpEventQueue();
+
+      delete.answer = const Err(UnexpectedFailure('Health Connect is gone'));
+      await container
+          .read(caffeineProvider.notifier)
+          .deleteCaffeineEntry(entry.id);
+
+      final state = container.read(caffeineProvider);
+      expect(state.entries, hasLength(1));
+      expect(state.error, isNotNull);
+    });
   });
 }

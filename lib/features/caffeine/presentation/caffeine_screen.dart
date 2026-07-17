@@ -22,6 +22,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 import '../application/caffeine_display.dart';
 import '../application/caffeine_view_model.dart';
@@ -101,7 +102,12 @@ List<Widget> _content(
       )
     else
       for (final entry in state.entries)
-        sectionPadded(_CaffeineEntryRow(entry: entry)),
+        sectionPadded(_CaffeineEntryRow(
+          entry: entry,
+          onDelete: entry.isOpenVitalsEntry && entry.id.isNotEmpty
+              ? () => notifier.deleteCaffeineEntry(entry.id)
+              : null,
+        )),
     const SectionHeader('Sleep impact'),
     sectionPadded(_CaffeineSleepImpactCard(home: home, formatter: formatter)),
     const SectionHeader('Analytics'),
@@ -856,9 +862,10 @@ class _CaffeineEmptyEntries extends StatelessWidget {
 
 /// One logged drink. Tapping it opens what that drink alone is doing to you.
 class _CaffeineEntryRow extends StatelessWidget {
-  const _CaffeineEntryRow({required this.entry});
+  const _CaffeineEntryRow({required this.entry, this.onDelete});
 
   final CaffeineEntry entry;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -866,7 +873,7 @@ class _CaffeineEntryRow extends StatelessWidget {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final time = DateFormat.jm(locale).format(entry.startTime.toLocal());
 
-    return OpenVitalsCard(
+    final content = OpenVitalsCard(
       child: ListTile(
         leading: const Icon(Icons.local_cafe_outlined),
         title: Text(entry.name ?? 'Caffeine'),
@@ -886,6 +893,13 @@ class _CaffeineEntryRow extends StatelessWidget {
         onTap: () =>
             context.push(AppRoutes.caffeineDrinkLocation(entry.id)),
       ),
+    );
+
+    if (onDelete == null) return content;
+    return SwipeToDeleteEntryRow(
+      key: ValueKey('caffeine-${entry.id}'),
+      onDelete: onDelete!,
+      child: content,
     );
   }
 }
