@@ -178,6 +178,9 @@ steps:
           aab_path="build/app/outputs/bundle/release/app-release.aab"
           test -f "$${aab_path}"
           cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
+          # Checksum alongside it, matching the APKs, so a hand-downloaded AAB can
+          # be verified before it is uploaded to Play.
+          (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_AAB_BASENAME}" > "$${OPENVITALS_AAB_BASENAME}.sha256")
         fi
       # Nightly keeps a single stable download page, so the `nightly` tag is force-moved
       # to this commit through the Forgejo API (a git push would need write creds).
@@ -274,6 +277,14 @@ steps:
             ".woodpecker/tmp/$${apk_basename}" \
             ".woodpecker/tmp/$${apk_basename}.sha256"
         done
+        # The Play upload artifact rides along on the same release, so it can be
+        # downloaded and submitted to the console by hand (nightly and tag builds
+        # both produce it). Signed with the upload key; Play re-signs on ingest.
+        if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
+          set -- "$${@}" \
+            ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}" \
+            ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}.sha256"
+        fi
         scripts/publish-codeberg-release.sh "$${@}"
     when:
       - event: manual

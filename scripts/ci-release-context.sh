@@ -133,6 +133,13 @@ else
             exit 1
         fi
         version_code="$configured_version_code"
+        # Build the AAB on a plain tag push too and attach it to the Codeberg
+        # release, so the Play upload artifact can be downloaded and submitted by
+        # hand. This does NOT publish to Play: the publish-play-* steps only run on
+        # cron/manual (beta open-testing) and deployment (production promotion), so
+        # a tag build just produces the AAB and leaves shipping it to the maintainer.
+        aab_basename="OpenVitals-$release_tag.aab"
+        build_aab="true"
     fi
 fi
 
