@@ -56,7 +56,9 @@ final hydrationReminderDeviceProvider =
 /// manager, so fall back to a notification scheduled ahead of time.
 final hydrationReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
   if (defaultTargetPlatform == TargetPlatform.android) {
-    return hydrationReminderAlarmScheduler;
+    return hydrationReminderAlarmSchedulerFor(
+      ref.watch(flutterLocalNotificationsProvider),
+    );
   }
   return ZonedNotificationReminderScheduler(
     plugin: ref.watch(flutterLocalNotificationsProvider),
@@ -86,7 +88,9 @@ final mindfulnessReminderDeviceProvider =
 /// today's mindful minutes before notifying; a scheduled notification elsewhere.
 final mindfulnessReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
   if (defaultTargetPlatform == TargetPlatform.android) {
-    return mindfulnessReminderAlarmScheduler;
+    return mindfulnessReminderAlarmSchedulerFor(
+      ref.watch(flutterLocalNotificationsProvider),
+    );
   }
   return ZonedNotificationReminderScheduler(
     plugin: ref.watch(flutterLocalNotificationsProvider),

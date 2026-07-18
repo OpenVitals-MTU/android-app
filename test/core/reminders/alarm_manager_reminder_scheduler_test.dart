@@ -1,3 +1,4 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/reminders/alarm_manager_reminder_scheduler.dart';
 import 'package:openvitals/features/hydration/reminders/hydration_reminder_alarm.dart';
@@ -57,15 +58,18 @@ void main() {
 
   setUp(() => alarms = _RecordingAlarms());
 
-  AlarmManagerReminderScheduler scheduler({int alarmId = 42}) =>
+  AlarmManagerReminderScheduler scheduler({
+    int alarmId = 42,
+    Future<bool> Function()? canScheduleExact,
+  }) =>
       AlarmManagerReminderScheduler(
         alarmId: alarmId,
         callback: _callback,
         alarms: alarms,
+        canScheduleExact: canScheduleExact,
       );
 
-  test('arms an INEXACT, wake-up, doze-proof alarm that survives reboot',
-      () async {
+  test('arms a wake-up, doze-proof alarm that survives reboot', () async {
     final when = DateTime(2026, 6, 1, 9);
     await scheduler().schedule(when);
 
@@ -74,24 +78,42 @@ void main() {
     expect(alarm.time, when);
     expect(alarm.id, 42);
 
-    // `exact` must stay FALSE, and this is a Play Store constraint, not a
-    // preference. An exact alarm needs SCHEDULE_EXACT_ALARM/USE_EXACT_ALARM, and
-    // USE_EXACT_ALARM is restricted to alarm-clock and calendar apps -- declaring
-    // it on a health dashboard risks the app being pulled. Flipping this back to
-    // true without also removing USE_EXACT_ALARM from the manifest and completing
-    // the Play declaration is how the app gets rejected.
-    expect(
-      alarm.exact,
-      isFalse,
-      reason: 'exact alarms require a Play declaration; see the manifest comment',
-    );
-
-    // The other three are still load-bearing: no wakeup means the reminder waits
-    // for the next unlock, Doze eats it overnight without allowWhileIdle, and
-    // without rescheduleOnReboot the chain dies at the next restart.
+    // These three are load-bearing regardless of exactness: no wakeup means the
+    // reminder waits for the next unlock, Doze eats it overnight without
+    // allowWhileIdle, and without rescheduleOnReboot the chain dies at restart.
     expect(alarm.wakeup, isTrue);
     expect(alarm.allowWhileIdle, isTrue);
     expect(alarm.rescheduleOnReboot, isTrue);
+  });
+
+  test('arms EXACT when the exact-alarm permission is granted', () async {
+    await scheduler(canScheduleExact: () async => true)
+        .schedule(DateTime(2026, 6, 1, 9));
+    expect(alarms.armed.single.exact, isTrue);
+  });
+
+  test('degrades to INEXACT when the permission is not granted', () async {
+    // The plugin silently DROPS an exact alarm it lacks permission for, so the
+    // scheduler must downgrade itself rather than let the reminder chain die.
+    await scheduler(canScheduleExact: () async => false)
+        .schedule(DateTime(2026, 6, 1, 9));
+    expect(alarms.armed.single.exact, isFalse);
+  });
+
+  test('arms INEXACT when no exact-alarm gate is wired', () async {
+    await scheduler().schedule(DateTime(2026, 6, 1, 9));
+    expect(alarms.armed.single.exact, isFalse);
+  });
+
+  test('consults the gate on every schedule, not just the first', () async {
+    var granted = false;
+    final s = scheduler(canScheduleExact: () async => granted);
+
+    await s.schedule(DateTime(2026, 6, 1, 9));
+    granted = true; // permission granted between fires
+    await s.schedule(DateTime(2026, 6, 1, 10));
+
+    expect(alarms.armed.map((a) => a.exact), [false, true]);
   });
 
   test('cancels its own alarm id', () async {
@@ -102,11 +124,9 @@ void main() {
   test('the hydration alarm is wired to a vm:entry-point callback', () {
     // A closure or instance method could not be resolved from a raw callback
     // handle in the alarm isolate, so the callback must be this top-level one.
-    expect(
-      hydrationReminderAlarmScheduler.callback,
-      same(hydrationReminderAlarmCallback),
-    );
-    expect(hydrationReminderAlarmScheduler.alarmId, hydrationReminderAlarmId);
+    final s = hydrationReminderAlarmSchedulerFor(FlutterLocalNotificationsPlugin());
+    expect(s.callback, same(hydrationReminderAlarmCallback));
+    expect(s.alarmId, hydrationReminderAlarmId);
     expect(hydrationReminderAlarmId.bitLength, lessThan(32));
   });
 }

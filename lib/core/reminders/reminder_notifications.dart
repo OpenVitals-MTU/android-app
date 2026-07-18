@@ -68,6 +68,52 @@ Future<bool> requestReminderNotificationPermission(
   }
 }
 
+/// Whether the app may schedule an EXACT alarm right now.
+///
+/// Android 12 (S) gates exact alarms behind `SCHEDULE_EXACT_ALARM`; Android 14
+/// denies that permission by default, so the user grants it from system settings.
+/// Below Android 12 exact alarms need no permission and this is always true.
+///
+/// This is load-bearing, not cosmetic: `android_alarm_manager_plus` SILENTLY
+/// DROPS an exact alarm when the permission is missing — it logs and schedules
+/// nothing, with no inexact fallback — so [AlarmManagerReminderScheduler] must
+/// consult this and downgrade to an inexact alarm itself, or the reminder chain
+/// dies the moment the permission is absent.
+///
+/// Defaults to FALSE (inexact) on any doubt — an unresolved host, a channel
+/// error, a null answer. A reminder a few minutes late beats one never armed.
+Future<bool> canScheduleExactReminders(
+  FlutterLocalNotificationsPlugin plugin,
+) async {
+  if (defaultTargetPlatform != TargetPlatform.android) return true;
+  try {
+    final android = plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return false;
+    return await android.canScheduleExactNotifications() ?? false;
+  } catch (_) {
+    return false;
+  }
+}
+
+/// Sends the user to the system screen that grants `SCHEDULE_EXACT_ALARM` — the
+/// only way to grant it, since Android offers no in-app prompt. Returns whether
+/// exact alarms are permitted afterwards.
+Future<bool> requestExactReminderAlarms(
+  FlutterLocalNotificationsPlugin plugin,
+) async {
+  if (defaultTargetPlatform != TargetPlatform.android) return true;
+  try {
+    final android = plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return false;
+    await android.requestExactAlarmsPermission();
+    return await android.canScheduleExactNotifications() ?? false;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// The notification-permission seam, injected so reminder settings UI can be
 /// tested without a platform channel.
 class ReminderNotificationPermissions {
@@ -83,4 +129,12 @@ class ReminderNotificationPermissions {
   /// permanently denied POST_NOTIFICATIONS: Android then refuses to prompt again,
   /// so [request] returns false without showing anything.
   Future<bool> openSettings() => openAppSettings();
+
+  /// Whether reminders may fire at their EXACT time, or only inside Android's
+  /// inexact-alarm window (which can be tens of minutes wide).
+  Future<bool> canScheduleExact() => canScheduleExactReminders(_plugin);
+
+  /// Sends the user to the system SCHEDULE_EXACT_ALARM screen. Returns whether
+  /// exact alarms are permitted afterwards.
+  Future<bool> requestExactAlarms() => requestExactReminderAlarms(_plugin);
 }

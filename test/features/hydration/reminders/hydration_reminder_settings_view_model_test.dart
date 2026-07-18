@@ -47,14 +47,22 @@ class _RecordingNotifier implements ReminderNotifier {
   Future<void> cancel() async => cancelCount++;
 }
 
-/// Stands in for the Android POST_NOTIFICATIONS gate.
+/// Stands in for the Android POST_NOTIFICATIONS + SCHEDULE_EXACT_ALARM gates.
 class _FakePermissions implements ReminderNotificationPermissions {
-  _FakePermissions({this.enabled = true, this.grantOnRequest = true});
+  _FakePermissions({
+    this.enabled = true,
+    this.grantOnRequest = true,
+    this.exact = true,
+    this.grantExactOnRequest = true,
+  });
 
   bool enabled;
   bool grantOnRequest;
+  bool exact;
+  bool grantExactOnRequest;
   int requestCount = 0;
   int openSettingsCount = 0;
+  int requestExactCount = 0;
 
   @override
   Future<bool> isEnabled() async => enabled;
@@ -70,6 +78,16 @@ class _FakePermissions implements ReminderNotificationPermissions {
   Future<bool> openSettings() async {
     openSettingsCount++;
     return true;
+  }
+
+  @override
+  Future<bool> canScheduleExact() async => exact;
+
+  @override
+  Future<bool> requestExactAlarms() async {
+    requestExactCount++;
+    exact = grantExactOnRequest;
+    return exact;
   }
 }
 
@@ -303,5 +321,78 @@ void main() {
     await subject.refreshPermission();
 
     expect(stateOf(container).isBlockedByPermission, isTrue);
+  });
+
+  group('exact alarms', () {
+    test('an enabled reminder without exact alarms surfaces inexact timing',
+        () async {
+      permissions = _FakePermissions(exact: false);
+      final container = await newContainer(
+        initial: const HydrationReminderConfig(enabled: true),
+      );
+      await settled(container);
+
+      expect(stateOf(container).hasExactAlarms, isFalse);
+      // Nothing is broken — it is a nudge, not a block.
+      expect(stateOf(container).isBlockedByPermission, isFalse);
+      expect(stateOf(container).isTimingInexact, isTrue);
+    });
+
+    test('a disabled reminder never nags about timing', () async {
+      permissions = _FakePermissions(exact: false);
+      final container = await newContainer();
+      await settled(container);
+
+      expect(stateOf(container).isTimingInexact, isFalse);
+    });
+
+    test('granting exact alarms clears the nudge and re-arms precisely',
+        () async {
+      permissions = _FakePermissions(exact: false, grantExactOnRequest: true);
+      final container = await newContainer(
+        initial: const HydrationReminderConfig(enabled: true),
+      );
+      final subject = await settled(container);
+      expect(stateOf(container).isTimingInexact, isTrue);
+      final armedBefore = scheduler.scheduled.length;
+
+      await subject.requestExactAlarms();
+
+      expect(permissions.requestExactCount, 1);
+      expect(stateOf(container).hasExactAlarms, isTrue);
+      expect(stateOf(container).isTimingInexact, isFalse);
+      // Re-armed so the already-enabled reminder becomes exact immediately.
+      expect(scheduler.scheduled.length, armedBefore + 1);
+    });
+
+    test('a declined exact-alarm request leaves timing inexact', () async {
+      permissions = _FakePermissions(exact: false, grantExactOnRequest: false);
+      final container = await newContainer(
+        initial: const HydrationReminderConfig(enabled: true),
+      );
+      final subject = await settled(container);
+      final armedBefore = scheduler.scheduled.length;
+
+      await subject.requestExactAlarms();
+
+      expect(stateOf(container).isTimingInexact, isTrue);
+      // Nothing re-armed: still the same inexact alarm.
+      expect(scheduler.scheduled.length, armedBefore);
+    });
+
+    test('refreshPermission picks up a revoked exact-alarm permission',
+        () async {
+      final container = await newContainer(
+        initial: const HydrationReminderConfig(enabled: true),
+      );
+      final subject = await settled(container);
+      expect(stateOf(container).hasExactAlarms, isTrue);
+
+      permissions.exact = false;
+      await subject.refreshPermission();
+
+      expect(stateOf(container).hasExactAlarms, isFalse);
+      expect(stateOf(container).isTimingInexact, isTrue);
+    });
   });
 }

@@ -65,6 +65,8 @@
   "actionGrant": "Grant",
   "actionGrantPermission": "Grant permission",
   "actionOpenNotificationSettings": "Open notification settings",
+  "actionUseExactTiming": "Use exact timing",
+  "reminderInexactTimingNotice": "Reminders may arrive a few minutes late.",
   "actionLoadMoreEntries": "Load 10 more",
   "actionShowCalculation": "Show calculation",
   "actionHideCalculation": "Hide calculation",

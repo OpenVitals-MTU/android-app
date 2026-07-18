@@ -17,11 +17,18 @@ import 'mindfulness_reminder_device.dart';
 /// The Android alarm id for the mindfulness reminder. Distinct from hydration's.
 const int mindfulnessReminderAlarmId = 5002;
 
-const AlarmManagerReminderScheduler mindfulnessReminderAlarmScheduler =
+/// Builds the mindfulness alarm scheduler, wiring the exact-alarm gate to
+/// [plugin] (which answers `SCHEDULE_EXACT_ALARM`). Built per call site rather
+/// than as a top-level const: the gate needs a live plugin, and a const cannot
+/// hold one. The UI and the alarm isolate each pass their own plugin instance.
+AlarmManagerReminderScheduler mindfulnessReminderAlarmSchedulerFor(
+  FlutterLocalNotificationsPlugin plugin,
+) =>
     AlarmManagerReminderScheduler(
-  alarmId: mindfulnessReminderAlarmId,
-  callback: mindfulnessReminderAlarmCallback,
-);
+      alarmId: mindfulnessReminderAlarmId,
+      callback: mindfulnessReminderAlarmCallback,
+      canScheduleExact: () => canScheduleExactReminders(plugin),
+    );
 
 /// Runs in a background isolate when the alarm fires. See
 /// `hydrationReminderAlarmCallback` for why this must be a top-level
@@ -61,7 +68,7 @@ Future<MindfulnessReminderController>
       plugin: plugin,
       spec: mindfulnessReminderNotificationSpec,
     ),
-    scheduler: mindfulnessReminderAlarmScheduler,
+    scheduler: mindfulnessReminderAlarmSchedulerFor(plugin),
     hasNotificationPermission: () => areReminderNotificationsEnabled(plugin),
   );
 }

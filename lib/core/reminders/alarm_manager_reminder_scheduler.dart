@@ -22,6 +22,7 @@ class AlarmManagerReminderScheduler implements ReminderScheduler {
     required this.alarmId,
     required this.callback,
     this.alarms = const AndroidAlarmManagerApi(),
+    this.canScheduleExact,
   });
 
   /// Must be unique per reminder feature and fit in 32 bits (plugin assertion).
@@ -29,31 +30,39 @@ class AlarmManagerReminderScheduler implements ReminderScheduler {
   final void Function() callback;
   final AndroidAlarmManagerApi alarms;
 
-  /// INEXACT, deliberately — matching the Kotlin app's `setAndAllowWhileIdle`.
+  /// Resolves whether an EXACT alarm may be armed right now — i.e. whether
+  /// `SCHEDULE_EXACT_ALARM` is granted (Android 12+) or implicit (below 12).
   ///
-  /// This briefly armed *exact* alarms (with `SCHEDULE_EXACT_ALARM` /
-  /// `USE_EXACT_ALARM`) so reminders fired on the dot rather than whenever Doze
-  /// relented. Play blocks any upload until exact-alarm use is declared, and
-  /// `USE_EXACT_ALARM` is a RESTRICTED permission Google grants only to apps
-  /// whose core function is an alarm clock or a calendar. A health dashboard is
-  /// neither, so declaring it risks the app being rejected or pulled — not just
-  /// this upload being blocked. A few minutes of drift is not worth that.
+  /// Consulted on EVERY [schedule], not cached, because the permission can be
+  /// revoked between fires. When it is null or answers false the alarm is armed
+  /// INEXACT — never dropped. This gate is mandatory: `android_alarm_manager_plus`
+  /// silently drops an exact alarm it lacks permission for (it logs and schedules
+  /// nothing, with no fallback of its own), so an ungated `exact: true` would kill
+  /// the self-perpetuating reminder chain the instant the permission is absent.
+  final Future<bool> Function()? canScheduleExact;
+
+  /// Exact when the permission allows it, INEXACT otherwise.
   ///
-  /// `allowWhileIdle` still makes the alarm survive Doze; it just lands inside a
-  /// window rather than at the instant. To restore exact reminders: add
-  /// `SCHEDULE_EXACT_ALARM` ONLY (user-grantable, broadly eligible), complete the
-  /// Play declaration, and flip `exact` back to true. Never add `USE_EXACT_ALARM`.
+  /// Exact reminders use `SCHEDULE_EXACT_ALARM` ONLY — the user-grantable,
+  /// broadly-eligible permission. Never `USE_EXACT_ALARM`, which is RESTRICTED to
+  /// alarm-clock and calendar apps; declaring it on a health dashboard risks the
+  /// app being rejected or pulled from Play. When the permission is not granted
+  /// (denied by default on Android 14+) the alarm degrades to an inexact,
+  /// Doze-surviving alarm that lands inside a window rather than at the instant.
   @override
-  Future<void> schedule(DateTime triggerAt) => alarms.oneShotAt(
-        triggerAt,
-        alarmId,
-        callback,
-        exact: false,
-        wakeup: true,
-        // Fire even in Doze, or an overnight reminder silently slips.
-        allowWhileIdle: true,
-        rescheduleOnReboot: true,
-      );
+  Future<void> schedule(DateTime triggerAt) async {
+    final exact = canScheduleExact != null && await canScheduleExact!();
+    await alarms.oneShotAt(
+      triggerAt,
+      alarmId,
+      callback,
+      exact: exact,
+      wakeup: true,
+      // Fire even in Doze, or an overnight reminder silently slips.
+      allowWhileIdle: true,
+      rescheduleOnReboot: true,
+    );
+  }
 
   @override
   Future<void> cancel() => alarms.cancel(alarmId);

@@ -18,13 +18,19 @@ import 'hydration_reminder_device.dart';
 /// notification id space, but kept equal for traceability in `adb dumpsys`.
 const int hydrationReminderAlarmId = 5001;
 
-/// The alarm that wakes the app to fire the hydration reminder. Mirrors the
-/// Kotlin `HydrationReminderAlarmManager`, and re-arms itself across reboot.
-const AlarmManagerReminderScheduler hydrationReminderAlarmScheduler =
+/// Builds the hydration alarm scheduler, wiring the exact-alarm gate to [plugin]
+/// (which answers `SCHEDULE_EXACT_ALARM`). Mirrors the Kotlin
+/// `HydrationReminderAlarmManager`, re-arms itself across reboot, and is built
+/// per call site rather than as a top-level const: the gate needs a live plugin,
+/// which a const cannot hold. The UI and the alarm isolate each pass their own.
+AlarmManagerReminderScheduler hydrationReminderAlarmSchedulerFor(
+  FlutterLocalNotificationsPlugin plugin,
+) =>
     AlarmManagerReminderScheduler(
-  alarmId: hydrationReminderAlarmId,
-  callback: hydrationReminderAlarmCallback,
-);
+      alarmId: hydrationReminderAlarmId,
+      callback: hydrationReminderAlarmCallback,
+      canScheduleExact: () => canScheduleExactReminders(plugin),
+    );
 
 /// Runs in a **background isolate** when the alarm fires, standing in for the
 /// Kotlin `HydrationReminderReceiver`.
@@ -81,7 +87,7 @@ Future<HydrationReminderController>
       plugin: plugin,
       spec: hydrationReminderNotificationSpec,
     ),
-    scheduler: hydrationReminderAlarmScheduler,
+    scheduler: hydrationReminderAlarmSchedulerFor(plugin),
     hasNotificationPermission: () => areReminderNotificationsEnabled(plugin),
   );
 }

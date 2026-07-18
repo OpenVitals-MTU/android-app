@@ -20,6 +20,8 @@ class ReminderToggleTile extends StatelessWidget {
     required this.onToggle,
     required this.onRequestPermission,
     this.onOpenSettings,
+    this.isTimingInexact = false,
+    this.onEnableExactTiming,
   });
 
   final IconData icon;
@@ -38,6 +40,15 @@ class ReminderToggleTile extends StatelessWidget {
   /// the fallback when the OS will no longer prompt (permanently denied). Null
   /// hides it.
   final VoidCallback? onOpenSettings;
+
+  /// The reminder delivers, but only inside Android's inexact-alarm window. Shows
+  /// an optional "use exact timing" nudge — nothing is broken, so it is quieter
+  /// than the permission warning.
+  final bool isTimingInexact;
+
+  /// Opens the system SCHEDULE_EXACT_ALARM screen. Null hides the nudge (e.g. off
+  /// Android, where exact timing is not gated).
+  final VoidCallback? onEnableExactTiming;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +100,30 @@ class ReminderToggleTile extends StatelessWidget {
                     onPressed: onOpenSettings,
                     child: Text(l10n.actionOpenNotificationSettings),
                   ),
+              ],
+            ),
+          ),
+        if (isTimingInexact && onEnableExactTiming != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(Icons.schedule,
+                    size: 16, color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.reminderInexactTimingNotice,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onEnableExactTiming,
+                  child: Text(l10n.actionUseExactTiming),
+                ),
               ],
             ),
           ),

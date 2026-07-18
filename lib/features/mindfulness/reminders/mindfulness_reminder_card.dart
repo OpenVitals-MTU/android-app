@@ -75,6 +75,8 @@ class _MindfulnessReminderCardState
               onToggle: notifier.setEnabled,
               onRequestPermission: notifier.requestPermission,
               onOpenSettings: notifier.openNotificationSettings,
+              isTimingInexact: state.isTimingInexact,
+              onEnableExactTiming: notifier.requestExactAlarms,
             ),
             if (config.enabled) ...[
               const SizedBox(height: 12),
