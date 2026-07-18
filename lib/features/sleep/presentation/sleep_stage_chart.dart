@@ -2,6 +2,10 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+// `show DateFormat`: intl also exports a `TextDirection` that would shadow the
+// dart:ui one this file uses for its label painter.
+import 'package:intl/intl.dart' show DateFormat;
 
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../ui/theme/chart_colors.dart';
@@ -131,51 +135,288 @@ class SleepStagesLaneChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: double.infinity,
-          height: laneHeight * lanes.length,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _LaneChartPainter(
-                    stages: orderedStages,
-                    lanes: lanes,
-                    timelineStart: timelineStart,
-                    timelineEnd: timelineEnd,
-                    trackColor: trackColor,
-                    labelHeight: labelHeight,
-                    laneHeight: laneHeight,
+        SleepStageScrubber(
+          stages: orderedStages,
+          timelineStart: timelineStart,
+          timelineEnd: timelineEnd,
+          child: SizedBox(
+            width: double.infinity,
+            height: laneHeight * lanes.length,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _LaneChartPainter(
+                      stages: orderedStages,
+                      lanes: lanes,
+                      timelineStart: timelineStart,
+                      timelineEnd: timelineEnd,
+                      trackColor: trackColor,
+                      labelHeight: labelHeight,
+                      laneHeight: laneHeight,
+                    ),
                   ),
                 ),
-              ),
-              // The per-lane labels sit above each track, matching the Kotlin
-              // overlay Column (label height then the remaining lane band).
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final lane in lanes) ...[
-                    SizedBox(
-                      height: labelHeight,
-                      width: double.infinity,
-                      child: Text(
-                        showInlineLabels
-                            ? '${localizedSleepStageLabel(l10n, lane.labelStageType)} - '
-                                '${formatter.duration(laneDurationMs(lane))}'
-                            : localizedSleepStageLabel(l10n, lane.labelStageType),
-                        style: labelStyle,
+                // The per-lane labels sit above each track, matching the Kotlin
+                // overlay Column (label height then the remaining lane band).
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final lane in lanes) ...[
+                      SizedBox(
+                        height: labelHeight,
+                        width: double.infinity,
+                        child: Text(
+                          showInlineLabels
+                              ? '${localizedSleepStageLabel(l10n, lane.labelStageType)} - '
+                                  '${formatter.duration(laneDurationMs(lane))}'
+                              : localizedSleepStageLabel(l10n, lane.labelStageType),
+                          style: labelStyle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: _trackBandHeight),
+                      const SizedBox(height: _trackBandHeight),
+                    ],
                   ],
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 8),
         TimeAxisLabels(start: timelineStart, end: timelineEnd),
       ],
+    );
+  }
+}
+
+/// Drag across the hypnogram to read the clock time — and the stage you were in —
+/// at any moment of the night. The sleep analogue of [ChartScrubber], and it
+/// reads CONTINUOUS time rather than snapping to a sample: a stage is a span, not
+/// a point, so a crosshair that jumped to a segment's midpoint would detach from
+/// a finger tracing a 40-minute stretch of REM. The time under the finger is what
+/// a night's chart is asked, exactly as [TimeAxisLabels] answers it at the edges.
+///
+/// Horizontal-only drag, like [ChartScrubber]: a vertical drag is left to the
+/// scrolling screen this chart sits inside, or the page would freeze under the
+/// thumb. See that widget for the gesture-arena reasoning.
+class SleepStageScrubber extends StatefulWidget {
+  const SleepStageScrubber({
+    super.key,
+    required this.stages,
+    required this.timelineStart,
+    required this.timelineEnd,
+    required this.child,
+    this.enabled = true,
+  });
+
+  /// The stages on show, in start order — the same list the hypnogram draws.
+  final List<SleepStage> stages;
+  final DateTime timelineStart;
+  final DateTime timelineEnd;
+
+  /// The hypnogram, unchanged. The scrubber draws over it, never inside it.
+  final Widget child;
+  final bool enabled;
+
+  @override
+  State<SleepStageScrubber> createState() => _SleepStageScrubberState();
+}
+
+class _SleepStageScrubberState extends State<SleepStageScrubber> {
+  /// Where the finger is, 0..1 across the plot, or null when it lifts.
+  double? _fraction;
+
+  /// The stage type last under the finger, so a haptic fires on each crossing
+  /// rather than every pixel.
+  int? _stageType;
+
+  int get _totalMs =>
+      widget.timelineEnd.difference(widget.timelineStart).inMilliseconds;
+
+  DateTime _timeAt(double fraction) => widget.timelineStart
+      .add(Duration(milliseconds: (fraction * _totalMs).round()));
+
+  /// The stage covering [time], or null in a gap between segments.
+  SleepStage? _stageAt(DateTime time) {
+    for (final stage in widget.stages) {
+      if (stage.durationMs <= 0) continue;
+      if (!time.isBefore(stage.startTime) && time.isBefore(stage.endTime)) {
+        return stage;
+      }
+    }
+    return null;
+  }
+
+  void _scrub(double dx, double width) {
+    if (width <= 0 || _totalMs <= 0) return;
+    final fraction = (dx / width).clamp(0.0, 1.0);
+    final type = _stageAt(_timeAt(fraction))?.stageType;
+    if (type != _stageType) HapticFeedback.selectionClick();
+    setState(() {
+      _fraction = fraction;
+      _stageType = type;
+    });
+  }
+
+  void _lift() {
+    if (_fraction == null) return;
+    setState(() {
+      _fraction = null;
+      _stageType = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled || widget.stages.isEmpty || _totalMs <= 0) {
+      return widget.child;
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          // HORIZONTAL only — a vertical drag stays with the scrolling screen.
+          onHorizontalDragStart: (d) => _scrub(d.localPosition.dx, width),
+          onHorizontalDragUpdate: (d) => _scrub(d.localPosition.dx, width),
+          onHorizontalDragEnd: (_) => _lift(),
+          onHorizontalDragCancel: _lift,
+          child: Stack(
+            children: [
+              widget.child,
+              if (_fraction case final fraction?) ...[
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _SleepScrubCrosshairPainter(
+                        fraction: fraction,
+                        color: ChartTokens.read(context).crosshair,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: _SleepScrubTooltip(
+                      fraction: fraction,
+                      time: _timeAt(fraction),
+                      stage: _stageAt(_timeAt(fraction)),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A single vertical line at the finger — this moment of the night.
+class _SleepScrubCrosshairPainter extends CustomPainter {
+  const _SleepScrubCrosshairPainter({
+    required this.fraction,
+    required this.color,
+  });
+
+  final double fraction;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final x = fraction.clamp(0.0, 1.0) * size.width;
+    canvas.drawLine(
+      Offset(x, 0),
+      Offset(x, size.height),
+      Paint()
+        ..color = color
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SleepScrubCrosshairPainter old) =>
+      old.fraction != fraction || old.color != color;
+}
+
+/// The clock time under the finger, and the stage active then, floated above the
+/// crosshair and kept inside the plot.
+class _SleepScrubTooltip extends StatelessWidget {
+  const _SleepScrubTooltip({
+    required this.fraction,
+    required this.time,
+    required this.stage,
+  });
+
+  final double fraction;
+  final DateTime time;
+  final SleepStage? stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final tokens = ChartTokens.read(context);
+    final locale = Localizations.localeOf(context).toString();
+    final timeText = DateFormat.jm(locale).format(time.toLocal());
+    final stageText =
+        stage == null ? null : localizedSleepStageLabel(l10n, stage!.stageType);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const width = 132.0;
+        final x = fraction.clamp(0.0, 1.0) * constraints.maxWidth;
+        // Clamped to the plot: the first and last moments of the night are exactly
+        // the ones a finger reaches for, and a tooltip hanging off the card cannot
+        // be read.
+        final left = (x - width / 2).clamp(0.0, constraints.maxWidth - width);
+
+        return Stack(
+          children: [
+            Positioned(
+              left: left,
+              top: 0,
+              width: width,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: tokens.tooltipSurface,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        timeText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: tokens.onTooltipSurface,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (stageText != null)
+                        Text(
+                          stageText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color:
+                                tokens.onTooltipSurface.withValues(alpha: 0.75),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
