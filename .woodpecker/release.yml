@@ -187,7 +187,9 @@ steps:
           (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_AAB_BASENAME}" > "$${OPENVITALS_AAB_BASENAME}.sha256")
         fi
       # Nightly keeps a single stable download page, so the `nightly` tag is force-moved
-      # to this commit through the Forgejo API (a git push would need write creds).
+      # to this commit over git (the release API key doubles as the git push credential).
+      # Codeberg's REST tag endpoint returns 500s and cannot be relied on -- see the
+      # script -- so the move goes straight through git instead.
       - |
         if { [ "$${CI_PIPELINE_EVENT}" = "cron" ] || [ "$${CI_PIPELINE_EVENT}" = "manual" ]; } && [ "$${OPENVITALS_RELEASE_CHANNEL}" = "nightly" ]; then
           test -n "$${CODEBERG_RELEASE_API_KEY}"

@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
+"""Force-move the mutable ``nightly`` tag to the built commit.
+
+The tag is moved over GIT rather than the Forgejo REST tag API. Codeberg's
+``POST /repos/.../tags`` returns HTTP 500 -- intermittently after the write has
+already committed, and (observed 2026-07) persistently -- which makes it
+unusable as a release gate. A git ref update goes straight to the repository and
+is reliable.
+
+If the push is refused because a release still pins the tag, the release is
+detached through the API (that endpoint is healthy) and the push retried; the
+publish step recreates the release on the moved tag.
+"""
+
 import json
+import subprocess
 import sys
 import time
 import urllib.error
@@ -13,29 +27,18 @@ def usage() -> None:
     )
 
 
-def request(method: str, url: str, token: str, payload=None) -> tuple[int, str]:
-    data = None if payload is None else json.dumps(payload).encode("utf-8")
-
+def api_request(method: str, url: str, token: str):
     attempts = 5
     for attempt in range(1, attempts + 1):
-        req = urllib.request.Request(url, data=data, method=method)
+        req = urllib.request.Request(url, method=method)
         req.add_header("Authorization", "token " + token)
-        if data is not None:
-            req.add_header("Content-Type", "application/json")
         try:
             with urllib.request.urlopen(req, timeout=30) as response:
                 return response.status, response.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as error:
             body = error.read().decode("utf-8", "replace")
-            # Codeberg/Forgejo returns intermittent 5xx on tag and release
-            # operations -- and has been seen to return one AFTER the write has
-            # already committed. Retry like a network blip; create_tag() makes the
-            # POST idempotent so a 500-after-success does not become a failure.
             if error.code >= 500 and attempt < attempts:
-                print(
-                    f"{method} {url} -> HTTP {error.code}; retry {attempt}/{attempts - 1}",
-                    file=sys.stderr,
-                )
+                print(f"{method} {url} -> HTTP {error.code}; retry {attempt}/{attempts - 1}", file=sys.stderr)
                 time.sleep(2 * attempt)
                 continue
             return error.code, body
@@ -43,61 +46,29 @@ def request(method: str, url: str, token: str, payload=None) -> tuple[int, str]:
             if attempt == attempts:
                 raise
             reason = getattr(error, "reason", error)
-            print(
-                f"{method} {url} failed ({reason}); retry {attempt}/{attempts - 1}",
-                file=sys.stderr,
-            )
+            print(f"{method} {url} failed ({reason}); retry {attempt}/{attempts - 1}", file=sys.stderr)
             time.sleep(2 * attempt)
-
     raise SystemExit(f"{method} {url} failed after {attempts} attempts.")
 
 
-def require_ok(status: int, body: str, method: str, url: str, ok: tuple[int, ...]) -> None:
-    if status not in ok:
-        raise SystemExit(f"{method} {url} failed: HTTP {status}: {body}")
+def git(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], capture_output=True, text=True)
 
 
-def tag_target_sha(api_base: str, token: str, tag_name: str):
-    """Commit SHA the tag currently points at, or None if the tag is absent."""
-    url = f"{api_base}/tags/{tag_name}"
-    status, body = request("GET", url, token)
-    if status == 404:
-        return None
-    require_ok(status, body, "GET", url, (200,))
-    return json.loads(body).get("commit", {}).get("sha")
+def git_url_from_api(api_base: str) -> str:
+    """https://host/api/v1/repos/owner/repo -> https://host/owner/repo.git"""
+    marker = "/api/v1/repos/"
+    if marker not in api_base:
+        raise SystemExit(f"Cannot derive a git URL from api-base {api_base!r}")
+    host, repo = api_base.split(marker, 1)
+    return f"{host}/{repo.rstrip('/')}.git"
 
 
-def delete_tag(api_base: str, token: str, tag_name: str) -> bool:
-    url = f"{api_base}/tags/{tag_name}"
-    status, body = request("DELETE", url, token)
-    if status in (204, 404):
-        return True
-    if status == 409 and "release" in body.lower():
-        return False
-    require_ok(status, body, "DELETE", url, (204, 404))
-    return True
-
-
-def create_tag(api_base: str, token: str, tag_name: str, target: str, message: str) -> None:
-    url = f"{api_base}/tags"
-    status, body = request(
-        "POST",
-        url,
-        token,
-        {"tag_name": tag_name, "target": target, "message": message},
-    )
-    if status == 201:
-        print(f"Updated {tag_name} tag to {target}")
-        return
-    # Two ways to get here with the tag actually in place: request() retried a 5xx
-    # whose first attempt had already written the tag (now "already exists"), or
-    # Codeberg returned a terminal 5xx on a POST that nonetheless committed. If the
-    # tag now points where we asked, the move succeeded regardless of the status.
-    if status in (409, 422) or status >= 500:
-        if tag_target_sha(api_base, token, tag_name) == target:
-            print(f"Updated {tag_name} tag to {target} (server returned HTTP {status})")
-            return
-    require_ok(status, body, "POST", f"{api_base}/tags", (201,))
+def delete_release(api_base: str, token: str, tag_name: str) -> None:
+    url = f"{api_base}/releases/tags/{tag_name}"
+    status, body = api_request("DELETE", url, token)
+    if status not in (204, 404):
+        raise SystemExit(f"DELETE {url} failed: HTTP {status}: {body}")
 
 
 def main() -> int:
@@ -108,26 +79,37 @@ def main() -> int:
     api_base, token, tag_name, target, message = sys.argv[1:]
     api_base = api_base.rstrip("/")
 
-    # A re-run on the same commit (or a recovery after a spurious 5xx that had
-    # already moved the tag) finds it right where we want it -- leave it, and let
-    # the publish step attach the release.
-    if tag_target_sha(api_base, token, tag_name) == target:
-        print(f"{tag_name} already at {target}; nothing to do")
-        return 0
+    git_url = git_url_from_api(api_base)
+    scheme, rest = git_url.split("://", 1)
+    authed_url = f"{scheme}://{token}@{rest}"
+    ref = f"refs/tags/{tag_name}"
 
-    if not delete_tag(api_base, token, tag_name):
-        release_url = f"{api_base}/releases/tags/{tag_name}"
-        status, body = request("DELETE", release_url, token)
-        require_ok(status, body, "DELETE", release_url, (204, 404))
+    def scrub(text: str) -> str:
+        return text.replace(token, "***")
 
-        for _ in range(5):
-            if delete_tag(api_base, token, tag_name):
-                break
-            time.sleep(1)
-        else:
-            raise SystemExit(f"Tag {tag_name} is still attached to a release after deleting the release.")
+    # Annotated local tag at the built commit; identity is inline so no global
+    # git config is touched. `-f` moves it if a stale local tag exists.
+    tagged = git(
+        "-c", "user.name=OpenVitals CI",
+        "-c", "user.email=ci@openvitals.invalid",
+        "tag", "-f", "-a", tag_name, "-m", message, target,
+    )
+    if tagged.returncode != 0:
+        raise SystemExit(f"git tag failed: {scrub(tagged.stderr.strip())}")
 
-    create_tag(api_base, token, tag_name, target, message)
+    # Force-push the ref. Pushing to the same commit is a no-op ("up-to-date"),
+    # so this is safe to re-run.
+    pushed = git("push", "--force", authed_url, ref)
+    if pushed.returncode != 0:
+        # The most likely cause is the existing release pinning the tag. Detach it
+        # (the publish step recreates it) and retry the push once.
+        print(f"git push of {ref} failed ({scrub(pushed.stderr.strip())}); detaching release and retrying", file=sys.stderr)
+        delete_release(api_base, token, tag_name)
+        pushed = git("push", "--force", authed_url, ref)
+        if pushed.returncode != 0:
+            raise SystemExit(f"git push of {ref} failed: {scrub(pushed.stderr.strip())}")
+
+    print(f"Moved {tag_name} tag to {target}")
     return 0
 
 
