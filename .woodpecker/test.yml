@@ -3,6 +3,10 @@ when:
   - event: push
     branch: main
 
+# Pin to our dedicated CI runner, which mounts the persistent pub/Gradle caches.
+labels:
+  runner: openvitals
+
 variables:
   # cirruslabs publishes one image per Flutter release; 3.44.0 is the newest that
   # exists (a tag it has not built resolves as "manifest unknown"). It carries Dart

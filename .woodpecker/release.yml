@@ -9,6 +9,10 @@ when:
   - event: deployment
     evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
+# Pin to our dedicated CI runner, which mounts the persistent pub/Gradle caches.
+labels:
+  runner: openvitals
+
 variables:
   - &alpine_image alpine:3.20
   # cirruslabs publishes one image per Flutter release; 3.44.0 is the newest that
