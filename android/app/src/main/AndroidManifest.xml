@@ -556,14 +556,15 @@
                 android:resource="@xml/home_today_vitals_widget_info" />
         </receiver>
 
-        <!-- Monochrome status-bar icon for the activity-recording foreground
-             service notification. flutter_foreground_task resolves NotificationIcon
+        <!-- Status-bar icon for the activity-recording foreground service
+             notification: the shared OpenVitals monochrome mark, matching every
+             other notification. flutter_foreground_task resolves NotificationIcon
              by looking up an application <meta-data> whose android:resource is the
              drawable id; without it the notification falls back to the full-colour
              launcher icon and renders as a blank/placeholder square. -->
         <meta-data
             android:name="tech.mmarca.openvitals.ACTIVITY_RECORDING_ICON"
-            android:resource="@drawable/ic_stat_activity_recording" />
+            android:resource="@drawable/ic_launcher_monochrome" />
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

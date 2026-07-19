@@ -13,7 +13,8 @@ const mindfulnessReminderNotificationSpec = ReminderNotificationSpec(
   channelName: 'Mindfulness reminders',
   channelDescription: 'A daily nudge to take mindful minutes.',
   title: 'Take a mindful moment',
-  androidIcon: 'ic_stat_mindfulness_reminder',
+  // The OpenVitals monochrome mark, shared by every notification the app posts.
+  androidIcon: 'ic_launcher_monochrome',
   scheduledBody: 'A few mindful minutes can reset your day.',
   body: _mindfulnessReminderBody,
 );

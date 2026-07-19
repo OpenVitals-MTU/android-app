@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Keep the notification status-bar icons from resource shrinking.
+  Keep the notification status-bar icon from resource shrinking.
 
-  flutter_local_notifications resolves a notification's small icon by NAME at
-  runtime (Resources.getIdentifier("ic_stat_hydration_reminder", "drawable", pkg)),
-  so nothing references these drawables statically. The release build's resource
-  shrinker therefore judged them unused and stripped them — ic_stat_activity_recording
-  survived only because the recording notification points at it from a manifest
-  <meta-data>. With the reminder icons gone, every hydration/mindfulness reminder
-  fire threw PlatformException(invalid_icon, "resource ... could not be found") and
-  posted nothing: reminders worked in debug (resources not shrunk) and silently died
-  in release. See docs/reference — this is the twin of the Glance keep rule in
-  app/proguard-rules.pro.
+  Every notification the app posts (hydration/mindfulness reminders, the recording
+  foreground service) uses the shared OpenVitals monochrome mark,
+  ic_launcher_monochrome, resolved by NAME at runtime
+  (flutter_local_notifications' Resources.getIdentifier, and flutter_foreground_task
+  via the ACTIVITY_RECORDING_ICON manifest <meta-data>). It is also referenced
+  statically from mipmap/ic_launcher.xml, so it survives shrinking on that account
+  alone — but it is pinned here explicitly because a notification icon that the
+  shrinker strips fails at runtime with PlatformException(invalid_icon) and posts
+  nothing, and that failure is invisible in debug (resources are never shrunk).
+  That is exactly how the per-feature ic_stat_* icons silently killed reminders in
+  every release until they were consolidated here. The resource-shrink twin of the
+  Glance keep rule in app/proguard-rules.pro.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/ic_stat_hydration_reminder,@drawable/ic_stat_mindfulness_reminder,@drawable/ic_stat_activity_recording" />
+    tools:keep="@drawable/ic_launcher_monochrome" />

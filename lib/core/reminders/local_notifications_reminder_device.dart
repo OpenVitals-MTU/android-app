@@ -26,10 +26,10 @@ class ReminderNotificationSpec {
   final String channelDescription;
   final String title;
 
-  /// The `res/drawable` name of this reminder's monochrome status-bar icon.
-  /// Android tints the small icon from its alpha channel, so this must be an
-  /// alpha-only silhouette (e.g. `ic_stat_hydration_reminder`); a full-color
-  /// launcher icon here renders as a blank white square.
+  /// The `res/drawable` name of the monochrome status-bar icon — the shared
+  /// OpenVitals mark (`ic_launcher_monochrome`) for every reminder. Android tints
+  /// the small icon from its alpha channel, so this must be an alpha-only
+  /// silhouette; a full-color launcher icon here renders as a blank white square.
   final String androidIcon;
 
   /// Used only by [ZonedNotificationReminderScheduler], which posts a
