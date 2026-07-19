@@ -3,12 +3,6 @@ when:
   - event: push
     branch: main
 
-# Run on our own agent (server repo: woodpecker/docker-compose.yml advertises
-# `runner=openvitals`) so PR and main-push runs reuse its persistent pub/Gradle
-# caches. Only that agent carries the label, so a run queues if it is offline.
-labels:
-  runner: openvitals
-
 variables:
   # cirruslabs publishes one image per Flutter release; 3.44.0 is the newest that
   # exists (a tag it has not built resolves as "manifest unknown"). It carries Dart

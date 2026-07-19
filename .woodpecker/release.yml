@@ -9,16 +9,6 @@ when:
   - event: deployment
     evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
-# Pin the whole release/nightly pipeline to our own agent (server repo:
-# woodpecker/docker-compose.yml advertises `runner=openvitals`). That agent mounts
-# persistent /woodpecker/cache/{gradle,pub} volumes, which ci-flutter.sh picks up to
-# stop re-downloading pub packages and Gradle deps on every build. Only an agent
-# carrying this label runs the pipeline, so if it is offline the release queues here
-# rather than falling back to a shared agent with a cold cache. PR runs (test.yml)
-# are deliberately NOT pinned, so they keep using shared agents and stay unblocked.
-labels:
-  runner: openvitals
-
 variables:
   - &alpine_image alpine:3.20
   # cirruslabs publishes one image per Flutter release; 3.44.0 is the newest that
