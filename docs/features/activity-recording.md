@@ -8,6 +8,28 @@
 
 OpenVitals can record activities locally, review the result, and then save the activity to Health Connect.
 
+## How to use it
+
+### Start a recording
+
+1. Tap **Start workout** on the dashboard (or **Log › Activity**). The **Activity** screen offers **Create manually**, **Create from existing plan**, or **Record activity** — choose **Record activity**.
+2. Grant **Notifications** if asked (recording runs a foreground service, so the permission is requested before the recorder opens).
+3. On the setup screen, pick the **activity type**, then:
+   - **GPS activities** show a GPS-fix status and a **Record without GPS** toggle. **Start stays disabled until a precise fix arrives** (or you turn GPS off). Tapping Start requests **precise location** if it isn't granted yet.
+   - **Rep activities** (push-ups, pull-ups, rope skipping, treadmill, …) show a **How recording works** panel with per-type sensor guidance and a **Rest seconds** field. Step-counting types request **activity recognition** on Start.
+   - If a heart-rate sensor is connected, you can turn on the **Heart rate recovery test** — see [Heart rate recovery](heart-rate-recovery.md).
+4. Tap **Start**.
+
+### While recording
+
+- **GPS / timed activities:** **Pause / Resume**, **Finish**, and (GPS) **Lap** and **Add Marker**, over a live map and an editable metric dashboard. **Focus mode** gives a full-screen, glanceable view with one big Pause/Resume; exit with its corner button or the system back gesture. An outdoor high-contrast toggle sits top-right.
+- **Rep activities:** a large live count with **− / +** corrections, **End set** / **Start next set**, and **Finish session**.
+- To keep the screen on during recording, enable that preference under **Settings › Activities** (it's applied automatically, not a live toggle).
+
+### Review and save (or discard)
+
+Tap **Finish** to end the session and return to the entry form, pre-filled with everything recorded. Review and adjust the details, then tap **Save activity** to write it to Health Connect — or tap the **discard** (✕) button to throw the draft away. Nothing is saved until you choose **Save activity**.
+
 ## GPS Activity
 
 GPS recording is for route-backed activities such as walking, running, or cycling. The recording flow can track location points, distance, elevation, moving time, pauses, and route preview data. When the activity is finished, the user reviews the draft before saving it to Health Connect.

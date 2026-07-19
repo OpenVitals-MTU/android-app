@@ -8,6 +8,14 @@
 
 The body feature owns period-based detail screens for body measurement and composition metrics read from Health Connect.
 
+## How to use it
+
+1. **Open Body.** Tap any body-composition tile on the dashboard (weight, BMI, body fat, and so on). They all open the single **Body** screen — every body metric lives here rather than on separate screens.
+2. **Read the composition.** The **Statistics** section shows the latest value of each body metric plus **BMI** and **FFMI** interpretation context. **Body trends** draws an inline chart per metric that has data in the period, and **Entries** lists every reading newest-first.
+3. **Move through time.** Use the shared **Day / Week / Month / Year** controls, calendar, and pull-to-refresh (see [Statistics](statistics.md)). Tap a chart day to reveal that day's entries.
+4. **Log a measurement.** Only **Weight**, **Height**, and **Body fat** can be entered by hand. Use **Log** on the dashboard, pick the measurement, enter the value in your units, and set the date/time. BMI, lean mass, bone mass, body water mass, and FFMI are **derived or device-sourced** and can't be typed in.
+5. **Fix or remove an entry.** In the **Entries** list, tap an entry you logged in OpenVitals to edit it, or swipe it away to delete it. Records written by other apps stay read-only.
+
 ## Implemented Metrics
 
 Body metric detail screens currently cover:

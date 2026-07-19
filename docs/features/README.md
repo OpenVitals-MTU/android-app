@@ -2,6 +2,8 @@
 
 OpenVitals is a local-first Android app for Health Connect data, activity logging, imports, and simple on-device insights. This index points to current implemented behavior. Proposal and future-work notes live in [Proposals](../proposals/README.md).
 
+Every feature page below opens with a **"How to use it"** section — a step-by-step, task-oriented walkthrough (entry points, on-screen controls, and what to do when a screen is empty) — followed by reference detail. If you just want to *use* a feature, that first section is the user guide; the shared metric-screen controls (Day/Week/Month/Year, calendar, refresh, tap-a-bar) are documented once in [Statistics](statistics.md).
+
 Use the [feature map](feature-map.md) when you need the route/widget/package mapping. The [root feature inventory](../../Features.md) remains the detailed checklist.
 
 ## Dashboard And App Experience

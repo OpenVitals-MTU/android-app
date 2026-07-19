@@ -8,6 +8,17 @@
 
 OpenVitals can analyze supported records from Apple Health exports, let the user choose which categories to import, and then write the selected Health Connect-compatible records with duplicate checks, route handling, and a downloadable full report.
 
+## How to use it
+
+1. **Export from Apple Health** on your iPhone (Health app › your profile › **Export All Health Data**) to get an `export.zip`, and copy it to your Android device.
+2. In OpenVitals, go to **Settings › Data Importers** and open the **Apple Health Importer** card. Grant the import (write) permissions if the card shows some are missing.
+3. Tap **Analyze Apple Health export** and pick your `export.xml` or `export.zip`. The analyze pass **only scans** — nothing is written yet — and reports how many compatible records it found.
+4. Review the **per-category checklist** (Workouts, Activity, Heart, Sleep, Body, Vitals, Nutrition, Hydration, Mindfulness, Cycle), all pre-selected with counts. Untick anything you don't want.
+5. Tap **Import selected categories**. The import runs as a background service, so **you can leave the Settings screen** and it keeps going (an ongoing notification shows progress). It can't run while a GPS recording is active, since both use the one foreground service.
+6. When it finishes, read the counters (**Imported / Duplicates / Not selected / Unsupported / Skipped / Failed**) and, if you need to troubleshoot, use **Copy report** or **Download full report**.
+
+Tips: prefer importing only the categories you actually want — on a multi-gigabyte export, a tight selection is much faster and lighter. If the import is interrupted, re-pick the **same** export with the **same** categories and it resumes from the last saved batch instead of redoing everything.
+
 ## Input Files
 
 The import starts from Settings and accepts Apple Health `export.xml` or `export.zip` files. Zipped exports may also contain Apple workout route files under `workout-routes/*.gpx`; these are matched to `WorkoutRoute` file references in `export.xml`.

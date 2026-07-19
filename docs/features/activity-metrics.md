@@ -8,6 +8,15 @@
 
 The activity feature owns period-based detail screens for movement metrics and workout sessions. It is separate from activity recording: recording and manual activity entry create records, while these screens read and explain existing Health Connect data.
 
+## How to use it
+
+1. **Open a metric.** Tap a movement tile on the dashboard — **Steps**, **Distance**, **Floors**, **Elevation**, or **Wheelchair pushes** — to open its detail. The **Calories** ring/tiles open a combined Calories screen (calories burned, active calories, and basal metabolic rate).
+2. **Work the screen.** All of these use the shared metric-detail controls: the **Day / Week / Month / Year** selector, date/calendar navigation, pull-to-refresh, and tap-a-bar-to-see-that-day's-entries. See [Statistics](statistics.md) for the full reference.
+3. **Set a goal.** On steps and other goal-capable metrics, use the **− / +** on the daily-goal card to raise or lower your target. The **Statistics** section then tracks **Total**, **Daily average**, **Best day**, and **Active days** against it.
+4. **Open a workout.** Movement metrics are read-only summaries. To see an individual session, tap a workout on the dashboard's **Activities** section or open the full list from **Activities** — that opens the activity detail, which reassembles the session's steps, distance, calories, pace/speed, splits, and heart-rate charts.
+
+These screens never create data. To add an activity, use **Start workout** on the dashboard or the **Log › Activity** entry — see [Recording of activity](activity-recording.md) and [Manual entry of metrics](manual-entry-metrics.md).
+
 ## Implemented Metrics
 
 Activity metric detail screens currently cover:

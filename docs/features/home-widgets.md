@@ -8,6 +8,26 @@
 
 OpenVitals provides Android home screen widgets for quick health summaries and fast beverage logging.
 
+## How to use it
+
+### Add a widget
+
+1. **Long-press** an empty area of your Android home screen and tap **Widgets**.
+2. Find **OpenVitals** and drag the widget you want onto the home screen.
+3. **Configurable widgets** open a picker as you place them:
+   - **Metric summary** → **Choose metric**: tap the metric this tile should show.
+   - **Quick beverage** (2×1 or 1×1) → **Choose beverage**: tap a drink (shown as "Name - 330 ml"). Frequently used and saved drinks appear first.
+   Backing out of the picker cancels the placement.
+4. **Daily Readiness**, **Body Energy**, and **Today Vitals** aren't configurable — they appear with data immediately.
+
+### Use widgets
+
+- **Tapping a widget opens the app** at the matching screen (for example the Body Energy widget opens the Body Energy detail for the day).
+- The **quick beverage** widget logs its drink on tap (**"Tap to log"**, confirming **"Saved now"** or **"Saved as nutrition"**); the 2×1 version adds explicit **Add** / **Edit** buttons.
+- If a widget shows **"Grant permission in OpenVitals"** or **"Select a metric/beverage"**, open the app to grant the missing Health Connect permission or re-run the widget's configure step.
+
+Widgets read the same on-device data as the app, so they refresh alongside it — there's no separate account or sync.
+
 ## Widget Types
 
 - Daily Readiness.

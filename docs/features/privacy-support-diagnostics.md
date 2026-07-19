@@ -10,6 +10,17 @@ OpenVitals is designed as a local-first Health Connect app.
 
 For the standalone privacy reference, see [Privacy](../app/privacy.md). For support-oriented questions, see [FAQ](../app/faq.md).
 
+## How to use it
+
+Everything here lives in **Settings** (gear icon on the dashboard).
+
+- **Get help or support the project.** In the **Support** section, tap **Report an issue** (opens the Codeberg issue tracker), **Join Zulip discussions** (community support), or **Open Liberapay** (donations).
+- **Confirm the privacy model.** The **Privacy** section card, **"Data stays on your device,"** states that OpenVitals uploads no health data, has no ads, and shares nothing with third parties. A full **privacy policy** is available from there.
+- **Read the health disclaimer.** It's shown during onboarding: OpenVitals is for general wellness and information only and is not a medical device.
+- **Export diagnostics (troubleshooting builds only).** Debug/nightly builds add a **Debug diagnostics** section with **Share logs** and **Save logs** — these write a **sanitized** log file that drops or redacts identifiers, locations, dates, and raw sensor data. Regular release builds don't show this section.
+
+> Don't confuse the two exports: **Debug diagnostics** logs are sanitized, but an **Apple Health import report** is intentionally *not* sanitized (it includes export-derived values and stack traces). Share an import report only when you're comfortable with what it contains — see [Apple Health import](apple-health-import.md#reports-and-diagnostics).
+
 ## Privacy Model
 
 OpenVitals does not require:

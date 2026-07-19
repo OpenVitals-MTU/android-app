@@ -10,7 +10,7 @@ Start here when you need to understand the app, a feature, or the implementation
 
 ## Browse Features
 
-- [Feature guide](features/README.md): grouped feature pages for current app behavior.
+- [Feature guide](features/README.md): grouped feature pages for current app behavior. Each page opens with a step-by-step **"How to use it"** user guide.
 - [Feature map](features/feature-map.md): canonical mapping between docs, routes/widgets, and implementation packages.
 - [Functional inventory](../Features.md): detailed checklist of view, write, import, settings, and privacy capabilities.
 

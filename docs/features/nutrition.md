@@ -8,6 +8,15 @@
 
 The nutrition feature owns period-based nutrition detail screens for intake metrics read from Health Connect.
 
+## How to use it
+
+1. **Open the overview.** Tap a nutrient tile on the dashboard to open the **Nutrition** overview. Its **Statistics** section groups totals under headers (Carbohydrates, Fats, Vitamins, Minerals, Other), **Nutrition trends** charts each tracked nutrient, and **Meals** lists every logged meal newest-first.
+2. **Open one nutrient.** Tap through to a per-nutrient detail (**Calories in**, **Protein**, **Carbohydrates**, **Fat**) for its hero total, trend chart, and full statistics with previous-period comparison and baseline.
+3. **Set a goal.** On a nutrient detail, use the **− / +** on the daily-goal card to adjust its target.
+4. **Move through time.** The shared **Day / Week / Month / Year** controls, calendar, and pull-to-refresh apply here too (see [Statistics](statistics.md)).
+5. **Log intake.** Of the four metrics, only **Carbs** has its own entry tile — use **Log › Carbs** on the dashboard. Calories-in, protein, and fat come from meals or beverages logged elsewhere (see [Beverage logging and caffeine](beverage-logging-and-caffeine.md)) or from other apps writing into Health Connect.
+6. **Remove a meal.** Swipe a meal you logged in OpenVitals to delete it from the **Meals** list.
+
 ## Implemented Metrics
 
 Nutrition metric detail screens currently cover:

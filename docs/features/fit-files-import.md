@@ -8,6 +8,14 @@
 
 FIT import lives in Settings, Data Importers. It lets users bring supported activity, course, and workout files into OpenVitals for review before saving to Health Connect.
 
+## How to use it
+
+1. Go to **Settings › Data Importers** and open the **FIT Importer** card.
+2. Choose one of:
+   - **Import FIT file** — pick a single `.fit` file. OpenVitals reads it and opens the **Activity Entry** review screen (the same one route import uses), carrying any per-second heart-rate, cadence, and speed data. Review the detected details and tap **Save activity** to write it to Health Connect.
+   - **Import a folder of FIT files** — pick a folder; OpenVitals finds every FIT file inside and writes them **straight to Health Connect with no review**, showing a result count.
+3. Use the single-file path when you want to check timing, calories, or route before saving; use the folder path to import a device's whole history at once.
+
 ## What FIT Import Is For
 
 FIT files commonly come from fitness devices and activity platforms. OpenVitals reads the Garmin FIT File Id type and handles Activity, Course, and Workout files differently: completed activities can provide timing, calories, distance, elevation, and optional GPS samples; courses provide route geometry and optional estimated duration; workouts provide structured workout metadata such as name, sport, and supported timed step duration.

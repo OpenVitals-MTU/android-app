@@ -20,6 +20,15 @@ claim that every branded SKU in the catalog has one universal label. Branded pro
 change by market, package size, recipe, and date; use the linked sources or package
 label when an exact entry needs to be logged.
 
+## How to use it
+
+You don't set any of this up — the catalog is seeded on first use. The practical benefit while logging a beverage (see [Beverage logging and caffeine](beverage-logging-and-caffeine.md)):
+
+- **Tap and go.** Choosing a preset like a coffee or an energy drink logs its serving size, hydration impact, and caffeine (and other seeded nutrients) with no numbers to type.
+- **Adjust the amount.** The log dialog pre-fills the drink's serving; change it and the nutrients scale to what you actually drank.
+- **Correct a value.** Presets can be edited or deleted like your own custom drinks — if a branded product's label differs from the seeded default, edit the preset (or make a custom drink) so future logs are right.
+- **This table is a reference, not the exact stored values.** Use it to sanity-check a family of drinks; for an exact log, trust the package label over a generic row.
+
 ## Nutrition Table
 
 Values are per common serving unless noted. Ranges mean the preloaded catalog contains

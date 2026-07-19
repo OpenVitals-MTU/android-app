@@ -8,6 +8,25 @@
 
 OpenVitals supports beverage logging as an explicit Health Connect write flow for hydration, caffeine, and selected nutrition values.
 
+## How to use it
+
+### Log a beverage
+
+1. Tap **Log › Hydration** on the dashboard to open **Beverage entry**, then pick a drink from the catalog. See [Hydration](hydration.md) for the step-by-step.
+2. **One drink writes three things at once:** a hydration record (the amount scaled by the drink's hydration impact), a caffeine value, and any other nutrients, all scaled to the amount you poured. A zero-hydration drink logs nutrition only and tells you **"Saved as nutrition only. No hydration was added."**
+
+### Make a custom drink
+
+1. In the catalog, tap **New drink**.
+2. Fill in **Name**, **Amount**, and **Category**, then choose a **Hydration impact** — **Counts fully**, **Counts partially** (reveals a "Counts as hydration (%)" field), or **Does not count**.
+3. Add **Nutrients** with **Add nutrient** (caffeine, calories, sugar, and so on). Save it, and it appears in your catalog to reuse, edit, or delete like any preset.
+
+### Track caffeine
+
+1. Open the **Caffeine** detail from its dashboard tile. It's read-only: **Active caffeine now**, a sleep-impact banner, a caffeine-decay curve, and a **Drinks** list (tap a drink for its own curve; swipe to delete one you logged).
+2. There is **no caffeine "+" button** — you add caffeine by logging a caffeinated beverage.
+3. **Personalize the model** in **Settings › Nutrition › Caffeine model**. This is a pharmacokinetic model, not a simple daily cap: set **half-life**, **absorption**, **sleep threshold (mg)**, **bedtime**, plus sensitivity and habituation options. A live "Effective half-life" readout updates as you change them; tap **Save**. These values drive the active-caffeine estimate and the bedtime/safe-sleep guidance.
+
 ## Beverage Catalog
 
 The beverage entry flow supports preset drinks, categories, custom drinks, and frequently consumed drinks. Common options include water, coffee, tea, soft drinks, energy drinks, sports drinks, oral rehydration solution, milk, fruit juice, and custom beverages.

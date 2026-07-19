@@ -3,10 +3,19 @@
 > **Status:** Current implemented behavior; caffeine sleep integration remains a proposal.
 > **Audience:** Users and contributors.
 > **Implementation:** `lib/features/recovery/`, `lib/features/sleep/`, `lib/domain/insights/sleep_score.dart`.
-> **Navigation:** `/recovery/sleep_score` and `/recovery/sleep_efficiency`, opened from the sleep detail experience (`/sleep`, `/sleep_detail/:sleepId`, `/metric/SLEEP`).
+> **Navigation:** `/recovery/sleep_score` and `/recovery/sleep_efficiency` are registered and fully built, but **no in-app control currently opens them** — the score and efficiency values reach the user only as tiles on the Sleep screen (`/sleep`, `/sleep_detail/:sleepId`, `/metric/SLEEP`) and the dashboard Sleep tile subtitle.
 > **Related:** [Feature map](feature-map.md), [Sleep tracking](sleep-tracking.md), [Caffeine sleep proposal](../proposals/caffeine-aware-sleep-insights.md).
 
 Sleep score and recovery views explain sleep quality using local, non-diagnostic calculations.
+
+## How to use it
+
+1. **Find your sleep score.** It appears as the **Sleep score** overview tile on the Sleep screen and in the dashboard **Sleep** tile's subtitle. Open Sleep from the dashboard to see it in context (see [Sleep tracking](sleep-tracking.md)).
+2. **Find your sleep efficiency.** It appears as the **Sleep efficiency** overview tile on the Sleep screen, alongside time in bed and schedule.
+3. **Understand a change.** Both values are recomputed from the night's Health Connect sleep data each time you open the screen or pull to refresh. Duration, efficiency, continuity, and regularity all feed the score; a night with missing stage data or a short baseline lowers confidence rather than inventing a number.
+4. **Improve confidence.** Use a sleep source that writes staged sessions into Health Connect, and log sleep consistently — the regularity component and personal baseline both need a few nights of history.
+
+> **Note:** the dedicated `/recovery/sleep_score` and `/recovery/sleep_efficiency` detail pages (with the full formula breakdown and research links) are built but not linked from anywhere in the current app, so today these values are surfaced only as the tiles above. This is a known gap, not intended behavior.
 
 ## Sleep Score
 

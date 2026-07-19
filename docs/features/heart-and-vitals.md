@@ -6,10 +6,21 @@
 > **Navigation:** `/heart_vitals` (overview); `/metric/:metricId` for all ten heart/vitals ids; `/manual_entry/vitals/:vitalsMeasurementType` (+ `/edit/:vitalsEntryId`).
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Statistics](statistics.md).
 
+## How to use it
+
+1. **Open the overview.** Tap any heart or vitals tile on the dashboard — they all open the **Heart & Vitals** overview. It's one scrolling screen with three groups you can reorder: **Heart** (average heart rate, resting heart rate, HRV), **Cardiovascular** (blood pressure, blood oxygen/SpO2, VO2 max, blood glucose), and **Respiratory** (respiratory rate, body temperature, skin temperature).
+2. **Open one metric.** Tap any card to open that metric's own detail, with the shared **Day / Week / Month / Year** controls, intraday charts, statistics, thresholds, and confidence notes (see [Statistics](statistics.md)). Cards with no data are still tappable and show **"No readings in this period."**
+3. **Check heart-rate recovery.** The **Average heart rate** detail has a **Heart rate recovery** row that opens the recovery history — see [Heart rate recovery](heart-rate-recovery.md).
+4. **Log a vital.** Four vitals accept manual entry — **Blood pressure**, **Blood oxygen**, **Respiratory rate**, **Body temperature**. Use **Log** on the dashboard, pick the vital, and fill the unit-aware field(s) (blood pressure has systolic and diastolic). Entries you logged in OpenVitals can be edited (tap the row) or deleted (swipe) on the detail screen; heart rate, resting HR, HRV, VO2 max, blood glucose, and skin temperature come from your device and stay read-only.
+
+> **"Today Vitals" is a home-screen widget, not an in-app screen.** The in-app equivalent is this **Heart & Vitals** overview. See [Home screen widgets](home-widgets.md).
+
+## How It Fits Together
+
 Heart and vitals are related but distinct feature areas, and the split is in the data layer, not the screen layer.
 
 - `lib/features/heart/` owns the **parametric detail screen** used by all ten metrics: `HeartMetricScreen`, configured by the `HeartMetric` enum (`heart_metric.dart`), backed by `HeartMetricViewModel`. There is no `RestingHeartRateScreen` or `BloodPressureScreen` in the route table.
-- `lib/features/vitals/` owns the Today Vitals overview (`heart_vitals_overview_screen.dart`). It also holds `vitals_screens.dart`, thin fixed-metric wrappers over `HeartMetricScreen` — a port artifact the router does not use; they are only exercised by `test/features/vitals/vitals_screens_test.dart`.
+- `lib/features/vitals/` owns the Heart & Vitals overview (`heart_vitals_overview_screen.dart`; app-bar title "Heart & Vitals"). It also holds `vitals_screens.dart`, thin fixed-metric wrappers over `HeartMetricScreen` — a port artifact the router does not use; they are only exercised by `test/features/vitals/vitals_screens_test.dart`.
 - The read split is real: `HeartRepository` serves heart rate / resting heart rate / HRV, `VitalsRepository` serves the rest, and `LoadHeartPeriodUseCase` combines them so one screen can load either family.
 
 `HeartMetricViewModel` (a Riverpod `Notifier` over a `freezed` `HeartMetricState`) is shared across every heart and vitals route. That is an intentional shared loader, not a leftover: each `HeartMetric` declares whether it needs the heart-only or vitals-only load path. Unlike the retired Kotlin view model, the notifier does **not** precompute a display state — the per-metric derivations are cheap and are computed by the screen on demand.
@@ -47,9 +58,9 @@ Heart and vitals detail screens use the shared metric detail scaffold:
 
 OpenVitals-created vitals entries can be edited or deleted when the app has write permission and ownership can be verified. External records stay read-only.
 
-## Today Vitals
+## The Heart & Vitals Overview
 
-The vitals overview groups related metrics into heart, cardiovascular, and respiratory/body-temperature sections. It uses the same period shell as other metric details and links into focused metric screens.
+The overview groups related metrics into heart, cardiovascular, and respiratory/body-temperature sections. It uses the same period shell as other metric details and links into focused metric screens. (The launcher widget named **Today Vitals** shows a compact subset of these values — see [Home screen widgets](home-widgets.md).)
 
 ## Data Boundaries
 

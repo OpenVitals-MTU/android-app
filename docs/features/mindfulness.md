@@ -8,6 +8,25 @@
 
 The mindfulness feature owns period-based meditation/mindfulness session details, goals, reminders, and links to manual session entry.
 
+## How to use it
+
+### Log a session
+
+Tap **Log › Mindfulness** on the dashboard (or the **Log session** button on the Mindfulness detail). The **Mindfulness entry** screen offers two ways:
+
+- **Timer** — set **Minutes**, optionally turn on the **Interval bell**, and pick a **Bell sound** and **Background sound**. Use **Start**, then **Stop**, then **Resume**, **Save session**, or **Discard**. Sessions under one minute are rejected.
+- **Manual entry** — type the **Minutes** and tap **Add minutes** to record a session that just finished.
+
+Every session is saved to Health Connect with the title "Meditation".
+
+### Review
+
+1. Open the **Mindfulness** detail from its dashboard tile for total mindful minutes, session counts, average and longest session, and your session history — with the shared **Day / Week / Month / Year** controls (see [Statistics](statistics.md)).
+2. Tap a session **you logged in OpenVitals** to edit it, or swipe to delete it. Sessions from other apps stay read-only.
+3. Turn on reminders from the card at the bottom of this screen — see [Reminders](reminders.md).
+
+> There is currently no in-app control to change the mindfulness goal (it is fixed at 10 minutes and used only by the reminder).
+
 ## What It Shows
 
 Mindfulness can show:
