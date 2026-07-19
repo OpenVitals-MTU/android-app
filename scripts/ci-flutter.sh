@@ -132,31 +132,51 @@ if command -v git >/dev/null 2>&1; then
 fi
 
 flutter --version
-flutter pub get
 
-# --- Generated code (freezed + drift) ----------------------------------------
-# The *.freezed.dart / *.g.dart outputs are NOT committed (see .gitignore) -- they
-# are reproduced here from their sources, exactly as the l10n outputs already are
-# on `pub get`. Every step needs them: `analyze` and `test` fail to resolve the
-# generated symbols without this, and `build` compiles them in. build_runner is
-# incremental and its cache lives in the workspace, so only the first step of a
-# pipeline pays the full (~30s) build; later steps are a few seconds. build_runner
-# 2.15 deletes conflicting outputs by default, so no flag is needed (and the old
-# --delete-conflicting-outputs is now rejected).
-dart run build_runner build
-
-# --- Generated code (pigeon bridge) ------------------------------------------
-# messages.g.dart / Messages.g.kt are generated from pigeons/messages.dart by a
-# separate toolchain: pigeon lives in the sub-package's own dev_dependencies and
-# the @ConfigurePigeon output paths are relative to that dir, so it must run there
-# (after that package resolves its own deps -- there is no pub workspace). The Dart
-# half is needed for `analyze`/`test` (the app imports it); the Kotlin half is a
-# Gradle source needed for `build`. Output is byte-identical to the sources, so this
-# is pure regeneration.
-(
-    cd packages/health_connect_native
+# --- Prepare once per step ---------------------------------------------------
+# pub get + build_runner + pigeon are deterministic from sources that do not change
+# within a pipeline, and their outputs land in the shared workspace -- so running
+# them again on every invocation is pure waste. The `build` step calls this script
+# once PER ABI plus once for the AAB (three times), and all commands of a Woodpecker
+# step run in ONE container, so a marker in the container-local temp dir makes the
+# regeneration run once and be skipped by the later builds in the loop.
+#
+# The marker is deliberately container-local (not in the workspace): each step
+# -- unit-tests, release-preflight, build -- still prepares itself exactly once,
+# so this only removes the intra-step repetition and changes nothing across steps.
+# Set CI_FLUTTER_FORCE_PREPARE=1 to force it (e.g. after editing a generator input).
+prepared_marker="${TMPDIR:-/tmp}/ci-flutter-prepared"
+if [ "${CI_FLUTTER_FORCE_PREPARE:-0}" != "1" ] && [ -f "$prepared_marker" ]; then
+    echo "Prepared already this step; skipping pub get + code generation."
+else
     flutter pub get
-    dart run pigeon --input pigeons/messages.dart
-)
+
+    # --- Generated code (freezed + drift) ------------------------------------
+    # The *.freezed.dart / *.g.dart outputs are NOT committed (see .gitignore) -- they
+    # are reproduced here from their sources, exactly as the l10n outputs already are
+    # on `pub get`. Every step needs them: `analyze` and `test` fail to resolve the
+    # generated symbols without this, and `build` compiles them in. build_runner is
+    # incremental and its cache lives in the workspace, so only the first step of a
+    # pipeline pays the full (~30s) build; later steps are a few seconds. build_runner
+    # 2.15 deletes conflicting outputs by default, so no flag is needed (and the old
+    # --delete-conflicting-outputs is now rejected).
+    dart run build_runner build
+
+    # --- Generated code (pigeon bridge) --------------------------------------
+    # messages.g.dart / Messages.g.kt are generated from pigeons/messages.dart by a
+    # separate toolchain: pigeon lives in the sub-package's own dev_dependencies and
+    # the @ConfigurePigeon output paths are relative to that dir, so it must run there
+    # (after that package resolves its own deps -- there is no pub workspace). The Dart
+    # half is needed for `analyze`/`test` (the app imports it); the Kotlin half is a
+    # Gradle source needed for `build`. Output is byte-identical to the sources, so this
+    # is pure regeneration.
+    (
+        cd packages/health_connect_native
+        flutter pub get
+        dart run pigeon --input pigeons/messages.dart
+    )
+
+    : > "$prepared_marker"
+fi
 
 exec flutter "$@"
