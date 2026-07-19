@@ -101,6 +101,31 @@ extension SleepStageDurations on List<SleepStage> {
   int durationMsForTypes(Set<int> types) => where(
         (stage) => types.contains(stage.stageType),
       ).fold<int>(0, (sum, stage) => sum + math.max(stage.durationMs, 0));
+
+  /// Total milliseconds the stages account for, summed (hypnogram stages do not
+  /// overlap). Tells a fully-staged night from one the device only staged part of.
+  int get totalStageMs =>
+      fold<int>(0, (sum, stage) => sum + math.max(stage.durationMs, 0));
+}
+
+/// Below this share of a session's span, its stage data is treated as too partial
+/// to draw a hypnogram from. A device that only staged the tail of the night — or
+/// a preliminary sync that has not finished — would otherwise render as a
+/// near-empty chart with a fragment at one edge. A fully-staged night is ~1.0.
+const double kMinSleepStageCoverage = 0.5;
+
+/// Whether [session] has enough stage coverage to draw a meaningful hypnogram:
+/// it has stages, and they cover at least [minCoverage] of its span. False for a
+/// session the device only partially staged, so callers can show a note instead
+/// of a misleading chart.
+bool sleepSessionHasReliableStages(
+  SleepData session, {
+  double minCoverage = kMinSleepStageCoverage,
+}) {
+  if (session.stages.isEmpty) return false;
+  final spanMs = session.endTime.difference(session.startTime).inMilliseconds;
+  if (spanMs <= 0) return false;
+  return session.stages.totalStageMs / spanMs >= minCoverage;
 }
 
 /// Wall-clock milliseconds covered by [sessions], counting overlapping time

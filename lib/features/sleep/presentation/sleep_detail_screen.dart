@@ -206,11 +206,14 @@ class SleepStageBreakdownCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    if (!display.hasStages) {
+    if (!display.hasReliableStages) {
       return SleepSectionCard(
         title: l10n.detailStages,
         child: Text(
-          l10n.messageNoStages,
+          // Distinguish a device that recorded no stages at all from one that
+          // staged only part of the night — the latter is a fragment we hide
+          // rather than nothing.
+          display.hasStages ? l10n.messagePartialStages : l10n.messageNoStages,
           style: theme.textTheme.bodyMedium
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),

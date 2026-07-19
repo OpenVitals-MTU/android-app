@@ -1936,6 +1936,7 @@
   "messageRouteConsentRequired": "Route data is available, but route access has not been granted yet. Open Health Connect permissions from Settings to enable route previews.",
   "messageNoRouteData": "No route data recorded.",
   "messageNoStages": "No stages recorded.",
+  "messagePartialStages": "This night was only partly staged, so the sleep graph isn't shown.",
   "messageNoKcal": "No kcal",
   "onboardingTagline": "Your health data, on your device",
   "onboardingPrivacyTitle": "Privacy first",

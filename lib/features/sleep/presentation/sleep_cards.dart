@@ -135,7 +135,7 @@ class SleepSessionTimelineCard extends StatelessWidget {
               timeRangeText ?? _sessionRangeText(locale, session),
               style: theme.textTheme.bodyMedium,
             ),
-            if (session.stages.isNotEmpty) ...[
+            if (sleepSessionHasReliableStages(session)) ...[
               const SizedBox(height: 16),
               SleepStagesLaneChart(
                 stages: session.stages,
@@ -145,6 +145,15 @@ class SleepSessionTimelineCard extends StatelessWidget {
                 // The lane totals are listed again in the "share of time in bed"
                 // card right below, so the lanes here carry names only.
                 showInlineLabels: false,
+              ),
+            ] else if (session.stages.isNotEmpty) ...[
+              // A device that staged only part of the night would otherwise draw
+              // a near-empty hypnogram with a fragment at one edge; say so instead.
+              const SizedBox(height: 12),
+              Text(
+                l10n.messagePartialStages,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
             if (onTap != null) ...[

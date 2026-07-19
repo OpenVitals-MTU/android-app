@@ -37,6 +37,11 @@ abstract class SleepDetailDisplay with _$SleepDetailDisplay {
   }) = _SleepDetailDisplay;
 
   bool get hasStages => sortedStages.isNotEmpty;
+
+  /// Whether the stages cover enough of the session to draw a hypnogram, rather
+  /// than the device having staged only part of the night. See
+  /// [sleepSessionHasReliableStages].
+  bool get hasReliableStages => sleepSessionHasReliableStages(session);
 }
 
 /// Pure derivation from a loaded session to its display model. No clock, no
