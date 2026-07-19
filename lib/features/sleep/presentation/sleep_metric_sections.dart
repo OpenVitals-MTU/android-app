@@ -73,20 +73,24 @@ class SleepStatisticsSectionContent extends StatelessWidget {
               icon: kSleepIcon,
               accentColor: AppColors.sleep,
             ),
-            InsightStat(
-              title: l10n.statDailyAverage,
-              value: hours(display.averageHours).value,
-              unit: '',
-              icon: Icons.star_outline,
-              accentColor: AppColors.sleep,
-            ),
-            InsightStat(
-              title: l10n.statLongestSleep,
-              value: hours(display.longestHours).value,
-              unit: '',
-              icon: Icons.calendar_month_outlined,
-              accentColor: AppColors.sleep,
-            ),
+            // Daily average and longest sleep are a single night's duration over
+            // again in the day view — they only mean something across a period.
+            if (!display.isDay)
+              InsightStat(
+                title: l10n.statDailyAverage,
+                value: hours(display.averageHours).value,
+                unit: '',
+                icon: Icons.star_outline,
+                accentColor: AppColors.sleep,
+              ),
+            if (!display.isDay)
+              InsightStat(
+                title: l10n.statLongestSleep,
+                value: hours(display.longestHours).value,
+                unit: '',
+                icon: Icons.calendar_month_outlined,
+                accentColor: AppColors.sleep,
+              ),
             InsightStat(
               title: l10n.statNightsLogged,
               value: formatter.count(display.nights.length),
