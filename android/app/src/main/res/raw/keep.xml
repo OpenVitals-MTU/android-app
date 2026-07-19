@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Keep the notification status-bar icons from resource shrinking.
+
+  flutter_local_notifications resolves a notification's small icon by NAME at
+  runtime (Resources.getIdentifier("ic_stat_hydration_reminder", "drawable", pkg)),
+  so nothing references these drawables statically. The release build's resource
+  shrinker therefore judged them unused and stripped them — ic_stat_activity_recording
+  survived only because the recording notification points at it from a manifest
+  <meta-data>. With the reminder icons gone, every hydration/mindfulness reminder
+  fire threw PlatformException(invalid_icon, "resource ... could not be found") and
+  posted nothing: reminders worked in debug (resources not shrunk) and silently died
+  in release. See docs/reference — this is the twin of the Glance keep rule in
+  app/proguard-rules.pro.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_hydration_reminder,@drawable/ic_stat_mindfulness_reminder,@drawable/ic_stat_activity_recording" />
