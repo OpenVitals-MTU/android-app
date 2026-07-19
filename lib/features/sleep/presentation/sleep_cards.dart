@@ -113,14 +113,10 @@ class SleepSessionTimelineCard extends StatelessWidget {
                             ?.copyWith(color: AppColors.sleep),
                       ),
                       Text(
-                        selectedDate == LocalDate.now()
-                            ? l10n.summarySleepEndingToday
-                            : l10n.summarySleepEndingOn(
-                                DateFormat.yMMMd(locale).format(
-                                  DateTime(selectedDate.year,
-                                      selectedDate.month, selectedDate.day),
-                                ),
-                              ),
+                        // The headline duration is the whole session span (awake
+                        // stretches included) — time in bed, matching the overview
+                        // tile and the "share of time in bed" card below.
+                        l10n.sleepTimeInBed,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
@@ -321,7 +317,10 @@ class SleepOverviewCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _OverviewTile(
-                title: 'Sleep duration',
+                // The value is the union of the night's session spans — the whole
+                // time in bed, awake stretches included — not time asleep, which
+                // is why "Sleep efficiency" sits beside it. Name it for what it is.
+                title: 'Time in bed',
                 value: summary.sleepDurationMs > 0
                     ? formatter.duration(summary.sleepDurationMs)
                     : '--',

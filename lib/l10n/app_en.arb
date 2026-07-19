@@ -1323,6 +1323,7 @@
       }
     }
   },
+  "sleepTimeInBed": "Time in bed",
   "summarySleepEndingToday": "Sleep ending today",
   "summarySleepEndingOn": "Sleep ending on {arg0}",
   "@summarySleepEndingOn": {
