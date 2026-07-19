@@ -833,13 +833,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.8"
-  health_connect_native:
-    dependency: "direct main"
-    description:
-      path: "packages/health_connect_native"
-      relative: true
-    source: path
-    version: "0.0.1"
   home_widget:
     dependency: "direct main"
     description:
@@ -1240,6 +1233,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.2"
+  pigeon:
+    dependency: transitive
+    description:
+      name: pigeon
+      sha256: dff8a0619d49652daeba23064f5480961c2a0275779394e3b606d8df07eb2ff3
+      url: "https://pub.dev"
+    source: hosted
+    version: "27.2.0"
   platform:
     dependency: transitive
     description:

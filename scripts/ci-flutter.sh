@@ -164,19 +164,22 @@ else
 
     # --- Generated code (pigeon bridge) --------------------------------------
     # messages.g.dart / Messages.g.kt are generated from pigeons/messages.dart by a
-    # separate toolchain: pigeon lives in the sub-package's own dev_dependencies and
-    # the @ConfigurePigeon output paths are relative to that dir, so it must run there
-    # (after that package resolves its own deps -- there is no pub workspace). The Dart
-    # half is needed for `analyze`/`test` (the app imports it); the Kotlin half is a
-    # Gradle source needed for `build`. Output is byte-identical to the sources, so this
-    # is pure regeneration.
+    # separate toolchain. The @ConfigurePigeon output paths are relative to the
+    # sub-package dir, so pigeon must run FROM there -- but the sub-package is a pub
+    # workspace member (see the app pubspec), so the root `flutter pub get` above
+    # already resolved its deps and no separate one is needed here. The Dart half is
+    # needed for `analyze`/`test` (the app imports it); the Kotlin half is a Gradle
+    # source needed for `build`. Output is byte-identical to the sources.
     (
         cd packages/health_connect_native
-        flutter pub get
         dart run pigeon --input pigeons/messages.dart
     )
 
     : > "$prepared_marker"
 fi
 
-exec flutter "$@"
+# Prepare (above) already ran `flutter pub get` once for this step, so skip the
+# implicit pub get that every `flutter <cmd>` would otherwise run -- packages are
+# then resolved exactly once per step. All CI subcommands (test/analyze/build apk/
+# build appbundle) accept --no-pub.
+exec flutter "$@" --no-pub

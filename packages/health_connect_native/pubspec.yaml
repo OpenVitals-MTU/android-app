@@ -6,6 +6,11 @@ description: >-
 version: 0.0.1
 publish_to: 'none'
 
+# Resolved as part of the root `openvitals` pub workspace (see the app pubspec),
+# so `flutter pub get` at the root covers this package too and there is no
+# separate lockfile here.
+resolution: workspace
+
 environment:
   sdk: ^3.9.0
   flutter: '>=3.3.0'
