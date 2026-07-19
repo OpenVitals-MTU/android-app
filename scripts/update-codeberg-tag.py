@@ -20,12 +20,25 @@ def request(method: str, url: str, token: str, payload=None) -> tuple[int, str]:
     if data is not None:
         req.add_header("Content-Type", "application/json")
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as response:
-            return response.status, response.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as error:
-        body = error.read().decode("utf-8", "replace")
-        return error.code, body
+    attempts = 4
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                return response.status, response.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as error:
+            body = error.read().decode("utf-8", "replace")
+            return error.code, body
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            if attempt == attempts:
+                raise
+            reason = getattr(error, "reason", error)
+            print(
+                f"{method} {url} failed ({reason}); retry {attempt}/{attempts - 1}",
+                file=sys.stderr,
+            )
+            time.sleep(2 * attempt)
+
+    raise SystemExit(f"{method} {url} failed after {attempts} attempts.")
 
 
 def require_ok(status: int, body: str, method: str, url: str, ok: tuple[int, ...]) -> None:
