@@ -158,7 +158,10 @@ class SleepStagesLaneChart extends StatelessWidget {
                   ),
                 ),
                 // The per-lane labels sit above each track, matching the Kotlin
-                // overlay Column (label height then the remaining lane band).
+                // overlay Column (label height then the remaining lane band). Each
+                // gets a scrim in the card's own colour so the hypnogram's segments
+                // and connectors are cut out behind the text rather than crossing
+                // through it — the labels ride over a busy plot at the left edge.
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -166,12 +169,26 @@ class SleepStagesLaneChart extends StatelessWidget {
                       SizedBox(
                         height: labelHeight,
                         width: double.infinity,
-                        child: Text(
-                          showInlineLabels
-                              ? '${localizedSleepStageLabel(l10n, lane.labelStageType)} - '
-                                  '${formatter.duration(laneDurationMs(lane))}'
-                              : localizedSleepStageLabel(l10n, lane.labelStageType),
-                          style: labelStyle,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 1),
+                              child: Text(
+                                showInlineLabels
+                                    ? '${localizedSleepStageLabel(l10n, lane.labelStageType)} - '
+                                        '${formatter.duration(laneDurationMs(lane))}'
+                                    : localizedSleepStageLabel(
+                                        l10n, lane.labelStageType),
+                                style: labelStyle,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: _trackBandHeight),
