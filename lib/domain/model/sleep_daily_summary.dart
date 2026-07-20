@@ -205,17 +205,14 @@ SleepData? dailySleepSummary(
         .toList(),
   );
 
-  final seenStageKeys = <(DateTime, DateTime, int)>{};
-  final mergedStages = <SleepStage>[];
-  for (final stage in dailySessions.expand((session) => session.stages)) {
-    final key = (stage.startTime, stage.endTime, stage.stageType);
-    if (seenStageKeys.add(key)) mergedStages.add(stage);
-  }
-  mergedStages.sort((a, b) {
-    final byStart = a.startTime.compareTo(b.startTime);
-    if (byStart != 0) return byStart;
-    return a.endTime.compareTo(b.endTime);
-  });
+  // A night can be several segments split by a wake (05:18–07:34 here). Combine
+  // them into one continuous stage timeline with the wake filled as Awake, so
+  // the span is covered by stages: otherwise the un-slept gap counts against
+  // sleepSessionHasReliableStages and the day view hides the hypnogram, and the
+  // schedule bar shows a hole. Gaps stay within the night by splitNightAndNaps
+  // (<= kSleepNapGap), so filling up to that bound never bridges a daytime nap.
+  final mergedStages =
+      combineNightStages(dailySessions, maxGap: kSleepNapGap);
 
   return SleepData(
     id: 'daily:$selectedDate',

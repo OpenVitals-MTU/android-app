@@ -156,6 +156,48 @@ int sleepSessionsUnionMs(Iterable<SleepData> sessions) {
   return totalMs;
 }
 
+/// Combines the stages of a night's [orderedSessions] (sorted by start) into one
+/// timeline: identical stages are deduped, and the wake gap between consecutive
+/// segments (up to [maxGap]) is filled with an Awake stage. This is what lets a
+/// night broken by a wake render as one continuous hypnogram — and have the wake
+/// count toward the awake share and the reliable-stage coverage — instead of
+/// blocks separated by holes. Gaps larger than [maxGap] (a daytime nap, not part
+/// of the night) are left unfilled. Empty when no segment carries any stage.
+List<SleepStage> combineNightStages(
+  List<SleepData> orderedSessions, {
+  required Duration maxGap,
+}) {
+  final seenKeys = <(DateTime, DateTime, int)>{};
+  final stages = <SleepStage>[];
+  for (final stage in orderedSessions.expand((session) => session.stages)) {
+    final key = (stage.startTime, stage.endTime, stage.stageType);
+    if (seenKeys.add(key)) stages.add(stage);
+  }
+  if (stages.isEmpty) return const <SleepStage>[];
+
+  final gapStages = <SleepStage>[];
+  for (var index = 0; index < orderedSessions.length - 1; index++) {
+    final previous = orderedSessions[index];
+    final next = orderedSessions[index + 1];
+    final gap = next.startTime.difference(previous.endTime);
+    if (!gap.isNegative && gap > Duration.zero && gap <= maxGap) {
+      gapStages.add(
+        SleepStage(
+          startTime: previous.endTime,
+          endTime: next.startTime,
+          stageType: SleepStage.stageAwake,
+        ),
+      );
+    }
+  }
+
+  return [...stages, ...gapStages]..sort((a, b) {
+      final byStart = a.startTime.compareTo(b.startTime);
+      if (byStart != 0) return byStart;
+      return a.endTime.compareTo(b.endTime);
+    });
+}
+
 int sleepDurationMsFromStages(
   List<SleepStage> stages,
   int fallbackDurationMs,

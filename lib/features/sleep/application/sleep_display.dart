@@ -392,9 +392,10 @@ List<SleepScheduleDay> toSleepScheduleDays(
   final dates = sessionsByDate.keys.toList()..sort();
   for (final date in dates) {
     final sessions = sessionsByDate[date]!;
-    final stages = [
-      for (final session in sessions) ...session.stages,
-    ]..sort((a, b) => a.startTime.compareTo(b.startTime));
+    // Fill the wake gaps between a night's segments with Awake so the schedule
+    // bar is continuous instead of holed; gaps beyond kSleepNapGap (a daytime
+    // nap) are left as a separate block. Sessions are already start-sorted.
+    final stages = combineNightStages(sessions, maxGap: kSleepNapGap);
     days.add(SleepScheduleDay(
       date: date,
       inBedStart: sessions.isEmpty
@@ -488,10 +489,9 @@ class _OverviewDay {
 
   int get timeInBedMs => sleepSessionsUnionMs(sessions);
 
-  int _stageMs(Set<int> types) => sessions.fold<int>(
-        0,
-        (sum, s) => sum + s.stages.durationMsForTypes(types),
-      );
+  int _stageMs(Set<int> types) =>
+      combineNightStages(sessions, maxGap: kSleepNapGap)
+          .durationMsForTypes(types);
 
   int get awakeDurationMs => _stageMs(awakeStageTypes);
   int get remDurationMs => _stageMs({SleepStage.stageRem});
