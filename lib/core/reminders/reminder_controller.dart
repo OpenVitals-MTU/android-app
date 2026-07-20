@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import 'reminder_schedule.dart';
 
 /// Today's progress toward a reminder's daily goal. A reminder stops nagging
@@ -28,17 +26,21 @@ class ReminderGoalProgress {
   String toString() => 'ReminderGoalProgress($current/$target)';
 }
 
-/// Arms or cancels the OS-level alarm that fires the next reminder.
-/// Device-specific; injected so the controller stays testable.
+/// (Re)schedules the batch of upcoming reminder notifications, replacing whatever
+/// was scheduled before. Device-specific; injected so the controller stays
+/// testable.
+///
+/// [scheduleAll] takes the whole upcoming plan (see [ReminderSchedule.plan]) and
+/// must cancel the previous batch before scheduling the new one, or a shrunken
+/// plan leaves stale notifications from a longer previous plan firing later. An
+/// empty list clears everything. [cancel] clears the batch (pending and any
+/// already-shown notification in the reserved id range).
 abstract interface class ReminderScheduler {
-  Future<void> schedule(DateTime triggerAt);
-
-  Future<void> cancel();
-}
-
-/// Posts or clears a reminder notification. Device-specific.
-abstract interface class ReminderNotifier {
-  Future<void> show(ReminderGoalProgress progress);
+  /// [progress] is today's value against today's goal, so the scheduler can bake
+  /// it into the notification (a "1.3 L / 2.0 L" body and a progress bar). It is
+  /// the progress as of scheduling — accurate for same-day reminders, which is
+  /// why the scheduler only shows it on those.
+  Future<void> scheduleAll(List<DateTime> triggers, ReminderGoalProgress progress);
 
   Future<void> cancel();
 }
@@ -67,12 +69,18 @@ class ReminderSettings {
 /// Whether a fired reminder may actually notify is the schedule's business
 /// ([ReminderSchedule.allowsNotificationAt]) — that is what made hydration
 /// (quiet outside its window) differ from mindfulness (always allowed).
+///
+/// The engine pre-schedules a rolling batch of notifications rather than waking
+/// the app to recompute at fire time, so there is no fire callback here: every
+/// path funnels through [apply], which recomputes the plan and re-schedules the
+/// whole batch. [apply] is re-run on every foreground opportunity (app start,
+/// resume, a relevant log, a config change) so the plan tracks reality.
 class ReminderController {
   ReminderController({
     required this.loadSettings,
     required this.readProgress,
     required this.scheduler,
-    required this.notifier,
+    this.loadAnchor,
     this.now = DateTime.now,
     this.hasNotificationPermission = _permissionGranted,
   });
@@ -80,15 +88,22 @@ class ReminderController {
   final ReminderSettings Function() loadSettings;
   final Future<ReminderGoalProgress> Function() readProgress;
   final ReminderScheduler scheduler;
-  final ReminderNotifier notifier;
+
+  /// The last relevant user action to measure the countdown from — e.g. the
+  /// timestamp of the last logged drink. Null (the default) means the schedule's
+  /// own baseline is used; a feature with no such anchor (a fixed daily time)
+  /// leaves it null. Must not throw: return null on a read failure.
+  final Future<DateTime?> Function()? loadAnchor;
+
   final DateTime Function() now;
 
   /// Asynchronous because the Android 13+ POST_NOTIFICATIONS check is a platform
   /// call; caching it would go stale when the user revokes the permission.
   final Future<bool> Function() hasNotificationPermission;
 
-  /// (Re)computes the next reminder and arms the scheduler, or clears everything
-  /// when the reminder is off or notifications are not permitted.
+  /// Recomputes the upcoming reminder plan and (re)schedules the whole batch, or
+  /// clears everything when the reminder is off or notifications are not
+  /// permitted.
   ///
   /// Pass [settings] to apply a config that has not been persisted yet;
   /// otherwise the current settings are read.
@@ -99,39 +114,15 @@ class ReminderController {
       return;
     }
     final progress = await readProgress();
-    await _scheduleNext(resolved.schedule, goalMet: progress.isMet);
-  }
-
-  /// Runs when an alarm fires: notifies unless the goal is already met or the
-  /// schedule is in quiet hours, then arms the next alarm either way.
-  ///
-  /// The re-arm is in a `finally`, and reading progress / posting is best-effort:
-  /// this is a self-perpetuating one-shot chain, so a transient failure in the
-  /// read or the post must NEVER stop the next alarm from being armed. It used to
-  /// re-arm last, so any throw (a momentary Health Connect read error, a plugin
-  /// error) killed the chain until the app was reopened — the "reminders just
-  /// stopped" bug.
-  Future<void> handleAlarm() async {
-    final settings = loadSettings();
-    if (!settings.enabled || !await hasNotificationPermission()) {
-      await clear();
-      return;
-    }
-    var goalMet = false;
-    try {
-      final progress = await readProgress();
-      goalMet = progress.isMet;
-      if (!goalMet && settings.schedule.allowsNotificationAt(now())) {
-        await notifier.show(progress);
-      }
-    } catch (error, stack) {
-      debugPrint('Reminder fire failed (chain kept alive): $error\n$stack');
-    } finally {
-      // Armed even while quiet or goal-met (so the chain survives to tomorrow),
-      // and even if the read/post above threw (goalMet defaults false, so the
-      // next fire is now+interval — it retries soon rather than going silent).
-      await _scheduleNext(settings.schedule, goalMet: goalMet);
-    }
+    final anchor = loadAnchor == null ? null : await loadAnchor!();
+    final triggers = resolved.schedule
+        .plan(now(), anchor: anchor, goalMet: progress.isMet)
+        // Belt-and-suspenders: plan() already omits out-of-window moments, but
+        // filtering here keeps quiet hours enforced even if a strategy's plan
+        // ever changes.
+        .where(resolved.schedule.allowsNotificationAt)
+        .toList();
+    await scheduler.scheduleAll(triggers, progress);
   }
 
   /// Re-arms (or clears) the schedule, e.g. after a device reboot or app update.
@@ -144,21 +135,8 @@ class ReminderController {
     }
   }
 
-  /// Dismisses a reminder that is on screen, without touching the schedule —
-  /// e.g. once the user logs the entry the reminder was nagging about.
-  Future<void> hideNotification() => notifier.cancel();
-
-  /// Cancels the pending alarm *and* any visible notification.
-  Future<void> clear() async {
-    await scheduler.cancel();
-    await notifier.cancel();
-  }
-
-  Future<void> _scheduleNext(
-    ReminderSchedule schedule, {
-    required bool goalMet,
-  }) =>
-      scheduler.schedule(schedule.nextTrigger(now(), goalMet: goalMet));
+  /// Cancels the whole batch (pending notifications and any already-shown one).
+  Future<void> clear() => scheduler.cancel();
 }
 
 /// Default permission gate. On-device the Android 13+ POST_NOTIFICATIONS check

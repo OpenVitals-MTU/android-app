@@ -3,10 +3,14 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../core/reminders/local_notifications_reminder_device.dart';
 import '../../../core/reminders/reminder_controller.dart';
 
-/// The mindfulness reminder's notification identity and copy. The behaviour
-/// lives in the shared [LocalNotificationsReminderDevice].
+/// The mindfulness reminder's notification identity and copy. The scheduling
+/// behaviour lives in the shared [BatchZonedNotificationReminderScheduler].
+///
+/// A single daily time needs only a tiny batch (today plus the next couple of
+/// days pre-scheduled). The id range `[6100, 6103)` must not overlap hydration's.
 const mindfulnessReminderNotificationSpec = ReminderNotificationSpec(
-  notificationId: 5002,
+  baseNotificationId: 6100,
+  batchSize: 3,
   // `_v2`: see [hydrationReminderNotificationSpec] — a new id upgrades existing
   // installs to the high-importance channel.
   channelId: 'mindfulness_reminders_v2',
@@ -16,14 +20,19 @@ const mindfulnessReminderNotificationSpec = ReminderNotificationSpec(
   // The OpenVitals monochrome mark, shared by every notification the app posts.
   androidIcon: 'ic_launcher_monochrome',
   scheduledBody: 'A few mindful minutes can reset your day.',
+  // Today's progress, e.g. "5 / 10 min", shown on same-day reminders.
   body: _mindfulnessReminderBody,
 );
+
+String _mindfulnessReminderBody(ReminderGoalProgress progress) =>
+    '${progress.current.toStringAsFixed(0)} / '
+    '${progress.target.toStringAsFixed(0)} min';
 
 /// The pre-`_v2` channel id, deleted when the high-importance channel is created.
 const _legacyMindfulnessChannelId = 'mindfulness_reminders';
 
 /// Creates the mindfulness reminder's high-importance channel and removes the
-/// legacy default-importance one. Call before the first `show()`.
+/// legacy default-importance one. Call before the first schedule.
 Future<void> ensureMindfulnessReminderChannel(
   FlutterLocalNotificationsPlugin plugin,
 ) =>
@@ -31,17 +40,4 @@ Future<void> ensureMindfulnessReminderChannel(
       plugin,
       mindfulnessReminderNotificationSpec,
       oldChannelId: _legacyMindfulnessChannelId,
-    );
-
-String _mindfulnessReminderBody(ReminderGoalProgress progress) => progress.target > 0.0
-    ? 'You have ${progress.current.toStringAsFixed(0)} of '
-        '${progress.target.toStringAsFixed(0)} mindful minutes today.'
-    : 'Take a few mindful minutes.';
-
-LocalNotificationsReminderDevice mindfulnessReminderDevice(
-  FlutterLocalNotificationsPlugin plugin,
-) =>
-    LocalNotificationsReminderDevice(
-      plugin: plugin,
-      spec: mindfulnessReminderNotificationSpec,
     );

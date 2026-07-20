@@ -147,43 +147,28 @@ class _FakeNutritionRepository implements NutritionRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// Records the reminder seams so the entry-save dismissal can be observed.
-class RecordingReminderNotifier implements ReminderScheduler, ReminderNotifier {
-  int notificationCancels = 0;
-  int alarmCancels = 0;
-
-  @override
-  Future<void> show(ReminderGoalProgress progress) async {}
-
-  @override
-  Future<void> cancel() async => notificationCancels++;
-
-  @override
-  Future<void> schedule(DateTime triggerAt) async {}
-}
-
-/// The scheduler seam, kept separate so a notification cancel is
-/// distinguishable from an alarm cancel.
-class RecordingAlarmScheduler implements ReminderScheduler {
+/// Records the reminder scheduler so a completed save's re-plan can be observed.
+/// The reminder is disabled by default in these tests, so a logged drink
+/// re-plans to `clear()` — i.e. a `cancel()`.
+class RecordingReminderScheduler implements ReminderScheduler {
+  int scheduleAllCount = 0;
   int cancels = 0;
 
   @override
-  Future<void> schedule(DateTime triggerAt) async {}
+  Future<void> scheduleAll(List<DateTime> triggers, ReminderGoalProgress progress) async => scheduleAllCount++;
 
   @override
   Future<void> cancel() async => cancels++;
 }
 
-late RecordingReminderNotifier reminderNotifier;
-late RecordingAlarmScheduler reminderScheduler;
+late RecordingReminderScheduler reminderScheduler;
 
 ProviderContainer _container(
   _FakeHydrationRepository hydration,
   _FakeNutritionRepository nutrition,
   SharedPreferences prefs,
 ) {
-  reminderNotifier = RecordingReminderNotifier();
-  reminderScheduler = RecordingAlarmScheduler();
+  reminderScheduler = RecordingReminderScheduler();
   final container = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
@@ -193,7 +178,6 @@ ProviderContainer _container(
         (ref) => HydrationReminderController(
           preferences: ref.watch(preferencesRepositoryProvider),
           hydrationRepository: hydration,
-          notifier: reminderNotifier,
           scheduler: reminderScheduler,
         ),
       ),
@@ -430,26 +414,25 @@ void main() {
     expect(state().dailyGoalLiters, 2.5);
   });
 
-  test('a saved entry dismisses the reminder but keeps its alarm armed',
-      () async {
+  test('a saved entry re-plans the reminder', () async {
     await settle();
     expect(state().canWriteHydration, isTrue);
 
     await notifier().addCustomHydrationEntry(250);
 
     expect(hydration.writes, hasLength(1));
-    // The notification is hidden; the schedule must survive so the next
-    // reminder still fires today.
-    expect(reminderNotifier.notificationCancels, 1);
-    expect(reminderScheduler.cancels, 0);
+    // The save re-anchors and reschedules; with the reminder disabled here that
+    // re-plan clears the batch (a cancel), which also dismisses any shown one.
+    expect(reminderScheduler.cancels, 1);
   });
 
-  test('a rejected entry does not dismiss the reminder', () async {
+  test('a rejected entry does not touch the reminder', () async {
     await settle();
 
     await notifier().addCustomHydrationEntry(0); // invalid amount
 
     expect(hydration.writes, isEmpty);
-    expect(reminderNotifier.notificationCancels, 0);
+    expect(reminderScheduler.cancels, 0);
+    expect(reminderScheduler.scheduleAllCount, 0);
   });
 }

@@ -136,11 +136,11 @@
          timer or calendar. Declaring it on a health dashboard risks the app being
          rejected or pulled. Never add it.
 
-         Denied by default on Android 14+, so AlarmManagerReminderScheduler consults
-         canScheduleExactReminders() at schedule time and degrades to an inexact,
-         Doze-surviving alarm when the permission is absent — the reminder is never
-         dropped, only made approximate. The reminder settings offer a button that opens
-         the system screen to grant it. -->
+         Denied by default on Android 14+, so BatchZonedNotificationReminderScheduler
+         consults canScheduleExactReminders() at schedule time and picks
+         AndroidScheduleMode.inexactAllowWhileIdle (a Doze-surviving window) when the
+         permission is absent — the reminder is never dropped, only made approximate. The
+         reminder settings offer a button that opens the system screen to grant it. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -451,7 +451,11 @@
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
             android:exported="false" />
 
-        <!-- android_alarm_manager_plus: inexact (Doze-surviving) reminder scheduling that survives reboot. -->
+        <!-- android_alarm_manager_plus: now serves ONLY the periodic home-screen-widget
+             refresh (alarm id 5003). Hydration/mindfulness reminders moved to
+             flutter_local_notifications, whose ScheduledNotificationBootReceiver above
+             re-arms them across reboot AND app update (MY_PACKAGE_REPLACED) — which the
+             one-shot alarm could not, so a nightly install used to kill the reminder. -->
         <service
             android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmService"
             android:permission="android.permission.BIND_JOB_SERVICE"

@@ -30,15 +30,7 @@ class _FakeHydrationRepository implements HydrationRepository {
 
 class _NoopScheduler implements ReminderScheduler {
   @override
-  Future<void> schedule(DateTime triggerAt) async {}
-
-  @override
-  Future<void> cancel() async {}
-}
-
-class _NoopNotifier implements ReminderNotifier {
-  @override
-  Future<void> show(ReminderGoalProgress progress) async {}
+  Future<void> scheduleAll(List<DateTime> triggers, ReminderGoalProgress progress) async {}
 
   @override
   Future<void> cancel() async {}
@@ -105,7 +97,6 @@ void main() {
             (ref) => HydrationReminderController(
               preferences: prefs,
               hydrationRepository: _FakeHydrationRepository(),
-              notifier: _NoopNotifier(),
               scheduler: _NoopScheduler(),
             ),
           ),

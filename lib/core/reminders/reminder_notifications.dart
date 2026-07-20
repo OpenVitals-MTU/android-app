@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart' show openAppSettings;
@@ -8,6 +10,41 @@ import 'package:permission_handler/permission_handler.dart' show openAppSettings
 /// from the alpha channel, so it must be an alpha silhouette, not the full-color
 /// launcher icon.
 const String _androidNotificationIcon = 'ic_launcher_monochrome';
+
+/// The go_router location a tapped reminder points at (its payload — e.g. the
+/// hydration entry route). A widget mounted above the router listens and
+/// navigates; see `ReminderTapBootstrap`. Broadcast, per-isolate: only the UI
+/// isolate's plugin receives taps, so only its stream ever has a listener.
+final StreamController<String> _reminderTapRoutes =
+    StreamController<String>.broadcast();
+
+Stream<String> get reminderNotificationTapRoutes => _reminderTapRoutes.stream;
+
+/// Foreground/background tap handler wired into [initializeReminderNotifications].
+/// Must be top-level so the plugin can hold it as a callback.
+@pragma('vm:entry-point')
+void _onReminderNotificationTap(NotificationResponse response) {
+  final payload = response.payload;
+  if (payload != null && payload.isNotEmpty) {
+    _reminderTapRoutes.add(payload);
+  }
+}
+
+/// The route of the reminder notification the app was cold-started from, or null.
+/// The tap callback above only fires while the app is already running.
+Future<String?> reminderNotificationLaunchRoute(
+  FlutterLocalNotificationsPlugin plugin,
+) async {
+  try {
+    final details = await plugin.getNotificationAppLaunchDetails();
+    if (details?.didNotificationLaunchApp ?? false) {
+      return details?.notificationResponse?.payload;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
 
 /// Prepares [plugin] to post notifications. Must run before any `show` /
 /// `zonedSchedule`, in the UI isolate *and* in the alarm callback's isolate —
@@ -24,6 +61,7 @@ Future<bool> initializeReminderNotifications(
         android: AndroidInitializationSettings(_androidNotificationIcon),
         iOS: DarwinInitializationSettings(),
       ),
+      onDidReceiveNotificationResponse: _onReminderNotificationTap,
     );
     return result ?? false;
   } catch (_) {

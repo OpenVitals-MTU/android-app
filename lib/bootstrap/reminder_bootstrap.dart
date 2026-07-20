@@ -14,14 +14,17 @@ import '../features/mindfulness/reminders/mindfulness_reminder_device.dart';
 ///
 /// Order matters:
 /// 1. the time-zone database, before anything can call `zonedSchedule`;
-/// 2. the notification plugin, before anything can post;
-/// 3. the alarm manager service, before an alarm can be armed;
-/// 4. re-arm each reminder's schedule.
+/// 2. the notification plugin, before anything can post or schedule;
+/// 3. the alarm manager service, before the home-widget refresh is armed;
+/// 4. re-plan each reminder's notification batch.
 ///
-/// Step 4 is what the Kotlin `HydrationReminderBootReceiver` did. It is still
-/// needed even though the alarm is `rescheduleOnReboot`: an app *update*
-/// (`MY_PACKAGE_REPLACED`) invalidates the stored callback handle, and a user
-/// who enables a reminder then force-stops the app leaves nothing armed.
+/// Reminders themselves are now pre-scheduled `flutter_local_notifications`
+/// batches, which the OS re-arms across reboot and app update on its own (the
+/// plugin's boot receiver handles `BOOT_COMPLETED` and `MY_PACKAGE_REPLACED`).
+/// Step 4 still runs on every start so the plan reflects the current config,
+/// permission state and last-intake anchor; it is also the app-resume path. The
+/// alarm manager service (step 3) survives only for the home-widget refresh,
+/// which still rides `android_alarm_manager_plus`.
 ///
 /// Every step is best-effort and independently guarded: a device that refuses
 /// notifications, or a host with no alarm manager, must not stop the app from
@@ -48,12 +51,15 @@ Future<ReminderBootstrapResult> bootstrapReminders(
     },
     'notifications',
   );
+  // Only the home-widget refresh needs the alarm manager now; reminders schedule
+  // notifications directly. Initialised here so `scheduleHomeWidgetRefresh` below
+  // can arm its alarm.
   final alarmService =
       isAndroid ? await _guard(alarms.initialize, 'alarm manager') : false;
 
-  // Restored even when a step above failed: a scheduled-notification fallback
-  // still works without the alarm service, and a reminder that cannot notify
-  // is cleared rather than left half-armed.
+  // Re-planned even when a step above failed: notification scheduling does not
+  // need the alarm service, and a reminder that cannot notify is cleared rather
+  // than left half-armed.
   final restored = await _guard(() async {
     await container.read(hydrationReminderControllerProvider).restoreSchedule();
     await container.read(mindfulnessReminderControllerProvider).restoreSchedule();

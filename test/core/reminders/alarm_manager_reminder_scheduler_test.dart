@@ -1,7 +1,6 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/reminders/alarm_manager_reminder_scheduler.dart';
-import 'package:openvitals/features/hydration/reminders/hydration_reminder_alarm.dart';
+import 'package:openvitals/features/homewidgets/home_widget_alarm.dart';
 
 class _RecordingAlarms implements AndroidAlarmManagerApi {
   final List<
@@ -121,12 +120,15 @@ void main() {
     expect(alarms.cancelled, [7]);
   });
 
-  test('the hydration alarm is wired to a vm:entry-point callback', () {
-    // A closure or instance method could not be resolved from a raw callback
-    // handle in the alarm isolate, so the callback must be this top-level one.
-    final s = hydrationReminderAlarmSchedulerFor(FlutterLocalNotificationsPlugin());
-    expect(s.callback, same(hydrationReminderAlarmCallback));
-    expect(s.alarmId, hydrationReminderAlarmId);
-    expect(hydrationReminderAlarmId.bitLength, lessThan(32));
+  test('the home-widget refresh alarm is wired to a vm:entry-point callback', () {
+    // This scheduler now serves only the home-widget refresh. A closure or
+    // instance method could not be resolved from a raw callback handle in the
+    // alarm isolate, so the callback must be this top-level one.
+    expect(
+      homeWidgetRefreshAlarmScheduler.callback,
+      same(homeWidgetRefreshAlarmCallback),
+    );
+    expect(homeWidgetRefreshAlarmScheduler.alarmId, homeWidgetRefreshAlarmId);
+    expect(homeWidgetRefreshAlarmId.bitLength, lessThan(32));
   });
 }

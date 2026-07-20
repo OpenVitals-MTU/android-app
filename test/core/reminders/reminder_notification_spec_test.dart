@@ -5,17 +5,32 @@ import 'package:openvitals/features/hydration/reminders/hydration_reminder_devic
 import 'package:openvitals/features/mindfulness/reminders/mindfulness_reminder_device.dart';
 
 /// Every reminder feature registered in the app. A new feature adds its spec
-/// here so the uniqueness guard below covers it.
+/// here so the uniqueness guards below cover it.
 const List<ReminderNotificationSpec> _allSpecs = [
   hydrationReminderNotificationSpec,
   mindfulnessReminderNotificationSpec,
 ];
 
 void main() {
-  test('notification ids are unique across reminder features', () {
-    // Sharing an id would make one feature's reminder cancel the other's.
-    final ids = [for (final spec in _allSpecs) spec.notificationId];
+  test('base notification ids are unique across reminder features', () {
+    final ids = [for (final spec in _allSpecs) spec.baseNotificationId];
     expect(ids.toSet(), hasLength(ids.length));
+  });
+
+  test('reserved id ranges do not overlap across features', () {
+    // Each feature owns [base, base + batchSize); an overlap would let one
+    // batch's range-cancel wipe another feature's pending reminders.
+    for (final a in _allSpecs) {
+      for (final b in _allSpecs) {
+        if (identical(a, b)) continue;
+        final aEnd = a.baseNotificationId + a.batchSize;
+        final overlaps =
+            b.baseNotificationId >= a.baseNotificationId &&
+                b.baseNotificationId < aEnd;
+        expect(overlaps, isFalse,
+            reason: '${a.channelId} and ${b.channelId} id ranges overlap');
+      }
+    }
   });
 
   test('channel ids are unique across reminder features', () {
@@ -31,34 +46,33 @@ void main() {
     }
   });
 
-  group('body copy', () {
-    test('hydration reports progress against a real goal', () {
-      final body = hydrationReminderNotificationSpec.body(
-        const ReminderGoalProgress(current: 1.25, target: 2.0),
+  test('every spec has a non-empty scheduled body', () {
+    for (final spec in _allSpecs) {
+      expect(spec.scheduledBody, isNotEmpty, reason: spec.channelId);
+    }
+  });
+
+  group('same-day progress body', () {
+    test('hydration shows "x.x L / y.y L"', () {
+      expect(
+        hydrationReminderNotificationSpec.body(
+          const ReminderGoalProgress(current: 1.25, target: 2.0),
+        ),
+        '1.3 L / 2.0 L',
       );
-      expect(body, contains('1.3 L'));
-      expect(body, contains('2.0 L'));
     });
 
-    test('hydration falls back when no goal is set', () {
-      final body = hydrationReminderNotificationSpec.body(
-        const ReminderGoalProgress.none(),
+    test('mindfulness shows whole minutes', () {
+      expect(
+        mindfulnessReminderNotificationSpec.body(
+          const ReminderGoalProgress(current: 4.6, target: 10),
+        ),
+        '5 / 10 min',
       );
-      expect(body, 'Log some water to stay hydrated.');
     });
+  });
 
-    test('mindfulness reports whole minutes', () {
-      final body = mindfulnessReminderNotificationSpec.body(
-        const ReminderGoalProgress(current: 4.6, target: 10),
-      );
-      expect(body, contains('5 of 10 mindful minutes'));
-    });
-
-    test('mindfulness falls back when no goal is set', () {
-      final body = mindfulnessReminderNotificationSpec.body(
-        const ReminderGoalProgress.none(),
-      );
-      expect(body, 'Take a few mindful minutes.');
-    });
+  test('the hydration reminder opens the hydration entry when tapped', () {
+    expect(hydrationReminderNotificationSpec.tapRoute, '/manual_entry/hydration');
   });
 }

@@ -1,23 +1,21 @@
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 
-import 'reminder_controller.dart';
-
-/// Arms an exact Android alarm that wakes the app at the trigger time, mirroring
-/// the Kotlin `HydrationReminderAlarmManager`.
+/// Arms a self-rearming one-shot Android alarm that wakes a background isolate at
+/// the trigger time.
 ///
-/// This is the faithful model: the alarm wakes a background isolate, which
-/// re-reads today's progress and *then* decides whether to notify. A
-/// pre-scheduled notification cannot do that — its body is fixed at schedule
-/// time, and it fires even after the user has already hit the goal.
+/// Now used ONLY by the periodic home-screen-widget refresh (see
+/// home_widget_alarm.dart). Hydration/mindfulness reminders moved to
+/// pre-scheduled `flutter_local_notifications`, which — unlike this one-shot
+/// alarm — the OS re-arms across an app update, so this is no longer a
+/// [ReminderScheduler].
 ///
 /// [callback] must be a top-level or static function annotated with
 /// `@pragma('vm:entry-point')`: the plugin resolves it to a raw callback handle
 /// and invokes it in a fresh isolate, so a closure would not survive.
 ///
-/// `rescheduleOnReboot` makes Android persist the alarm across a reboot, which
-/// is what the Kotlin `HydrationReminderBootReceiver` did by hand. The alarm
-/// re-fires after boot, the callback recomputes, and the chain continues.
-class AlarmManagerReminderScheduler implements ReminderScheduler {
+/// `rescheduleOnReboot` makes Android persist the alarm across a reboot; the
+/// alarm re-fires after boot, the callback recomputes, and the chain continues.
+class AlarmManagerReminderScheduler {
   const AlarmManagerReminderScheduler({
     required this.alarmId,
     required this.callback,
@@ -49,7 +47,6 @@ class AlarmManagerReminderScheduler implements ReminderScheduler {
   /// app being rejected or pulled from Play. When the permission is not granted
   /// (denied by default on Android 14+) the alarm degrades to an inexact,
   /// Doze-surviving alarm that lands inside a window rather than at the instant.
-  @override
   Future<void> schedule(DateTime triggerAt) async {
     final exact = canScheduleExact != null && await canScheduleExact!();
     await alarms.oneShotAt(
@@ -64,7 +61,6 @@ class AlarmManagerReminderScheduler implements ReminderScheduler {
     );
   }
 
-  @override
   Future<void> cancel() => alarms.cancel(alarmId);
 }
 

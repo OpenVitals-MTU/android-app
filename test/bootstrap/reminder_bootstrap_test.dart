@@ -19,21 +19,12 @@ import 'package:openvitals/features/hydration/reminders/hydration_reminder_contr
 import 'package:openvitals/features/mindfulness/reminders/mindfulness_reminder_controller.dart';
 
 class RecordingScheduler implements ReminderScheduler {
-  final List<DateTime> scheduled = [];
+  final List<List<DateTime>> batches = [];
   int cancelCount = 0;
 
   @override
-  Future<void> schedule(DateTime triggerAt) async => scheduled.add(triggerAt);
-
-  @override
-  Future<void> cancel() async => cancelCount++;
-}
-
-class RecordingNotifier implements ReminderNotifier {
-  int cancelCount = 0;
-
-  @override
-  Future<void> show(ReminderGoalProgress progress) async {}
+  Future<void> scheduleAll(List<DateTime> triggers, ReminderGoalProgress progress) async =>
+      batches.add(triggers);
 
   @override
   Future<void> cancel() async => cancelCount++;
@@ -46,6 +37,13 @@ class _FakeHydrationRepository implements HydrationRepository {
     LocalDate end,
   ) async =>
       const Ok(<DailyHydration>[]);
+
+  @override
+  Future<Result<List<HydrationEntry>>> loadHydrationEntries(
+    LocalDate start,
+    LocalDate end,
+  ) async =>
+      const Ok(<HydrationEntry>[]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -87,9 +85,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late RecordingScheduler hydrationScheduler;
-  late RecordingNotifier hydrationNotifier;
   late RecordingScheduler mindfulnessScheduler;
-  late RecordingNotifier mindfulnessNotifier;
   late _RecordingAlarms alarms;
 
   Future<ProviderContainer> newContainer({
@@ -112,7 +108,6 @@ void main() {
           (ref) => HydrationReminderController(
             preferences: prefs,
             hydrationRepository: _FakeHydrationRepository(),
-            notifier: hydrationNotifier,
             scheduler: hydrationScheduler,
           ),
         ),
@@ -120,7 +115,6 @@ void main() {
           (ref) => MindfulnessReminderController(
             preferences: prefs,
             mindfulnessRepository: _FakeMindfulnessRepository(),
-            notifier: mindfulnessNotifier,
             scheduler: mindfulnessScheduler,
           ),
         ),
@@ -132,9 +126,7 @@ void main() {
 
   setUp(() {
     hydrationScheduler = RecordingScheduler();
-    hydrationNotifier = RecordingNotifier();
     mindfulnessScheduler = RecordingScheduler();
-    mindfulnessNotifier = RecordingNotifier();
     alarms = _RecordingAlarms();
   });
 
@@ -159,14 +151,15 @@ void main() {
     final result = await boot(container);
 
     expect(result.schedulesRestored, isTrue);
-    // Hydration re-arms; this is the app-start / post-update boot restore.
-    expect(hydrationScheduler.scheduled, hasLength(1));
-    // Mindfulness is off, so its alarm is cancelled rather than left dangling.
-    expect(mindfulnessScheduler.scheduled, isEmpty);
+    // Hydration re-plans; this is the app-start / post-update restore.
+    expect(hydrationScheduler.batches, hasLength(1));
+    expect(hydrationScheduler.batches.single, isNotEmpty);
+    // Mindfulness is off, so its batch is cancelled rather than left dangling.
+    expect(mindfulnessScheduler.batches, isEmpty);
     expect(mindfulnessScheduler.cancelCount, 1);
   });
 
-  test('starts the alarm service on Android, before arming anything', () async {
+  test('starts the alarm service on Android (for the widget refresh)', () async {
     final container = await newContainer();
 
     final result = await boot(container);
@@ -182,8 +175,8 @@ void main() {
 
     expect(alarms.initializeCount, 0);
     expect(result.alarmServiceReady, isFalse);
-    // The scheduled-notification fallback still gets armed.
-    expect(hydrationScheduler.scheduled, hasLength(1));
+    // Notifications are still scheduled off Android.
+    expect(hydrationScheduler.batches, hasLength(1));
   });
 
   test('a failed time-zone init still restores the schedules', () async {
@@ -196,7 +189,7 @@ void main() {
 
     expect(result.timeZoneReady, isFalse);
     expect(result.schedulesRestored, isTrue);
-    expect(hydrationScheduler.scheduled, hasLength(1));
+    expect(hydrationScheduler.batches, hasLength(1));
   });
 
   test('a throwing time-zone init is swallowed and does not abort startup',
@@ -221,6 +214,6 @@ void main() {
 
     expect(result.alarmServiceReady, isFalse);
     expect(result.schedulesRestored, isTrue);
-    expect(hydrationScheduler.scheduled, hasLength(1));
+    expect(hydrationScheduler.batches, hasLength(1));
   });
 }
