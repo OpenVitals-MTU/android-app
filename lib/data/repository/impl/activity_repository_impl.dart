@@ -8,6 +8,7 @@ import '../../../domain/model/exercise_session_metrics.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/activity_period_data.dart';
+import '../../local/open_vitals_database.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../contract/activity_repository.dart';
@@ -27,13 +28,21 @@ class ActivityRepositoryImpl implements ActivityRepository {
     this._dataSource, {
     PreferencesRepository? preferencesRepository,
     ActivityMarkerRepository? markerRepository,
+    VitalsDailyCacheDao? caloriesCacheDao,
   })  : _preferences = preferencesRepository,
-        _markers = markerRepository;
+        _markers = markerRepository,
+        _caloriesCacheDao = caloriesCacheDao;
 
   final HealthDataSource _dataSource;
   // ignore: unused_field
   final PreferencesRepository? _preferences;
   final ActivityMarkerRepository? _markers;
+
+  /// The daily calories-burned cache (the generic vitals daily-aggregate store,
+  /// keyed by [caloriesBurnedCacheMetric]). When it has been synced, the daily
+  /// calories-burned series is served from SQLite instead of Health Connect's
+  /// slow `TotalCaloriesBurned` year aggregate. Null in tests / before sync.
+  final VitalsDailyCacheDao? _caloriesCacheDao;
 
   @override
   Future<Result<ActivityPeriodData>> loadActivityPeriod(
@@ -64,11 +73,17 @@ class ActivityRepositoryImpl implements ActivityRepository {
         Future<List<DailyNutrition>> nutrition(DatePeriod period) async {
           if (!includeNutrition) return const [];
           if (!granted.contains(HcPermissions.readNutrition)) return const [];
-          return _dataSource.readDailyNutrition(
-            period.start,
-            period.end,
-            includeHydration: false,
-          );
+          // Serve calories burned from the daily cache once synced — the
+          // callers of this read (calories overview, movement-metric screen)
+          // use only the per-day kcal, never hydration or the burn source, so a
+          // cache hit avoids Health Connect's 13-24s TotalCaloriesBurned year
+          // aggregate. Falls back to the live read until the cache is populated.
+          return await _cachedCaloriesBurned(period.start, period.end) ??
+              _dataSource.readDailyNutrition(
+                period.start,
+                period.end,
+                includeHydration: false,
+              );
         }
 
         final activityProgress = includeActivityProgress &&
@@ -122,6 +137,37 @@ class ActivityRepositoryImpl implements ActivityRepository {
           activityProgress: activityProgress,
         );
       });
+
+  /// Cached daily calories-burned as [DailyNutrition] rows, or null when the
+  /// cache has not been synced yet (no cursor) — the caller then reads live.
+  /// Only days with a positive burn are stored; the heatmap fills the rest.
+  Future<List<DailyNutrition>?> _cachedCaloriesBurned(
+    LocalDate start,
+    LocalDate end,
+  ) async {
+    final dao = _caloriesCacheDao;
+    if (dao == null) return null;
+    // The cache only covers the last [caloriesCacheLookbackDays]. A range that
+    // begins before that window would read as empty from the cache (its days
+    // were never synced), so fall back to the live read for it.
+    final coverageStart =
+        LocalDate.now().epochDay - caloriesCacheLookbackDays;
+    if (start.epochDay < coverageStart) return null;
+    if (await dao.cursor(caloriesBurnedCacheMetric) == null) return null;
+    final rows = await dao.aggregatesBetween(
+      caloriesBurnedCacheMetric,
+      start.epochDay,
+      end.epochDay,
+    );
+    return [
+      for (final r in rows)
+        DailyNutrition(
+          date: LocalDate.fromEpochDay(r.epochDay),
+          hydrationLiters: 0.0,
+          caloriesBurnedKcal: r.valueSum,
+        ),
+    ];
+  }
 
   @override
   Future<Result<ActivitiesPeriodData>> loadActivitiesPeriod(

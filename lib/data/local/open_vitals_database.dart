@@ -254,6 +254,19 @@ class VitalsDailyCacheDao extends DatabaseAccessor<OpenVitalsDatabase>
   }
 }
 
+/// The [VitalsDailyCacheDao] metric key under which daily calories-burned totals
+/// are cached. That table is a generic per-day aggregate store keyed by metric
+/// name, so calories reuse it rather than clone an identical table. The calorie
+/// day value is a kcal SUM, stored as [VitalsDailyAggregates.valueSum] with a
+/// [VitalsDailyAggregates.sampleCount] of 1 (so valueSum/sampleCount is the day
+/// total). See CaloriesHistorySyncService.
+const String caloriesBurnedCacheMetric = 'totalCaloriesBurned';
+
+/// How many days back the calories-burned cache is kept fresh. A requested range
+/// that starts before this window is not covered by the cache, so it falls back
+/// to a live Health Connect read rather than reading as empty.
+const int caloriesCacheLookbackDays = 730;
+
 @DriftAccessor(tables: [Beverages])
 class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
     with _$BeverageDaoMixin {
