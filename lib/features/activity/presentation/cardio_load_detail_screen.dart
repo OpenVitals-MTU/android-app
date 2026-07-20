@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/reference_link.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/insights/cardio_load.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
@@ -45,6 +47,7 @@ class CardioLoadDetailScreen extends ConsumerWidget {
     }
 
     final estimate = state.estimate;
+    final l10n = AppLocalizations.of(context);
     return RefreshIndicator(
       onRefresh: notifier.refresh,
       child: ListView(
@@ -53,7 +56,50 @@ class CardioLoadDetailScreen extends ConsumerWidget {
           sectionPadded(_SummaryCard(estimate: estimate, formatter: formatter)),
           const SectionHeader('Today\'s numbers'),
           sectionPadded(_NumbersCard(state: state, formatter: formatter)),
+          SectionHeader(l10n.cardioLoadReferencesTitle),
+          sectionPadded(const _CardioLoadReferencesCard()),
         ],
+      ),
+    );
+  }
+}
+
+// Research behind the TRIMP-based cardio-load estimate, shown to the user as
+// tappable links (recovered from the Kotlin CardioLoadDetailScreen; AGENTS.md
+// invariant 8).
+const String _banisterTrimpUrl =
+    'https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/';
+const String _trainingLoadReviewUrl =
+    'https://pmc.ncbi.nlm.nih.gov/articles/PMC4213373/';
+const String _healthConnectWorkoutUrl =
+    'https://developer.android.com/health-and-fitness/health-connect/experiences/workouts';
+
+class _CardioLoadReferencesCard extends StatelessWidget {
+  const _CardioLoadReferencesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ReferenceLinkButton(
+              title: l10n.cardioLoadReferenceBanister,
+              url: _banisterTrimpUrl,
+            ),
+            ReferenceLinkButton(
+              title: l10n.cardioLoadReferenceTrainingLoad,
+              url: _trainingLoadReviewUrl,
+            ),
+            ReferenceLinkButton(
+              title: l10n.cardioLoadReferenceHealthConnect,
+              url: _healthConnectWorkoutUrl,
+            ),
+          ],
+        ),
       ),
     );
   }
