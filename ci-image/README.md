@@ -11,9 +11,12 @@ and a recurring network-flake failure mode. No `ci-flutter.sh` change is needed.
 
 ## Build & push
 
+Codeberg does **not** run a container registry, so use `ghcr.io` (aligns with the
+GitHub mirror), Docker Hub, or any OCI registry:
+
 ```sh
-docker login codeberg.org        # username + a token with package:write scope
-REGISTRY_IMAGE=codeberg.org/OpenVitals/mobile-app-ci sh scripts/build-ci-image.sh
+docker login ghcr.io             # GitHub username + a PAT with write:packages
+REGISTRY_IMAGE=ghcr.io/mmarca-tech/mobile-app-ci sh scripts/build-ci-image.sh
 ```
 
 Then make the package **public** (so CI pulls it without credentials) and point
