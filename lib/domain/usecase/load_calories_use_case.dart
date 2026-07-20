@@ -45,6 +45,10 @@ class LoadCaloriesUseCase {
         // nutrition slices only; it never renders the intraday cumulative chart,
         // so it skips that Day-only aggregate read entirely.
         includeActivityProgress: false,
+        // It shows the current period alone (no previous/baseline comparison),
+        // so it skips the four extra window reads — on the Year range that is
+        // four fewer 365/90-day Health Connect aggregates, the bulk of the load.
+        includeComparisonWindows: false,
         refreshMode: refreshMode,
       ),
       _bodyRepository.loadLatestBMR(),

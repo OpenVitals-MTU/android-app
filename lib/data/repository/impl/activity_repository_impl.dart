@@ -42,6 +42,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     required bool includeNutrition,
     bool includeWheelchairPushes = false,
     bool includeActivityProgress = true,
+    bool includeComparisonWindows = true,
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>
       runCatching(() async {
@@ -76,7 +77,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
             ? await _dataSource.readRawActivityProgress(w.current.start)
             : const <ActivityProgressPoint>[];
 
-        // The six window reads are independent (distinct date ranges, distinct
+        // The window reads are independent (distinct date ranges, distinct
         // metrics), so fire them together rather than in series. Over a YEAR the
         // current and previous windows are each a 365-day Health Connect
         // aggregate, and `TotalCaloriesBurned` is heavy to synthesize; awaiting
@@ -84,6 +85,13 @@ class ActivityRepositoryImpl implements ActivityRepository {
         // open. Concurrent reads collapse that to roughly a single window's
         // latency. A failing read still fails the whole load (via runCatching),
         // exactly as the sequential awaits did.
+        //
+        // The previous/baseline windows exist only for the movement-metric
+        // screen's period comparison; the calories overview never reads them, so
+        // it opts out ([includeComparisonWindows] = false) and skips four more
+        // year-long aggregates — the difference between two concurrent reads and
+        // six.
+        Future<List<T>> skip<T>() => Future.value(const []);
         final (
           currentSteps,
           previousSteps,
@@ -93,11 +101,15 @@ class ActivityRepositoryImpl implements ActivityRepository {
           baselineNutrition,
         ) = await (
           steps(w.current),
-          steps(w.previous),
-          steps(w.baseline),
+          includeComparisonWindows ? steps(w.previous) : skip<DailySteps>(),
+          includeComparisonWindows ? steps(w.baseline) : skip<DailySteps>(),
           nutrition(w.current),
-          nutrition(w.previous),
-          nutrition(w.baseline),
+          includeComparisonWindows
+              ? nutrition(w.previous)
+              : skip<DailyNutrition>(),
+          includeComparisonWindows
+              ? nutrition(w.baseline)
+              : skip<DailyNutrition>(),
         ).wait;
 
         return ActivityPeriodData(
