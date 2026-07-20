@@ -42,6 +42,12 @@ enum SettingsSection {
     summary: 'Import from Apple Health and .fit files',
     icon: Icons.folder_open_outlined,
   ),
+  deviceSync(
+    route: AppRoutes.settingsDeviceSync,
+    title: 'Sync with another phone',
+    summary: 'Copy Health Connect records to a nearby phone over Bluetooth',
+    icon: Icons.devices_other_outlined,
+  ),
   healthConnect(
     route: AppRoutes.settingsHealthConnect,
     title: 'Health Connect',
@@ -98,6 +104,8 @@ extension SettingsSectionL10n on SettingsSection {
         return l10n.settingsRecoveryGroupTitle;
       case SettingsSection.dataImport:
         return l10n.settingsDataImportGroupTitle;
+      case SettingsSection.deviceSync:
+        return l10n.settingsDeviceSyncGroupTitle;
       case SettingsSection.healthConnect:
         return l10n.settingsHealthConnectGroupTitle;
       case SettingsSection.debugDiagnostics:
@@ -119,6 +127,8 @@ extension SettingsSectionL10n on SettingsSection {
         return l10n.settingsRecoveryGroupBody;
       case SettingsSection.dataImport:
         return l10n.settingsDataImportGroupBody;
+      case SettingsSection.deviceSync:
+        return l10n.settingsDeviceSyncGroupBody;
       case SettingsSection.healthConnect:
         return l10n.settingsHealthConnectGroupBody;
       case SettingsSection.debugDiagnostics:

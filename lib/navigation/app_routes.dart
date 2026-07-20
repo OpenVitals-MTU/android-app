@@ -101,6 +101,7 @@ class AppRoutes {
   static const String settingsSleep = '/settings/sleep';
   static const String settingsBodyEnergy = '/settings/body_energy';
   static const String settingsDataImport = '/settings/data_import';
+  static const String settingsDeviceSync = '/settings/device_sync';
   static const String settingsHealthConnect = '/settings/health_connect';
   static const String settingsPermissions = '/settings/permissions';
   static const String settingsDebugDiagnostics = '/settings/debug_diagnostics';

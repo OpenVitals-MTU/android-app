@@ -41,6 +41,7 @@ import '../features/readiness/presentation/daily_readiness_screen.dart';
 import '../features/readiness/presentation/stress_details_screen.dart';
 import '../features/readiness/presentation/training_readiness_details_screen.dart';
 import '../features/recovery/presentation/sleep_efficiency_detail_screen.dart';
+import '../features/devicesync/presentation/device_sync_screen.dart';
 import '../features/recovery/presentation/sleep_score_detail_screen.dart';
 import '../features/settings/presentation/ble_devices_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -346,9 +347,11 @@ List<RouteBase> _settingsSectionRoutes() => [
         if (kDiagnosticsEnabled || section != SettingsSection.debugDiagnostics)
           GoRoute(
             path: section.route,
-            builder: (context, state) => section == SettingsSection.sensors
-                ? const BleDevicesScreen()
-                : SettingsSectionScreen(section: section),
+            builder: (context, state) => switch (section) {
+              SettingsSection.sensors => const BleDevicesScreen(),
+              SettingsSection.deviceSync => const DeviceSyncScreen(),
+              _ => SettingsSectionScreen(section: section),
+            },
           ),
     ];
 
