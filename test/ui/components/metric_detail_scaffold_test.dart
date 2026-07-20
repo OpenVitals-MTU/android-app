@@ -7,7 +7,9 @@ import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/core/period/period_range_preference_key.dart';
 import 'package:openvitals/core/period/period_selection.dart';
 import 'package:openvitals/core/period/time_range.dart';
+import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/di/providers.dart';
+import 'package:openvitals/ui/charts/metric_day_opener.dart';
 import 'package:openvitals/ui/components/metric_detail_scaffold.dart';
 
 Future<Widget> _bootstrap(Widget child, {double bottomInset = 0}) async {
@@ -83,6 +85,43 @@ void main() {
 
     expect(find.text('Today'), findsOneWidget);
     expect(selections.last.selectedRange, TimeRange.day);
+  });
+
+  testWidgets('provides a day opener that drills into that day\'s Day view',
+      (tester) async {
+    final selections = <PeriodSelection>[];
+    ValueChanged<LocalDate>? opener;
+    await tester.pumpWidget(
+      await _bootstrap(
+        MetricDetailScaffold(
+          rangePreferenceKey: PeriodRangePreferenceKey.heart,
+          onRefresh: () async {},
+          onSelectionChanged: selections.add,
+          content: (period) => [
+            Builder(
+              builder: (context) {
+                opener = MetricDetailDayOpener.maybeOf(context);
+                return const Text('CONTENT');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The scaffold hands its subtree a day opener (what a month heatmap cell
+    // calls on tap), and starts on the heart key's default Week range.
+    expect(opener, isNotNull);
+    expect(selections.last.selectedRange, TimeRange.week);
+
+    final target = LocalDate.now().minusDays(40);
+    opener!(target);
+    await tester.pumpAndSettle();
+
+    // Opening a day switches to the Day range anchored on that date.
+    expect(selections.last.selectedRange, TimeRange.day);
+    expect(selections.last.selectedDate, target);
   });
 
   testWidgets('tapping next past today is a no-op (forward-capped)',

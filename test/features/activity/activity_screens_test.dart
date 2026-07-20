@@ -48,6 +48,7 @@ class _FakeActivityRepository implements ActivityRepository {
     required bool includeSteps,
     required bool includeNutrition,
     bool includeWheelchairPushes = false,
+    bool includeActivityProgress = true,
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
       Ok(ActivityPeriodData(

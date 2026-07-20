@@ -41,6 +41,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     required bool includeSteps,
     required bool includeNutrition,
     bool includeWheelchairPushes = false,
+    bool includeActivityProgress = true,
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>
       runCatching(() async {
@@ -69,7 +70,8 @@ class ActivityRepositoryImpl implements ActivityRepository {
           );
         }
 
-        final activityProgress = query.range == TimeRange.day &&
+        final activityProgress = includeActivityProgress &&
+                query.range == TimeRange.day &&
                 granted.contains(HcPermissions.readSteps)
             ? await _dataSource.readRawActivityProgress(w.current.start)
             : const <ActivityProgressPoint>[];

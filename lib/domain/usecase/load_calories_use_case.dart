@@ -41,6 +41,10 @@ class LoadCaloriesUseCase {
         query,
         includeSteps: true,
         includeNutrition: true,
+        // The calories overview draws its two series from the daily-steps and
+        // nutrition slices only; it never renders the intraday cumulative chart,
+        // so it skips that Day-only aggregate read entirely.
+        includeActivityProgress: false,
         refreshMode: refreshMode,
       ),
       _bodyRepository.loadLatestBMR(),

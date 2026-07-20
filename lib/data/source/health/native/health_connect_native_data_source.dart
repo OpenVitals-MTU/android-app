@@ -389,6 +389,12 @@ Duration? _zoneOffset(int? seconds) =>
   Future<int?> readWheelchairPushes(LocalDate date) async =>
       (await _readDayTotal('WheelchairPushes.count', date))?.round();
 
+  /// How long to wait for the intraday hourly aggregate before giving up and
+  /// rendering the Day view without its cumulative line. Generous enough that a
+  /// merely-slow device still gets its chart, short enough that a wedged Health
+  /// Connect binder call cannot strand the loading spinner.
+  static const Duration _intradayAggregateTimeout = Duration(seconds: 12);
+
   /// Kotlin `ActivityHealthReader.readRawActivityProgress`: the day's metrics
   /// aggregated into hourly buckets and accumulated, so each point is the
   /// running total at that hour — what the intraday chart plots.
@@ -412,14 +418,22 @@ Duration? _zoneOffset(int? seconds) =>
     // Today's chart stops at "now" rather than running on to midnight.
     final isToday = date == LocalDate.now();
     final end = isToday ? DateTime.now() : _dayEnd(date);
+    // Bound the hourly-bucket aggregate: on some devices this Health Connect
+    // binder call can stall indefinitely, and it is the ONLY read the Day range
+    // issues that the other ranges do not — an unbounded stall here hangs the Day
+    // view's spinner forever. On timeout `_catch` degrades to an empty series
+    // (no intraday line), exactly as it does for any other aggregate failure.
     final buckets = await _catch(
-      () => _api.aggregateGroupByDurationJson(
-        metrics,
-        _dayStart(date).millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-        60,
-      ),
+      () => _api
+          .aggregateGroupByDurationJson(
+            metrics,
+            _dayStart(date).millisecondsSinceEpoch,
+            end.millisecondsSinceEpoch,
+            60,
+          )
+          .timeout(_intradayAggregateTimeout),
       const <String>[],
+      read: 'readRawActivityProgress',
     );
 
     var steps = 0.0;

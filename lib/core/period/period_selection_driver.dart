@@ -46,6 +46,16 @@ class PeriodSelectionDriver {
   PeriodSelection selectDate(LocalDate date) =>
       _updateUserSelection(_selection.selectDate(date));
 
+  /// Drill into a single day: switch to the Day range anchored on [date] (the
+  /// month heatmap's tap-to-open-day). Persists the range like [selectRange] so
+  /// the screen reopens on Day, and pins the past period like [selectDate].
+  PeriodSelection selectDay(LocalDate date) {
+    _onRangeSelected?.call(TimeRange.day);
+    return _updateUserSelection(
+      _selection.selectRange(TimeRange.day).selectDate(date),
+    );
+  }
+
   PeriodSelection? resumeCurrentPeriod({LocalDate? today}) {
     final resolvedToday = today ?? LocalDate.now();
     if (_userPinnedPastPeriod || !_isPastPeriod(_selection, resolvedToday)) {

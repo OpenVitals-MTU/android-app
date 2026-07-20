@@ -117,7 +117,9 @@ void main() {
     );
   });
 
-  test('rolling period titles fall back to dated labels for past periods', () {
+  test('past rolling periods read as the dated span they cover', () {
+    // A rolling month that no longer ends today is a 30-day span, not the single
+    // calendar month its start falls in ("April 2026" for a mostly-May window).
     expect(
       periodTitle(
         l10n,
@@ -126,7 +128,7 @@ void main() {
         today: today,
         weekPeriodMode: WeekPeriodMode.last7Days,
       ),
-      'April 2026',
+      '12 Apr – 11 May 2026',
     );
     expect(
       periodTitle(
@@ -136,7 +138,20 @@ void main() {
         today: today,
         weekPeriodMode: WeekPeriodMode.last7Days,
       ),
-      'Week of Thu 28 May',
+      '28 May – 3 Jun 2026',
+    );
+  });
+
+  test('a past rolling span that straddles a year shows both years', () {
+    expect(
+      periodTitle(
+        l10n,
+        TimeRange.year,
+        DatePeriod(LocalDate(2024, 12, 20), LocalDate(2025, 12, 19)),
+        today: today,
+        weekPeriodMode: WeekPeriodMode.last7Days,
+      ),
+      '20 Dec 2024 – 19 Dec 2025',
     );
   });
 }

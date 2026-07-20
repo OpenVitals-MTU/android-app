@@ -5,6 +5,7 @@ import '../../core/period/time_range.dart';
 import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
 import 'bar_chart.dart' show PeriodChartValue;
+import 'metric_day_opener.dart';
 
 /// One cell of a calendar heatmap. A null [date] is a layout filler for the
 /// leading/trailing days of the first/last week. Port of Kotlin
@@ -34,12 +35,22 @@ Map<LocalDate, double> _valuesByDate(List<PeriodChartValue> values) {
 
 /// The month grid cells (Mon→Sun rows, with leading/trailing fillers). Port of
 /// Kotlin `periodMonthHeatmapCells`.
+///
+/// [rolling] chooses what span the grid covers. A calendar month (the default)
+/// draws the whole month of [DatePeriod.start] — the 1st to the last day — with
+/// days past the loaded window greyed. A rolling window ("Last 30 days") spans
+/// two calendar months, so it draws exactly `[period.start, period.end]` as
+/// consecutive weeks; drawing only one month of it left ~20 days blank and hid
+/// the other month's half of the window entirely.
 List<PeriodHeatmapCell> periodMonthHeatmapCells(
   List<PeriodChartValue> values,
-  DatePeriod period,
-) {
-  final firstDay = period.start.withDayOfMonth(1);
-  final lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth);
+  DatePeriod period, {
+  bool rolling = false,
+}) {
+  final firstDay =
+      rolling ? period.start : period.start.withDayOfMonth(1);
+  final lastDay =
+      rolling ? period.end : firstDay.withDayOfMonth(firstDay.lengthOfMonth);
   final byDate = _valuesByDate(values);
 
   final leadingEmptyCells = firstDay.dayOfWeek - DateTime.monday;
@@ -50,7 +61,8 @@ List<PeriodHeatmapCell> periodMonthHeatmapCells(
       PeriodHeatmapCell(
         date: date,
         value: byDate[date] ?? 0.0,
-        isWithinLoadedPeriod: !date.isAfter(period.end),
+        isWithinLoadedPeriod:
+            !date.isBefore(period.start) && !date.isAfter(period.end),
       ),
     );
     date = date.plusDays(1);
@@ -138,6 +150,7 @@ class PeriodMonthHeatmap extends StatelessWidget {
     required this.summaryText,
     this.selectedDate,
     this.onDateSelected,
+    this.rolling = false,
   });
 
   final String title;
@@ -148,16 +161,20 @@ class PeriodMonthHeatmap extends StatelessWidget {
   final LocalDate? selectedDate;
   final ValueChanged<LocalDate>? onDateSelected;
 
+  /// Whether the period is a rolling window ("Last 30 days") rather than a
+  /// calendar month. A rolling window renders exactly its span across the month
+  /// boundary; see [periodMonthHeatmapCells].
+  final bool rolling;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final cells = periodMonthHeatmapCells(values, period);
+    final cells = periodMonthHeatmapCells(values, period, rolling: rolling);
     final minPositive = _minPositive(cells);
     final maxValue = _maxValue(cells);
-    final monthStartMonday = period.start
-        .withDayOfMonth(1)
-        .previousOrSame(DateTime.monday);
+    final gridStart = rolling ? period.start : period.start.withDayOfMonth(1);
+    final monthStartMonday = gridStart.previousOrSame(DateTime.monday);
     final weekdays = [
       for (var offset = 0; offset < 7; offset++)
         _weekdayFormat.format(_toDateTime(monthStartMonday.plusDays(offset))),
@@ -247,12 +264,18 @@ class _MonthCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final date = cell.date;
-    final tappable =
-        date != null && cell.isWithinLoadedPeriod && onDateSelected != null;
+    // Inside a metric-detail scaffold, tapping a day drills into its Day view;
+    // otherwise it falls back to the host's pin-a-day callback (or is inert).
+    final openDay = MetricDetailDayOpener.maybeOf(context);
+    final tappable = date != null &&
+        cell.isWithinLoadedPeriod &&
+        (openDay != null || onDateSelected != null);
     return AspectRatio(
       aspectRatio: 1,
       child: GestureDetector(
-        onTap: tappable ? () => onDateSelected!(date) : null,
+        onTap: tappable
+            ? () => (openDay ?? onDateSelected)!(date)
+            : null,
         child: Container(
           decoration: BoxDecoration(
             color: color,

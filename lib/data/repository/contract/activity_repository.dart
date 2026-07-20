@@ -21,6 +21,11 @@ abstract interface class ActivityRepository {
     required bool includeSteps,
     required bool includeNutrition,
     bool includeWheelchairPushes = false,
+    // The intraday cumulative series (Day range only). It costs an extra Health
+    // Connect `aggregateGroupByDuration` call, so a caller that never renders the
+    // intraday chart (e.g. the calories overview) opts out — one fewer read, and
+    // one fewer place a stalled aggregate can hang the Day view.
+    bool includeActivityProgress = true,
     RefreshMode refreshMode = RefreshMode.normal,
   });
 

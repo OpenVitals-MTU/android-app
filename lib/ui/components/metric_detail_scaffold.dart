@@ -10,6 +10,7 @@ import '../../core/period/time_range.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/time/local_date.dart';
 import '../../di/providers.dart';
+import '../charts/metric_day_opener.dart';
 import 'health_connect_gate.dart';
 import 'health_date_picker.dart';
 import 'loading_state.dart';
@@ -127,6 +128,9 @@ class _MetricDetailScaffoldState extends ConsumerState<MetricDetailScaffold> {
     if (picked != null) _apply(_driver.selectDate(picked));
   }
 
+  /// Drill from a month heatmap cell into that day's Day view.
+  void _openDay(LocalDate date) => _apply(_driver.selectDay(date));
+
   @override
   Widget build(BuildContext context) {
     final today = LocalDate.now();
@@ -175,15 +179,18 @@ class _MetricDetailScaffoldState extends ConsumerState<MetricDetailScaffold> {
       const SizedBox(height: 16),
     ];
 
-    return RefreshIndicator(
-      onRefresh: widget.onRefresh,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
-          child: ListView(
-            padding: screenScrollPadding(context),
-            children: items,
+    return MetricDetailDayOpener(
+      openDay: _openDay,
+      child: RefreshIndicator(
+        onRefresh: widget.onRefresh,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 920),
+            child: ListView(
+              padding: screenScrollPadding(context),
+              children: items,
+            ),
           ),
         ),
       ),

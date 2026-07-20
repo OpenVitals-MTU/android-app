@@ -26,6 +26,7 @@ class PeriodHistoryChart extends StatelessWidget {
     this.selectedDate,
     this.onDateSelected,
     this.valueFormatter = formatCompactAxisValue,
+    this.weekPeriodMode = WeekPeriodMode.mondayToSunday,
   });
 
   final String title;
@@ -35,6 +36,7 @@ class PeriodHistoryChart extends StatelessWidget {
   final Color accentColor;
   final String summaryText;
   final PeriodBarAggregation yearAggregation;
+  final WeekPeriodMode weekPeriodMode;
   final LocalDate? selectedDate;
   final ValueChanged<LocalDate>? onDateSelected;
   final String Function(double) valueFormatter;
@@ -51,6 +53,7 @@ class PeriodHistoryChart extends StatelessWidget {
           summaryText: summaryText,
           selectedDate: selectedDate,
           onDateSelected: onDateSelected,
+          rolling: weekPeriodMode.usesRollingDates,
         );
       case TimeRange.year:
         return PeriodYearHeatmap(
@@ -133,6 +136,7 @@ class MetricBarChart extends StatelessWidget {
       selectedDate: selectedDate,
       onDateSelected: onDateSelected,
       valueFormatter: valueFormatter,
+      weekPeriodMode: weekPeriodMode,
     );
   }
 }
