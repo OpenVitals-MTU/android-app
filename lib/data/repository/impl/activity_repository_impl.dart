@@ -28,10 +28,9 @@ class ActivityRepositoryImpl implements ActivityRepository {
     this._dataSource, {
     PreferencesRepository? preferencesRepository,
     ActivityMarkerRepository? markerRepository,
-    VitalsDailyCacheDao? caloriesCacheDao,
+    this._caloriesCacheDao,
   })  : _preferences = preferencesRepository,
-        _markers = markerRepository,
-        _caloriesCacheDao = caloriesCacheDao;
+        _markers = markerRepository;
 
   final HealthDataSource _dataSource;
   // ignore: unused_field

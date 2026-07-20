@@ -25,10 +25,9 @@ class CaloriesHistorySyncService {
   CaloriesHistorySyncService(
     this._cacheDao,
     this._dataSource, {
-    DateTime Function() clock = DateTime.now,
-    int historyLookbackDays = caloriesCacheLookbackDays,
-  })  : _clock = clock,
-        _historyLookbackDays = historyLookbackDays;
+    this._clock = DateTime.now,
+    this._historyLookbackDays = caloriesCacheLookbackDays,
+  });
 
   final VitalsDailyCacheDao _cacheDao;
   final HealthDataSource _dataSource;
