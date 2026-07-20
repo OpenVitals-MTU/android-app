@@ -112,6 +112,18 @@
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!--
+        Phone-to-phone Health Connect sync (bluetooth_sync_native) reuses
+        BLUETOOTH_SCAN + BLUETOOTH_CONNECT above and additionally needs
+        BLUETOOTH_ADVERTISE (API 31+) for ACTION_REQUEST_DISCOVERABLE, so the
+        other phone can find this one. RFCOMM (Bluetooth Classic) is used
+        deliberately over Wi-Fi: any TCP/UDP socket on Android requires the
+        INTERNET permission, which this app never declares (see the offline-only
+        block below). Bluetooth keeps the transfer peer-to-peer with no network.
+    -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADVERTISE"
+        tools:targetApi="s" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
 
     <!-- Foreground service (flutter_foreground_task GPS recorder + geolocator). -->
