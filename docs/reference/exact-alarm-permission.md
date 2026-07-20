@@ -24,7 +24,7 @@ off the table. `SCHEDULE_EXACT_ALARM` gives the identical scheduling capability
 with none of that risk; the only cost is that the user grants it themselves.
 
 **Never add `USE_EXACT_ALARM` to the manifest.** See the manifest comment and
-`AlarmManagerReminderScheduler`.
+`BatchZonedNotificationReminderScheduler`.
 
 ## Do we owe Google Play a declaration?
 
@@ -53,12 +53,12 @@ exact alarms, this is the ready answer:
   on but the permission is absent, opening the system screen that grants it
   (`requestExactAlarmsPermission`). There is no in-app grant dialog — Android only
   allows granting it from Settings.
-- `AlarmManagerReminderScheduler` consults `canScheduleExactReminders()` on **every**
-  schedule and downgrades to an inexact, Doze-surviving alarm when the permission
-  is missing. This is mandatory, not cosmetic: `android_alarm_manager_plus`
-  **silently drops** an exact alarm it lacks permission for (it logs and schedules
-  nothing, with no fallback of its own), which would kill the self-perpetuating
-  reminder chain. The scheduler's own downgrade is what keeps reminders alive.
+- `BatchZonedNotificationReminderScheduler` consults `canScheduleExactReminders()`
+  on **every** (re)schedule and picks `AndroidScheduleMode.inexactAllowWhileIdle`
+  (a Doze-surviving window) instead of `exactAllowWhileIdle` when the permission is
+  missing. Reminders are never dropped, only made approximate. (Reminders are
+  pre-scheduled `flutter_local_notifications` — see [Reminders](../features/reminders.md);
+  `android_alarm_manager_plus` now serves only the home-screen-widget refresh.)
 
 ## Data safety
 
