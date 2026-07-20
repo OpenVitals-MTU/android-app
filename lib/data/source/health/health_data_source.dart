@@ -669,4 +669,22 @@ class HealthDataSource {
     Set<String> wantedIds,
   ) async =>
       const <String>{};
+
+  // ── Phone-to-phone sync (device sync) ─────────────────────────────────────
+
+  /// Reads every record of [recordType] (an [ImportRecord.targetType]) in
+  /// [start]..[end] as reconstructible [ImportRecord]s, for phone-to-phone sync.
+  ///
+  /// This is the generic READ counterpart to [insertImportedRecords] — it lets
+  /// the sync layer treat any supported type uniformly. The base is a no-op so
+  /// tests can drive a fake; `HealthConnectNativeDataSource` reads the raw
+  /// records through the native plugin. The returned records' `clientRecordId`
+  /// is whatever Health Connect holds (often null-sourced); the sync layer
+  /// re-keys them by content fingerprint, so it is not relied upon here.
+  Future<List<ImportRecord>> readImportRecords(
+    String recordType,
+    DateTime start,
+    DateTime end,
+  ) async =>
+      const <ImportRecord>[];
 }
