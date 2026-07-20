@@ -117,6 +117,47 @@ void main() {
     );
   });
 
+  testWidgets('a night the device only partly staged draws as a solid bar',
+      (tester) async {
+    // A full night in bed (23:30–07:00) that the tracker staged only near the
+    // end — a tail-only reading. Its fragments would otherwise float in an empty
+    // bar; instead the whole time in bed reads as one solid block, like the
+    // no-stage night. Regression guard for the 16th/18th "I slept much more"
+    // report. The middle night is fully staged, for contrast.
+    SleepScheduleDay tailStaged(LocalDate date) {
+      final bed =
+          DateTime(date.year, date.month, date.day, 23, 30).subtract(
+        const Duration(days: 1),
+      );
+      final wake = bed.add(const Duration(hours: 7, minutes: 30));
+      return SleepScheduleDay(
+        date: date,
+        inBedStart: bed,
+        inBedEnd: wake,
+        // ~50 min of stages at the tail of a 7h30m night — well under half.
+        stages: stagesFrom(
+          wake.subtract(const Duration(minutes: 50)),
+          const Duration(minutes: 50),
+        ),
+      );
+    }
+
+    await expectChartGoldenBothThemes(
+      tester,
+      () => SleepScheduleStageChart(
+        title: 'Sleep schedule',
+        summaryText: 'This week · partly staged',
+        days: [
+          tailStaged(monday),
+          night(monday.plusDays(1), 23, 5, const Duration(hours: 7, minutes: 55)),
+          tailStaged(monday.plusDays(2)),
+        ],
+        selectedRange: TimeRange.week,
+      ),
+      name: 'sleep_schedule_chart_partly_staged',
+    );
+  });
+
   testWidgets('a night with a daytime nap keeps both bars rounded',
       (tester) async {
     // The night's in-bed window ends at the NAP's end, hours after the night's

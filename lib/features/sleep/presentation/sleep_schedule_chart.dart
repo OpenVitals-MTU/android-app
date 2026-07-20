@@ -6,6 +6,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/sleep_daily_summary.dart';
+import '../../../domain/model/sleep_models.dart';
 import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/chart_paint.dart';
 import '../../../ui/charts/schedule_axis.dart';
@@ -257,8 +258,18 @@ class _ScheduleChartPainter extends CustomPainter {
         ));
       }
 
-      if (segments.isEmpty) {
-        // A night with no stage detail is a solid bar, not an empty slot.
+      // A night with no stage detail — or one the device only partly staged, so
+      // its fragments would float in an empty bar (e.g. a tail-only reading of a
+      // full night's sleep) — draws as one solid bar spanning the whole time in
+      // bed, not an empty slot. This mirrors the day view, which hides a
+      // fragmentary hypnogram rather than draw a misleading one. The Awake
+      // gap-fill of a split night counts toward coverage, so a genuine multi-
+      // segment night still renders its stages.
+      final stageMinutes =
+          segments.fold<double>(0, (sum, seg) => sum + (seg.$3 - seg.$2));
+      final spanMinutes = endMinute - startMinute;
+      if (segments.isEmpty ||
+          stageMinutes / spanMinutes < kMinSleepStageCoverage) {
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromLTRB(
