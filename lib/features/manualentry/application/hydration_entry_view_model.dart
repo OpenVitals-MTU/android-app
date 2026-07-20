@@ -602,11 +602,11 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
         entryNotice: success.notice,
         entryError: null,
       );
-      // "Saving a hydration entry can automatically hide an active hydration
-      // reminder" (the Kotlin reminders doc). The state above is already
-      // published, and the call swallows its own failures, so awaiting here
-      // cannot turn a completed write into a save error.
-      await _hideHydrationReminder();
+      // Saving a hydration entry re-anchors the reminder to this drink and
+      // reschedules (which also hides an active reminder). The state above is
+      // already published, and the call swallows its own failures, so awaiting
+      // here cannot turn a completed write into a save error.
+      await _reanchorHydrationReminder();
     } catch (error) {
       if (!ref.mounted) return;
       state = state.copyWith(
@@ -617,13 +617,13 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
     }
   }
 
-  /// Dismisses a visible hydration reminder after a successful save. Leaves the
-  /// alarm chain armed, so the next reminder still fires.
-  Future<void> _hideHydrationReminder() async {
+  /// Re-anchors the hydration reminder to the just-saved drink and reschedules
+  /// the batch (which also dismisses a visible reminder). Best-effort.
+  Future<void> _reanchorHydrationReminder() async {
     try {
-      await ref.read(hydrationReminderControllerProvider).hideReminderNotification();
+      await ref.read(hydrationReminderControllerProvider).onHydrationLogged();
     } catch (_) {
-      // Notifications are a nicety; never fail a completed write over them.
+      // Reminders are a nicety; never fail a completed write over them.
     }
   }
 

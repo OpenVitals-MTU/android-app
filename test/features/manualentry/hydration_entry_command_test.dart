@@ -102,16 +102,13 @@ class _FakeNutritionRepository implements NutritionRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// The reminder seams a completed save reaches for; silent here.
-class _SilentReminders implements ReminderScheduler, ReminderNotifier {
+/// The reminder scheduler a completed save reaches for; silent here.
+class _SilentReminders implements ReminderScheduler {
   @override
-  Future<void> show(ReminderGoalProgress progress) async {}
+  Future<void> scheduleAll(List<DateTime> triggers, ReminderGoalProgress progress) async {}
 
   @override
   Future<void> cancel() async {}
-
-  @override
-  Future<void> schedule(DateTime triggerAt) async {}
 }
 
 void main() {
@@ -135,7 +132,6 @@ void main() {
         (ref) => HydrationReminderController(
           preferences: ref.watch(preferencesRepositoryProvider),
           hydrationRepository: hydration,
-          notifier: reminders,
           scheduler: reminders,
         ),
       ),

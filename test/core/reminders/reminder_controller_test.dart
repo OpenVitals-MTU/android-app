@@ -4,36 +4,23 @@ import 'package:openvitals/core/reminders/reminder_schedule.dart';
 import 'package:openvitals/core/time/local_date.dart';
 
 class _RecordingScheduler implements ReminderScheduler {
-  final List<DateTime> scheduled = [];
+  final List<List<DateTime>> batches = [];
+  final List<ReminderGoalProgress> progresses = [];
   int cancelCount = 0;
 
+  List<DateTime> get lastBatch => batches.last;
+
   @override
-  Future<void> schedule(DateTime triggerAt) async => scheduled.add(triggerAt);
+  Future<void> scheduleAll(
+    List<DateTime> triggers,
+    ReminderGoalProgress progress,
+  ) async {
+    batches.add(triggers);
+    progresses.add(progress);
+  }
 
   @override
   Future<void> cancel() async => cancelCount++;
-}
-
-class _RecordingNotifier implements ReminderNotifier {
-  final List<ReminderGoalProgress> shown = [];
-  int cancelCount = 0;
-
-  @override
-  Future<void> show(ReminderGoalProgress progress) async => shown.add(progress);
-
-  @override
-  Future<void> cancel() async => cancelCount++;
-}
-
-/// A notifier whose post fails, standing in for a flaky notification plugin at
-/// fire time.
-class _ThrowingNotifier implements ReminderNotifier {
-  @override
-  Future<void> show(ReminderGoalProgress progress) async =>
-      throw StateError('notification post failed');
-
-  @override
-  Future<void> cancel() async {}
 }
 
 /// 07:00–23:00, every two hours — the hydration defaults.
@@ -50,11 +37,9 @@ DateTime _at(int hour) => DateTime.utc(2026, 6, 1, hour);
 
 void main() {
   late _RecordingScheduler scheduler;
-  late _RecordingNotifier notifier;
 
   setUp(() {
     scheduler = _RecordingScheduler();
-    notifier = _RecordingNotifier();
   });
 
   ReminderController controller({
@@ -63,6 +48,7 @@ void main() {
     ReminderGoalProgress progress = const ReminderGoalProgress.none(),
     bool permission = true,
     int hour = 10,
+    Future<DateTime?> Function()? loadAnchor,
   }) =>
       ReminderController(
         loadSettings: () => ReminderSettings(
@@ -70,8 +56,8 @@ void main() {
           schedule: schedule ?? _window,
         ),
         readProgress: () async => progress,
+        loadAnchor: loadAnchor,
         scheduler: scheduler,
-        notifier: notifier,
         now: () => _at(hour),
         hasNotificationPermission: () async => permission,
       );
@@ -93,38 +79,79 @@ void main() {
   });
 
   group('apply', () {
-    test('a disabled reminder clears the alarm and the notification', () async {
+    test('a disabled reminder clears and schedules nothing', () async {
       await controller(enabled: false).apply();
 
       expect(scheduler.cancelCount, 1);
-      expect(notifier.cancelCount, 1);
-      expect(scheduler.scheduled, isEmpty);
+      expect(scheduler.batches, isEmpty);
     });
 
     test('missing notification permission clears, even when enabled', () async {
       await controller(permission: false).apply();
 
       expect(scheduler.cancelCount, 1);
-      expect(notifier.cancelCount, 1);
-      expect(scheduler.scheduled, isEmpty);
+      expect(scheduler.batches, isEmpty);
     });
 
-    test('arms the next alarm without notifying', () async {
+    test('schedules a batch whose first fire is the next interval', () async {
       await controller(
         progress: const ReminderGoalProgress(current: 1, target: 2),
       ).apply();
 
-      expect(scheduler.scheduled, [_at(12)]);
-      expect(notifier.shown, isEmpty);
+      expect(scheduler.lastBatch.first, _at(12));
     });
 
-    test('a met goal pushes the next alarm past today', () async {
+    test('every scheduled time falls inside the active window', () async {
+      await controller(
+        progress: const ReminderGoalProgress(current: 1, target: 2),
+      ).apply();
+
+      expect(scheduler.lastBatch, isNotEmpty);
+      for (final trigger in scheduler.lastBatch) {
+        expect(_window.allowsNotificationAt(trigger), isTrue,
+            reason: '$trigger is outside the active window');
+      }
+    });
+
+    test('a met goal pushes the whole batch past today', () async {
       await controller(
         progress: const ReminderGoalProgress(current: 2, target: 2),
       ).apply();
 
-      // Tomorrow's active start (07:00) plus the interval.
-      expect(scheduler.scheduled, [DateTime.utc(2026, 6, 2, 9)]);
+      // Tomorrow's active start (07:00) plus the interval, and nothing today.
+      expect(scheduler.lastBatch.first, DateTime.utc(2026, 6, 2, 9));
+      for (final trigger in scheduler.lastBatch) {
+        expect(trigger.isAfter(DateTime.utc(2026, 6, 2)), isTrue);
+      }
+    });
+
+    test("passes today's progress to the scheduler for the notification", () async {
+      const progress = ReminderGoalProgress(current: 1, target: 2);
+      await controller(progress: progress).apply();
+
+      expect(scheduler.progresses.single, progress);
+    });
+
+    test('anchors the first fire to the last logged time', () async {
+      // Last drink at 09:00, now 10:00 → first reminder is 09:00 + 2h = 11:00,
+      // not now + 2h = 12:00.
+      await controller(
+        progress: const ReminderGoalProgress(current: 1, target: 2),
+        loadAnchor: () async => _at(9),
+      ).apply();
+
+      expect(scheduler.lastBatch.first, _at(11));
+    });
+
+    test('a daily schedule notifies at any time (no quiet hours)', () async {
+      await controller(
+        schedule: _daily,
+        progress: const ReminderGoalProgress(current: 1, target: 10),
+        hour: 3,
+      ).apply();
+
+      // 18:00 today is still ahead of 03:00.
+      expect(scheduler.lastBatch.first, DateTime.utc(2026, 6, 1, 18));
     });
 
     test('explicit settings override the persisted ones', () async {
@@ -133,126 +160,27 @@ void main() {
         ReminderSettings(enabled: false, schedule: _window),
       );
 
-      expect(scheduler.scheduled, isEmpty);
+      expect(scheduler.batches, isEmpty);
       expect(scheduler.cancelCount, 1);
-    });
-  });
-
-  group('handleAlarm', () {
-    test('notifies and re-arms when the goal is unmet and hours allow', () async {
-      const progress = ReminderGoalProgress(current: 1, target: 2);
-      await controller(progress: progress, hour: 10).handleAlarm();
-
-      expect(notifier.shown, [progress]);
-      expect(scheduler.scheduled, [_at(12)]);
-    });
-
-    test('does not notify once the goal is met, but still re-arms', () async {
-      await controller(
-        progress: const ReminderGoalProgress(current: 2, target: 2),
-      ).handleAlarm();
-
-      expect(notifier.shown, isEmpty);
-      expect(scheduler.scheduled, hasLength(1));
-    });
-
-    test('does not notify during quiet hours, but still re-arms', () async {
-      // 03:00 is outside the 07:00–23:00 window.
-      await controller(
-        progress: const ReminderGoalProgress(current: 1, target: 2),
-        hour: 3,
-      ).handleAlarm();
-
-      expect(notifier.shown, isEmpty);
-      expect(scheduler.scheduled, [_at(9)]);
-    });
-
-    test('a schedule without quiet hours notifies at any time', () async {
-      const progress = ReminderGoalProgress(current: 1, target: 10);
-      await controller(schedule: _daily, progress: progress, hour: 3)
-          .handleAlarm();
-
-      expect(notifier.shown, [progress]);
-    });
-
-    test('a disabled reminder clears instead of notifying', () async {
-      await controller(
-        enabled: false,
-        progress: const ReminderGoalProgress(current: 1, target: 2),
-      ).handleAlarm();
-
-      expect(notifier.shown, isEmpty);
-      expect(scheduler.cancelCount, 1);
-      expect(notifier.cancelCount, 1);
-    });
-
-    // The chain is a self-perpetuating one-shot: each fire arms the next. A
-    // transient failure reading progress or posting must never break that, or the
-    // reminder goes silent until the app is reopened (the "reminders stopped" bug).
-    test('re-arms even when reading progress throws', () async {
-      final c = ReminderController(
-        loadSettings: () =>
-            ReminderSettings(enabled: true, schedule: _window),
-        readProgress: () async => throw StateError('HC read failed'),
-        scheduler: scheduler,
-        notifier: notifier,
-        now: () => _at(10),
-        hasNotificationPermission: () async => true,
-      );
-
-      await c.handleAlarm();
-
-      expect(notifier.shown, isEmpty);
-      // goalMet defaults false on a failed read, so the next fire is now+interval
-      // (retry soon) rather than rolling to tomorrow.
-      expect(scheduler.scheduled, [_at(12)]);
-    });
-
-    test('re-arms even when posting the notification throws', () async {
-      final c = ReminderController(
-        loadSettings: () =>
-            ReminderSettings(enabled: true, schedule: _window),
-        readProgress: () async =>
-            const ReminderGoalProgress(current: 1, target: 2),
-        scheduler: scheduler,
-        notifier: _ThrowingNotifier(),
-        now: () => _at(10),
-        hasNotificationPermission: () async => true,
-      );
-
-      await c.handleAlarm();
-
-      expect(scheduler.scheduled, [_at(12)]);
     });
   });
 
   group('restoreSchedule', () {
-    test('re-arms an enabled reminder', () async {
+    test('re-plans an enabled reminder', () async {
       await controller().restoreSchedule();
-      expect(scheduler.scheduled, hasLength(1));
+      expect(scheduler.batches, hasLength(1));
+      expect(scheduler.lastBatch, isNotEmpty);
     });
 
     test('clears a disabled one', () async {
       await controller(enabled: false).restoreSchedule();
-      expect(scheduler.scheduled, isEmpty);
+      expect(scheduler.batches, isEmpty);
       expect(scheduler.cancelCount, 1);
     });
   });
 
-  test('hideNotification dismisses the notification but keeps the alarm armed',
-      () async {
-    // This is the "saving an entry hides the reminder" path — the schedule must
-    // survive, or the reminder chain dies for the rest of the day.
-    await controller().hideNotification();
-
-    expect(notifier.cancelCount, 1);
-    expect(scheduler.cancelCount, 0);
-  });
-
-  test('clear cancels both the alarm and the notification', () async {
+  test('clear cancels the batch', () async {
     await controller().clear();
-
-    expect(notifier.cancelCount, 1);
     expect(scheduler.cancelCount, 1);
   });
 }

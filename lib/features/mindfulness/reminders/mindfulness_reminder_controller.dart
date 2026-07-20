@@ -14,7 +14,6 @@ class MindfulnessReminderController {
   MindfulnessReminderController({
     required this.preferences,
     required this.mindfulnessRepository,
-    required ReminderNotifier notifier,
     required ReminderScheduler scheduler,
     DateTime Function() now = DateTime.now,
     Future<bool> Function()? hasNotificationPermission,
@@ -22,8 +21,8 @@ class MindfulnessReminderController {
           loadSettings: () =>
               _settingsFor(preferences.mindfulnessReminderConfig()),
           readProgress: () => _readProgress(preferences, mindfulnessRepository),
+          // A fixed daily time, so there is no last-action anchor to reset from.
           scheduler: scheduler,
-          notifier: notifier,
           now: now,
           hasNotificationPermission:
               hasNotificationPermission ?? _alwaysGranted,
@@ -46,11 +45,7 @@ class MindfulnessReminderController {
   Future<void> applyConfig([MindfulnessReminderConfig? config]) =>
       reminders.apply(config == null ? null : _settingsFor(config));
 
-  Future<void> handleReminderAlarm() => reminders.handleAlarm();
-
   Future<void> restoreSchedule() => reminders.restoreSchedule();
-
-  Future<void> hideReminderNotification() => reminders.hideNotification();
 
   static ReminderSettings _settingsFor(MindfulnessReminderConfig config) {
     final normalized = config.normalized();

@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'bootstrap/reminder_bootstrap.dart';
+import 'bootstrap/reminder_resume_bootstrap.dart';
+import 'bootstrap/reminder_tap_bootstrap.dart';
 import 'data/migration/kotlin_data_migration.dart';
 import 'data/migration/legacy_data_source.dart';
 import 'di/providers.dart';
@@ -87,7 +89,11 @@ Future<void> main() async {
       // `ExternalRouteImportRequest` path — and routes a home-screen-widget tap
       // to the screen it points at (the Kotlin `EXTRA_OPENVITALS_ROUTE` path).
       child: const RouteImportIntentBootstrap(
-        child: HomeWidgetLaunchBootstrap(child: OpenVitalsApp()),
+        child: HomeWidgetLaunchBootstrap(
+          child: ReminderResumeBootstrap(
+            child: ReminderTapBootstrap(child: OpenVitalsApp()),
+          ),
+        ),
       ),
     ),
   );

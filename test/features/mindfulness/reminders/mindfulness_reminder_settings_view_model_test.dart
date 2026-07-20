@@ -27,21 +27,13 @@ class _FakeMindfulnessRepository implements MindfulnessRepository {
 }
 
 class _RecordingScheduler implements ReminderScheduler {
-  final List<DateTime> scheduled = [];
+  /// One entry per scheduleAll call — the tests count re-arm operations.
+  final List<List<DateTime>> scheduled = [];
   int cancelCount = 0;
 
   @override
-  Future<void> schedule(DateTime triggerAt) async => scheduled.add(triggerAt);
-
-  @override
-  Future<void> cancel() async => cancelCount++;
-}
-
-class _RecordingNotifier implements ReminderNotifier {
-  int cancelCount = 0;
-
-  @override
-  Future<void> show(ReminderGoalProgress progress) async {}
+  Future<void> scheduleAll(List<DateTime> triggers, ReminderGoalProgress progress) async =>
+      scheduled.add(triggers);
 
   @override
   Future<void> cancel() async => cancelCount++;
@@ -95,7 +87,6 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _RecordingScheduler scheduler;
-  late _RecordingNotifier notifier;
   late _FakePermissions permissions;
   late PreferencesRepository prefs;
 
@@ -114,7 +105,6 @@ void main() {
           (ref) => MindfulnessReminderController(
             preferences: prefs,
             mindfulnessRepository: _FakeMindfulnessRepository(),
-            notifier: notifier,
             scheduler: scheduler,
           ),
         ),
@@ -126,7 +116,6 @@ void main() {
 
   setUp(() {
     scheduler = _RecordingScheduler();
-    notifier = _RecordingNotifier();
     permissions = _FakePermissions();
   });
 
@@ -178,7 +167,6 @@ void main() {
 
     expect(prefs.mindfulnessReminderConfig().enabled, isFalse);
     expect(scheduler.cancelCount, 1);
-    expect(notifier.cancelCount, 1);
   });
 
   test('enabling without permission asks first, and enables once granted',

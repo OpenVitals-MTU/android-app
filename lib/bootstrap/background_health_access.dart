@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/result/result.dart';
@@ -30,29 +29,6 @@ Future<Result<HealthDataSource>> openBackgroundHealthAccess() async {
   final dataSource = await _buildBackgroundHealthDataSource();
   final refreshed = await HealthRepositoryImpl(dataSource).refreshAvailability();
   return refreshed.map((_) => dataSource);
-}
-
-/// Like [openBackgroundHealthAccess], but it NEVER fails: it returns the data
-/// source even when the availability refresh failed, having logged it.
-///
-/// For the reminder alarm isolates only. Their self-rearming one-shot alarm chain
-/// must keep going even when Health Connect is momentarily unavailable at fire
-/// time — otherwise the builder throws, the alarm callback swallows it, and the
-/// chain is never re-armed, so reminders die silently until the app is reopened.
-/// On a failed refresh, reads degrade to empty (a transient over-notify) until HC
-/// recovers next fire, which is far better than the chain dying. Writers must keep
-/// using [openBackgroundHealthAccess] and abort on failure — an empty read there
-/// would silently drop data.
-Future<HealthDataSource> openBackgroundHealthAccessResilient() async {
-  final dataSource = await _buildBackgroundHealthDataSource();
-  final refreshed = await HealthRepositoryImpl(dataSource).refreshAvailability();
-  if (refreshed case Err(:final failure)) {
-    debugPrint(
-      'Background HC availability refresh failed; the reminder will read empty '
-      'until HC recovers, but the alarm chain is kept alive: $failure',
-    );
-  }
-  return dataSource;
 }
 
 /// Builds the background Health Connect data source WITHOUT refreshing

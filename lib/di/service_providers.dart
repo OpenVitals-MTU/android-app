@@ -9,8 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import '../core/presentation/unit_formatter.dart';
 import '../core/reminders/local_notifications_reminder_device.dart';
 import '../features/manualentry/mindfulness/mindfulness_sound_player.dart';
-import '../features/hydration/reminders/hydration_reminder_alarm.dart';
-import '../features/mindfulness/reminders/mindfulness_reminder_alarm.dart';
 import '../core/reminders/reminder_notifications.dart';
 import '../core/reminders/reminder_controller.dart';
 import '../features/activity/maps/offline_map_import_controller.dart';
@@ -46,23 +44,16 @@ final reminderNotificationPermissionsProvider =
   ),
 );
 
-final hydrationReminderDeviceProvider =
-    Provider<LocalNotificationsReminderDevice>(
-  (ref) => hydrationReminderDevice(ref.watch(flutterLocalNotificationsProvider)),
-);
-
-/// On Android an exact alarm wakes the app so the reminder can re-check today's
-/// intake before notifying (the Kotlin model). Elsewhere there is no alarm
-/// manager, so fall back to a notification scheduled ahead of time.
+/// One pre-scheduled notification batch per feature — the same on every platform.
+/// Chooses exact vs inexact delivery from SCHEDULE_EXACT_ALARM per (re)schedule.
+/// Survives reboot AND app update via flutter_local_notifications' boot receiver,
+/// which is why the reminder no longer dies after a nightly install.
 final hydrationReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
-  if (defaultTargetPlatform == TargetPlatform.android) {
-    return hydrationReminderAlarmSchedulerFor(
-      ref.watch(flutterLocalNotificationsProvider),
-    );
-  }
-  return ZonedNotificationReminderScheduler(
-    plugin: ref.watch(flutterLocalNotificationsProvider),
+  final plugin = ref.watch(flutterLocalNotificationsProvider);
+  return BatchZonedNotificationReminderScheduler(
+    plugin: plugin,
     spec: hydrationReminderNotificationSpec,
+    canScheduleExact: () => canScheduleExactReminders(plugin),
   );
 });
 
@@ -72,29 +63,17 @@ final hydrationReminderControllerProvider =
   return HydrationReminderController(
     preferences: ref.watch(preferencesRepositoryProvider),
     hydrationRepository: ref.watch(hydrationRepositoryProvider),
-    notifier: ref.watch(hydrationReminderDeviceProvider),
     scheduler: ref.watch(hydrationReminderSchedulerProvider),
     hasNotificationPermission: () => areReminderNotificationsEnabled(plugin),
   );
 });
 
-final mindfulnessReminderDeviceProvider =
-    Provider<LocalNotificationsReminderDevice>(
-  (ref) =>
-      mindfulnessReminderDevice(ref.watch(flutterLocalNotificationsProvider)),
-);
-
-/// As with hydration: an exact alarm on Android so the reminder can re-check
-/// today's mindful minutes before notifying; a scheduled notification elsewhere.
 final mindfulnessReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
-  if (defaultTargetPlatform == TargetPlatform.android) {
-    return mindfulnessReminderAlarmSchedulerFor(
-      ref.watch(flutterLocalNotificationsProvider),
-    );
-  }
-  return ZonedNotificationReminderScheduler(
-    plugin: ref.watch(flutterLocalNotificationsProvider),
+  final plugin = ref.watch(flutterLocalNotificationsProvider);
+  return BatchZonedNotificationReminderScheduler(
+    plugin: plugin,
     spec: mindfulnessReminderNotificationSpec,
+    canScheduleExact: () => canScheduleExactReminders(plugin),
   );
 });
 
@@ -104,7 +83,6 @@ final mindfulnessReminderControllerProvider =
   return MindfulnessReminderController(
     preferences: ref.watch(preferencesRepositoryProvider),
     mindfulnessRepository: ref.watch(mindfulnessRepositoryProvider),
-    notifier: ref.watch(mindfulnessReminderDeviceProvider),
     scheduler: ref.watch(mindfulnessReminderSchedulerProvider),
     hasNotificationPermission: () => areReminderNotificationsEnabled(plugin),
   );

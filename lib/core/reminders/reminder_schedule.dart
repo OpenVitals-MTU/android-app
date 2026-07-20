@@ -18,6 +18,52 @@ sealed class ReminderSchedule {
   /// reminder rolls to tomorrow rather than nagging again today.
   DateTime nextTrigger(DateTime now, {bool goalMet = false});
 
+  /// The ordered upcoming fire instants in `(now, now+horizon]`, capped at
+  /// [maxCount]. This is what the notification engine pre-schedules as a batch,
+  /// since — unlike the old wake-and-recheck alarm — a plain scheduled
+  /// notification cannot recompute at fire time. Suppressed moments are simply
+  /// omitted: [goalMet] pushes the whole plan to tomorrow, and any strategy with
+  /// quiet hours never emits a moment outside its window (its [nextTrigger]
+  /// already snaps into the window).
+  ///
+  /// [anchor] is the last relevant user action (e.g. the last logged drink): the
+  /// first fire is then measured from it rather than from [now], which is how the
+  /// countdown resets on a drink and how "skip if you drank recently" falls out.
+  /// A null anchor (or [goalMet]) uses the strategy's own baseline. Strategies
+  /// with no interval (a single daily time) ignore the anchor.
+  List<DateTime> plan(
+    DateTime now, {
+    DateTime? anchor,
+    bool goalMet = false,
+    Duration horizon = const Duration(hours: 48),
+    int maxCount = 64,
+  }) {
+    final deadline = now.add(horizon);
+    final triggers = <DateTime>[];
+    var next = _firstTrigger(now, anchor: anchor, goalMet: goalMet);
+    while (!next.isAfter(deadline) && triggers.length < maxCount) {
+      triggers.add(next);
+      final following = nextTrigger(next);
+      // Defensive: every strategy's nextTrigger must strictly advance, but never
+      // spin if one does not.
+      if (!following.isAfter(next)) break;
+      next = following;
+    }
+    return triggers;
+  }
+
+  /// The first fire of a [plan]. With an [anchor] (and no met goal) the countdown
+  /// is measured from it: `nextTrigger(anchor)` yields anchor+interval snapped
+  /// into the window, then it is rolled forward past [now] for a stale anchor.
+  DateTime _firstTrigger(DateTime now, {DateTime? anchor, bool goalMet = false}) {
+    if (goalMet || anchor == null) return nextTrigger(now, goalMet: goalMet);
+    var candidate = nextTrigger(anchor);
+    while (!candidate.isAfter(now)) {
+      candidate = nextTrigger(candidate);
+    }
+    return candidate;
+  }
+
   /// Whether a reminder that fires at [moment] may actually notify. Schedules
   /// with no quiet hours always allow it.
   bool allowsNotificationAt(DateTime moment) => true;

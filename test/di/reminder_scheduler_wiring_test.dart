@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:openvitals/core/reminders/alarm_manager_reminder_scheduler.dart';
 import 'package:openvitals/core/reminders/local_notifications_reminder_device.dart';
 import 'package:openvitals/di/providers.dart';
-import 'package:openvitals/features/hydration/reminders/hydration_reminder_alarm.dart';
-import 'package:openvitals/features/mindfulness/reminders/mindfulness_reminder_alarm.dart';
+import 'package:openvitals/features/hydration/reminders/hydration_reminder_device.dart';
+import 'package:openvitals/features/mindfulness/reminders/mindfulness_reminder_device.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -26,61 +25,43 @@ void main() {
 
   tearDown(() => debugDefaultTargetPlatformOverride = null);
 
-  test('Android hydration reminders go through the exact alarm manager',
-      () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    final container = await newContainer();
+  // Both platforms now use the same pre-scheduled notification batch — there is
+  // no alarm-manager path any more, so reminders survive an app update.
+  for (final platform in const [TargetPlatform.android, TargetPlatform.iOS]) {
+    test('hydration reminders use the batch scheduler on $platform', () async {
+      debugDefaultTargetPlatformOverride = platform;
+      final container = await newContainer();
 
-    final scheduler = container.read(hydrationReminderSchedulerProvider);
+      final scheduler = container.read(hydrationReminderSchedulerProvider);
+      expect(scheduler, isA<BatchZonedNotificationReminderScheduler>());
+      expect(
+        (scheduler as BatchZonedNotificationReminderScheduler)
+            .spec
+            .baseNotificationId,
+        hydrationReminderNotificationSpec.baseNotificationId,
+      );
+    });
 
-    // The alarm wakes the app so the reminder can re-check today's intake — a
-    // pre-scheduled notification cannot.
-    expect(scheduler, isA<AlarmManagerReminderScheduler>());
+    test('mindfulness reminders use the batch scheduler on $platform', () async {
+      debugDefaultTargetPlatformOverride = platform;
+      final container = await newContainer();
+
+      final scheduler = container.read(mindfulnessReminderSchedulerProvider);
+      expect(scheduler, isA<BatchZonedNotificationReminderScheduler>());
+      expect(
+        (scheduler as BatchZonedNotificationReminderScheduler)
+            .spec
+            .baseNotificationId,
+        mindfulnessReminderNotificationSpec.baseNotificationId,
+      );
+    });
+  }
+
+  test('the two reminders use distinct notification id ranges', () {
+    // Sharing a range would make one feature's batch cancel the other's.
     expect(
-      (scheduler as AlarmManagerReminderScheduler).alarmId,
-      hydrationReminderAlarmId,
-    );
-    expect(scheduler.callback, same(hydrationReminderAlarmCallback));
-  });
-
-  test('off Android hydration reminders fall back to a scheduled notification',
-      () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-    final container = await newContainer();
-
-    expect(
-      container.read(hydrationReminderSchedulerProvider),
-      isA<ZonedNotificationReminderScheduler>(),
-    );
-  });
-
-  test('Android mindfulness reminders also go through the alarm manager',
-      () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    final container = await newContainer();
-
-    final scheduler = container.read(mindfulnessReminderSchedulerProvider);
-    expect(scheduler, isA<AlarmManagerReminderScheduler>());
-    expect(
-      (scheduler as AlarmManagerReminderScheduler).alarmId,
-      mindfulnessReminderAlarmId,
-    );
-    expect(scheduler.callback, same(mindfulnessReminderAlarmCallback));
-  });
-
-  test('the two reminders use distinct alarm ids', () async {
-    // Sharing an id would make one feature's alarm cancel the other's.
-    expect(hydrationReminderAlarmId, isNot(mindfulnessReminderAlarmId));
-  });
-
-  test('off Android mindfulness falls back to a scheduled notification',
-      () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-    final container = await newContainer();
-
-    expect(
-      container.read(mindfulnessReminderSchedulerProvider),
-      isA<ZonedNotificationReminderScheduler>(),
+      hydrationReminderNotificationSpec.baseNotificationId,
+      isNot(mindfulnessReminderNotificationSpec.baseNotificationId),
     );
   });
 }

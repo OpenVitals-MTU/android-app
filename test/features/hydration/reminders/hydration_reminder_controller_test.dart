@@ -9,13 +9,19 @@ import 'package:openvitals/domain/model/nutrition_models.dart';
 import 'package:openvitals/features/hydration/reminders/hydration_reminder_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Ported from the Kotlin `HydrationReminderControllerTest`, with the device
-/// scheduler / notifier replaced by recording fakes.
+/// Reads today's litres (for the goal) from [loadDailyHydration] and the last
+/// intake instant (for the anchor) from [loadHydrationEntries]. Everything else
+/// falls through [noSuchMethod] — the controller only touches these two.
 class _FakeHydrationRepository implements HydrationRepository {
-  _FakeHydrationRepository(this.litersToday, {this.throwsOnLoad = false});
+  _FakeHydrationRepository(
+    this.litersToday, {
+    this.throwsOnLoad = false,
+    this.entries = const [],
+  });
 
   final double litersToday;
   final bool throwsOnLoad;
+  final List<HydrationEntry> entries;
 
   @override
   Future<Result<List<DailyHydration>>> loadDailyHydration(
@@ -27,28 +33,28 @@ class _FakeHydrationRepository implements HydrationRepository {
   }
 
   @override
+  Future<Result<List<HydrationEntry>>> loadHydrationEntries(
+    LocalDate start,
+    LocalDate end,
+  ) async {
+    if (throwsOnLoad) throw StateError('health connect unavailable');
+    return Ok(entries);
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) =>
       super.noSuchMethod(invocation);
 }
 
 class _RecordingScheduler implements ReminderScheduler {
-  int scheduleCount = 0;
+  final List<List<DateTime>> batches = [];
   int cancelCount = 0;
 
-  @override
-  Future<void> schedule(DateTime triggerAt) async => scheduleCount++;
+  List<DateTime> get lastBatch => batches.last;
 
   @override
-  Future<void> cancel() async => cancelCount++;
-}
-
-class _RecordingNotifier implements ReminderNotifier {
-  final List<(double, double)> shown = [];
-  int cancelCount = 0;
-
-  @override
-  Future<void> show(ReminderGoalProgress progress) async =>
-      shown.add((progress.current, progress.target));
+  Future<void> scheduleAll(List<DateTime> triggers, ReminderGoalProgress progress) async =>
+      batches.add(triggers);
 
   @override
   Future<void> cancel() async => cancelCount++;
@@ -61,33 +67,41 @@ Future<PreferencesRepository> newPrefs([
   return PreferencesRepository(await SharedPreferences.getInstance());
 }
 
+HydrationEntry _entryAt(DateTime startTime) => HydrationEntry(
+      startTime: startTime,
+      endTime: startTime,
+      liters: 0.25,
+      source: 'test',
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _RecordingScheduler scheduler;
-  late _RecordingNotifier notifier;
 
   setUp(() {
     scheduler = _RecordingScheduler();
-    notifier = _RecordingNotifier();
   });
 
   HydrationReminderController controller(
     PreferencesRepository prefs, {
     double litersToday = 0.0,
     bool repositoryThrows = false,
+    List<HydrationEntry> entries = const [],
+    DateTime Function()? now,
   }) =>
       HydrationReminderController(
         preferences: prefs,
         hydrationRepository: _FakeHydrationRepository(
           litersToday,
           throwsOnLoad: repositoryThrows,
+          entries: entries,
         ),
-        notifier: notifier,
         scheduler: scheduler,
+        now: now ?? DateTime.now,
       );
 
-  test('disabled config clears alarm and notification', () async {
+  test('disabled config clears and schedules nothing', () async {
     final prefs = await newPrefs();
 
     await controller(prefs).applyConfig(
@@ -95,11 +109,10 @@ void main() {
     );
 
     expect(scheduler.cancelCount, 1);
-    expect(notifier.cancelCount, 1);
-    expect(scheduler.scheduleCount, 0);
+    expect(scheduler.batches, isEmpty);
   });
 
-  test('enabled config schedules next reminder without notifying', () async {
+  test('enabled config schedules a batch', () async {
     final prefs = await newPrefs();
     prefs.hydrationDailyGoalLiters = 2.0;
 
@@ -107,70 +120,64 @@ void main() {
       const HydrationReminderConfig(enabled: true),
     );
 
-    expect(scheduler.scheduleCount, 1);
-    expect(notifier.shown, isEmpty);
+    expect(scheduler.batches, hasLength(1));
+    expect(scheduler.lastBatch, isNotEmpty);
   });
 
-  test('alarm shows notification when goal unmet and within active hours',
-      () async {
+  test('anchors the first reminder to the last logged drink', () async {
     final prefs = await newPrefs();
     prefs.hydrationDailyGoalLiters = 2.0;
-    prefs.setHydrationReminderConfig(
-      const HydrationReminderConfig(
-        enabled: true,
-        activeStartTime: LocalTime(0, 0),
-        activeEndTime: LocalTime(0, 0),
-      ),
-    );
 
-    await controller(prefs, litersToday: 1.0).handleReminderAlarm();
+    // Default window 07:00–23:00, interval 120 min. Last drink at 09:00, now
+    // 10:00 → first reminder 09:00 + 2h = 11:00, not now + 2h.
+    await controller(
+      prefs,
+      litersToday: 1.0,
+      entries: [_entryAt(DateTime.utc(2026, 6, 1, 9))],
+      now: () => DateTime.utc(2026, 6, 1, 10),
+    ).applyConfig(const HydrationReminderConfig(enabled: true));
 
-    expect(notifier.shown, [(1.0, 2.0)]);
-    expect(scheduler.scheduleCount, 1);
+    expect(scheduler.lastBatch.first, DateTime.utc(2026, 6, 1, 11));
   });
 
-  test('alarm does not notify after goal is met', () async {
+  test('a met goal schedules only tomorrow onward', () async {
     final prefs = await newPrefs();
     prefs.hydrationDailyGoalLiters = 2.0;
-    prefs.setHydrationReminderConfig(
-      const HydrationReminderConfig(
-        enabled: true,
-        activeStartTime: LocalTime(0, 0),
-        activeEndTime: LocalTime(0, 0),
-      ),
-    );
 
-    await controller(prefs, litersToday: 2.0).handleReminderAlarm();
+    await controller(
+      prefs,
+      litersToday: 2.0,
+      now: () => DateTime.utc(2026, 6, 1, 10),
+    ).applyConfig(const HydrationReminderConfig(enabled: true));
 
-    expect(notifier.shown, isEmpty);
-    expect(scheduler.scheduleCount, 1);
+    // Tomorrow's active start (07:00) plus the interval, and nothing today.
+    expect(scheduler.lastBatch.first, DateTime.utc(2026, 6, 2, 9));
   });
 
-  test('an intake read failure counts as zero, never as a met goal', () async {
+  test('an intake read failure counts as zero and still schedules', () async {
     // Kotlin's `runCatching { … }.getOrDefault(0.0)`: the user still gets
     // reminded when Health Connect cannot be read.
     final prefs = await newPrefs();
     prefs.hydrationDailyGoalLiters = 2.0;
-    prefs.setHydrationReminderConfig(
-      const HydrationReminderConfig(
-        enabled: true,
-        activeStartTime: LocalTime(0, 0),
-        activeEndTime: LocalTime(0, 0),
-      ),
+
+    await controller(prefs, repositoryThrows: true).applyConfig(
+      const HydrationReminderConfig(enabled: true),
     );
 
-    await controller(prefs, repositoryThrows: true).handleReminderAlarm();
-
-    expect(notifier.shown, [(0.0, 2.0)]);
-    expect(scheduler.scheduleCount, 1);
+    expect(scheduler.batches, hasLength(1));
+    expect(scheduler.lastBatch, isNotEmpty);
   });
 
-  test('hiding the reminder leaves the alarm chain armed', () async {
+  test('logging a drink re-anchors and reschedules', () async {
     final prefs = await newPrefs();
+    prefs.hydrationDailyGoalLiters = 2.0;
+    prefs.setHydrationReminderConfig(
+      const HydrationReminderConfig(enabled: true),
+    );
 
-    await controller(prefs).hideReminderNotification();
+    await controller(prefs, litersToday: 1.0).onHydrationLogged();
 
-    expect(notifier.cancelCount, 1);
-    expect(scheduler.cancelCount, 0);
+    expect(scheduler.batches, hasLength(1));
+    expect(scheduler.lastBatch, isNotEmpty);
   });
 }

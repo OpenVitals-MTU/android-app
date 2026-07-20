@@ -10,7 +10,6 @@ import 'package:openvitals/domain/model/mindfulness_reminder_config.dart';
 import 'package:openvitals/features/mindfulness/reminders/mindfulness_reminder_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Ported from the Kotlin `MindfulnessReminderControllerTest`.
 class _FakeMindfulnessRepository implements MindfulnessRepository {
   _FakeMindfulnessRepository(this.minutesToday);
 
@@ -40,23 +39,14 @@ class _FakeMindfulnessRepository implements MindfulnessRepository {
 }
 
 class _RecordingScheduler implements ReminderScheduler {
-  int scheduleCount = 0;
+  final List<List<DateTime>> batches = [];
   int cancelCount = 0;
 
-  @override
-  Future<void> schedule(DateTime triggerAt) async => scheduleCount++;
+  List<DateTime> get lastBatch => batches.last;
 
   @override
-  Future<void> cancel() async => cancelCount++;
-}
-
-class _RecordingNotifier implements ReminderNotifier {
-  final List<(double, double)> shown = [];
-  int cancelCount = 0;
-
-  @override
-  Future<void> show(ReminderGoalProgress progress) async =>
-      shown.add((progress.current, progress.target));
+  Future<void> scheduleAll(List<DateTime> triggers, ReminderGoalProgress progress) async =>
+      batches.add(triggers);
 
   @override
   Future<void> cancel() async => cancelCount++;
@@ -73,25 +63,24 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _RecordingScheduler scheduler;
-  late _RecordingNotifier notifier;
 
   setUp(() {
     scheduler = _RecordingScheduler();
-    notifier = _RecordingNotifier();
   });
 
   MindfulnessReminderController controller(
     PreferencesRepository prefs, {
     int minutesToday = 0,
+    DateTime Function()? now,
   }) =>
       MindfulnessReminderController(
         preferences: prefs,
         mindfulnessRepository: _FakeMindfulnessRepository(minutesToday),
-        notifier: notifier,
         scheduler: scheduler,
+        now: now ?? DateTime.now,
       );
 
-  test('disabled config clears alarm and notification', () async {
+  test('disabled config clears and schedules nothing', () async {
     final prefs = await newPrefs();
 
     await controller(prefs).applyConfig(
@@ -99,51 +88,43 @@ void main() {
     );
 
     expect(scheduler.cancelCount, 1);
-    expect(notifier.cancelCount, 1);
-    expect(scheduler.scheduleCount, 0);
+    expect(scheduler.batches, isEmpty);
   });
 
-  test('enabled config schedules next reminder without notifying', () async {
+  test('enabled config schedules a batch at the daily time', () async {
     final prefs = await newPrefs();
     prefs.setDailyGoalFor(MetricDailyGoalKey.mindfulnessMinutes, 10.0);
 
-    await controller(prefs, minutesToday: 5).applyConfig(
-      const MindfulnessReminderConfig(enabled: true),
-    );
-
-    expect(scheduler.scheduleCount, 1);
-    expect(notifier.shown, isEmpty);
-  });
-
-  test('alarm shows notification when goal is not met', () async {
-    final prefs = await newPrefs();
-    prefs.setDailyGoalFor(MetricDailyGoalKey.mindfulnessMinutes, 10.0);
-    prefs.setMindfulnessReminderConfig(
+    await controller(
+      prefs,
+      minutesToday: 5,
+      now: () => DateTime.utc(2026, 6, 1, 9),
+    ).applyConfig(
       const MindfulnessReminderConfig(
         enabled: true,
-        reminderTime: LocalTime(0, 0),
+        reminderTime: LocalTime(18, 0),
       ),
     );
 
-    await controller(prefs, minutesToday: 5).handleReminderAlarm();
-
-    expect(notifier.shown, [(5.0, 10.0)]);
-    expect(scheduler.scheduleCount, 1);
+    // 18:00 today is still ahead of 09:00.
+    expect(scheduler.lastBatch.first, DateTime.utc(2026, 6, 1, 18));
   });
 
-  test('alarm does not notify after goal is met', () async {
+  test('a met goal schedules only tomorrow onward', () async {
     final prefs = await newPrefs();
     prefs.setDailyGoalFor(MetricDailyGoalKey.mindfulnessMinutes, 10.0);
-    prefs.setMindfulnessReminderConfig(
+
+    await controller(
+      prefs,
+      minutesToday: 10,
+      now: () => DateTime.utc(2026, 6, 1, 9),
+    ).applyConfig(
       const MindfulnessReminderConfig(
         enabled: true,
-        reminderTime: LocalTime(0, 0),
+        reminderTime: LocalTime(18, 0),
       ),
     );
 
-    await controller(prefs, minutesToday: 10).handleReminderAlarm();
-
-    expect(notifier.shown, isEmpty);
-    expect(scheduler.scheduleCount, 1);
+    expect(scheduler.lastBatch.first, DateTime.utc(2026, 6, 2, 18));
   });
 }

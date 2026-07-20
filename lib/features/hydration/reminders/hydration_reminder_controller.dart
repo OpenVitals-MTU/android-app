@@ -17,15 +17,14 @@ class HydrationReminderController {
   HydrationReminderController({
     required this.preferences,
     required this.hydrationRepository,
-    required ReminderNotifier notifier,
     required ReminderScheduler scheduler,
     DateTime Function() now = DateTime.now,
     Future<bool> Function()? hasNotificationPermission,
   }) : reminders = ReminderController(
           loadSettings: () => _settingsFor(preferences.hydrationReminderConfig()),
           readProgress: () => _readProgress(preferences, hydrationRepository),
+          loadAnchor: () => _readLastIntake(hydrationRepository),
           scheduler: scheduler,
-          notifier: notifier,
           now: now,
           hasNotificationPermission:
               hasNotificationPermission ?? _alwaysGranted,
@@ -48,13 +47,14 @@ class HydrationReminderController {
   Future<void> applyConfig([HydrationReminderConfig? config]) =>
       reminders.apply(config == null ? null : _settingsFor(config));
 
-  Future<void> handleReminderAlarm() => reminders.handleAlarm();
-
   Future<void> restoreSchedule() => reminders.restoreSchedule();
 
-  /// Dismisses a visible reminder — the Kotlin behaviour where saving a
-  /// hydration entry hides the notification that prompted it.
-  Future<void> hideReminderNotification() => reminders.hideNotification();
+  /// Re-anchors the reminder countdown to the just-logged drink and reschedules
+  /// the batch. Because rescheduling cancels the whole reserved id range, this
+  /// also dismisses the reminder that prompted the log (the old
+  /// hide-on-save behaviour). Best-effort; the caller must never let it fail the
+  /// write.
+  Future<void> onHydrationLogged() => applyConfig();
 
   static ReminderSettings _settingsFor(HydrationReminderConfig config) {
     final normalized = config.normalized();
@@ -83,6 +83,26 @@ class HydrationReminderController {
       return ReminderGoalProgress(current: current, target: target);
     } catch (_) {
       return ReminderGoalProgress(current: 0.0, target: target);
+    }
+  }
+
+  /// The instant of the most recent hydration entry today — the anchor the
+  /// reminder countdown is measured from. Null when there is no entry today or
+  /// the read fails, in which case the schedule falls back to the window start.
+  /// Must not throw (a throw would leave nothing scheduled).
+  static Future<DateTime?> _readLastIntake(
+    HydrationRepository repository,
+  ) async {
+    final today = LocalDate.now();
+    try {
+      final entries =
+          (await repository.loadHydrationEntries(today, today)).orThrow();
+      if (entries.isEmpty) return null;
+      return entries
+          .map((entry) => entry.startTime)
+          .reduce((a, b) => a.isAfter(b) ? a : b);
+    } catch (_) {
+      return null;
     }
   }
 }

@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../bootstrap/background_health_access.dart';
 import '../../core/presentation/unit_formatter.dart';
-import '../../core/reminders/reminder_controller.dart';
+import '../../core/reminders/local_notifications_reminder_device.dart';
 import '../../core/reminders/reminder_notifications.dart';
 import '../../core/result/result.dart';
 import '../../data/prefs/preferences_repository.dart';
@@ -21,6 +21,7 @@ import '../../data/repository/impl/nutrition_repository_impl.dart';
 import '../../data/source/health/health_data_source.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../l10n/app_localizations.dart';
+import '../hydration/reminders/hydration_reminder_controller.dart';
 import '../hydration/reminders/hydration_reminder_device.dart';
 import '../manualentry/application/hydration_entry_view_model.dart';
 import 'home_widget_beverage.dart';
@@ -126,25 +127,40 @@ Future<QuickBeverageWidgetLogger> buildBackgroundQuickBeverageLogger() async {
       (await openBackgroundHealthAccess()).orThrow();
 
   // This isolate has its own notifications plugin instance (like the reminder
-  // alarm's), so it must initialize it before it can clear the reminder.
+  // alarm's), so it must initialize it and its channel before it can reschedule.
   final plugin = FlutterLocalNotificationsPlugin();
   await initializeReminderNotifications(plugin);
+  await ensureHydrationReminderChannel(plugin);
+
+  final hydrationRepository = HydrationRepositoryImpl(
+    dataSource,
+    preferencesRepository: preferences,
+  );
+
+  // Logging water re-anchors the hydration reminder to this drink and reschedules
+  // the batch — which cancels the whole range, so it also dismisses the reminder
+  // that prompted the tap. The same as the day view's onHydrationLogged.
+  final reminderController = HydrationReminderController(
+    preferences: preferences,
+    hydrationRepository: hydrationRepository,
+    scheduler: BatchZonedNotificationReminderScheduler(
+      plugin: plugin,
+      spec: hydrationReminderNotificationSpec,
+      canScheduleExact: () => canScheduleExactReminders(plugin),
+    ),
+    hasNotificationPermission: () => areReminderNotificationsEnabled(plugin),
+  );
 
   return QuickBeverageWidgetLogger(
     service: const HomeWidgetService(),
-    // Logging water dismisses an active hydration reminder, the same as saving
-    // from the day view — otherwise the reminder lingers after the widget tap.
-    hydrationReminder: hydrationReminderDevice(plugin),
+    onHydrationLogged: reminderController.onHydrationLogged,
     // Resolves Health Connect access before the write. Without it this isolate's
     // freshly-built data source stays at `notSupported`, `grantedPermissions()`
     // comes back empty, `hasHydrationWritePermission()` is false, and the tap is
     // silently discarded as "missing permission" — invisibly on the 2x1, which
     // does not render a subtitle at all.
     health: HealthRepositoryImpl(dataSource),
-    hydrationRepository: HydrationRepositoryImpl(
-      dataSource,
-      preferencesRepository: preferences,
-    ),
+    hydrationRepository: hydrationRepository,
     nutritionRepository: NutritionRepositoryImpl(dataSource),
     unitFormatter:
         UnitFormatter(unitSystemProvider: () => preferences.unitSystem),
@@ -162,16 +178,16 @@ class QuickBeverageWidgetLogger {
     required this.nutritionRepository,
     required this.unitFormatter,
     required this.localizations,
-    required this.hydrationReminder,
+    required this.onHydrationLogged,
     this.savedConfirmationDuration = quickBeverageSavedConfirmationDuration,
   });
 
   final HomeWidgetService service;
 
-  /// Clears an active hydration reminder once water is logged, matching the day
-  /// view's `_hideHydrationReminder`. Injected so tests need no notifications
-  /// plugin.
-  final ReminderNotifier hydrationReminder;
+  /// Re-anchors the hydration reminder to the just-logged drink and reschedules
+  /// (which also dismisses the reminder that prompted the tap), matching the day
+  /// view's `onHydrationLogged`. Injected so tests need no notifications plugin.
+  final Future<void> Function() onHydrationLogged;
 
   /// Resolves Health Connect access before the permission check — without it the
   /// write is always refused. See [buildBackgroundQuickBeverageLogger].
@@ -240,7 +256,7 @@ class QuickBeverageWidgetLogger {
           // Water logged: dismiss any active hydration reminder, exactly as the
           // day-view save does. Nutrition-only taps leave it — the reminder is
           // about hydration, and none was recorded.
-          if (wroteHydration) await _hideHydrationReminder();
+          if (wroteHydration) await _reanchorHydrationReminder();
           await _push(
             widget,
             drink,
@@ -264,14 +280,15 @@ class QuickBeverageWidgetLogger {
     }
   }
 
-  /// Clears a visible hydration reminder after a successful water log. A failed
-  /// dismissal must never fail the tap — the write already succeeded — so this
-  /// swallows its own errors, like the day view's `_hideHydrationReminder`.
-  Future<void> _hideHydrationReminder() async {
+  /// Re-anchors and reschedules the hydration reminder after a successful water
+  /// log (which also dismisses the visible reminder). A failure here must never
+  /// fail the tap — the write already succeeded — so it swallows its own errors,
+  /// like the day view's `onHydrationLogged`.
+  Future<void> _reanchorHydrationReminder() async {
     try {
-      await hydrationReminder.cancel();
+      await onHydrationLogged();
     } catch (_) {
-      // A dismissed reminder is a nicety; never surface an error over it.
+      // Re-anchoring is a nicety; never surface an error over a successful log.
     }
   }
 
