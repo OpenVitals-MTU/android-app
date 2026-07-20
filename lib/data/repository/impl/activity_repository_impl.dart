@@ -76,13 +76,37 @@ class ActivityRepositoryImpl implements ActivityRepository {
             ? await _dataSource.readRawActivityProgress(w.current.start)
             : const <ActivityProgressPoint>[];
 
+        // The six window reads are independent (distinct date ranges, distinct
+        // metrics), so fire them together rather than in series. Over a YEAR the
+        // current and previous windows are each a 365-day Health Connect
+        // aggregate, and `TotalCaloriesBurned` is heavy to synthesize; awaiting
+        // them one by one stacked into the ~45s the calories year view took to
+        // open. Concurrent reads collapse that to roughly a single window's
+        // latency. A failing read still fails the whole load (via runCatching),
+        // exactly as the sequential awaits did.
+        final (
+          currentSteps,
+          previousSteps,
+          baselineSteps,
+          currentNutrition,
+          previousNutrition,
+          baselineNutrition,
+        ) = await (
+          steps(w.current),
+          steps(w.previous),
+          steps(w.baseline),
+          nutrition(w.current),
+          nutrition(w.previous),
+          nutrition(w.baseline),
+        ).wait;
+
         return ActivityPeriodData(
-          dailySteps: await steps(w.current),
-          previousDailySteps: await steps(w.previous),
-          baselineDailySteps: await steps(w.baseline),
-          nutrition: await nutrition(w.current),
-          previousNutrition: await nutrition(w.previous),
-          baselineNutrition: await nutrition(w.baseline),
+          dailySteps: currentSteps,
+          previousDailySteps: previousSteps,
+          baselineDailySteps: baselineSteps,
+          nutrition: currentNutrition,
+          previousNutrition: previousNutrition,
+          baselineNutrition: baselineNutrition,
           activityProgress: activityProgress,
         );
       });
