@@ -48,6 +48,10 @@ for asset_path in "$@"; do
 done
 
 api_base="${CI_FORGE_URL%/}/api/v1/repos/${CI_REPO}"
+# Codeberg's write API (release/tag creation) returns intermittent 5xx. curl's
+# --retry already backs off on 500/502/503/504; --retry-all-errors extends that to
+# the transfer as a whole so a `-f` 500 is retried rather than failing the release.
+retry_opts="--retry 5 --retry-delay 2 --retry-all-errors"
 tmp_dir=".woodpecker/tmp"
 mkdir -p "$tmp_dir"
 release_response="$tmp_dir/codeberg-release-${release_tag}.json"
@@ -65,7 +69,7 @@ print_response_body() {
 }
 
 http_status="$(
-    curl -sS -w '%{http_code}' -o "$release_response" \
+    curl -sS $retry_opts -w '%{http_code}' -o "$release_response" \
         -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
         "$api_base/releases/tags/$release_tag" || true
 )"
@@ -79,29 +83,31 @@ case "$http_status" in
             --argjson prerelease "$prerelease" \
             '{name: $name, body: $body, draft: false, prerelease: $prerelease}' \
             > "$release_payload"
-        curl -fsS -X PATCH \
+        curl -fsS $retry_opts -X PATCH \
             -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
             -H "Content-Type: application/json" \
             --data-binary @"$release_payload" \
             "$api_base/releases/$release_id" >/dev/null
         ;;
     404)
+        # No target_commitish: the tag is force-moved to the built commit BEFORE
+        # this step runs (update-codeberg-tag.py, over git), so it already exists.
+        # Passing target_commitish makes Forgejo try to create the tag on top of the
+        # existing one, which it answers with a 500. Reference the existing tag only.
         jq -n \
             --arg tag_name "$release_tag" \
-            --arg target_commitish "$target_commit" \
             --arg name "$release_title" \
             --rawfile body "$notes_file" \
             --argjson prerelease "$prerelease" \
             '{
                 tag_name: $tag_name,
-                target_commitish: $target_commitish,
                 name: $name,
                 body: $body,
                 draft: false,
                 prerelease: $prerelease
             }' \
             > "$release_payload"
-        curl -fsS -X POST \
+        curl -fsS $retry_opts -X POST \
             -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
             -H "Content-Type: application/json" \
             --data-binary @"$release_payload" \
@@ -128,7 +134,7 @@ for asset_path in "$@"; do
     if [ -n "$asset_ids" ]; then
         while IFS= read -r asset_id; do
             [ -n "$asset_id" ] || continue
-            curl -fsS -X DELETE \
+            curl -fsS $retry_opts -X DELETE \
                 -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
                 "$api_base/releases/$release_id/assets/$asset_id" >/dev/null
         done <<EOF
@@ -138,7 +144,7 @@ EOF
 
     asset_response="$tmp_dir/codeberg-release-${release_tag}-asset-${asset_name}.response"
     asset_status="$(
-        curl -sS -w '%{http_code}' -o "$asset_response" -X POST \
+        curl -sS $retry_opts -w '%{http_code}' -o "$asset_response" -X POST \
             -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
             -F "attachment=@${asset_path}" \
             "$api_base/releases/$release_id/assets?name=$asset_name" || true
