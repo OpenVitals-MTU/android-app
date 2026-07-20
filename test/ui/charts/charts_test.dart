@@ -152,6 +152,39 @@ void main() {
     expect(find.byType(PeriodYearHeatmap), findsOneWidget);
   });
 
+  test('periodYearHeatmapCells (rolling) spans across the calendar-year edge',
+      () {
+    // A rolling year "26 Jul 2006 - 25 Jul 2007" straddles two calendar years.
+    final period = DatePeriod(
+      const LocalDate(2006, 7, 26),
+      const LocalDate(2007, 7, 25),
+    );
+    final values = [
+      PeriodChartValue(const LocalDate(2006, 8, 1), 1000), // earlier-year half
+      PeriodChartValue(const LocalDate(2007, 3, 1), 2000), // later-year half
+    ];
+
+    final cells = periodYearHeatmapCells(values, period, rolling: true);
+
+    // The grid is exactly the rolling window, not a single calendar year.
+    expect(cells.first.date, period.start);
+    expect(cells.last.date, period.end);
+    expect(cells.length, 365);
+    // Data from BOTH calendar years lands in the grid (the bug dropped 2006).
+    expect(cells.firstWhere((c) => c.date == const LocalDate(2006, 8, 1)).value,
+        1000);
+    expect(cells.firstWhere((c) => c.date == const LocalDate(2007, 3, 1)).value,
+        2000);
+    expect(cells.every((c) => c.isWithinLoadedPeriod), isTrue);
+  });
+
+  test('periodYearHeatmapCells (calendar) draws Jan 1 to Dec 31', () {
+    final cells = periodYearHeatmapCells(const [], _yearPeriod);
+    expect(cells.first.date, const LocalDate(2024, 1, 1));
+    expect(cells.last.date, const LocalDate(2024, 12, 31));
+    expect(cells.length, 366); // 2024 is a leap year
+  });
+
   testWidgets('MetricBarChart builds its summary from the period title',
       (tester) async {
     await _pump(

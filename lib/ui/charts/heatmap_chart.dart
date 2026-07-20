@@ -80,12 +80,21 @@ List<PeriodHeatmapCell> periodMonthHeatmapCells(
 }
 
 /// The full-year dot grid cells. Port of Kotlin `periodYearHeatmapCells`.
+///
+/// [rolling] chooses what span the grid covers, mirroring
+/// [periodMonthHeatmapCells]. A calendar year (the default) draws Jan 1 to
+/// Dec 31 of [DatePeriod.start], with future days greyed. A rolling window
+/// ("Last 365 days") spans two calendar years, so it draws exactly
+/// `[period.start, period.end]`; anchoring the grid to a single calendar year
+/// left the other year's half of the window blank.
 List<PeriodHeatmapCell> periodYearHeatmapCells(
   List<PeriodChartValue> values,
-  DatePeriod period,
-) {
-  final firstDay = period.start.withDayOfYear(1);
-  final lastDay = firstDay.withDayOfYear(firstDay.lengthOfYear);
+  DatePeriod period, {
+  bool rolling = false,
+}) {
+  final firstDay = rolling ? period.start : period.start.withDayOfYear(1);
+  final lastDay =
+      rolling ? period.end : firstDay.withDayOfYear(firstDay.lengthOfYear);
   final byDate = _valuesByDate(values);
 
   final cells = <PeriodHeatmapCell>[];
@@ -95,7 +104,8 @@ List<PeriodHeatmapCell> periodYearHeatmapCells(
       PeriodHeatmapCell(
         date: date,
         value: byDate[date] ?? 0.0,
-        isWithinLoadedPeriod: !date.isAfter(period.end),
+        isWithinLoadedPeriod:
+            !date.isBefore(period.start) && !date.isAfter(period.end),
       ),
     );
     date = date.plusDays(1);
@@ -306,6 +316,7 @@ class PeriodYearHeatmap extends StatelessWidget {
     required this.period,
     required this.accentColor,
     required this.summaryText,
+    this.rolling = false,
   });
 
   final String title;
@@ -314,10 +325,15 @@ class PeriodYearHeatmap extends StatelessWidget {
   final Color accentColor;
   final String summaryText;
 
+  /// Whether the period is a rolling window ("Last 365 days") rather than a
+  /// calendar year. A rolling window renders exactly its span across the year
+  /// boundary; see [periodYearHeatmapCells].
+  final bool rolling;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final cells = periodYearHeatmapCells(values, period);
+    final cells = periodYearHeatmapCells(values, period, rolling: rolling);
     final minPositive = _minPositive(cells);
     final maxValue = _maxValue(cells);
     final rows = <List<PeriodHeatmapCell>>[];

@@ -62,6 +62,7 @@ class PeriodHistoryChart extends StatelessWidget {
           period: period,
           accentColor: accentColor,
           summaryText: summaryText,
+          rolling: weekPeriodMode.usesRollingDates,
         );
       case TimeRange.day:
       case TimeRange.week:
