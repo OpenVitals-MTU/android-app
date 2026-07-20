@@ -483,11 +483,26 @@ class _OverviewDay {
   final List<SleepData> sessions;
   final SleepScoreEstimate sleepScore;
 
-  /// Wall-clock time in bed for the night: the union of its segments, so
-  /// overlapping sessions from different sources count their shared time once.
-  int get sleepDurationMs => sleepSessionsUnionMs(sessions);
+  /// Time actually **asleep**: sleep-stage time with wake excluded (falling back
+  /// to the in-bed union when a night carries no stages). This is the figure the
+  /// overview highlights and the goal counts — not time in bed.
+  int get sleepDurationMs => sleepDurationMsFromStages(
+        combineNightStages(sessions, maxGap: kSleepNapGap),
+        sleepSessionsUnionMs(sessions),
+      );
 
-  int get timeInBedMs => sleepSessionsUnionMs(sessions);
+  /// Time in bed: the full span from the night's first bedtime to its last wake,
+  /// wake gaps included (AASM "time in bed", and the sleep-efficiency
+  /// denominator). Distinct from [sleepDurationMs], which is time asleep.
+  int get timeInBedMs {
+    if (sessions.isEmpty) return 0;
+    final start = sessions
+        .map((s) => s.startTime)
+        .reduce((a, b) => a.isBefore(b) ? a : b);
+    final end =
+        sessions.map((s) => s.endTime).reduce((a, b) => a.isAfter(b) ? a : b);
+    return math.max(0, end.difference(start).inMilliseconds);
+  }
 
   int _stageMs(Set<int> types) =>
       combineNightStages(sessions, maxGap: kSleepNapGap)
