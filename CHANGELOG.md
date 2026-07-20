@@ -1,5 +1,52 @@
 # Changelog
 
+## 2.2.8 - 2026-07-20
+
+### English
+
+- **Heart-rate recovery.** A guided test measures how fast your heart rate drops after exertion, and recovery is shown on workouts and tracked over weeks and months, from the samples Health Connect already holds.
+- **Reminders were rebuilt to survive app updates.** Hydration and mindfulness reminders keep firing after every update; hydration nudges anchor to your last drink and fire at the exact minute when you allow exact alarms.
+- **Every on-screen number now links to the research behind it** - sleep, daily readiness, body energy, cardio load and caffeine - and the sleep goal counts only the time you were actually asleep.
+- **The Calories Day view no longer hangs on some phones,** the "Last 30 days" calendar shows all thirty days across the month boundary, and you can tap a day in any month calendar to open it.
+- **Sleep fixes:** the sleep score and efficiency detail screens are reachable again; scrub the hypnogram to read the time of night; and the day view stops drawing over its labels, drops stray stats, and labels the duration "time in bed".
+- **More fixes and polish:** recordings can save their own heart rate, edits write through the vitals cache immediately, notifications use the OpenVitals mark, and Spanish, German, Estonian and Italian are fully translated.
+
+### Espanol
+
+- **Recuperacion de la frecuencia cardiaca.** Una prueba guiada mide con que rapidez baja tu frecuencia cardiaca tras el esfuerzo, y la recuperacion se muestra en los entrenamientos y se registra a lo largo de semanas y meses, a partir de las muestras que Health Connect ya guarda.
+- **Los recordatorios se reconstruyeron para sobrevivir a las actualizaciones de la app.** Los recordatorios de hidratacion y mindfulness siguen sonando despues de cada actualizacion; los avisos de hidratacion se anclan a tu ultima bebida y suenan en el minuto exacto cuando permites alarmas exactas.
+- **Cada numero en pantalla ahora enlaza con la investigacion que lo respalda** (sueno, disposicion diaria, energia corporal, carga cardiaca y cafeina), y el objetivo de sueno cuenta solo el tiempo que estuviste realmente dormido.
+- **La vista Dia de Calorias ya no se bloquea en algunos telefonos,** el calendario "Ultimos 30 dias" muestra los treinta dias cruzando el limite del mes, y puedes tocar un dia en cualquier calendario mensual para abrirlo.
+- **Correcciones de sueno:** las pantallas de detalle de la puntuacion y la eficiencia del sueno vuelven a ser accesibles; desliza por el hipnograma para leer la hora de la noche; y la vista de dia deja de dibujar sobre sus etiquetas, elimina estadisticas sueltas y etiqueta la duracion como "tiempo en la cama".
+- **Mas correcciones y mejoras:** las grabaciones pueden guardar su propia frecuencia cardiaca, las ediciones se escriben en la cache de vitales de inmediato, las notificaciones usan el simbolo de OpenVitals, y el espanol, el aleman, el estonio y el italiano estan completamente traducidos.
+
+### Deutsch
+
+- **Herzfrequenz-Erholung.** Ein gefuehrter Test misst, wie schnell deine Herzfrequenz nach Anstrengung sinkt; die Erholung wird bei Trainings angezeigt und ueber Wochen und Monate verfolgt, aus den Werten, die Health Connect bereits vorhaelt.
+- **Erinnerungen wurden neu gebaut, damit sie App-Updates ueberstehen.** Fluessigkeits- und Achtsamkeitserinnerungen loesen nach jedem Update weiter aus; Trinkerinnerungen richten sich nach deinem letzten Getraenk und loesen auf die Minute genau aus, wenn du exakte Alarme erlaubst.
+- **Jede angezeigte Zahl verweist jetzt auf die Forschung dahinter** - Schlaf, Tagesbereitschaft, Body Energy, Cardio-Last und Koffein - und das Schlafziel zaehlt nur die Zeit, die du wirklich geschlafen hast.
+- **Die Kalorien-Tagesansicht haengt auf manchen Telefonen nicht mehr,** der Kalender "Letzte 30 Tage" zeigt alle dreissig Tage ueber die Monatsgrenze hinweg, und du kannst in jedem Monatskalender auf einen Tag tippen, um ihn zu oeffnen.
+- **Schlaf-Korrekturen:** Die Detailbildschirme fuer Schlafscore und Effizienz sind wieder erreichbar; ziehe ueber das Hypnogramm, um die Uhrzeit der Nacht abzulesen; und die Tagesansicht zeichnet nicht mehr ueber ihre Beschriftungen, laesst verirrte Werte weg und beschriftet die Dauer mit "Zeit im Bett".
+- **Weitere Korrekturen und Feinschliff:** Aufzeichnungen koennen ihre eigene Herzfrequenz speichern, Bearbeitungen werden sofort in den Vitalwerte-Cache geschrieben, Benachrichtigungen nutzen die OpenVitals-Marke, und Spanisch, Deutsch, Estnisch und Italienisch sind vollstaendig uebersetzt.
+
+### Italiano
+
+- **Recupero della frequenza cardiaca.** Un test guidato misura quanto velocemente la frequenza cardiaca scende dopo lo sforzo, e il recupero viene mostrato sugli allenamenti e monitorato nel corso di settimane e mesi, a partire dai campioni gia presenti in Health Connect.
+- **I promemoria sono stati ricostruiti per sopravvivere agli aggiornamenti dell'app.** I promemoria di idratazione e mindfulness continuano a scattare dopo ogni aggiornamento; i solleciti di idratazione si ancorano alla tua ultima bevanda e scattano al minuto esatto quando consenti le sveglie esatte.
+- **Ogni numero a schermo ora rimanda alla ricerca che lo sostiene** - sonno, prontezza giornaliera, body energy, carico cardio e caffeina - e l'obiettivo di sonno conta solo il tempo in cui hai davvero dormito.
+- **La vista giornaliera delle calorie non si blocca piu su alcuni telefoni,** il calendario "Ultimi 30 giorni" mostra tutti e trenta i giorni a cavallo del cambio di mese, e puoi toccare un giorno in qualsiasi calendario mensile per aprirlo.
+- **Correzioni al sonno:** le schermate di dettaglio del punteggio e dell'efficienza del sonno sono di nuovo raggiungibili; scorri l'ipnogramma per leggere l'ora della notte; e la vista giornaliera smette di disegnare sopra le proprie etichette, elimina statistiche superflue ed etichetta la durata come "tempo a letto".
+- **Altre correzioni e rifiniture:** le registrazioni possono salvare la propria frequenza cardiaca, le modifiche vengono scritte subito nella cache dei parametri vitali, le notifiche usano il simbolo OpenVitals, e spagnolo, tedesco, estone e italiano sono tradotti completamente.
+
+### Eesti
+
+- **Sudame loogisageduse taastumine.** Juhitud test moodab, kui kiiresti su sudame loogisagedus parast pingutust langeb, ning taastumist naidatakse treeningutel ja jalgitakse nadalate ja kuude loikes, tuginedes naitudele, mis Health Connectis juba olemas on.
+- **Meeldetuletused ehitati umber, et need rakenduse uuendused ule elaksid.** Hudratatsiooni ja teadveloleku meeldetuletused kaivituvad ka parast iga uuendust; hudratatsiooni margutused lahtuvad su viimasest joogist ja kaivituvad tapsel minutil, kui lubad tapsed aratused.
+- **Iga ekraanil kuvatav number viitab nuud selle taga olevale uurimistoole** - uni, igapaevane valmisolek, Body Energy, kardiokoormus ja kofeiin - ning une eesmark loeb ainult aega, mil sa tegelikult magasid.
+- **Kalorite paevavaade ei jaa mones telefonis enam hanguma,** kalender "Viimased 30 paeva" naitab koiki kolmekummet paeva ule kuupiiri ning saad iga kuu kalendris paeva avamiseks seda koputada.
+- **Une parandused:** unehinde ja efektiivsuse uksikasjade ekraanid on jalle avatavad; libista hupnogrammil, et lugeda oo kellaaega; ning paevavaade ei joonista enam ule oma siltide, jatab valja eksinud statistika ja margistab kestuse kui "voodis veedetud aeg".
+- **Veel parandusi ja viimistlust:** salvestused saavad talletada oma sudame loogisageduse, muudatused kirjutatakse kohe labi vitaalnaitude vahemalu, teavitused kasutavad OpenVitalsi margist ning hispaania, saksa, eesti ja itaalia keel on taielikult tolgitud.
+
 ## 2.2.7 - 2026-07-17
 
 ### English
