@@ -199,8 +199,14 @@ steps:
         fi
 
   - name: publish-play-open-testing
+    # Gate on the Codeberg release, not just the build. That step records the
+    # version-code marker, which IS the counter's source of truth. If Play uploaded
+    # first and the Codeberg release then failed, the version code would be burned on
+    # Play but never recorded -- so the next nightly recomputes the same code and Play
+    # rejects it as a duplicate. That is exactly how this desynced. Recording the
+    # marker before Play consumes the code keeps the two in step.
     depends_on:
-      - build
+      - publish-codeberg-release
     image: *ruby_image
     environment:
       <<: *fastlane_environment
