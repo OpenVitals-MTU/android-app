@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/theme/chart_colors.dart';
@@ -6,6 +7,7 @@ import '../../../ui/theme/chart_colors.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../navigation/app_routes.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../ui/components/ov_card.dart';
@@ -312,6 +314,7 @@ class SleepOverviewCard extends StatelessWidget {
                 value: summary.sleepScore?.toString() ?? '--',
                 subtitle: periodTitle,
                 accent: AppColors.sleep,
+                onTap: () => context.push(AppRoutes.sleepScoreDetail),
               ),
             ),
             const SizedBox(width: 12),
@@ -351,6 +354,8 @@ class SleepOverviewCard extends StatelessWidget {
                     : '--',
                 subtitle: periodTitle,
                 accent: AppColors.sleep,
+                onTap: () =>
+                    context.push(AppRoutes.sleepEfficiencyDetail),
               ),
             ),
           ],
@@ -377,6 +382,7 @@ class _OverviewTile extends StatelessWidget {
     required this.value,
     required this.subtitle,
     required this.accent,
+    this.onTap,
   });
 
   final String title;
@@ -384,10 +390,15 @@ class _OverviewTile extends StatelessWidget {
   final String subtitle;
   final Color accent;
 
+  /// Opens the metric's detail screen (sleep score / efficiency). Null tiles are
+  /// not tappable.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OpenVitalsCard(
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

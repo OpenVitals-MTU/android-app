@@ -14,6 +14,7 @@ import '../../../ui/charts/chart_skeleton.dart';
 import '../../../ui/components/loading_state.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../core/presentation/reference_link.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/caffeine_models.dart';
@@ -144,8 +145,103 @@ List<Widget> _content(
     sectionPadded(
       CaffeineTimeBucketsCard(analytics: analytics, formatter: formatter),
     ),
+    SectionHeader(AppLocalizations.of(context).caffeineSectionScience),
+    sectionPadded(const _CaffeineScienceCard()),
+    sectionPadded(const _CaffeineReferencesCard()),
     const SizedBox(height: 16),
   ];
+}
+
+/// How the caffeine estimate is computed, shown to the user. Ported from the
+/// Kotlin `CaffeineScienceCard`.
+class _CaffeineScienceCard extends StatelessWidget {
+  const _CaffeineScienceCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final body = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.caffeineScienceTitle,
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            Text(l10n.caffeineScienceBody, style: body),
+            const SizedBox(height: 10),
+            Text(
+              l10n.caffeineScienceMeasurements,
+              style: theme.textTheme.labelLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(l10n.caffeineScienceMeasurementsBody, style: body),
+            const SizedBox(height: 10),
+            Text(l10n.caffeineScienceLimits, style: body),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Research behind the caffeine model, shown to the user as tappable links
+// (recovered from the Kotlin CaffeineReferencesCard; AGENTS.md invariant 8).
+const String _drakeSleepStudyUrl = 'https://jcsm.aasm.org/doi/10.5664/jcsm.3170';
+const String _nehligMetabolismUrl =
+    'https://pubmed.ncbi.nlm.nih.gov/29514871/';
+const String _efsaCaffeineUrl =
+    'https://www.efsa.europa.eu/en/topics/topic/caffeine';
+const String _healthConnectNutritionUrl =
+    'https://developer.android.com/reference/kotlin/androidx/health/connect/client/records/NutritionRecord';
+
+class _CaffeineReferencesCard extends StatelessWidget {
+  const _CaffeineReferencesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.caffeineReferencesTitle,
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            ReferenceLinkButton(
+              title: l10n.caffeineReferenceDrake,
+              url: _drakeSleepStudyUrl,
+            ),
+            ReferenceLinkButton(
+              title: l10n.caffeineReferenceNehlig,
+              url: _nehligMetabolismUrl,
+            ),
+            ReferenceLinkButton(
+              title: l10n.caffeineReferenceEfsa,
+              url: _efsaCaffeineUrl,
+            ),
+            ReferenceLinkButton(
+              title: l10n.caffeineReferenceHealthConnect,
+              url: _healthConnectNutritionUrl,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 
