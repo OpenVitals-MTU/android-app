@@ -8,6 +8,7 @@ import '../../../domain/insights/sleep_score.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/dashboard_data.dart';
 import '../../../domain/model/dashboard_query.dart';
+import '../../../domain/model/sleep_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/theme/app_colors.dart';
@@ -483,10 +484,14 @@ DashboardSummary buildDashboardSummary(
   // ── Sleep ─────────────────────────────────────────────────────────────────
   final sleep = data.sleep;
   final sleepScore = data.sleepScore;
+  // Time ASLEEP, not time in bed: wake epochs within the session do not count
+  // toward the sleep value or the goal. See nightAsleepHours / the Sleep detail.
+  final asleepMs =
+      sleep == null ? 0 : sleepDurationMsFromStages(sleep.stages, sleep.durationMs);
   add(
     DashboardMetric.sleep,
     title: 'Sleep',
-    value: sleep == null ? null : f.duration(sleep.durationMs),
+    value: sleep == null ? null : f.duration(asleepMs),
     icon: Icons.bed,
     accent: AppColors.sleep,
     subtitle: sleepScore.confidence != SleepScoreConfidence.noData
@@ -495,7 +500,7 @@ DashboardSummary buildDashboardSummary(
     noDataMessage: l10n.messageNoSleepDay,
     showTitle: false,
     progress: _fraction(
-      (sleep?.durationMs ?? 0).toDouble(),
+      asleepMs.toDouble(),
       goals.sleepHours * 3600 * 1000,
     ),
     location: AppRoutes.sleep,

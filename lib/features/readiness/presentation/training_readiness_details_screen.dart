@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/reference_link.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/health/health_permissions.dart';
@@ -180,6 +181,7 @@ class _Content extends StatelessWidget {
           ],
         ),
       ),
+      const _CardPad(child: _SourcesCard()),
       const DataSourceEducationItem(),
       const SizedBox(height: 16),
     ];
@@ -388,4 +390,45 @@ LocalDate parseIsoLocalDate(String value) {
   final parsed = DateTime.tryParse(value);
   if (parsed != null) return LocalDate(parsed.year, parsed.month, parsed.day);
   return LocalDate.now();
+}
+
+// Research behind readiness's main inputs. (This screen is not localized; its
+// copy is inline English, so these labels are too.) See AGENTS.md invariant 8.
+const String _readinessSleepUrl = 'https://pubmed.ncbi.nlm.nih.gov/24470692/';
+const String _readinessTrainingLoadUrl =
+    'https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/';
+
+/// The science behind the readiness calculation, shown to the user as tappable
+/// links — as the Kotlin app did on its derived-metric screens.
+class _SourcesCard extends StatelessWidget {
+  const _SourcesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Backed links',
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            const ReferenceLinkButton(
+              title: 'Multidimensional sleep health',
+              url: _readinessSleepUrl,
+            ),
+            const ReferenceLinkButton(
+              title: 'Banister TRIMP training load',
+              url: _readinessTrainingLoadUrl,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

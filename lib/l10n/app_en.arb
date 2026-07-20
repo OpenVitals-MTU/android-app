@@ -3427,6 +3427,7 @@
   "bodyEnergyCalibrationModeManualValues": "Manual values",
   "bodyEnergyCalibrationModeManualZones": "Manual zones",
   "bodyEnergyCalculationTitle": "How Body Energy is estimated",
+  "bodyEnergyReferencesTitle": "Backed links",
   "bodyEnergyCalculationBody": "OpenVitals divides the selected day into short buckets, starts from the previous available score when possible, then adds charge from sleep or quiet rest and subtracts drain from exertion, elevated awake heart rate, and recovery debt after harder effort.",
   "bodyEnergyCalculationInputsBody": "Heart rate, resting heart rate, personal zones, sleep, workouts, HRV, and respiratory rate can all improve the estimate. Missing inputs make the estimate more conservative and lower confidence.",
   "bodyEnergyCalculationLimitsBody": "This is an on-device wellness estimate, not a direct measurement or medical advice. The displayed inputs and reasons are exposed so the method can be reviewed and improved.",

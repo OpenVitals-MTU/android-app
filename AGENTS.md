@@ -130,6 +130,10 @@ iOS/HealthKit is planned, so a Kotlin-only reimplementation of something a cross
 
 After adding any Android-side plugin, build the APK once: some plugins fail only at APK link time under AGP 9 (`cannot find symbol` in `GeneratedPluginRegistrant`).
 
+### 8. Internal calculations cite their science
+
+Every number the app derives from raw data — sleep score, sleep duration/efficiency, daily readiness, body energy, cardio/training load, caffeine clearance, and the like — must carry the research it is based on as a `// Research: <url>` doc comment on the calculation itself, and, where a detail screen explains it to the user, a tappable source link. Health metrics claim to mean something clinical ("time asleep", "readiness"); a formula with no citation is a guess we cannot defend. If a calculation cannot be backed by a source, it does not ship. These citations existed in the Kotlin app and several were dropped in the port — recover them from git history (`git show 23c14d0:app/src/main/kotlin/...`) rather than inventing new ones, and never remove one when refactoring.
+
 ## Do Not Copy These Patterns
 
 - ad hoc `Future`/`setState` loading inside a `StatefulWidget` for new feature work — use a view-model

@@ -10,6 +10,15 @@ import 'stress_tracking.dart';
 
 part 'daily_readiness.freezed.dart';
 
+// Daily readiness is a weighted blend of recovery signals; the science lives with
+// each input rather than in a single formula here.
+//
+// Research:
+//   sleep's contribution to next-day readiness  https://pubmed.ncbi.nlm.nih.gov/24470692/
+//   (sub-score sources)                          see sleep_score.dart
+// The activity (intensity minutes) and stress/HRV inputs carry their own
+// citations in intensity_minutes.dart and stress_tracking.dart.
+
 enum ReadinessState {
   ready,
   moderate,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../ui/theme/chart_colors.dart';
 
+import '../../../core/presentation/reference_link.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
@@ -140,6 +141,7 @@ class _BodyEnergyBody extends ConsumerWidget {
       _CardPad(child: _ReasonsCard(display: display)),
       _CardPad(child: _InputsCard(display: display)),
       const _CardPad(child: _CalculationCard()),
+      const _CardPad(child: _SourcesCard()),
       if (display.timeline?.confidence == BodyEnergyConfidence.low)
         _CardPad(
           child: _FootnoteCard(text: l10n.bodyEnergyTimelineLowConfidence),
@@ -654,6 +656,49 @@ class _CalculationCard extends StatelessWidget {
             Text(l10n.bodyEnergyCalculationInputsBody, style: bodyStyle),
             const SizedBox(height: 10),
             Text(l10n.bodyEnergyCalculationLimitsBody, style: bodyStyle),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Research behind the activity-drain component of Body Energy (heart-rate-zone
+// training load). See body_energy_timeline.dart and AGENTS.md invariant 8.
+const String _banisterTrimpUrl =
+    'https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/';
+const String _trainingLoadReviewUrl =
+    'https://pmc.ncbi.nlm.nih.gov/articles/PMC4213373/';
+
+/// The science behind the calculation, shown to the user as tappable links —
+/// the Kotlin app surfaced sources this way on every derived-metric screen.
+class _SourcesCard extends StatelessWidget {
+  const _SourcesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.bodyEnergyReferencesTitle,
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            ReferenceLinkButton(
+              title: l10n.cardioLoadReferenceBanister,
+              url: _banisterTrimpUrl,
+            ),
+            ReferenceLinkButton(
+              title: l10n.cardioLoadReferenceTrainingLoad,
+              url: _trainingLoadReviewUrl,
+            ),
           ],
         ),
       ),

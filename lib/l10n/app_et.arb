@@ -1777,5 +1777,6 @@
     "heartRateRecoveryCooldownBeforeStop": "Su pulss oli juba enne treeningu lõppu languses, seega pole see taastumisnäit. Taastumist mõõdetakse hetkest, mil raske pingutus lõpeb.",
     "heartRateRecoverySubmaximalEffort": "Raske, kuid mitte maksimumi lähedal – seega ei saa seda näitu teistega võrrelda.",
     "heartRateRecoveryUnknownMaxHeartRate": "Määra oma maksimaalne pulss profiilis, siis saame öelda, kas pingutus oli piisavalt raske, et see näit loeks.",
-    "heartRateRecoveryPeakFromSingleSample": "Tipu taga on vaid üksainus mõõtmine."
+    "heartRateRecoveryPeakFromSingleSample": "Tipu taga on vaid üksainus mõõtmine.",
+    "bodyEnergyReferencesTitle": "Kasutatud allikad"
 }

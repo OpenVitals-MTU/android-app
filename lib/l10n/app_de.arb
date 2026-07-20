@@ -1777,5 +1777,6 @@
     "heartRateRecoveryCooldownBeforeStop": "Deine Herzfrequenz ist schon vor dem Ende des Trainings gefallen, daher ist dies kein Erholungswert. Die Erholung wird ab dem Moment gemessen, in dem die harte Belastung endet.",
     "heartRateRecoverySubmaximalEffort": "Anstrengend, aber nicht nahe an deinem Maximum – daher lässt sich dieser Wert nicht mit den anderen vergleichen.",
     "heartRateRecoveryUnknownMaxHeartRate": "Leg deine maximale Herzfrequenz in deinem Profil fest, dann können wir dir sagen, ob die Belastung stark genug war, damit dieser Wert zählt.",
-    "heartRateRecoveryPeakFromSingleSample": "Hinter der Spitze steht nur ein einziger Messwert."
+    "heartRateRecoveryPeakFromSingleSample": "Hinter der Spitze steht nur ein einziger Messwert.",
+    "bodyEnergyReferencesTitle": "Belegte Links"
 }

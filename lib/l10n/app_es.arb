@@ -1962,5 +1962,6 @@
     "heartRateRecoveryCooldownBeforeStop": "Tu frecuencia cardíaca ya estaba bajando antes de que terminara el entrenamiento, así que esto no es una lectura de recuperación. La recuperación se mide desde el momento en que cesa el esfuerzo intenso.",
     "heartRateRecoverySubmaximalEffort": "Intenso, pero no cerca de tu máximo, así que esta lectura no se puede comparar con las demás.",
     "heartRateRecoveryUnknownMaxHeartRate": "Configura tu frecuencia cardíaca máxima en tu perfil y podremos decirte si el esfuerzo fue lo bastante intenso para que esta lectura cuente.",
-    "heartRateRecoveryPeakFromSingleSample": "El pico se basa en una única lectura."
+    "heartRateRecoveryPeakFromSingleSample": "El pico se basa en una única lectura.",
+    "bodyEnergyReferencesTitle": "Enlaces de respaldo"
 }

@@ -22,6 +22,13 @@ part 'body_energy_timeline.freezed.dart';
 /// as an energy balance — a basal waking floor plus an activity drain that is
 /// the stronger of the heart-rate-zone estimate and an active-calorie estimate,
 /// with waking rest no longer charging. See the design proposal for the reason.
+///
+/// Research: the activity-drain component is heart-rate-zone training load
+/// (Banister TRIMP, https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/;
+/// training-load monitoring review, https://pmc.ncbi.nlm.nih.gov/articles/PMC4213373/),
+/// taken as the stronger of the zone estimate and an active-calorie estimate; the
+/// basal floor is resting metabolism. The energy-balance framing is a documented
+/// product design, not a single published model.
 const int bodyEnergyTimelineBucketMinutes = 5;
 const int bodyEnergyTimelineAlgorithmVersion = 3;
 

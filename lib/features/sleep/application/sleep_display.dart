@@ -434,21 +434,42 @@ List<LocalDate> _datesInPeriod(LocalDate start, LocalDate end) {
   return dates;
 }
 
+/// The hours actually **asleep** for [date]'s night: sleep-stage time only, so
+/// wake epochs inside the session (WASO) are not counted toward the sleep
+/// duration or the daily sleep goal — total sleep time is time in bed minus the
+/// time awake, not time in bed. Falls back to wall-clock time in bed when the
+/// night has no stage data to subtract awake from (an unstaged session is all we
+/// can measure).
+///
+/// Research: total sleep time / sleep efficiency define sleep as time asleep, not
+/// time in bed (AASM scoring; https://pmc.ncbi.nlm.nih.gov/articles/PMC5971842/).
+/// See [sleepDurationMsFromStages].
+double nightAsleepHours(
+  List<SleepData> sessions,
+  LocalDate date, {
+  SleepRangeMode sleepRangeMode = SleepRangeMode.evening18h,
+}) {
+  final summary =
+      dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode);
+  if (summary == null) return 0.0;
+  return sleepDurationMsFromStages(summary.stages, summary.durationMs) /
+      3600000.0;
+}
+
 List<SleepDurationPoint> _sleepDurationPoints(
   List<SleepData> sessions,
   DatePeriod period,
   SleepRangeMode sleepRangeMode,
 ) {
-  // The night's wall-clock duration, grouped by the same window the sessions are.
-  // (The old Health-Connect daily aggregate keyed sleep by its START date, so a
-  // night crossing midnight landed on the wrong day — see dailySleepSummary.)
+  // Hours ASLEEP per night (wake time within the session excluded), grouped by
+  // the same window the sessions are. (The old Health-Connect daily aggregate
+  // keyed sleep by its START date, so a night crossing midnight landed on the
+  // wrong day — see dailySleepSummary.)
   return [
     for (final date in _datesInPeriod(period.start, period.end))
       SleepDurationPoint(
         date,
-        dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode)
-                ?.durationHours ??
-            0.0,
+        nightAsleepHours(sessions, date, sleepRangeMode: sleepRangeMode),
       ),
   ];
 }

@@ -9,6 +9,16 @@ import '../preferences/sleep_range_mode.dart';
 
 part 'sleep_score.freezed.dart';
 
+// The sleep score is a weighted blend of four sub-scores, each grounded in
+// published sleep science (the same sources the sleep-score detail screen links).
+//
+// Research:
+//   duration    https://aasm.org/advocacy/position-statements/adult-sleep-duration-health-advisory/
+//               https://pubmed.ncbi.nlm.nih.gov/24470692/
+//   efficiency  https://www.ncbi.nlm.nih.gov/medgen/1669302
+//               https://pmc.ncbi.nlm.nih.gov/articles/PMC4751425/
+//   continuity  https://pmc.ncbi.nlm.nih.gov/articles/PMC5971842/  (WASO / sleep vs time in bed)
+//   regularity  https://www.nature.com/articles/s41598-017-03171-4
 const double _durationWeight = 35.0;
 const double _efficiencyWeight = 30.0;
 const double _continuityWeight = 20.0;

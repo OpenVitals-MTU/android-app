@@ -1777,5 +1777,6 @@
     "heartRateRecoveryCooldownBeforeStop": "La tua frequenza cardiaca stava già scendendo prima della fine dell'allenamento, quindi questa non è una misurazione di recupero. Il recupero si misura dal momento in cui cessa lo sforzo intenso.",
     "heartRateRecoverySubmaximalEffort": "Intenso, ma non vicino al tuo massimo — quindi questa misurazione non può essere confrontata con le altre.",
     "heartRateRecoveryUnknownMaxHeartRate": "Imposta la tua frequenza cardiaca massima nel profilo e potremo dirti se lo sforzo è stato abbastanza intenso perché questa misurazione conti.",
-    "heartRateRecoveryPeakFromSingleSample": "Dietro il picco c'è una sola misurazione."
+    "heartRateRecoveryPeakFromSingleSample": "Dietro il picco c'è una sola misurazione.",
+    "bodyEnergyReferencesTitle": "Riferimenti"
 }
