@@ -15,9 +15,10 @@ labels:
 
 variables:
   - &alpine_image alpine:3.20
-  # cirruslabs publishes one image per Flutter release; 3.44.0 is the newest that
-  # exists. See the note in test.yml before bumping.
-  - &flutter_image ghcr.io/cirruslabs/flutter:3.44.0
+  # Prebaked CI image (cirruslabs/flutter:3.44.0 + native-assets toolchain + Android
+  # SDK; see ci-image/Dockerfile and the note in test.yml). Rebuild + push via
+  # scripts/build-ci-image.sh and bump this tag when the Flutter version changes.
+  - &flutter_image ghcr.io/mmarca-tech/mobile-app-ci:flutter-3.44.0
   - &ruby_image ruby:3.3
   - &fastlane_environment
     FASTLANE_DISABLE_COLORS: "1"
