@@ -116,6 +116,7 @@ class DeviceSyncState {
     this.errorMessage,
     this.discoverableSeconds = 0,
     this.bluetoothUnavailable = false,
+    this.scanning = false,
   });
 
   final DeviceSyncStep step;
@@ -141,6 +142,9 @@ class DeviceSyncState {
   final int discoverableSeconds;
   final bool bluetoothUnavailable;
 
+  /// True while a discovery scan window is open (guest scanning step).
+  final bool scanning;
+
   DeviceSyncState copyWith({
     DeviceSyncStep? step,
     SyncRole? role,
@@ -158,6 +162,7 @@ class DeviceSyncState {
     String? errorMessage,
     int? discoverableSeconds,
     bool? bluetoothUnavailable,
+    bool? scanning,
   }) =>
       DeviceSyncState(
         step: step ?? this.step,
@@ -176,15 +181,22 @@ class DeviceSyncState {
         errorMessage: errorMessage,
         discoverableSeconds: discoverableSeconds ?? this.discoverableSeconds,
         bluetoothUnavailable: bluetoothUnavailable ?? this.bluetoothUnavailable,
+        scanning: scanning ?? this.scanning,
       );
 }
 
 class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
   BluetoothSyncService? _service;
   StreamSubscription<DiscoveredSyncDevice>? _deviceSub;
+  StreamSubscription<void>? _discoveryFinishedSub;
   StreamSubscription<SyncConnectionState>? _connSub;
   StreamSubscription<SyncProgress>? _progressSub;
-  final Completer<void> _connected = Completer<void>();
+  // Recreated on every reset(): the previous one is one-shot, so a second session
+  // would otherwise find it already completed and skip its socket-wait gate.
+  Completer<void> _connected = Completer<void>();
+  // Bumped on reset()/cancel() so a session tearing down in the background can't
+  // write its result over a freshly-reset wizard.
+  int _generation = 0;
   final DeviceSyncReportStore _reportStore = DeviceSyncReportStore();
 
   @override
@@ -240,6 +252,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       role: SyncRole.guest,
       step: DeviceSyncStep.guestScanning,
       devices: const [],
+      scanning: true,
     );
     _deviceSub?.cancel();
     _deviceSub = service.devices.listen((device) {
@@ -251,6 +264,22 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       ];
       state = state.copyWith(devices: next);
     });
+    // The scan window closes itself after ~12s; without consuming this the UI
+    // would spin forever with no "no devices found" / rescan affordance.
+    _discoveryFinishedSub?.cancel();
+    _discoveryFinishedSub = service.discoveryFinished.listen((_) {
+      if (state.step == DeviceSyncStep.guestScanning) {
+        state = state.copyWith(scanning: false);
+      }
+    });
+    await service.startDiscovery();
+  }
+
+  /// Restarts discovery after a scan window closed (the Rescan affordance).
+  Future<void> rescan() async {
+    final service = _service;
+    if (service == null || state.step != DeviceSyncStep.guestScanning) return;
+    state = state.copyWith(devices: const [], scanning: true);
     await service.startDiscovery();
   }
 
@@ -315,6 +344,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
     final service = _service;
     final role = state.role;
     if (service == null || role == null) return;
+    final gen = _generation;
     debugPrint('[devicesync] startSync role=$role types=${state.selectedTypes.length} range=${state.range}');
     state = state.copyWith(step: DeviceSyncStep.syncing);
 
@@ -323,10 +353,13 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       try {
         await _connected.future.timeout(const Duration(seconds: 30));
       } on TimeoutException {
-        state = state.copyWith(errorMessage: 'connect_timeout');
+        if (gen != _generation) return;
+        state = state.copyWith(
+            step: DeviceSyncStep.report, errorMessage: 'connect_timeout');
         return;
       }
     }
+    if (gen != _generation) return;
 
     final window = _window(state.range);
     final store = HealthConnectSyncStore(
@@ -362,6 +395,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       debugPrint('[devicesync] session done: completed=${report.completed} '
           'sent=${report.itemsSent} received=${report.itemsReceived} '
           'imported=${report.imported} abort=${report.abortReason}');
+      if (gen != _generation) return;
       if (!report.completed &&
           (report.abortReason?.contains('code') ?? false)) {
         // Wrong code — back to code entry with an error.
@@ -373,10 +407,15 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
         return;
       }
       await _persistReport(report);
+      if (gen != _generation) return;
       state = state.copyWith(step: DeviceSyncStep.report, report: report);
     } catch (e) {
       debugPrint('[devicesync] session threw: $e');
-      state = state.copyWith(errorMessage: 'sync_failed', report: null);
+      if (gen != _generation) return;
+      // Move OFF the syncing step so the UI leaves the progress spinner and can
+      // render the failure, instead of animating forever.
+      state = state.copyWith(
+          step: DeviceSyncStep.report, errorMessage: 'sync_failed');
     } finally {
       await stopDeviceSyncForegroundService();
     }
@@ -391,11 +430,19 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
   void reset() {
     _teardown();
     _service = null;
+    _connected = Completer<void>();
+    _generation++;
     state = DeviceSyncState(
       availableTypes: kSyncableRecordTypes.toSet(),
       selectedTypes: kSyncableRecordTypes.toSet(),
     );
   }
+
+  /// Cancels an in-flight or pending sync and returns to the start. Tearing the
+  /// service down closes the transport, which ends any running SyncSession (its
+  /// inbound closes → abort), and the bumped generation stops that session's
+  /// result from landing on the reset wizard.
+  void cancel() => reset();
 
   // ── Internals ─────────────────────────────────────────────────────────────
 
@@ -473,8 +520,16 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
 
   void _teardown() {
     _deviceSub?.cancel();
+    _discoveryFinishedSub?.cancel();
     _connSub?.cancel();
     _progressSub?.cancel();
+    // Null them so the next run re-attaches: _listenConnection / chooseGuest use
+    // `??=` / a cancelled-sub check and would otherwise no-op on a stale handle,
+    // leaving the host stuck on "waiting" and the guest with no device list.
+    _deviceSub = null;
+    _discoveryFinishedSub = null;
+    _connSub = null;
+    _progressSub = null;
     unawaited(_service?.dispose());
     unawaited(stopDeviceSyncForegroundService());
   }

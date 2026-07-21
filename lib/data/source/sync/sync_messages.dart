@@ -120,8 +120,14 @@ class SyncBatch {
   }
 
   factory SyncBatch.decode(Uint8List bytes) {
-    final json = jsonDecode(utf8.decode(GZipDecoder().decodeBytes(bytes)))
-        as Map<String, Object?>;
+    // Inflate through a size-capped sink: gzip's ratio reaches ~1000:1, so a
+    // 16 MiB frame (the frame cap) could inflate toward GiB. Decoding is chunked
+    // on the native path, so the sink throws as soon as output crosses the cap —
+    // the bomb never fully materializes. The cap is far above any real batch.
+    final output = _CappedOutputStream(kMaxDecompressedBatchBytes);
+    GZipDecoder().decodeStream(InputMemoryStream(bytes), output);
+    final json =
+        jsonDecode(utf8.decode(output.getBytes())) as Map<String, Object?>;
     return SyncBatch(
       seq: json['seq']! as int,
       items: [
@@ -129,6 +135,37 @@ class SyncBatch {
           SyncItem.fromJson(raw as Map<String, Object?>),
       ],
     );
+  }
+}
+
+/// The largest a decompressed batch may be. A batch is JSON of at most a few
+/// hundred records; 64 MiB is ample headroom, but the hard cap turns a gzip bomb
+/// into a bounded [FormatException] instead of an out-of-memory crash.
+const int kMaxDecompressedBatchBytes = 64 * 1024 * 1024;
+
+/// An [OutputMemoryStream] that refuses to grow past a byte cap, so a streaming
+/// gzip inflate aborts a decompression bomb instead of exhausting memory.
+class _CappedOutputStream extends OutputMemoryStream {
+  _CappedOutputStream(this._cap);
+
+  final int _cap;
+
+  void _check() {
+    if (length > _cap) {
+      throw const FormatException('decompressed batch exceeds cap');
+    }
+  }
+
+  @override
+  void writeByte(int value) {
+    super.writeByte(value);
+    _check();
+  }
+
+  @override
+  void writeBytes(List<int> bytes, {int? length}) {
+    super.writeBytes(bytes, length: length);
+    _check();
   }
 }
 

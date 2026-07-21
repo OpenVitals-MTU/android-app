@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/data/source/sync/health_connect_sync_store.dart';
 import 'package:openvitals/data/source/sync/import_record_sync_codec.dart';
+import 'package:openvitals/data/source/sync/sync_messages.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
 
 /// A HealthDataSource that models Health Connect's import surface in memory:
@@ -35,8 +36,15 @@ class FakeHealthDataSource extends HealthDataSource {
   ) async =>
       wantedIds.where(_byClientId.containsKey).toSet();
 
+  /// Record types whose batch insert should be rejected (models an unsupported
+  /// or over-quota type).
+  Set<String> failTypes = {};
+
   @override
   Future<void> insertImportedRecords(List<ImportRecord> records) async {
+    if (records.isNotEmpty && failTypes.contains(records.first.targetType)) {
+      throw StateError('insert rejected for ${records.first.targetType}');
+    }
     for (final r in records) {
       _byClientId[r.clientRecordId] = r;
     }
@@ -116,5 +124,57 @@ void main() {
     expect(ds.count, 2);
     final after = await store.readItems({'WeightRecord'});
     expect(after.map((i) => i.key).toSet(), items.map((i) => i.key).toSet());
+  });
+
+  test('writeItems ignores a peer-chosen key and writes under the content '
+      'fingerprint', () async {
+    final record = weight(6, 65);
+    final honestKey = syncFingerprint(record);
+    // A hostile peer sets the SyncItem key to an existing id it wants to clobber
+    // (e.g. an apple_health_* record we hold). The store must NOT trust it.
+    final hostile = SyncItem(
+      key: 'apple_health_deadbeef',
+      recordType: 'WeightRecord',
+      payload: encodeImportRecordPayload(record),
+    );
+
+    await store.writeItems([hostile]);
+
+    final written = await store.readItems({'WeightRecord'});
+    // Written under the recomputed content fingerprint, never the peer's key —
+    // so the peer can only ever address the record it actually sent.
+    expect(written.single.key, honestKey);
+    expect(written.single.key, isNot('apple_health_deadbeef'));
+  });
+
+  test('writeItems returns the keys that actually landed', () async {
+    final source = FakeHealthDataSource()..seed(weight(8, 72));
+    final sourceStore = HealthConnectSyncStore(
+      dataSource: source,
+      windowStart: store.windowStart,
+      windowEnd: store.windowEnd,
+    );
+    final items = await sourceStore.readItems({'WeightRecord'});
+
+    final written = await store.writeItems(items);
+    expect(written, {items.single.key});
+  });
+
+  test('writeItems excludes a rejected type from its written-keys result',
+      () async {
+    ds.failTypes = {'WeightRecord'};
+    final source = FakeHealthDataSource()..seed(weight(9, 73));
+    final sourceStore = HealthConnectSyncStore(
+      dataSource: source,
+      windowStart: store.windowStart,
+      windowEnd: store.windowEnd,
+    );
+    final items = await sourceStore.readItems({'WeightRecord'});
+
+    final written = await store.writeItems(items);
+    // The batch was rejected, so its key is NOT reported as written — the session
+    // therefore won't count it as imported.
+    expect(written, isEmpty);
+    expect(ds.count, 0);
   });
 }

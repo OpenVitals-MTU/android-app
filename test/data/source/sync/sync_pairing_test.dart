@@ -84,29 +84,54 @@ void main() {
       final hostKey = keyFor('424242');
       final guestKey = keyFor('424242');
 
-      // Host authenticates over the guest's nonce; guest verifies over its own.
-      final hostProof =
-          computeAuthProof(sessionKey: hostKey, challengeNonce: guestNonce);
-      final guestExpectsHost =
-          computeAuthProof(sessionKey: guestKey, challengeNonce: guestNonce);
+      // Host authenticates over the guest's nonce with the host role; guest
+      // verifies over its own nonce using the host role.
+      final hostProof = computeAuthProof(
+          sessionKey: hostKey,
+          challengeNonce: guestNonce,
+          roleByte: kAuthRoleHost);
+      final guestExpectsHost = computeAuthProof(
+          sessionKey: guestKey,
+          challengeNonce: guestNonce,
+          roleByte: kAuthRoleHost);
       expect(constantTimeEquals(hostProof, guestExpectsHost), isTrue);
 
-      // And symmetrically.
-      final guestProof =
-          computeAuthProof(sessionKey: guestKey, challengeNonce: hostNonce);
-      final hostExpectsGuest =
-          computeAuthProof(sessionKey: hostKey, challengeNonce: hostNonce);
+      // And symmetrically, with the guest role.
+      final guestProof = computeAuthProof(
+          sessionKey: guestKey,
+          challengeNonce: hostNonce,
+          roleByte: kAuthRoleGuest);
+      final hostExpectsGuest = computeAuthProof(
+          sessionKey: hostKey,
+          challengeNonce: hostNonce,
+          roleByte: kAuthRoleGuest);
       expect(constantTimeEquals(guestProof, hostExpectsGuest), isTrue);
+    });
+
+    test('a reflected proof does not validate (role binding)', () {
+      final key = keyFor('424242');
+      // The attacker echoes the host's own proof back. Under a role-less scheme
+      // this validated; now the host expects a GUEST-role proof over its nonce,
+      // which the reflected host-role proof over the guest nonce is not.
+      final hostProof = computeAuthProof(
+          sessionKey: key, challengeNonce: guestNonce, roleByte: kAuthRoleHost);
+      final hostExpectsGuest = computeAuthProof(
+          sessionKey: key, challengeNonce: hostNonce, roleByte: kAuthRoleGuest);
+      expect(constantTimeEquals(hostProof, hostExpectsGuest), isFalse);
     });
 
     test('wrong code on the guest fails verification', () {
       final hostKey = keyFor('424242');
       final guestKey = keyFor('000000'); // user mistyped
 
-      final hostProof =
-          computeAuthProof(sessionKey: hostKey, challengeNonce: guestNonce);
-      final guestExpectsHost =
-          computeAuthProof(sessionKey: guestKey, challengeNonce: guestNonce);
+      final hostProof = computeAuthProof(
+          sessionKey: hostKey,
+          challengeNonce: guestNonce,
+          roleByte: kAuthRoleHost);
+      final guestExpectsHost = computeAuthProof(
+          sessionKey: guestKey,
+          challengeNonce: guestNonce,
+          roleByte: kAuthRoleHost);
       expect(constantTimeEquals(hostProof, guestExpectsHost), isFalse);
     });
   });

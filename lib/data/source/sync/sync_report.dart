@@ -119,19 +119,25 @@ class SyncReportBuilder {
   int imported = 0;
   int duplicateSkipped = 0;
 
-  void recordReceived(String recordType, {required bool wasDuplicate}) {
+  /// Records one received item. [imported] is true only when it was actually
+  /// written to Health Connect (a fresh item whose write succeeded); [duplicate]
+  /// is true when it was skipped as already present. A fresh item whose write
+  /// FAILED is neither — counted as received but not imported, so the report can
+  /// no longer claim "imported N" when nothing landed.
+  void recordReceived(
+    String recordType, {
+    bool imported = false,
+    bool duplicate = false,
+  }) {
     itemsReceived += 1;
-    if (wasDuplicate) {
-      duplicateSkipped += 1;
-    } else {
-      imported += 1;
-    }
+    if (imported) this.imported += 1;
+    if (duplicate) duplicateSkipped += 1;
     final current =
         _byType[recordType] ?? SyncTypeSummary(recordType: recordType);
     _byType[recordType] = current._add(
       received: 1,
-      imported: wasDuplicate ? 0 : 1,
-      duplicateSkipped: wasDuplicate ? 1 : 0,
+      imported: imported ? 1 : 0,
+      duplicateSkipped: duplicate ? 1 : 0,
     );
   }
 
