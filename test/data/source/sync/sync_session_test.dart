@@ -7,7 +7,8 @@ import 'package:openvitals/data/source/sync/sync_session.dart';
 import 'package:openvitals/data/source/sync/sync_transport.dart';
 
 /// In-memory stand-in for Health Connect: a keyed set of records. `readItems`
-/// snapshots current contents; `existingKeys`/`writeItems` model dedup + insert.
+/// snapshots current contents (the session's dedup baseline); `writeItems`
+/// upserts.
 class FakeRecordStore implements SyncRecordStore {
   FakeRecordStore(Iterable<SyncItem> initial) {
     for (final item in initial) {
@@ -22,10 +23,6 @@ class FakeRecordStore implements SyncRecordStore {
   @override
   Future<List<SyncItem>> readItems(Set<String> types) async =>
       _byKey.values.where((i) => types.contains(i.recordType)).toList();
-
-  @override
-  Future<Set<String>> existingKeys(List<SyncItem> incoming) async =>
-      incoming.map((i) => i.key).where(_byKey.containsKey).toSet();
 
   @override
   Future<void> writeItems(List<SyncItem> items) async {
@@ -257,20 +254,11 @@ void main() {
 class _DupReadingStore implements SyncRecordStore {
   _DupReadingStore(this._keys);
   final List<String> _keys;
-  final Set<String> _written = {};
 
   @override
   Future<List<SyncItem>> readItems(Set<String> types) async =>
       [for (final k in _keys) item(k)];
 
   @override
-  Future<Set<String>> existingKeys(List<SyncItem> incoming) async =>
-      incoming.map((i) => i.key).where(_written.contains).toSet();
-
-  @override
-  Future<void> writeItems(List<SyncItem> items) async {
-    for (final i in items) {
-      _written.add(i.key);
-    }
-  }
+  Future<void> writeItems(List<SyncItem> items) async {}
 }

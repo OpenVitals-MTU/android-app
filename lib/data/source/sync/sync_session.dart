@@ -38,12 +38,11 @@ class SyncAborted implements Exception {
 /// the real implementation over `HealthDataSource`.
 abstract interface class SyncRecordStore {
   /// Reads this phone's records for the negotiated [types] in the session's
-  /// window, each already carrying its dedup [SyncItem.key].
+  /// window, each already carrying its dedup [SyncItem.key]. These same keys are
+  /// the session's dedup baseline: an incoming peer record is a duplicate iff we
+  /// already hold a record with the same content fingerprint, i.e. its key is
+  /// among the ones this returns.
   Future<List<SyncItem>> readItems(Set<String> types);
-
-  /// Returns the subset of [incoming] item keys that Health Connect ALREADY has
-  /// (so the session writes only the genuinely new ones).
-  Future<Set<String>> existingKeys(List<SyncItem> incoming);
 
   /// Writes [items] to Health Connect (post-dedup).
   Future<void> writeItems(List<SyncItem> items);
@@ -232,6 +231,16 @@ class SyncSession {
     _emit(phase: SyncPhase.exchanging);
     final localItems = await _store.readItems(negotiated.toSet());
     _report.itemsSent = localItems.length;
+    // Seed the dedup baseline from the records we just read. A peer record is a
+    // duplicate iff we already hold one with the same content fingerprint, so our
+    // own item keys ARE that set — dedup is then an in-memory lookup. This
+    // replaces a per-batch Health Connect re-read that paged the whole window
+    // every batch (O(batches x history) — the on-device "stuck at ~1 batch / 17s"
+    // crawl). It's also stricter: it catches records we hold natively (no
+    // clientRecordId), which a clientRecordId-only check would miss and re-import.
+    for (final item in localItems) {
+      _seenKeys.add(item.key);
+    }
     // Sender and receiver run concurrently over the one full-duplex link.
     await Future.wait([_runSender(localItems), _runReceiver()]);
   }
@@ -258,11 +267,12 @@ class SyncSession {
     var received = 0;
     var written = 0;
     await for (final batch in _incomingBatches.stream) {
-      final existing = await _store.existingKeys(batch.items);
       final fresh = <SyncItem>[];
       for (final item in batch.items) {
-        final duplicate =
-            existing.contains(item.key) || _seenKeys.contains(item.key);
+        // _seenKeys holds every record we already had (seeded from readItems)
+        // plus everything written earlier this session, so this one lookup covers
+        // both cross-device and within-session dedup.
+        final duplicate = _seenKeys.contains(item.key);
         _report.recordReceived(item.recordType, wasDuplicate: duplicate);
         if (!duplicate) {
           fresh.add(item);

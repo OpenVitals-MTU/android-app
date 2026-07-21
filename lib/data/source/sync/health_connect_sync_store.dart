@@ -2,8 +2,8 @@
 /// protocol to real record reads, dedup, and writes.
 ///
 /// Reads become [SyncItem]s keyed by content fingerprint ([syncFingerprint]);
-/// dedup runs through Health Connect's clientRecordId lookup
-/// ([HealthDataSource.findMatchingImportedClientRecordIds]); writes reconstruct
+/// dedup happens in the session, which seeds its baseline from these same keys
+/// (see [SyncRecordStore.readItems]); writes reconstruct
 /// typed [ImportRecord]s (carrying the fingerprint as their clientRecordId) and
 /// insert them via [HealthDataSource.insertImportedRecords]. Because both phones
 /// compute the same fingerprint and write it as the clientRecordId, re-syncs
@@ -49,26 +49,6 @@ class HealthConnectSyncStore implements SyncRecordStore {
       }
     }
     return items;
-  }
-
-  @override
-  Future<Set<String>> existingKeys(List<SyncItem> incoming) async {
-    // Group by type so each clientRecordId lookup is one bounded query.
-    final byType = <String, Set<String>>{};
-    for (final item in incoming) {
-      (byType[item.recordType] ??= <String>{}).add(item.key);
-    }
-    final present = <String>{};
-    for (final entry in byType.entries) {
-      final matches = await _dataSource.findMatchingImportedClientRecordIds(
-        entry.key,
-        windowStart,
-        windowEnd,
-        entry.value,
-      );
-      present.addAll(matches);
-    }
-    return present;
   }
 
   @override

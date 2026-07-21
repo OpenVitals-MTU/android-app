@@ -75,23 +75,6 @@ void main() {
     }
   });
 
-  test('existingKeys reports only fingerprints Health Connect already holds',
-      () async {
-    ds.seed(weight(1, 70));
-    final items = await store.readItems({'WeightRecord'});
-    final present = await store.existingKeys(items);
-    expect(present, {items.single.key});
-
-    // An item the store has never seen is absent.
-    final fresh = await store.readItems({'WeightRecord'});
-    final other = HealthConnectSyncStore(
-      dataSource: FakeHealthDataSource(),
-      windowStart: store.windowStart,
-      windowEnd: store.windowEnd,
-    );
-    expect(await other.existingKeys(fresh), isEmpty);
-  });
-
   test('writeItems reconstructs typed records under the fingerprint id',
       () async {
     // Build items on a source phone, then write them into a fresh target.
@@ -106,14 +89,14 @@ void main() {
     await store.writeItems(items);
     expect(ds.count, 1);
 
-    // The written record is typed and re-fingerprints to the same key (so a
-    // re-sync would dedup it).
+    // The written record is typed and re-fingerprints to the same key, so it
+    // reappears from readItems under that key — the session's dedup baseline
+    // (seeded from readItems) then recognises a re-sync as a duplicate.
     final written = await store.readItems({'WeightRecord'});
     expect(written.single.key, items.single.key);
-    expect(await store.existingKeys(items), {items.single.key});
   });
 
-  test('a full round trip through the store is idempotent', () async {
+  test('writing the same items twice upserts rather than duplicating', () async {
     final source = FakeHealthDataSource()
       ..seed(weight(4, 60))
       ..seed(weight(5, 61));
@@ -124,13 +107,14 @@ void main() {
     );
 
     final items = await sourceStore.readItems({'WeightRecord'});
-    // First write imports both.
-    expect(await store.existingKeys(items), isEmpty);
     await store.writeItems(items);
     expect(ds.count, 2);
 
-    // Second pass: all already present, nothing new to write.
-    final present = await store.existingKeys(items);
-    expect(present, items.map((i) => i.key).toSet());
+    // Writing them again keys on the same fingerprint clientRecordIds, so Health
+    // Connect upserts and the count stays put.
+    await store.writeItems(items);
+    expect(ds.count, 2);
+    final after = await store.readItems({'WeightRecord'});
+    expect(after.map((i) => i.key).toSet(), items.map((i) => i.key).toSet());
   });
 }
