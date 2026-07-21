@@ -141,27 +141,39 @@ internal class CompanionDevices(
         pendingCallback = callback
         pendingAddress = address
         Log.i(SyncBluetooth.TAG, "associate: requesting association with ${displayName ?: address}")
-        manager.associate(
-            request,
-            object : CompanionDeviceManager.Callback() {
-                override fun onDeviceFound(intentSender: IntentSender) {
-                    try {
-                        activeLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
-                    } catch (e: Exception) {
-                        Log.w(SyncBluetooth.TAG, "associate: launch failed: ${e.message}")
+        try {
+            manager.associate(
+                request,
+                object : CompanionDeviceManager.Callback() {
+                    override fun onDeviceFound(intentSender: IntentSender) {
+                        try {
+                            activeLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                        } catch (e: Exception) {
+                            Log.w(SyncBluetooth.TAG, "associate: launch failed: ${e.message}")
+                            resolvePending(false)
+                        }
+                    }
+
+                    override fun onFailure(error: CharSequence?) {
+                        // Most often the watch simply was not seen within the OS's
+                        // scan window. Not fatal: onboarding continues unassociated.
+                        Log.w(SyncBluetooth.TAG, "associate: failed: $error")
                         resolvePending(false)
                     }
-                }
-
-                override fun onFailure(error: CharSequence?) {
-                    // Most often the watch simply was not seen within the OS's
-                    // scan window. Not fatal: onboarding continues unassociated.
-                    Log.w(SyncBluetooth.TAG, "associate: failed: $error")
-                    resolvePending(false)
-                }
-            },
-            null,
-        )
+                },
+                null,
+            )
+        } catch (e: Exception) {
+            // `associate` is a binder call that throws SYNCHRONOUSLY when the
+            // platform refuses the request outright -- e.g. IllegalStateException
+            // "Must declare uses-feature android.software.companion_device_setup"
+            // if that declaration is ever dropped from the host manifest. Without
+            // this catch the throw crosses the Pigeon boundary as a channel error
+            // instead of the quiet `false` this API promises, and the pending
+            // callback is never resolved.
+            Log.w(SyncBluetooth.TAG, "associate: request refused: ${e.message}")
+            resolvePending(false)
+        }
     }
 
     fun isAssociated(address: String): Boolean {

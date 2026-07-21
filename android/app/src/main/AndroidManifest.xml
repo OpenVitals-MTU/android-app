@@ -136,7 +136,17 @@
         declared by the installable app.
     -->
     <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
-    <uses-permission android:name="android.permission.REQUEST_COMPANION_USE_DATA_IN_BACKGROUND" />
+    <!--
+        Required by start/stopObservingDevicePresence, which is what actually
+        makes the OS bind OpenVitalsCompanionDeviceService when the watch comes
+        into range. Without it those calls throw SecurityException and the
+        association exists but buys nothing.
+
+        Deliberately NOT declared: REQUEST_COMPANION_USE_DATA_IN_BACKGROUND. It
+        governs background NETWORK use, and this app ships no INTERNET
+        permission at all, so asking for it would be meaningless.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
 
     <!-- Foreground service (flutter_foreground_task GPS recorder + geolocator). -->
@@ -207,6 +217,18 @@
         android:required="false" />
     <uses-feature
         android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <!--
+        CompanionDeviceManager (Garmin watch onboarding). NOT optional
+        boilerplate: without this declaration `CompanionDeviceManager.associate`
+        throws "Must declare uses-feature android.software.companion_device_setup
+        in manifest to use this API" from the system service, so the association
+        can never be offered. `required="false"` keeps the app installable on
+        devices that lack companion support, where onboarding degrades to a
+        plain bond that syncs fine without the background priority boost.
+    -->
+    <uses-feature
+        android:name="android.software.companion_device_setup"
         android:required="false" />
 
     <!-- =========================================================================
