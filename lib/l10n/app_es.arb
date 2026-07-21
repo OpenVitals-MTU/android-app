@@ -2217,5 +2217,53 @@
     "deviceSyncSaveReport": "Guardar informe",
     "@deviceSyncSaveReport": {
         "description": "Button to save the sync report to a file."
+    },
+    "healthConnectGateErrorTitle": "No se pudo acceder a Health Connect",
+    "@healthConnectGateErrorTitle": {
+        "description": "Title when the availability/permission read fails."
+    },
+    "healthConnectGateErrorBody": "Se produjo un error al leer tus datos de salud. Comprueba que Health Connect esté instalado y actualizado, y vuelve a intentarlo.",
+    "@healthConnectGateErrorBody": {
+        "description": "Body when the availability/permission read fails."
+    },
+    "healthConnectGateRetry": "Intentar otra vez",
+    "@healthConnectGateRetry": {
+        "description": "Retry button on the gate error state."
+    },
+    "deviceSyncNoDevices": "No se encontraron teléfonos. Asegúrese de que el otro teléfono esté en la pantalla \"Hacer visible\" y vuelva a escanear.",
+    "@deviceSyncNoDevices": {
+        "description": "Empty state after a scan finds no devices."
+    },
+    "deviceSyncRescan": "Volver a escanear",
+    "@deviceSyncRescan": {
+        "description": "Button to restart discovery."
+    },
+    "deviceSyncCancel": "Cancelar",
+    "@deviceSyncCancel": {
+        "description": "Cancel button on the waiting/scanning/syncing steps."
+    },
+    "deviceSyncErrorHeading": "Sincronización finalizada",
+    "@deviceSyncErrorHeading": {
+        "description": "Heading on the report step when the sync failed or was aborted."
+    },
+    "deviceSyncErrorGeneric": "Error al sincronizar. Inténtelo de nuevo.",
+    "@deviceSyncErrorGeneric": {
+        "description": "Generic sync failure message."
+    },
+    "deviceSyncErrorConnect": "Error al conectar con el otro teléfono. Asegúrate de que esté cerca e inténtalo de nuevo.",
+    "@deviceSyncErrorConnect": {
+        "description": "Connection failure/timeout message."
+    },
+    "deviceSyncErrorPermission": "Se necesita permiso de Bluetooth para la sincronización.",
+    "@deviceSyncErrorPermission": {
+        "description": "Bluetooth permission denied message."
+    },
+    "deviceSyncErrorDiscoverable": "Para que se pueda sincronizar, este teléfono deber ser visible. Prueba otra vez y acepta la solicitud.",
+    "@deviceSyncErrorDiscoverable": {
+        "description": "Discoverability declined message."
+    },
+    "deviceSyncAborted": "No se sincronizó por un error",
+    "@deviceSyncAborted": {
+        "description": "Shown on the report step when the session aborted."
     }
 }
