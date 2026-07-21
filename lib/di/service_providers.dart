@@ -122,7 +122,7 @@ final homeWidgetRefresherProvider = Provider<HomeWidgetRefresher>((ref) {
         UnitFormatter(unitSystemProvider: () => preferences.unitSystem),
     localizations: homeWidgetLocalizations(),
     goals: homeWidgetReadinessGoals(preferences),
-    sleepRangeMode: preferences.sleepRangeMode,
+    sleepWindow: preferences.sleepWindow,
     activityWeekMode: preferences.activityWeekMode,
   );
 });

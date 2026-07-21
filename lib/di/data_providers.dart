@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/local/beverage/beverage_store.dart';
 import '../data/local/open_vitals_database.dart';
+import '../data/sync/calories_history_sync_service.dart';
 import '../data/sync/vitals_history_sync_service.dart';
 import '../data/prefs/preferences_repository.dart';
 import '../data/repository/body_energy_timeline_cache_store.dart';
@@ -104,6 +105,14 @@ final vitalsDailyCacheDaoProvider = Provider<VitalsDailyCacheDao>(
 
 final vitalsHistorySyncServiceProvider = Provider<VitalsHistorySyncService>(
   (ref) => VitalsHistorySyncService(
+    ref.watch(vitalsDailyCacheDaoProvider),
+    ref.watch(healthDataSourceProvider),
+  ),
+);
+
+final caloriesHistorySyncServiceProvider =
+    Provider<CaloriesHistorySyncService>(
+  (ref) => CaloriesHistorySyncService(
     ref.watch(vitalsDailyCacheDaoProvider),
     ref.watch(healthDataSourceProvider),
   ),
@@ -205,6 +214,7 @@ final activityRepositoryProvider = Provider<ActivityRepository>(
     ref.watch(healthDataSourceProvider),
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
     markerRepository: ref.watch(activityMarkerRepositoryProvider),
+    caloriesCacheDao: ref.watch(vitalsDailyCacheDaoProvider),
   ),
 );
 

@@ -152,7 +152,7 @@ SleepData _toMergedSleepSession(List<SleepData> group, Duration maxGap) {
     clientRecordVersion: null,
     recordingMethod: _singleOrNull(recordingMethods),
     device: _singleOrNull(devices),
-    stages: _mergedSleepStages(ordered, maxGap),
+    stages: combineNightStages(ordered, maxGap: maxGap),
   );
 }
 
@@ -231,38 +231,6 @@ String _mergedSleepSessionId(List<String> ids) {
   return '$_mergedSleepSessionIdPrefix$encoded';
 }
 
-List<SleepStage> _mergedSleepStages(
-  List<SleepData> orderedSessions,
-  Duration maxGap,
-) {
-  final seenKeys = <(DateTime, DateTime, int)>{};
-  final stages = <SleepStage>[];
-  for (final stage in orderedSessions.expand((session) => session.stages)) {
-    final key = (stage.startTime, stage.endTime, stage.stageType);
-    if (seenKeys.add(key)) stages.add(stage);
-  }
-
-  if (stages.isEmpty) return const <SleepStage>[];
-
-  final gapStages = <SleepStage>[];
-  for (var index = 0; index < orderedSessions.length - 1; index++) {
-    final previous = orderedSessions[index];
-    final next = orderedSessions[index + 1];
-    final gap = next.startTime.difference(previous.endTime);
-    if (!gap.isNegative && gap > Duration.zero && gap <= maxGap) {
-      gapStages.add(
-        SleepStage(
-          startTime: previous.endTime,
-          endTime: next.startTime,
-          stageType: SleepStage.stageAwake,
-        ),
-      );
-    }
-  }
-
-  return [...stages, ...gapStages]..sort(_stagesByStartThenEnd);
-}
-
 String _padBase64(String value) {
   final remainder = value.length % 4;
   if (remainder == 0) return value;
@@ -270,12 +238,6 @@ String _padBase64(String value) {
 }
 
 int _byStartThenEnd(SleepData a, SleepData b) {
-  final byStart = a.startTime.compareTo(b.startTime);
-  if (byStart != 0) return byStart;
-  return a.endTime.compareTo(b.endTime);
-}
-
-int _stagesByStartThenEnd(SleepStage a, SleepStage b) {
   final byStart = a.startTime.compareTo(b.startTime);
   if (byStart != 0) return byStart;
   return a.endTime.compareTo(b.endTime);

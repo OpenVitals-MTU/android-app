@@ -80,7 +80,7 @@ class RecoveryViewModel extends Notifier<RecoveryState> {
     final result = await useCase(
       DashboardQuery(
         date: clamped,
-        sleepRangeMode: prefs.sleepRangeMode,
+        sleepWindow: prefs.sleepWindow,
         activityWeekMode: prefs.activityWeekMode,
         visibleMetrics: recoveryStressMetrics,
         refreshMode: refreshMode,

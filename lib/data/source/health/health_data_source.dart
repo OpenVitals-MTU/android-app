@@ -11,7 +11,6 @@ import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/vitals_change_batch.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/model/vitals_models.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/model/apple_health_import_records.dart';
 import '../../../domain/health/health_permissions.dart';
 
@@ -572,7 +571,6 @@ class HealthDataSource {
   Future<SleepReadData> readSleepData(
     LocalDate startDate,
     LocalDate endDate,
-    SleepRangeMode sleepRangeMode,
   ) async =>
       const SleepReadData();
 

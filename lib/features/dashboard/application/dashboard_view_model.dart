@@ -16,7 +16,7 @@ import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/preferences/activity_week_mode.dart';
 import '../../../domain/preferences/app_language.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
+import '../../../domain/preferences/sleep_window.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
@@ -66,7 +66,7 @@ abstract class DashboardState with _$DashboardState {
     @Default(true) bool isLoading,
     @Default(false) bool isRefreshing,
     ScreenError? error,
-    @Default(SleepRangeMode.evening18h) SleepRangeMode sleepRangeMode,
+    @Default(SleepWindow.defaultWindow) SleepWindow sleepWindow,
     @Default(ActivityWeekMode.mondayToSunday) ActivityWeekMode activityWeekMode,
     @Default(false) bool showOpenVitalsCalculatedCalories,
     @Default(HealthConnectAvailability.available)
@@ -109,7 +109,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final prefs = ref.read(preferencesRepositoryProvider);
     final initial = DashboardState(
       selectedDate: LocalDate.now(),
-      sleepRangeMode: prefs.sleepRangeMode,
+      sleepWindow: prefs.sleepWindow,
       activityWeekMode: prefs.activityWeekMode,
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
       // The user's goals, not the defaults. The summary used to read these from
@@ -311,7 +311,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       isLoading: !keepData,
       isRefreshing: true,
       error: null,
-      sleepRangeMode: prefs.sleepRangeMode,
+      sleepWindow: prefs.sleepWindow,
       activityWeekMode: prefs.activityWeekMode,
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
       goals: DashboardGoals.fromPreferences(prefs),
@@ -323,7 +323,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final quickResult = await useCase(
       DashboardQuery(
         date: clamped,
-        sleepRangeMode: prefs.sleepRangeMode,
+        sleepWindow: prefs.sleepWindow,
         activityWeekMode: prefs.activityWeekMode,
         visibleMetrics: dashboardQuickMetrics,
         refreshMode: refreshMode,
@@ -376,7 +376,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final data = (await useCase(
       DashboardQuery(
         date: date,
-        sleepRangeMode: prefs.sleepRangeMode,
+        sleepWindow: prefs.sleepWindow,
         activityWeekMode: prefs.activityWeekMode,
         visibleMetrics: backgroundMetrics,
         refreshMode: refreshMode,

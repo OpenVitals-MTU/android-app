@@ -26,6 +26,11 @@ abstract interface class ActivityRepository {
     // intraday chart (e.g. the calories overview) opts out — one fewer read, and
     // one fewer place a stalled aggregate can hang the Day view.
     bool includeActivityProgress = true,
+    // The previous/baseline comparison windows (two extra period reads each for
+    // steps and nutrition). Only the movement-metric screen renders a
+    // period-over-period comparison; overviews that show the current period
+    // alone (e.g. calories) opt out, turning six window aggregates into two.
+    bool includeComparisonWindows = true,
     RefreshMode refreshMode = RefreshMode.normal,
   });
 

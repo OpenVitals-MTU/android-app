@@ -6,6 +6,7 @@ import '../../../ui/theme/chart_tokens.dart';
 import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../di/data_providers.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/charts/period_chart.dart';
@@ -19,11 +20,36 @@ import '../application/calories_view_model.dart';
 /// Calories overview pushed over the shell (`/calories`), ported from the Kotlin
 /// `CaloriesScreen`. Shows calories burned and active calories over the selected
 /// period plus the latest basal metabolic rate.
-class CaloriesScreen extends ConsumerWidget {
+class CaloriesScreen extends ConsumerStatefulWidget {
   const CaloriesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CaloriesScreen> createState() => _CaloriesScreenState();
+}
+
+class _CaloriesScreenState extends ConsumerState<CaloriesScreen> {
+  bool _syncKicked = false;
+
+  Future<void> _syncHistory() async {
+    await ref.read(caloriesHistorySyncServiceProvider).syncAll();
+    if (!mounted) return;
+    ref.read(caloriesProvider.notifier).refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Kick the background cache sync only AFTER the first foreground load
+    // finishes — never alongside it. Concurrent reads serialize inside Health
+    // Connect, so running the sync's slow history read next to the screen's own
+    // read turned a ~30s first open into 80s+. Sequenced, the screen loads
+    // first (live, once), then the cache fills in the background, and every
+    // later open is a ~365-row SQLite read. Guarded to fire once per open.
+    ref.listen(caloriesProvider.select((s) => s.isLoading), (prev, next) {
+      if (prev == true && next == false && !_syncKicked) {
+        _syncKicked = true;
+        _syncHistory();
+      }
+    });
     final state = ref.watch(caloriesProvider);
     final notifier = ref.read(caloriesProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);

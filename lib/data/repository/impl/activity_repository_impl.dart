@@ -8,6 +8,7 @@ import '../../../domain/model/exercise_session_metrics.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/activity_period_data.dart';
+import '../../local/open_vitals_database.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../contract/activity_repository.dart';
@@ -27,6 +28,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     this._dataSource, {
     PreferencesRepository? preferencesRepository,
     ActivityMarkerRepository? markerRepository,
+    this._caloriesCacheDao,
   })  : _preferences = preferencesRepository,
         _markers = markerRepository;
 
@@ -35,6 +37,12 @@ class ActivityRepositoryImpl implements ActivityRepository {
   final PreferencesRepository? _preferences;
   final ActivityMarkerRepository? _markers;
 
+  /// The daily calories-burned cache (the generic vitals daily-aggregate store,
+  /// keyed by [caloriesBurnedCacheMetric]). When it has been synced, the daily
+  /// calories-burned series is served from SQLite instead of Health Connect's
+  /// slow `TotalCaloriesBurned` year aggregate. Null in tests / before sync.
+  final VitalsDailyCacheDao? _caloriesCacheDao;
+
   @override
   Future<Result<ActivityPeriodData>> loadActivityPeriod(
     PeriodLoadQuery query, {
@@ -42,6 +50,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     required bool includeNutrition,
     bool includeWheelchairPushes = false,
     bool includeActivityProgress = true,
+    bool includeComparisonWindows = true,
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>
       runCatching(() async {
@@ -63,11 +72,17 @@ class ActivityRepositoryImpl implements ActivityRepository {
         Future<List<DailyNutrition>> nutrition(DatePeriod period) async {
           if (!includeNutrition) return const [];
           if (!granted.contains(HcPermissions.readNutrition)) return const [];
-          return _dataSource.readDailyNutrition(
-            period.start,
-            period.end,
-            includeHydration: false,
-          );
+          // Serve calories burned from the daily cache once synced — the
+          // callers of this read (calories overview, movement-metric screen)
+          // use only the per-day kcal, never hydration or the burn source, so a
+          // cache hit avoids Health Connect's 13-24s TotalCaloriesBurned year
+          // aggregate. Falls back to the live read until the cache is populated.
+          return await _cachedCaloriesBurned(period.start, period.end) ??
+              _dataSource.readDailyNutrition(
+                period.start,
+                period.end,
+                includeHydration: false,
+              );
         }
 
         final activityProgress = includeActivityProgress &&
@@ -76,16 +91,82 @@ class ActivityRepositoryImpl implements ActivityRepository {
             ? await _dataSource.readRawActivityProgress(w.current.start)
             : const <ActivityProgressPoint>[];
 
+        // The window reads are independent (distinct date ranges, distinct
+        // metrics), so fire them together rather than in series. Over a YEAR the
+        // current and previous windows are each a 365-day Health Connect
+        // aggregate, and `TotalCaloriesBurned` is heavy to synthesize; awaiting
+        // them one by one stacked into the ~45s the calories year view took to
+        // open. Concurrent reads collapse that to roughly a single window's
+        // latency. A failing read still fails the whole load (via runCatching),
+        // exactly as the sequential awaits did.
+        //
+        // The previous/baseline windows exist only for the movement-metric
+        // screen's period comparison; the calories overview never reads them, so
+        // it opts out ([includeComparisonWindows] = false) and skips four more
+        // year-long aggregates — the difference between two concurrent reads and
+        // six.
+        Future<List<T>> skip<T>() => Future.value(const []);
+        final (
+          currentSteps,
+          previousSteps,
+          baselineSteps,
+          currentNutrition,
+          previousNutrition,
+          baselineNutrition,
+        ) = await (
+          steps(w.current),
+          includeComparisonWindows ? steps(w.previous) : skip<DailySteps>(),
+          includeComparisonWindows ? steps(w.baseline) : skip<DailySteps>(),
+          nutrition(w.current),
+          includeComparisonWindows
+              ? nutrition(w.previous)
+              : skip<DailyNutrition>(),
+          includeComparisonWindows
+              ? nutrition(w.baseline)
+              : skip<DailyNutrition>(),
+        ).wait;
+
         return ActivityPeriodData(
-          dailySteps: await steps(w.current),
-          previousDailySteps: await steps(w.previous),
-          baselineDailySteps: await steps(w.baseline),
-          nutrition: await nutrition(w.current),
-          previousNutrition: await nutrition(w.previous),
-          baselineNutrition: await nutrition(w.baseline),
+          dailySteps: currentSteps,
+          previousDailySteps: previousSteps,
+          baselineDailySteps: baselineSteps,
+          nutrition: currentNutrition,
+          previousNutrition: previousNutrition,
+          baselineNutrition: baselineNutrition,
           activityProgress: activityProgress,
         );
       });
+
+  /// Cached daily calories-burned as [DailyNutrition] rows, or null when the
+  /// cache has not been synced yet (no cursor) — the caller then reads live.
+  /// Only days with a positive burn are stored; the heatmap fills the rest.
+  Future<List<DailyNutrition>?> _cachedCaloriesBurned(
+    LocalDate start,
+    LocalDate end,
+  ) async {
+    final dao = _caloriesCacheDao;
+    if (dao == null) return null;
+    // The cache only covers the last [caloriesCacheLookbackDays]. A range that
+    // begins before that window would read as empty from the cache (its days
+    // were never synced), so fall back to the live read for it.
+    final coverageStart =
+        LocalDate.now().epochDay - caloriesCacheLookbackDays;
+    if (start.epochDay < coverageStart) return null;
+    if (await dao.cursor(caloriesBurnedCacheMetric) == null) return null;
+    final rows = await dao.aggregatesBetween(
+      caloriesBurnedCacheMetric,
+      start.epochDay,
+      end.epochDay,
+    );
+    return [
+      for (final r in rows)
+        DailyNutrition(
+          date: LocalDate.fromEpochDay(r.epochDay),
+          hydrationLiters: 0.0,
+          caloriesBurnedKcal: r.valueSum,
+        ),
+    ];
+  }
 
   @override
   Future<Result<ActivitiesPeriodData>> loadActivitiesPeriod(

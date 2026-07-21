@@ -2,7 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../core/time/local_date.dart';
 import '../preferences/activity_week_mode.dart';
-import '../preferences/sleep_range_mode.dart';
+import '../preferences/sleep_window.dart';
 import 'refresh_mode.dart';
 
 part 'dashboard_query.freezed.dart';
@@ -11,7 +11,7 @@ part 'dashboard_query.freezed.dart';
 abstract class DashboardQuery with _$DashboardQuery {
   const factory DashboardQuery.build({
     required LocalDate date,
-    required SleepRangeMode sleepRangeMode,
+    required SleepWindow sleepWindow,
     required ActivityWeekMode activityWeekMode,
     required Set<DashboardMetric> visibleMetrics,
     required RefreshMode refreshMode,
@@ -21,7 +21,7 @@ abstract class DashboardQuery with _$DashboardQuery {
 
   factory DashboardQuery({
     LocalDate? date,
-    SleepRangeMode sleepRangeMode = SleepRangeMode.evening18h,
+    SleepWindow sleepWindow = SleepWindow.defaultWindow,
     ActivityWeekMode activityWeekMode = ActivityWeekMode.mondayToSunday,
     Set<DashboardMetric>? visibleMetrics,
     RefreshMode refreshMode = RefreshMode.normal,
@@ -30,7 +30,7 @@ abstract class DashboardQuery with _$DashboardQuery {
   }) =>
       DashboardQuery.build(
         date: date ?? LocalDate.now(),
-        sleepRangeMode: sleepRangeMode,
+        sleepWindow: sleepWindow,
         activityWeekMode: activityWeekMode,
         visibleMetrics: visibleMetrics ?? DashboardMetric.values.toSet(),
         refreshMode: refreshMode,

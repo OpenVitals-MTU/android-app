@@ -117,27 +117,28 @@ void main() {
     );
   });
 
-  testWidgets('a night with a daytime nap keeps both bars rounded',
-      (tester) async {
-    // The night's in-bed window ends at the NAP's end, hours after the night's
-    // own last stage. One clipped bar spanning the whole window would square off
-    // the night's rounded bottom edge at the empty afternoon gap; each block
-    // gets its own rounded bar instead. Regression guard for that fix.
-    SleepScheduleDay napNight(LocalDate date, int napHour) {
-      final bed = DateTime(date.year, date.month, date.day, 23, 20)
-          .subtract(const Duration(days: 1));
-      final wake = bed.add(const Duration(hours: 7, minutes: 40));
-      final napStart = DateTime(date.year, date.month, date.day, napHour, 0);
+  testWidgets('a partly-staged night reads at its full duration', (tester) async {
+    // A full night in bed (23:30–07:00) that the tracker staged only near the
+    // end — a tail-only reading. The bar draws the whole time in bed as a base
+    // block with stage colour overlaid on the staged tail, so it reads as its
+    // full duration (not a tiny fragment floating in an empty slot, and not a
+    // uniform solid block that hides the data). Regression guard for the
+    // 16th/18th "I slept much more" report. The middle night is fully staged.
+    SleepScheduleDay tailStaged(LocalDate date) {
+      final bed =
+          DateTime(date.year, date.month, date.day, 23, 30).subtract(
+        const Duration(days: 1),
+      );
+      final wake = bed.add(const Duration(hours: 7, minutes: 30));
       return SleepScheduleDay(
         date: date,
         inBedStart: bed,
-        inBedEnd: napStart.add(const Duration(minutes: 40)),
-        stages: [
-          ...stagesFrom(bed, wake.difference(bed)),
-          stage(SleepStage.stageLight, napStart, const Duration(minutes: 25)),
-          stage(SleepStage.stageRem, napStart.add(const Duration(minutes: 25)),
-              const Duration(minutes: 15)),
-        ],
+        inBedEnd: wake,
+        // ~50 min of stages at the tail of a 7h30m night — well under half.
+        stages: stagesFrom(
+          wake.subtract(const Duration(minutes: 50)),
+          const Duration(minutes: 50),
+        ),
       );
     }
 
@@ -145,15 +146,15 @@ void main() {
       tester,
       () => SleepScheduleStageChart(
         title: 'Sleep schedule',
-        summaryText: 'This week · with naps',
+        summaryText: 'This week · partly staged',
         days: [
-          napNight(monday, 14),
+          tailStaged(monday),
           night(monday.plusDays(1), 23, 5, const Duration(hours: 7, minutes: 55)),
-          napNight(monday.plusDays(2), 13),
+          tailStaged(monday.plusDays(2)),
         ],
         selectedRange: TimeRange.week,
       ),
-      name: 'sleep_schedule_chart_nap',
+      name: 'sleep_schedule_chart_partly_staged',
     );
   });
 

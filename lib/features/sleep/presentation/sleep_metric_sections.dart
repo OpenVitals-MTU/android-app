@@ -7,6 +7,7 @@ import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/insights/cross_metric_insights.dart';
 import '../../../domain/insights/data_confidence.dart';
 import '../../../domain/insights/metric_interpretations.dart';
+import '../../../domain/model/sleep_daily_summary.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/cross_metric_insight_card.dart';
@@ -307,7 +308,11 @@ class SleepSessionsSection extends StatelessWidget {
       rowBuilder: (context, session) => SleepSessionItem(
         session: session,
         formatter: formatter,
-        onTap: () => onOpenSession(session.id),
+        // A merged night maps to no single record, so it is not openable; a
+        // single-session night keeps its real id and stays tappable.
+        onTap: session.id.startsWith(mergedNightIdPrefix)
+            ? null
+            : () => onOpenSession(session.id),
       ),
     );
   }

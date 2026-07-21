@@ -128,49 +128,40 @@ void main() {
   });
 
   group('toSleepScheduleDays', () {
-    test('takes the earliest bedtime and latest wake of each night', () {
+    // The chart now consumes ONE already-merged night per date (built upstream by
+    // dailySleepSummary); it only maps span + stages onto the bar.
+    test('maps a merged night to its span and stages', () {
       final date = LocalDate(2026, 7, 5);
-      final days = toSleepScheduleDays({
-        date: [
-          session(at(5, 23, 30), at(6, 3)),
-          session(at(6, 3, 30), at(6, 7)),
-        ],
-      });
+      final night = session(at(5, 23, 30), at(6, 7), stages: [
+        stage(at(5, 23, 30), at(6, 3), SleepStage.stageDeep),
+        stage(at(6, 3), at(6, 7), SleepStage.stageRem),
+      ]);
+      final days = toSleepScheduleDays({date: night});
 
       expect(days, hasLength(1));
       expect(days.single.inBedStart, at(5, 23, 30));
       expect(days.single.inBedEnd, at(6, 7));
+      expect(days.single.stages.map((s) => s.stageType),
+          [SleepStage.stageDeep, SleepStage.stageRem]);
     });
 
-    test('merges and sorts every session stage', () {
+    test('a night with no stages carries an empty stage list', () {
       final date = LocalDate(2026, 7, 5);
-      final days = toSleepScheduleDays({
-        date: [
-          session(at(6, 3), at(6, 7), stages: [
-            stage(at(6, 3), at(6, 7), SleepStage.stageRem),
-          ]),
-          session(at(5, 23), at(6, 3), stages: [
-            stage(at(5, 23), at(6, 3), SleepStage.stageDeep),
-          ]),
-        ],
-      });
-
-      final stages = days.single.stages;
-      expect(stages, hasLength(2));
-      expect(stages.first.stageType, SleepStage.stageDeep);
-      expect(stages.last.stageType, SleepStage.stageRem);
+      final days = toSleepScheduleDays({date: session(at(5, 23), at(6, 7))});
+      expect(days.single.inBedStart, at(5, 23));
+      expect(days.single.stages, isEmpty);
     });
 
-    test('a night with no sessions has no bedtime', () {
-      final days = toSleepScheduleDays({LocalDate(2026, 7, 5): const []});
+    test('a date with no night has no bedtime', () {
+      final days = toSleepScheduleDays({LocalDate(2026, 7, 5): null});
       expect(days.single.inBedStart, isNull);
       expect(days.single.inBedEnd, isNull);
     });
 
     test('days come out in date order', () {
       final days = toSleepScheduleDays({
-        LocalDate(2026, 7, 6): [session(at(6, 23), at(7, 7))],
-        LocalDate(2026, 7, 5): [session(at(5, 23), at(6, 7))],
+        LocalDate(2026, 7, 6): session(at(6, 23), at(7, 7)),
+        LocalDate(2026, 7, 5): session(at(5, 23), at(6, 7)),
       });
       expect(
         [for (final day in days) day.date],

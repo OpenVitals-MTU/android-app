@@ -4,7 +4,6 @@ import '../../../core/time/local_date.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/model/sleep_session_merging.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/query/sleep_period_data.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
@@ -24,8 +23,7 @@ class SleepRepositoryImpl implements SleepRepository {
 
   @override
   Future<Result<SleepPeriodData>> loadSleepPeriod(
-    PeriodLoadQuery query,
-    SleepRangeMode sleepRangeMode, {
+    PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>
       runCatching(() async {
@@ -34,12 +32,12 @@ class SleepRepositoryImpl implements SleepRepository {
           return const SleepPeriodData();
         }
         final windows = query.windows;
-        final current =
-            await _dataSource.readSleepData(windows.current.start, windows.current.end, sleepRangeMode);
+        final current = await _dataSource.readSleepData(
+            windows.current.start, windows.current.end);
         final previous = await _dataSource.readSleepData(
-            windows.previous.start, windows.previous.end, sleepRangeMode);
+            windows.previous.start, windows.previous.end);
         final baseline = await _dataSource.readSleepData(
-            windows.baseline.start, windows.baseline.end, sleepRangeMode);
+            windows.baseline.start, windows.baseline.end);
         return SleepPeriodData(
           sessions: current.sessions,
           previousSessions: previous.sessions,
@@ -75,5 +73,22 @@ class SleepRepositoryImpl implements SleepRepository {
 
   @override
   Future<Result<SleepData?>> loadSleepSession(String id) =>
-      runCatching(() => _dataSource.readSleepSession(id));
+      runCatching(() async {
+        // The list already merges the raw Health Connect records into one night
+        // per source, so a day card's "night" often carries a synthetic
+        // `merged:…` id that belongs to no single record. Rebuild that night
+        // from its component records the same way the list did, rather than
+        // asking Health Connect for an id it has never heard of.
+        final componentIds = mergedSleepSessionComponentIds(id);
+        if (componentIds == null) return _dataSource.readSleepSession(id);
+
+        final components = <SleepData>[];
+        for (final componentId in componentIds) {
+          final session = await _dataSource.readSleepSession(componentId);
+          if (session != null) components.add(session);
+        }
+        if (components.isEmpty) return null;
+        final merged = mergeSleepSessions(components);
+        return merged.isEmpty ? null : merged.first;
+      });
 }

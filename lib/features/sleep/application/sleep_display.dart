@@ -16,7 +16,7 @@ import '../../../domain/insights/personal_baseline.dart';
 import '../../../domain/insights/sleep_score.dart';
 import '../../../domain/model/sleep_daily_summary.dart';
 import '../../../domain/model/sleep_models.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
+import '../../../domain/preferences/sleep_window.dart';
 import '../../../domain/model/recording_method.dart';
 import '../../../domain/usecase/load_sleep_period_use_case.dart';
 import '../../../ui/charts/bar_chart.dart';
@@ -155,17 +155,23 @@ abstract class SleepDisplay with _$SleepDisplay {
     required CrossMetricInsight? hrvInsight,
     required DataConfidence dataConfidence,
 
-    /// The entry lists, newest night first.
-    required Map<LocalDate, List<SleepData>> sortedSessionsByDate,
-    required List<SleepData> sortedDailySessions,
-    required List<SleepData> sortedPeriodSessions,
     required String? dayTimeRangeText,
+
+    /// The merged night per date — the entry lists render this one night, not
+    /// the raw segments. Null on a date with no night.
+    required Map<LocalDate, SleepData?> nightByDate,
+
+    /// Daytime naps per date, reported apart from the night.
+    required Map<LocalDate, List<SleepData>> napsByDate,
+
+    /// One merged night per date over the period, newest night first.
+    required List<SleepData> periodNights,
   }) = _SleepDisplay;
 
-  /// Only a single night can be opened. With two or more sessions
-  /// [dailySummary] is a MERGED summary whose id belongs to no record, so there
-  /// is nothing for the detail screen to load — Kotlin gated on
-  /// `dailySessions.singleOrNull()` for exactly this.
+  /// The id the day card opens, or null when the day has no single night to
+  /// open. The night is already merged upstream, so its id may be a synthetic
+  /// `merged:…` one — the detail loader rebuilds that night from its component
+  /// records, so a merged id is openable just like a plain one.
   String? get openableDailySessionId =>
       dailySessions.length == 1 ? dailySessions.single.id : null;
 }
@@ -181,7 +187,7 @@ SleepDisplay buildSleepDisplay({
   required SleepPeriodLoadResult result,
   required TimeRange selectedRange,
   required LocalDate selectedDate,
-  required SleepRangeMode sleepRangeMode,
+  required SleepWindow sleepWindow,
   required WeekPeriodMode weekPeriodMode,
   required double dailyGoalHours,
 }) {
@@ -199,25 +205,25 @@ SleepDisplay buildSleepDisplay({
   // Split the selected day into the night and its daytime naps: the timeline
   // card, duration and stage breakdown are the night only, naps reported apart.
   final daySplit = splitNightAndNaps(
-    sleepSessionsForRange(result.sessions, selectedDate, sleepRangeMode),
+    sleepSessionsForRange(result.sessions, selectedDate, sleepWindow),
   );
   final dailySessions = daySplit.night;
   final dayNaps = daySplit.naps;
   final dailySummary = dailySleepSummary(
     result.sessions,
     selectedDate,
-    sleepRangeMode: sleepRangeMode,
+    sleepWindow: sleepWindow,
   );
 
   final durationPoints = _sleepDurationPoints(
     result.sessions,
     selectedPeriod,
-    sleepRangeMode,
+    sleepWindow,
   );
   final previousDurationPoints = _sleepDurationPoints(
     result.previousSessions,
     previousPeriod,
-    sleepRangeMode,
+    sleepWindow,
   );
 
   final scoreSessions = _distinctById([
@@ -228,23 +234,32 @@ SleepDisplay buildSleepDisplay({
     result.sessions,
     scoreSessions,
     selectedPeriod,
-    sleepRangeMode,
+    sleepWindow,
   );
 
   final baselineDurationPoints = _sleepDurationPoints(
     result.baselineSessions,
     baselinePeriodBefore(selectedPeriod),
-    sleepRangeMode,
+    sleepWindow,
   );
 
   final overviewSummary = _overviewSummary(overviewDays);
   final sessionsByDate = {
     for (final date in _datesInPeriod(selectedPeriod.start, selectedPeriod.end))
-      date: sleepSessionsForRange(result.sessions, date, sleepRangeMode),
+      date: sleepSessionsForRange(result.sessions, date, sleepWindow),
   };
   final periodSessions = [
     for (final sessions in sessionsByDate.values) ...sessions,
   ];
+  // The canonical merged night per date — the day card, the schedule chart and
+  // the entry lists all render this one night, never the raw segments.
+  final nightByDate =
+      _nightByDate(result.sessions, selectedPeriod, sleepWindow);
+  final napsByDate =
+      _napsByDate(result.sessions, selectedPeriod, sleepWindow);
+  final periodNights = _newestNightFirst(
+    [for (final night in nightByDate.values) ?night],
+  );
   final crossMetricHrvValues = [
     for (final hrv in result.crossDailyHrv)
       CrossMetricValue(date: hrv.date, value: hrv.rmssdMs),
@@ -255,7 +270,7 @@ SleepDisplay buildSleepDisplay({
   final averageHours = sleepAverageHours(nights);
   final previousAverageHours =
       sleepAverageHours(sleepNights(previousDurationPoints));
-  final scheduleDays = toSleepScheduleDays(sessionsByDate);
+  final scheduleDays = toSleepScheduleDays(nightByDate);
   final confidenceSessions = isDay ? dailySessions : periodSessions;
 
   return SleepDisplay(
@@ -326,13 +341,10 @@ SleepDisplay buildSleepDisplay({
               session.recordingMethod == RecordingMethod.manualEntry)
           .length,
     ),
-    sortedSessionsByDate: {
-      for (final entry in sessionsByDate.entries)
-        entry.key: _newestNightFirst(entry.value),
-    },
-    sortedDailySessions: _newestNightFirst(dailySessions),
-    sortedPeriodSessions: _newestNightFirst(periodSessions),
     dayTimeRangeText: _dayTimeRangeText(dailySessions),
+    nightByDate: nightByDate,
+    napsByDate: napsByDate,
+    periodNights: periodNights,
   );
 }
 
@@ -384,30 +396,51 @@ List<SleepStageShare> sleepStageShares(SleepOverviewSummary summary) {
   ];
 }
 
-/// Kotlin `List<SleepOverviewDay>.toSleepScheduleDays()`.
+/// One schedule bar per date, built from the SAME merged night the day card
+/// shows ([dailySleepSummary]) — its span (`inBedStart..inBedEnd`) and its
+/// stages describe the one interval, so coverage is naturally whole and the
+/// painter never mistakes a night-with-data for a stageless one. Kotlin
+/// `List<SleepOverviewDay>.toSleepScheduleDays()`.
 List<SleepScheduleDay> toSleepScheduleDays(
-  Map<LocalDate, List<SleepData>> sessionsByDate,
+  Map<LocalDate, SleepData?> nightByDate,
 ) {
   final days = <SleepScheduleDay>[];
-  final dates = sessionsByDate.keys.toList()..sort();
+  final dates = nightByDate.keys.toList()..sort();
   for (final date in dates) {
-    final sessions = sessionsByDate[date]!;
-    final stages = [
-      for (final session in sessions) ...session.stages,
-    ]..sort((a, b) => a.startTime.compareTo(b.startTime));
+    final night = nightByDate[date];
     days.add(SleepScheduleDay(
       date: date,
-      inBedStart: sessions.isEmpty
-          ? null
-          : sessions.map((s) => s.startTime).reduce((a, b) => a.isBefore(b) ? a : b),
-      inBedEnd: sessions.isEmpty
-          ? null
-          : sessions.map((s) => s.endTime).reduce((a, b) => a.isAfter(b) ? a : b),
-      stages: stages,
+      inBedStart: night?.startTime,
+      inBedEnd: night?.endTime,
+      stages: night?.stages ?? const [],
     ));
   }
   return days;
 }
+
+/// The merged night for each date in [period] — the single canonical night
+/// ([dailySleepSummary]) every view now shares: the day card, the schedule
+/// chart, and the entry lists. Null on a date with no night.
+Map<LocalDate, SleepData?> _nightByDate(
+  List<SleepData> sessions,
+  DatePeriod period,
+  SleepWindow sleepWindow,
+) =>
+    {
+      for (final date in _datesInPeriod(period.start, period.end))
+        date: dailySleepSummary(sessions, date, sleepWindow: sleepWindow),
+    };
+
+/// The daytime naps for each date, reported apart from the night.
+Map<LocalDate, List<SleepData>> _napsByDate(
+  List<SleepData> sessions,
+  DatePeriod period,
+  SleepWindow sleepWindow,
+) =>
+    {
+      for (final date in _datesInPeriod(period.start, period.end))
+        date: dailyNaps(sessions, date, sleepWindow: sleepWindow),
+    };
 
 List<SleepData> _newestNightFirst(List<SleepData> sessions) =>
     [...sessions]..sort((a, b) => b.endTime.compareTo(a.endTime));
@@ -447,10 +480,10 @@ List<LocalDate> _datesInPeriod(LocalDate start, LocalDate end) {
 double nightAsleepHours(
   List<SleepData> sessions,
   LocalDate date, {
-  SleepRangeMode sleepRangeMode = SleepRangeMode.evening18h,
+  SleepWindow sleepWindow = SleepWindow.defaultWindow,
 }) {
   final summary =
-      dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode);
+      dailySleepSummary(sessions, date, sleepWindow: sleepWindow);
   if (summary == null) return 0.0;
   return sleepDurationMsFromStages(summary.stages, summary.durationMs) /
       3600000.0;
@@ -459,7 +492,7 @@ double nightAsleepHours(
 List<SleepDurationPoint> _sleepDurationPoints(
   List<SleepData> sessions,
   DatePeriod period,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) {
   // Hours ASLEEP per night (wake time within the session excluded), grouped by
   // the same window the sessions are. (The old Health-Connect daily aggregate
@@ -469,7 +502,7 @@ List<SleepDurationPoint> _sleepDurationPoints(
     for (final date in _datesInPeriod(period.start, period.end))
       SleepDurationPoint(
         date,
-        nightAsleepHours(sessions, date, sleepRangeMode: sleepRangeMode),
+        nightAsleepHours(sessions, date, sleepWindow: sleepWindow),
       ),
   ];
 }
@@ -482,16 +515,30 @@ class _OverviewDay {
   final List<SleepData> sessions;
   final SleepScoreEstimate sleepScore;
 
-  /// Wall-clock time in bed for the night: the union of its segments, so
-  /// overlapping sessions from different sources count their shared time once.
-  int get sleepDurationMs => sleepSessionsUnionMs(sessions);
-
-  int get timeInBedMs => sleepSessionsUnionMs(sessions);
-
-  int _stageMs(Set<int> types) => sessions.fold<int>(
-        0,
-        (sum, s) => sum + s.stages.durationMsForTypes(types),
+  /// Time actually **asleep**: sleep-stage time with wake excluded (falling back
+  /// to the in-bed union when a night carries no stages). This is the figure the
+  /// overview highlights and the goal counts — not time in bed.
+  int get sleepDurationMs => sleepDurationMsFromStages(
+        combineNightStages(sessions, maxGap: kSleepNapGap),
+        sleepSessionsUnionMs(sessions),
       );
+
+  /// Time in bed: the full span from the night's first bedtime to its last wake,
+  /// wake gaps included (AASM "time in bed", and the sleep-efficiency
+  /// denominator). Distinct from [sleepDurationMs], which is time asleep.
+  int get timeInBedMs {
+    if (sessions.isEmpty) return 0;
+    final start = sessions
+        .map((s) => s.startTime)
+        .reduce((a, b) => a.isBefore(b) ? a : b);
+    final end =
+        sessions.map((s) => s.endTime).reduce((a, b) => a.isAfter(b) ? a : b);
+    return math.max(0, end.difference(start).inMilliseconds);
+  }
+
+  int _stageMs(Set<int> types) =>
+      combineNightStages(sessions, maxGap: kSleepNapGap)
+          .durationMsForTypes(types);
 
   int get awakeDurationMs => _stageMs(awakeStageTypes);
   int get remDurationMs => _stageMs({SleepStage.stageRem});
@@ -516,15 +563,15 @@ List<_OverviewDay> _overviewDays(
   List<SleepData> sessions,
   List<SleepData> scoreSessions,
   DatePeriod period,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) {
   return [
     for (final date in _datesInPeriod(period.start, period.end))
       _OverviewDay(
         splitNightAndNaps(
-          sleepSessionsForRange(sessions, date, sleepRangeMode),
+          sleepSessionsForRange(sessions, date, sleepWindow),
         ).night,
-        calculateSleepScoreForDate(date, scoreSessions, sleepRangeMode),
+        calculateSleepScoreForDate(date, scoreSessions, sleepWindow),
       ),
   ];
 }

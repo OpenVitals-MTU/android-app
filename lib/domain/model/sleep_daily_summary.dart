@@ -1,7 +1,8 @@
 import '../../core/time/local_date.dart';
-import '../preferences/sleep_range_mode.dart';
+import '../preferences/sleep_window.dart';
 import 'sleep_models.dart';
 
+/// A half-open clock window `[start, end)` of device-local instants.
 class SleepRangeWindow {
   const SleepRangeWindow({required this.start, required this.end});
 
@@ -9,59 +10,43 @@ class SleepRangeWindow {
   final DateTime end;
 }
 
-SleepRangeWindow sleepRangeWindowFor(
+/// The NIGHT window for [selectedDate]: from the configured evening hour the
+/// previous day to the configured morning hour today — e.g. `[(D-1) 18:00,
+/// D 10:00)`.
+SleepRangeWindow sleepNightWindowFor(
   LocalDate selectedDate,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) =>
     SleepRangeWindow(
-      start: sleepRangeStartFor(selectedDate, sleepRangeMode),
-      end: sleepRangeEndFor(selectedDate, sleepRangeMode),
+      start: sleepRangeStartFor(selectedDate, sleepWindow),
+      end: sleepRangeEndFor(selectedDate, sleepWindow),
     );
 
-/// The device-local instant at which the sleep window for [selectedDate]
-/// begins. In Kotlin this returns a `LocalDateTime`; here it is resolved to the
-/// device-zone instant directly.
-DateTime sleepRangeStartFor(
-  LocalDate selectedDate,
-  SleepRangeMode sleepRangeMode,
-) {
-  switch (sleepRangeMode) {
-    case SleepRangeMode.rolling24h:
-      return selectedDate.atTimeInstant(0);
-    case SleepRangeMode.noon:
-      return selectedDate.minusDays(1).atTimeInstant(12);
-    case SleepRangeMode.evening18h:
-      return selectedDate.minusDays(1).atTimeInstant(18);
-  }
-}
+/// The instant the night for [selectedDate] opens: [SleepWindow.startHour] the
+/// previous evening.
+DateTime sleepRangeStartFor(LocalDate selectedDate, SleepWindow sleepWindow) =>
+    selectedDate.minusDays(1).atTimeInstant(sleepWindow.startHour);
 
-DateTime sleepRangeEndFor(
-  LocalDate selectedDate,
-  SleepRangeMode sleepRangeMode,
-) {
-  switch (sleepRangeMode) {
-    case SleepRangeMode.rolling24h:
-      return selectedDate.plusDays(1).atTimeInstant(0);
-    case SleepRangeMode.noon:
-      return selectedDate.atTimeInstant(12);
-    case SleepRangeMode.evening18h:
-      return selectedDate.atTimeInstant(18);
-  }
-}
+/// The instant the night for [selectedDate] closes: [SleepWindow.endHour] this
+/// morning. After this, up to the next evening's [SleepWindow.startHour], a
+/// session is a daytime nap (see [dailyNaps]).
+DateTime sleepRangeEndFor(LocalDate selectedDate, SleepWindow sleepWindow) =>
+    selectedDate.atTimeInstant(sleepWindow.endHour);
 
+/// The night's sessions for [selectedDate]: those that BEGAN inside the night
+/// window. Classifying by start time (not wake) keeps a sleep-in that runs past
+/// the morning hour attached to the night it belongs to, instead of misfiling
+/// it as a nap; and it still puts a night begun the previous evening on the
+/// wake-up date, as before.
 List<SleepData> sleepSessionsForRange(
   List<SleepData> sessions,
   LocalDate selectedDate,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) {
-  final window = sleepRangeWindowFor(selectedDate, sleepRangeMode);
+  final window = sleepNightWindowFor(selectedDate, sleepWindow);
   final filtered =
-      sessions.where((session) => _containsEnd(window, session)).toList();
-  filtered.sort((a, b) {
-    final byStart = a.startTime.compareTo(b.startTime);
-    if (byStart != 0) return byStart;
-    return a.endTime.compareTo(b.endTime);
-  });
+      sessions.where((session) => _containsStart(window, session)).toList()
+        ..sort(_byStartThenEnd);
   return filtered;
 }
 
@@ -69,6 +54,11 @@ List<SleepData> sleepSessionsForRange(
 /// early-morning wake (well under this) keeps one night together; a clearly
 /// daytime session sits on the far side of a gap this large and reads as a nap.
 const Duration kSleepNapGap = Duration(hours: 3);
+
+/// The id prefix a [dailySleepSummary] gives a night it MERGED from 2+ segments.
+/// Such a night maps to no single Health Connect record, so the detail screen
+/// cannot load it — the entry list gates tap on this.
+const String mergedNightIdPrefix = 'daily:';
 
 /// A day's sleep split into the main night and any daytime naps.
 class SleepNightSplit {
@@ -137,22 +127,38 @@ int _byStartThenEnd(SleepData a, SleepData b) {
 }
 
 /// The daytime naps for [selectedDate], reported separately from the night.
+///
+/// Two sources: a far-apart session peeled off the night cluster by
+/// [splitNightAndNaps] (an early-evening nap hours before sleep), and any
+/// session that BEGAN in the daytime gap between the morning [SleepWindow.endHour]
+/// and the evening [SleepWindow.startHour]. Night ∪ daytime tiles the whole day
+/// by start time, so no session is ever dropped.
 List<SleepData> dailyNaps(
   List<SleepData> sessions,
   LocalDate selectedDate, {
-  SleepRangeMode sleepRangeMode = SleepRangeMode.evening18h,
-}) =>
-    splitNightAndNaps(
-      sleepSessionsForRange(sessions, selectedDate, sleepRangeMode),
-    ).naps;
+  SleepWindow sleepWindow = SleepWindow.defaultWindow,
+}) {
+  final nightNaps = splitNightAndNaps(
+    sleepSessionsForRange(sessions, selectedDate, sleepWindow),
+  ).naps;
+  final daytimeStart = selectedDate.atTimeInstant(sleepWindow.endHour);
+  final daytimeEnd = selectedDate.atTimeInstant(sleepWindow.startHour);
+  final daytimeNaps = [
+    for (final session in sessions)
+      if (!session.startTime.isBefore(daytimeStart) &&
+          session.startTime.isBefore(daytimeEnd))
+        session,
+  ];
+  return [...nightNaps, ...daytimeNaps]..sort(_byStartThenEnd);
+}
 
 SleepData? dailySleepSummary(
   List<SleepData> sessions,
   LocalDate selectedDate, {
-  SleepRangeMode sleepRangeMode = SleepRangeMode.evening18h,
+  SleepWindow sleepWindow = SleepWindow.defaultWindow,
 }) {
   final windowed =
-      sleepSessionsForRange(sessions, selectedDate, sleepRangeMode);
+      sleepSessionsForRange(sessions, selectedDate, sleepWindow);
   // Naps are reported separately; the night's summary is the night only, and its
   // duration is wall-clock time in bed — the union of the night's segments, so
   // two overlapping sessions from different sources count their shared time once
@@ -205,20 +211,17 @@ SleepData? dailySleepSummary(
         .toList(),
   );
 
-  final seenStageKeys = <(DateTime, DateTime, int)>{};
-  final mergedStages = <SleepStage>[];
-  for (final stage in dailySessions.expand((session) => session.stages)) {
-    final key = (stage.startTime, stage.endTime, stage.stageType);
-    if (seenStageKeys.add(key)) mergedStages.add(stage);
-  }
-  mergedStages.sort((a, b) {
-    final byStart = a.startTime.compareTo(b.startTime);
-    if (byStart != 0) return byStart;
-    return a.endTime.compareTo(b.endTime);
-  });
+  // A night can be several segments split by a wake (05:18–07:34 here). Combine
+  // them into one continuous stage timeline with the wake filled as Awake, so
+  // the span is covered by stages: otherwise the un-slept gap counts against
+  // sleepSessionHasReliableStages and the day view hides the hypnogram, and the
+  // schedule bar shows a hole. Gaps stay within the night by splitNightAndNaps
+  // (<= kSleepNapGap), so filling up to that bound never bridges a daytime nap.
+  final mergedStages =
+      combineNightStages(dailySessions, maxGap: kSleepNapGap);
 
   return SleepData(
-    id: 'daily:$selectedDate',
+    id: '$mergedNightIdPrefix$selectedDate',
     startTime: first.startTime,
     endTime: last.endTime,
     durationMs: nightDurationMs,
@@ -238,9 +241,9 @@ SleepData? dailySleepSummary(
   );
 }
 
-bool _containsEnd(SleepRangeWindow window, SleepData session) =>
-    !session.endTime.isBefore(window.start) &&
-    session.endTime.isBefore(window.end);
+bool _containsStart(SleepRangeWindow window, SleepData session) =>
+    !session.startTime.isBefore(window.start) &&
+    session.startTime.isBefore(window.end);
 
 List<T> _distinct<T>(List<T> items) {
   final seen = <T>{};

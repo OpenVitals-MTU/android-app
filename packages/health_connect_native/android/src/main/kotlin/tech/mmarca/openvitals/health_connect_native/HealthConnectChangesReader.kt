@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.health_connect_native
 
 import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.changes.UpsertionChange
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
@@ -9,6 +10,7 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
 import java.time.Instant
@@ -68,7 +70,9 @@ internal class HealthConnectChangesReader(
       )
     }
 
-  // Tokens are registered per vitals record type, so only these reach here.
+  // Tokens are registered per record type, so only these reach here. The
+  // calorie records are interval records (startTime/endTime), bucketed by their
+  // start to match the daily calories-burned cache.
   private fun instantOf(record: Record): Instant? = when (record) {
     is BloodPressureRecord -> record.time
     is OxygenSaturationRecord -> record.time
@@ -77,6 +81,8 @@ internal class HealthConnectChangesReader(
     is Vo2MaxRecord -> record.time
     is BloodGlucoseRecord -> record.time
     is SkinTemperatureRecord -> record.startTime
+    is TotalCaloriesBurnedRecord -> record.startTime
+    is ActiveCaloriesBurnedRecord -> record.startTime
     else -> null
   }
 }

@@ -11,7 +11,6 @@ import '../../domain/preferences/activity_week_mode.dart';
 import '../../domain/preferences/app_language.dart';
 import '../../domain/preferences/app_theme_mode.dart';
 import '../../domain/preferences/caffeine_preferences.dart';
-import '../../domain/preferences/sleep_range_mode.dart';
 import '../../domain/preferences/unit_system.dart';
 import '../../features/activity/maps/offline_map_metadata_store.dart';
 import '../../features/homewidgets/home_widget_service.dart';
@@ -192,7 +191,8 @@ Future<void> _migratePreferences(
 final Map<String, List<Enum>> _enumValuedKeys = {
   'unit_system': UnitSystem.values,
   'app_theme_mode': AppThemeMode.values,
-  'sleep_range_mode': SleepRangeMode.values,
+  // sleep_range_mode was replaced by numeric night start/end hours (no enum to
+  // migrate; a legacy install cleanly picks up the new 18:00/10:00 default).
   'activity_week_mode': ActivityWeekMode.values,
   'caffeine_sleep_sensitivity': CaffeineSleepSensitivity.values,
   'caffeine_alcohol_use': CaffeineAlcoholUse.values,

@@ -16,7 +16,7 @@ import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/sleep_daily_summary.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/preferences/activity_week_mode.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
+import '../../../domain/preferences/sleep_window.dart';
 import '../impl/run_catching.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
@@ -86,7 +86,7 @@ class DashboardDataLoader {
     required bool showOpenVitalsCalculatedCalories,
   }) async {
     final date = query.date;
-    final sleepRangeMode = query.sleepRangeMode;
+    final sleepWindow = query.sleepWindow;
     final activityWeekMode = query.activityWeekMode;
 
     bool wants(DashboardMetric metric) => metrics.contains(metric);
@@ -111,7 +111,7 @@ class DashboardDataLoader {
         const <ExerciseData>[];
     final dashboardSleep = await _metric(
         wants(DashboardMetric.sleep), HcPermissions.readSleep, granted,
-        () => _readDashboardSleep(date, sleepRangeMode));
+        () => _readDashboardSleep(date, sleepWindow));
     final calories = await _metric(wants(DashboardMetric.caloriesOut),
         HcPermissions.readTotalCalories, granted,
         () => _hc.readCaloriesBurned(
@@ -393,21 +393,20 @@ class DashboardDataLoader {
 
   Future<_DashboardSleepData> _readDashboardSleep(
     LocalDate date,
-    SleepRangeMode sleepRangeMode,
+    SleepWindow sleepWindow,
   ) async {
     final data = await _hc.readSleepData(
       date.minusDays(sleepScoreLookbackDays - 1),
       date,
-      sleepRangeMode,
     );
     final sessions = data.sessions;
     // The night's wall-clock duration, not the Health-Connect start-date aggregate
     // (which mis-attributed a night crossing midnight to the previous day).
     final sleep =
-        dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode);
+        dailySleepSummary(sessions, date, sleepWindow: sleepWindow);
     return _DashboardSleepData(
       sleep: sleep,
-      sleepScore: calculateSleepScoreForDate(date, sessions, sleepRangeMode),
+      sleepScore: calculateSleepScoreForDate(date, sessions, sleepWindow),
     );
   }
 

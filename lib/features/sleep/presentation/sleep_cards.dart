@@ -110,17 +110,27 @@ class SleepSessionTimelineCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        formatter.duration(session.durationMs),
+                        // The highlight is time asleep (wake excluded), not time
+                        // in bed — which is shown below in smaller type. Falls
+                        // back to the span when the night carries no stages.
+                        formatter.duration(sleepDurationMsFromStages(
+                            session.stages, session.durationMs)),
                         style: theme.textTheme.headlineMedium
                             ?.copyWith(color: AppColors.sleep),
                       ),
                       Text(
-                        // The headline duration is the whole session span (awake
-                        // stretches included) — time in bed, matching the overview
-                        // tile and the "share of time in bed" card below.
-                        l10n.sleepTimeInBed,
+                        l10n.metricSleep,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        // Time in bed: the full bedtime-to-final-wake span.
+                        '${formatter.duration(session.endTime.difference(session.startTime).inMilliseconds)} '
+                        '${l10n.sleepTimeInBed.toLowerCase()}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.7)),
                       ),
                     ],
                   ),
@@ -320,10 +330,10 @@ class SleepOverviewCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _OverviewTile(
-                // The value is the union of the night's session spans — the whole
-                // time in bed, awake stretches included — not time asleep, which
-                // is why "Sleep efficiency" sits beside it. Name it for what it is.
-                title: 'Time in bed',
+                // The highlight: time actually asleep (wake excluded). Time in
+                // bed is kept too, but demoted to the row below — see the user's
+                // "focus on sleep, not time in bed".
+                title: 'Sleep',
                 value: summary.sleepDurationMs > 0
                     ? formatter.duration(summary.sleepDurationMs)
                     : '--',
@@ -356,6 +366,35 @@ class SleepOverviewCard extends StatelessWidget {
                 accent: AppColors.sleep,
                 onTap: () =>
                     context.push(AppRoutes.sleepEfficiencyDetail),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _OverviewTile(
+                // Still useful, but no longer the headline — the full span from
+                // bedtime to final wake, wake included (the efficiency
+                // denominator).
+                title: 'Time in bed',
+                value: summary.timeInBedMs > 0
+                    ? formatter.duration(summary.timeInBedMs)
+                    : '--',
+                subtitle: periodTitle,
+                accent: AppColors.sleep,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _OverviewTile(
+                title: 'Awake',
+                value: summary.timeInBedMs > 0
+                    ? formatter.duration(summary.awakeDurationMs)
+                    : '--',
+                subtitle: periodTitle,
+                accent: AppColors.sleep,
               ),
             ),
           ],

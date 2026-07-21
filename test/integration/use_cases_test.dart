@@ -6,7 +6,6 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/refresh_mode.dart';
 import 'package:openvitals/domain/usecase/load_heart_period_use_case.dart';
-import 'package:openvitals/domain/preferences/sleep_range_mode.dart';
 
 import '../support/boot_container.dart';
 
@@ -40,7 +39,6 @@ final _useCases = <_UseCase>[
     'sleep',
     (c, q, m) => c.read(loadSleepPeriodUseCaseProvider)(
       q,
-      SleepRangeMode.noon,
       refreshMode: m,
     ),
   ),

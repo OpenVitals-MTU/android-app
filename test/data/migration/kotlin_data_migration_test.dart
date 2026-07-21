@@ -13,7 +13,6 @@ import 'package:openvitals/domain/preferences/activity_week_mode.dart';
 import 'package:openvitals/domain/preferences/app_language.dart';
 import 'package:openvitals/domain/preferences/app_theme_mode.dart';
 import 'package:openvitals/domain/preferences/caffeine_preferences.dart';
-import 'package:openvitals/domain/preferences/sleep_range_mode.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/activity/maps/offline_map_metadata_store.dart';
 import 'package:openvitals/features/homewidgets/home_widget_service.dart';
@@ -126,7 +125,6 @@ Map<String, Object?> kotlinPrefs() => <String, Object?>{
       'unit_system': 'IMPERIAL',
       'app_theme_mode': 'AMOLED',
       'app_language': 'es',
-      'sleep_range_mode': 'EVENING_18H',
       'activity_week_mode': 'LAST_7_DAYS',
       'dynamic_color': true,
       'detail_range_steps': 'MONTH',
@@ -207,7 +205,6 @@ void main() {
       expect(repo.unitSystem, UnitSystem.imperial);
       expect(repo.appThemeMode, AppThemeMode.amoled);
       expect(repo.appLanguage, AppLanguage.spanish);
-      expect(repo.sleepRangeMode, SleepRangeMode.evening18h);
       expect(repo.activityWeekMode, ActivityWeekMode.last7Days);
       expect(repo.dynamicColor, isTrue);
       expect(repo.onboardingDone, isTrue);
@@ -301,7 +298,6 @@ void main() {
           prefs: {
             'openvitals_prefs': {
               'unit_system': 'METRIC',
-              'sleep_range_mode': 'ROLLING_24H',
               'activity_week_mode': 'MONDAY_TO_SUNDAY',
               'caffeine_hormonal_status': 'ORAL_CONTRACEPTIVE',
               'detail_range_body': 'YEAR',
@@ -311,7 +307,6 @@ void main() {
       );
 
       expect(prefs.getString('unit_system'), 'metric');
-      expect(prefs.getString('sleep_range_mode'), 'rolling24h');
       expect(prefs.getString('activity_week_mode'), 'mondayToSunday');
       expect(prefs.getString('caffeine_hormonal_status'), 'oralContraceptive');
       expect(prefs.getString('detail_range_body'), 'year');

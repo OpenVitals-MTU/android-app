@@ -4,7 +4,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/domain/model/recording_method.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
-import 'package:openvitals/domain/preferences/sleep_range_mode.dart';
+import 'package:openvitals/domain/preferences/sleep_window.dart';
 import 'package:openvitals/domain/usecase/load_sleep_period_use_case.dart';
 import 'package:openvitals/features/sleep/application/sleep_display.dart';
 
@@ -55,7 +55,7 @@ SleepDisplay _display({
       result: result,
       selectedRange: selectedRange,
       selectedDate: selectedDate,
-      sleepRangeMode: SleepRangeMode.evening18h,
+      sleepWindow: SleepWindow.defaultWindow,
       weekPeriodMode: WeekPeriodMode.mondayToSunday,
       dailyGoalHours: dailyGoalHours,
     );
@@ -130,8 +130,9 @@ void main() {
       ]),
     );
 
-    expect(display.sortedPeriodSessions.first.id, 'newer');
-    expect(display.sortedPeriodSessions.last.id, 'older');
+    // The merged night per date, newest first.
+    expect(display.periodNights.first.id, 'newer');
+    expect(display.periodNights.last.id, 'older');
     // ...while the raw period list stays in date order, as the schedule and
     // confidence readings expect it.
     expect(display.periodSessions.first.id, 'older');
