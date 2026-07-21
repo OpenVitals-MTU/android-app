@@ -302,6 +302,43 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
     case MenstruationPeriodImportRecord r:
       return interval('MenstruationPeriod', r.startTime, r.startZoneOffset,
           r.endTime, r.endZoneOffset);
+    case PlannedExerciseSessionImportRecord r:
+      return ImportRecordMsg(
+        recordType: 'PlannedExerciseSession',
+        clientRecordId: record.clientRecordId,
+        startEpochMs: r.startTime.millisecondsSinceEpoch,
+        endEpochMs: r.endTime.millisecondsSinceEpoch,
+        startZoneOffsetSeconds: r.startZoneOffset?.inSeconds,
+        endZoneOffsetSeconds: r.endZoneOffset?.inSeconds,
+        doubleFields: const {},
+        intFields: {'exerciseType': r.exerciseType},
+        name: r.title,
+        notes: r.notes,
+        samples: const [],
+        sleepStages: const [],
+        routePoints: const [],
+        segments: const [],
+        laps: const [],
+        plannedBlocks: [
+          for (final b in r.blocks)
+            PlannedExerciseBlockMsg(
+              repetitions: b.repetitions,
+              description: b.description,
+              steps: [
+                for (final s in b.steps)
+                  PlannedExerciseStepMsg(
+                    exerciseType: s.exerciseType,
+                    exercisePhase: s.exercisePhase,
+                    description: s.description,
+                    completionKind:
+                        PlannedExerciseCompletionKindMsg.values[s.completionKind],
+                    completionRepetitions: s.completionRepetitions,
+                    completionSeconds: s.completionSeconds,
+                  ),
+              ],
+            ),
+        ],
+      );
   }
 }
 
@@ -414,6 +451,14 @@ ImportRecord? importRecordFromMsg(ImportRecordMsg m) {
       return SkinTemperatureImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, baselineCelsius: d['baselineCelsius'], measurementLocation: i['measurementLocation'] ?? 0, deltas: [for (final s in m.samples) SkinTemperatureDeltaValue(ms(s.timeEpochMs), s.value)]);
     case 'MenstruationPeriod':
       return MenstruationPeriodImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone);
+    case 'PlannedExerciseSession':
+      return PlannedExerciseSessionImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, exerciseType: i['exerciseType'] ?? 0, title: m.name, notes: m.notes, blocks: [
+        for (final b in m.plannedBlocks)
+          PlannedExerciseBlockValue(repetitions: b.repetitions, description: b.description, steps: [
+            for (final s in b.steps)
+              PlannedExerciseStepValue(exerciseType: s.exerciseType, exercisePhase: s.exercisePhase, description: s.description, completionKind: s.completionKind.index, completionRepetitions: s.completionRepetitions, completionSeconds: s.completionSeconds),
+          ]),
+      ]);
   }
   return null;
 }

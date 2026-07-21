@@ -872,14 +872,14 @@ internal class ActivityHealthReader(
   }
 }
 
-private fun PlannedExerciseBlock.toMsg(): PlannedExerciseBlockMsg =
+internal fun PlannedExerciseBlock.toMsg(): PlannedExerciseBlockMsg =
   PlannedExerciseBlockMsg(
     repetitions = repetitions.toLong(),
     description = description?.toString(),
     steps = steps.map { it.toMsg() },
   )
 
-private fun PlannedExerciseStep.toMsg(): PlannedExerciseStepMsg {
+internal fun PlannedExerciseStep.toMsg(): PlannedExerciseStepMsg {
   val goal = completionGoal
   return PlannedExerciseStepMsg(
     exerciseType = exerciseType.toLong(),
@@ -896,14 +896,14 @@ private fun PlannedExerciseStep.toMsg(): PlannedExerciseStepMsg {
   )
 }
 
-private fun PlannedExerciseBlockMsg.toRecord(): PlannedExerciseBlock =
+internal fun PlannedExerciseBlockMsg.toRecord(): PlannedExerciseBlock =
   PlannedExerciseBlock(
     repetitions = repetitions.toInt(),
     description = description,
     steps = steps.map { it.toRecord() },
   )
 
-private fun PlannedExerciseStepMsg.toRecord(): PlannedExerciseStep =
+internal fun PlannedExerciseStepMsg.toRecord(): PlannedExerciseStep =
   PlannedExerciseStep(
     exerciseType = exerciseType.toInt(),
     exercisePhase = exercisePhase.toInt(),

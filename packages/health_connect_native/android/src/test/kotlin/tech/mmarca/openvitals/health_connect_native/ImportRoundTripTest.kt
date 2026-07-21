@@ -154,4 +154,9 @@ class ImportRoundTripTest {
     assertThat(out.recordType).isEqualTo("MenstruationPeriod")
     assertThat(out.endEpochMs).isEqualTo(end)
   }
+
+  // NOTE: PlannedExerciseSession is intentionally not round-tripped here — Google's
+  // FakeHealthConnectClient throws "Unsupported yet!" for it. The builder/converter
+  // reuse the block <-> msg mappers the app's planned-exercise path already tests,
+  // and the Dart codec round-trips it in import_record_sync_codec_test.dart.
 }

@@ -81,6 +81,7 @@ const Map<String, String> kSyncableTypePermissionSuffix = <String, String>{
   // Sleep / Workouts / Mindfulness
   'SleepSessionRecord': 'SLEEP',
   'ExerciseSessionRecord': 'EXERCISE',
+  'PlannedExerciseSessionRecord': 'PLANNED_EXERCISE',
   'MindfulnessSessionRecord': 'MINDFULNESS',
   // Cycle
   'MenstruationFlowRecord': 'MENSTRUATION',

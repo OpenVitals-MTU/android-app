@@ -129,6 +129,22 @@ final samples = <ImportRecord>[
     endTime: utc(2026, 1, 19),
     endZoneOffset: null,
   ),
+  PlannedExerciseSessionImportRecord(
+    clientRecordId: 'x',
+    startTime: utc(2026, 1, 20, 7),
+    startZoneOffset: null,
+    endTime: utc(2026, 1, 20, 8),
+    endZoneOffset: null,
+    exerciseType: 56,
+    title: 'Interval run',
+    notes: 'track day',
+    blocks: [
+      PlannedExerciseBlockValue(repetitions: 4, description: 'sprints', steps: [
+        PlannedExerciseStepValue(exerciseType: 56, exercisePhase: 1, description: 'fast', completionKind: 1, completionRepetitions: null, completionSeconds: 60),
+        PlannedExerciseStepValue(exerciseType: 56, exercisePhase: 2, description: 'recover', completionKind: 0, completionRepetitions: 10, completionSeconds: null),
+      ]),
+    ],
+  ),
 ];
 
 void main() {

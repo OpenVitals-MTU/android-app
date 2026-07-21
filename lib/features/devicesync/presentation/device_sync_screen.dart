@@ -24,7 +24,7 @@ const Map<String, List<String>> _categories = {
     'CyclingPedalingCadenceRecord',
     'PowerRecord',
   ],
-  'workouts': ['ExerciseSessionRecord'],
+  'workouts': ['ExerciseSessionRecord', 'PlannedExerciseSessionRecord'],
   'heart': [
     'HeartRateRecord',
     'RestingHeartRateRecord',

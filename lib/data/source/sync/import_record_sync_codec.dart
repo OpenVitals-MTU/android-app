@@ -224,6 +224,16 @@ List<Object?> _fingerprintParts(ImportRecord r) {
       ];
     case MenstruationPeriodImportRecord():
       return [r.targetType, _inst(r.startTime), _inst(r.endTime)];
+    case PlannedExerciseSessionImportRecord():
+      return [
+        r.targetType,
+        _inst(r.startTime),
+        _inst(r.endTime),
+        r.exerciseType,
+        r.title ?? '',
+        for (final b in r.blocks)
+          '${b.repetitions}:${b.steps.map((s) => '${s.exerciseType}/${s.completionKind}/${s.completionRepetitions}/${s.completionSeconds}').join(',')}',
+      ];
   }
 }
 
@@ -360,6 +370,31 @@ Map<String, Object?> _encode(ImportRecord r) {
       };
     case MenstruationPeriodImportRecord():
       return _interval(r.startTime, r.startZoneOffset, r.endTime, r.endZoneOffset);
+    case PlannedExerciseSessionImportRecord():
+      return {
+        ..._interval(r.startTime, r.startZoneOffset, r.endTime, r.endZoneOffset),
+        'et': r.exerciseType,
+        'title': r.title,
+        'notes': r.notes,
+        'blocks': [
+          for (final b in r.blocks)
+            {
+              'reps': b.repetitions,
+              'desc': b.description,
+              'steps': [
+                for (final s in b.steps)
+                  {
+                    'et': s.exerciseType,
+                    'phase': s.exercisePhase,
+                    'desc': s.description,
+                    'ck': s.completionKind,
+                    'cr': s.completionRepetitions,
+                    'cs': s.completionSeconds,
+                  },
+              ],
+            },
+        ],
+      };
   }
 }
 
@@ -458,6 +493,14 @@ ImportRecord _decode(String type, String cid, Map<String, Object?> j) {
       return SkinTemperatureImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo(), baselineCelsius: dn('baseline'), measurementLocation: n('loc'), deltas: [for (final x in j['deltas']! as List) SkinTemperatureDeltaValue(_dt((x as Map)['t']), (x['v'] as num).toDouble())]);
     case 'MenstruationPeriodRecord':
       return MenstruationPeriodImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo());
+    case 'PlannedExerciseSessionRecord':
+      return PlannedExerciseSessionImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo(), exerciseType: n('et'), title: j['title'] as String?, notes: j['notes'] as String?, blocks: [
+        for (final b in (j['blocks']! as List).cast<Map>())
+          PlannedExerciseBlockValue(repetitions: (b['reps'] as num).toInt(), description: b['desc'] as String?, steps: [
+            for (final st in (b['steps']! as List).cast<Map>())
+              PlannedExerciseStepValue(exerciseType: (st['et'] as num).toInt(), exercisePhase: (st['phase'] as num).toInt(), description: st['desc'] as String?, completionKind: (st['ck'] as num).toInt(), completionRepetitions: (st['cr'] as num?)?.toInt(), completionSeconds: (st['cs'] as num?)?.toInt()),
+          ]),
+      ]);
   }
   throw UnsupportedSyncRecordType(type);
 }

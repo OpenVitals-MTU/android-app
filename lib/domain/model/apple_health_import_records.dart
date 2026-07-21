@@ -789,3 +789,64 @@ class MenstruationPeriodImportRecord extends ImportRecord {
   final DateTime endTime;
   final Duration? endZoneOffset;
 }
+
+/// One step within a planned-exercise block (`PlannedExerciseStep`).
+class PlannedExerciseStepValue {
+  const PlannedExerciseStepValue({
+    required this.exerciseType,
+    required this.exercisePhase,
+    this.description,
+    required this.completionKind,
+    this.completionRepetitions,
+    this.completionSeconds,
+  });
+
+  final int exerciseType;
+  final int exercisePhase;
+  final String? description;
+
+  /// The step's completion goal kind, matching `PlannedExerciseCompletionKindMsg`
+  /// ordinals: 0 repetitions, 1 durationSeconds, 2 manual, 3 unknown.
+  final int completionKind;
+  final int? completionRepetitions;
+  final int? completionSeconds;
+}
+
+/// One block of a planned-exercise session (`PlannedExerciseBlock`).
+class PlannedExerciseBlockValue {
+  const PlannedExerciseBlockValue({
+    required this.repetitions,
+    this.description,
+    required this.steps,
+  });
+
+  final int repetitions;
+  final String? description;
+  final List<PlannedExerciseStepValue> steps;
+}
+
+/// A planned (future) workout with its block/step structure
+/// (`PlannedExerciseSessionRecord`). `exerciseType` is the raw Health Connect
+/// exercise-type int (not the limited [ImportExerciseType]).
+class PlannedExerciseSessionImportRecord extends ImportRecord {
+  const PlannedExerciseSessionImportRecord({
+    required super.clientRecordId,
+    required this.startTime,
+    required this.startZoneOffset,
+    required this.endTime,
+    required this.endZoneOffset,
+    required this.exerciseType,
+    required this.title,
+    required this.notes,
+    required this.blocks,
+  }) : super(targetType: 'PlannedExerciseSessionRecord');
+
+  final DateTime startTime;
+  final Duration? startZoneOffset;
+  final DateTime endTime;
+  final Duration? endZoneOffset;
+  final int exerciseType;
+  final String? title;
+  final String? notes;
+  final List<PlannedExerciseBlockValue> blocks;
+}

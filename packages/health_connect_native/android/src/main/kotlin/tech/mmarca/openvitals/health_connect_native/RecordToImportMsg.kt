@@ -28,6 +28,7 @@ import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -139,8 +140,28 @@ internal object RecordToImportMsg {
 
     // ── Exercise (interval) ────────────────────────────────────────────────
     is ExerciseSessionRecord -> exercise(record)
+    is PlannedExerciseSessionRecord -> ImportRecordMsg(
+      recordType = "PlannedExerciseSession",
+      clientRecordId = record.metadata.clientRecordId ?: "",
+      startEpochMs = record.startTime.toEpochMilli(),
+      endEpochMs = record.endTime.toEpochMilli(),
+      startZoneOffsetSeconds = record.startZoneOffset?.totalSeconds?.toLong(),
+      endZoneOffsetSeconds = record.endZoneOffset?.totalSeconds?.toLong(),
+      doubleFields = emptyMap(),
+      intFields = mapOf("exerciseType" to record.exerciseType.toLong()),
+      name = record.title,
+      samples = emptyList(),
+      sleepStages = emptyList(),
+      routePoints = emptyList(),
+      dataOriginPackage = record.metadata.dataOrigin.packageName,
+      notes = record.notes,
+      segments = emptyList(),
+      laps = emptyList(),
+      plannedExerciseId = null,
+      plannedBlocks = record.blocks.map { it.toMsg() },
+    )
 
-    else -> null // PlannedExerciseSession (structured plan) — not yet imported.
+    else -> null
   }
 
   private fun instant(

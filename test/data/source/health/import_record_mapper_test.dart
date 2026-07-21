@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:health_connect_native/health_connect_native.dart';
 import 'package:openvitals/data/source/health/native/import_record_mapper.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
 

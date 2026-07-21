@@ -31,6 +31,7 @@ import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -264,6 +265,17 @@ internal object ImportRecordsBuilder {
       )
       "Nutrition" -> buildNutrition(msg, start, sZone, end!!, eZone, meta)
       "ExerciseSession" -> buildExercise(msg, start, sZone, end!!, eZone, meta)
+      "PlannedExerciseSession" -> PlannedExerciseSessionRecord(
+        startTime = start,
+        startZoneOffset = sZone,
+        endTime = end!!,
+        endZoneOffset = eZone,
+        metadata = meta,
+        exerciseType = i("exerciseType") ?: ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
+        title = msg.name,
+        notes = msg.notes,
+        blocks = msg.plannedBlocks.map { it.toRecord() },
+      )
       else -> throw IllegalArgumentException("Unknown import record type: ${msg.recordType}")
     }
   }
