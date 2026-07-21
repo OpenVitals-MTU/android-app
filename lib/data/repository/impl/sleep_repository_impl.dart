@@ -73,5 +73,22 @@ class SleepRepositoryImpl implements SleepRepository {
 
   @override
   Future<Result<SleepData?>> loadSleepSession(String id) =>
-      runCatching(() => _dataSource.readSleepSession(id));
+      runCatching(() async {
+        // The list already merges the raw Health Connect records into one night
+        // per source, so a day card's "night" often carries a synthetic
+        // `merged:…` id that belongs to no single record. Rebuild that night
+        // from its component records the same way the list did, rather than
+        // asking Health Connect for an id it has never heard of.
+        final componentIds = mergedSleepSessionComponentIds(id);
+        if (componentIds == null) return _dataSource.readSleepSession(id);
+
+        final components = <SleepData>[];
+        for (final componentId in componentIds) {
+          final session = await _dataSource.readSleepSession(componentId);
+          if (session != null) components.add(session);
+        }
+        if (components.isEmpty) return null;
+        final merged = mergeSleepSessions(components);
+        return merged.isEmpty ? null : merged.first;
+      });
 }

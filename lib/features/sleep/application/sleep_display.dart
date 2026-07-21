@@ -168,10 +168,10 @@ abstract class SleepDisplay with _$SleepDisplay {
     required List<SleepData> periodNights,
   }) = _SleepDisplay;
 
-  /// Only a single night can be opened. With two or more sessions
-  /// [dailySummary] is a MERGED summary whose id belongs to no record, so there
-  /// is nothing for the detail screen to load — Kotlin gated on
-  /// `dailySessions.singleOrNull()` for exactly this.
+  /// The id the day card opens, or null when the day has no single night to
+  /// open. The night is already merged upstream, so its id may be a synthetic
+  /// `merged:…` one — the detail loader rebuilds that night from its component
+  /// records, so a merged id is openable just like a plain one.
   String? get openableDailySessionId =>
       dailySessions.length == 1 ? dailySessions.single.id : null;
 }
