@@ -103,7 +103,9 @@ class RemoveWidgetButton extends StatelessWidget {
       visualDensity: VisualDensity.compact,
       iconSize: 18,
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+      // A 44 dp hit area (icon stays 18 dp): the old 32x32 was below the Material
+      // minimum, and mis-taps on this drag-enabled surface started a drag.
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
       tooltip: AppLocalizations.of(context).cdRemoveWidget,
       onPressed: onPressed,
       icon: Icon(Icons.close, color: scheme.onSurfaceVariant),

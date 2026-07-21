@@ -199,7 +199,13 @@ class PeriodBarChart extends StatelessWidget {
               builder: (context, viewport) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: chartHeight, child: chartFor(viewport)),
+                  // The bars are a CustomPaint — a blank box to a screen reader.
+                  // Label the plot with the same summary sighted users read below.
+                  Semantics(
+                    label: '$title. $summaryText',
+                    container: true,
+                    child: SizedBox(height: chartHeight, child: chartFor(viewport)),
+                  ),
                   const SizedBox(height: 8),
                   PeriodChartXAxis(
                     dates: buckets.map((bucket) => bucket.date).toList(),
