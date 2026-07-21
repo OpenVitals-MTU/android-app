@@ -68,6 +68,7 @@ class DeviceSyncState {
     this.codeEntry = '',
     this.codeError = false,
     this.range = SyncRange.year1,
+    this.availableTypes = const <String>{},
     this.selectedTypes = const <String>{},
     this.progress,
     this.report,
@@ -84,6 +85,11 @@ class DeviceSyncState {
   final String codeEntry;
   final bool codeError;
   final SyncRange range;
+
+  /// The syncable types this device's Health Connect provider actually supports
+  /// (a subset of [kSyncableRecordTypes]). The picker only offers these, so a
+  /// device that lacks e.g. MindfulnessSession never shows it.
+  final Set<String> availableTypes;
   final Set<String> selectedTypes;
   final SyncProgress? progress;
   final SyncReport? report;
@@ -100,6 +106,7 @@ class DeviceSyncState {
     String? codeEntry,
     bool? codeError,
     SyncRange? range,
+    Set<String>? availableTypes,
     Set<String>? selectedTypes,
     SyncProgress? progress,
     SyncReport? report,
@@ -116,6 +123,7 @@ class DeviceSyncState {
         codeEntry: codeEntry ?? this.codeEntry,
         codeError: codeError ?? this.codeError,
         range: range ?? this.range,
+        availableTypes: availableTypes ?? this.availableTypes,
         selectedTypes: selectedTypes ?? this.selectedTypes,
         progress: progress ?? this.progress,
         report: report ?? this.report,
@@ -135,7 +143,12 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
   @override
   DeviceSyncState build() {
     ref.onDispose(_teardown);
-    return DeviceSyncState(selectedTypes: kSyncableRecordTypes.toSet());
+    // Optimistic default; narrowed to what this provider supports once a role is
+    // chosen (see _ensureHealthPermissions).
+    return DeviceSyncState(
+      availableTypes: kSyncableRecordTypes.toSet(),
+      selectedTypes: kSyncableRecordTypes.toSet(),
+    );
   }
 
   BluetoothSyncService _ensureService() =>
@@ -281,7 +294,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
         role: role,
         code: state.code,
         deviceName: 'OpenVitals phone',
-        supportedTypes: kSyncableRecordTypes,
+        supportedTypes: state.availableTypes.toList(),
         selectedTypes: state.selectedTypes.toList(),
         // Real datasets can be large (a CGM alone is ~100k readings/year). Bigger
         // batches cut the number of stop-and-wait round-trips, and a generous ack
@@ -318,7 +331,10 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
   void reset() {
     _teardown();
     _service = null;
-    state = DeviceSyncState(selectedTypes: kSyncableRecordTypes.toSet());
+    state = DeviceSyncState(
+      availableTypes: kSyncableRecordTypes.toSet(),
+      selectedTypes: kSyncableRecordTypes.toSet(),
+    );
   }
 
   // ── Internals ─────────────────────────────────────────────────────────────
@@ -370,8 +386,22 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
     final ds = ref.read(healthDataSourceProvider);
     try {
       final supported = await ds.filterSupportedPermissions(wanted);
+      // A type is syncable on THIS device only if its provider defines both a
+      // read (to send) and a write (to receive) permission — so an old provider
+      // that lacks e.g. MindfulnessSession drops out of the picker entirely.
+      final available = <String>{
+        for (var i = 0; i < suffixes.length; i++)
+          if (supported.contains('android.permission.health.READ_${suffixes[i]}') &&
+              supported.contains('android.permission.health.WRITE_${suffixes[i]}'))
+            kSyncableRecordTypes[i],
+      };
       final granted = await ds.requestPermissions(supported);
-      debugPrint('[devicesync] HC permissions: requested ${supported.length}, allGranted=$granted');
+      debugPrint('[devicesync] HC permissions: requested ${supported.length}, '
+          'allGranted=$granted, availableTypes=${available.length}');
+      state = state.copyWith(
+        availableTypes: available,
+        selectedTypes: available,
+      );
     } catch (e) {
       debugPrint('[devicesync] HC permission request failed: $e');
     }

@@ -396,19 +396,27 @@ class _TypesStep extends StatelessWidget {
           child: ListView(
             children: [
               for (final entry in _categories.entries)
-                CheckboxListTile(
-                  value: entry.value.every(state.selectedTypes.contains),
-                  onChanged: (_) {
-                    for (final type in entry.value) {
-                      final allOn =
-                          entry.value.every(state.selectedTypes.contains);
-                      if (allOn == state.selectedTypes.contains(type)) {
-                        vm.toggleType(type);
-                      }
-                    }
-                  },
-                  title: Text(_categoryLabel(entry.key)),
-                ),
+                // Only the types this device's Health Connect provider supports.
+                if (entry.value.any(state.availableTypes.contains))
+                  Builder(builder: (context) {
+                    final types = [
+                      for (final t in entry.value)
+                        if (state.availableTypes.contains(t)) t,
+                    ];
+                    return CheckboxListTile(
+                      value: types.every(state.selectedTypes.contains),
+                      onChanged: (_) {
+                        final allOn =
+                            types.every(state.selectedTypes.contains);
+                        for (final type in types) {
+                          if (allOn == state.selectedTypes.contains(type)) {
+                            vm.toggleType(type);
+                          }
+                        }
+                      },
+                      title: Text(_categoryLabel(entry.key)),
+                    );
+                  }),
             ],
           ),
         ),
