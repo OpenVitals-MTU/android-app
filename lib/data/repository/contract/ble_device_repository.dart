@@ -56,4 +56,22 @@ abstract interface class BleDeviceRepository {
   /// a sync can outlive the user forgetting the device it ran against, and that
   /// race must not throw the way [updateDevice] does.
   void markSynced(String deviceId, DateTime at);
+
+  /// Which of a watch's files a previous sync already pulled, keyed by
+  /// [GarminDirectoryEntry.dedupKey].
+  ///
+  /// Purely a BANDWIDTH optimisation, and the secondary one at that: the primary
+  /// mechanism is the archive flag the sync sets on the watch, which stops it
+  /// re-offering a file at all. This set covers the cases where that fails — a
+  /// re-pair, a sync that died before archiving — and Health Connect's
+  /// `clientRecordId` makes a re-import idempotent regardless, so a stale or
+  /// empty set costs airtime and never correctness.
+  Set<String> syncedFileKeys(String deviceId);
+
+  /// Adds to that set. Bounded, oldest-dropped-first: a watch worn for years
+  /// would otherwise grow an unbounded list in SharedPreferences.
+  void recordSyncedFileKeys(String deviceId, Iterable<String> keys);
+
+  /// Drops a watch's recorded keys, so a re-pair starts clean.
+  void clearSyncedFileKeys(String deviceId);
 }

@@ -1,0 +1,165 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+import '../../../data/source/sensors/garmin/garmin_ble_transport.dart';
+import '../../../data/source/sensors/garmin/garmin_session.dart';
+import '../../../di/providers.dart';
+import '../../../state/app_providers.dart';
+import '../../imports/application/route_bulk_import_view_model.dart';
+
+part 'garmin_sync_view_model.freezed.dart';
+
+/// The importer instance the watch sync writes through.
+///
+/// Its own provider, following [fitBulkImportProvider]'s reasoning: the same
+/// engine as the folder importers, with independent state, so a "file 3/12"
+/// progress line appears under the watch that started it and nowhere else.
+final garminBulkImportProvider =
+    NotifierProvider<RouteBulkImportViewModel, RouteBulkImportState>(
+  RouteBulkImportViewModel.new,
+);
+
+/// Where a watch sync has got to, for the device row.
+@freezed
+abstract class GarminSyncState with _$GarminSyncState {
+  const GarminSyncState._();
+
+  const factory GarminSyncState({
+    /// The device id being synced, or null when idle. Scoped rather than a bare
+    /// bool because the screen can list several watches and only one row should
+    /// show a spinner.
+    String? syncingDeviceId,
+    GarminSyncPhase? phase,
+    @Default(0) int filesTotal,
+    @Default(0) int filesDone,
+
+    /// Files downloaded and handed to the importer by the last completed run.
+    int? lastFileCount,
+    String? errorMessage,
+  }) = _GarminSyncState;
+
+  bool get isSyncing => syncingDeviceId != null;
+
+  bool isSyncingDevice(String deviceId) => syncingDeviceId == deviceId;
+}
+
+/// Runs a Garmin watch sync and feeds what it downloads into the existing FIT
+/// import pipeline.
+///
+/// The division of labour: [GarminWatchSyncService] owns the radio and the
+/// protocol, this owns the app-level sequence — sync, import, record what was
+/// taken so the next run can skip it, stamp the device.
+class GarminSyncViewModel extends Notifier<GarminSyncState> {
+  @override
+  GarminSyncState build() => const GarminSyncState();
+
+  /// Syncs [deviceId]. Returns the number of files handed to the importer.
+  ///
+  /// One sync at a time: the radio is a single resource, and two sessions
+  /// against one watch would fight over its ML handles.
+  Future<int> syncDevice(String deviceId) async {
+    if (state.isSyncing) return 0;
+
+    final devices = ref.read(readPairedBleDevicesUseCaseProvider)();
+    final device = devices.where((d) => d.id == deviceId).firstOrNull;
+    if (device == null || !device.isWatch) return 0;
+
+    final repository = ref.read(bleDeviceRepositoryProvider);
+    final service = ref.read(garminWatchSyncServiceProvider);
+    final phone = ref.read(phoneIdentityProvider);
+
+    state = GarminSyncState(
+      syncingDeviceId: deviceId,
+      phase: GarminSyncPhase.handshake,
+    );
+
+    final List<GarminDownloadedFile> downloaded;
+    try {
+      downloaded = await service.sync(
+        address: device.address,
+        phoneName: phone.bluetoothName,
+        manufacturer: phone.manufacturer,
+        model: phone.model,
+        alreadySynced: repository.syncedFileKeys(deviceId),
+        onProgress: (progress) {
+          if (!ref.mounted || state.syncingDeviceId != deviceId) return;
+          state = state.copyWith(
+            phase: progress.phase,
+            filesTotal: progress.filesTotal,
+            filesDone: progress.filesDone,
+          );
+        },
+      );
+    } on GarminBleTransportException catch (error) {
+      if (!ref.mounted) return 0;
+      state = GarminSyncState(errorMessage: _describe(error));
+      return 0;
+    } catch (error) {
+      if (!ref.mounted) return 0;
+      debugPrint('[GARMIN-SYNC] failed: $error');
+      state = GarminSyncState(errorMessage: _describe(error));
+      return 0;
+    }
+    if (!ref.mounted) return 0;
+
+    if (downloaded.isNotEmpty) {
+      try {
+        // Straight into the folder importer's path: batching, Health Connect
+        // quota handling, the wellness/activity split and per-file error
+        // tolerance all come for free, and stay in step with it forever.
+        await ref.read(garminBulkImportProvider.notifier).importRouteFiles(
+              [
+                for (final file in downloaded)
+                  ActivityRouteFileSource.ofBytes(
+                    bytes: file.bytes,
+                    fileName: '${file.entry.type.name}_'
+                        '${file.entry.fileNumber}.fit',
+                  ),
+              ],
+              ref.read(unitSystemProvider),
+            );
+      } catch (error) {
+        // The importer tolerates a bad FILE internally, so reaching here means
+        // the write path itself is unavailable (no Health Connect, permissions
+        // revoked mid-run). Without this catch the throw escaped syncDevice and
+        // left the row spinning forever with no way back.
+        if (!ref.mounted) return 0;
+        debugPrint('[GARMIN-SYNC] import failed: $error');
+        state = GarminSyncState(errorMessage: _describe(error));
+        // Neither the keys nor the sync stamp are written: nothing reached
+        // Health Connect, so the next run must fetch these files again.
+        return 0;
+      }
+      if (!ref.mounted) return downloaded.length;
+
+      // Recorded AFTER the import, so a run that died mid-import re-downloads
+      // rather than skipping files that never reached Health Connect.
+      repository.recordSyncedFileKeys(
+        deviceId,
+        downloaded.map((f) => f.entry.dedupKey),
+      );
+    }
+
+    repository.markSynced(deviceId, DateTime.now().toUtc());
+    state = GarminSyncState(
+      phase: GarminSyncPhase.complete,
+      lastFileCount: downloaded.length,
+    );
+    return downloaded.length;
+  }
+
+  /// Clears the finished/failed banner so the row goes back to normal.
+  void clear() => state = const GarminSyncState();
+
+  String _describe(Object error) {
+    if (error is GarminBleTransportException) return error.message;
+    final text = error.toString();
+    return text.isEmpty ? 'The watch could not be synced.' : text;
+  }
+}
+
+final garminSyncViewModelProvider =
+    NotifierProvider<GarminSyncViewModel, GarminSyncState>(
+  GarminSyncViewModel.new,
+);

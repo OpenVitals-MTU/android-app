@@ -2072,6 +2072,30 @@
   },
   "settingsWatchNoCompanionNotice": "Paired, but Android access was not granted. Syncing works while OpenVitals is open.",
   "settingsWatchRemove": "Remove watch",
+  "settingsWatchSyncNow": "Sync now",
+  "settingsWatchSyncConnecting": "Connecting to the watch…",
+  "settingsWatchSyncListing": "Looking for new data…",
+  "settingsWatchSyncDownloading": "Copying {arg0} of {arg1}",
+  "@settingsWatchSyncDownloading": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsWatchSyncImporting": "Saving to Health Connect…",
+  "settingsWatchSyncNothingNew": "Already up to date",
+  "settingsWatchSyncDone": "Synced {arg0} files",
+  "@settingsWatchSyncDone": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
   "activityRecordingSensorsTitle": "Sensors",
   "activityRecordingSensorsAddInSettings": "Add sensors in Settings",
   "activityRecordingSensorsNotConfigured": "Not configured",

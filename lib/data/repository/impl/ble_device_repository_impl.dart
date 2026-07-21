@@ -135,6 +135,10 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
 
   @override
   void removeDevice(String deviceId) {
+    // Forget the sync history too: a watch that is removed and re-added should
+    // start clean, not silently skip files because a previous pairing under a
+    // different id had already seen them.
+    clearSyncedFileKeys(deviceId);
     _persist(_devices.where((d) => d.id != deviceId).toList());
   }
 
@@ -162,6 +166,42 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
           d,
     ]);
   }
+
+  /// Cap on remembered file keys per watch. A few years of daily monitor, sleep
+  /// and HRV files plus activities lands well inside this; the cap only exists
+  /// so the list cannot grow without bound in SharedPreferences.
+  static const int _maxSyncedFileKeys = 4000;
+
+  String _syncedKeysPrefsKey(String deviceId) =>
+      'ble_synced_files_$deviceId';
+
+  @override
+  Set<String> syncedFileKeys(String deviceId) {
+    final raw = _prefs.getStringList(_syncedKeysPrefsKey(deviceId));
+    return raw == null ? <String>{} : raw.toSet();
+  }
+
+  @override
+  void recordSyncedFileKeys(String deviceId, Iterable<String> keys) {
+    if (keys.isEmpty) return;
+    final key = _syncedKeysPrefsKey(deviceId);
+    // Order matters for the cap: a List keeps insertion order, so trimming from
+    // the front drops the OLDEST keys, which are the least likely to be
+    // re-offered by the watch.
+    final existing = _prefs.getStringList(key) ?? const <String>[];
+    final merged = <String>[
+      ...existing,
+      ...keys.where((k) => !existing.contains(k)),
+    ];
+    final trimmed = merged.length > _maxSyncedFileKeys
+        ? merged.sublist(merged.length - _maxSyncedFileKeys)
+        : merged;
+    _prefs.setStringList(key, trimmed);
+  }
+
+  @override
+  void clearSyncedFileKeys(String deviceId) =>
+      _prefs.remove(_syncedKeysPrefsKey(deviceId));
 
   @override
   void markSynced(String deviceId, DateTime at) {

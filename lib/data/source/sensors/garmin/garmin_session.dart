@@ -107,9 +107,22 @@ class GarminSession {
   /// arms the state machine; everything else is driven by [handleFrame].
   void start() => _report(GarminSyncPhase.handshake);
 
+  /// Serialises frame handling. Frames arrive from the transport as they land,
+  /// but [_dispatch] awaits its sends — so without this a second notification
+  /// could enter the state machine while the first is still mid-flight and
+  /// mutate `_active` underneath it, appending chunks out of order.
+  Future<void> _chain = Future<void>.value();
+
   /// Feeds one decoded GFDI frame in. Safe to call after completion — late
   /// frames from a watch that is still talking are ignored rather than throwing.
-  Future<void> handleFrame(GarminGfdiFrame frame) async {
+  ///
+  /// Frames are processed strictly in arrival order, however fast they arrive.
+  Future<void> handleFrame(GarminGfdiFrame frame) {
+    _chain = _chain.then((_) => _handleFrameSerially(frame));
+    return _chain;
+  }
+
+  Future<void> _handleFrameSerially(GarminGfdiFrame frame) async {
     if (_finished) return;
     try {
       await _dispatch(decodeGarminMessage(frame));

@@ -7,7 +7,9 @@ import '../../../domain/model/ble_sensor_models.dart';
 import '../../../domain/model/garmin_transport.dart';
 import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../data/source/sensors/garmin/garmin_session.dart';
 import '../application/ble_devices_view_model.dart';
+import '../application/garmin_sync_view_model.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 
 /// The Sensors settings screen: list paired BLE sensors (enable / edit / remove)
@@ -234,6 +236,7 @@ class _BleDeviceRow extends StatelessWidget {
                     ],
                   ),
                 ],
+                if (device.isWatch) _WatchSyncRow(device: device),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
@@ -252,6 +255,103 @@ class _BleDeviceRow extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// The sync control on a watch row: a button when idle, live progress while a
+/// sync runs, and the outcome once it finishes.
+///
+/// Watches only this watch's slice of the state, so a sync on one row cannot put
+/// a spinner on another.
+class _WatchSyncRow extends ConsumerWidget {
+  const _WatchSyncRow({required this.device});
+
+  final BleSensorDevice device;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final sync = ref.watch(garminSyncViewModelProvider);
+    final importing = ref.watch(
+      garminBulkImportProvider.select((s) => s.isImporting),
+    );
+    final isThisWatch = sync.isSyncingDevice(device.id);
+
+    if (isThisWatch || (importing && sync.isSyncing)) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _progressLabel(l10n, sync, importing: importing),
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          FilledButton.tonalIcon(
+            // One radio, one sync: disabled while any watch is syncing.
+            onPressed: sync.isSyncing
+                ? null
+                : () => ref
+                    .read(garminSyncViewModelProvider.notifier)
+                    .syncDevice(device.id),
+            icon: const Icon(Icons.sync, size: 18),
+            label: Text(l10n.settingsWatchSyncNow),
+          ),
+          const SizedBox(width: 12),
+          if (sync.errorMessage != null)
+            Expanded(
+              child: Text(
+                sync.errorMessage!,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.error),
+              ),
+            )
+          else if (sync.lastFileCount != null)
+            Expanded(
+              child: Text(
+                sync.lastFileCount == 0
+                    ? l10n.settingsWatchSyncNothingNew
+                    : l10n.settingsWatchSyncDone(sync.lastFileCount!),
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _progressLabel(
+    AppLocalizations l10n,
+    GarminSyncState sync, {
+    required bool importing,
+  }) {
+    // Importing outlives the BLE session, so it wins over the last sync phase.
+    if (importing) return l10n.settingsWatchSyncImporting;
+    return switch (sync.phase) {
+      GarminSyncPhase.listing => l10n.settingsWatchSyncListing,
+      GarminSyncPhase.downloading => l10n.settingsWatchSyncDownloading(
+          sync.filesDone + 1,
+          sync.filesTotal,
+        ),
+      _ => l10n.settingsWatchSyncConnecting,
+    };
   }
 }
 

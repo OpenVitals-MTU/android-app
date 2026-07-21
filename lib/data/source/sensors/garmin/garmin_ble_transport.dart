@@ -53,6 +53,20 @@ class GarminBleTransport {
       StreamController<String>.broadcast();
   Stream<String> get onDisconnected => _disconnected.stream;
 
+  /// The open ML channel.
+  ///
+  /// Lets a caller build its session BEFORE connecting and still bind `send` to
+  /// the channel that does not exist yet — the closure resolves this on first
+  /// use, by which point [connect] has run. Throws rather than returning null so
+  /// a send that somehow beats the connect fails loudly instead of vanishing.
+  GarminMlTransport get mlOrThrow {
+    final ml = _ml;
+    if (ml == null) {
+      throw const GarminBleTransportException('GFDI channel is not open');
+    }
+    return ml;
+  }
+
   void _log(String message) {
     debugPrint(message);
     onLog?.call(message);
