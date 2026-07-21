@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/result/result.dart';
 import '../../di/providers.dart';
 import '../../domain/model/health_connect_availability.dart';
+import '../../l10n/app_localizations.dart';
 import 'loading_state.dart';
 import 'ov_card.dart';
 
@@ -109,11 +110,22 @@ class HealthConnectGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final availability =
-        ref.watch(healthConnectAvailabilityProvider).value;
-    final granted = ref.watch(grantedHealthPermissionsProvider).value;
+    final availabilityAsync = ref.watch(healthConnectAvailabilityProvider);
+    final grantedAsync = ref.watch(grantedHealthPermissionsProvider);
     final syncEnabled = ref.watch(healthConnectSyncEnabledProvider);
 
+    // A failed availability/permission read must be recoverable — `.value` is
+    // null on AsyncError, so the old "null → FullScreenLoading" trapped the whole
+    // (home) screen behind a permanent spinner with no way out.
+    if (availabilityAsync.hasError || grantedAsync.hasError) {
+      return _GateError(onRetry: () {
+        ref.invalidate(healthConnectAvailabilityProvider);
+        ref.invalidate(grantedHealthPermissionsProvider);
+      });
+    }
+
+    final availability = availabilityAsync.value;
+    final granted = grantedAsync.value;
     if (availability == null || granted == null) {
       return const FullScreenLoading();
     }
@@ -153,14 +165,69 @@ class HealthConnectGate extends ConsumerWidget {
       await onGrant!();
       return;
     }
-    if (requiredPermissions.isNotEmpty) {
-      (await ref
-              .read(healthRepositoryProvider)
-              .requestPermissions(requiredPermissions))
-          .orThrow();
+    try {
+      if (requiredPermissions.isNotEmpty) {
+        (await ref
+                .read(healthRepositoryProvider)
+                .requestPermissions(requiredPermissions))
+            .orThrow();
+      }
+    } catch (e, s) {
+      // Fire-and-forget from a VoidCallback: an uncaught throw here was an
+      // unhandled async error (the tap silently did nothing). Log and fall
+      // through to re-read state so the gate reflects reality.
+      debugPrint('HealthConnectGate: permission request failed: $e\n$s');
+    } finally {
+      ref.invalidate(grantedHealthPermissionsProvider);
+      ref.invalidate(healthConnectAvailabilityProvider);
     }
-    ref.invalidate(grantedHealthPermissionsProvider);
-    ref.invalidate(healthConnectAvailabilityProvider);
+  }
+}
+
+/// A recoverable error state for the gate: shown when availability/permission
+/// reads throw, instead of leaving the screen behind a permanent spinner.
+class _GateError extends StatelessWidget {
+  const _GateError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Icon(Icons.error_outline, color: scheme.error, size: 40),
+          const SizedBox(height: 16),
+          Text(
+            l10n.healthConnectGateErrorTitle,
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              l10n.healthConnectGateErrorBody,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: FilledButton(
+              onPressed: onRetry,
+              child: Text(l10n.healthConnectGateRetry),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

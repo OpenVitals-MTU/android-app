@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 
 Future<Widget> _bootstrap({
@@ -12,16 +13,22 @@ Future<Widget> _bootstrap({
   Set<String> granted = const <String>{},
   Set<String> required = const <String>{},
   Map<String, Object> prefs = const <String, Object>{},
+  bool availabilityThrows = false,
 }) async {
   SharedPreferences.setMockInitialValues(prefs);
   final resolved = await SharedPreferences.getInstance();
   return ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(resolved),
-      healthConnectAvailabilityProvider.overrideWith((ref) async => availability),
+      healthConnectAvailabilityProvider.overrideWith((ref) async {
+        if (availabilityThrows) throw StateError('availability read failed');
+        return availability;
+      }),
       grantedHealthPermissionsProvider.overrideWith((ref) async => granted),
     ],
     child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: HealthConnectGate(
           requiredPermissions: required,
@@ -81,6 +88,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sync paused'), findsOneWidget);
+    expect(find.text('CHILD'), findsNothing);
+  });
+
+  testWidgets('shows a recoverable error (not a permanent spinner) when a read '
+      'throws', (tester) async {
+    await tester.pumpWidget(
+      await _bootstrap(
+        availability: HealthConnectAvailability.available,
+        availabilityThrows: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text("Couldn't reach Health Connect"), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('CHILD'), findsNothing);
   });
 }
