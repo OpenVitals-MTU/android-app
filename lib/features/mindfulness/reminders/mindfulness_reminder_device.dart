@@ -6,11 +6,13 @@ import '../../../core/reminders/reminder_controller.dart';
 /// The mindfulness reminder's notification identity and copy. The scheduling
 /// behaviour lives in the shared [BatchZonedNotificationReminderScheduler].
 ///
-/// A single daily time needs only a tiny batch (today plus the next couple of
-/// days pre-scheduled). The id range `[6100, 6103)` must not overlap hydration's.
+/// A single daily time pre-schedules two weeks of reminders, so it keeps firing
+/// through a long absence (the old 3-day batch went silent over a weekend +
+/// couple of days away). The id range `[6100, 6114)` must not overlap hydration's
+/// `[6000, 6048)`, and 14 + hydration's 48 stays under the iOS 64-pending cap.
 const mindfulnessReminderNotificationSpec = ReminderNotificationSpec(
   baseNotificationId: 6100,
-  batchSize: 3,
+  batchSize: 14,
   // `_v2`: see [hydrationReminderNotificationSpec] — a new id upgrades existing
   // installs to the high-importance channel.
   channelId: 'mindfulness_reminders_v2',

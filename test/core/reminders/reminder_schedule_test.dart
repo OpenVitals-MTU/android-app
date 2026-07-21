@@ -192,6 +192,14 @@ void main() {
         at(day: 2, hour: 18, minute: 0),
       );
     });
+
+    test('the default horizon pre-schedules about two weeks of daily reminders',
+        () {
+      // H13: the old 48h default left only ~2 daily reminders, so a long weekend
+      // away silenced the feature until the app was next opened.
+      final triggers = schedule.plan(at(hour: 9, minute: 0));
+      expect(triggers.length, greaterThanOrEqualTo(14));
+    });
   });
 
   test('schedules preserve the reference instant’s zone', () {

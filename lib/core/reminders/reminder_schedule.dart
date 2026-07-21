@@ -35,7 +35,11 @@ sealed class ReminderSchedule {
     DateTime now, {
     DateTime? anchor,
     bool goalMet = false,
-    Duration horizon = const Duration(hours: 48),
+    // Two weeks, not two days: re-planning only happens on a foreground event, so
+    // a 48h horizon silenced a low-frequency (daily) reminder after a weekend
+    // away. A high-frequency schedule is still bounded by [maxCount] and its
+    // device batch size, so this only extends the schedules that can benefit.
+    Duration horizon = const Duration(days: 14),
     int maxCount = 64,
   }) {
     final deadline = now.add(horizon);
