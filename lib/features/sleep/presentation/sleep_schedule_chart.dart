@@ -5,8 +5,6 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
-import '../../../domain/model/sleep_daily_summary.dart';
-import '../../../domain/model/sleep_models.dart';
 import '../../../ui/charts/chart_axis.dart';
 import '../../../ui/charts/chart_paint.dart';
 import '../../../ui/charts/schedule_axis.dart';
@@ -258,57 +256,33 @@ class _ScheduleChartPainter extends CustomPainter {
         ));
       }
 
-      // A night with no stage detail — or one the device only partly staged, so
-      // its fragments would float in an empty bar (e.g. a tail-only reading of a
-      // full night's sleep) — draws as one solid bar spanning the whole time in
-      // bed, not an empty slot. This mirrors the day view, which hides a
-      // fragmentary hypnogram rather than draw a misleading one. The Awake
-      // gap-fill of a split night counts toward coverage, so a genuine multi-
-      // segment night still renders its stages.
-      final stageMinutes =
-          segments.fold<double>(0, (sum, seg) => sum + (seg.$3 - seg.$2));
-      final spanMinutes = endMinute - startMinute;
-      if (segments.isEmpty ||
-          stageMinutes / spanMinutes < kMinSleepStageCoverage) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTRB(
-                left, yFor(startMinute), left + barWidth, yFor(endMinute)),
-            Radius.circular(cornerRadius),
-          ),
-          Paint()..color = emptyBarColor,
-        );
-        continue;
-      }
+      // Draw the whole time in bed as one base bar, then overlay stage colour
+      // where the device staged it. So a night the device recorded but only
+      // partly staged (or never staged) reads as its FULL duration — a solid bar
+      // with detail on the staged part — rather than a tiny fragment floating in
+      // an empty slot, or (the "dark blue nights with data" bug) a uniform block.
+      // The bar carries the SAME merged night the day card shows: naps are peeled
+      // off upstream and internal wake gaps are Awake-filled, so there are no
+      // large holes to split around.
+      final barRRect = RRect.fromRectAndRadius(
+        Rect.fromLTRB(
+            left, yFor(startMinute), left + barWidth, yFor(endMinute)),
+        Radius.circular(cornerRadius),
+      );
+      canvas.drawRRect(barRRect, Paint()..color = emptyBarColor);
+      if (segments.isEmpty) continue;
 
-      // Split the night from any daytime nap: a gap wider than the nap
-      // threshold starts a new bar. Otherwise one bar spans from the night's
-      // bedtime all the way down to the nap's end, and clipping it squares off
-      // the night's rounded bottom edge at the empty middle. Each block instead
-      // keeps its own rounded top and bottom, like a day without a nap.
-      for (final block in _stageBlocks(segments)) {
-        final blockTop = block.first.$2;
-        var blockBottom = block.first.$3;
-        for (final seg in block) {
-          if (seg.$3 > blockBottom) blockBottom = seg.$3;
-        }
-        final blockRRect = RRect.fromRectAndRadius(
-          Rect.fromLTRB(
-              left, yFor(blockTop), left + barWidth, yFor(blockBottom)),
-          Radius.circular(cornerRadius),
+      canvas.save();
+      canvas.clipRRect(barRRect);
+      for (final (stageType, segStart, segEnd) in segments) {
+        final top = yFor(segStart);
+        final bottom = yFor(segEnd);
+        canvas.drawRect(
+          Rect.fromLTWH(left, top, barWidth, math.max(0.0, bottom - top)),
+          Paint()..color = sleepStageColor(stageType),
         );
-        canvas.save();
-        canvas.clipRRect(blockRRect);
-        for (final (stageType, segStart, segEnd) in block) {
-          final top = yFor(segStart);
-          final bottom = yFor(segEnd);
-          canvas.drawRect(
-            Rect.fromLTWH(left, top, barWidth, math.max(0.0, bottom - top)),
-            Paint()..color = sleepStageColor(stageType),
-          );
-        }
-        canvas.restore();
       }
+      canvas.restore();
     }
 
     _paintAverageMarkers(canvas, size, barsWidth, yFor);
@@ -345,34 +319,6 @@ class _ScheduleChartPainter extends CustomPainter {
       );
       measured.paint(canvas, Offset(padH, chipTop + padV));
     }
-  }
-
-  /// Flutter has no `PathEffect.dashPathEffect`, so the 8-on/6-off dash is
-  /// stepped by hand.
-
-  /// Groups start-ordered `(stageType, startMinute, endMinute)` segments into
-  /// contiguous blocks, breaking wherever a gap wider than [kSleepNapGap] sits
-  /// between one segment's end and the next's start — the same threshold the
-  /// domain uses to tell a daytime nap from the night ([splitNightAndNaps]).
-  static List<List<(int, double, double)>> _stageBlocks(
-    List<(int, double, double)> segments,
-  ) {
-    final gapMinutes = kSleepNapGap.inMinutes.toDouble();
-    final blocks = <List<(int, double, double)>>[];
-    var block = <(int, double, double)>[segments.first];
-    var blockEnd = segments.first.$3;
-    for (final seg in segments.skip(1)) {
-      if (seg.$2 - blockEnd > gapMinutes) {
-        blocks.add(block);
-        block = <(int, double, double)>[seg];
-        blockEnd = seg.$3;
-      } else {
-        block.add(seg);
-        if (seg.$3 > blockEnd) blockEnd = seg.$3;
-      }
-    }
-    blocks.add(block);
-    return blocks;
   }
 
   static DateTime _clampTime(DateTime value, DateTime low, DateTime high) {

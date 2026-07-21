@@ -146,11 +146,14 @@ class _SleepContent extends StatelessWidget {
         '${l10n.summaryAvgValue('${formatter.decimal(display.averageHours, 1)}h')} · '
         '${l10n.summaryNights(formatter.count(display.nights.length))}';
 
-    // The sessions of the pinned day, for SELECTED_DAY_ENTRIES — one key out of
-    // the map the display built, newest night first.
+    // The pinned day, for SELECTED_DAY_ENTRIES — the one merged night (not its
+    // raw segments), with the day's naps reported apart.
     final daySessions = selectedDay == null
         ? const <SleepData>[]
-        : display.sortedSessionsByDate[selectedDay] ?? const <SleepData>[];
+        : [if (display.nightByDate[selectedDay] != null) display.nightByDate[selectedDay]!];
+    final selectedDayNaps = selectedDay == null
+        ? const <SleepData>[]
+        : display.napsByDate[selectedDay] ?? const <SleepData>[];
 
     // Held in a local, because `visible:` does NOT guard the child.
     //
@@ -261,16 +264,31 @@ class _SleepContent extends StatelessWidget {
         ),
         MetricDetailSection(
           MetricDetailSectionId.selectedDayEntries,
-          visible: selectedDay != null && daySessions.isNotEmpty,
-          SleepSessionsSection(
-            title: DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag())
-                .format(DateTime(
-                    selectedDay?.year ?? 0,
-                    selectedDay?.month ?? 1,
-                    selectedDay?.day ?? 1)),
-            sessions: daySessions,
-            formatter: formatter,
-            onOpenSession: onOpenSession,
+          visible: selectedDay != null &&
+              (daySessions.isNotEmpty || selectedDayNaps.isNotEmpty),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (daySessions.isNotEmpty)
+                SleepSessionsSection(
+                  title: DateFormat.yMMMd(
+                          Localizations.localeOf(context).toLanguageTag())
+                      .format(DateTime(
+                          selectedDay?.year ?? 0,
+                          selectedDay?.month ?? 1,
+                          selectedDay?.day ?? 1)),
+                  sessions: daySessions,
+                  formatter: formatter,
+                  onOpenSession: onOpenSession,
+                ),
+              if (selectedDayNaps.isNotEmpty)
+                SleepSessionsSection(
+                  title: l10n.sleepNaps,
+                  sessions: selectedDayNaps,
+                  formatter: formatter,
+                  onOpenSession: onOpenSession,
+                ),
+            ],
           ),
         ),
         MetricDetailSection(
@@ -299,13 +317,13 @@ class _SleepContent extends StatelessWidget {
         ),
         MetricDetailSection(
           MetricDetailSectionId.entries,
-          // A single night is already spelled out by the timeline card above.
-          visible: isDay ? display.dailySessions.length > 1 : true,
+          // Day view: the night is already the timeline card above, so this
+          // period list is week/month only — one merged night per date, never
+          // the raw segments.
+          visible: !isDay,
           SleepSessionsSection(
             title: l10n.sectionSleepSessions,
-            sessions: isDay
-                ? display.sortedDailySessions
-                : display.sortedPeriodSessions,
+            sessions: display.periodNights,
             formatter: formatter,
             onOpenSession: onOpenSession,
           ),

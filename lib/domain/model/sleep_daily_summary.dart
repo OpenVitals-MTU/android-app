@@ -70,6 +70,11 @@ List<SleepData> sleepSessionsForRange(
 /// daytime session sits on the far side of a gap this large and reads as a nap.
 const Duration kSleepNapGap = Duration(hours: 3);
 
+/// The id prefix a [dailySleepSummary] gives a night it MERGED from 2+ segments.
+/// Such a night maps to no single Health Connect record, so the detail screen
+/// cannot load it — the entry list gates tap on this.
+const String mergedNightIdPrefix = 'daily:';
+
 /// A day's sleep split into the main night and any daytime naps.
 class SleepNightSplit {
   const SleepNightSplit({required this.night, required this.naps});
@@ -215,7 +220,7 @@ SleepData? dailySleepSummary(
       combineNightStages(dailySessions, maxGap: kSleepNapGap);
 
   return SleepData(
-    id: 'daily:$selectedDate',
+    id: '$mergedNightIdPrefix$selectedDate',
     startTime: first.startTime,
     endTime: last.endTime,
     durationMs: nightDurationMs,

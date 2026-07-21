@@ -160,6 +160,16 @@ abstract class SleepDisplay with _$SleepDisplay {
     required List<SleepData> sortedDailySessions,
     required List<SleepData> sortedPeriodSessions,
     required String? dayTimeRangeText,
+
+    /// The merged night per date — the entry lists render this one night, not
+    /// the raw segments. Null on a date with no night.
+    required Map<LocalDate, SleepData?> nightByDate,
+
+    /// Daytime naps per date, reported apart from the night.
+    required Map<LocalDate, List<SleepData>> napsByDate,
+
+    /// One merged night per date over the period, newest night first.
+    required List<SleepData> periodNights,
   }) = _SleepDisplay;
 
   /// Only a single night can be opened. With two or more sessions
@@ -245,6 +255,15 @@ SleepDisplay buildSleepDisplay({
   final periodSessions = [
     for (final sessions in sessionsByDate.values) ...sessions,
   ];
+  // The canonical merged night per date — the day card, the schedule chart and
+  // the entry lists all render this one night, never the raw segments.
+  final nightByDate =
+      _nightByDate(result.sessions, selectedPeriod, sleepRangeMode);
+  final napsByDate =
+      _napsByDate(result.sessions, selectedPeriod, sleepRangeMode);
+  final periodNights = _newestNightFirst(
+    [for (final night in nightByDate.values) ?night],
+  );
   final crossMetricHrvValues = [
     for (final hrv in result.crossDailyHrv)
       CrossMetricValue(date: hrv.date, value: hrv.rmssdMs),
@@ -255,7 +274,7 @@ SleepDisplay buildSleepDisplay({
   final averageHours = sleepAverageHours(nights);
   final previousAverageHours =
       sleepAverageHours(sleepNights(previousDurationPoints));
-  final scheduleDays = toSleepScheduleDays(sessionsByDate);
+  final scheduleDays = toSleepScheduleDays(nightByDate);
   final confidenceSessions = isDay ? dailySessions : periodSessions;
 
   return SleepDisplay(
@@ -333,6 +352,9 @@ SleepDisplay buildSleepDisplay({
     sortedDailySessions: _newestNightFirst(dailySessions),
     sortedPeriodSessions: _newestNightFirst(periodSessions),
     dayTimeRangeText: _dayTimeRangeText(dailySessions),
+    nightByDate: nightByDate,
+    napsByDate: napsByDate,
+    periodNights: periodNights,
   );
 }
 
@@ -384,31 +406,51 @@ List<SleepStageShare> sleepStageShares(SleepOverviewSummary summary) {
   ];
 }
 
-/// Kotlin `List<SleepOverviewDay>.toSleepScheduleDays()`.
+/// One schedule bar per date, built from the SAME merged night the day card
+/// shows ([dailySleepSummary]) — its span (`inBedStart..inBedEnd`) and its
+/// stages describe the one interval, so coverage is naturally whole and the
+/// painter never mistakes a night-with-data for a stageless one. Kotlin
+/// `List<SleepOverviewDay>.toSleepScheduleDays()`.
 List<SleepScheduleDay> toSleepScheduleDays(
-  Map<LocalDate, List<SleepData>> sessionsByDate,
+  Map<LocalDate, SleepData?> nightByDate,
 ) {
   final days = <SleepScheduleDay>[];
-  final dates = sessionsByDate.keys.toList()..sort();
+  final dates = nightByDate.keys.toList()..sort();
   for (final date in dates) {
-    final sessions = sessionsByDate[date]!;
-    // Fill the wake gaps between a night's segments with Awake so the schedule
-    // bar is continuous instead of holed; gaps beyond kSleepNapGap (a daytime
-    // nap) are left as a separate block. Sessions are already start-sorted.
-    final stages = combineNightStages(sessions, maxGap: kSleepNapGap);
+    final night = nightByDate[date];
     days.add(SleepScheduleDay(
       date: date,
-      inBedStart: sessions.isEmpty
-          ? null
-          : sessions.map((s) => s.startTime).reduce((a, b) => a.isBefore(b) ? a : b),
-      inBedEnd: sessions.isEmpty
-          ? null
-          : sessions.map((s) => s.endTime).reduce((a, b) => a.isAfter(b) ? a : b),
-      stages: stages,
+      inBedStart: night?.startTime,
+      inBedEnd: night?.endTime,
+      stages: night?.stages ?? const [],
     ));
   }
   return days;
 }
+
+/// The merged night for each date in [period] — the single canonical night
+/// ([dailySleepSummary]) every view now shares: the day card, the schedule
+/// chart, and the entry lists. Null on a date with no night.
+Map<LocalDate, SleepData?> _nightByDate(
+  List<SleepData> sessions,
+  DatePeriod period,
+  SleepRangeMode sleepRangeMode,
+) =>
+    {
+      for (final date in _datesInPeriod(period.start, period.end))
+        date: dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode),
+    };
+
+/// The daytime naps for each date, reported apart from the night.
+Map<LocalDate, List<SleepData>> _napsByDate(
+  List<SleepData> sessions,
+  DatePeriod period,
+  SleepRangeMode sleepRangeMode,
+) =>
+    {
+      for (final date in _datesInPeriod(period.start, period.end))
+        date: dailyNaps(sessions, date, sleepRangeMode: sleepRangeMode),
+    };
 
 List<SleepData> _newestNightFirst(List<SleepData> sessions) =>
     [...sessions]..sort((a, b) => b.endTime.compareTo(a.endTime));
