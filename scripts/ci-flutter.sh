@@ -170,10 +170,16 @@ else
     # already resolved its deps and no separate one is needed here. The Dart half is
     # needed for `analyze`/`test` (the app imports it); the Kotlin half is a Gradle
     # source needed for `build`. Output is byte-identical to the sources.
-    (
-        cd packages/health_connect_native
-        dart run pigeon --input pigeons/messages.dart
-    )
+    #
+    # EVERY native plugin with a pigeon bridge must be listed here: its
+    # lib/src/messages.g.dart is gitignored, so a missing entry leaves the whole
+    # package uncompilable on CI and every test that imports it fails to load.
+    for plugin in health_connect_native bluetooth_sync_native; do
+        (
+            cd "packages/$plugin"
+            dart run pigeon --input pigeons/messages.dart
+        )
+    done
 
     : > "$prepared_marker"
 fi
