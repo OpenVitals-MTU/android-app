@@ -73,21 +73,28 @@ class HealthConnectSyncStore implements SyncRecordStore {
 
   @override
   Future<void> writeItems(List<SyncItem> items) async {
-    final records = <ImportRecord>[
-      for (final item in items)
+    // Group by record type and insert each group separately. A Health Connect
+    // batch insert is atomic, so mixing types means one unsupported/rejected type
+    // sinks the whole batch; isolating types keeps the rest landing (the earlier
+    // "imported N but nothing persisted" failure). A per-type failure is logged
+    // and swallowed so the sync continues with the types that do write.
+    final byType = <String, List<ImportRecord>>{};
+    for (final item in items) {
+      (byType[item.recordType] ??= <ImportRecord>[]).add(
         decodeImportRecord(
           recordType: item.recordType,
           clientRecordId: item.key,
           payload: item.payload,
         ),
-    ];
-    if (records.isEmpty) return;
-    try {
-      await _dataSource.insertImportedRecords(records);
-      debugPrint('[devicesync] wrote ${records.length} records to Health Connect');
-    } catch (e) {
-      debugPrint('[devicesync] WRITE FAILED for ${records.length} records: $e');
-      rethrow;
+      );
+    }
+    for (final entry in byType.entries) {
+      try {
+        await _dataSource.insertImportedRecords(entry.value);
+        debugPrint('[devicesync] wrote ${entry.value.length} ${entry.key} records');
+      } catch (e) {
+        debugPrint('[devicesync] WRITE FAILED for ${entry.value.length} ${entry.key}: $e');
+      }
     }
   }
 }

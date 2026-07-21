@@ -9,8 +9,24 @@ import '../../../data/source/sync/sync_report.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/device_sync_view_model.dart';
 
-/// Groups the currently-syncable record types by category for the picker.
+/// Groups the syncable record types by category for the picker.
 const Map<String, List<String>> _categories = {
+  'activity': [
+    'StepsRecord',
+    'DistanceRecord',
+    'ActiveCaloriesBurnedRecord',
+    'FloorsClimbedRecord',
+    'ElevationGainedRecord',
+    'WheelchairPushesRecord',
+    'SpeedRecord',
+  ],
+  'workouts': ['ExerciseSessionRecord'],
+  'heart': [
+    'HeartRateRecord',
+    'RestingHeartRateRecord',
+    'HeartRateVariabilityRmssdRecord',
+  ],
+  'sleep': ['SleepSessionRecord'],
   'body': [
     'WeightRecord',
     'HeightRecord',
@@ -27,9 +43,18 @@ const Map<String, List<String>> _categories = {
     'BodyTemperatureRecord',
     'Vo2MaxRecord',
     'BloodGlucoseRecord',
+    'BasalBodyTemperatureRecord',
   ],
+  'nutrition': ['NutritionRecord'],
   'hydration': ['HydrationRecord'],
   'mindfulness': ['MindfulnessSessionRecord'],
+  'cycle': [
+    'MenstruationFlowRecord',
+    'OvulationTestRecord',
+    'CervicalMucusRecord',
+    'IntermenstrualBleedingRecord',
+    'SexualActivityRecord',
+  ],
 };
 
 class DeviceSyncScreen extends ConsumerWidget {
@@ -380,9 +405,15 @@ class _TypesStep extends StatelessWidget {
   final AppLocalizations l10n;
 
   String _categoryLabel(String key) => switch (key) {
+        'activity' => l10n.deviceSyncCategoryActivity,
+        'workouts' => l10n.deviceSyncCategoryWorkouts,
+        'heart' => l10n.deviceSyncCategoryHeart,
+        'sleep' => l10n.deviceSyncCategorySleep,
         'body' => l10n.deviceSyncCategoryBody,
         'vitals' => l10n.deviceSyncCategoryVitals,
+        'nutrition' => l10n.deviceSyncCategoryNutrition,
         'hydration' => l10n.deviceSyncCategoryHydration,
+        'cycle' => l10n.deviceSyncCategoryCycle,
         _ => l10n.deviceSyncCategoryMindfulness,
       };
 

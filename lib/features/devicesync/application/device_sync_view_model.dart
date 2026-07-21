@@ -37,26 +37,57 @@ enum DeviceSyncStep {
   report,
 }
 
-/// Record types the sync can currently move — the instant Health Connect "entry"
-/// types with working reads (see `HealthConnectNativeDataSource.readImportRecords`).
-/// Interval/series/session types are added as their raw reads land.
-const List<String> kSyncableRecordTypes = <String>[
-  'WeightRecord',
-  'HeightRecord',
-  'BodyFatRecord',
-  'LeanBodyMassRecord',
-  'BasalMetabolicRateRecord',
-  'BoneMassRecord',
-  'BodyWaterMassRecord',
-  'HydrationRecord',
-  'BloodPressureRecord',
-  'OxygenSaturationRecord',
-  'RespiratoryRateRecord',
-  'BodyTemperatureRecord',
-  'Vo2MaxRecord',
-  'BloodGlucoseRecord',
-  'MindfulnessSessionRecord',
-];
+/// Every record type the sync can move, mapped to its Health Connect permission
+/// suffix (`READ_<suffix>` / `WRITE_<suffix>`). The generic native read/write
+/// (`readImportRecords` / `insertImportedRecords`) covers all of these; the
+/// device-support gate then hides any a given provider doesn't define.
+const Map<String, String> kSyncableTypePermissionSuffix = <String, String>{
+  // Activity
+  'StepsRecord': 'STEPS',
+  'DistanceRecord': 'DISTANCE',
+  'ActiveCaloriesBurnedRecord': 'ACTIVE_CALORIES_BURNED',
+  'FloorsClimbedRecord': 'FLOORS_CLIMBED',
+  'ElevationGainedRecord': 'ELEVATION_GAINED',
+  'WheelchairPushesRecord': 'WHEELCHAIR_PUSHES',
+  'SpeedRecord': 'SPEED',
+  // Heart
+  'HeartRateRecord': 'HEART_RATE',
+  'RestingHeartRateRecord': 'RESTING_HEART_RATE',
+  'HeartRateVariabilityRmssdRecord': 'HEART_RATE_VARIABILITY',
+  // Body
+  'WeightRecord': 'WEIGHT',
+  'HeightRecord': 'HEIGHT',
+  'BodyFatRecord': 'BODY_FAT',
+  'LeanBodyMassRecord': 'LEAN_BODY_MASS',
+  'BasalMetabolicRateRecord': 'BASAL_METABOLIC_RATE',
+  'BoneMassRecord': 'BONE_MASS',
+  'BodyWaterMassRecord': 'BODY_WATER_MASS',
+  // Hydration / Nutrition
+  'HydrationRecord': 'HYDRATION',
+  'NutritionRecord': 'NUTRITION',
+  // Vitals
+  'BloodPressureRecord': 'BLOOD_PRESSURE',
+  'OxygenSaturationRecord': 'OXYGEN_SATURATION',
+  'RespiratoryRateRecord': 'RESPIRATORY_RATE',
+  'BodyTemperatureRecord': 'BODY_TEMPERATURE',
+  'Vo2MaxRecord': 'VO2_MAX',
+  'BloodGlucoseRecord': 'BLOOD_GLUCOSE',
+  'BasalBodyTemperatureRecord': 'BASAL_BODY_TEMPERATURE',
+  // Sleep / Workouts / Mindfulness
+  'SleepSessionRecord': 'SLEEP',
+  'ExerciseSessionRecord': 'EXERCISE',
+  'MindfulnessSessionRecord': 'MINDFULNESS',
+  // Cycle
+  'MenstruationFlowRecord': 'MENSTRUATION',
+  'OvulationTestRecord': 'OVULATION_TEST',
+  'CervicalMucusRecord': 'CERVICAL_MUCUS',
+  'IntermenstrualBleedingRecord': 'INTERMENSTRUAL_BLEEDING',
+  'SexualActivityRecord': 'SEXUAL_ACTIVITY',
+};
+
+/// Every syncable record type (the keys of [kSyncableTypePermissionSuffix]).
+final List<String> kSyncableRecordTypes =
+    kSyncableTypePermissionSuffix.keys.toList();
 
 class DeviceSyncState {
   const DeviceSyncState({
@@ -371,17 +402,10 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
   /// provider's supported set first — requesting a permission the provider does
   /// not define throws.
   Future<void> _ensureHealthPermissions() async {
-    const suffixes = <String>[
-      'WEIGHT', 'HEIGHT', 'BODY_FAT', 'LEAN_BODY_MASS', 'BASAL_METABOLIC_RATE',
-      'BONE_MASS', 'BODY_WATER_MASS', 'HYDRATION', 'BLOOD_PRESSURE',
-      'OXYGEN_SATURATION', 'RESPIRATORY_RATE', 'BODY_TEMPERATURE', 'VO2_MAX',
-      'BLOOD_GLUCOSE', 'MINDFULNESS',
-    ];
+    String read(String s) => 'android.permission.health.READ_$s';
+    String write(String s) => 'android.permission.health.WRITE_$s';
     final wanted = <String>{
-      for (final s in suffixes) ...[
-        'android.permission.health.READ_$s',
-        'android.permission.health.WRITE_$s',
-      ],
+      for (final s in kSyncableTypePermissionSuffix.values) ...[read(s), write(s)],
     };
     final ds = ref.read(healthDataSourceProvider);
     try {
@@ -390,10 +414,10 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       // read (to send) and a write (to receive) permission — so an old provider
       // that lacks e.g. MindfulnessSession drops out of the picker entirely.
       final available = <String>{
-        for (var i = 0; i < suffixes.length; i++)
-          if (supported.contains('android.permission.health.READ_${suffixes[i]}') &&
-              supported.contains('android.permission.health.WRITE_${suffixes[i]}'))
-            kSyncableRecordTypes[i],
+        for (final entry in kSyncableTypePermissionSuffix.entries)
+          if (supported.contains(read(entry.value)) &&
+              supported.contains(write(entry.value)))
+            entry.key,
       };
       final granted = await ds.requestPermissions(supported);
       debugPrint('[devicesync] HC permissions: requested ${supported.length}, '

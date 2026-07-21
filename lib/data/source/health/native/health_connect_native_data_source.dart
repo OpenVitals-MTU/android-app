@@ -2470,188 +2470,25 @@ Duration? _zoneOffset(int? seconds) =>
     DateTime start,
     DateTime end,
   ) async {
-    // Phone-to-phone sync read path. The instant "entry" types below map 1:1
-    // from the existing typed reads. Interval/series/session types (steps,
-    // distance, calories, heart-rate series, sleep, nutrition, exercise, cycle,
-    // etc.) need dedicated raw reads that preserve every field + zone offset and
-    // are validated on-device; until then they return empty here rather than
-    // syncing a lossy shape. clientRecordId is left blank — the sync layer keys
-    // every record by content fingerprint, never by this id.
-    final localStart = LocalDate.fromDateTime(start);
-    final localEnd = LocalDate.fromDateTime(end);
-    switch (recordType) {
-      case 'WeightRecord':
-        final entries = await readWeightEntries(localStart, localEnd);
-        return [
-          for (final e in entries)
-            WeightImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              kilograms: e.weightKg,
-            ),
-        ];
-      case 'HeightRecord':
-        final entries = await readHeightEntries(localStart, localEnd);
-        return [
-          for (final e in entries)
-            HeightImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              meters: e.heightCm / 100.0,
-            ),
-        ];
-      case 'BodyFatRecord':
-        final entries = await readBodyFatEntries(localStart, localEnd);
-        return [
-          for (final e in entries)
-            BodyFatImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              percent: e.percent,
-            ),
-        ];
-      case 'LeanBodyMassRecord':
-        final entries = await readLeanBodyMassEntries(localStart, localEnd);
-        return [
-          for (final e in entries)
-            LeanBodyMassImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              kilograms: e.massKg,
-            ),
-        ];
-      case 'BasalMetabolicRateRecord':
-        final entries = await readBmrEntries(localStart, localEnd);
-        return [
-          for (final e in entries)
-            BasalMetabolicRateImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              kilocaloriesPerDay: e.kcalPerDay,
-            ),
-        ];
-      case 'BoneMassRecord':
-        final entries = await readBoneMassEntries(localStart, localEnd);
-        return [
-          for (final e in entries)
-            BoneMassImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              kilograms: e.massKg,
-            ),
-        ];
-      case 'BodyWaterMassRecord':
-        final entries = await readBodyWaterMassEntries(localStart, localEnd);
-        return [
-          for (final e in entries)
-            BodyWaterMassImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              kilograms: e.massKg,
-            ),
-        ];
-      case 'HydrationRecord':
-        final entries = await readHydrationEntries(start, end);
-        return [
-          for (final e in entries)
-            HydrationImportRecord(
-              clientRecordId: '',
-              startTime: e.startTime,
-              startZoneOffset: null,
-              endTime: e.endTime,
-              endZoneOffset: null,
-              milliliters: e.liters * 1000.0,
-            ),
-        ];
-      case 'BloodPressureRecord':
-        final entries = await readBloodPressureEntries(start, end);
-        return [
-          for (final e in entries)
-            BloodPressureImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              systolicMmHg: e.systolicMmHg.toDouble(),
-              diastolicMmHg: e.diastolicMmHg.toDouble(),
-            ),
-        ];
-      case 'OxygenSaturationRecord':
-        final entries = await readSpO2Entries(start, end);
-        return [
-          for (final e in entries)
-            OxygenSaturationImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              percent: e.percent,
-            ),
-        ];
-      case 'RespiratoryRateRecord':
-        final entries = await readRespiratoryRateEntries(start, end);
-        return [
-          for (final e in entries)
-            RespiratoryRateImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              rate: e.breathsPerMinute,
-            ),
-        ];
-      case 'BodyTemperatureRecord':
-        final entries = await readBodyTemperatureEntries(start, end);
-        return [
-          for (final e in entries)
-            BodyTemperatureImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              celsius: e.temperatureCelsius,
-            ),
-        ];
-      case 'Vo2MaxRecord':
-        final entries = await readVo2MaxEntries(start, end);
-        return [
-          for (final e in entries)
-            Vo2MaxImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              vo2MillilitersPerMinuteKilogram: e.vo2MaxMlPerKgPerMin,
-            ),
-        ];
-      case 'BloodGlucoseRecord':
-        final entries = await readBloodGlucoseEntries(start, end);
-        return [
-          for (final e in entries)
-            BloodGlucoseImportRecord(
-              clientRecordId: '',
-              time: e.time,
-              zoneOffset: null,
-              millimolesPerLiter: e.millimolesPerLiter,
-            ),
-        ];
-      case 'MindfulnessSessionRecord':
-        final sessions = await readMindfulnessSessions(start, end);
-        return [
-          for (final s in sessions)
-            MindfulnessSessionImportRecord(
-              clientRecordId: '',
-              startTime: s.startTime,
-              startZoneOffset: null,
-              endTime: s.endTime,
-              endZoneOffset: null,
-              title: s.title ?? '',
-            ),
-        ];
-      default:
-        return const <ImportRecord>[];
-    }
+    // Generic full read: the native plugin reads the RAW records of this type
+    // over the window and returns them as ImportRecordMsgs (steps/sleep/heart/
+    // nutrition/exercise/cycle included, not just the instant "entry" types), and
+    // importRecordFromMsg rebuilds the typed ImportRecord. recordType is an
+    // ImportRecord.targetType (e.g. "StepsRecord"); the plugin keys on the
+    // canonical schema name ("Steps"), so translate via schemaTypeForImport.
+    final schemaType = HealthRecordJson.schemaTypeForImport(recordType);
+    if (schemaType == null) return const <ImportRecord>[];
+    final msgs = await _catch(
+      () => _api.readImportRecords(
+        schemaType,
+        start.millisecondsSinceEpoch,
+        end.millisecondsSinceEpoch,
+      ),
+      const <ImportRecordMsg>[],
+    );
+    return [
+      for (final msg in msgs)
+        if (importRecordFromMsg(msg) case final ImportRecord record) record,
+    ];
   }
 }
