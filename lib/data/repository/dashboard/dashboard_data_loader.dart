@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -49,10 +51,17 @@ class DashboardDataLoader {
   static const int _cardioLoadHistoryPeriods = 4;
   static const int _weeklyCardioHeartRateSampleWeeks = 2;
 
-  /// Each individual metric is already permission-gated and error-guarded by
-  /// [_metric], so one failing tile cannot blank the dashboard. The `Result`
-  /// therefore only reports the failures that sink the whole load — reading the
-  /// granted-permission set, and the assembly itself.
+  /// How many metric reads may hit Health Connect at once. The reads are
+  /// independent, so a small concurrent wave replaces ~35 serial round-trips
+  /// without an unbounded fan-out that would swamp the binder (mirrors the
+  /// 7-wide precedent in VitalsRepositoryImpl).
+  static const int _maxConcurrentDashboardReads = 8;
+
+  /// Each individual metric is already permission-gated and error-guarded by the
+  /// local `metric`/`guard` helpers in [_loadDashboardUncached], so one failing
+  /// tile cannot blank the dashboard. The `Result` therefore only reports the
+  /// failures that sink the whole load — reading the granted-permission set, and
+  /// the assembly itself.
   Future<Result<DashboardData>> loadDashboard(DashboardQuery query) =>
       runCatching(() async {
         final granted = await _hc.grantedIfAvailable();
@@ -66,22 +75,6 @@ class DashboardDataLoader {
           showOpenVitalsCalculatedCalories: showEstimatedCalories,
         );
       });
-
-  Future<T?> _metric<T>(
-    bool enabled,
-    String permission,
-    Set<String> granted,
-    Future<T> Function() block,
-  ) async {
-    if (!enabled || !granted.contains(permission)) return null;
-    try {
-      return await block();
-    } catch (e, s) {
-      debugPrint(
-          'DashboardDataLoader: $permission read failed, metric hidden: $e\n$s');
-      return null;
-    }
-  }
 
   Future<DashboardData> _loadDashboardUncached({
     required DashboardQuery query,
@@ -103,38 +96,72 @@ class DashboardDataLoader {
     final effectiveDayEnd =
         date == LocalDate.now() && dayEnd.isAfter(now) ? now : dayEnd;
 
-    final steps = await _metric(
-        wants(DashboardMetric.steps), HcPermissions.readSteps, granted,
+    // These ~35 metric reads are mutually independent — every cross-metric
+    // derivation (BMI, the HRV mean, per-metric sources) is computed further
+    // down, after the reads resolve. So start them all up front and await them
+    // together instead of one after the next. A per-load pool caps how many hit
+    // Health Connect at once, turning ~35 serial binder round-trips (front-screen
+    // latency) into a small concurrent wave — without the unbounded fan-out that
+    // would swamp the binder. Each read stays permission-gated and
+    // failure-guarded (the local `metric`/`guard` below), so one failing tile
+    // still can't blank the dashboard.
+    final pool = _DashboardReadPool(_maxConcurrentDashboardReads);
+
+    Future<T?> metric<T>(
+      bool enabled,
+      String permission,
+      Future<T> Function() block,
+    ) {
+      if (!enabled || !granted.contains(permission)) return Future<T?>.value();
+      return pool.run(() async {
+        try {
+          return await block();
+        } catch (e, s) {
+          debugPrint(
+              'DashboardDataLoader: $permission read failed, metric hidden: $e\n$s');
+          return null;
+        }
+      });
+    }
+
+    Future<T?> guard<T>(Future<T> Function() block) => pool.run(() async {
+          try {
+            return await block();
+          } catch (e, s) {
+            debugPrint(
+                'DashboardDataLoader: guarded read failed, value null: $e\n$s');
+            return null;
+          }
+        });
+
+    // Phase 1 — start every read (bounded by the pool).
+    final stepsF = metric(wants(DashboardMetric.steps), HcPermissions.readSteps,
         () => _hc.readSteps(date));
-    final distance = await _metric(
-        wants(DashboardMetric.distance), HcPermissions.readDistance, granted,
-        () => _hc.readDistanceMeters(date));
-    final workouts = await _metric(
-            wants(DashboardMetric.workout), HcPermissions.readExercise, granted,
-            () => _hc.readExerciseSessions(dayStart, dayEnd)) ??
-        const <ExerciseData>[];
-    final dashboardSleep = await _metric(
-        wants(DashboardMetric.sleep), HcPermissions.readSleep, granted,
-        () => _readDashboardSleep(date, sleepWindow));
-    final calories = await _metric(wants(DashboardMetric.caloriesOut),
-        HcPermissions.readTotalCalories, granted,
+    final distanceF = metric(wants(DashboardMetric.distance),
+        HcPermissions.readDistance, () => _hc.readDistanceMeters(date));
+    final workoutsF = metric(wants(DashboardMetric.workout),
+        HcPermissions.readExercise, () => _hc.readExerciseSessions(dayStart, dayEnd));
+    final dashboardSleepF = metric(wants(DashboardMetric.sleep),
+        HcPermissions.readSleep, () => _readDashboardSleep(date, sleepWindow));
+    final caloriesF = metric(wants(DashboardMetric.caloriesOut),
+        HcPermissions.readTotalCalories,
         () => _hc.readCaloriesBurned(
               date,
               includeEstimatedCalories:
                   _canEstimateTotalCalories(granted, showOpenVitalsCalculatedCalories),
             ));
-    final activeCalories = (wants(DashboardMetric.activeCalories) &&
+    final activeCaloriesF = (wants(DashboardMetric.activeCalories) &&
             granted.contains(HcPermissions.readActiveCalories) &&
             granted.contains(HcPermissions.readSteps) &&
             granted.contains(HcPermissions.readDistance))
-        ? await _guard(() async =>
+        ? guard(() async =>
             (await _hc.readDailySteps(date, date, includeActiveCalories: true))
                 .firstOrNull
                 ?.activeCaloriesKcal)
-        : null;
-    final caloriesIn = await _metric(wants(DashboardMetric.caloriesIn),
-        HcPermissions.readNutrition, granted, () => _hc.readCaloriesInKcal(date));
-    final macros = await _metric(
+        : Future<double?>.value();
+    final caloriesInF = metric(wants(DashboardMetric.caloriesIn),
+        HcPermissions.readNutrition, () => _hc.readCaloriesInKcal(date));
+    final macrosF = metric(
         wantsAny([
           DashboardMetric.protein,
           DashboardMetric.carbs,
@@ -142,113 +169,105 @@ class DashboardDataLoader {
           DashboardMetric.caffeine,
         ]),
         HcPermissions.readNutrition,
-        granted,
         () async => (await _hc.readDailyMacros(date, date)).firstOrNull);
-    final hydration = await _metric(wants(DashboardMetric.hydration),
-        HcPermissions.readHydration, granted, () => _hc.readHydrationLiters(date));
-    final weight = await _metric(
+    final hydrationF = metric(wants(DashboardMetric.hydration),
+        HcPermissions.readHydration, () => _hc.readHydrationLiters(date));
+    final weightF = metric(
         wantsAny([DashboardMetric.weight, DashboardMetric.bmi, DashboardMetric.ffmi]),
         HcPermissions.readWeight,
-        granted,
         () => _hc.readLatestWeight());
-    final height = await _metric(
+    final heightF = metric(
         wantsAny([DashboardMetric.height, DashboardMetric.bmi, DashboardMetric.ffmi]),
         HcPermissions.readHeight,
-        granted,
         () => _hc.readLatestHeightEntry());
-    final bodyFat = await _metric(
+    final bodyFatF = metric(
         wantsAny([DashboardMetric.bodyFat, DashboardMetric.ffmi]),
         HcPermissions.readBodyFat,
-        granted,
         () => _hc.readLatestBodyFat());
-    final leanMass = await _metric(wants(DashboardMetric.leanMass),
-        HcPermissions.readLeanMass, granted, () => _hc.readLatestLeanBodyMass());
-    final bmr = await _metric(wants(DashboardMetric.bmr), HcPermissions.readBmr,
-        granted, () => _hc.readLatestBMR());
-    final boneMass = await _metric(wants(DashboardMetric.boneMass),
-        HcPermissions.readBoneMass, granted, () => _hc.readLatestBoneMass());
-    final bodyWaterMass = await _metric(wants(DashboardMetric.bodyWaterMass),
-        HcPermissions.readBodyWaterMass, granted, () => _hc.readLatestBodyWaterMass());
-    final heartRate = await _metric(wants(DashboardMetric.avgHeartRate),
-        HcPermissions.readHeartRate, granted, () => _hc.readAvgHeartRate(date));
-    final restingHR = await _metric(wants(DashboardMetric.restingHeartRate),
-        HcPermissions.readRestingHeartRate, granted, () => _hc.readRestingHeartRate(date));
-    final restingHRBaseline = await _metric(
+    final leanMassF = metric(wants(DashboardMetric.leanMass),
+        HcPermissions.readLeanMass, () => _hc.readLatestLeanBodyMass());
+    final bmrF = metric(wants(DashboardMetric.bmr), HcPermissions.readBmr,
+        () => _hc.readLatestBMR());
+    final boneMassF = metric(wants(DashboardMetric.boneMass),
+        HcPermissions.readBoneMass, () => _hc.readLatestBoneMass());
+    final bodyWaterMassF = metric(wants(DashboardMetric.bodyWaterMass),
+        HcPermissions.readBodyWaterMass, () => _hc.readLatestBodyWaterMass());
+    final heartRateF = metric(wants(DashboardMetric.avgHeartRate),
+        HcPermissions.readHeartRate, () => _hc.readAvgHeartRate(date));
+    final restingHRF = metric(wants(DashboardMetric.restingHeartRate),
+        HcPermissions.readRestingHeartRate, () => _hc.readRestingHeartRate(date));
+    final restingHRBaselineF = metric(
         query.includeHistoricalBaselines && wants(DashboardMetric.restingHeartRate),
         HcPermissions.readRestingHeartRate,
-        granted,
         () async => DashboardAggregator.medianLongOrNull(
               (await _hc.readDailyRestingHR(date.minusDays(28), date.minusDays(1)))
                   .map((e) => e.bpm)
                   .where((v) => v > 0)
                   .toList(),
             ));
-    final hrvSamples = await _metric(wants(DashboardMetric.hrv),
-            HcPermissions.readHrv, granted,
-            () => _hc.readHrvSamples(dayStart, effectiveDayEnd)) ??
-        const <HrvSample>[];
-    final hrvBaseline = await _metric(
+    final hrvSamplesF = metric(wants(DashboardMetric.hrv), HcPermissions.readHrv,
+        () => _hc.readHrvSamples(dayStart, effectiveDayEnd));
+    final hrvBaselineF = metric(
         query.includeHistoricalBaselines && wants(DashboardMetric.hrv),
         HcPermissions.readHrv,
-        granted,
         () async => DashboardAggregator.medianDoubleValuesOrNull(
               (await _hc.readDailyHRV(date.minusDays(28), date.minusDays(1)))
                   .map((e) => e.rmssdMs)
                   .where((v) => v > 0)
                   .toList(),
             ));
-    final bloodPressure = await _metric(wants(DashboardMetric.bloodPressure),
-        HcPermissions.readBloodPressure, granted, () => _hc.readLatestBloodPressure(date));
-    final spO2 = await _metric(wants(DashboardMetric.spo2),
-        HcPermissions.readSpO2, granted, () => _hc.readLatestSpO2(date));
-    final vo2Max = await _metric(wants(DashboardMetric.vo2Max),
-        HcPermissions.readVo2Max, granted, () => _hc.readLatestVo2Max(date));
-    final respiratoryRate = await _metric(wants(DashboardMetric.respiratoryRate),
-        HcPermissions.readRespiratoryRate, granted, () async {
+    final bloodPressureF = metric(wants(DashboardMetric.bloodPressure),
+        HcPermissions.readBloodPressure, () => _hc.readLatestBloodPressure(date));
+    final spO2F = metric(wants(DashboardMetric.spo2), HcPermissions.readSpO2,
+        () => _hc.readLatestSpO2(date));
+    final vo2MaxF = metric(wants(DashboardMetric.vo2Max),
+        HcPermissions.readVo2Max, () => _hc.readLatestVo2Max(date));
+    final respiratoryRateF = metric(wants(DashboardMetric.respiratoryRate),
+        HcPermissions.readRespiratoryRate, () async {
       final entries = await _hc.readRespiratoryRateEntries(dayStart, dayEnd);
       if (entries.isEmpty) return null;
       return entries.map((e) => e.breathsPerMinute).reduce((a, b) => a + b) /
           entries.length;
     });
-    final bodyTemperature = await _metric(wants(DashboardMetric.bodyTemperature),
-        HcPermissions.readBodyTemperature, granted, () async {
+    final bodyTemperatureF = metric(wants(DashboardMetric.bodyTemperature),
+        HcPermissions.readBodyTemperature, () async {
       final entries = await _hc.readBodyTemperatureEntries(dayStart, dayEnd);
       return _latestByTime(entries, (e) => e.time)?.temperatureCelsius;
     });
-    final bloodGlucose = await _metric(wants(DashboardMetric.bloodGlucose),
-        HcPermissions.readBloodGlucose, granted, () async {
+    final bloodGlucoseF = metric(wants(DashboardMetric.bloodGlucose),
+        HcPermissions.readBloodGlucose, () async {
       final entries = await _hc.readBloodGlucoseEntries(dayStart, dayEnd);
       return _latestByTime(entries, (e) => e.time)?.millimolesPerLiter;
     });
-    final skinTemperature = await _metric(
+    final skinTemperatureF = metric(
         wants(DashboardMetric.skinTemperature) && _hc.isSkinTemperatureAvailable(),
-        HcPermissions.readSkinTemperature, granted, () async {
+        HcPermissions.readSkinTemperature, () async {
       final entries = await _hc.readSkinTemperatureEntries(dayStart, dayEnd);
       return _latestByTime(entries, (e) => e.time)?.averageDeltaCelsius;
     });
-    final trainingSignals = (query.includeWeeklyTrainingSignals &&
+    final trainingSignalsF = (query.includeWeeklyTrainingSignals &&
             wantsAny([
               DashboardMetric.weeklyCardioLoad,
               DashboardMetric.intensityMinutes,
             ]))
-        ? await _guard(() => _readWeeklyTrainingSignals(date, activityWeekMode, granted))
-        : null;
-    final floors = await _metric(wants(DashboardMetric.floors),
-        HcPermissions.readFloors, granted, () => _hc.readFloorsClimbed(date));
-    final elevation = await _metric(wants(DashboardMetric.elevation),
-        HcPermissions.readElevation, granted, () => _hc.readElevationGained(date));
-    final wheelchairPushes = await _metric(wants(DashboardMetric.wheelchairPushes),
-        HcPermissions.readWheelchairPushes, granted, () => _hc.readWheelchairPushes(date));
-    final mindfulnessMinutes = await _metric(wants(DashboardMetric.mindfulness),
-        HcPermissions.readMindfulness, granted, () => _hc.readMindfulnessMinutes(date));
-    final menstruationPeriods = await _metric(wants(DashboardMetric.cycle),
-        HcPermissions.readMenstruationPeriod, granted,
+        ? guard(() => _readWeeklyTrainingSignals(date, activityWeekMode, granted))
+        : Future<_DashboardWeeklyTrainingSignals?>.value();
+    final floorsF = metric(wants(DashboardMetric.floors),
+        HcPermissions.readFloors, () => _hc.readFloorsClimbed(date));
+    final elevationF = metric(wants(DashboardMetric.elevation),
+        HcPermissions.readElevation, () => _hc.readElevationGained(date));
+    final wheelchairPushesF = metric(wants(DashboardMetric.wheelchairPushes),
+        HcPermissions.readWheelchairPushes, () => _hc.readWheelchairPushes(date));
+    final mindfulnessMinutesF = metric(wants(DashboardMetric.mindfulness),
+        HcPermissions.readMindfulness, () => _hc.readMindfulnessMinutes(date));
+    final menstruationPeriodsF = metric(wants(DashboardMetric.cycle),
+        HcPermissions.readMenstruationPeriod,
         () => _hc.readMenstruationPeriods(dayStart, dayEnd));
-    final ovulationTests = await _metric(wants(DashboardMetric.cycle),
-        HcPermissions.readOvulationTest, granted,
+    final ovulationTestsF = metric(wants(DashboardMetric.cycle),
+        HcPermissions.readOvulationTest,
         () => _hc.readOvulationTests(dayStart, dayEnd));
-    final basalBodyTemperature = await _metric(wants(DashboardMetric.cycle),
-        HcPermissions.readBasalBodyTemperature, granted, () async {
+    final basalBodyTemperatureF = metric(wants(DashboardMetric.cycle),
+        HcPermissions.readBasalBodyTemperature, () async {
       final entries = await _hc.readBasalBodyTemperatureEntries(dayStart, dayEnd);
       return _latestByTime(entries, (e) => e.time)?.temperatureCelsius;
     });
@@ -258,12 +277,11 @@ class DashboardDataLoader {
     // screen's permission). The repo runs `calculateBodyEnergyTimeline`; we keep
     // today's `latestDay` for the tile's `currentScore` / start / charged /
     // drained.
-    final bodyEnergyTimeline = await _metric(
+    final bodyEnergyTimelineF = metric(
         wants(DashboardMetric.bodyEnergy) &&
             _bodyEnergy != null &&
             (_preferences?.bodyEnergyCalibration().setupCompleted ?? false),
         HcPermissions.readHeartRate,
-        granted,
         () async => (await _bodyEnergy!.loadTimeline(BodyEnergyTimelineQuery(
               period: DatePeriod(date, date),
               range: TimeRange.day,
@@ -271,6 +289,46 @@ class DashboardDataLoader {
             )))
             .orThrow()
             .latestDay);
+
+    // Phase 2 — resolve. Every read has been started, so awaiting them collects
+    // results as the pool drains; the order here doesn't affect concurrency.
+    final steps = await stepsF;
+    final distance = await distanceF;
+    final workouts = (await workoutsF) ?? const <ExerciseData>[];
+    final dashboardSleep = await dashboardSleepF;
+    final calories = await caloriesF;
+    final activeCalories = await activeCaloriesF;
+    final caloriesIn = await caloriesInF;
+    final macros = await macrosF;
+    final hydration = await hydrationF;
+    final weight = await weightF;
+    final height = await heightF;
+    final bodyFat = await bodyFatF;
+    final leanMass = await leanMassF;
+    final bmr = await bmrF;
+    final boneMass = await boneMassF;
+    final bodyWaterMass = await bodyWaterMassF;
+    final heartRate = await heartRateF;
+    final restingHR = await restingHRF;
+    final restingHRBaseline = await restingHRBaselineF;
+    final hrvSamples = (await hrvSamplesF) ?? const <HrvSample>[];
+    final hrvBaseline = await hrvBaselineF;
+    final bloodPressure = await bloodPressureF;
+    final spO2 = await spO2F;
+    final vo2Max = await vo2MaxF;
+    final respiratoryRate = await respiratoryRateF;
+    final bodyTemperature = await bodyTemperatureF;
+    final bloodGlucose = await bloodGlucoseF;
+    final skinTemperature = await skinTemperatureF;
+    final trainingSignals = await trainingSignalsF;
+    final floors = await floorsF;
+    final elevation = await elevationF;
+    final wheelchairPushes = await wheelchairPushesF;
+    final mindfulnessMinutes = await mindfulnessMinutesF;
+    final menstruationPeriods = await menstruationPeriodsF;
+    final ovulationTests = await ovulationTestsF;
+    final basalBodyTemperature = await basalBodyTemperatureF;
+    final bodyEnergyTimeline = await bodyEnergyTimelineF;
 
     final missingPerms = _dashboardPermissionsFor(metrics, showOpenVitalsCalculatedCalories)
         .where((p) => !granted.contains(p))
@@ -385,15 +443,6 @@ class DashboardDataLoader {
       supportedMetrics: _supportedMetrics(),
       metricSourcePackages: metricSourcePackages,
     );
-  }
-
-  Future<T?> _guard<T>(Future<T> Function() block) async {
-    try {
-      return await block();
-    } catch (e, s) {
-      debugPrint('DashboardDataLoader: guarded read failed, value null: $e\n$s');
-      return null;
-    }
   }
 
   Future<_DashboardSleepData> _readDashboardSleep(
@@ -753,4 +802,31 @@ class _DashboardWeeklyTrainingSignals {
 
   final DashboardWeeklyCardioLoad? cardioLoad;
   final DashboardWeeklyIntensityMinutes intensityMinutes;
+}
+
+/// A minimal counting semaphore: at most [_maxConcurrent] tasks run at once, the
+/// rest queue FIFO. Scoped to a single dashboard load so it holds no state
+/// between loads. Bounds the metric-read fan-out (Health Connect serializes
+/// internally, so an unbounded wave only piles up on the binder).
+class _DashboardReadPool {
+  _DashboardReadPool(this._maxConcurrent);
+
+  final int _maxConcurrent;
+  int _active = 0;
+  final Queue<Completer<void>> _waiting = Queue<Completer<void>>();
+
+  Future<T> run<T>(Future<T> Function() task) async {
+    if (_active >= _maxConcurrent) {
+      final waiter = Completer<void>();
+      _waiting.add(waiter);
+      await waiter.future;
+    }
+    _active++;
+    try {
+      return await task();
+    } finally {
+      _active--;
+      if (_waiting.isNotEmpty) _waiting.removeFirst().complete();
+    }
+  }
 }

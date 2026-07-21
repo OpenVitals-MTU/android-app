@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/core/result/result.dart';
@@ -72,6 +74,55 @@ Future<PreferencesRepository> _prefsWithCalibration(
     BodyEnergyCalibration(setupCompleted: setupCompleted),
   );
   return prefs;
+}
+
+/// A source whose reads all park on one gate, so a test can observe how many
+/// run concurrently. Used to assert the loader bounds its metric-read fan-out.
+class _GatedSource extends HealthDataSource {
+  _GatedSource(this._granted) {
+    cachedAvailability = HealthConnectAvailability.available;
+  }
+
+  final Set<String> _granted;
+  final Completer<void> _gate = Completer<void>();
+  int inFlight = 0;
+  int maxInFlight = 0;
+  int completed = 0;
+
+  Future<T> _gated<T>(T value) async {
+    inFlight++;
+    if (inFlight > maxInFlight) maxInFlight = inFlight;
+    await _gate.future;
+    inFlight--;
+    completed++;
+    return value;
+  }
+
+  void release() => _gate.complete();
+
+  @override
+  Future<Set<String>> grantedPermissions() async => _granted;
+
+  @override
+  Future<int> readSteps(LocalDate date) => _gated(1);
+  @override
+  Future<double> readDistanceMeters(LocalDate date) => _gated(1.0);
+  @override
+  Future<int> readFloorsClimbed(LocalDate date) => _gated(1);
+  @override
+  Future<double?> readElevationGained(LocalDate date) => _gated(1.0);
+  @override
+  Future<int?> readWheelchairPushes(LocalDate date) => _gated(1);
+  @override
+  Future<double?> readCaloriesInKcal(LocalDate date) => _gated(1.0);
+  @override
+  Future<double?> readHydrationLiters(LocalDate date) => _gated(1.0);
+  @override
+  Future<int?> readAvgHeartRate(LocalDate date) => _gated(1);
+  @override
+  Future<int?> readRestingHeartRate(LocalDate date) => _gated(1);
+  @override
+  Future<int> readMindfulnessMinutes(LocalDate date) => _gated(1);
 }
 
 void main() {
@@ -275,5 +326,53 @@ void main() {
       expect(repo.loaded, isFalse);
       expect(data.bodyEnergyTimeline, isNull);
     });
+  });
+
+  test('bounds how many metric reads run at once', () async {
+    // Ten independent reads are enabled; the loader must run them as a bounded
+    // wave, not all at once (unbounded fan-out swamps the binder) and not one at
+    // a time (the ~35 serial round-trips this refactor removed).
+    final source = _GatedSource({
+      HcPermissions.readSteps,
+      HcPermissions.readDistance,
+      HcPermissions.readFloors,
+      HcPermissions.readElevation,
+      HcPermissions.readWheelchairPushes,
+      HcPermissions.readNutrition,
+      HcPermissions.readHydration,
+      HcPermissions.readHeartRate,
+      HcPermissions.readRestingHeartRate,
+      HcPermissions.readMindfulness,
+    });
+    final loader = DashboardDataLoader(source);
+
+    final future = loader.loadDashboard(DashboardQuery(
+      date: LocalDate(2026, 1, 2),
+      visibleMetrics: {
+        DashboardMetric.steps,
+        DashboardMetric.distance,
+        DashboardMetric.floors,
+        DashboardMetric.elevation,
+        DashboardMetric.wheelchairPushes,
+        DashboardMetric.caloriesIn,
+        DashboardMetric.hydration,
+        DashboardMetric.avgHeartRate,
+        DashboardMetric.restingHeartRate,
+        DashboardMetric.mindfulness,
+      },
+      includeHistoricalBaselines: false,
+      includeWeeklyTrainingSignals: false,
+    ));
+
+    // Let the pool admit as many reads as it will; they park at the gate.
+    await pumpEventQueue();
+    // Exactly _maxConcurrentDashboardReads (8) are in flight — the other two
+    // queue. A serial loader would show 1; an unbounded one would show 10.
+    expect(source.maxInFlight, 8);
+
+    source.release();
+    await future;
+    // Every enabled read still ran.
+    expect(source.completed, 10);
   });
 }
