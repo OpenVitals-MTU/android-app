@@ -13,7 +13,7 @@ import '../../domain/model/nutrition_models.dart';
 import '../../domain/model/refresh_mode.dart';
 import '../../data/prefs/preferences_repository.dart';
 import '../../domain/preferences/activity_week_mode.dart';
-import '../../domain/preferences/sleep_range_mode.dart';
+import '../../domain/preferences/sleep_window.dart';
 import '../../data/repository/contract/health_repository.dart';
 import '../../domain/usecase/load_dashboard_day_use_case.dart';
 import '../../l10n/app_localizations.dart';
@@ -42,7 +42,7 @@ class HomeWidgetRefresher {
     required this.unitFormatter,
     required this.localizations,
     required this.goals,
-    this.sleepRangeMode,
+    this.sleepWindow,
     this.activityWeekMode,
   });
 
@@ -58,7 +58,7 @@ class HomeWidgetRefresher {
   /// Preference-driven query inputs (the Kotlin widget loaders read the same two
   /// off `PreferencesRepository`). Null falls back to the [DashboardQuery]
   /// defaults.
-  final SleepRangeMode? sleepRangeMode;
+  final SleepWindow? sleepWindow;
   final ActivityWeekMode? activityWeekMode;
 
   /// Loads today, having first resolved Health Connect access.
@@ -240,7 +240,7 @@ class HomeWidgetRefresher {
   /// weekly training signals.
   DashboardQuery _todayQuery() => DashboardQuery(
         date: LocalDate.now(),
-        sleepRangeMode: sleepRangeMode ?? SleepRangeMode.evening18h,
+        sleepWindow: sleepWindow ?? SleepWindow.defaultWindow,
         activityWeekMode: activityWeekMode ?? ActivityWeekMode.mondayToSunday,
         refreshMode: RefreshMode.force,
       );

@@ -8,7 +8,6 @@ import '../../../domain/preferences/activity_week_mode.dart';
 import '../../../domain/preferences/app_language.dart';
 import '../../../domain/preferences/app_theme_mode.dart';
 import '../../../domain/preferences/chart_aggregation_mode.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/preferences/unit_system.dart';
 
 part 'settings_view_model.freezed.dart';
@@ -24,7 +23,8 @@ abstract class SettingsState with _$SettingsState {
     @Default(AppLanguage.system) AppLanguage appLanguage,
     @Default(AppThemeMode.system) AppThemeMode appThemeMode,
     @Default(false) bool dynamicColor,
-    @Default(SleepRangeMode.evening18h) SleepRangeMode sleepRangeMode,
+    @Default(18) int nightStartHour,
+    @Default(10) int nightEndHour,
     @Default(ChartAggregationMode.off) ChartAggregationMode chartAggregationMode,
     @Default(ActivityWeekMode.mondayToSunday) ActivityWeekMode activityWeekMode,
     @Default(false) bool showOpenVitalsCalculatedCalories,
@@ -53,7 +53,8 @@ class SettingsViewModel extends Notifier<SettingsState> {
       appLanguage: prefs.appLanguage,
       appThemeMode: prefs.appThemeMode,
       dynamicColor: prefs.dynamicColor,
-      sleepRangeMode: prefs.sleepRangeMode,
+      nightStartHour: prefs.nightStartHour,
+      nightEndHour: prefs.nightEndHour,
       chartAggregationMode: prefs.chartAggregationMode,
       activityWeekMode: prefs.activityWeekMode,
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
@@ -86,9 +87,16 @@ class SettingsViewModel extends Notifier<SettingsState> {
     state = state.copyWith(dynamicColor: enabled);
   }
 
-  void selectSleepRangeMode(SleepRangeMode value) {
-    _prefs.sleepRangeMode = value;
-    state = state.copyWith(sleepRangeMode: value);
+  void setNightStartHour(int value) {
+    final hour = value % 24;
+    _prefs.nightStartHour = hour;
+    state = state.copyWith(nightStartHour: hour);
+  }
+
+  void setNightEndHour(int value) {
+    final hour = value % 24;
+    _prefs.nightEndHour = hour;
+    state = state.copyWith(nightEndHour: hour);
   }
 
   void selectChartAggregationMode(ChartAggregationMode value) {

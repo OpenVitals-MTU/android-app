@@ -20,7 +20,7 @@ import '../../domain/preferences/body_energy_calibration.dart';
 import '../../domain/preferences/body_profile.dart';
 import '../../domain/preferences/caffeine_preferences.dart';
 import '../../domain/preferences/chart_aggregation_mode.dart';
-import '../../domain/preferences/sleep_range_mode.dart';
+import '../../domain/preferences/sleep_window.dart';
 import '../../domain/preferences/unit_system.dart';
 import 'device_locale.dart';
 import 'prefs_codec.dart';
@@ -75,7 +75,8 @@ class PreferencesRepository {
         _appLanguage = ValueNotifier(_readAppLanguage(_prefs)),
         _appThemeMode = ValueNotifier(_readAppThemeMode(_prefs)),
         _dynamicColor = ValueNotifier(_readDynamicColor(_prefs)),
-        _sleepRangeMode = ValueNotifier(_readSleepRangeMode(_prefs)),
+        _nightStartHour = ValueNotifier(_readNightHour(_prefs, _keyNightStartHour, 18)),
+        _nightEndHour = ValueNotifier(_readNightHour(_prefs, _keyNightEndHour, 10)),
         _chartAggregationMode =
             ValueNotifier(_readChartAggregationMode(_prefs)),
         _activityWeekMode = ValueNotifier(_readActivityWeekMode(_prefs)),
@@ -109,7 +110,8 @@ class PreferencesRepository {
   final ValueNotifier<AppLanguage> _appLanguage;
   final ValueNotifier<AppThemeMode> _appThemeMode;
   final ValueNotifier<bool> _dynamicColor;
-  final ValueNotifier<SleepRangeMode> _sleepRangeMode;
+  final ValueNotifier<int> _nightStartHour;
+  final ValueNotifier<int> _nightEndHour;
   final ValueNotifier<ChartAggregationMode> _chartAggregationMode;
   final ValueNotifier<ActivityWeekMode> _activityWeekMode;
   final ValueNotifier<double> _activitySplitDistanceMeters;
@@ -125,8 +127,8 @@ class PreferencesRepository {
   ValueListenable<AppLanguage> get appLanguageListenable => _appLanguage;
   ValueListenable<AppThemeMode> get appThemeModeListenable => _appThemeMode;
   ValueListenable<bool> get dynamicColorListenable => _dynamicColor;
-  ValueListenable<SleepRangeMode> get sleepRangeModeListenable =>
-      _sleepRangeMode;
+  ValueListenable<int> get nightStartHourListenable => _nightStartHour;
+  ValueListenable<int> get nightEndHourListenable => _nightEndHour;
   ValueListenable<ChartAggregationMode> get chartAggregationModeListenable =>
       _chartAggregationMode;
   ValueListenable<ActivityWeekMode> get activityWeekModeListenable =>
@@ -173,10 +175,25 @@ class PreferencesRepository {
     _dynamicColor.value = value;
   }
 
-  SleepRangeMode get sleepRangeMode => _sleepRangeMode.value;
-  set sleepRangeMode(SleepRangeMode value) {
-    _store.putString(_keySleepRangeMode, value.name);
-    _sleepRangeMode.value = value;
+  /// The nightly sleep window (default 18:00 → 10:00). Sleep is captured within
+  /// it; sessions outside are daytime naps.
+  SleepWindow get sleepWindow => SleepWindow(
+        startHour: _nightStartHour.value,
+        endHour: _nightEndHour.value,
+      );
+
+  int get nightStartHour => _nightStartHour.value;
+  set nightStartHour(int value) {
+    final hour = value.clamp(0, 23);
+    _store.putInt(_keyNightStartHour, hour);
+    _nightStartHour.value = hour;
+  }
+
+  int get nightEndHour => _nightEndHour.value;
+  set nightEndHour(int value) {
+    final hour = value.clamp(0, 23);
+    _store.putInt(_keyNightEndHour, hour);
+    _nightEndHour.value = hour;
   }
 
   ChartAggregationMode get chartAggregationMode => _chartAggregationMode.value;
@@ -581,7 +598,8 @@ class PreferencesRepository {
     _appLanguage.dispose();
     _appThemeMode.dispose();
     _dynamicColor.dispose();
-    _sleepRangeMode.dispose();
+    _nightStartHour.dispose();
+    _nightEndHour.dispose();
     _chartAggregationMode.dispose();
     _activityWeekMode.dispose();
     _activitySplitDistanceMeters.dispose();
@@ -613,9 +631,12 @@ class PreferencesRepository {
   static bool _readDynamicColor(SharedPreferences prefs) =>
       prefs.getBool(_keyDynamicColor) ?? false;
 
-  static SleepRangeMode _readSleepRangeMode(SharedPreferences prefs) =>
-      enumByName(SleepRangeMode.values, prefs.getString(_keySleepRangeMode)) ??
-      SleepRangeMode.evening18h;
+  static int _readNightHour(
+    SharedPreferences prefs,
+    String key,
+    int fallback,
+  ) =>
+      (prefs.getInt(key) ?? fallback).clamp(0, 23);
 
   static ChartAggregationMode _readChartAggregationMode(
     SharedPreferences prefs,
@@ -695,7 +716,8 @@ class PreferencesRepository {
   static const String _keyAppLanguage = 'app_language';
   static const String _keyAppThemeMode = 'app_theme_mode';
   static const String _keyDynamicColor = 'dynamic_color';
-  static const String _keySleepRangeMode = 'sleep_range_mode';
+  static const String _keyNightStartHour = 'sleep_night_start_hour';
+  static const String _keyNightEndHour = 'sleep_night_end_hour';
   static const String _keyChartAggregationMode = 'chart_aggregation_mode';
   static const String _keyActivityWeekMode = 'activity_week_mode';
   static const String _keyActivitySplitDistanceMeters =

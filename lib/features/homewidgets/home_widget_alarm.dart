@@ -124,7 +124,7 @@ Future<HomeWidgetRefresher> buildBackgroundHomeWidgetRefresher() async {
         UnitFormatter(unitSystemProvider: () => preferences.unitSystem),
     localizations: homeWidgetLocalizations(),
     goals: homeWidgetReadinessGoals(preferences),
-    sleepRangeMode: preferences.sleepRangeMode,
+    sleepWindow: preferences.sleepWindow,
     activityWeekMode: preferences.activityWeekMode,
   );
 }

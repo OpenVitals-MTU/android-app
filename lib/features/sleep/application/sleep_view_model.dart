@@ -11,7 +11,7 @@ import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/daily_goals.dart';
 import '../../../domain/model/refresh_mode.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
+import '../../../domain/preferences/sleep_window.dart';
 import '../../../domain/usecase/load_sleep_period_use_case.dart';
 import 'sleep_display.dart';
 
@@ -28,7 +28,7 @@ abstract class SleepState with _$SleepState {
   const factory SleepState({
     required LocalDate selectedDate,
     @Default(TimeRange.week) TimeRange selectedRange,
-    @Default(SleepRangeMode.evening18h) SleepRangeMode sleepRangeMode,
+    @Default(SleepWindow.defaultWindow) SleepWindow sleepWindow,
     @Default(WeekPeriodMode.mondayToSunday) WeekPeriodMode weekPeriodMode,
     @Default(true) bool isLoading,
     /// The sleep-hours goal, moved by the goal card's steppers.
@@ -55,7 +55,7 @@ class SleepViewModel extends Notifier<SleepState>
     final prefs = ref.read(preferencesRepositoryProvider);
     return SleepState(
       selectedDate: LocalDate.now(),
-      sleepRangeMode: prefs.sleepRangeMode,
+      sleepWindow: prefs.sleepWindow,
       weekPeriodMode: prefs.weekPeriodMode,
       dailyGoalHours: prefs.dailyGoalFor(MetricDailyGoalKey.sleepHours),
     );
@@ -90,7 +90,7 @@ class SleepViewModel extends Notifier<SleepState>
         result: result,
         selectedRange: state.selectedRange,
         selectedDate: state.selectedDate,
-        sleepRangeMode: state.sleepRangeMode,
+        sleepWindow: state.sleepWindow,
         weekPeriodMode: state.weekPeriodMode,
         dailyGoalHours: goalHours,
       );
@@ -119,7 +119,7 @@ class SleepViewModel extends Notifier<SleepState>
     final next = state.copyWith(
       selectedRange: selection.selectedRange,
       selectedDate: selection.selectedDate,
-      sleepRangeMode: prefs.sleepRangeMode,
+      sleepWindow: prefs.sleepWindow,
       weekPeriodMode: prefs.weekPeriodMode,
       isLoading: true,
       error: null,
@@ -134,7 +134,7 @@ class SleepViewModel extends Notifier<SleepState>
   ) =>
       ref.read(loadSleepPeriodUseCaseProvider)(
         query,
-        state.sleepRangeMode,
+        state.sleepWindow,
         refreshMode: refreshMode,
       );
 

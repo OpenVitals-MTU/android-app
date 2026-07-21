@@ -90,7 +90,7 @@ class DailyReadinessViewModel extends Notifier<DailyReadinessState> {
     final result = await useCase(
       DashboardQuery(
         date: clamped,
-        sleepRangeMode: prefs.sleepRangeMode,
+        sleepWindow: prefs.sleepWindow,
         activityWeekMode: prefs.activityWeekMode,
         visibleMetrics: dailyReadinessMetrics,
         refreshMode: refreshMode,

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/insights/sleep_score.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
-import 'package:openvitals/domain/preferences/sleep_range_mode.dart';
+import 'package:openvitals/domain/preferences/sleep_window.dart';
 
 SleepData _sleepSession(LocalDate date) {
   final end = date.atTimeInstant(7);
@@ -44,7 +44,7 @@ void main() {
         for (var offset = 0; offset <= 3; offset++)
           _sleepSession(today.minusDays(offset)),
       ],
-      SleepRangeMode.evening18h,
+      SleepWindow.defaultWindow,
     );
 
     expect(estimate.confidence, SleepScoreConfidence.high);

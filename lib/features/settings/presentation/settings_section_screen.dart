@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/preferences/activity_week_mode.dart';
 import '../../../domain/preferences/app_theme_mode.dart';
 import '../../../domain/preferences/chart_aggregation_mode.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../domain/preferences/unit_system.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
@@ -168,15 +167,21 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
       ];
     case SettingsSection.recovery:
       return [
-        _SettingsCard(
-          title: l10n.settingsSleepRangeTitle,
-          body: l10n.settingsSleepRangeBody,
-          child: _ChoiceRow<SleepRangeMode>(
-            options: SleepRangeMode.values,
-            selected: state.sleepRangeMode,
-            labelFor: (value) => _sleepLabel(l10n, value),
-            onSelect: notifier.selectSleepRangeMode,
-          ),
+        _StepperCard(
+          title: l10n.settingsSleepNightStartTitle,
+          body: l10n.settingsSleepNightStartBody,
+          valueLabel: _hourLabel(state.nightStartHour),
+          onDecrement: () =>
+              notifier.setNightStartHour(state.nightStartHour - 1),
+          onIncrement: () =>
+              notifier.setNightStartHour(state.nightStartHour + 1),
+        ),
+        _StepperCard(
+          title: l10n.settingsSleepNightEndTitle,
+          body: l10n.settingsSleepNightEndBody,
+          valueLabel: _hourLabel(state.nightEndHour),
+          onDecrement: () => notifier.setNightEndHour(state.nightEndHour - 1),
+          onIncrement: () => notifier.setNightEndHour(state.nightEndHour + 1),
         ),
         _StepperCard(
           title: 'High heart-rate alert',
@@ -257,12 +262,8 @@ String _themeLabel(AppLocalizations l10n, AppThemeMode value) => switch (value) 
       AppThemeMode.amoled => l10n.settingsThemeAmoled,
     };
 
-String _sleepLabel(AppLocalizations l10n, SleepRangeMode value) =>
-    switch (value) {
-      SleepRangeMode.rolling24h => l10n.settingsSleepRangeRolling24h,
-      SleepRangeMode.noon => l10n.settingsSleepRangeNoon,
-      SleepRangeMode.evening18h => l10n.settingsSleepRangeEvening,
-    };
+/// A 24h clock hour as `HH:00` (e.g. 18 → "18:00").
+String _hourLabel(int hour) => '${hour.toString().padLeft(2, '0')}:00';
 
 String _chartAggregationLabel(AppLocalizations l10n, ChartAggregationMode value) =>
     switch (value) {

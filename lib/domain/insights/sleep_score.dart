@@ -5,7 +5,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../core/time/local_date.dart';
 import '../model/sleep_daily_summary.dart';
 import '../model/sleep_models.dart';
-import '../preferences/sleep_range_mode.dart';
+import '../preferences/sleep_window.dart';
 
 part 'sleep_score.freezed.dart';
 
@@ -113,12 +113,12 @@ Map<LocalDate, SleepScoreEstimate> calculateSleepScoresByDate(
 SleepScoreEstimate calculateSleepScoreForDate(
   LocalDate selectedDate,
   List<SleepData> sessions,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) {
   final selectedSleep = dailySleepSummary(
     sessions,
     selectedDate,
-    sleepRangeMode: sleepRangeMode,
+    sleepWindow: sleepWindow,
   );
   final startDate = selectedDate.minusDays(sleepScoreLookbackDays - 1);
   final previousSessions = <SleepData>[];
@@ -127,7 +127,7 @@ SleepScoreEstimate calculateSleepScoreForDate(
     final summary = dailySleepSummary(
       sessions,
       date,
-      sleepRangeMode: sleepRangeMode,
+      sleepWindow: sleepWindow,
     );
     if (summary != null) previousSessions.add(summary);
     date = date.plusDays(1);

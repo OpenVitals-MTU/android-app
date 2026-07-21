@@ -20,7 +20,7 @@ import '../../../../domain/model/sleep_models.dart';
 import '../../../../domain/model/sleep_session_merging.dart';
 import '../../../../domain/model/vitals_change_batch.dart';
 import '../../../../domain/model/vitals_models.dart';
-import '../../../../domain/preferences/sleep_range_mode.dart';
+import '../../../../domain/preferences/sleep_window.dart';
 import '../../../../domain/model/apple_health_import_records.dart';
 import '../health_data_source.dart';
 import '../../../../domain/health/health_permissions.dart';
@@ -2030,7 +2030,7 @@ Duration? _zoneOffset(int? seconds) =>
   Future<SleepReadData> readSleepData(
     LocalDate startDate,
     LocalDate endDate,
-    SleepRangeMode sleepRangeMode,
+    SleepWindow sleepWindow,
   ) async {
     // Widen by a day on each side so sessions crossing midnight are captured.
     final sessions = await readSleepSessions(

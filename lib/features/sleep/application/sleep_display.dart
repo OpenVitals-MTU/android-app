@@ -16,7 +16,7 @@ import '../../../domain/insights/personal_baseline.dart';
 import '../../../domain/insights/sleep_score.dart';
 import '../../../domain/model/sleep_daily_summary.dart';
 import '../../../domain/model/sleep_models.dart';
-import '../../../domain/preferences/sleep_range_mode.dart';
+import '../../../domain/preferences/sleep_window.dart';
 import '../../../domain/model/recording_method.dart';
 import '../../../domain/usecase/load_sleep_period_use_case.dart';
 import '../../../ui/charts/bar_chart.dart';
@@ -191,7 +191,7 @@ SleepDisplay buildSleepDisplay({
   required SleepPeriodLoadResult result,
   required TimeRange selectedRange,
   required LocalDate selectedDate,
-  required SleepRangeMode sleepRangeMode,
+  required SleepWindow sleepWindow,
   required WeekPeriodMode weekPeriodMode,
   required double dailyGoalHours,
 }) {
@@ -209,25 +209,25 @@ SleepDisplay buildSleepDisplay({
   // Split the selected day into the night and its daytime naps: the timeline
   // card, duration and stage breakdown are the night only, naps reported apart.
   final daySplit = splitNightAndNaps(
-    sleepSessionsForRange(result.sessions, selectedDate, sleepRangeMode),
+    sleepSessionsForRange(result.sessions, selectedDate, sleepWindow),
   );
   final dailySessions = daySplit.night;
   final dayNaps = daySplit.naps;
   final dailySummary = dailySleepSummary(
     result.sessions,
     selectedDate,
-    sleepRangeMode: sleepRangeMode,
+    sleepWindow: sleepWindow,
   );
 
   final durationPoints = _sleepDurationPoints(
     result.sessions,
     selectedPeriod,
-    sleepRangeMode,
+    sleepWindow,
   );
   final previousDurationPoints = _sleepDurationPoints(
     result.previousSessions,
     previousPeriod,
-    sleepRangeMode,
+    sleepWindow,
   );
 
   final scoreSessions = _distinctById([
@@ -238,19 +238,19 @@ SleepDisplay buildSleepDisplay({
     result.sessions,
     scoreSessions,
     selectedPeriod,
-    sleepRangeMode,
+    sleepWindow,
   );
 
   final baselineDurationPoints = _sleepDurationPoints(
     result.baselineSessions,
     baselinePeriodBefore(selectedPeriod),
-    sleepRangeMode,
+    sleepWindow,
   );
 
   final overviewSummary = _overviewSummary(overviewDays);
   final sessionsByDate = {
     for (final date in _datesInPeriod(selectedPeriod.start, selectedPeriod.end))
-      date: sleepSessionsForRange(result.sessions, date, sleepRangeMode),
+      date: sleepSessionsForRange(result.sessions, date, sleepWindow),
   };
   final periodSessions = [
     for (final sessions in sessionsByDate.values) ...sessions,
@@ -258,9 +258,9 @@ SleepDisplay buildSleepDisplay({
   // The canonical merged night per date — the day card, the schedule chart and
   // the entry lists all render this one night, never the raw segments.
   final nightByDate =
-      _nightByDate(result.sessions, selectedPeriod, sleepRangeMode);
+      _nightByDate(result.sessions, selectedPeriod, sleepWindow);
   final napsByDate =
-      _napsByDate(result.sessions, selectedPeriod, sleepRangeMode);
+      _napsByDate(result.sessions, selectedPeriod, sleepWindow);
   final periodNights = _newestNightFirst(
     [for (final night in nightByDate.values) ?night],
   );
@@ -434,22 +434,22 @@ List<SleepScheduleDay> toSleepScheduleDays(
 Map<LocalDate, SleepData?> _nightByDate(
   List<SleepData> sessions,
   DatePeriod period,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) =>
     {
       for (final date in _datesInPeriod(period.start, period.end))
-        date: dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode),
+        date: dailySleepSummary(sessions, date, sleepWindow: sleepWindow),
     };
 
 /// The daytime naps for each date, reported apart from the night.
 Map<LocalDate, List<SleepData>> _napsByDate(
   List<SleepData> sessions,
   DatePeriod period,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) =>
     {
       for (final date in _datesInPeriod(period.start, period.end))
-        date: dailyNaps(sessions, date, sleepRangeMode: sleepRangeMode),
+        date: dailyNaps(sessions, date, sleepWindow: sleepWindow),
     };
 
 List<SleepData> _newestNightFirst(List<SleepData> sessions) =>
@@ -490,10 +490,10 @@ List<LocalDate> _datesInPeriod(LocalDate start, LocalDate end) {
 double nightAsleepHours(
   List<SleepData> sessions,
   LocalDate date, {
-  SleepRangeMode sleepRangeMode = SleepRangeMode.evening18h,
+  SleepWindow sleepWindow = SleepWindow.defaultWindow,
 }) {
   final summary =
-      dailySleepSummary(sessions, date, sleepRangeMode: sleepRangeMode);
+      dailySleepSummary(sessions, date, sleepWindow: sleepWindow);
   if (summary == null) return 0.0;
   return sleepDurationMsFromStages(summary.stages, summary.durationMs) /
       3600000.0;
@@ -502,7 +502,7 @@ double nightAsleepHours(
 List<SleepDurationPoint> _sleepDurationPoints(
   List<SleepData> sessions,
   DatePeriod period,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) {
   // Hours ASLEEP per night (wake time within the session excluded), grouped by
   // the same window the sessions are. (The old Health-Connect daily aggregate
@@ -512,7 +512,7 @@ List<SleepDurationPoint> _sleepDurationPoints(
     for (final date in _datesInPeriod(period.start, period.end))
       SleepDurationPoint(
         date,
-        nightAsleepHours(sessions, date, sleepRangeMode: sleepRangeMode),
+        nightAsleepHours(sessions, date, sleepWindow: sleepWindow),
       ),
   ];
 }
@@ -573,15 +573,15 @@ List<_OverviewDay> _overviewDays(
   List<SleepData> sessions,
   List<SleepData> scoreSessions,
   DatePeriod period,
-  SleepRangeMode sleepRangeMode,
+  SleepWindow sleepWindow,
 ) {
   return [
     for (final date in _datesInPeriod(period.start, period.end))
       _OverviewDay(
         splitNightAndNaps(
-          sleepSessionsForRange(sessions, date, sleepRangeMode),
+          sleepSessionsForRange(sessions, date, sleepWindow),
         ).night,
-        calculateSleepScoreForDate(date, scoreSessions, sleepRangeMode),
+        calculateSleepScoreForDate(date, scoreSessions, sleepWindow),
       ),
   ];
 }

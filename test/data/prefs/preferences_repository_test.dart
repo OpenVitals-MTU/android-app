@@ -12,7 +12,6 @@ import 'package:openvitals/domain/preferences/app_theme_mode.dart';
 import 'package:openvitals/domain/preferences/body_energy_calibration.dart';
 import 'package:openvitals/domain/preferences/body_profile.dart';
 import 'package:openvitals/domain/preferences/caffeine_preferences.dart';
-import 'package:openvitals/domain/preferences/sleep_range_mode.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -156,17 +155,29 @@ void main() {
       expect(observed, [target]);
     });
 
-    test('appThemeMode / sleepRangeMode round-trip via a fresh instance',
+    test('appThemeMode / sleep window round-trip via a fresh instance',
         () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final repo = PreferencesRepository(prefs);
       repo.appThemeMode = AppThemeMode.amoled;
-      repo.sleepRangeMode = SleepRangeMode.noon;
+      repo.nightStartHour = 20;
+      repo.nightEndHour = 9;
 
       final reloaded = PreferencesRepository(prefs);
       expect(reloaded.appThemeMode, AppThemeMode.amoled);
-      expect(reloaded.sleepRangeMode, SleepRangeMode.noon);
+      expect(reloaded.sleepWindow.startHour, 20);
+      expect(reloaded.sleepWindow.endHour, 9);
+    });
+
+    test('sleep window defaults to 18:00-10:00 and clamps out-of-range hours',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      final repo = PreferencesRepository(await SharedPreferences.getInstance());
+      expect(repo.sleepWindow.startHour, 18);
+      expect(repo.sleepWindow.endHour, 10);
+      repo.nightStartHour = 30;
+      expect(repo.nightStartHour, 23);
     });
   });
 

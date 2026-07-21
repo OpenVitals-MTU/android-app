@@ -5,7 +5,7 @@ import '../../data/repository/contract/sleep_repository.dart';
 import '../model/heart_models.dart';
 import '../model/refresh_mode.dart';
 import '../model/sleep_models.dart';
-import '../preferences/sleep_range_mode.dart';
+import '../preferences/sleep_window.dart';
 
 /// Combined sleep + cross-metric HRV result. Port of the Kotlin
 /// `SleepPeriodLoadResult`.
@@ -38,12 +38,12 @@ class LoadSleepPeriodUseCase {
 
   Future<Result<SleepPeriodLoadResult>> call(
     PeriodLoadQuery query,
-    SleepRangeMode sleepRangeMode, {
+    SleepWindow sleepWindow, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
     final loaded = await _sleepRepository.loadSleepPeriod(
       query,
-      sleepRangeMode,
+      sleepWindow,
       refreshMode: refreshMode,
     );
     return loaded.flatMap((periodData) async {
