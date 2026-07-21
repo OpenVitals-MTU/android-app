@@ -90,6 +90,15 @@ class HealthDataSource {
   /// Requests OS authorization for [permissions]. Returns success.
   Future<bool> requestPermissions(Set<String> permissions) async => false;
 
+  /// The subset of [permissions] the installed Health Connect provider actually
+  /// recognizes. Requesting a permission the provider does not define throws, so
+  /// callers building an ad-hoc permission set (e.g. device sync) filter through
+  /// this first. Base returns them unchanged; the native source asks the plugin.
+  Future<Set<String>> filterSupportedPermissions(
+    Set<String> permissions,
+  ) async =>
+      permissions;
+
   /// The subset of [permissionService.managedPermissions] currently granted.
   Future<Set<String>> grantedPermissions() async => const <String>{};
 

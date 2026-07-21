@@ -249,6 +249,18 @@ Duration? _zoneOffset(int? seconds) =>
   }
 
   @override
+  Future<Set<String>> filterSupportedPermissions(
+    Set<String> permissions,
+  ) async {
+    if (permissions.isEmpty) return const <String>{};
+    final supported = await _catch(
+      () => _api.filterSupportedPermissions(permissions.toList()),
+      permissions.toList(),
+    );
+    return supported.toSet();
+  }
+
+  @override
   Future<bool> openHealthConnectSettings() =>
       _catch(() => _api.openHealthConnectSettings(), false);
 

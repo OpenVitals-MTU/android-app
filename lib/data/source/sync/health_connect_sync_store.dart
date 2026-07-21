@@ -10,6 +10,8 @@
 /// converge and Health Connect upserts rather than duplicating.
 library;
 
+import 'package:flutter/foundation.dart';
+
 import '../../../domain/model/apple_health_import_records.dart';
 import '../health/health_data_source.dart';
 import 'import_record_sync_codec.dart';
@@ -79,8 +81,13 @@ class HealthConnectSyncStore implements SyncRecordStore {
           payload: item.payload,
         ),
     ];
-    if (records.isNotEmpty) {
+    if (records.isEmpty) return;
+    try {
       await _dataSource.insertImportedRecords(records);
+      debugPrint('[devicesync] wrote ${records.length} records to Health Connect');
+    } catch (e) {
+      debugPrint('[devicesync] WRITE FAILED for ${records.length} records: $e');
+      rethrow;
     }
   }
 }

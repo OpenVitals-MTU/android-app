@@ -145,6 +145,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
 
   Future<void> chooseHost() async {
     if (!await _ensurePermissions()) return;
+    await _ensureHealthPermissions();
     final service = _ensureService();
     if (!await service.isBluetoothEnabled()) {
       state = state.copyWith(bluetoothUnavailable: true);
@@ -169,6 +170,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
 
   Future<void> chooseGuest() async {
     if (!await _ensurePermissions()) return;
+    await _ensureHealthPermissions();
     final service = _ensureService();
     if (!await service.isBluetoothEnabled()) {
       state = state.copyWith(bluetoothUnavailable: true);
@@ -345,6 +347,34 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       state = state.copyWith(errorMessage: 'permission_denied');
     }
     return granted;
+  }
+
+  /// Requests Health Connect READ + WRITE for the syncable types, so the guest
+  /// can actually write received records (an unpermitted write throws and, since
+  /// a batch insert is atomic, drops the whole batch). Filtered through the
+  /// provider's supported set first — requesting a permission the provider does
+  /// not define throws.
+  Future<void> _ensureHealthPermissions() async {
+    const suffixes = <String>[
+      'WEIGHT', 'HEIGHT', 'BODY_FAT', 'LEAN_BODY_MASS', 'BASAL_METABOLIC_RATE',
+      'BONE_MASS', 'BODY_WATER_MASS', 'HYDRATION', 'BLOOD_PRESSURE',
+      'OXYGEN_SATURATION', 'RESPIRATORY_RATE', 'BODY_TEMPERATURE', 'VO2_MAX',
+      'BLOOD_GLUCOSE', 'MINDFULNESS',
+    ];
+    final wanted = <String>{
+      for (final s in suffixes) ...[
+        'android.permission.health.READ_$s',
+        'android.permission.health.WRITE_$s',
+      ],
+    };
+    final ds = ref.read(healthDataSourceProvider);
+    try {
+      final supported = await ds.filterSupportedPermissions(wanted);
+      final granted = await ds.requestPermissions(supported);
+      debugPrint('[devicesync] HC permissions: requested ${supported.length}, allGranted=$granted');
+    } catch (e) {
+      debugPrint('[devicesync] HC permission request failed: $e');
+    }
   }
 
   static (DateTime, DateTime) _window(SyncRange range) {
