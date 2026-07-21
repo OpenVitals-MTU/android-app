@@ -90,6 +90,11 @@ Future<void> homeWidgetRefreshAlarmCallback() async {
 @visibleForTesting
 Future<HomeWidgetRefresher> buildBackgroundHomeWidgetRefresher() async {
   final sharedPreferences = await SharedPreferences.getInstance();
+  // The alarm plugin reuses one long-lived background engine, so this isolate's
+  // prefs cache is whatever it read on the FIRST fire — stale to any unit/goal
+  // change the user has since made in the foreground. Reload before building the
+  // repository so the widgets render current values.
+  await sharedPreferences.reload();
   final preferences = PreferencesRepository(sharedPreferences);
   final HealthDataSource dataSource =
       (await openBackgroundHealthAccess()).orThrow();

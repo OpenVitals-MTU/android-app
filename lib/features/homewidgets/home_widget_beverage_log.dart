@@ -121,8 +121,12 @@ Future<void> homeWidgetInteractivityCallback(Uri? uri) async {
 /// Connect and SharedPreferences.
 @visibleForTesting
 Future<QuickBeverageWidgetLogger> buildBackgroundQuickBeverageLogger() async {
-  final preferences =
-      PreferencesRepository(await SharedPreferences.getInstance());
+  final sharedPreferences = await SharedPreferences.getInstance();
+  // The widget-tap engine is long-lived, so its prefs cache can be stale to a
+  // foreground change (or a prior tap in another isolate). Reload before reading
+  // e.g. the last custom amount so the tap acts on current values.
+  await sharedPreferences.reload();
+  final preferences = PreferencesRepository(sharedPreferences);
   final HealthDataSource dataSource =
       (await openBackgroundHealthAccess()).orThrow();
 
