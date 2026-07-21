@@ -1280,7 +1280,7 @@
     "settingsAppleHealthImportCategoryCycleDesc": "Menstruación, ovulación, moco cervical, sangrado, temperatura basal y actividad sexual.",
     "settingsAppleHealthImportCopyReport": "Copiar informe",
     "settingsAppleHealthImportCopyError": "Copiar error",
-    "settingsAppleHealthImportSaveReport": "Guardar informe",
+    "settingsAppleHealthImportSaveReport": "Descargar el informe completo",
     "settingsAppleHealthImportReportCopied": "Informe de importación copiado.",
     "settingsAppleHealthImportErrorCopied": "Error de importación copiado.",
     "settingsAppleHealthImportReportSaved": "Informe de importación guardado.",
@@ -1962,5 +1962,260 @@
     "settingsSleepNightStartTitle": "La noche empieza a las",
     "settingsSleepNightStartBody": "La noche comienza al caer la tarde. Dormir desde ese momento hasta la mañana siguiente equivale a una noche; las sesiones anteriores son siestas diurnas.",
     "settingsSleepNightEndTitle": "La noche termina a las",
-    "settingsSleepNightEndBody": "La hora de la mañana con la que termina la noche. El sueño que sigue a esta, hasta el comienzo de la tarde, se considera una siesta diurna."
+    "settingsSleepNightEndBody": "La hora de la mañana con la que termina la noche. El sueño que sigue a esta, hasta el comienzo de la tarde, se considera una siesta diurna.",
+    "settingsDeviceSyncGroupTitle": "Sincronizar con otro teléfono",
+    "@settingsDeviceSyncGroupTitle": {
+        "description": "Settings hub card title for phone-to-phone Bluetooth sync."
+    },
+    "settingsDeviceSyncGroupBody": "Copiar los registros de Health Connect a un teléfono cercano a través de Bluetooth",
+    "@settingsDeviceSyncGroupBody": {
+        "description": "Settings hub card summary for phone-to-phone Bluetooth sync."
+    },
+    "deviceSyncTitle": "Sincronizar con otro teléfono",
+    "@deviceSyncTitle": {
+        "description": "App-bar title of the device-sync wizard."
+    },
+    "deviceSyncRoleHeading": "Traslada tus datos, sin necesidad de la nube",
+    "@deviceSyncRoleHeading": {
+        "description": "Heading on the role-choice step."
+    },
+    "deviceSyncRoleBody": "Copia los registros de Health Connect directamente a otro teléfono a través de Bluetooth. La información no sale de tus dispositivos.",
+    "@deviceSyncRoleBody": {
+        "description": "Body on the role-choice step."
+    },
+    "deviceSyncHostOption": "Hacer visible este dispositivo",
+    "@deviceSyncHostOption": {
+        "description": "Host-role option title."
+    },
+    "deviceSyncHostOptionBody": "Muestra un código que el otro teléfono debe introducir.",
+    "@deviceSyncHostOptionBody": {
+        "description": "Host-role option subtitle."
+    },
+    "deviceSyncGuestOption": "Busca un teléfono con el que sincronizar",
+    "@deviceSyncGuestOption": {
+        "description": "Guest-role option title."
+    },
+    "deviceSyncGuestOptionBody": "Escanea dispositivos cercanos e introduce el código.",
+    "@deviceSyncGuestOptionBody": {
+        "description": "Guest-role option subtitle."
+    },
+    "deviceSyncPrivacyNote": "La transferencia se realiza a través de una conexión Bluetooth enpariada y cifrada. OpenVitals no tiene permiso para acceder a Internet, por lo que nunca se conecta a ninguna red.",
+    "@deviceSyncPrivacyNote": {
+        "description": "Privacy reassurance on the role step."
+    },
+    "deviceSyncBluetoothOff": "Activa el Bluetooth para sincronizarlo con otro teléfono.",
+    "@deviceSyncBluetoothOff": {
+        "description": "Shown when Bluetooth is disabled."
+    },
+    "deviceSyncHostHeading": "Esperando al otro teléfono",
+    "@deviceSyncHostHeading": {
+        "description": "Heading while the host is discoverable."
+    },
+    "deviceSyncHostBody": "En el otro móvil, elige \"Buscar teléfono\", toca sobre este equipo y escribe el código que ves abajo.",
+    "@deviceSyncHostBody": {
+        "description": "Body while the host is discoverable."
+    },
+    "deviceSyncCodeLabel": "Código de vinculación",
+    "@deviceSyncCodeLabel": {
+        "description": "Label above the 6-digit pairing code."
+    },
+    "deviceSyncWaiting": "Esperando a que se establezca la conexión...",
+    "@deviceSyncWaiting": {
+        "description": "Host waiting-for-connection status."
+    },
+    "deviceSyncScanHeading": "Buscando cerca",
+    "@deviceSyncScanHeading": {
+        "description": "Heading on the guest scan step."
+    },
+    "deviceSyncScanBody": "Elige el teléfono en el que aparezca un código de emparejamiento. Asegúrate de que esté en modo de detección.",
+    "@deviceSyncScanBody": {
+        "description": "Body on the guest scan step."
+    },
+    "deviceSyncPaired": "Emparejados",
+    "@deviceSyncPaired": {
+        "description": "Subtitle marking an already-bonded device."
+    },
+    "deviceSyncCodeHeading": "Código de {deviceName}",
+    "@deviceSyncCodeHeading": {
+        "description": "Heading on the code-entry step, naming the selected device.",
+        "placeholders": {
+            "deviceName": {
+                "type": "String"
+            }
+        }
+    },
+    "deviceSyncCodeBody": "Escribe los seis dígitos que aparecen en el otro teléfono para confirmar que se trata realmente de ese dispositivo.",
+    "@deviceSyncCodeBody": {
+        "description": "Body on the code-entry step."
+    },
+    "deviceSyncWrongCode": "Código incorrecto. Verifica el otro dispositivo e inténtalo otra vez.",
+    "@deviceSyncWrongCode": {
+        "description": "Wrong-code error on the code-entry step."
+    },
+    "deviceSyncConnect": "Conectar",
+    "@deviceSyncConnect": {
+        "description": "Connect button on the code-entry step."
+    },
+    "deviceSyncRangeHeading": "Período de sincronización",
+    "@deviceSyncRangeHeading": {
+        "description": "Heading on the time-range step."
+    },
+    "deviceSyncRangeBody": "Los datos más antiguos tardan más en leerse y enviarse. Siempre puedes volver a ejecutar la operación para obtener más.",
+    "@deviceSyncRangeBody": {
+        "description": "Body on the time-range step."
+    },
+    "deviceSyncRange30": "Últimos 30 días",
+    "@deviceSyncRange30": {
+        "description": "30-day sync range option."
+    },
+    "deviceSyncRange6mo": "Últimos 6 meses",
+    "@deviceSyncRange6mo": {
+        "description": "6-month sync range option."
+    },
+    "deviceSyncRange1y": "El último año",
+    "@deviceSyncRange1y": {
+        "description": "1-year sync range option."
+    },
+    "deviceSyncRangeAll": "Todo",
+    "@deviceSyncRangeAll": {
+        "description": "All-time sync range option."
+    },
+    "deviceSyncNext": "Elige los datos",
+    "@deviceSyncNext": {
+        "description": "Advance button from range to types."
+    },
+    "deviceSyncTypesHeading": "Seleccionar contenido",
+    "@deviceSyncTypesHeading": {
+        "description": "Heading on the data-types step."
+    },
+    "deviceSyncTypesBody": "Los dos móviles están listos para transferir estos datos. Quita la marca de lo que prefieras no copiar.",
+    "@deviceSyncTypesBody": {
+        "description": "Body on the data-types step."
+    },
+    "deviceSyncCategoryBody": "Medidas corporales",
+    "@deviceSyncCategoryBody": {
+        "description": "Body-measurements category label."
+    },
+    "deviceSyncCategoryVitals": "Datos vitales",
+    "@deviceSyncCategoryVitals": {
+        "description": "Vitals category label."
+    },
+    "deviceSyncCategoryHydration": "Hidratación",
+    "@deviceSyncCategoryHydration": {
+        "description": "Hydration category label."
+    },
+    "deviceSyncCategoryMindfulness": "Mindfulness o Atención plena",
+    "@deviceSyncCategoryMindfulness": {
+        "description": "Mindfulness category label."
+    },
+    "deviceSyncCategoryActivity": "Actividad",
+    "@deviceSyncCategoryActivity": {
+        "description": "Activity (steps, distance, calories) category label."
+    },
+    "deviceSyncCategoryWorkouts": "Entrenamientos",
+    "@deviceSyncCategoryWorkouts": {
+        "description": "Workouts (exercise sessions) category label."
+    },
+    "deviceSyncCategoryHeart": "Corazón",
+    "@deviceSyncCategoryHeart": {
+        "description": "Heart (heart rate, HRV) category label."
+    },
+    "deviceSyncCategorySleep": "Sueño",
+    "@deviceSyncCategorySleep": {
+        "description": "Sleep category label."
+    },
+    "deviceSyncCategoryNutrition": "Nutrición",
+    "@deviceSyncCategoryNutrition": {
+        "description": "Nutrition category label."
+    },
+    "deviceSyncCategoryCycle": "Seguimiento del ciclo",
+    "@deviceSyncCategoryCycle": {
+        "description": "Menstrual cycle tracking category label."
+    },
+    "deviceSyncStartSync": "Iniciar sincronización, {count} elementos seleccionados",
+    "@deviceSyncStartSync": {
+        "description": "Start-sync button with the count of selected categories/types.",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "deviceSyncProgressHeading": "Sincronizanso",
+    "@deviceSyncProgressHeading": {
+        "description": "Heading on the transfer step."
+    },
+    "deviceSyncPhaseHandshake": "Confirmación de conexión y descarte de duplicados",
+    "@deviceSyncPhaseHandshake": {
+        "description": "Transfer phase: handshake."
+    },
+    "deviceSyncPhaseExchanging": "Intercambiando los registros",
+    "@deviceSyncPhaseExchanging": {
+        "description": "Transfer phase: exchange."
+    },
+    "deviceSyncPhaseWriting": "Copiando en Health Connect",
+    "@deviceSyncPhaseWriting": {
+        "description": "Transfer phase: writing."
+    },
+    "deviceSyncSent": "Enviar",
+    "@deviceSyncSent": {
+        "description": "Transfer stat: records sent."
+    },
+    "deviceSyncReceived": "Recibido",
+    "@deviceSyncReceived": {
+        "description": "Transfer stat: records received."
+    },
+    "deviceSyncWritten": "Copiando",
+    "@deviceSyncWritten": {
+        "description": "Transfer stat: records written."
+    },
+    "deviceSyncReportHeading": "Fusionado {count} registros",
+    "@deviceSyncReportHeading": {
+        "description": "Report heading with the number of records merged.",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "deviceSyncImported": "Importado",
+    "@deviceSyncImported": {
+        "description": "Report counter: imported records."
+    },
+    "deviceSyncDuplicates": "Ya existía (omitido)",
+    "@deviceSyncDuplicates": {
+        "description": "Report counter: duplicate records skipped."
+    },
+    "deviceSyncDone": "Hecho",
+    "@deviceSyncDone": {
+        "description": "Finish button on the report step."
+    },
+    "deviceSyncNotificationChannel": "Copia directa",
+    "@deviceSyncNotificationChannel": {
+        "description": "Notification channel name for the sync foreground service."
+    },
+    "deviceSyncNotificationTitle": "Sincronización con otro teléfono",
+    "@deviceSyncNotificationTitle": {
+        "description": "Foreground-service notification title during a sync."
+    },
+    "deviceSyncNotificationText": "Mantén ambos teléfonos cerca hasta que finalice la sincronización.",
+    "@deviceSyncNotificationText": {
+        "description": "Foreground-service notification body during a sync."
+    },
+    "deviceSyncReportCopied": "El informe se ha copiado en el portapapeles.",
+    "@deviceSyncReportCopied": {
+        "description": "Snackbar after copying the sync report."
+    },
+    "deviceSyncReportSaved": "Informe guardado.",
+    "@deviceSyncReportSaved": {
+        "description": "Snackbar after saving the sync report."
+    },
+    "deviceSyncCopyReport": "Copiar informe",
+    "@deviceSyncCopyReport": {
+        "description": "Button to copy the sync report to the clipboard."
+    },
+    "deviceSyncSaveReport": "Guardar informe",
+    "@deviceSyncSaveReport": {
+        "description": "Button to save the sync report to a file."
+    }
 }
