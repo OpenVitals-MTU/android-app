@@ -605,6 +605,7 @@ class PreferencesRepository {
     _activitySplitDistanceMeters.dispose();
     _showOpenVitalsCalculatedCalories.dispose();
     _healthConnectSyncEnabled.dispose();
+    _healthConnectMindfulnessEnabled.dispose();
     _bodyEnergyCalibration.dispose();
     _caffeinePreferences.dispose();
     _bodyProfile.dispose();

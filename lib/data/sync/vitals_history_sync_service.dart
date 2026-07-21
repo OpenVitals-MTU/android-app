@@ -71,6 +71,11 @@ class VitalsHistorySyncService {
   Future<void> _fullSync(_MetricSync m) async {
     final today = LocalDate.fromDateTime(_clock());
     final start = today.plusDays(-_historyLookbackDays);
+    // Register the changes token BEFORE the (slow) history read, so writes that
+    // land during it are caught by the next incremental sync rather than lost
+    // (they would otherwise be in neither this snapshot nor the token's delta).
+    // Mirrors CaloriesHistorySyncService._fullSync.
+    final freshToken = await _dataSource.getVitalsChangesToken(m.recordType);
     final aggregates = await m.read(start, today);
     await _cacheDao.replaceMetric(m.metric.name, [
       for (final a in aggregates)
@@ -82,7 +87,6 @@ class VitalsHistorySyncService {
           secondarySum: Value(a.secondarySum),
         ),
     ]);
-    final freshToken = await _dataSource.getVitalsChangesToken(m.recordType);
     await _cacheDao.writeFullSync(
       m.metric.name,
       freshToken.isEmpty ? null : freshToken,

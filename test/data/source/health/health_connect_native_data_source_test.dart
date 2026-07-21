@@ -324,6 +324,36 @@ class FakeHostApi extends HealthConnectHostApi {
   Future<void> deleteActivityEntry(String id) async {
     deletedActivityIds.add(id);
   }
+
+  // ── Hydration / nutrition deletes + daily hydration ───────────────────────
+  /// Per-day hydration aggregate buckets returned by `readDailyHydration`.
+  List<DailyHydrationMsg> dailyHydration = const [];
+
+  /// When set, the matching delete throws it instead of returning a
+  /// clientRecordId — lets tests assert failures propagate (not swallowed).
+  Object? deleteHydrationError;
+  Object? deleteNutritionError;
+  String? deleteHydrationResult;
+  String? deleteNutritionResult;
+
+  @override
+  Future<List<DailyHydrationMsg>> readDailyHydration(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      dailyHydration;
+
+  @override
+  Future<String?> deleteHydrationEntry(String id) async {
+    if (deleteHydrationError != null) throw deleteHydrationError!;
+    return deleteHydrationResult;
+  }
+
+  @override
+  Future<String?> deleteNutritionEntry(String id) async {
+    if (deleteNutritionError != null) throw deleteNutritionError!;
+    return deleteNutritionResult;
+  }
 }
 
 HealthConnectNativeDataSource _source(FakeHostApi api) =>
@@ -780,6 +810,58 @@ void main() {
       expect(api.lastDurationQuery!.metrics, contains('FloorsClimbed.floors'));
     });
 
+    test(
+        'readDailySteps sums two buckets on the same local date '
+        '(DST fall-back day) instead of overwriting', () async {
+      final api = FakeHostApi();
+      // A 25-hour local day makes two absolute 24h buckets resolve to the same
+      // LocalDate (midnight + 23:00). They must be summed; the old map-assign
+      // kept only the second, silently dropping a near-full day of steps.
+      api.durationBuckets = [
+        jsonEncode({
+          'startEpochMs': DateTime(2026, 1, 2).millisecondsSinceEpoch,
+          'endEpochMs': DateTime(2026, 1, 2, 23).millisecondsSinceEpoch,
+          'values': {'Steps.count': 5000.0, 'Distance.distance': 4000.0},
+        }),
+        jsonEncode({
+          'startEpochMs': DateTime(2026, 1, 2, 23).millisecondsSinceEpoch,
+          'endEpochMs': DateTime(2026, 1, 3, 23).millisecondsSinceEpoch,
+          'values': {'Steps.count': 300.0, 'Distance.distance': 250.0},
+        }),
+      ];
+      final daily = await _source(api).readDailySteps(
+        LocalDate(2026, 1, 2),
+        LocalDate(2026, 1, 2),
+      );
+      expect(daily, hasLength(1));
+      expect(daily.single.date, LocalDate(2026, 1, 2));
+      expect(daily.single.steps, 5300);
+      expect(daily.single.distanceMeters, 4250.0);
+    });
+
+    test(
+        'readDailyHydration sums same-date buckets instead of keeping the last',
+        () async {
+      final api = FakeHostApi()
+        ..dailyHydration = [
+          DailyHydrationMsg(
+            dateEpochMs: DateTime(2026, 1, 2).millisecondsSinceEpoch,
+            liters: 1.2,
+          ),
+          DailyHydrationMsg(
+            dateEpochMs: DateTime(2026, 1, 2, 23).millisecondsSinceEpoch,
+            liters: 0.3,
+          ),
+        ];
+      final daily = await _source(api).readDailyHydration(
+        LocalDate(2026, 1, 2),
+        LocalDate(2026, 1, 2),
+      );
+      expect(daily, hasLength(1));
+      expect(daily.single.date, LocalDate(2026, 1, 2));
+      expect(daily.single.liters, closeTo(1.5, 1e-9));
+    });
+
     test('readDailySteps maps floors when requested', () async {
       final api = FakeHostApi();
       api.durationBuckets = [
@@ -1102,6 +1184,32 @@ void main() {
       expect(req.segments, hasLength(1));
       expect(req.segments.first.segmentType, 42);
       expect(req.segments.first.repetitions, 10);
+    });
+
+    test('deleteHydrationEntry propagates provider failures (not swallowed)',
+        () async {
+      final api = FakeHostApi()..deleteHydrationError = StateError('denied');
+      // The bug: _catch(..., null) turned a failed delete into the same null the
+      // "no clientRecordId" success returns, so the use case never rolled back.
+      await expectLater(
+        _source(api).deleteHydrationEntry('h-1'),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('deleteHydrationEntry still returns null for no paired clientRecordId',
+        () async {
+      final api = FakeHostApi()..deleteHydrationResult = null;
+      expect(await _source(api).deleteHydrationEntry('h-1'), isNull);
+    });
+
+    test('deleteNutritionEntry propagates provider failures (not swallowed)',
+        () async {
+      final api = FakeHostApi()..deleteNutritionError = StateError('denied');
+      await expectLater(
+        _source(api).deleteNutritionEntry('n-1'),
+        throwsA(isA<StateError>()),
+      );
     });
 
     test('deleteActivityEntry delegates by id', () async {

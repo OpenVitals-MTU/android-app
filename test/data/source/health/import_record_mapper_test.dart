@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:health_connect_native/health_connect_native.dart';
 import 'package:openvitals/data/source/health/native/import_record_mapper.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
 
@@ -73,5 +74,48 @@ void main() {
         }
       });
     }
+  });
+
+  group('out-of-range peer data is clamped, not crashed', () {
+    PlannedExerciseSessionImportRecord planWith(int completionKind) =>
+        PlannedExerciseSessionImportRecord(
+          clientRecordId: 'p',
+          startTime: utc(1, 6),
+          startZoneOffset: null,
+          endTime: utc(1, 7),
+          endZoneOffset: null,
+          exerciseType: 8,
+          title: 'Plan',
+          notes: null,
+          blocks: [
+            PlannedExerciseBlockValue(
+              repetitions: 1,
+              steps: [
+                PlannedExerciseStepValue(
+                  exerciseType: 8,
+                  exercisePhase: 1,
+                  completionKind: completionKind,
+                ),
+              ],
+            ),
+          ],
+        );
+
+    test('an out-of-range completionKind maps to unknown, not RangeError', () {
+      // Device sync round-trips completionKind.index from another phone, so a
+      // corrupt or newer value must not throw and abort the whole import batch.
+      final msg = importRecordMsg(planWith(99));
+      expect(
+        msg.plannedBlocks.single.steps.single.completionKind,
+        PlannedExerciseCompletionKindMsg.unknown,
+      );
+    });
+
+    test('every valid completionKind ordinal maps through unchanged', () {
+      for (final kind in PlannedExerciseCompletionKindMsg.values) {
+        final msg = importRecordMsg(planWith(kind.index));
+        expect(msg.plannedBlocks.single.steps.single.completionKind, kind);
+      }
+    });
   });
 }

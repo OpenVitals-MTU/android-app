@@ -330,8 +330,7 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
                     exerciseType: s.exerciseType,
                     exercisePhase: s.exercisePhase,
                     description: s.description,
-                    completionKind:
-                        PlannedExerciseCompletionKindMsg.values[s.completionKind],
+                    completionKind: _completionKindAt(s.completionKind),
                     completionRepetitions: s.completionRepetitions,
                     completionSeconds: s.completionSeconds,
                   ),
@@ -465,3 +464,12 @@ ImportRecord? importRecordFromMsg(ImportRecordMsg m) {
 
 T _enumAt<T extends Enum>(List<T> values, int? index) =>
     (index != null && index >= 0 && index < values.length) ? values[index] : values.first;
+
+/// Like [_enumAt] but for [PlannedExerciseCompletionKindMsg], whose `unknown`
+/// sentinel is last (not first). A peer-supplied index — device sync round-trips
+/// `completionKind.index` from another phone — outside `0..values.length-1`
+/// would otherwise throw `RangeError` and abort the whole import batch.
+PlannedExerciseCompletionKindMsg _completionKindAt(int index) =>
+    (index >= 0 && index < PlannedExerciseCompletionKindMsg.values.length)
+        ? PlannedExerciseCompletionKindMsg.values[index]
+        : PlannedExerciseCompletionKindMsg.unknown;

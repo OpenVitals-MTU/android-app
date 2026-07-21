@@ -17,6 +17,21 @@ class _FakeSource extends HealthDataSource {
   final List<VitalsChangeBatch> changeBatches = [];
   String tokenToReturn = 'token-1';
 
+  /// Records the order of token-registration vs history-read so a test can
+  /// assert the token is taken BEFORE the (slow) read.
+  final List<String> callOrder = [];
+
+  /// Permissions the fake reports as granted; defaults to all vitals reads.
+  Set<String> granted = {
+    HcPermissions.readRespiratoryRate,
+    HcPermissions.readSpO2,
+    HcPermissions.readBodyTemperature,
+    HcPermissions.readVo2Max,
+    HcPermissions.readBloodGlucose,
+    HcPermissions.readSkinTemperature,
+    HcPermissions.readBloodPressure,
+  };
+
   @override
   HealthConnectAvailability get cachedAvailability =>
       HealthConnectAvailability.available;
@@ -25,28 +40,25 @@ class _FakeSource extends HealthDataSource {
   bool isSkinTemperatureAvailable() => true;
 
   @override
-  Future<Set<String>> grantedPermissions() async => {
-        HcPermissions.readRespiratoryRate,
-        HcPermissions.readSpO2,
-        HcPermissions.readBodyTemperature,
-        HcPermissions.readVo2Max,
-        HcPermissions.readBloodGlucose,
-        HcPermissions.readSkinTemperature,
-        HcPermissions.readBloodPressure,
-      };
+  Future<Set<String>> grantedPermissions() async => granted;
 
   @override
   Future<List<DailyVitalPoint>> readDailyRespiratoryRate(
     LocalDate start,
     LocalDate end,
-  ) async =>
-      [
-        for (final e in respByDay.entries)
-          if (e.key >= start.epochDay && e.key <= end.epochDay) e.value,
-      ];
+  ) async {
+    callOrder.add('read');
+    return [
+      for (final e in respByDay.entries)
+        if (e.key >= start.epochDay && e.key <= end.epochDay) e.value,
+    ];
+  }
 
   @override
-  Future<String> getVitalsChangesToken(String recordType) async => tokenToReturn;
+  Future<String> getVitalsChangesToken(String recordType) async {
+    callOrder.add('getToken');
+    return tokenToReturn;
+  }
 
   @override
   Future<VitalsChangeBatch> getVitalsChanges(String token) async =>
@@ -84,6 +96,21 @@ void main() {
     expect(rows.single.valueSum, 36);
     expect(rows.single.sampleCount, 3);
     expect((await dao.cursor('respiratoryRate'))!.changesToken, 'token-1');
+  });
+
+  test('full sync registers the changes token BEFORE the history read',
+      () async {
+    // A write that lands during the (slow) read is in neither the snapshot nor
+    // the token's delta unless the token is taken first — so it must precede the
+    // read, or such writes are silently lost until the next full rebuild.
+    // Isolate to one metric so the order is unambiguous.
+    source.granted = {HcPermissions.readRespiratoryRate};
+    source.respByDay[today.epochDay] =
+        DailyVitalPoint(date: today, value: 12, count: 3);
+
+    await service().syncAll();
+
+    expect(source.callOrder, ['getToken', 'read']);
   });
 
   test('incremental sync recomputes only the changed day and advances the token',

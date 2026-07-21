@@ -335,10 +335,18 @@ Duration? _zoneOffset(int? seconds) =>
           DateTime.fromMillisecondsSinceEpoch(startMs),
         );
         final values = (map['values'] as Map).cast<String, dynamic>();
-        byDate[date] = {
-          for (final entry in values.entries)
-            entry.key: (entry.value as num?)?.toDouble(),
-        };
+        // The DST fall-back day is 25 local hours, so two absolute 24h buckets
+        // can map to the same LocalDate. Sum them per metric instead of letting
+        // the second overwrite the first (which silently dropped a near-full day
+        // of steps and shifted the rest of the chunk). Matches how
+        // CaloriesHistorySyncService._readDays and the heatmap already fold
+        // same-date values.
+        final dayValues = byDate.putIfAbsent(date, () => <String, double?>{});
+        for (final entry in values.entries) {
+          final incoming = (entry.value as num?)?.toDouble();
+          if (incoming == null) continue;
+          dayValues[entry.key] = (dayValues[entry.key] ?? 0.0) + incoming;
+        }
       }
     }
     final result = <DailySteps>[];
@@ -1076,10 +1084,14 @@ Duration? _zoneOffset(int? seconds) =>
     );
     // Native returns raw per-day aggregate buckets; fill the full range here so
     // days without hydration data still appear as 0 L (matches the reference).
-    final byDay = <int, double>{
-      for (final m in msgs)
-        LocalDate.fromDateTime(_fromMs(m.dateEpochMs)).epochDay: m.liters,
-    };
+    // Sum same-date buckets: the DST fall-back day can yield two absolute 24h
+    // buckets on one LocalDate; a map literal would keep only the last and drop a
+    // day. Matches readDailySteps and the calories cache.
+    final byDay = <int, double>{};
+    for (final m in msgs) {
+      final epochDay = LocalDate.fromDateTime(_fromMs(m.dateEpochMs)).epochDay;
+      byDay[epochDay] = (byDay[epochDay] ?? 0.0) + m.liters;
+    }
     final out = <DailyHydration>[];
     for (var date = startDate;
         date.compareTo(endDate) <= 0;
@@ -2221,7 +2233,10 @@ Duration? _zoneOffset(int? seconds) =>
   Future<String?> deleteHydrationEntry(String id) =>
       // Returns the deleted record's clientRecordId (for paired-nutrition
       // cleanup, handled in the nutrition phase); ownership is enforced natively.
-      _catch(() => _api.deleteHydrationEntry(id), null);
+      // Failures propagate (NOT degraded to null) so the use case can roll back
+      // the screen's optimistic removal — null strictly means "no paired
+      // clientRecordId", never "the delete failed".
+      _api.deleteHydrationEntry(id);
 
   // ── Mindfulness (Phase 2) — typed via native MindfulnessHealthReader ────────
 
@@ -2400,7 +2415,9 @@ Duration? _zoneOffset(int? seconds) =>
 
   @override
   Future<String?> deleteNutritionEntry(String id) =>
-      _catch(() => _api.deleteNutritionEntry(id), null);
+      // Failures propagate so the use case can roll back the screen's optimistic
+      // removal — null strictly means "no paired clientRecordId".
+      _api.deleteNutritionEntry(id);
 
   @override
   Future<void> deleteHydrationNutritionEntry(String hydrationClientRecordId) =>

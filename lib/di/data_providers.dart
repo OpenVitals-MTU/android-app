@@ -127,7 +127,11 @@ final bodyEnergyFeelCheckRepositoryProvider =
     );
 
 final preferencesRepositoryProvider = Provider<PreferencesRepository>(
-  (ref) => PreferencesRepository(ref.watch(sharedPreferencesProvider)),
+  (ref) {
+    final repo = PreferencesRepository(ref.watch(sharedPreferencesProvider));
+    ref.onDispose(repo.dispose);
+    return repo;
+  },
 );
 
 final beverageStoreProvider = Provider<BeverageStore>(
