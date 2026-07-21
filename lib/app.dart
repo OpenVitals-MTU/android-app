@@ -1,6 +1,7 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import 'domain/preferences/app_language.dart';
 import 'domain/preferences/app_theme_mode.dart';
@@ -75,6 +76,15 @@ class OpenVitalsApp extends ConsumerWidget {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: supportedLocales,
           locale: _localeFor(language),
+          // Point `Intl.defaultLocale` at the locale MaterialApp actually
+          // resolved (including `system` → the platform locale), so every
+          // DateFormat across the app localizes weekday/month names instead of
+          // defaulting to en_US. Runs below Localizations, so localeOf resolves;
+          // reruns on a language switch. Data for all locales is loaded in main().
+          builder: (context, child) {
+            Intl.defaultLocale = Localizations.localeOf(context).toString();
+            return child ?? const SizedBox.shrink();
+          },
           routerConfig: router,
         );
       },

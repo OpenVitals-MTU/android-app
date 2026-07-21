@@ -4,8 +4,10 @@ import '../../l10n/app_localizations.dart';
 import '../time/local_date.dart';
 import 'time_range.dart';
 
-final DateFormat _dateFormatter = DateFormat('EEE d MMM');
-final DateFormat _monthFormatter = DateFormat('LLLL yyyy');
+// Getters, not cached finals: constructed per use so they follow the current
+// Intl.defaultLocale (the app language) instead of freezing at first access.
+DateFormat get _dateFormatter => DateFormat('EEE d MMM');
+DateFormat get _monthFormatter => DateFormat('LLLL yyyy');
 final DateFormat _yearFormatter = DateFormat('yyyy');
 final DateFormat _spanFormatter = DateFormat('d MMM');
 final DateFormat _spanFormatterWithYear = DateFormat('d MMM yyyy');

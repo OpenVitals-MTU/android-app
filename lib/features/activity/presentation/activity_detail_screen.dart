@@ -26,7 +26,11 @@ import 'exercise_labels.dart';
 import '../maps/route_map_view.dart';
 import '../../../ui/components/section_padding.dart';
 
-final DateFormat _dateTimeFormat = DateFormat('EEE d MMM yyyy · HH:mm');
+// A getter, not a cached final: constructed per use so it picks up the current
+// Intl.defaultLocale (set from the app language) instead of freezing to whatever
+// locale was active at first access — otherwise a language switch never updates
+// the weekday/month names.
+DateFormat get _dateTimeFormat => DateFormat('EEE d MMM yyyy · HH:mm');
 
 /// Single-activity detail pushed over the shell (`/activity_detail/:activityId`),
 /// ported from the Kotlin `ActivityDetailScreen` + `ActivityDetailCards`.

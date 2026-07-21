@@ -38,7 +38,9 @@ import 'exercise_labels.dart';
 import '../../../ui/components/section_padding.dart';
 import '../../../ui/components/accent_icon_chip.dart';
 
-final DateFormat _rowTimeFormat = DateFormat('EEE d MMM · HH:mm');
+// A getter, not a cached final, so it reflects the current Intl.defaultLocale
+// (the app language) rather than freezing at first access.
+DateFormat get _rowTimeFormat => DateFormat('EEE d MMM · HH:mm');
 
 /// The reorderable body of the activities aggregate screen — a port of Kotlin
 /// `renderActivitiesOrderedContent` (`ActivitiesMetricOrderedSections.kt`).

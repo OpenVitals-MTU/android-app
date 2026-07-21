@@ -266,9 +266,11 @@ bool isPeriodChartLabelVisible(int index, int lastIndex, TimeRange selectedRange
   }
 }
 
-final DateFormat _chartDayFormat = DateFormat('EEE d');
-final DateFormat _chartDayOfMonthFormat = DateFormat('d');
-final DateFormat _chartMonthFormat = DateFormat('LLL');
+// Getters, not cached finals, so axis labels follow the current
+// Intl.defaultLocale (the app language) rather than freezing at first access.
+DateFormat get _chartDayFormat => DateFormat('EEE d');
+DateFormat get _chartDayOfMonthFormat => DateFormat('d');
+DateFormat get _chartMonthFormat => DateFormat('LLL');
 
 String _periodChartLabel(LocalDate date, TimeRange selectedRange) {
   final dateTime = DateTime(date.year, date.month, date.day);

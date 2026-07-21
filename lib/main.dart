@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,6 +34,11 @@ import 'features/imports/presentation/route_import_intent.dart';
 /// the first frame.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Load date-formatting symbols for every locale. Without this (and the
+  // Intl.defaultLocale set in app.dart), DateFormat only has en_US data and
+  // every date across the app renders in English regardless of the user's
+  // language. The symbols are embedded, so this is fast.
+  await initializeDateFormatting();
   // Receives activity-recording notification-button presses relayed from the
   // foreground-service isolate (see activity_recording_task_handler.dart).
   FlutterForegroundTask.initCommunicationPort();

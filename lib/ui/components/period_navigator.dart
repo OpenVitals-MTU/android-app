@@ -6,9 +6,11 @@ import '../../core/period/time_range.dart';
 import '../../core/time/local_date.dart';
 import '../../l10n/app_localizations.dart';
 
-final DateFormat _dayTitleFormat = DateFormat('EEE, d MMM');
-final DateFormat _daySubtitleFormat = DateFormat('d MMM yyyy');
-final DateFormat _periodSubtitleFormat = DateFormat('EEE d MMM');
+// Getters, not cached finals: constructed per use so they follow the current
+// Intl.defaultLocale (the app language) instead of freezing at first access.
+DateFormat get _dayTitleFormat => DateFormat('EEE, d MMM');
+DateFormat get _daySubtitleFormat => DateFormat('d MMM yyyy');
+DateFormat get _periodSubtitleFormat => DateFormat('EEE d MMM');
 
 DateTime _toDateTime(LocalDate date) => DateTime(date.year, date.month, date.day);
 

@@ -445,7 +445,8 @@ Map<LocalDate, List<SleepData>> _napsByDate(
 List<SleepData> _newestNightFirst(List<SleepData> sessions) =>
     [...sessions]..sort((a, b) => b.endTime.compareTo(a.endTime));
 
-final DateFormat _timeFormat = DateFormat('HH:mm');
+// A getter, not a cached final, so it follows the current Intl.defaultLocale.
+DateFormat get _timeFormat => DateFormat('HH:mm');
 
 String? _dayTimeRangeText(List<SleepData> sessions) {
   if (sessions.isEmpty) return null;
