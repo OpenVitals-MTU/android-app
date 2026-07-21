@@ -116,6 +116,15 @@ class BluetoothSyncService implements BluetoothSyncFlutterApi {
 
   @override
   void onConnectionStateChanged(SyncConnectionStateMsg state) {
+    // A dropped or failed link MUST end the inbound byte stream. The native side
+    // never closes it, and a SyncSession parked in its receiver loop learns of a
+    // dead link only via inbound's onDone — without this it hangs forever after
+    // the peer disconnects mid-transfer, holding the wake-locked foreground
+    // service and spinning the UI with no way out.
+    if (state == SyncConnectionStateMsg.disconnected ||
+        state == SyncConnectionStateMsg.connectFailed) {
+      if (!_inbound.isClosed) unawaited(_inbound.close());
+    }
     if (_connection.isClosed) return;
     _connection.add(switch (state) {
       SyncConnectionStateMsg.connected => SyncConnectionState.connected,

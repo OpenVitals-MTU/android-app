@@ -50,10 +50,16 @@ AppLocalizations _l10n() {
   }
 }
 
+/// Whether THIS module started the currently-running foreground service. The app
+/// has a single FGS slot shared with activity recording, so the stop side must
+/// never tear down a service it didn't start (e.g. a live GPS recording).
+bool _startedByUs = false;
+
 /// Starts the keep-alive foreground service. Returns false (and starts nothing)
 /// if a foreground service is already running or startup fails; the caller then
 /// runs the transfer in-process.
 Future<bool> startDeviceSyncForegroundService() async {
+  _startedByUs = false;
   try {
     if (await FlutterForegroundTask.isRunningService) return false;
     final l10n = _l10n();
@@ -86,7 +92,8 @@ Future<bool> startDeviceSyncForegroundService() async {
       notificationText: l10n.deviceSyncNotificationText,
       callback: deviceSyncTaskCallback,
     );
-    return result is! ServiceRequestFailure;
+    _startedByUs = result is! ServiceRequestFailure;
+    return _startedByUs;
   } catch (e) {
     debugPrint('[devicesync] foreground service start failed: $e');
     return false;
@@ -94,11 +101,17 @@ Future<bool> startDeviceSyncForegroundService() async {
 }
 
 Future<void> stopDeviceSyncForegroundService() async {
+  // Only stop a service WE started. Otherwise a sync that ran in-process (because
+  // a GPS recording already held the single FGS slot) would, on teardown, kill
+  // that unrelated recording service.
+  if (!_startedByUs) return;
   try {
     if (await FlutterForegroundTask.isRunningService) {
       await FlutterForegroundTask.stopService();
     }
   } catch (_) {
     // best effort
+  } finally {
+    _startedByUs = false;
   }
 }

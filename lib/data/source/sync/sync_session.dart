@@ -283,7 +283,17 @@ class SyncSession {
   Future<void> _runReceiver() async {
     var received = 0;
     var written = 0;
-    await for (final batch in _incomingBatches.stream) {
+    // Defense in depth for a link that goes silent WITHOUT a disconnect event
+    // (out of range, a wedged peer): the receiver phase otherwise has no timeout
+    // and would hang. A gap longer than batchTimeout during an active
+    // stop-and-wait exchange means the peer is gone. A clean close (sendDone)
+    // ends the stream first, so this never fires on a healthy sync.
+    final batches = _incomingBatches.stream.timeout(
+      config.batchTimeout,
+      onTimeout: (sink) => sink.addError(
+          const SyncAborted('timed out waiting for the next batch')),
+    );
+    await for (final batch in batches) {
       final fresh = <SyncItem>[];
       for (final item in batch.items) {
         // _seenKeys holds every record we already had (seeded from readItems)
