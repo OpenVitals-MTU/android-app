@@ -1958,5 +1958,9 @@
     "heartRateRecoverySubmaximalEffort": "Intenso, pero no cerca de tu máximo, así que esta lectura no se puede comparar con las demás.",
     "heartRateRecoveryUnknownMaxHeartRate": "Configura tu frecuencia cardíaca máxima en tu perfil y podremos decirte si el esfuerzo fue lo bastante intenso para que esta lectura cuente.",
     "heartRateRecoveryPeakFromSingleSample": "El pico se basa en una única lectura.",
-    "bodyEnergyReferencesTitle": "Enlaces de respaldo"
+    "bodyEnergyReferencesTitle": "Enlaces de respaldo",
+    "settingsSleepNightStartTitle": "La noche empieza a las",
+    "settingsSleepNightStartBody": "La noche comienza al caer la tarde. Dormir desde ese momento hasta la mañana siguiente equivale a una noche; las sesiones anteriores son siestas diurnas.",
+    "settingsSleepNightEndTitle": "La noche termina a las",
+    "settingsSleepNightEndBody": "La hora de la mañana con la que termina la noche. El sueño que sigue a esta, hasta el comienzo de la tarde, se considera una siesta diurna."
 }
