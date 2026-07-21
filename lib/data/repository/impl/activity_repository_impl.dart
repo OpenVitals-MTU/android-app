@@ -62,10 +62,18 @@ class ActivityRepositoryImpl implements ActivityRepository {
         Future<List<DailySteps>> steps(DatePeriod period) async {
           if (!(includeSteps || includeWheelchairPushes)) return const [];
           if (!granted.contains(HcPermissions.readSteps)) return const [];
+          // Kotlin's `readDailyStepsGated` always carries the optional columns
+          // their read permission allows; without them every daily row comes
+          // back null and the floors/elevation/wheelchair screens render 0
+          // while their intraday charts (a separate read) show data.
           return _dataSource.readDailySteps(
             period.start,
             period.end,
             includeActiveCalories: includeActiveCalories,
+            includeFloors: granted.contains(HcPermissions.readFloors),
+            includeElevation: granted.contains(HcPermissions.readElevation),
+            includeWheelchairPushes: includeWheelchairPushes &&
+                granted.contains(HcPermissions.readWheelchairPushes),
           );
         }
 
