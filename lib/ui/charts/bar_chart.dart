@@ -382,7 +382,19 @@ class _BarChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _BarChartPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _BarChartPainter oldDelegate) =>
+      // A bare `true` repaints every frame forever once anything on the screen
+      // animates — costly for a chart in a scrolling list. Compare the inputs;
+      // `progress` is included, so the reveal still animates. valueFormatter is a
+      // closure (uncomparable), but a unit change also changes buckets/labelStyle.
+      oldDelegate.progress != progress ||
+      oldDelegate.viewport != viewport ||
+      oldDelegate.buckets != buckets ||
+      oldDelegate.accentColor != accentColor ||
+      oldDelegate.selectedDate != selectedDate ||
+      oldDelegate.selectedRange != selectedRange ||
+      oldDelegate.labelStyle != labelStyle ||
+      oldDelegate.textDirection != textDirection;
 }
 
 @visibleForTesting

@@ -456,5 +456,21 @@ class _LinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _LinePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _LinePainter oldDelegate) =>
+      // Compare inputs instead of a bare `true`, which repaints every frame once
+      // anything on the screen animates (costly for a chart in a scrolling list).
+      oldDelegate.series != series ||
+      oldDelegate.selectedRange != selectedRange ||
+      oldDelegate.period != period ||
+      oldDelegate.dayStartMillis != dayStartMillis ||
+      oldDelegate.dayDurationMillis != dayDurationMillis ||
+      oldDelegate.periodDayCount != periodDayCount ||
+      oldDelegate.minValue != minValue ||
+      oldDelegate.maxValue != maxValue ||
+      oldDelegate.gridColor != gridColor ||
+      oldDelegate.axisColor != axisColor ||
+      oldDelegate.selectedDate != selectedDate ||
+      oldDelegate.axisDates != axisDates ||
+      oldDelegate.highlightColor != highlightColor ||
+      oldDelegate.viewport != viewport;
 }
