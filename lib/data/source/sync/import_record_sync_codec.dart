@@ -190,6 +190,40 @@ List<Object?> _fingerprintParts(ImportRecord r) {
         r.exerciseType.name,
         r.title,
       ];
+    case TotalCaloriesBurnedImportRecord():
+      return [r.targetType, _inst(r.startTime), _inst(r.endTime), r.kilocalories];
+    case PowerImportRecord():
+      return [
+        r.targetType,
+        _inst(r.startTime),
+        _inst(r.endTime),
+        for (final s in r.samples) '${_inst(s.time)}:${s.watts}',
+      ];
+    case StepsCadenceImportRecord():
+      return [
+        r.targetType,
+        _inst(r.startTime),
+        _inst(r.endTime),
+        for (final s in r.samples) '${_inst(s.time)}:${s.rate}',
+      ];
+    case CyclingPedalingCadenceImportRecord():
+      return [
+        r.targetType,
+        _inst(r.startTime),
+        _inst(r.endTime),
+        for (final s in r.samples) '${_inst(s.time)}:${s.revolutionsPerMinute}',
+      ];
+    case SkinTemperatureImportRecord():
+      return [
+        r.targetType,
+        _inst(r.startTime),
+        _inst(r.endTime),
+        r.baselineCelsius,
+        r.measurementLocation,
+        for (final s in r.deltas) '${_inst(s.time)}:${s.deltaCelsius}',
+      ];
+    case MenstruationPeriodImportRecord():
+      return [r.targetType, _inst(r.startTime), _inst(r.endTime)];
   }
 }
 
@@ -300,6 +334,32 @@ Map<String, Object?> _encode(ImportRecord r) {
                   },
               ],
       };
+    case TotalCaloriesBurnedImportRecord():
+      return {..._interval(r.startTime, r.startZoneOffset, r.endTime, r.endZoneOffset), 'kcal': r.kilocalories};
+    case PowerImportRecord():
+      return {
+        ..._interval(r.startTime, r.startZoneOffset, r.endTime, r.endZoneOffset),
+        'samples': [for (final s in r.samples) {'t': _ms(s.time), 'v': s.watts}],
+      };
+    case StepsCadenceImportRecord():
+      return {
+        ..._interval(r.startTime, r.startZoneOffset, r.endTime, r.endZoneOffset),
+        'samples': [for (final s in r.samples) {'t': _ms(s.time), 'v': s.rate}],
+      };
+    case CyclingPedalingCadenceImportRecord():
+      return {
+        ..._interval(r.startTime, r.startZoneOffset, r.endTime, r.endZoneOffset),
+        'samples': [for (final s in r.samples) {'t': _ms(s.time), 'v': s.revolutionsPerMinute}],
+      };
+    case SkinTemperatureImportRecord():
+      return {
+        ..._interval(r.startTime, r.startZoneOffset, r.endTime, r.endZoneOffset),
+        'baseline': r.baselineCelsius,
+        'loc': r.measurementLocation,
+        'deltas': [for (final s in r.deltas) {'t': _ms(s.time), 'v': s.deltaCelsius}],
+      };
+    case MenstruationPeriodImportRecord():
+      return _interval(r.startTime, r.startZoneOffset, r.endTime, r.endZoneOffset);
   }
 }
 
@@ -386,6 +446,18 @@ ImportRecord _decode(String type, String cid, Map<String, Object?> j) {
     case 'ExerciseSessionRecord':
       final route = j['route'] as List?;
       return ExerciseSessionImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo(), exerciseType: _enum(ImportExerciseType.values, j['exerciseType']), title: j['title']! as String, route: route == null ? null : ExerciseRoute([for (final p in route) ExerciseRouteLocation(time: _dt((p as Map)['t']), latitude: (p['lat'] as num).toDouble(), longitude: (p['lng'] as num).toDouble(), altitudeMeters: (p['alt'] as num?)?.toDouble(), horizontalAccuracyMeters: (p['ha'] as num?)?.toDouble(), verticalAccuracyMeters: (p['va'] as num?)?.toDouble())]));
+    case 'TotalCaloriesBurnedRecord':
+      return TotalCaloriesBurnedImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo(), kilocalories: d('kcal'));
+    case 'PowerRecord':
+      return PowerImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo(), samples: [for (final x in j['samples']! as List) PowerSampleValue(_dt((x as Map)['t']), (x['v'] as num).toDouble())]);
+    case 'StepsCadenceRecord':
+      return StepsCadenceImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo(), samples: [for (final x in j['samples']! as List) StepsCadenceSampleValue(_dt((x as Map)['t']), (x['v'] as num).toDouble())]);
+    case 'CyclingPedalingCadenceRecord':
+      return CyclingPedalingCadenceImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo(), samples: [for (final x in j['samples']! as List) CyclingPedalingCadenceSampleValue(_dt((x as Map)['t']), (x['v'] as num).toDouble())]);
+    case 'SkinTemperatureRecord':
+      return SkinTemperatureImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo(), baselineCelsius: dn('baseline'), measurementLocation: n('loc'), deltas: [for (final x in j['deltas']! as List) SkinTemperatureDeltaValue(_dt((x as Map)['t']), (x['v'] as num).toDouble())]);
+    case 'MenstruationPeriodRecord':
+      return MenstruationPeriodImportRecord(clientRecordId: cid, startTime: s(), startZoneOffset: so(), endTime: e(), endZoneOffset: eo());
   }
   throw UnsupportedSyncRecordType(type);
 }

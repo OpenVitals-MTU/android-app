@@ -258,6 +258,50 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
     case SexualActivityImportRecord r:
       return instant('SexualActivity', r.time, r.zoneOffset,
           ints: {'protectionUsed': r.protectionUsed.index});
+    case TotalCaloriesBurnedImportRecord r:
+      return interval('TotalCaloriesBurned', r.startTime, r.startZoneOffset,
+          r.endTime, r.endZoneOffset, doubles: {'energyKcal': r.kilocalories});
+    case PowerImportRecord r:
+      return interval('Power', r.startTime, r.startZoneOffset, r.endTime,
+          r.endZoneOffset,
+          samples: [
+            for (final s in r.samples)
+              ImportSampleMsg(
+                  timeEpochMs: s.time.millisecondsSinceEpoch, value: s.watts),
+          ]);
+    case StepsCadenceImportRecord r:
+      return interval('StepsCadence', r.startTime, r.startZoneOffset, r.endTime,
+          r.endZoneOffset,
+          samples: [
+            for (final s in r.samples)
+              ImportSampleMsg(
+                  timeEpochMs: s.time.millisecondsSinceEpoch, value: s.rate),
+          ]);
+    case CyclingPedalingCadenceImportRecord r:
+      return interval('CyclingPedalingCadence', r.startTime, r.startZoneOffset,
+          r.endTime, r.endZoneOffset,
+          samples: [
+            for (final s in r.samples)
+              ImportSampleMsg(
+                  timeEpochMs: s.time.millisecondsSinceEpoch,
+                  value: s.revolutionsPerMinute),
+          ]);
+    case SkinTemperatureImportRecord r:
+      return interval('SkinTemperature', r.startTime, r.startZoneOffset,
+          r.endTime, r.endZoneOffset,
+          doubles: {
+            if (r.baselineCelsius != null) 'baselineCelsius': r.baselineCelsius!,
+          },
+          ints: {'measurementLocation': r.measurementLocation},
+          samples: [
+            for (final s in r.deltas)
+              ImportSampleMsg(
+                  timeEpochMs: s.time.millisecondsSinceEpoch,
+                  value: s.deltaCelsius),
+          ]);
+    case MenstruationPeriodImportRecord r:
+      return interval('MenstruationPeriod', r.startTime, r.startZoneOffset,
+          r.endTime, r.endZoneOffset);
   }
 }
 
@@ -358,6 +402,18 @@ ImportRecord? importRecordFromMsg(ImportRecordMsg m) {
     case 'ExerciseSession':
       final route = m.routePoints.isEmpty ? null : ExerciseRoute([for (final p in m.routePoints) ExerciseRouteLocation(time: ms(p.timeEpochMs), latitude: p.latitude, longitude: p.longitude, altitudeMeters: p.altitudeMeters, horizontalAccuracyMeters: p.horizontalAccuracyMeters, verticalAccuracyMeters: p.verticalAccuracyMeters)]);
       return ExerciseSessionImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, exerciseType: _exerciseTypeFromHc[i['exerciseType']] ?? ImportExerciseType.otherWorkout, title: m.name ?? '', route: route);
+    case 'TotalCaloriesBurned':
+      return TotalCaloriesBurnedImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, kilocalories: d['energyKcal'] ?? 0);
+    case 'Power':
+      return PowerImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, samples: [for (final s in m.samples) PowerSampleValue(ms(s.timeEpochMs), s.value)]);
+    case 'StepsCadence':
+      return StepsCadenceImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, samples: [for (final s in m.samples) StepsCadenceSampleValue(ms(s.timeEpochMs), s.value)]);
+    case 'CyclingPedalingCadence':
+      return CyclingPedalingCadenceImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, samples: [for (final s in m.samples) CyclingPedalingCadenceSampleValue(ms(s.timeEpochMs), s.value)]);
+    case 'SkinTemperature':
+      return SkinTemperatureImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, baselineCelsius: d['baselineCelsius'], measurementLocation: i['measurementLocation'] ?? 0, deltas: [for (final s in m.samples) SkinTemperatureDeltaValue(ms(s.timeEpochMs), s.value)]);
+    case 'MenstruationPeriod':
+      return MenstruationPeriodImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone);
   }
   return null;
 }

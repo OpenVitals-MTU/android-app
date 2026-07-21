@@ -18,6 +18,10 @@ final samples = <ImportRecord>[
   BloodPressureImportRecord(clientRecordId: 'a', time: utc(9), zoneOffset: null, systolicMmHg: 118, diastolicMmHg: 76),
   OvulationTestImportRecord(clientRecordId: 'a', time: utc(10), zoneOffset: null, result: OvulationResultType.positive),
   HydrationImportRecord(clientRecordId: 'a', startTime: utc(11, 9), startZoneOffset: null, endTime: utc(11, 9), endZoneOffset: null, milliliters: 350),
+  TotalCaloriesBurnedImportRecord(clientRecordId: 'a', startTime: utc(12), startZoneOffset: null, endTime: utc(12, 23), endZoneOffset: null, kilocalories: 2100),
+  PowerImportRecord(clientRecordId: 'a', startTime: utc(13, 6), startZoneOffset: null, endTime: utc(13, 7), endZoneOffset: null, samples: [PowerSampleValue(utc(13, 6), 200), PowerSampleValue(utc(13, 7), 180)]),
+  SkinTemperatureImportRecord(clientRecordId: 'a', startTime: utc(14, 2), startZoneOffset: null, endTime: utc(14, 7), endZoneOffset: null, baselineCelsius: 33.2, measurementLocation: 1, deltas: [SkinTemperatureDeltaValue(utc(14, 2), 0.3)]),
+  MenstruationPeriodImportRecord(clientRecordId: 'a', startTime: utc(15), startZoneOffset: null, endTime: utc(19), endZoneOffset: null),
 ];
 
 void main() {
@@ -57,6 +61,15 @@ void main() {
             expect(r.result, OvulationResultType.positive);
           case HydrationImportRecord r:
             expect(r.milliliters, closeTo(350, 1e-6));
+          case TotalCaloriesBurnedImportRecord r:
+            expect(r.kilocalories, closeTo(2100, 1e-9));
+          case PowerImportRecord r:
+            expect(r.samples.map((s) => s.watts), [200, 180]);
+          case SkinTemperatureImportRecord r:
+            expect(r.baselineCelsius, closeTo(33.2, 1e-9));
+            expect(r.deltas.single.deltaCelsius, closeTo(0.3, 1e-9));
+          case MenstruationPeriodImportRecord r:
+            expect(r.endTime, utc(19));
           default:
         }
       });
