@@ -1027,6 +1027,25 @@ class HealthConnectNativePlugin :
     }
   }
 
+  override fun readImportRecords(
+    recordType: String,
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<ImportRecordMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    val recordClass = recordClassFor(recordType) ?: return@launchCatching emptyList()
+    withContext(Dispatchers.IO) {
+      client().readRecordsPaged(
+        recordType = recordClass,
+        timeRangeFilter = TimeRangeFilter.between(
+          Instant.ofEpochMilli(startEpochMs),
+          Instant.ofEpochMilli(endEpochMs),
+        ),
+        maxRecords = MAX_IMPORT_READ_RECORDS,
+      ).mapNotNull { RecordToImportMsg.convert(it) }
+    }
+  }
+
   override fun getGrantedPermissions(
     permissions: List<String>,
     callback: (Result<List<String>>) -> Unit,
@@ -1423,6 +1442,11 @@ class HealthConnectNativePlugin :
   private companion object {
     private const val TAG = "HealthConnectNative"
     private const val READ_PAGE_SIZE = 1000
+
+    // Safety cap for a generic import read (device sync / backup) — high enough
+    // for years of dense series (e.g. a CGM at ~288/day ≈ 100k/year) while still
+    // bounding a runaway read. Callers window their reads by the chosen range.
+    private const val MAX_IMPORT_READ_RECORDS = 200_000
 
     /**
      * PlatformException code raised when Health Connect refuses a call because the

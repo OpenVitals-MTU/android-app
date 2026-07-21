@@ -57,9 +57,13 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
     Map<String, double> doubles = const {},
     Map<String, int> ints = const {},
     String? name,
+    String? notes,
     List<ImportSampleMsg> samples = const [],
     List<ImportSleepStageMsg> sleepStages = const [],
     List<ExerciseRoutePointMsg> routePoints = const [],
+    List<ExerciseSegmentMsg> segments = const [],
+    List<ExerciseLapMsg> laps = const [],
+    String? plannedExerciseId,
   }) =>
       ImportRecordMsg(
         recordType: type,
@@ -74,6 +78,11 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
         samples: samples,
         sleepStages: sleepStages,
         routePoints: routePoints,
+        notes: notes,
+        segments: segments,
+        laps: laps,
+        plannedExerciseId: plannedExerciseId,
+        plannedBlocks: const [],
       );
 
   ImportRecordMsg instant(
@@ -97,6 +106,9 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
         samples: const [],
         sleepStages: const [],
         routePoints: const [],
+        segments: const [],
+        laps: const [],
+        plannedBlocks: const [],
       );
 
   switch (record) {

@@ -10,9 +10,12 @@ import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
+import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseLap
 import androidx.health.connect.client.records.ExerciseRoute
+import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -26,14 +29,19 @@ import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
+import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SexualActivityRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.SpeedRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
@@ -46,6 +54,7 @@ import androidx.health.connect.client.units.Percentage
 import androidx.health.connect.client.units.Power
 import androidx.health.connect.client.units.Pressure
 import androidx.health.connect.client.units.Temperature
+import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.units.Velocity
 import androidx.health.connect.client.units.Volume
 import java.time.Instant
@@ -74,6 +83,38 @@ internal object ImportRecordsBuilder {
       "Distance" -> DistanceRecord(start, sZone, end!!, eZone, Length.meters(req("distanceMeters")), meta)
       "ActiveCaloriesBurned" ->
         ActiveCaloriesBurnedRecord(start, sZone, end!!, eZone, Energy.kilocalories(req("energyKcal")), meta)
+      "TotalCaloriesBurned" ->
+        TotalCaloriesBurnedRecord(start, sZone, end!!, eZone, Energy.kilocalories(req("energyKcal")), meta)
+      "StepsCadence" -> StepsCadenceRecord(
+        startTime = start,
+        startZoneOffset = sZone,
+        endTime = end!!,
+        endZoneOffset = eZone,
+        samples = msg.samples.map {
+          StepsCadenceRecord.Sample(Instant.ofEpochMilli(it.timeEpochMs), it.value)
+        },
+        metadata = meta,
+      )
+      "CyclingPedalingCadence" -> CyclingPedalingCadenceRecord(
+        startTime = start,
+        startZoneOffset = sZone,
+        endTime = end!!,
+        endZoneOffset = eZone,
+        samples = msg.samples.map {
+          CyclingPedalingCadenceRecord.Sample(Instant.ofEpochMilli(it.timeEpochMs), it.value)
+        },
+        metadata = meta,
+      )
+      "Power" -> PowerRecord(
+        startTime = start,
+        startZoneOffset = sZone,
+        endTime = end!!,
+        endZoneOffset = eZone,
+        samples = msg.samples.map {
+          PowerRecord.Sample(Instant.ofEpochMilli(it.timeEpochMs), Power.watts(it.value))
+        },
+        metadata = meta,
+      )
       "BasalMetabolicRate" -> BasalMetabolicRateRecord(
         time = start,
         zoneOffset = sZone,
@@ -158,6 +199,7 @@ internal object ImportRecordsBuilder {
         endZoneOffset = eZone,
         metadata = meta,
         title = msg.name,
+        notes = msg.notes,
         stages = msg.sleepStages.map {
           SleepSessionRecord.Stage(
             startTime = Instant.ofEpochMilli(it.startEpochMs),
@@ -174,6 +216,7 @@ internal object ImportRecordsBuilder {
         metadata = meta,
         mindfulnessSessionType = MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_UNKNOWN,
         title = msg.name,
+        notes = msg.notes,
       )
       "MenstruationFlow" -> MenstruationFlowRecord(
         time = start,
@@ -192,6 +235,24 @@ internal object ImportRecordsBuilder {
         zoneOffset = sZone,
         appearance = i("appearance") ?: CervicalMucusRecord.APPEARANCE_UNKNOWN,
         sensation = i("sensation") ?: CervicalMucusRecord.SENSATION_UNKNOWN,
+        metadata = meta,
+      )
+      "MenstruationPeriod" ->
+        MenstruationPeriodRecord(start, sZone, end!!, eZone, meta)
+      "SkinTemperature" -> SkinTemperatureRecord(
+        startTime = start,
+        startZoneOffset = sZone,
+        endTime = end!!,
+        endZoneOffset = eZone,
+        deltas = msg.samples.map {
+          SkinTemperatureRecord.Delta(
+            Instant.ofEpochMilli(it.timeEpochMs),
+            TemperatureDelta.celsius(it.value),
+          )
+        },
+        baseline = d("baselineCelsius")?.let { Temperature.celsius(it) },
+        measurementLocation = i("measurementLocation")
+          ?: SkinTemperatureRecord.MEASUREMENT_LOCATION_UNKNOWN,
         metadata = meta,
       )
       "IntermenstrualBleeding" -> IntermenstrualBleedingRecord(start, sZone, meta)
@@ -289,6 +350,21 @@ internal object ImportRecordsBuilder {
         )
       }
       ?.let { ExerciseRoute(it) }
+    val segments = msg.segments.map {
+      ExerciseSegment(
+        startTime = Instant.ofEpochMilli(it.startEpochMs),
+        endTime = Instant.ofEpochMilli(it.endEpochMs),
+        segmentType = it.segmentType.toInt(),
+        repetitions = it.repetitions.toInt(),
+      )
+    }
+    val laps = msg.laps.map {
+      ExerciseLap(
+        startTime = Instant.ofEpochMilli(it.startEpochMs),
+        endTime = Instant.ofEpochMilli(it.endEpochMs),
+        length = it.lengthMeters?.let { m -> Length.meters(m) },
+      )
+    }
     return ExerciseSessionRecord(
       startTime = start,
       startZoneOffset = sZone,
@@ -298,7 +374,11 @@ internal object ImportRecordsBuilder {
       exerciseType = (msg.intFields["exerciseType"]?.toInt())
         ?: ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
       title = msg.name,
+      notes = msg.notes,
+      segments = segments,
+      laps = laps,
       exerciseRoute = route,
+      plannedExerciseSessionId = msg.plannedExerciseId,
     )
   }
 }

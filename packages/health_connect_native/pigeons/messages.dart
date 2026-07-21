@@ -899,6 +899,25 @@ class ImportRecordMsg {
   final List<ImportSampleMsg> samples;
   final List<ImportSleepStageMsg> sleepStages;
   final List<ExerciseRoutePointMsg> routePoints;
+
+  /// The source app that wrote the record (`metadata.dataOrigin.packageName`).
+  /// Populated on reads (empty on writes); folded into the sync dedup fingerprint
+  /// so identical values from different source apps stay distinct.
+  final String? dataOriginPackage;
+
+  /// Free-text notes for sleep / exercise / planned-exercise records.
+  final String? notes;
+
+  /// Exercise session sub-structure (empty for other types).
+  final List<ExerciseSegmentMsg> segments;
+  final List<ExerciseLapMsg> laps;
+
+  /// The planned-exercise session this exercise completed, if any.
+  final String? plannedExerciseId;
+
+  /// Planned-exercise session structure (only for PlannedExerciseSession).
+  final List<PlannedExerciseBlockMsg> plannedBlocks;
+
   ImportRecordMsg(
     this.recordType,
     this.clientRecordId,
@@ -912,6 +931,12 @@ class ImportRecordMsg {
     this.samples,
     this.sleepStages,
     this.routePoints,
+    this.dataOriginPackage,
+    this.notes,
+    this.segments,
+    this.laps,
+    this.plannedExerciseId,
+    this.plannedBlocks,
   );
 }
 
@@ -1494,4 +1519,17 @@ abstract class HealthConnectHostApi {
   /// Typed bulk insert of imported records; returns the inserted HC ids.
   @async
   List<String> insertImportedRecords(List<ImportRecordMsg> records);
+
+  /// Reads every record of [recordType] (a canonical schema name like "Steps",
+  /// "Sleep", "HeartRate") in [startEpochMs]..[endEpochMs] as [ImportRecordMsg]s,
+  /// the symmetric read counterpart to [insertImportedRecords]. Reads the RAW
+  /// records (not aggregates) via the generic paged reader, so every record type
+  /// — including the activity totals — round-trips faithfully. Used by
+  /// phone-to-phone sync and any future backup/export.
+  @async
+  List<ImportRecordMsg> readImportRecords(
+    String recordType,
+    int startEpochMs,
+    int endEpochMs,
+  );
 }
