@@ -123,6 +123,7 @@ class SyncSession {
   StreamSubscription<Uint8List>? _sub;
   final SyncFrameReader _reader = SyncFrameReader();
   bool _abortSent = false;
+  bool _authenticated = false;
   String? _abortReason;
 
   /// Runs the session and resolves with the report (both success and clean
@@ -142,6 +143,10 @@ class SyncSession {
     try {
       final peerHello = await _handshake();
       await _authenticate(peerHello);
+      // Only now may record frames be processed. Batch/ack/sendDone arriving
+      // before this are a protocol violation (a peer that hasn't proved the code
+      // trying to push data) and abort the session — see _dispatch.
+      _authenticated = true;
       final negotiated = _negotiateTypes(peerHello);
       await _exchange(negotiated);
       _emit(phase: SyncPhase.complete);
@@ -195,6 +200,13 @@ class SyncSession {
 
   Future<void> _authenticate(SyncHello peer) async {
     _emit(phase: SyncPhase.authenticating);
+    // A peer that echoes OUR nonce back could reflect our own proof to pass auth
+    // without knowing the code (host==guest nonce makes both proofs identical).
+    // Two independently-generated 256-bit nonces are never equal by chance, so a
+    // match means reflection — reject it.
+    if (constantTimeEquals(peer.nonce, _nonce)) {
+      throw const SyncAborted('peer reflected our nonce');
+    }
     // Fix nonce order by role so both phones derive the same key.
     final hostNonce = config.role == SyncRole.host ? _nonce : peer.nonce;
     final guestNonce = config.role == SyncRole.host ? peer.nonce : _nonce;
@@ -203,15 +215,20 @@ class SyncSession {
       hostNonce: hostNonce,
       guestNonce: guestNonce,
     );
-    // Prove over the peer's nonce; verify their proof over ours.
-    final myProof =
-        computeAuthProof(sessionKey: sessionKey, challengeNonce: peer.nonce);
+    final myRole =
+        config.role == SyncRole.host ? kAuthRoleHost : kAuthRoleGuest;
+    final peerRole =
+        config.role == SyncRole.host ? kAuthRoleGuest : kAuthRoleHost;
+    // Prove over the peer's nonce with OUR role; verify their proof over our
+    // nonce with THEIR role. The role binding is what defeats reflection.
+    final myProof = computeAuthProof(
+        sessionKey: sessionKey, challengeNonce: peer.nonce, roleByte: myRole);
     final proofFuture = _await(
         _peerAuth.future, config.handshakeTimeout, 'timed out waiting for auth');
     await _send(SyncFrameType.auth, SyncAuthProof(myProof).encode());
     final peerProof = await proofFuture;
-    final expected =
-        computeAuthProof(sessionKey: sessionKey, challengeNonce: _nonce);
+    final expected = computeAuthProof(
+        sessionKey: sessionKey, challengeNonce: _nonce, roleByte: peerRole);
     if (!constantTimeEquals(peerProof.proof, expected)) {
       throw const SyncAborted('pairing code did not match');
     }
@@ -323,20 +340,40 @@ class SyncSession {
             _peerAuth.complete(SyncAuthProof.decode(frame.payload));
           }
         case SyncFrameType.batch:
-          if (!_incomingBatches.isClosed) {
-            _incomingBatches.add(SyncBatch.decode(frame.payload));
-          }
         case SyncFrameType.batchAck:
-          final ack = _pendingAck;
-          _pendingAck = null;
-          ack?.complete(SyncBatchAck.decode(frame.payload).seq);
         case SyncFrameType.sendDone:
-          if (!_incomingBatches.isClosed) _incomingBatches.close();
+          // Record frames before auth are a protocol violation — reject without
+          // decoding (a gzip batch is never inflated for an unauthenticated
+          // peer, closing the pre-auth OOM vector).
+          if (!_authenticated) {
+            _failPending('${frame.type.name} before authentication');
+            return;
+          }
+          switch (frame.type) {
+            case SyncFrameType.batch:
+              if (!_incomingBatches.isClosed) {
+                _incomingBatches.add(SyncBatch.decode(frame.payload));
+              }
+            case SyncFrameType.batchAck:
+              final ack = _pendingAck;
+              _pendingAck = null;
+              ack?.complete(SyncBatchAck.decode(frame.payload).seq);
+            case SyncFrameType.sendDone:
+              if (!_incomingBatches.isClosed) _incomingBatches.close();
+            default:
+              break;
+          }
         case SyncFrameType.abort:
           _handleAbort(SyncAbort.decode(frame.payload).reason);
       }
     } on FormatException catch (e) {
       _failPending('malformed ${frame.type.name} payload: $e');
+    } catch (e) {
+      // A frame from a hostile/buggy peer can parse as JSON but have the wrong
+      // shape (a `null!` TypeError, an unknown enum, a wrong-typed field). Those
+      // are Errors, not Exceptions, and would otherwise escape this stream
+      // callback unhandled; turn them into a clean session abort with a reason.
+      _failPending('bad ${frame.type.name} frame: $e');
     }
   }
 

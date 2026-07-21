@@ -25,14 +25,16 @@
 ///   sessionKey = HMAC-SHA256(key = utf8(code), msg = hostNonce ‖ guestNonce)
 ///
 /// Each side then proves it holds the session key with a challenge bound to the
-/// PEER's nonce (so a proof can't be replayed for a different nonce):
+/// PEER's nonce (so a proof can't be replayed for a different nonce) and to the
+/// PROVER's role (so the two sides' proofs differ — the anti-reflection bit):
 ///
-///   proof(forChallengeNonce) = HMAC-SHA256(key = sessionKey,
-///                                          msg = "ov-sync-auth-v1" ‖ challengeNonce)
+///   proof(challengeNonce, role) = HMAC-SHA256(key = sessionKey,
+///       msg = "ov-sync-auth-v2" ‖ roleByte ‖ challengeNonce)
 ///
-/// A side sends `proof(peerNonce)` and verifies the received proof against
-/// `proof(ownNonce)`. A wrong code yields a different sessionKey on the two
-/// phones, so the proofs mismatch and the session aborts.
+/// A side sends `proof(peerNonce, ownRole)` and verifies the received proof
+/// against `proof(ownNonce, peerRole)`. A wrong code yields a different
+/// sessionKey on the two phones, so the proofs mismatch and the session aborts.
+/// The session also rejects a peer whose nonce equals ours (a reflection).
 library;
 
 import 'dart:convert';
@@ -46,7 +48,12 @@ const int kSyncNonceBytes = 32;
 
 /// Domain-separation label mixed into every auth proof. Bump the suffix if the
 /// proof construction ever changes so old and new clients can't cross-validate.
-const String _authContext = 'ov-sync-auth-v1';
+/// v2 adds the prover's role byte to the message (see [computeAuthProof]).
+const String _authContext = 'ov-sync-auth-v2';
+
+/// Role byte mixed into an auth proof so host and guest proofs differ.
+const int kAuthRoleHost = 0;
+const int kAuthRoleGuest = 1;
 
 /// Number of digits in the human-checked pairing code.
 const int kPairingCodeDigits = 6;
@@ -88,18 +95,27 @@ Uint8List deriveSessionKey({
   return Uint8List.fromList(hmac.convert(message).bytes);
 }
 
-/// Computes the auth proof over [challengeNonce] under [sessionKey]. To
-/// authenticate to the peer, pass the PEER's nonce; to verify the peer's proof,
-/// recompute this over your OWN nonce and compare.
+/// Computes the auth proof over [challengeNonce] under [sessionKey], bound to the
+/// PROVER's [roleByte] ([kAuthRoleHost]/[kAuthRoleGuest]). To authenticate to the
+/// peer, pass the PEER's nonce and your OWN role; to verify the peer's proof,
+/// recompute this over your OWN nonce and the PEER's role and compare.
+///
+/// The role byte is what stops a reflection attack: without it both sides' proofs
+/// are the same HMAC, so a peer that echoed our nonce and then our proof back
+/// would validate without knowing the code. With the role mixed in, our proof
+/// (our role) never equals the proof we expect from the peer (their role).
 Uint8List computeAuthProof({
   required Uint8List sessionKey,
   required Uint8List challengeNonce,
+  required int roleByte,
 }) {
   final hmac = Hmac(sha256, sessionKey);
   final prefix = utf8.encode(_authContext);
-  final message = Uint8List(prefix.length + challengeNonce.length)
+  final message = Uint8List(prefix.length + 1 + challengeNonce.length)
     ..setRange(0, prefix.length, prefix)
-    ..setRange(prefix.length, prefix.length + challengeNonce.length, challengeNonce);
+    ..[prefix.length] = roleByte
+    ..setRange(prefix.length + 1, prefix.length + 1 + challengeNonce.length,
+        challengeNonce);
   return Uint8List.fromList(hmac.convert(message).bytes);
 }
 

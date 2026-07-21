@@ -53,7 +53,7 @@ class UnsupportedSyncRecordType implements Exception {
 /// two genuinely distinct records with identical type+time+values from different
 /// source apps collide into one — is rare and the lesser evil.
 String syncFingerprint(ImportRecord record) {
-  final parts = _fingerprintParts(record).join('|');
+  final parts = _fingerprintParts(record).map(_fp).join('|');
   final digest = sha256.convert(utf8.encode(parts)).bytes;
   final hex = StringBuffer();
   for (var i = 0; i < 16; i++) {
@@ -78,6 +78,17 @@ ImportRecord decodeImportRecord({
   final json = jsonDecode(utf8.decode(payload)) as Map<String, Object?>;
   return _decode(recordType, clientRecordId, json);
 }
+
+/// Renders a fingerprint part as a stable string. Doubles are quantized to 6
+/// decimals so a value that came back from a Health Connect unit round-trip
+/// (grams↔kilograms, watts↔kcal/day, calories↔kilocalories) with a bit or two of
+/// binary drift still hashes identically — otherwise phone B, after writing A's
+/// record and reading it back, computes a different fingerprint and a re-sync
+/// re-imports it as a new record, accumulating duplicates. Ints/strings pass
+/// through. NOTE: this changes the fingerprint format, so records synced by an
+/// older build re-converge once (a one-time re-import) after both phones upgrade.
+String _fp(Object? part) =>
+    part is double ? part.toStringAsFixed(6) : '$part';
 
 // ── Time helpers ─────────────────────────────────────────────────────────────
 
@@ -122,7 +133,7 @@ List<Object?> _fingerprintParts(ImportRecord r) {
         r.targetType,
         _inst(r.startTime),
         _inst(r.endTime),
-        for (final s in r.samples) '${_inst(s.time)}:${s.metersPerSecond}',
+        for (final s in r.samples) '${_inst(s.time)}:${_fp(s.metersPerSecond)}',
       ];
     case HeartRateImportRecord():
       return [
@@ -192,7 +203,7 @@ List<Object?> _fingerprintParts(ImportRecord r) {
         _inst(r.endTime),
         r.name ?? '',
         r.energyKilocalories,
-        for (final k in keys) '$k=${r.nutrientGrams[k]}',
+        for (final k in keys) '$k=${_fp(r.nutrientGrams[k])}',
       ];
     case ExerciseSessionImportRecord():
       return [
@@ -209,21 +220,22 @@ List<Object?> _fingerprintParts(ImportRecord r) {
         r.targetType,
         _inst(r.startTime),
         _inst(r.endTime),
-        for (final s in r.samples) '${_inst(s.time)}:${s.watts}',
+        for (final s in r.samples) '${_inst(s.time)}:${_fp(s.watts)}',
       ];
     case StepsCadenceImportRecord():
       return [
         r.targetType,
         _inst(r.startTime),
         _inst(r.endTime),
-        for (final s in r.samples) '${_inst(s.time)}:${s.rate}',
+        for (final s in r.samples) '${_inst(s.time)}:${_fp(s.rate)}',
       ];
     case CyclingPedalingCadenceImportRecord():
       return [
         r.targetType,
         _inst(r.startTime),
         _inst(r.endTime),
-        for (final s in r.samples) '${_inst(s.time)}:${s.revolutionsPerMinute}',
+        for (final s in r.samples)
+          '${_inst(s.time)}:${_fp(s.revolutionsPerMinute)}',
       ];
     case SkinTemperatureImportRecord():
       return [
@@ -232,7 +244,7 @@ List<Object?> _fingerprintParts(ImportRecord r) {
         _inst(r.endTime),
         r.baselineCelsius,
         r.measurementLocation,
-        for (final s in r.deltas) '${_inst(s.time)}:${s.deltaCelsius}',
+        for (final s in r.deltas) '${_inst(s.time)}:${_fp(s.deltaCelsius)}',
       ];
     case MenstruationPeriodImportRecord():
       return [r.targetType, _inst(r.startTime), _inst(r.endTime)];

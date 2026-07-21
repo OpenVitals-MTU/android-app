@@ -60,13 +60,16 @@ class HealthConnectSyncStore implements SyncRecordStore {
     // and swallowed so the sync continues with the types that do write.
     final byType = <String, List<ImportRecord>>{};
     for (final item in items) {
-      (byType[item.recordType] ??= <ImportRecord>[]).add(
-        decodeImportRecord(
-          recordType: item.recordType,
-          clientRecordId: item.key,
-          payload: item.payload,
-        ),
-      );
+      final ImportRecord record;
+      try {
+        record = _ownedRecord(item);
+      } catch (e) {
+        // One malformed item from a buggy/hostile peer must not kill the whole
+        // receive loop (which would stop acking and stall the peer). Skip it.
+        debugPrint('[devicesync] skipping undecodable ${item.recordType}: $e');
+        continue;
+      }
+      (byType[item.recordType] ??= <ImportRecord>[]).add(record);
     }
     for (final entry in byType.entries) {
       try {
@@ -76,5 +79,27 @@ class HealthConnectSyncStore implements SyncRecordStore {
         debugPrint('[devicesync] WRITE FAILED for ${entry.value.length} ${entry.key}: $e');
       }
     }
+  }
+
+  /// Decodes [item] and re-derives its clientRecordId from the decoded *content*
+  /// rather than trusting the peer-supplied [SyncItem.key]. Otherwise a hostile
+  /// or buggy peer could set the key to an existing id (e.g. an
+  /// `apple_health_<hex>` we hold) and have Health Connect upsert over — corrupt
+  /// — an unrelated record. A content fingerprint can only ever address the
+  /// record the peer actually sent. In the honest case the recomputed key equals
+  /// the sent one, so the extra decode is skipped.
+  ImportRecord _ownedRecord(SyncItem item) {
+    final decoded = decodeImportRecord(
+      recordType: item.recordType,
+      clientRecordId: item.key,
+      payload: item.payload,
+    );
+    final ownKey = syncFingerprint(decoded);
+    if (ownKey == item.key) return decoded;
+    return decodeImportRecord(
+      recordType: item.recordType,
+      clientRecordId: ownKey,
+      payload: item.payload,
+    );
   }
 }

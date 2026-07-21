@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/data/source/sync/sync_frame.dart';
 import 'package:openvitals/data/source/sync/sync_messages.dart';
 import 'package:openvitals/data/source/sync/sync_report.dart';
 import 'package:openvitals/data/source/sync/sync_session.dart';
@@ -81,6 +83,25 @@ Future<(SyncReport, SyncReport)> runPair(
   final results = await Future.wait([host.run(), guest.run()]);
   return (results[0], results[1]);
 }
+
+/// Drives one real session against a manual endpoint that sends whatever raw
+/// frames [attack] dictates — for hostile/malformed-peer cases.
+Future<SyncReport> runAgainstAttacker(
+  void Function(SyncByteTransport attacker) attack,
+) async {
+  final (hostPipe, attackerPipe) = SyncPipe.create();
+  final host = SyncSession(
+    transport: hostPipe,
+    store: FakeRecordStore([item('a')]),
+    config: configFor(SyncRole.host),
+  );
+  final report = host.run();
+  attack(attackerPipe);
+  return report;
+}
+
+Uint8List frameBytes(SyncFrameType type, Uint8List payload) =>
+    SyncFrame(type, payload).encode();
 
 void main() {
   group('bidirectional merge', () {
@@ -245,6 +266,29 @@ void main() {
       // so this asserts the guest's selection governs what IT reads/sends.
       expect(results[0].completed, isTrue);
       expect(guestStore.keys, contains('s1'));
+    });
+  });
+
+  group('hostile peer', () {
+    test('a record frame before authentication aborts the session', () async {
+      final report = await runAgainstAttacker((attacker) {
+        // No handshake/auth — just push a batch straight away.
+        attacker.send(frameBytes(
+            SyncFrameType.batch, SyncBatch(seq: 1, items: const []).encode()));
+      });
+      expect(report.completed, isFalse);
+      expect(report.abortReason, contains('before authentication'));
+    });
+
+    test('a malformed hello frame aborts cleanly instead of crashing', () async {
+      // Valid JSON, wrong shape: `v` is a string where an int is required, which
+      // would throw a TypeError (an Error, not an Exception) from the decode.
+      final badHello = Uint8List.fromList(utf8.encode('{"v":"not-an-int"}'));
+      final report = await runAgainstAttacker((attacker) {
+        attacker.send(frameBytes(SyncFrameType.hello, badHello));
+      });
+      expect(report.completed, isFalse);
+      expect(report.abortReason, contains('hello'));
     });
   });
 }

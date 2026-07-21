@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/data/source/sync/health_connect_sync_store.dart';
 import 'package:openvitals/data/source/sync/import_record_sync_codec.dart';
+import 'package:openvitals/data/source/sync/sync_messages.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
 
 /// A HealthDataSource that models Health Connect's import surface in memory:
@@ -116,5 +117,26 @@ void main() {
     expect(ds.count, 2);
     final after = await store.readItems({'WeightRecord'});
     expect(after.map((i) => i.key).toSet(), items.map((i) => i.key).toSet());
+  });
+
+  test('writeItems ignores a peer-chosen key and writes under the content '
+      'fingerprint', () async {
+    final record = weight(6, 65);
+    final honestKey = syncFingerprint(record);
+    // A hostile peer sets the SyncItem key to an existing id it wants to clobber
+    // (e.g. an apple_health_* record we hold). The store must NOT trust it.
+    final hostile = SyncItem(
+      key: 'apple_health_deadbeef',
+      recordType: 'WeightRecord',
+      payload: encodeImportRecordPayload(record),
+    );
+
+    await store.writeItems([hostile]);
+
+    final written = await store.readItems({'WeightRecord'});
+    // Written under the recomputed content fingerprint, never the peer's key —
+    // so the peer can only ever address the record it actually sent.
+    expect(written.single.key, honestKey);
+    expect(written.single.key, isNot('apple_health_deadbeef'));
   });
 }
