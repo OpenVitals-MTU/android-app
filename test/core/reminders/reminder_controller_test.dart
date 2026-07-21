@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/reminders/reminder_controller.dart';
 import 'package:openvitals/core/reminders/reminder_schedule.dart';
@@ -21,6 +23,28 @@ class _RecordingScheduler implements ReminderScheduler {
 
   @override
   Future<void> cancel() async => cancelCount++;
+}
+
+/// A scheduler whose scheduleAll blocks on a gate, so a test can prove two
+/// concurrent applies don't interleave their scheduling.
+class _GatedScheduler implements ReminderScheduler {
+  final List<String> log = [];
+  final Completer<void> _gate = Completer<void>();
+
+  void release() => _gate.complete();
+
+  @override
+  Future<void> scheduleAll(
+    List<DateTime> triggers,
+    ReminderGoalProgress progress,
+  ) async {
+    log.add('start');
+    await _gate.future;
+    log.add('end');
+  }
+
+  @override
+  Future<void> cancel() async => log.add('cancel');
 }
 
 /// 07:00–23:00, every two hours — the hydration defaults.
@@ -182,5 +206,31 @@ void main() {
   test('clear cancels the batch', () async {
     await controller().clear();
     expect(scheduler.cancelCount, 1);
+  });
+
+  test('concurrent applies serialize instead of interleaving', () async {
+    final gated = _GatedScheduler();
+    final ctrl = ReminderController(
+      loadSettings: () =>
+          ReminderSettings(enabled: true, schedule: _window),
+      readProgress: () async => const ReminderGoalProgress.none(),
+      scheduler: gated,
+      now: () => _at(10),
+      hasNotificationPermission: () async => true,
+    );
+
+    final first = ctrl.apply();
+    final second = ctrl.apply();
+    await pumpEventQueue();
+
+    // Only the first apply's scheduleAll is running; the second is queued behind
+    // it — not interleaving its cancels with the first's scheduling.
+    expect(gated.log, ['start']);
+
+    gated.release();
+    await Future.wait([first, second]);
+
+    // The second ran strictly after the first finished.
+    expect(gated.log, ['start', 'end', 'start', 'end']);
   });
 }

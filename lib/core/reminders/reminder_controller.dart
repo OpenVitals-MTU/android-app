@@ -101,16 +101,32 @@ class ReminderController {
   /// call; caching it would go stale when the user revokes the permission.
   final Future<bool> Function() hasNotificationPermission;
 
+  /// Serializes every operation that touches the reserved notification-id range.
+  /// A cold-start apply (fired unawaited from bootstrap) and a resume re-plan
+  /// could otherwise interleave one run's cancel-range with the other's
+  /// schedule-batch, dropping arbitrary entries from the surviving batch.
+  Future<void> _queue = Future<void>.value();
+
+  Future<void> _serialize(Future<void> Function() op) {
+    final result = _queue.then((_) => op());
+    _queue = result.then((_) {}, onError: (_) {});
+    return result;
+  }
+
   /// Recomputes the upcoming reminder plan and (re)schedules the whole batch, or
   /// clears everything when the reminder is off or notifications are not
   /// permitted.
   ///
   /// Pass [settings] to apply a config that has not been persisted yet;
   /// otherwise the current settings are read.
-  Future<void> apply([ReminderSettings? settings]) async {
+  Future<void> apply([ReminderSettings? settings]) =>
+      _serialize(() => _applyOnce(settings));
+
+  Future<void> _applyOnce([ReminderSettings? settings]) async {
     final resolved = settings ?? loadSettings();
     if (!resolved.enabled || !await hasNotificationPermission()) {
-      await clear();
+      // The unserialized clear — we already hold the queue.
+      await _clearOnce();
       return;
     }
     final progress = await readProgress();
@@ -136,7 +152,9 @@ class ReminderController {
   }
 
   /// Cancels the whole batch (pending notifications and any already-shown one).
-  Future<void> clear() => scheduler.cancel();
+  Future<void> clear() => _serialize(_clearOnce);
+
+  Future<void> _clearOnce() => scheduler.cancel();
 }
 
 /// Default permission gate. On-device the Android 13+ POST_NOTIFICATIONS check
