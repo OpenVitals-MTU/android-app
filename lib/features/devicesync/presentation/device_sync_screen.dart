@@ -76,12 +76,21 @@ class DeviceSyncScreen extends ConsumerWidget {
     final vm = ref.read(deviceSyncProvider.notifier);
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
+    // Leaving the wizard by ANY route (system back, app-bar back, Done/Cancel)
+    // must tear the apparatus down — the provider is root-scoped (autoDispose
+    // would be unsafe: it could dispose mid-sync), so ref.onDispose never fires.
+    // Without this, backing out leaves the RFCOMM server + discovery running.
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) vm.cancel();
+      },
+      child: Scaffold(
       appBar: AppBar(title: Text(l10n.deviceSyncTitle)),
       body: SafeArea(
         child: switch (state.step) {
           DeviceSyncStep.role => _RoleStep(state: state, vm: vm, l10n: l10n),
-          DeviceSyncStep.hostWaiting => _HostStep(state: state, l10n: l10n),
+          DeviceSyncStep.hostWaiting =>
+            _HostStep(state: state, vm: vm, l10n: l10n),
           DeviceSyncStep.guestScanning =>
             _ScanStep(state: state, vm: vm, l10n: l10n),
           DeviceSyncStep.guestCode => _CodeStep(state: state, vm: vm, l10n: l10n),
@@ -91,6 +100,7 @@ class DeviceSyncScreen extends ConsumerWidget {
             _ProgressStep(state: state, vm: vm, l10n: l10n),
           DeviceSyncStep.report => _ReportStep(state: state, vm: vm, l10n: l10n),
         },
+      ),
       ),
     );
   }
@@ -137,6 +147,9 @@ class _RoleStep extends StatelessWidget {
             l10n.deviceSyncRoleBody),
         if (state.bluetoothUnavailable)
           _banner(context, l10n.deviceSyncBluetoothOff),
+        if (state.errorMessage != null)
+          _banner(context, deviceSyncErrorText(l10n, state.errorMessage!),
+              isError: true),
         Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: ListTile(
@@ -176,8 +189,10 @@ class _RoleStep extends StatelessWidget {
 }
 
 class _HostStep extends StatelessWidget {
-  const _HostStep({required this.state, required this.l10n});
+  const _HostStep(
+      {required this.state, required this.vm, required this.l10n});
   final DeviceSyncState state;
+  final DeviceSyncViewModel vm;
   final AppLocalizations l10n;
 
   @override
@@ -218,6 +233,7 @@ class _HostStep extends StatelessWidget {
             ),
           ),
         ),
+        _cancelButton(context, l10n, vm),
       ],
     );
   }
@@ -262,6 +278,7 @@ class _ScanStep extends StatelessWidget {
             ],
           ),
         ),
+        _cancelButton(context, l10n, vm),
       ],
     );
   }
@@ -314,6 +331,9 @@ class _CodeStep extends StatelessWidget {
         ),
         if (state.codeError)
           _banner(context, l10n.deviceSyncWrongCode, isError: true),
+        if (state.errorMessage != null)
+          _banner(context, deviceSyncErrorText(l10n, state.errorMessage!),
+              isError: true),
         Padding(
           padding: const EdgeInsets.all(16),
           child: _Keypad(
@@ -497,6 +517,7 @@ class _ProgressStep extends StatelessWidget {
         _statRow(context, l10n.deviceSyncSent, progress?.itemsSent ?? 0),
         _statRow(context, l10n.deviceSyncReceived, progress?.itemsReceived ?? 0),
         _statRow(context, l10n.deviceSyncWritten, progress?.itemsWritten ?? 0),
+        _cancelButton(context, l10n, vm),
       ],
     );
   }
@@ -512,7 +533,43 @@ class _ReportStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final report = state.report;
-    final imported = report?.imported ?? 0;
+    // A failed (report == null, from sync_failed/connect_timeout) or aborted
+    // (report present but not completed) session must NOT render the success
+    // checkmark + "imported N" — show the failure and a way out instead.
+    if (report == null || !report.completed) {
+      final message = state.errorMessage != null
+          ? deviceSyncErrorText(l10n, state.errorMessage!)
+          : l10n.deviceSyncAborted;
+      return ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Icon(Icons.error_outline,
+                    size: 56, color: Theme.of(context).colorScheme.error),
+                const SizedBox(height: 12),
+                Text(l10n.deviceSyncErrorHeading,
+                    style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                Text(message, textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: FilledButton(
+              onPressed: () {
+                vm.reset();
+                Navigator.of(context).maybePop();
+              },
+              child: Text(l10n.deviceSyncDone),
+            ),
+          ),
+        ],
+      );
+    }
+    final imported = report.imported;
     return ListView(
       children: [
         Padding(
@@ -528,9 +585,8 @@ class _ReportStep extends StatelessWidget {
           ),
         ),
         _statRow(context, l10n.deviceSyncImported, imported),
-        _statRow(context, l10n.deviceSyncDuplicates,
-            report?.duplicateSkipped ?? 0),
-        for (final summary in report?.typeSummaries ?? const <SyncTypeSummary>[])
+        _statRow(context, l10n.deviceSyncDuplicates, report.duplicateSkipped),
+        for (final summary in report.typeSummaries)
           ListTile(
             dense: true,
             title: Text(summary.recordType),
@@ -594,6 +650,14 @@ class _ReportStep extends StatelessWidget {
   }
 }
 
+/// Maps a view-model error key to a localized, user-facing message.
+String deviceSyncErrorText(AppLocalizations l10n, String key) => switch (key) {
+      'connect_failed' || 'connect_timeout' => l10n.deviceSyncErrorConnect,
+      'permission_denied' => l10n.deviceSyncErrorPermission,
+      'discoverable_declined' => l10n.deviceSyncErrorDiscoverable,
+      _ => l10n.deviceSyncErrorGeneric,
+    };
+
 Widget _statRow(BuildContext context, String label, int value) => ListTile(
       title: Text(label),
       trailing: Text('$value',
@@ -606,6 +670,23 @@ Widget _bottomButton(BuildContext context, String label, VoidCallback? onTap) =>
       child: SizedBox(
         width: double.infinity,
         child: FilledButton(onPressed: onTap, child: Text(label)),
+      ),
+    );
+
+/// Cancels the wizard (aborting any in-flight session) and leaves the screen.
+Widget _cancelButton(
+        BuildContext context, AppLocalizations l10n, DeviceSyncViewModel vm) =>
+    Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: () {
+            vm.cancel();
+            Navigator.of(context).maybePop();
+          },
+          child: Text(l10n.deviceSyncCancel),
+        ),
       ),
     );
 
