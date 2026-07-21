@@ -8,7 +8,14 @@ import 'dart:math' as math;
 /// Java semantics used by the source (notably: `plusMonths`/`plusYears` clamp
 /// the day-of-month to the target month length).
 class LocalDate implements Comparable<LocalDate> {
-  const LocalDate(this.year, this.month, this.day);
+  // A gross-range guard (debug-only, and const-evaluable so `const LocalDate`
+  // keeps working). It can't call _lengthOfMonth in a const context, so it can't
+  // reject Feb-31 here — [withDayOfMonth] clamps to the month length instead, so
+  // no phantom date (which downstream ISO-date route parsing silently rejects)
+  // reaches the rest of the app.
+  const LocalDate(this.year, this.month, this.day)
+      : assert(month >= 1 && month <= 12, 'month must be 1-12'),
+        assert(day >= 1 && day <= 31, 'day must be 1-31');
 
   final int year;
 
@@ -82,7 +89,9 @@ class LocalDate implements Comparable<LocalDate> {
   }
 
   LocalDate withDayOfMonth(int dayOfMonth) =>
-      LocalDate(year, month, dayOfMonth);
+      // Clamp to the month length so a caller can't mint a phantom date like
+      // Feb 31 (consistent with plusMonths/plusYears, which also clamp).
+      LocalDate(year, month, math.min(math.max(dayOfMonth, 1), lengthOfMonth));
 
   LocalDate withDayOfYear(int dayOfYear) {
     final shifted =

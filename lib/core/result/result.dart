@@ -22,6 +22,15 @@ final class Ok<T> extends Result<T> {
 
   @override
   String toString() => 'Ok($value)';
+
+  // Value equality so a state object embedding a Result short-circuits Riverpod's
+  // identical-state check, and test matchers can compare directly.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is Ok<T> && other.value == value);
+
+  @override
+  int get hashCode => Object.hash(Ok<T>, value);
 }
 
 final class Err<T> extends Result<T> {
@@ -31,6 +40,13 @@ final class Err<T> extends Result<T> {
 
   @override
   String toString() => 'Err($failure)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is Err<T> && other.failure == failure);
+
+  @override
+  int get hashCode => Object.hash(Err<T>, failure);
 }
 
 extension ResultX<T> on Result<T> {

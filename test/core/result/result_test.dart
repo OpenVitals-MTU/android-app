@@ -89,4 +89,17 @@ void main() {
       ),
     );
   });
+
+  test('Ok has value equality', () {
+    expect(const Ok(2), const Ok(2));
+    expect(const Ok(2).hashCode, const Ok(2).hashCode);
+    expect(const Ok(2), isNot(const Ok(3)));
+    // Distinguishes the case as well as the value.
+    expect(const Ok<int>(2), isNot(const Err<int>(failure)));
+  });
+
+  test('Err equals another Err over the same failure', () {
+    expect(const Err<int>(failure), const Err<int>(failure));
+    expect(const Err<int>(failure).hashCode, const Err<int>(failure).hashCode);
+  });
 }
