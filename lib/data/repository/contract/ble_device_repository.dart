@@ -19,6 +19,8 @@ abstract interface class BleDeviceRepository {
 
   void refresh();
 
+  /// Only [BleDeviceKind.sensor] devices take part: a watch streams nothing
+  /// live, so it can neither own a capability nor conflict over one.
   Map<BleSensorCapability, BleSensorDevice> resolveCapabilityAssignments();
 
   Map<BleSensorCapability, BleSensorDevice> capabilityConflicts(
@@ -32,6 +34,7 @@ abstract interface class BleDeviceRepository {
     required String? bluetoothName,
     required Set<BleSensorCapability> capabilities,
     int? wheelCircumferenceMm,
+    BleDeviceKind kind,
   });
 
   BleSensorDevice updateDevice({
@@ -40,6 +43,7 @@ abstract interface class BleDeviceRepository {
     Set<BleSensorCapability>? capabilities,
     bool? enabled,
     int? wheelCircumferenceMm,
+    BleDeviceKind? kind,
   });
 
   void removeDevice(String deviceId);
@@ -47,4 +51,9 @@ abstract interface class BleDeviceRepository {
   void setDeviceEnabled(String deviceId, bool enabled);
 
   void updateBatteryLevel(String deviceId, int batteryPercent);
+
+  /// Stamps a watch's last successful FIT-file sync. No-op for an unknown id —
+  /// a sync can outlive the user forgetting the device it ran against, and that
+  /// race must not throw the way [updateDevice] does.
+  void markSynced(String deviceId, DateTime at);
 }

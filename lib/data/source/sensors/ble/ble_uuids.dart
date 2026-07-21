@@ -58,12 +58,28 @@ class BleUuids {
     measurementUuid: '00002a53-0000-1000-8000-00805f9b34fb',
   );
 
+  /// Garmin's GFDI service — the transport this app pulls FIT files over.
+  ///
+  /// Not a standard GATT service and not a sensor: a device advertising this is
+  /// a watch/bike computer to onboard as [BleDeviceKind.watch], never a source
+  /// of live capabilities (which is why [capabilitiesForService] returns empty
+  /// for it). From Gadgetbridge's `CommunicatorV1.UUID_SERVICE_GARMIN_GFDI_V1`.
+  static const String garminGfdiServiceV1 =
+      '6a4e2401-667b-11e3-949a-0800200c9a66';
+
+  static const String garminGfdiSendV1 =
+      '6a4e4c80-667b-11e3-949a-0800200c9a66';
+
+  static const String garminGfdiReceiveV1 =
+      '6a4ecd28-667b-11e3-949a-0800200c9a66';
+
   static const List<String> scanServiceUuids = [
     '0000180d-0000-1000-8000-00805f9b34fb', // heartRate
     '0000fee0-0000-1000-8000-00805f9b34fb', // heartRateMiband
     '00001816-0000-1000-8000-00805f9b34fb', // cyclingSpeedCadence
     '00001818-0000-1000-8000-00805f9b34fb', // cyclingPower
     '00001814-0000-1000-8000-00805f9b34fb', // runningSpeedCadence
+    garminGfdiServiceV1,
   ];
 
   /// Capabilities advertised by a given GATT [serviceUuid] (lowercase 128-bit).

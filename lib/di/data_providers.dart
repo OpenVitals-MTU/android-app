@@ -2,7 +2,9 @@ import '../domain/model/vitals_models.dart';
 import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
+import '../data/source/sensors/ble/ble_watch_pairing.dart';
 import '../data/repository/contract/ble_sensor_repository.dart';
+import '../domain/port/watch_pairing_port.dart';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -232,6 +234,12 @@ final hydrationRepositoryProvider = Provider<HydrationRepository>(
 
 final bleDeviceRepositoryProvider = Provider<BleDeviceRepository>(
   (ref) => BleDeviceRepositoryImpl(ref.watch(sharedPreferencesProvider)),
+);
+
+/// Bonding + companion association for Garmin watch onboarding. A provider so a
+/// widget test can substitute one and never touch a radio.
+final watchPairingPortProvider = Provider<WatchPairingPort>(
+  (ref) => BleWatchPairing(),
 );
 
 final appleHealthImportRepositoryProvider =

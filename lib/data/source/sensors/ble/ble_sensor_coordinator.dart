@@ -236,6 +236,9 @@ class BleSensorCoordinator implements BleSensorRepository {
       for (final uuid in result.advertisementData.serviceUuids)
         ...BleUuids.capabilitiesForService(uuid.str128),
     };
+    final advertisesGarmin = result.advertisementData.serviceUuids.any(
+      (uuid) => uuid.str128 == BleUuids.garminGfdiServiceV1,
+    );
     final existing = _scanResults[address];
     final name = result.advertisementData.advName.isNotEmpty
         ? result.advertisementData.advName
@@ -248,6 +251,10 @@ class BleSensorCoordinator implements BleSensorRepository {
         ...?existing?.suggestedCapabilities,
         ...serviceCapabilities,
       },
+      // Sticky across advertisements: a watch does not put every service in
+      // every packet, so one sighting of GFDI settles it for this scan.
+      advertisesGarminService:
+          advertisesGarmin || (existing?.advertisesGarminService ?? false),
     );
     _publishScanResults();
   }

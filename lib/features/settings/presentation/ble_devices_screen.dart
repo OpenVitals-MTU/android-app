@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/ble_devices_view_model.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
@@ -49,7 +51,22 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
       context: context,
       builder: (_) => const _AddDeviceDialog(),
     );
+    // Told once, after the sheet closes, rather than inside it: the user has
+    // already answered the companion dialog by then, and a declined association
+    // costs them nothing until a sync actually runs in the background.
+    final withoutCompanion = ref
+        .read(bleDevicesViewModelProvider)
+        .watchOnboardedWithoutCompanion;
     _notifier.closeAddFlow();
+    if (withoutCompanion && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).settingsWatchNoCompanionNotice,
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _startEditFlow(String deviceId) async {
@@ -181,9 +198,16 @@ class _BleDeviceRow extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            battery != null
-                                ? l10n.settingsSensorsBatteryPercent(battery)
-                                : l10n.settingsSensorsBatteryUnknown,
+                            // A watch reports its battery over GFDI during a
+                            // sync, not over the standard battery service the
+                            // sensor path polls — so until it has synced once
+                            // there is genuinely nothing to show, and its sync
+                            // time is the more useful line anyway.
+                            device.isWatch
+                                ? _lastSyncedLabel(context, l10n, device)
+                                : battery != null
+                                    ? l10n.settingsSensorsBatteryPercent(battery)
+                                    : l10n.settingsSensorsBatteryUnknown,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -194,20 +218,26 @@ class _BleDeviceRow extends StatelessWidget {
                     Switch(value: device.enabled, onChanged: onToggleEnabled),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final capability in device.capabilities)
-                      Chip(label: Text(capabilityLabel(l10n, capability))),
-                  ],
-                ),
+                if (!device.isWatch) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final capability in device.capabilities)
+                        Chip(label: Text(capabilityLabel(l10n, capability))),
+                    ],
+                  ),
+                ],
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     onPressed: onRemove,
                     icon: const Icon(Icons.delete_outline, size: 18),
-                    label: Text(l10n.settingsSensorsRemoveDevice),
+                    label: Text(
+                      device.isWatch
+                          ? l10n.settingsWatchRemove
+                          : l10n.settingsSensorsRemoveDevice,
+                    ),
                   ),
                 ),
               ],
@@ -217,6 +247,24 @@ class _BleDeviceRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A watch's sync line: the local date and time of the last successful sync, or
+/// "Never synced". Stored in UTC (as everything in the registry is), rendered in
+/// the user's own zone.
+String _lastSyncedLabel(
+  BuildContext context,
+  AppLocalizations l10n,
+  BleSensorDevice device,
+) {
+  final syncedAt = device.lastSyncedAt;
+  if (syncedAt == null) return l10n.settingsWatchNeverSynced;
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  final local = syncedAt.toLocal();
+  return l10n.settingsWatchLastSynced(
+    '${DateFormat.yMMMd(locale).format(local)} '
+    '${DateFormat.jm(locale).format(local)}',
+  );
 }
 
 class _AddDeviceDialog extends ConsumerStatefulWidget {
@@ -338,7 +386,12 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
                 ),
               ),
               const SizedBox(height: 12),
-              if (state.isDiscoveringCapabilities)
+              // A watch has no capabilities to pick and no conflicts to resolve
+              // — it is a file source, not a live sensor. What it needs instead
+              // is the two OS dialogs, named before they appear.
+              if (state.isAddingWatch)
+                _WatchPairSteps(step: state.onboardStep)
+              else if (state.isDiscoveringCapabilities)
                 Text(l10n.settingsSensorsDiscovering)
               else ...[
                 Text(l10n.settingsSensorsCapabilitiesTitle,
@@ -374,21 +427,145 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          // Bonding puts system dialogs over this one and cannot be taken back
+          // halfway; cancelling underneath it would leave the watch half-paired.
+          onPressed: state.isOnboardingWatch
+              ? null
+              : () => Navigator.of(context).pop(),
           child: Text(l10n.actionCancel),
         ),
-        TextButton(
-          onPressed: (state.selectedDevice != null &&
-                  state.addCapabilities.isNotEmpty &&
-                  !state.isDiscoveringCapabilities)
-              ? () {
-                  notifier.saveAddedDevice();
-                  Navigator.of(context).pop();
-                }
-              : null,
-          child: Text(l10n.actionSave),
+        if (state.isAddingWatch)
+          TextButton(
+            onPressed: state.isOnboardingWatch
+                ? null
+                : () async {
+                    // The dialog owns the pop, not the view-model: a refused
+                    // pairing must leave the sheet open so the user can retry
+                    // without re-scanning.
+                    if (await notifier.onboardSelectedWatch() &&
+                        context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+            child: Text(l10n.settingsWatchPairAction),
+          )
+        else
+          TextButton(
+            onPressed: (state.selectedDevice != null &&
+                    state.addCapabilities.isNotEmpty &&
+                    !state.isDiscoveringCapabilities)
+                ? () {
+                    notifier.saveAddedDevice();
+                    Navigator.of(context).pop();
+                  }
+                : null,
+            child: Text(l10n.actionSave),
+          ),
+      ],
+    );
+  }
+}
+
+/// The two platform steps of watch onboarding, shown as a checklist so the user
+/// knows which system dialog is theirs to answer. [step] is null before pairing
+/// starts and again once it finishes.
+class _WatchPairSteps extends StatelessWidget {
+  const _WatchPairSteps({required this.step});
+
+  final GarminOnboardStep? step;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.settingsWatchPairTitle, style: theme.textTheme.labelLarge),
+        const SizedBox(height: 4),
+        Text(
+          l10n.settingsWatchPairBody,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        _WatchPairStepRow(
+          label: l10n.settingsWatchStepBonding,
+          active: step == GarminOnboardStep.bonding,
+          done: step == GarminOnboardStep.associating,
+        ),
+        _WatchPairStepRow(
+          label: l10n.settingsWatchStepAssociating,
+          active: step == GarminOnboardStep.associating,
+          done: false,
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 32, top: 2),
+          child: Text(
+            l10n.settingsWatchStepAssociatingHint,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _WatchPairStepRow extends StatelessWidget {
+  const _WatchPairStepRow({
+    required this.label,
+    required this.active,
+    required this.done,
+  });
+
+  final String label;
+  final bool active;
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Center(
+              child: switch ((active, done)) {
+                (true, _) => const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                (_, true) => Icon(
+                    Icons.check_circle_outline,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                _ => Icon(
+                    Icons.radio_button_unchecked,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: active
+                  ? theme.textTheme.bodyMedium
+                  : theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -453,26 +630,31 @@ class _EditDeviceDialogState extends ConsumerState<_EditDeviceDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(l10n.settingsSensorsCapabilitiesTitle,
-                style: theme.textTheme.labelLarge),
-            const SizedBox(height: 4),
-            _CapabilityChips(
-              selected: state.editCapabilities,
-              onToggle: notifier.toggleEditCapability,
-            ),
-            _ConflictMessages(conflicts: state.capabilityConflicts),
-            if (state.editCapabilities
-                .contains(BleSensorCapability.cyclingSpeedDistance)) ...[
+            // A watch owns no capabilities, so the picker below would offer it
+            // roles it cannot fill — and saving one would put it into the
+            // recording coordinator's assignment map.
+            if (!state.isEditingWatch) ...[
               const SizedBox(height: 8),
-              TextField(
-                controller: _wheelController,
-                keyboardType: TextInputType.number,
-                onChanged: notifier.updateEditWheelCircumference,
-                decoration: InputDecoration(
-                  labelText: l10n.settingsSensorsWheelCircumference,
-                ),
+              Text(l10n.settingsSensorsCapabilitiesTitle,
+                  style: theme.textTheme.labelLarge),
+              const SizedBox(height: 4),
+              _CapabilityChips(
+                selected: state.editCapabilities,
+                onToggle: notifier.toggleEditCapability,
               ),
+              _ConflictMessages(conflicts: state.capabilityConflicts),
+              if (state.editCapabilities
+                  .contains(BleSensorCapability.cyclingSpeedDistance)) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _wheelController,
+                  keyboardType: TextInputType.number,
+                  onChanged: notifier.updateEditWheelCircumference,
+                  decoration: InputDecoration(
+                    labelText: l10n.settingsSensorsWheelCircumference,
+                  ),
+                ),
+              ],
             ],
             if (state.errorMessage != null) ...[
               const SizedBox(height: 8),
@@ -489,7 +671,11 @@ class _EditDeviceDialogState extends ConsumerState<_EditDeviceDialog> {
             notifier.removeDevice(widget.deviceId);
             Navigator.of(context).pop();
           },
-          child: Text(l10n.settingsSensorsRemoveDevice),
+          child: Text(
+            state.isEditingWatch
+                ? l10n.settingsWatchRemove
+                : l10n.settingsSensorsRemoveDevice,
+          ),
         ),
         TextButton(
           onPressed: () {

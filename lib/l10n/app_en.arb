@@ -2053,6 +2053,23 @@
     }
   },
   "settingsSensorsWheelCircumference": "Wheel circumference (mm)",
+  "settingsWatchPairTitle": "Pair this watch",
+  "settingsWatchPairBody": "OpenVitals will pair with the watch, then copy its recorded activity, sleep and health files. Confirm the code shown on the watch when it appears.",
+  "settingsWatchStepBonding": "Pairing with the watch",
+  "settingsWatchStepAssociating": "Asking Android for access",
+  "settingsWatchStepAssociatingHint": "Optional. Allowing this lets syncing continue reliably in the background.",
+  "settingsWatchPairAction": "Pair",
+  "settingsWatchNeverSynced": "Never synced",
+  "settingsWatchLastSynced": "Last synced {arg0}",
+  "@settingsWatchLastSynced": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchNoCompanionNotice": "Paired, but Android access was not granted. Syncing works while OpenVitals is open.",
+  "settingsWatchRemove": "Remove watch",
   "activityRecordingSensorsTitle": "Sensors",
   "activityRecordingSensorsAddInSettings": "Add sensors in Settings",
   "activityRecordingSensorsNotConfigured": "Not configured",

@@ -25,6 +25,7 @@ import '../domain/usecase/read_activity_write_permissions_use_case.dart';
 import '../domain/usecase/read_hydration_daily_goal_use_case.dart';
 import '../domain/usecase/read_hydration_entry_settings_use_case.dart';
 import '../domain/usecase/read_onboarding_permission_catalog_use_case.dart';
+import '../domain/usecase/onboard_garmin_watch_use_case.dart';
 import '../domain/usecase/read_paired_ble_devices_use_case.dart';
 import '../domain/usecase/refresh_ble_device_registry_use_case.dart';
 import '../domain/usecase/request_health_permissions_use_case.dart';
@@ -239,6 +240,14 @@ final discoverBleDeviceCapabilitiesUseCaseProvider =
     Provider<DiscoverBleDeviceCapabilitiesUseCase>(
   (ref) => DiscoverBleDeviceCapabilitiesUseCase(
     ref.watch(bleSensorRepositoryProvider),
+    ref.watch(bleDeviceRepositoryProvider),
+  ),
+);
+
+final onboardGarminWatchUseCaseProvider =
+    Provider<OnboardGarminWatchUseCase>(
+  (ref) => OnboardGarminWatchUseCase(
+    ref.watch(watchPairingPortProvider),
     ref.watch(bleDeviceRepositoryProvider),
   ),
 );

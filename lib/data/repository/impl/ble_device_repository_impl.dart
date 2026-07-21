@@ -41,6 +41,10 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
   Map<BleSensorCapability, BleSensorDevice> resolveCapabilityAssignments() {
     final assignments = <BleSensorCapability, BleSensorDevice>{};
     for (final device in enabledDevices) {
+      // A watch holds no capabilities anyway, but the guard is explicit: it is
+      // what stops a stored watch from ever being connected to and polled by
+      // the recording coordinator.
+      if (device.kind != BleDeviceKind.sensor) continue;
       for (final capability in device.capabilities) {
         assignments.putIfAbsent(capability, () => device);
       }
@@ -69,6 +73,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
     required String? bluetoothName,
     required Set<BleSensorCapability> capabilities,
     int? wheelCircumferenceMm,
+    BleDeviceKind kind = BleDeviceKind.sensor,
   }) {
     final normalizedAddress = address.toUpperCase();
     final existing = _devices.firstWhereOrNull(
@@ -81,6 +86,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
         capabilities: capabilities,
         enabled: true,
         wheelCircumferenceMm: wheelCircumferenceMm ?? existing.wheelCircumferenceMm,
+        kind: kind,
       );
     }
     final device = BleSensorDevice(
@@ -92,6 +98,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
       enabled: true,
       wheelCircumferenceMm: wheelCircumferenceMm,
       addedAt: DateTime.now().toUtc(),
+      kind: kind,
     ).normalized();
     _persist([..._devices, device]);
     return device;
@@ -104,6 +111,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
     Set<BleSensorCapability>? capabilities,
     bool? enabled,
     int? wheelCircumferenceMm,
+    BleDeviceKind? kind,
   }) {
     final current = _devices.firstWhereOrNull((d) => d.id == deviceId);
     if (current == null) {
@@ -116,6 +124,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
           enabled: enabled ?? current.enabled,
           wheelCircumferenceMm:
               wheelCircumferenceMm ?? current.wheelCircumferenceMm,
+          kind: kind ?? current.kind,
         )
         .normalized();
     _persist([
@@ -151,6 +160,15 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
           )
         else
           d,
+    ]);
+  }
+
+  @override
+  void markSynced(String deviceId, DateTime at) {
+    if (!_devices.any((d) => d.id == deviceId)) return;
+    _persist([
+      for (final d in _devices)
+        if (d.id == deviceId) d.copyWith(lastSyncedAt: at.toUtc()) else d,
     ]);
   }
 
@@ -192,6 +210,8 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
         'batteryPercent': device.batteryPercent,
         'batteryUpdatedAt': device.batteryUpdatedAt?.millisecondsSinceEpoch,
         'addedAt': device.addedAt.millisecondsSinceEpoch,
+        'kind': device.kind.storageName,
+        'lastSyncedAt': device.lastSyncedAt?.millisecondsSinceEpoch,
       };
 
   BleSensorDevice? _fromJson(Map<String, dynamic> json) {
@@ -205,6 +225,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
         ?BleSensorCapability.fromStorage(raw.toString()),
     };
     final batteryUpdatedAt = (json['batteryUpdatedAt'] as num?)?.toInt();
+    final lastSyncedAt = (json['lastSyncedAt'] as num?)?.toInt();
     return BleSensorDevice(
       id: id,
       displayName: displayName,
@@ -220,6 +241,13 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
       addedAt: addedAtMillis == null
           ? DateTime.now().toUtc()
           : DateTime.fromMillisecondsSinceEpoch(addedAtMillis, isUtc: true),
+      // Absent for every device stored before watches existed — those are all
+      // sensors, which is exactly what the fallback says.
+      kind: BleDeviceKind.fromStorage(json['kind']?.toString() ?? '') ??
+          BleDeviceKind.sensor,
+      lastSyncedAt: lastSyncedAt == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(lastSyncedAt, isUtc: true),
     ).normalized();
   }
 
