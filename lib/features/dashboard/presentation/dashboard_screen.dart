@@ -610,6 +610,14 @@ class _MetricCarouselState extends State<_MetricCarousel> {
     );
   }
 
+  /// The tile height, grown with the text scale so a value+title+subtitle stack
+  /// doesn't overflow the fixed 82 px box at large font sizes. Clamped so tiles
+  /// never shrink below the design height and don't grow without bound. Used for
+  /// both the tile box and the pager height, so the two stay in sync.
+  double _scaledTileHeight(BuildContext context) =>
+      _MetricCarousel._tileHeight *
+      MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.6);
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -618,7 +626,8 @@ class _MetricCarouselState extends State<_MetricCarousel> {
     final tilesOnTallestPage =
         widget.tiles.length.clamp(0, _MetricCarousel._perPage);
     final rows = (tilesOnTallestPage / _MetricCarousel._columns).ceil();
-    final pageHeight = rows * _MetricCarousel._tileHeight +
+    final tileHeight = _scaledTileHeight(context);
+    final pageHeight = rows * tileHeight +
         (rows - 1).clamp(0, rows) * _MetricCarousel._rowGap;
 
     return Column(
@@ -699,7 +708,7 @@ class _MetricCarouselState extends State<_MetricCarousel> {
               for (var row = 0; row < rows; row++) ...[
                 if (row > 0) const SizedBox(height: _MetricCarousel._rowGap),
                 SizedBox(
-                  height: _MetricCarousel._tileHeight,
+                  height: _scaledTileHeight(context),
                   child: Row(
                     // Tiles fill the row height; the default centre alignment
                     // leaves them shrink-wrapped, with dead space above/below.
