@@ -178,16 +178,22 @@ class BluetoothSyncNativePlugin :
                 return@launch
             }
             // The socket is now listening — resolve before the blocking accept.
+            Log.i(SyncBluetooth.TAG, "server: listening, waiting to accept")
             withContext(Dispatchers.Main) { callback(Result.success(Unit)) }
             val socket =
                 try {
                     rfcommServer.accept()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.w(SyncBluetooth.TAG, "server: accept failed: ${e.message}")
                     null
                 }
             server = null
-            if (socket != null) onSocketConnected(socket)
-            else emitState(SyncConnectionStateMsg.DISCONNECTED)
+            if (socket != null) {
+                Log.i(SyncBluetooth.TAG, "server: accepted a connection")
+                onSocketConnected(socket)
+            } else {
+                emitState(SyncConnectionStateMsg.DISCONNECTED)
+            }
         }
     }
 
@@ -236,15 +242,25 @@ class BluetoothSyncNativePlugin :
         }
         // A running discovery starves an RFCOMM connect.
         cancelDiscovery()
+        // Guard against a re-entrant connect while one socket is already open —
+        // a second RFCOMM connect to the same UUID fails with "already opened".
+        if (channel != null) {
+            Log.w(SyncBluetooth.TAG, "connect: ignoring, a connection is already open")
+            callback(Result.success(Unit))
+            return
+        }
+        Log.i(SyncBluetooth.TAG, "connect: dialing $address")
         ioScope.launch {
             val socket =
                 try {
                     RfcommClient(adapter).connect(address)
                 } catch (e: Exception) {
+                    Log.w(SyncBluetooth.TAG, "connect: failed: ${e.message}")
                     emitState(SyncConnectionStateMsg.CONNECT_FAILED)
                     withContext(Dispatchers.Main) { callback(Result.failure(e)) }
                     return@launch
                 }
+            Log.i(SyncBluetooth.TAG, "connect: socket open")
             onSocketConnected(socket)
             withContext(Dispatchers.Main) { callback(Result.success(Unit)) }
         }
@@ -284,11 +300,13 @@ class BluetoothSyncNativePlugin :
                     socket = socket,
                     onBytes = { bytes -> emitBytes(bytes) },
                     onClosed = {
+                        Log.i(SyncBluetooth.TAG, "socket closed by peer/link")
                         channel = null
                         emitState(SyncConnectionStateMsg.DISCONNECTED)
                     },
                 )
-            } catch (_: IOException) {
+            } catch (e: IOException) {
+                Log.w(SyncBluetooth.TAG, "onSocketConnected: stream open failed: ${e.message}")
                 emitState(SyncConnectionStateMsg.CONNECT_FAILED)
                 return
             }
@@ -353,6 +371,7 @@ class BluetoothSyncNativePlugin :
     }
 
     private fun emitState(state: SyncConnectionStateMsg) {
+        Log.i(SyncBluetooth.TAG, "connectionState -> $state")
         mainScope.launch { flutterApi?.onConnectionStateChanged(state) {} }
     }
 

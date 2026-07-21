@@ -11,6 +11,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/source/sync/bluetooth_sync_service.dart';
@@ -157,6 +158,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       return;
     }
     await service.startServer();
+    debugPrint('[devicesync] host: discoverable ${granted}s, server listening, code=$code');
     state = state.copyWith(
       role: SyncRole.host,
       code: code,
@@ -223,9 +225,12 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
     _listenConnection();
     try {
       await service.cancelDiscovery();
+      debugPrint('[devicesync] guest: connecting to ${device.address}');
       await service.connect(device.address);
+      debugPrint('[devicesync] guest: connected, advancing to range');
       state = state.copyWith(code: state.codeEntry, step: DeviceSyncStep.range);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[devicesync] guest: connect failed: $e');
       state = state.copyWith(errorMessage: 'connect_failed');
     }
   }
@@ -248,6 +253,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
     final service = _service;
     final role = state.role;
     if (service == null || role == null) return;
+    debugPrint('[devicesync] startSync role=$role types=${state.selectedTypes.length} range=${state.range}');
     state = state.copyWith(step: DeviceSyncStep.syncing);
 
     // Wait until the RFCOMM socket is actually connected before the handshake.
@@ -282,6 +288,9 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
     );
     try {
       final report = await session.run();
+      debugPrint('[devicesync] session done: completed=${report.completed} '
+          'sent=${report.itemsSent} received=${report.itemsReceived} '
+          'imported=${report.imported} abort=${report.abortReason}');
       if (!report.completed &&
           (report.abortReason?.contains('code') ?? false)) {
         // Wrong code — back to code entry with an error.
@@ -294,6 +303,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       }
       state = state.copyWith(step: DeviceSyncStep.report, report: report);
     } catch (e) {
+      debugPrint('[devicesync] session threw: $e');
       state = state.copyWith(errorMessage: 'sync_failed', report: null);
     }
   }
@@ -309,8 +319,17 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
   void _listenConnection() {
     final service = _ensureService();
     _connSub ??= service.connectionState.listen((s) {
-      if (s == SyncConnectionState.connected && !_connected.isCompleted) {
-        _connected.complete();
+      debugPrint('[devicesync] connectionState=$s role=${state.role} step=${state.step}');
+      if (s == SyncConnectionState.connected) {
+        if (!_connected.isCompleted) _connected.complete();
+        // The host sits on a static "waiting" screen until a peer connects.
+        // Advance it into the range/type picker so it runs its own half of the
+        // (bidirectional) session — without this the host never starts a session
+        // and the guest's handshake finds no peer.
+        if (state.role == SyncRole.host &&
+            state.step == DeviceSyncStep.hostWaiting) {
+          state = state.copyWith(step: DeviceSyncStep.range);
+        }
       }
     });
   }
