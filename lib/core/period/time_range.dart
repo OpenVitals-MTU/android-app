@@ -1,15 +1,17 @@
 import '../time/local_date.dart';
 
 /// The Day/Week/Month/Year selector shared by every period-based screen.
+///
+/// The user-facing label is NOT here — core carries no UI copy. The presentation
+/// layer maps each value through AppLocalizations (see `timeRangeLabel`).
 enum TimeRange {
-  day('Day', 1),
-  week('Week', 7),
-  month('Month', 30),
-  year('Year', 365);
+  day(1),
+  week(7),
+  month(30),
+  year(365);
 
-  const TimeRange(this.label, this.days);
+  const TimeRange(this.days);
 
-  final String label;
   final int days;
 }
 

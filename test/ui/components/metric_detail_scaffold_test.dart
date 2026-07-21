@@ -54,9 +54,15 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('HEADER'), findsOneWidget);
     expect(find.text('CONTENT'), findsOneWidget);
-    // The Day/Week/Month/Year selector.
+    // The Day/Week/Month/Year selector (locale is en in tests).
+    const labels = {
+      TimeRange.day: 'Day',
+      TimeRange.week: 'Week',
+      TimeRange.month: 'Month',
+      TimeRange.year: 'Year',
+    };
     for (final range in TimeRange.values) {
-      expect(find.text(range.label), findsOneWidget);
+      expect(find.text(labels[range]!), findsOneWidget);
     }
     // The default range for the heart key is Week → "This week" title.
     expect(find.text('This week'), findsOneWidget);

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/period/time_range.dart';
+import '../../l10n/app_localizations.dart';
 import 'ov_card.dart';
+import 'time_range_label.dart';
 
 /// A single-metric summary card: icon + title, a large value/unit row, and an
 /// optional subtitle and source chip. Port of Kotlin `MetricCard`.
@@ -287,7 +289,7 @@ class _TimeRangeSegment extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Text(
-            range.label,
+            timeRangeLabel(AppLocalizations.of(context), range),
             textAlign: TextAlign.center,
             style: textStyle?.copyWith(
               color: selected

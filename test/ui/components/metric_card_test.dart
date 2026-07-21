@@ -2,13 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/core/period/time_range.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/metric_card.dart';
 
 const _accent = Color(0xFF4CAF50);
 
+/// The selector chip labels the widget renders (locale is en in tests).
+String _rangeLabel(TimeRange range) => switch (range) {
+      TimeRange.day => 'Day',
+      TimeRange.week => 'Week',
+      TimeRange.month => 'Month',
+      TimeRange.year => 'Year',
+    };
+
 Future<void> _pump(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(
-    MaterialApp(home: Scaffold(body: child)),
+    MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(body: child),
+    ),
   );
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
@@ -79,7 +92,7 @@ void main() {
       ),
     );
     for (final range in TimeRange.values) {
-      expect(find.text(range.label), findsOneWidget);
+      expect(find.text(_rangeLabel(range)), findsOneWidget);
     }
     await tester.tap(find.text('Month'));
     await tester.pump();
