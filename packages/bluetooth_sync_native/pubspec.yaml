@@ -1,0 +1,33 @@
+name: bluetooth_sync_native
+description: >-
+  App-local Flutter plugin bridging Flutter to Android Bluetooth Classic
+  (RFCOMM) sockets for phone-to-phone Health Connect sync. Moves raw bytes only;
+  the wire protocol lives in pure Dart. Android-only.
+version: 0.0.1
+publish_to: 'none'
+
+# Resolved as part of the root `openvitals` pub workspace (see the app pubspec),
+# so `flutter pub get` at the root covers this package too and there is no
+# separate lockfile here.
+resolution: workspace
+
+environment:
+  sdk: ^3.9.0
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  pigeon: ^27.1.0
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: tech.mmarca.openvitals.bluetooth_sync_native
+        pluginClass: BluetoothSyncNativePlugin

@@ -81,6 +81,12 @@ void main() {
     // Each entry is a DECISION, with the reason. Adding one means accepting that
     // Dart will read null forever. Fixing one means deleting the entry.
     const known = <String, String>{
+      'RecordToImportMsg.kt.ImportRecordMsg.plannedExerciseId':
+          'Correct-by-semantics: plannedExerciseId links a COMPLETED exercise to '
+              'the plan it fulfilled. A PlannedExerciseSession record IS the plan, '
+              'so it has no such link. The ExerciseSession converter does populate '
+              'it from record.plannedExerciseSessionId.',
+
       'ActivityHealthReader.kt.ExerciseSegmentMsg.setIndex':
           'REAL GAP. Health Connect ExerciseSegment has no set-index concept, so '
               'the reader has nothing to read; the WRITE path drops it too, so an '

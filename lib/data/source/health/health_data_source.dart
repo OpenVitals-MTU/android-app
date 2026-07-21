@@ -90,6 +90,15 @@ class HealthDataSource {
   /// Requests OS authorization for [permissions]. Returns success.
   Future<bool> requestPermissions(Set<String> permissions) async => false;
 
+  /// The subset of [permissions] the installed Health Connect provider actually
+  /// recognizes. Requesting a permission the provider does not define throws, so
+  /// callers building an ad-hoc permission set (e.g. device sync) filter through
+  /// this first. Base returns them unchanged; the native source asks the plugin.
+  Future<Set<String>> filterSupportedPermissions(
+    Set<String> permissions,
+  ) async =>
+      permissions;
+
   /// The subset of [permissionService.managedPermissions] currently granted.
   Future<Set<String>> grantedPermissions() async => const <String>{};
 
@@ -667,4 +676,22 @@ class HealthDataSource {
     Set<String> wantedIds,
   ) async =>
       const <String>{};
+
+  // ── Phone-to-phone sync (device sync) ─────────────────────────────────────
+
+  /// Reads every record of [recordType] (an [ImportRecord.targetType]) in
+  /// [start]..[end] as reconstructible [ImportRecord]s, for phone-to-phone sync.
+  ///
+  /// This is the generic READ counterpart to [insertImportedRecords] — it lets
+  /// the sync layer treat any supported type uniformly. The base is a no-op so
+  /// tests can drive a fake; `HealthConnectNativeDataSource` reads the raw
+  /// records through the native plugin. The returned records' `clientRecordId`
+  /// is whatever Health Connect holds (often null-sourced); the sync layer
+  /// re-keys them by content fingerprint, so it is not relied upon here.
+  Future<List<ImportRecord>> readImportRecords(
+    String recordType,
+    DateTime start,
+    DateTime end,
+  ) async =>
+      const <ImportRecord>[];
 }

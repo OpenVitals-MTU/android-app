@@ -249,6 +249,18 @@ Duration? _zoneOffset(int? seconds) =>
   }
 
   @override
+  Future<Set<String>> filterSupportedPermissions(
+    Set<String> permissions,
+  ) async {
+    if (permissions.isEmpty) return const <String>{};
+    final supported = await _catch(
+      () => _api.filterSupportedPermissions(permissions.toList()),
+      permissions.toList(),
+    );
+    return supported.toSet();
+  }
+
+  @override
   Future<bool> openHealthConnectSettings() =>
       _catch(() => _api.openHealthConnectSettings(), false);
 
@@ -2450,5 +2462,33 @@ Duration? _zoneOffset(int? seconds) =>
       const <String>[],
     );
     return existing.toSet();
+  }
+
+  @override
+  Future<List<ImportRecord>> readImportRecords(
+    String recordType,
+    DateTime start,
+    DateTime end,
+  ) async {
+    // Generic full read: the native plugin reads the RAW records of this type
+    // over the window and returns them as ImportRecordMsgs (steps/sleep/heart/
+    // nutrition/exercise/cycle included, not just the instant "entry" types), and
+    // importRecordFromMsg rebuilds the typed ImportRecord. recordType is an
+    // ImportRecord.targetType (e.g. "StepsRecord"); the plugin keys on the
+    // canonical schema name ("Steps"), so translate via schemaTypeForImport.
+    final schemaType = HealthRecordJson.schemaTypeForImport(recordType);
+    if (schemaType == null) return const <ImportRecord>[];
+    final msgs = await _catch(
+      () => _api.readImportRecords(
+        schemaType,
+        start.millisecondsSinceEpoch,
+        end.millisecondsSinceEpoch,
+      ),
+      const <ImportRecordMsg>[],
+    );
+    return [
+      for (final msg in msgs)
+        if (importRecordFromMsg(msg) case final ImportRecord record) record,
+    ];
   }
 }

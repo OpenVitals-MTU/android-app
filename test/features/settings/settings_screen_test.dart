@@ -43,8 +43,10 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Display'), findsOneWidget);
-    expect(find.text('Health Connect'), findsOneWidget);
     expect(find.text('Nutrition'), findsOneWidget);
+    // Health Connect sits lower in the (now longer) list, so scroll it in.
+    await tester.scrollUntilVisible(find.text('Health Connect'), 120);
+    expect(find.text('Health Connect'), findsOneWidget);
   });
 
   testWidgets('settings root shows the support card and version footer',

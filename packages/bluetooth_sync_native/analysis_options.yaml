@@ -1,0 +1,12 @@
+# Lints for the `bluetooth_sync_native` plugin.
+#
+# Mirrors the app's exclusions: Pigeon-generated Dart (`*.g.dart`) is machine
+# output and must not gate `flutter analyze`.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+
+linter:
+  rules:

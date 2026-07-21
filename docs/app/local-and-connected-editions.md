@@ -12,6 +12,7 @@ The local app is this repository's Health Connect app.
 - Reads Health Connect records on device.
 - Writes only records the user explicitly saves, imports, records, edits, or deletes.
 - Keeps local preferences such as units, language, theme, widget order, goals, calibration, and reminders.
+- May move records **directly between two phones over Bluetooth** ([Sync with another phone](../features/device-sync.md)). This is peer-to-peer and still ships **no internet permission** — Bluetooth Classic RFCOMM needs none, unlike any Wi-Fi/socket transport — so it stays inside the local boundary rather than being a connected feature.
 
 This repository should preserve that boundary for the local app.
 

@@ -57,9 +57,13 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
     Map<String, double> doubles = const {},
     Map<String, int> ints = const {},
     String? name,
+    String? notes,
     List<ImportSampleMsg> samples = const [],
     List<ImportSleepStageMsg> sleepStages = const [],
     List<ExerciseRoutePointMsg> routePoints = const [],
+    List<ExerciseSegmentMsg> segments = const [],
+    List<ExerciseLapMsg> laps = const [],
+    String? plannedExerciseId,
   }) =>
       ImportRecordMsg(
         recordType: type,
@@ -74,6 +78,11 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
         samples: samples,
         sleepStages: sleepStages,
         routePoints: routePoints,
+        notes: notes,
+        segments: segments,
+        laps: laps,
+        plannedExerciseId: plannedExerciseId,
+        plannedBlocks: const [],
       );
 
   ImportRecordMsg instant(
@@ -97,6 +106,9 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
         samples: const [],
         sleepStages: const [],
         routePoints: const [],
+        segments: const [],
+        laps: const [],
+        plannedBlocks: const [],
       );
 
   switch (record) {
@@ -246,5 +258,210 @@ ImportRecordMsg importRecordMsg(ImportRecord record) {
     case SexualActivityImportRecord r:
       return instant('SexualActivity', r.time, r.zoneOffset,
           ints: {'protectionUsed': r.protectionUsed.index});
+    case TotalCaloriesBurnedImportRecord r:
+      return interval('TotalCaloriesBurned', r.startTime, r.startZoneOffset,
+          r.endTime, r.endZoneOffset, doubles: {'energyKcal': r.kilocalories});
+    case PowerImportRecord r:
+      return interval('Power', r.startTime, r.startZoneOffset, r.endTime,
+          r.endZoneOffset,
+          samples: [
+            for (final s in r.samples)
+              ImportSampleMsg(
+                  timeEpochMs: s.time.millisecondsSinceEpoch, value: s.watts),
+          ]);
+    case StepsCadenceImportRecord r:
+      return interval('StepsCadence', r.startTime, r.startZoneOffset, r.endTime,
+          r.endZoneOffset,
+          samples: [
+            for (final s in r.samples)
+              ImportSampleMsg(
+                  timeEpochMs: s.time.millisecondsSinceEpoch, value: s.rate),
+          ]);
+    case CyclingPedalingCadenceImportRecord r:
+      return interval('CyclingPedalingCadence', r.startTime, r.startZoneOffset,
+          r.endTime, r.endZoneOffset,
+          samples: [
+            for (final s in r.samples)
+              ImportSampleMsg(
+                  timeEpochMs: s.time.millisecondsSinceEpoch,
+                  value: s.revolutionsPerMinute),
+          ]);
+    case SkinTemperatureImportRecord r:
+      return interval('SkinTemperature', r.startTime, r.startZoneOffset,
+          r.endTime, r.endZoneOffset,
+          doubles: {
+            if (r.baselineCelsius != null) 'baselineCelsius': r.baselineCelsius!,
+          },
+          ints: {'measurementLocation': r.measurementLocation},
+          samples: [
+            for (final s in r.deltas)
+              ImportSampleMsg(
+                  timeEpochMs: s.time.millisecondsSinceEpoch,
+                  value: s.deltaCelsius),
+          ]);
+    case MenstruationPeriodImportRecord r:
+      return interval('MenstruationPeriod', r.startTime, r.startZoneOffset,
+          r.endTime, r.endZoneOffset);
+    case PlannedExerciseSessionImportRecord r:
+      return ImportRecordMsg(
+        recordType: 'PlannedExerciseSession',
+        clientRecordId: record.clientRecordId,
+        startEpochMs: r.startTime.millisecondsSinceEpoch,
+        endEpochMs: r.endTime.millisecondsSinceEpoch,
+        startZoneOffsetSeconds: r.startZoneOffset?.inSeconds,
+        endZoneOffsetSeconds: r.endZoneOffset?.inSeconds,
+        doubleFields: const {},
+        intFields: {'exerciseType': r.exerciseType},
+        name: r.title,
+        notes: r.notes,
+        samples: const [],
+        sleepStages: const [],
+        routePoints: const [],
+        segments: const [],
+        laps: const [],
+        plannedBlocks: [
+          for (final b in r.blocks)
+            PlannedExerciseBlockMsg(
+              repetitions: b.repetitions,
+              description: b.description,
+              steps: [
+                for (final s in b.steps)
+                  PlannedExerciseStepMsg(
+                    exerciseType: s.exerciseType,
+                    exercisePhase: s.exercisePhase,
+                    description: s.description,
+                    completionKind:
+                        PlannedExerciseCompletionKindMsg.values[s.completionKind],
+                    completionRepetitions: s.completionRepetitions,
+                    completionSeconds: s.completionSeconds,
+                  ),
+              ],
+            ),
+        ],
+      );
   }
 }
+
+// Reverse enum decoders (Health Connect int -> domain enum), mirroring the
+// encoders above so a record round-trips write -> read faithfully.
+final Map<int, SleepStageType> _sleepStageFromHc = {
+  for (final e in _sleepStage.entries) e.value: e.key,
+};
+final Map<int, OvulationResultType> _ovulationResultFromHc = {
+  for (final e in _ovulationResult.entries) e.value: e.key,
+};
+final Map<int, ImportExerciseType> _exerciseTypeFromHc = {
+  for (final e in _exerciseType.entries) e.value: e.key,
+};
+
+/// Reconstructs a domain [ImportRecord] from a native [ImportRecordMsg] read
+/// from Health Connect — the inverse of [importRecordMsg]. Used by the device
+/// sync read path. Returns null for a record type with no domain model yet.
+ImportRecord? importRecordFromMsg(ImportRecordMsg m) {
+  DateTime ms(int v) => DateTime.fromMillisecondsSinceEpoch(v, isUtc: true);
+  Duration? zone(int? s) => s == null ? null : Duration(seconds: s);
+  final cid = m.clientRecordId;
+  final start = ms(m.startEpochMs);
+  final sZone = zone(m.startZoneOffsetSeconds);
+  final end = m.endEpochMs == null ? start : ms(m.endEpochMs!);
+  final eZone = zone(m.endZoneOffsetSeconds);
+  final d = m.doubleFields;
+  final i = m.intFields;
+
+  switch (m.recordType) {
+    case 'Steps':
+      return StepsImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, count: (d['count'] ?? 0).round());
+    case 'Distance':
+      return DistanceImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, meters: d['distanceMeters'] ?? 0);
+    case 'ActiveCaloriesBurned':
+      return ActiveCaloriesBurnedImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, kilocalories: d['energyKcal'] ?? 0);
+    case 'BasalMetabolicRate':
+      return BasalMetabolicRateImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, kilocaloriesPerDay: d['kcalPerDay'] ?? 0);
+    case 'FloorsClimbed':
+      return FloorsClimbedImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, floors: d['floors'] ?? 0);
+    case 'ElevationGained':
+      return ElevationGainedImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, meters: d['elevationMeters'] ?? 0);
+    case 'WheelchairPushes':
+      return WheelchairPushesImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, count: (d['count'] ?? 0).round());
+    case 'Speed':
+      return SpeedImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, samples: [for (final s in m.samples) SpeedSampleValue(ms(s.timeEpochMs), s.value)]);
+    case 'HeartRate':
+      return HeartRateImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, samples: [for (final s in m.samples) HeartRateSampleValue(ms(s.timeEpochMs), s.value.round())]);
+    case 'RestingHeartRate':
+      return RestingHeartRateImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, beatsPerMinute: (d['bpm'] ?? 0).round());
+    case 'HeartRateVariabilityRmssd':
+      return HeartRateVariabilityRmssdImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, rmssdMillis: d['rmssdMillis'] ?? 0);
+    case 'Weight':
+      return WeightImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, kilograms: d['weightKg'] ?? 0);
+    case 'Height':
+      return HeightImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, meters: d['heightMeters'] ?? 0);
+    case 'BodyFat':
+      return BodyFatImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, percent: d['percentage'] ?? 0);
+    case 'LeanBodyMass':
+      return LeanBodyMassImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, kilograms: d['massKg'] ?? 0);
+    case 'BoneMass':
+      return BoneMassImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, kilograms: d['massKg'] ?? 0);
+    case 'BodyWaterMass':
+      return BodyWaterMassImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, kilograms: d['massKg'] ?? 0);
+    case 'Hydration':
+      return HydrationImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, milliliters: (d['volumeLiters'] ?? 0) * 1000.0);
+    case 'OxygenSaturation':
+      return OxygenSaturationImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, percent: d['percentage'] ?? 0);
+    case 'RespiratoryRate':
+      return RespiratoryRateImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, rate: d['rate'] ?? 0);
+    case 'BodyTemperature':
+      return BodyTemperatureImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, celsius: d['temperatureCelsius'] ?? 0);
+    case 'BasalBodyTemperature':
+      return BasalBodyTemperatureImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, celsius: d['temperatureCelsius'] ?? 0);
+    case 'BloodGlucose':
+      return BloodGlucoseImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, millimolesPerLiter: d['levelMmolL'] ?? 0);
+    case 'Vo2Max':
+      return Vo2MaxImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, vo2MillilitersPerMinuteKilogram: d['vo2MillilitersPerMinuteKilogram'] ?? 0);
+    case 'BloodPressure':
+      return BloodPressureImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, systolicMmHg: d['systolicMmHg'] ?? 0, diastolicMmHg: d['diastolicMmHg'] ?? 0);
+    case 'Sleep':
+      return SleepSessionImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, title: m.name ?? '', stages: [for (final s in m.sleepStages) SleepStageValue(startTime: ms(s.startEpochMs), endTime: ms(s.endEpochMs), stage: _sleepStageFromHc[s.stage] ?? SleepStageType.sleeping)]);
+    case 'MindfulnessSession':
+      return MindfulnessSessionImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, title: m.name ?? '');
+    case 'MenstruationFlow':
+      return MenstruationFlowImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, flow: _enumAt(MenstruationFlowType.values, i['flow']));
+    case 'OvulationTest':
+      return OvulationTestImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, result: _ovulationResultFromHc[i['result']] ?? OvulationResultType.inconclusive);
+    case 'CervicalMucus':
+      return CervicalMucusImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, appearance: _enumAt(CervicalMucusAppearance.values, i['appearance']), sensation: _enumAt(CervicalMucusSensation.values, i['sensation']));
+    case 'IntermenstrualBleeding':
+      return IntermenstrualBleedingImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone);
+    case 'SexualActivity':
+      return SexualActivityImportRecord(clientRecordId: cid, time: start, zoneOffset: sZone, protectionUsed: _enumAt(SexualActivityProtection.values, i['protectionUsed']));
+    case 'Nutrition':
+      final nutrients = {for (final e in d.entries) if (e.key != 'energyKcal') e.key: e.value};
+      return NutritionImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, name: m.name, nutrientGrams: nutrients, energyKilocalories: d['energyKcal']);
+    case 'ExerciseSession':
+      final route = m.routePoints.isEmpty ? null : ExerciseRoute([for (final p in m.routePoints) ExerciseRouteLocation(time: ms(p.timeEpochMs), latitude: p.latitude, longitude: p.longitude, altitudeMeters: p.altitudeMeters, horizontalAccuracyMeters: p.horizontalAccuracyMeters, verticalAccuracyMeters: p.verticalAccuracyMeters)]);
+      return ExerciseSessionImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, exerciseType: _exerciseTypeFromHc[i['exerciseType']] ?? ImportExerciseType.otherWorkout, title: m.name ?? '', route: route);
+    case 'TotalCaloriesBurned':
+      return TotalCaloriesBurnedImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, kilocalories: d['energyKcal'] ?? 0);
+    case 'Power':
+      return PowerImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, samples: [for (final s in m.samples) PowerSampleValue(ms(s.timeEpochMs), s.value)]);
+    case 'StepsCadence':
+      return StepsCadenceImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, samples: [for (final s in m.samples) StepsCadenceSampleValue(ms(s.timeEpochMs), s.value)]);
+    case 'CyclingPedalingCadence':
+      return CyclingPedalingCadenceImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, samples: [for (final s in m.samples) CyclingPedalingCadenceSampleValue(ms(s.timeEpochMs), s.value)]);
+    case 'SkinTemperature':
+      return SkinTemperatureImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, baselineCelsius: d['baselineCelsius'], measurementLocation: i['measurementLocation'] ?? 0, deltas: [for (final s in m.samples) SkinTemperatureDeltaValue(ms(s.timeEpochMs), s.value)]);
+    case 'MenstruationPeriod':
+      return MenstruationPeriodImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone);
+    case 'PlannedExerciseSession':
+      return PlannedExerciseSessionImportRecord(clientRecordId: cid, startTime: start, startZoneOffset: sZone, endTime: end, endZoneOffset: eZone, exerciseType: i['exerciseType'] ?? 0, title: m.name, notes: m.notes, blocks: [
+        for (final b in m.plannedBlocks)
+          PlannedExerciseBlockValue(repetitions: b.repetitions, description: b.description, steps: [
+            for (final s in b.steps)
+              PlannedExerciseStepValue(exerciseType: s.exerciseType, exercisePhase: s.exercisePhase, description: s.description, completionKind: s.completionKind.index, completionRepetitions: s.completionRepetitions, completionSeconds: s.completionSeconds),
+          ]),
+      ]);
+  }
+  return null;
+}
+
+T _enumAt<T extends Enum>(List<T> values, int? index) =>
+    (index != null && index >= 0 && index < values.length) ? values[index] : values.first;

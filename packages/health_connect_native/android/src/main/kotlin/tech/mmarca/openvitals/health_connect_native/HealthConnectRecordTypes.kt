@@ -27,6 +27,7 @@ import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -89,5 +90,6 @@ internal fun recordClassFor(recordType: String): KClass<out Record>? = when (rec
   "SkinTemperature" -> SkinTemperatureRecord::class
   "BloodGlucose" -> BloodGlucoseRecord::class
   "Vo2Max" -> Vo2MaxRecord::class
+  "PlannedExerciseSession" -> PlannedExerciseSessionRecord::class
   else -> null
 }

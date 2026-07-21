@@ -378,4 +378,12 @@ abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
 
   @override
   Future<List<String>> insertImportedRecords(List<ImportRecordMsg> records) => unimplemented('insertImportedRecords');
+
+  @override
+  Future<List<ImportRecordMsg>> readImportRecords(
+    String recordType,
+    int startEpochMs,
+    int endEpochMs,
+  ) =>
+      unimplemented('readImportRecords');
 }

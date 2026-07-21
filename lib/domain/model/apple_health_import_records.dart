@@ -656,3 +656,197 @@ class ExerciseSessionImportRecord extends ImportRecord {
 
   bool get hasRoute => route != null;
 }
+
+/// A single-instant total energy expenditure over an interval (basal + active),
+/// mirroring `TotalCaloriesBurnedRecord`.
+class TotalCaloriesBurnedImportRecord extends ImportRecord {
+  const TotalCaloriesBurnedImportRecord({
+    required super.clientRecordId,
+    required this.startTime,
+    required this.startZoneOffset,
+    required this.endTime,
+    required this.endZoneOffset,
+    required this.kilocalories,
+  }) : super(targetType: 'TotalCaloriesBurnedRecord');
+
+  final DateTime startTime;
+  final Duration? startZoneOffset;
+  final DateTime endTime;
+  final Duration? endZoneOffset;
+  final double kilocalories;
+}
+
+class PowerSampleValue {
+  const PowerSampleValue(this.time, this.watts);
+  final DateTime time;
+  final double watts;
+}
+
+class PowerImportRecord extends ImportRecord {
+  const PowerImportRecord({
+    required super.clientRecordId,
+    required this.startTime,
+    required this.startZoneOffset,
+    required this.endTime,
+    required this.endZoneOffset,
+    required this.samples,
+  }) : super(targetType: 'PowerRecord');
+
+  final DateTime startTime;
+  final Duration? startZoneOffset;
+  final DateTime endTime;
+  final Duration? endZoneOffset;
+  final List<PowerSampleValue> samples;
+}
+
+class StepsCadenceSampleValue {
+  const StepsCadenceSampleValue(this.time, this.rate);
+  final DateTime time;
+  final double rate;
+}
+
+class StepsCadenceImportRecord extends ImportRecord {
+  const StepsCadenceImportRecord({
+    required super.clientRecordId,
+    required this.startTime,
+    required this.startZoneOffset,
+    required this.endTime,
+    required this.endZoneOffset,
+    required this.samples,
+  }) : super(targetType: 'StepsCadenceRecord');
+
+  final DateTime startTime;
+  final Duration? startZoneOffset;
+  final DateTime endTime;
+  final Duration? endZoneOffset;
+  final List<StepsCadenceSampleValue> samples;
+}
+
+class CyclingPedalingCadenceSampleValue {
+  const CyclingPedalingCadenceSampleValue(this.time, this.revolutionsPerMinute);
+  final DateTime time;
+  final double revolutionsPerMinute;
+}
+
+class CyclingPedalingCadenceImportRecord extends ImportRecord {
+  const CyclingPedalingCadenceImportRecord({
+    required super.clientRecordId,
+    required this.startTime,
+    required this.startZoneOffset,
+    required this.endTime,
+    required this.endZoneOffset,
+    required this.samples,
+  }) : super(targetType: 'CyclingPedalingCadenceRecord');
+
+  final DateTime startTime;
+  final Duration? startZoneOffset;
+  final DateTime endTime;
+  final Duration? endZoneOffset;
+  final List<CyclingPedalingCadenceSampleValue> samples;
+}
+
+/// A single skin-temperature reading over an interval: a baseline plus a series
+/// of deltas from it (`SkinTemperatureRecord`).
+class SkinTemperatureDeltaValue {
+  const SkinTemperatureDeltaValue(this.time, this.deltaCelsius);
+  final DateTime time;
+  final double deltaCelsius;
+}
+
+class SkinTemperatureImportRecord extends ImportRecord {
+  const SkinTemperatureImportRecord({
+    required super.clientRecordId,
+    required this.startTime,
+    required this.startZoneOffset,
+    required this.endTime,
+    required this.endZoneOffset,
+    required this.baselineCelsius,
+    required this.measurementLocation,
+    required this.deltas,
+  }) : super(targetType: 'SkinTemperatureRecord');
+
+  final DateTime startTime;
+  final Duration? startZoneOffset;
+  final DateTime endTime;
+  final Duration? endZoneOffset;
+  final double? baselineCelsius;
+  final int measurementLocation;
+  final List<SkinTemperatureDeltaValue> deltas;
+}
+
+/// A menstrual period span (`MenstruationPeriodRecord`) — interval only, no value.
+class MenstruationPeriodImportRecord extends ImportRecord {
+  const MenstruationPeriodImportRecord({
+    required super.clientRecordId,
+    required this.startTime,
+    required this.startZoneOffset,
+    required this.endTime,
+    required this.endZoneOffset,
+  }) : super(targetType: 'MenstruationPeriodRecord');
+
+  final DateTime startTime;
+  final Duration? startZoneOffset;
+  final DateTime endTime;
+  final Duration? endZoneOffset;
+}
+
+/// One step within a planned-exercise block (`PlannedExerciseStep`).
+class PlannedExerciseStepValue {
+  const PlannedExerciseStepValue({
+    required this.exerciseType,
+    required this.exercisePhase,
+    this.description,
+    required this.completionKind,
+    this.completionRepetitions,
+    this.completionSeconds,
+  });
+
+  final int exerciseType;
+  final int exercisePhase;
+  final String? description;
+
+  /// The step's completion goal kind, matching `PlannedExerciseCompletionKindMsg`
+  /// ordinals: 0 repetitions, 1 durationSeconds, 2 manual, 3 unknown.
+  final int completionKind;
+  final int? completionRepetitions;
+  final int? completionSeconds;
+}
+
+/// One block of a planned-exercise session (`PlannedExerciseBlock`).
+class PlannedExerciseBlockValue {
+  const PlannedExerciseBlockValue({
+    required this.repetitions,
+    this.description,
+    required this.steps,
+  });
+
+  final int repetitions;
+  final String? description;
+  final List<PlannedExerciseStepValue> steps;
+}
+
+/// A planned (future) workout with its block/step structure
+/// (`PlannedExerciseSessionRecord`). `exerciseType` is the raw Health Connect
+/// exercise-type int (not the limited [ImportExerciseType]).
+class PlannedExerciseSessionImportRecord extends ImportRecord {
+  const PlannedExerciseSessionImportRecord({
+    required super.clientRecordId,
+    required this.startTime,
+    required this.startZoneOffset,
+    required this.endTime,
+    required this.endZoneOffset,
+    required this.exerciseType,
+    required this.title,
+    required this.notes,
+    required this.blocks,
+  }) : super(targetType: 'PlannedExerciseSessionRecord');
+
+  final DateTime startTime;
+  final Duration? startZoneOffset;
+  final DateTime endTime;
+  final Duration? endZoneOffset;
+  final int exerciseType;
+  final String? title;
+  final String? notes;
+  final List<PlannedExerciseBlockValue> blocks;
+}

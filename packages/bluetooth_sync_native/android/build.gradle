@@ -1,0 +1,54 @@
+// Gradle build for the `bluetooth_sync_native` Flutter plugin (Android only).
+//
+// Built-in Kotlin (Flutter 3.44+ / AGP 9): the plugin does NOT apply the Kotlin
+// Gradle Plugin itself — AGP applies KGP automatically for modules with Kotlin
+// sources. So only `com.android.library` is declared here, and Kotlin options use
+// the top-level `kotlin { compilerOptions {} }` DSL (not the deprecated
+// `android.kotlinOptions`). This keeps the plugin off the "applies KGP" warning.
+// Repositories (google/mavenCentral) come from the app root's `allprojects` block.
+plugins {
+    id "com.android.library"
+}
+
+group = "tech.mmarca.openvitals.bluetooth_sync_native"
+version = "1.0"
+
+android {
+    namespace = "tech.mmarca.openvitals.bluetooth_sync_native"
+    // compileSdk 37 matches the host app.
+    compileSdk = 37
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        // minSdk 26 matches the host app.
+        minSdk = 26
+    }
+
+    testOptions {
+        unitTests {
+            // android.util.Log is an unimplemented JVM stub that throws by
+            // default; make it a no-op so the pure-Kotlin helpers can be unit
+            // tested without Robolectric.
+            returnDefaultValues = true
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+dependencies {
+    // Coroutines back the accept/connect/read blocking calls off the main thread.
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2"
+    testImplementation "com.google.truth:truth:1.4.4"
+}

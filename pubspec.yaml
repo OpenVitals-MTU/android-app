@@ -32,6 +32,7 @@ environment:
 # APK; the shared resolution keeps one lockfile for the whole tree.
 workspace:
   - packages/health_connect_native
+  - packages/bluetooth_sync_native
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -109,6 +110,12 @@ dependencies:
   # the former `health` package.
   health_connect_native:
     path: packages/health_connect_native
+  # App-local plugin bridging Flutter to Android Bluetooth Classic (RFCOMM)
+  # sockets for phone-to-phone Health Connect sync. Moves raw bytes only; the
+  # wire protocol lives in pure Dart under lib/data/source/sync/. RFCOMM (not
+  # Wi-Fi) keeps the app's no-INTERNET-permission stance intact.
+  bluetooth_sync_native:
+    path: packages/bluetooth_sync_native
   flutter_timezone: ^5.1.0
   audioplayers: ^6.8.1
   file_selector: ^1.1.0
