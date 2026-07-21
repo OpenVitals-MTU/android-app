@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../../domain/model/garmin_transport.dart';
 import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/ble_devices_view_model.dart';
@@ -54,18 +55,23 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
     // Told once, after the sheet closes, rather than inside it: the user has
     // already answered the companion dialog by then, and a declined association
     // costs them nothing until a sync actually runs in the background.
-    final withoutCompanion = ref
-        .read(bleDevicesViewModelProvider)
-        .watchOnboardedWithoutCompanion;
+    final state = ref.read(bleDevicesViewModelProvider);
+    final transport = state.watchTransport;
     _notifier.closeAddFlow();
-    if (withoutCompanion && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).settingsWatchNoCompanionNotice,
-          ),
-        ),
-      );
+    if (!mounted) return;
+    // An unsupported transport outranks a missing association: a watch that
+    // cannot sync at all makes the background-reliability note moot.
+    final notice = switch (transport) {
+      GarminTransportVariant.unknown ||
+      GarminTransportVariant.unreachable =>
+        AppLocalizations.of(context).settingsWatchUnsupportedNotice,
+      _ when state.watchOnboardedWithoutCompanion =>
+        AppLocalizations.of(context).settingsWatchNoCompanionNotice,
+      _ => null,
+    };
+    if (notice != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(notice)));
     }
   }
 
@@ -492,12 +498,13 @@ class _WatchPairSteps extends StatelessWidget {
         _WatchPairStepRow(
           label: l10n.settingsWatchStepBonding,
           active: step == GarminOnboardStep.bonding,
-          done: step == GarminOnboardStep.associating,
+          done: step == GarminOnboardStep.associating ||
+              step == GarminOnboardStep.probing,
         ),
         _WatchPairStepRow(
           label: l10n.settingsWatchStepAssociating,
           active: step == GarminOnboardStep.associating,
-          done: false,
+          done: step == GarminOnboardStep.probing,
         ),
         Padding(
           padding: const EdgeInsets.only(left: 32, top: 2),
@@ -506,6 +513,11 @@ class _WatchPairSteps extends StatelessWidget {
             style: theme.textTheme.labelSmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
+        ),
+        _WatchPairStepRow(
+          label: l10n.settingsWatchStepProbing,
+          active: step == GarminOnboardStep.probing,
+          done: false,
         ),
       ],
     );

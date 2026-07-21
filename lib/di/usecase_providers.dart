@@ -249,6 +249,7 @@ final onboardGarminWatchUseCaseProvider =
   (ref) => OnboardGarminWatchUseCase(
     ref.watch(watchPairingPortProvider),
     ref.watch(bleDeviceRepositoryProvider),
+    ref.watch(garminTransportProbeProvider),
   ),
 );
 

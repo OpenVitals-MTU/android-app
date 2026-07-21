@@ -2058,6 +2058,8 @@
   "settingsWatchStepBonding": "Pairing with the watch",
   "settingsWatchStepAssociating": "Asking Android for access",
   "settingsWatchStepAssociatingHint": "Optional. Allowing this lets syncing continue reliably in the background.",
+  "settingsWatchStepProbing": "Checking what the watch supports",
+  "settingsWatchUnsupportedNotice": "Paired, but this watch uses a connection OpenVitals does not support yet, so it cannot sync.",
   "settingsWatchPairAction": "Pair",
   "settingsWatchNeverSynced": "Never synced",
   "settingsWatchLastSynced": "Last synced {arg0}",

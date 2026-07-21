@@ -3,7 +3,9 @@ import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
 import '../data/source/sensors/ble/ble_watch_pairing.dart';
+import '../data/source/sensors/garmin/garmin_gatt_probe.dart';
 import '../data/repository/contract/ble_sensor_repository.dart';
+import '../domain/port/garmin_transport_probe.dart';
 import '../domain/port/watch_pairing_port.dart';
 import 'dart:io';
 
@@ -240,6 +242,11 @@ final bleDeviceRepositoryProvider = Provider<BleDeviceRepository>(
 /// widget test can substitute one and never touch a radio.
 final watchPairingPortProvider = Provider<WatchPairingPort>(
   (ref) => BleWatchPairing(),
+);
+
+/// Reads a bonded watch's GATT map to decide which GFDI transport it speaks.
+final garminTransportProbeProvider = Provider<GarminTransportProbe>(
+  (ref) => const GarminGattProbe(),
 );
 
 final appleHealthImportRepositoryProvider =

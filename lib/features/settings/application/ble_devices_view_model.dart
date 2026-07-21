@@ -6,6 +6,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../data/repository/contract/ble_sensor_repository.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../../domain/model/garmin_transport.dart';
 import '../../../domain/port/watch_pairing_port.dart';
 import '../../../domain/usecase/edit_ble_device_registry_use_case.dart';
 import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
@@ -64,6 +65,11 @@ abstract class BleDevicesUiState with _$BleDevicesUiState {
     /// unavailable. Not an error — a note that background syncs are likelier to
     /// be interrupted.
     @Default(false) bool watchOnboardedWithoutCompanion,
+
+    /// Which GFDI transport the last onboarded watch speaks. Null until one is
+    /// onboarded. Surfaced so an unsupported watch says so instead of sitting in
+    /// the list looking healthy and never syncing.
+    GarminTransportVariant? watchTransport,
   }) = _BleDevicesUiState;
 
   int get enabledDeviceCount => devices.where((d) => d.enabled).length;
@@ -134,6 +140,7 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
       // the sheet pops — so it is cleared when a new flow starts, not when the
       // old one closes.
       watchOnboardedWithoutCompanion: false,
+      watchTransport: null,
     ));
   }
 
@@ -301,11 +308,12 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
           },
         ));
         return false;
-      case GarminOnboardSucceeded(:final associated):
+      case GarminOnboardSucceeded(:final associated, :final transport):
         _setLocal(_local.copyWith(
           isOnboardingWatch: false,
           onboardStep: null,
           watchOnboardedWithoutCompanion: !associated,
+          watchTransport: transport.variant,
         ));
         closeAddFlow();
         return true;

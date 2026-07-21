@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
+import 'package:openvitals/domain/model/garmin_transport.dart';
+import 'package:openvitals/domain/port/garmin_transport_probe.dart';
 import 'package:openvitals/domain/port/watch_pairing_port.dart';
 import 'package:openvitals/domain/usecase/onboard_garmin_watch_use_case.dart';
 
@@ -34,6 +36,22 @@ class _FakePairing implements WatchPairingPort {
       calls.add('disassociate:$address');
 }
 
+/// Answers with a canned GATT verdict; never opens a connection.
+class _FakeProbe implements GarminTransportProbe {
+  GarminTransportVariant variant = GarminTransportVariant.v1;
+  final List<String> calls = [];
+
+  @override
+  Future<GarminGattReport> probe(String address) async {
+    calls.add('probe:$address');
+    return GarminGattReport(
+      address: address,
+      variant: variant,
+      services: const [],
+    );
+  }
+}
+
 const _watch = BleDiscoveredDevice(
   address: 'E0:48:24:D5:F7:10',
   name: 'vívoactive 5',
@@ -45,13 +63,15 @@ const _watch = BleDiscoveredDevice(
 void main() {
   late BleDeviceRepositoryImpl repo;
   late _FakePairing pairing;
+  late _FakeProbe probe;
   late OnboardGarminWatchUseCase useCase;
 
   Future<void> setUp0() async {
     SharedPreferences.setMockInitialValues(const {});
     repo = BleDeviceRepositoryImpl(await SharedPreferences.getInstance());
     pairing = _FakePairing();
-    useCase = OnboardGarminWatchUseCase(pairing, repo);
+    probe = _FakeProbe();
+    useCase = OnboardGarminWatchUseCase(pairing, repo, probe);
   }
 
   test('registers a bonded watch with no capabilities', () async {
@@ -145,7 +165,47 @@ void main() {
 
     await useCase(_watch, displayName: 'vívoactive 5', onStep: steps.add);
 
-    expect(steps, [GarminOnboardStep.bonding, GarminOnboardStep.associating]);
+    expect(steps, [
+      GarminOnboardStep.bonding,
+      GarminOnboardStep.associating,
+      GarminOnboardStep.probing,
+    ]);
+  });
+
+  test('the probe runs only after bonding succeeds', () async {
+    await setUp0();
+    pairing.bondResult = WatchBondResult.refused;
+
+    await useCase(_watch, displayName: 'vívoactive 5');
+
+    // Probing an unbonded watch enumerates a link with no encryption, so the
+    // GFDI characteristics are absent and the verdict would read "unknown" —
+    // a false negative that looks exactly like an unsupported device.
+    expect(probe.calls, isEmpty);
+  });
+
+  test('an unsupported transport still onboards, and is reported', () async {
+    await setUp0();
+    probe.variant = GarminTransportVariant.unknown;
+
+    final outcome = await useCase(_watch, displayName: 'vívoactive 5');
+
+    // Refusing a pairing the user just confirmed on the watch would be worse
+    // than registering one that cannot sync yet and saying so.
+    expect(outcome, isA<GarminOnboardSucceeded>());
+    final succeeded = outcome as GarminOnboardSucceeded;
+    expect(succeeded.transport.variant, GarminTransportVariant.unknown);
+    expect(succeeded.transport.isSupported, isFalse);
+    expect(repo.devices, hasLength(1));
+  });
+
+  test('a v2 watch reports as supported', () async {
+    await setUp0();
+    probe.variant = GarminTransportVariant.v2;
+
+    final outcome = await useCase(_watch, displayName: 'vívoactive 5');
+
+    expect((outcome as GarminOnboardSucceeded).transport.isSupported, isTrue);
   });
 
   test('forget drops the association and the bond, in that order', () async {

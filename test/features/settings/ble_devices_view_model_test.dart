@@ -6,6 +6,8 @@ import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart'
 import 'package:openvitals/data/repository/contract/ble_sensor_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
+import 'package:openvitals/domain/model/garmin_transport.dart';
+import 'package:openvitals/domain/port/garmin_transport_probe.dart';
 import 'package:openvitals/domain/port/watch_pairing_port.dart';
 import 'package:openvitals/features/settings/application/ble_devices_view_model.dart';
 
@@ -58,6 +60,18 @@ class _FakePairing implements WatchPairingPort {
       calls.add('disassociate:$address');
 }
 
+/// Canned GATT verdict; never opens a connection.
+class _FakeProbe implements GarminTransportProbe {
+  GarminTransportVariant variant = GarminTransportVariant.v1;
+
+  @override
+  Future<GarminGattReport> probe(String address) async => GarminGattReport(
+        address: address,
+        variant: variant,
+        services: const [],
+      );
+}
+
 BleDiscoveredDevice _discovered({
   Set<BleSensorCapability> suggested = const {BleSensorCapability.heartRate},
 }) =>
@@ -81,6 +95,7 @@ void main() {
   late BleDeviceRepositoryImpl repo;
   late _FakeCoordinator coordinator;
   late _FakePairing pairing;
+  late _FakeProbe probe;
   late ProviderContainer container;
 
   Future<void> setUp0() async {
@@ -89,10 +104,12 @@ void main() {
     repo = BleDeviceRepositoryImpl(prefs);
     coordinator = _FakeCoordinator();
     pairing = _FakePairing();
+    probe = _FakeProbe();
     container = ProviderContainer(overrides: [
       bleDeviceRepositoryProvider.overrideWithValue(repo),
       bleSensorRepositoryProvider.overrideWithValue(coordinator),
       watchPairingPortProvider.overrideWithValue(pairing),
+      garminTransportProbeProvider.overrideWithValue(probe),
     ]);
     addTearDown(container.dispose);
   }

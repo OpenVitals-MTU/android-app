@@ -1,11 +1,14 @@
 import '../../data/repository/contract/ble_device_repository.dart';
 import '../model/ble_sensor_models.dart';
+import '../model/garmin_transport.dart';
+import '../port/garmin_transport_probe.dart';
 import '../port/watch_pairing_port.dart';
 
 /// Which platform step the onboarding is on, so the sheet can tell the user
-/// which OS dialog is about to appear over it. Both steps show a system dialog
-/// the app does not own, and an unexplained one reads as the app misbehaving.
-enum GarminOnboardStep { bonding, associating }
+/// which OS dialog is about to appear over it. The first two show a system
+/// dialog the app does not own, and an unexplained one reads as the app
+/// misbehaving; [probing] shows nothing but takes a few seconds over the air.
+enum GarminOnboardStep { bonding, associating, probing }
 
 /// How onboarding ended.
 sealed class GarminOnboardOutcome {
@@ -20,10 +23,17 @@ class GarminOnboardSucceeded extends GarminOnboardOutcome {
   const GarminOnboardSucceeded({
     required this.device,
     required this.associated,
+    required this.transport,
   });
 
   final BleSensorDevice device;
   final bool associated;
+
+  /// Which GFDI transport the watch turned out to speak. Recorded, never
+  /// enforced: an [GarminTransportVariant.unknown] watch still onboards, because
+  /// the user's watch being unsupported is a thing to TELL them, not a reason to
+  /// refuse a pairing they just confirmed on the device.
+  final GarminGattReport transport;
 }
 
 /// Onboarding stopped at [step]. Nothing was written to the registry.
@@ -45,17 +55,25 @@ class GarminOnboardFailed extends GarminOnboardOutcome {
 ///   2. **Associate.** The companion dialog. Optional in every direction: the
 ///      user may decline it, and the platform may not offer it at all. A false
 ///      here is recorded, not raised.
-///   3. **Register.** Only now, so a refused pairing cannot leave a watch in the
+///   3. **Probe.** Enumerate the GATT services to learn which GFDI transport
+///      this watch speaks. Must come after the bond — the characteristics sit
+///      behind an encrypted link. Also non-fatal: the answer is recorded.
+///   4. **Register.** Only now, so a refused pairing cannot leave a watch in the
 ///      list that the app can never actually reach.
 ///
 /// The watch is registered with NO capabilities and [BleDeviceKind.watch]: it
 /// streams nothing live, and must never be picked up by the recording
 /// coordinator's capability assignment.
 class OnboardGarminWatchUseCase {
-  const OnboardGarminWatchUseCase(this._pairing, this._bleDeviceRepository);
+  const OnboardGarminWatchUseCase(
+    this._pairing,
+    this._bleDeviceRepository,
+    this._transportProbe,
+  );
 
   final WatchPairingPort _pairing;
   final BleDeviceRepository _bleDeviceRepository;
+  final GarminTransportProbe _transportProbe;
 
   /// [onStep] fires as each platform dialog is about to be shown.
   Future<GarminOnboardOutcome> call(
@@ -83,6 +101,9 @@ class OnboardGarminWatchUseCase {
       displayName,
     );
 
+    onStep?.call(GarminOnboardStep.probing);
+    final transport = await _transportProbe.probe(device.address);
+
     final registered = _bleDeviceRepository.addDevice(
       displayName: displayName,
       address: device.address,
@@ -93,6 +114,7 @@ class OnboardGarminWatchUseCase {
     return GarminOnboardSucceeded(
       device: registered,
       associated: associated,
+      transport: transport,
     );
   }
 
