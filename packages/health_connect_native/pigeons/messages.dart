@@ -1270,6 +1270,11 @@ abstract class HealthConnectHostApi {
   void updateHydrationEntry(String id, HydrationWriteRequestMsg request);
   @async
   String? deleteHydrationEntry(String id);
+  // Deletes by clientRecordId (not record UID) — used to roll back a just-written
+  // hydration record when its paired nutrition write fails, keeping the drink's
+  // two halves atomic.
+  @async
+  void deleteHydrationEntryByClientRecordId(String clientRecordId);
 
   // ── Mindfulness (Phase 2) ──────────────────────────────────────────────────
 

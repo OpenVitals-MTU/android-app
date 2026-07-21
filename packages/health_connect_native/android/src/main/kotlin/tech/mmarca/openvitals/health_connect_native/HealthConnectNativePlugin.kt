@@ -437,6 +437,13 @@ class HealthConnectNativePlugin :
     callback: (Result<String?>) -> Unit,
   ) = launchCatching(callback) { requireHydrationReader().deleteHydrationEntry(id) }
 
+  override fun deleteHydrationEntryByClientRecordId(
+    clientRecordId: String,
+    callback: (Result<Unit>) -> Unit,
+  ) = launchCatching(callback) {
+    requireHydrationReader().deleteHydrationEntryByClientRecordId(clientRecordId)
+  }
+
   // ---------------------------------------------------------------------------
   // Mindfulness (Phase 2)
   // ---------------------------------------------------------------------------

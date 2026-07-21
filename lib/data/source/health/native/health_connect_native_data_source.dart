@@ -2238,6 +2238,10 @@ Duration? _zoneOffset(int? seconds) =>
       // clientRecordId", never "the delete failed".
       _api.deleteHydrationEntry(id);
 
+  @override
+  Future<void> deleteHydrationEntryByClientRecordId(String clientRecordId) =>
+      _api.deleteHydrationEntryByClientRecordId(clientRecordId);
+
   // ── Mindfulness (Phase 2) — typed via native MindfulnessHealthReader ────────
 
   MindfulnessSession _mindfulnessSession(MindfulnessSessionMsg m) =>

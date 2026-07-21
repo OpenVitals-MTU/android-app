@@ -167,6 +167,10 @@ abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
   Future<String?> deleteHydrationEntry(String id) => unimplemented('deleteHydrationEntry');
 
   @override
+  Future<void> deleteHydrationEntryByClientRecordId(String clientRecordId) =>
+      unimplemented('deleteHydrationEntryByClientRecordId');
+
+  @override
   Future<List<MindfulnessSessionMsg>> readMindfulnessSessions(int startEpochMs, int endEpochMs) => unimplemented('readMindfulnessSessions');
 
   @override

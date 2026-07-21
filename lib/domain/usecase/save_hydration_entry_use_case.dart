@@ -185,15 +185,27 @@ class SaveHydrationEntryUseCase {
                 .orThrow();
       }
       if (writesNutrition) {
-        (await _nutritionRepository.writeNutritionEntry(
-          NutritionWriteRequest(
-            time: entryTime,
-            nutrientValues: nutrientValues,
-            name: nutritionName,
-            associatedHydrationClientRecordId: hydrationClientRecordId,
-          ),
-        ))
-            .orThrow();
+        try {
+          (await _nutritionRepository.writeNutritionEntry(
+            NutritionWriteRequest(
+              time: entryTime,
+              nutrientValues: nutrientValues,
+              name: nutritionName,
+              associatedHydrationClientRecordId: hydrationClientRecordId,
+            ),
+          ))
+              .orThrow();
+        } catch (_) {
+          // A drink is two records that must land together. The hydration half
+          // already committed, so roll it back — otherwise the natural retry
+          // writes a *second* hydration record with no nutrition. Best-effort:
+          // if the rollback itself fails, the original write error still wins.
+          if (hydrationClientRecordId != null) {
+            await _hydrationRepository
+                .deleteHydrationEntryByClientRecordId(hydrationClientRecordId);
+          }
+          rethrow;
+        }
       }
     } else {
       (await _hydrationRepository.updateHydrationEntry(

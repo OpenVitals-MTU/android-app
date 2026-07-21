@@ -73,4 +73,11 @@ abstract interface class HydrationRepository {
   );
 
   Future<Result<void>> deleteHydrationEntry(String id);
+
+  /// Deletes a hydration record by its clientRecordId — the compensating delete
+  /// that keeps a drink's hydration+nutrition halves atomic when the nutrition
+  /// write fails after the hydration half committed.
+  Future<Result<void>> deleteHydrationEntryByClientRecordId(
+    String clientRecordId,
+  );
 }

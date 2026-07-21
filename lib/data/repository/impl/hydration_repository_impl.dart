@@ -221,6 +221,15 @@ class HydrationRepositoryImpl implements HydrationRepository {
         }
       });
 
+  @override
+  Future<Result<void>> deleteHydrationEntryByClientRecordId(
+    String clientRecordId,
+  ) =>
+      runCatching(() async {
+        await _requireWrite();
+        await _dataSource.deleteHydrationEntryByClientRecordId(clientRecordId);
+      });
+
   Future<void> _requireWrite() async {
     final granted = await _dataSource.grantedIfAvailable();
     if (!granted.containsAll(hydrationWritePermissions)) {

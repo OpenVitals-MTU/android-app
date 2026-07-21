@@ -271,6 +271,12 @@ class HealthDataSource {
   /// nutrition cleanup), or null.
   Future<String?> deleteHydrationEntry(String id) async => null;
 
+  /// Deletes a hydration record by its clientRecordId — used to roll back a
+  /// just-written record when its paired nutrition write fails.
+  Future<void> deleteHydrationEntryByClientRecordId(
+    String clientRecordId,
+  ) async {}
+
   Future<void> deleteHydrationNutritionEntry(
     String hydrationClientRecordId,
   ) async {}
