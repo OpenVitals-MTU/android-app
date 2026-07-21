@@ -547,21 +547,26 @@ class ActivityRecordingService implements ActivityRecordingController {
 
   void acceptBleMetrics(BleRecordingMetrics metrics) {
     final current = _state.value;
-    _updateAndPersist(
-      current.copyWith(
-        currentHeartRateBpm: metrics.heartRateBpm,
-        currentCyclingCadenceRpm: metrics.cyclingCadenceRpm,
-        currentPowerWatts: metrics.powerWatts,
-        currentSensorSpeedMetersPerSecond: metrics.cyclingSpeedMetersPerSecond ??
-            metrics.runningSpeedMetersPerSecond,
-        currentRunningCadenceRpm: metrics.runningCadenceRpm,
-        bleHeartRateNoSignal:
-            metrics.heartRateNoSignal && metrics.heartRateBpm == null,
-        bleDeviceStatuses: metrics.deviceStatuses.isEmpty
-            ? current.bleDeviceStatuses
-            : metrics.deviceStatuses,
-      ),
+    final next = current.copyWith(
+      currentHeartRateBpm: metrics.heartRateBpm,
+      currentCyclingCadenceRpm: metrics.cyclingCadenceRpm,
+      currentPowerWatts: metrics.powerWatts,
+      currentSensorSpeedMetersPerSecond: metrics.cyclingSpeedMetersPerSecond ??
+          metrics.runningSpeedMetersPerSecond,
+      currentRunningCadenceRpm: metrics.runningCadenceRpm,
+      bleHeartRateNoSignal:
+          metrics.heartRateNoSignal && metrics.heartRateBpm == null,
+      bleDeviceStatuses: metrics.deviceStatuses.isEmpty
+          ? current.bleDeviceStatuses
+          : metrics.deviceStatuses,
     );
+    // BLE sensors re-emit the same values continuously; an unchanged emission
+    // must not trigger a state update + full metadata re-serialize.
+    if (next == current) {
+      _maybeEndHrrEffortOnTarget(current);
+      return;
+    }
+    _updateAndPersist(next, throttlePersist: true);
     // Against the heart rate we just took, not the one before it.
     _maybeEndHrrEffortOnTarget(_state.value);
   }
@@ -1013,6 +1018,7 @@ class ActivityRecordingService implements ActivityRecordingController {
               ? ActivityGpsStatus.waitingForFix
               : ActivityGpsStatus.poorAccuracy,
         ).copyWith(latestUiPoint: point),
+        throttlePersist: true,
       );
       return;
     }
@@ -1021,7 +1027,9 @@ class ActivityRecordingService implements ActivityRecordingController {
 
     // Everything a good fix implies — distance, elevation, speed, route breaks,
     // auto-idle — is a pure fold of the fix into the state, and lives in
-    // `withAcceptedLocation`, where it is testable without a GPS receiver.
+    // `withAcceptedLocation`, where it is testable without a GPS receiver. The
+    // route grows every fix, so persistence (a full route re-serialize) is
+    // throttled — the live UI still updates every fix.
     _updateAndPersist(
       withAcceptedLocation(
         current,
@@ -1029,6 +1037,7 @@ class ActivityRecordingService implements ActivityRecordingController {
         accuracyMeters: accuracy,
         preferences: preferences,
       ),
+      throttlePersist: true,
     );
   }
 
@@ -1113,13 +1122,17 @@ class ActivityRecordingService implements ActivityRecordingController {
     final delta = smoothed - previous;
     final gained = delta >= minBarometerElevationStepMeters ? delta : 0.0;
     final lost = delta <= -minBarometerElevationStepMeters ? -delta : 0.0;
-    _updateAndPersist(current.copyWith(
+    final next = current.copyWith(
       hasBarometerElevation: true,
       barometerElevationGainedMeters:
           current.barometerElevationGainedMeters + gained,
       barometerElevationLostMeters: current.barometerElevationLostMeters + lost,
       lastBarometerAltitudeMeters: (gained > 0.0 || lost > 0.0) ? smoothed : previous,
-    ));
+    );
+    // Barometer events arrive ~5 Hz but only a real elevation step changes the
+    // state; skip the update + persist when nothing moved.
+    if (next == current) return;
+    _updateAndPersist(next);
   }
 
   // ── Motion recognizers (repetition sensors) ──────────────────────────────
@@ -1504,14 +1517,38 @@ class ActivityRecordingService implements ActivityRecordingController {
     unawaited(recordingStore.clear());
   }
 
-  void _updateAndPersist(ActivityRecordingState state) {
+  DateTime? _lastMetadataPersist;
+
+  /// Crash-recovery metadata is re-serialized (including the whole route) on
+  /// every persist, so high-frequency sensor updates throttle it to at most once
+  /// per this interval. The live UI still updates every event (via `_state`); the
+  /// only cost of throttling is that a crash loses up to this much of the newest
+  /// data from the RESTORED state — the finished workout's snapshot is built from
+  /// the in-memory state, not the persisted metadata, so it is unaffected.
+  static const Duration _metadataPersistThrottle = Duration(seconds: 2);
+
+  void _updateAndPersist(
+    ActivityRecordingState state, {
+    bool throttlePersist = false,
+  }) {
     _state.value = state;
-    unawaited(recordingStore.storeMetadata(state));
+    _persistMetadata(state, throttle: throttlePersist);
     _scheduleRestCompletion(state);
     // Kotlin's service observes the state flow and refreshes the notification
     // and voice announcer on every emission; this is that observer.
     _updateForegroundNotification(state);
     _maybeAnnounce(state);
+  }
+
+  void _persistMetadata(ActivityRecordingState state, {required bool throttle}) {
+    final now = DateTime.now();
+    if (throttle &&
+        _lastMetadataPersist != null &&
+        now.difference(_lastMetadataPersist!) < _metadataPersistThrottle) {
+      return;
+    }
+    _lastMetadataPersist = now;
+    unawaited(recordingStore.storeMetadata(state));
   }
 
   ActivityRecordingKind _recordingKind(ActivityEntryType activityType) {
