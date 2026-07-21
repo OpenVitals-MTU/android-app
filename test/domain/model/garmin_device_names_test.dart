@@ -58,7 +58,8 @@ void main() {
   });
 
   group('BleDiscoveredDevice.isGarminSyncDevice', () {
-    test('the advertised GFDI service settles it even with no name', () {
+    test('the advertised Garmin member service settles it even with no name',
+        () {
       expect(_discovered(advertisesGarminService: true).isGarminSyncDevice,
           isTrue);
     });

@@ -58,12 +58,28 @@ class BleUuids {
     measurementUuid: '00002a53-0000-1000-8000-00805f9b34fb',
   );
 
+  /// Garmin's Bluetooth SIG member service (16-bit `0xFE1F`) — what a Garmin
+  /// watch actually puts in its ADVERTISEMENT, and therefore the only Garmin
+  /// UUID a scan filter can match on.
+  ///
+  /// Confirmed against a vívoactive 5, whose advertisement carries exactly
+  /// `mServiceUuids=[0000fe1f-…]`, service data under the same UUID, and
+  /// manufacturer ID 135 (0x0087, Garmin International) — and carries no trace
+  /// of [garminGfdiServiceV1].
+  ///
+  /// A device advertising this is a watch/bike computer to onboard as
+  /// [BleDeviceKind.watch], never a source of live capabilities — which is why
+  /// [capabilitiesForService] returns empty for it.
+  static const String garminMemberService =
+      '0000fe1f-0000-1000-8000-00805f9b34fb';
+
   /// Garmin's GFDI service — the transport this app pulls FIT files over.
   ///
-  /// Not a standard GATT service and not a sensor: a device advertising this is
-  /// a watch/bike computer to onboard as [BleDeviceKind.watch], never a source
-  /// of live capabilities (which is why [capabilitiesForService] returns empty
-  /// for it). From Gadgetbridge's `CommunicatorV1.UUID_SERVICE_GARMIN_GFDI_V1`.
+  /// **Not advertised.** This is a GATT service, discoverable only AFTER
+  /// connecting, so it must never go in [scanServiceUuids]: a filter built on
+  /// it matches nothing and hides every Garmin watch from the scan. Kept for the
+  /// connect path. From Gadgetbridge's
+  /// `CommunicatorV1.UUID_SERVICE_GARMIN_GFDI_V1`.
   static const String garminGfdiServiceV1 =
       '6a4e2401-667b-11e3-949a-0800200c9a66';
 
@@ -79,7 +95,7 @@ class BleUuids {
     '00001816-0000-1000-8000-00805f9b34fb', // cyclingSpeedCadence
     '00001818-0000-1000-8000-00805f9b34fb', // cyclingPower
     '00001814-0000-1000-8000-00805f9b34fb', // runningSpeedCadence
-    garminGfdiServiceV1,
+    garminMemberService,
   ];
 
   /// Capabilities advertised by a given GATT [serviceUuid] (lowercase 128-bit).

@@ -236,8 +236,10 @@ class BleSensorCoordinator implements BleSensorRepository {
       for (final uuid in result.advertisementData.serviceUuids)
         ...BleUuids.capabilitiesForService(uuid.str128),
     };
+    // 0xFE1F, not GFDI: GFDI is a GATT service that only exists once connected,
+    // so an advertisement never carries it.
     final advertisesGarmin = result.advertisementData.serviceUuids.any(
-      (uuid) => uuid.str128 == BleUuids.garminGfdiServiceV1,
+      (uuid) => uuid.str128 == BleUuids.garminMemberService,
     );
     final existing = _scanResults[address];
     final name = result.advertisementData.advName.isNotEmpty

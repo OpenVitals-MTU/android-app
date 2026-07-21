@@ -314,9 +314,12 @@ abstract class BleDiscoveredDevice with _$BleDiscoveredDevice {
     required int? rssi,
     required Set<BleSensorCapability> suggestedCapabilities,
 
-    /// The advertisement carried Garmin's GFDI service UUID. This is the
-    /// authoritative signal — [isGarminSyncDeviceName] is only the fallback for
-    /// a watch advertising a name but not the service.
+    /// The advertisement carried Garmin's member service UUID (`0xFE1F`). This
+    /// is the authoritative signal — [isGarminSyncDeviceName] is the fallback
+    /// for a watch that advertises a name but not the service.
+    ///
+    /// Deliberately NOT the GFDI UUID: that is a GATT service, invisible until
+    /// the device is connected, so no advertisement ever carries it.
     @Default(false) bool advertisesGarminService,
   }) = _BleDiscoveredDevice;
 

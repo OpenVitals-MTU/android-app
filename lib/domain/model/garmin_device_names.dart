@@ -10,9 +10,11 @@
 /// does not exist yet is recognised here and would need a new Gadgetbridge
 /// class.
 ///
-/// Name matching is the FALLBACK. The authoritative signal is the GFDI service
-/// UUID in the advertisement (`BleUuids.garminGfdiServiceV1`) — some watches
-/// advertise a shortened name, or none at all, until they are connected.
+/// Name matching is the FALLBACK. The authoritative signal is Garmin's member
+/// service UUID `0xFE1F` in the advertisement (`BleUuids.garminMemberService`) —
+/// some watches advertise a shortened name, or none at all. The name check
+/// still earns its place: it is what classifies a watch found through "Show all
+/// devices", whose advertisement the scan filter never had to match.
 library;
 
 /// Product families whose devices speak GFDI and hold FIT files.
