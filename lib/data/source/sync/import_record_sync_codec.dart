@@ -40,6 +40,18 @@ class UnsupportedSyncRecordType implements Exception {
 
 /// Computes the deterministic `sync_<hex>` fingerprint for [record] from its
 /// content. Independent of the record's current clientRecordId.
+///
+/// DELIBERATELY CONTENT-ONLY — it does NOT include the source app
+/// (`dataOriginPackage`). Folding origin in was considered and rejected: it would
+/// break bidirectional idempotency. When phone B writes a record received from A,
+/// Health Connect re-stamps the record's `dataOrigin` with B's own package (an app
+/// cannot forge another app's origin), so on a later B→A sync B re-reads it with a
+/// DIFFERENT origin, computes a different fingerprint, and A — which stored it under
+/// A's fingerprint — sees it as new and writes a duplicate. Every re-sync would then
+/// accumulate duplicates. Content-only keeps the same logical record mapping to the
+/// same fingerprint on both phones, which is what convergence needs. The cost —
+/// two genuinely distinct records with identical type+time+values from different
+/// source apps collide into one — is rare and the lesser evil.
 String syncFingerprint(ImportRecord record) {
   final parts = _fingerprintParts(record).join('|');
   final digest = sha256.convert(utf8.encode(parts)).bytes;

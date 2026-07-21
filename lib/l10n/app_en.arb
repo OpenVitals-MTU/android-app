@@ -3799,5 +3799,19 @@
   "deviceSyncDuplicates": "Already had (skipped)",
   "@deviceSyncDuplicates": {"description": "Report counter: duplicate records skipped."},
   "deviceSyncDone": "Done",
-  "@deviceSyncDone": {"description": "Finish button on the report step."}
+  "@deviceSyncDone": {"description": "Finish button on the report step."},
+  "deviceSyncNotificationChannel": "Phone-to-phone sync",
+  "@deviceSyncNotificationChannel": {"description": "Notification channel name for the sync foreground service."},
+  "deviceSyncNotificationTitle": "Syncing with another phone",
+  "@deviceSyncNotificationTitle": {"description": "Foreground-service notification title during a sync."},
+  "deviceSyncNotificationText": "Keep both phones nearby until the sync finishes.",
+  "@deviceSyncNotificationText": {"description": "Foreground-service notification body during a sync."},
+  "deviceSyncReportCopied": "Report copied to the clipboard.",
+  "@deviceSyncReportCopied": {"description": "Snackbar after copying the sync report."},
+  "deviceSyncReportSaved": "Report saved.",
+  "@deviceSyncReportSaved": {"description": "Snackbar after saving the sync report."},
+  "deviceSyncCopyReport": "Copy report",
+  "@deviceSyncCopyReport": {"description": "Button to copy the sync report to the clipboard."},
+  "deviceSyncSaveReport": "Save report",
+  "@deviceSyncSaveReport": {"description": "Button to save the sync report to a file."}
 }

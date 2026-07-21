@@ -2,7 +2,11 @@
 /// [DeviceSyncViewModel]'s state machine, mirroring the design-system mockups.
 library;
 
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/source/sync/sync_report.dart';
@@ -532,6 +536,29 @@ class _ReportStep extends StatelessWidget {
             title: Text(summary.recordType),
             trailing: Text('+${summary.imported}'),
           ),
+        if (state.reportText.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.content_copy),
+                    label: Text(l10n.deviceSyncCopyReport),
+                    onPressed: () => _copyReport(context),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.download),
+                    label: Text(l10n.deviceSyncSaveReport),
+                    onPressed: () => _saveReport(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.all(16),
           child: FilledButton(
@@ -544,6 +571,26 @@ class _ReportStep extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _copyReport(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: state.reportText));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.deviceSyncReportCopied)),
+      );
+    }
+  }
+
+  Future<void> _saveReport(BuildContext context) async {
+    final location = await getSaveLocation(suggestedName: 'openvitals_sync_report.txt');
+    if (location == null) return;
+    await File(location.path).writeAsString(state.reportText, flush: true);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.deviceSyncReportSaved)),
+      );
+    }
   }
 }
 

@@ -15,11 +15,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/source/sync/bluetooth_sync_service.dart';
+import '../../../data/source/sync/device_sync_report_store.dart';
 import '../../../data/source/sync/health_connect_sync_store.dart';
 import '../../../data/source/sync/sync_pairing.dart';
 import '../../../data/source/sync/sync_report.dart';
 import '../../../data/source/sync/sync_session.dart';
 import '../../../di/data_providers.dart';
+import 'device_sync_foreground.dart';
 import 'device_sync_permissions.dart';
 
 /// How far back the user chose to sync.
@@ -110,6 +112,7 @@ class DeviceSyncState {
     this.selectedTypes = const <String>{},
     this.progress,
     this.report,
+    this.reportText = '',
     this.errorMessage,
     this.discoverableSeconds = 0,
     this.bluetoothUnavailable = false,
@@ -131,6 +134,9 @@ class DeviceSyncState {
   final Set<String> selectedTypes;
   final SyncProgress? progress;
   final SyncReport? report;
+
+  /// The shareable report text (for Copy/Save), set when a report is produced.
+  final String reportText;
   final String? errorMessage;
   final int discoverableSeconds;
   final bool bluetoothUnavailable;
@@ -148,6 +154,7 @@ class DeviceSyncState {
     Set<String>? selectedTypes,
     SyncProgress? progress,
     SyncReport? report,
+    String? reportText,
     String? errorMessage,
     int? discoverableSeconds,
     bool? bluetoothUnavailable,
@@ -165,6 +172,7 @@ class DeviceSyncState {
         selectedTypes: selectedTypes ?? this.selectedTypes,
         progress: progress ?? this.progress,
         report: report ?? this.report,
+        reportText: reportText ?? this.reportText,
         errorMessage: errorMessage,
         discoverableSeconds: discoverableSeconds ?? this.discoverableSeconds,
         bluetoothUnavailable: bluetoothUnavailable ?? this.bluetoothUnavailable,
@@ -177,6 +185,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
   StreamSubscription<SyncConnectionState>? _connSub;
   StreamSubscription<SyncProgress>? _progressSub;
   final Completer<void> _connected = Completer<void>();
+  final DeviceSyncReportStore _reportStore = DeviceSyncReportStore();
 
   @override
   DeviceSyncState build() {
@@ -344,6 +353,10 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
     _progressSub = session.progress.listen(
       (p) => state = state.copyWith(progress: p),
     );
+    // Keep the process foregrounded for the duration of the transfer so the OS
+    // does not kill the app if the user switches away (best-effort; skipped when
+    // another foreground service — e.g. GPS recording — already holds the slot).
+    await startDeviceSyncForegroundService();
     try {
       final report = await session.run();
       debugPrint('[devicesync] session done: completed=${report.completed} '
@@ -359,11 +372,20 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
         );
         return;
       }
+      await _persistReport(report);
       state = state.copyWith(step: DeviceSyncStep.report, report: report);
     } catch (e) {
       debugPrint('[devicesync] session threw: $e');
       state = state.copyWith(errorMessage: 'sync_failed', report: null);
+    } finally {
+      await stopDeviceSyncForegroundService();
     }
+  }
+
+  Future<void> _persistReport(SyncReport report) async {
+    final text = buildSyncReportText(report, generatedAt: DateTime.now());
+    state = state.copyWith(reportText: text);
+    await _reportStore.writeReport(text);
   }
 
   void reset() {
@@ -454,6 +476,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
     _connSub?.cancel();
     _progressSub?.cancel();
     unawaited(_service?.dispose());
+    unawaited(stopDeviceSyncForegroundService());
   }
 }
 
