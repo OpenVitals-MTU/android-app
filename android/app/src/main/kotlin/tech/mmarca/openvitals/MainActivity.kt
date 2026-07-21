@@ -147,7 +147,13 @@ class MainActivity : FlutterFragmentActivity() {
         // the sanitizer regex expects. Privacy handling stays entirely in Dart.
         MethodChannel(messenger, DIAGNOSTICS_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-                "readCurrentProcessLogcat" -> result.success(readCurrentProcessLogcat())
+                // Spawns `logcat`, waits up to 5s, and reads the whole buffer —
+                // off the main thread (ANR territory otherwise, in exactly the
+                // diagnostics build flavor users report bugs from). Mirrors scanFolder.
+                "readCurrentProcessLogcat" -> importExecutor.execute {
+                    val lines = readCurrentProcessLogcat()
+                    mainHandler.post { result.success(lines) }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -178,7 +184,17 @@ class MainActivity : FlutterFragmentActivity() {
                 "takePendingRouteImport" -> {
                     val uri = pendingRouteImportUri
                     pendingRouteImportUri = null
-                    result.success(uri?.let(::readRouteImport))
+                    if (uri == null) {
+                        result.success(null)
+                    } else {
+                        // openInputStream().readBytes() can block on a slow (cloud)
+                        // provider — during launch, when Dart drains this. Off the
+                        // main thread, like readDocument.
+                        importExecutor.execute {
+                            val payload = readRouteImport(uri)
+                            mainHandler.post { result.success(payload) }
+                        }
+                    }
                 }
                 else -> result.notImplemented()
             }
