@@ -27,10 +27,11 @@ class FakeRecordStore implements SyncRecordStore {
       _byKey.values.where((i) => types.contains(i.recordType)).toList();
 
   @override
-  Future<void> writeItems(List<SyncItem> items) async {
+  Future<Set<String>> writeItems(List<SyncItem> items) async {
     for (final item in items) {
       _byKey[item.key] = item;
     }
+    return {for (final i in items) i.key};
   }
 }
 
@@ -269,6 +270,21 @@ void main() {
     });
   });
 
+  group('write accounting', () {
+    test('a received record whose write fails is not counted as imported',
+        () async {
+      final hostStore = FakeRecordStore([item('a'), item('b')]);
+      final guestStore = _WriteFailingStore();
+
+      final (_, guestReport) = await runPair(hostStore, guestStore);
+
+      // The guest received both records but wrote neither, so the report shows
+      // them received-but-not-imported instead of overcounting imported.
+      expect(guestReport.itemsReceived, 2);
+      expect(guestReport.imported, 0);
+    });
+  });
+
   group('hostile peer', () {
     test('a record frame before authentication aborts the session', () async {
       final report = await runAgainstAttacker((attacker) {
@@ -304,5 +320,16 @@ class _DupReadingStore implements SyncRecordStore {
       [for (final k in _keys) item(k)];
 
   @override
-  Future<void> writeItems(List<SyncItem> items) async {}
+  Future<Set<String>> writeItems(List<SyncItem> items) async =>
+      {for (final i in items) i.key};
+}
+
+/// A store that reads nothing and fails every write (returns no written keys),
+/// modelling a receiver whose Health Connect inserts are all rejected.
+class _WriteFailingStore implements SyncRecordStore {
+  @override
+  Future<List<SyncItem>> readItems(Set<String> types) async => const [];
+
+  @override
+  Future<Set<String>> writeItems(List<SyncItem> items) async => const {};
 }

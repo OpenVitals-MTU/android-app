@@ -69,4 +69,26 @@ void main() {
 
     expect(find.textContaining('Bluetooth permission is needed'), findsOneWidget);
   });
+
+  testWidgets('the scan step shows a spinner while scanning', (tester) async {
+    await tester.pumpWidget(_bootstrap(
+      const DeviceSyncState(
+          step: DeviceSyncStep.guestScanning, scanning: true),
+    ));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.text('Scan again'), findsNothing);
+  });
+
+  testWidgets('a finished scan with no devices offers a rescan', (tester) async {
+    await tester.pumpWidget(_bootstrap(
+      const DeviceSyncState(
+          step: DeviceSyncStep.guestScanning, scanning: false),
+    ));
+    await tester.pump();
+
+    expect(find.textContaining('No phones found'), findsOneWidget);
+    expect(find.text('Scan again'), findsOneWidget);
+  });
 }

@@ -116,6 +116,7 @@ class DeviceSyncState {
     this.errorMessage,
     this.discoverableSeconds = 0,
     this.bluetoothUnavailable = false,
+    this.scanning = false,
   });
 
   final DeviceSyncStep step;
@@ -141,6 +142,9 @@ class DeviceSyncState {
   final int discoverableSeconds;
   final bool bluetoothUnavailable;
 
+  /// True while a discovery scan window is open (guest scanning step).
+  final bool scanning;
+
   DeviceSyncState copyWith({
     DeviceSyncStep? step,
     SyncRole? role,
@@ -158,6 +162,7 @@ class DeviceSyncState {
     String? errorMessage,
     int? discoverableSeconds,
     bool? bluetoothUnavailable,
+    bool? scanning,
   }) =>
       DeviceSyncState(
         step: step ?? this.step,
@@ -176,12 +181,14 @@ class DeviceSyncState {
         errorMessage: errorMessage,
         discoverableSeconds: discoverableSeconds ?? this.discoverableSeconds,
         bluetoothUnavailable: bluetoothUnavailable ?? this.bluetoothUnavailable,
+        scanning: scanning ?? this.scanning,
       );
 }
 
 class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
   BluetoothSyncService? _service;
   StreamSubscription<DiscoveredSyncDevice>? _deviceSub;
+  StreamSubscription<void>? _discoveryFinishedSub;
   StreamSubscription<SyncConnectionState>? _connSub;
   StreamSubscription<SyncProgress>? _progressSub;
   // Recreated on every reset(): the previous one is one-shot, so a second session
@@ -245,6 +252,7 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       role: SyncRole.guest,
       step: DeviceSyncStep.guestScanning,
       devices: const [],
+      scanning: true,
     );
     _deviceSub?.cancel();
     _deviceSub = service.devices.listen((device) {
@@ -256,6 +264,22 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
       ];
       state = state.copyWith(devices: next);
     });
+    // The scan window closes itself after ~12s; without consuming this the UI
+    // would spin forever with no "no devices found" / rescan affordance.
+    _discoveryFinishedSub?.cancel();
+    _discoveryFinishedSub = service.discoveryFinished.listen((_) {
+      if (state.step == DeviceSyncStep.guestScanning) {
+        state = state.copyWith(scanning: false);
+      }
+    });
+    await service.startDiscovery();
+  }
+
+  /// Restarts discovery after a scan window closed (the Rescan affordance).
+  Future<void> rescan() async {
+    final service = _service;
+    if (service == null || state.step != DeviceSyncStep.guestScanning) return;
+    state = state.copyWith(devices: const [], scanning: true);
     await service.startDiscovery();
   }
 
@@ -496,12 +520,14 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
 
   void _teardown() {
     _deviceSub?.cancel();
+    _discoveryFinishedSub?.cancel();
     _connSub?.cancel();
     _progressSub?.cancel();
     // Null them so the next run re-attaches: _listenConnection / chooseGuest use
     // `??=` / a cancelled-sub check and would otherwise no-op on a stale handle,
     // leaving the host stuck on "waiting" and the guest with no device list.
     _deviceSub = null;
+    _discoveryFinishedSub = null;
     _connSub = null;
     _progressSub = null;
     unawaited(_service?.dispose());

@@ -266,15 +266,33 @@ class _ScanStep extends StatelessWidget {
                     onTap: () => vm.selectDevice(device),
                   ),
                 ),
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(
-                  child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2)),
+              if (state.scanning)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                )
+              else if (state.devices.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(l10n.deviceSyncNoDevices,
+                        textAlign: TextAlign.center),
+                  ),
                 ),
-              ),
+              if (!state.scanning)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.refresh),
+                    label: Text(l10n.deviceSyncRescan),
+                    onPressed: vm.rescan,
+                  ),
+                ),
             ],
           ),
         ),

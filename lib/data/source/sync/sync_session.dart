@@ -44,8 +44,11 @@ abstract interface class SyncRecordStore {
   /// among the ones this returns.
   Future<List<SyncItem>> readItems(Set<String> types);
 
-  /// Writes [items] to Health Connect (post-dedup).
-  Future<void> writeItems(List<SyncItem> items);
+  /// Writes [items] to Health Connect (post-dedup) and returns the
+  /// [SyncItem.key]s that actually landed. A key missing from the result was
+  /// received but not written (an undecodable item, or a type whose batch
+  /// insert was rejected) — the session then does NOT count it as imported.
+  Future<Set<String>> writeItems(List<SyncItem> items);
 }
 
 /// Static configuration for a session.
@@ -300,18 +303,26 @@ class SyncSession {
         // plus everything written earlier this session, so this one lookup covers
         // both cross-device and within-session dedup.
         final duplicate = _seenKeys.contains(item.key);
-        _report.recordReceived(item.recordType, wasDuplicate: duplicate);
-        if (!duplicate) {
+        if (duplicate) {
+          _report.recordReceived(item.recordType, duplicate: true);
+        } else {
           fresh.add(item);
           _seenKeys.add(item.key);
         }
       }
+      // Count `imported` from what actually landed, not from what we tried to
+      // write — a failed batch insert must not be reported as imported.
+      var writtenKeys = const <String>{};
       if (fresh.isNotEmpty) {
         _emit(phase: SyncPhase.writing);
-        await _store.writeItems(fresh);
+        writtenKeys = await _store.writeItems(fresh);
+      }
+      for (final item in fresh) {
+        _report.recordReceived(item.recordType,
+            imported: writtenKeys.contains(item.key));
       }
       received += batch.items.length;
-      written += fresh.length;
+      written += writtenKeys.length;
       _emit(
         phase: SyncPhase.exchanging,
         itemsReceived: received,

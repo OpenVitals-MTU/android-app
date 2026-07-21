@@ -52,33 +52,41 @@ class HealthConnectSyncStore implements SyncRecordStore {
   }
 
   @override
-  Future<void> writeItems(List<SyncItem> items) async {
+  Future<Set<String>> writeItems(List<SyncItem> items) async {
     // Group by record type and insert each group separately. A Health Connect
     // batch insert is atomic, so mixing types means one unsupported/rejected type
     // sinks the whole batch; isolating types keeps the rest landing (the earlier
     // "imported N but nothing persisted" failure). A per-type failure is logged
     // and swallowed so the sync continues with the types that do write.
     final byType = <String, List<ImportRecord>>{};
+    final keysByType = <String, List<String>>{};
     for (final item in items) {
       final ImportRecord record;
       try {
         record = _ownedRecord(item);
       } catch (e) {
         // One malformed item from a buggy/hostile peer must not kill the whole
-        // receive loop (which would stop acking and stall the peer). Skip it.
+        // receive loop (which would stop acking and stall the peer). Skip it —
+        // and, since it never lands, it is not among the returned written keys.
         debugPrint('[devicesync] skipping undecodable ${item.recordType}: $e');
         continue;
       }
       (byType[item.recordType] ??= <ImportRecord>[]).add(record);
+      (keysByType[item.recordType] ??= <String>[]).add(item.key);
     }
+    final written = <String>{};
     for (final entry in byType.entries) {
       try {
         await _dataSource.insertImportedRecords(entry.value);
+        written.addAll(keysByType[entry.key]!);
         debugPrint('[devicesync] wrote ${entry.value.length} ${entry.key} records');
       } catch (e) {
+        // Type batch rejected — its keys are NOT reported as written, so the
+        // session won't count them as imported.
         debugPrint('[devicesync] WRITE FAILED for ${entry.value.length} ${entry.key}: $e');
       }
     }
+    return written;
   }
 
   /// Decodes [item] and re-derives its clientRecordId from the decoded *content*

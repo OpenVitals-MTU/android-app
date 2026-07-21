@@ -36,8 +36,15 @@ class FakeHealthDataSource extends HealthDataSource {
   ) async =>
       wantedIds.where(_byClientId.containsKey).toSet();
 
+  /// Record types whose batch insert should be rejected (models an unsupported
+  /// or over-quota type).
+  Set<String> failTypes = {};
+
   @override
   Future<void> insertImportedRecords(List<ImportRecord> records) async {
+    if (records.isNotEmpty && failTypes.contains(records.first.targetType)) {
+      throw StateError('insert rejected for ${records.first.targetType}');
+    }
     for (final r in records) {
       _byClientId[r.clientRecordId] = r;
     }
@@ -138,5 +145,36 @@ void main() {
     // so the peer can only ever address the record it actually sent.
     expect(written.single.key, honestKey);
     expect(written.single.key, isNot('apple_health_deadbeef'));
+  });
+
+  test('writeItems returns the keys that actually landed', () async {
+    final source = FakeHealthDataSource()..seed(weight(8, 72));
+    final sourceStore = HealthConnectSyncStore(
+      dataSource: source,
+      windowStart: store.windowStart,
+      windowEnd: store.windowEnd,
+    );
+    final items = await sourceStore.readItems({'WeightRecord'});
+
+    final written = await store.writeItems(items);
+    expect(written, {items.single.key});
+  });
+
+  test('writeItems excludes a rejected type from its written-keys result',
+      () async {
+    ds.failTypes = {'WeightRecord'};
+    final source = FakeHealthDataSource()..seed(weight(9, 73));
+    final sourceStore = HealthConnectSyncStore(
+      dataSource: source,
+      windowStart: store.windowStart,
+      windowEnd: store.windowEnd,
+    );
+    final items = await sourceStore.readItems({'WeightRecord'});
+
+    final written = await store.writeItems(items);
+    // The batch was rejected, so its key is NOT reported as written — the session
+    // therefore won't count it as imported.
+    expect(written, isEmpty);
+    expect(ds.count, 0);
   });
 }
