@@ -134,7 +134,6 @@ class SleepViewModel extends Notifier<SleepState>
   ) =>
       ref.read(loadSleepPeriodUseCaseProvider)(
         query,
-        state.sleepWindow,
         refreshMode: refreshMode,
       );
 

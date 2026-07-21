@@ -155,10 +155,6 @@ abstract class SleepDisplay with _$SleepDisplay {
     required CrossMetricInsight? hrvInsight,
     required DataConfidence dataConfidence,
 
-    /// The entry lists, newest night first.
-    required Map<LocalDate, List<SleepData>> sortedSessionsByDate,
-    required List<SleepData> sortedDailySessions,
-    required List<SleepData> sortedPeriodSessions,
     required String? dayTimeRangeText,
 
     /// The merged night per date — the entry lists render this one night, not
@@ -345,12 +341,6 @@ SleepDisplay buildSleepDisplay({
               session.recordingMethod == RecordingMethod.manualEntry)
           .length,
     ),
-    sortedSessionsByDate: {
-      for (final entry in sessionsByDate.entries)
-        entry.key: _newestNightFirst(entry.value),
-    },
-    sortedDailySessions: _newestNightFirst(dailySessions),
-    sortedPeriodSessions: _newestNightFirst(periodSessions),
     dayTimeRangeText: _dayTimeRangeText(dailySessions),
     nightByDate: nightByDate,
     napsByDate: napsByDate,

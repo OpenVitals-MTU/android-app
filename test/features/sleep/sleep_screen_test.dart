@@ -24,7 +24,6 @@ import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/domain/model/refresh_mode.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
-import 'package:openvitals/domain/preferences/sleep_window.dart';
 import 'package:openvitals/domain/query/sleep_period_data.dart';
 import 'package:openvitals/features/sleep/presentation/sleep_screen.dart';
 import 'package:openvitals/domain/health/health_permissions.dart';
@@ -41,8 +40,7 @@ class _FakeSleepRepository implements SleepRepository {
 
   @override
   Future<Result<SleepPeriodData>> loadSleepPeriod(
-    PeriodLoadQuery query,
-    SleepWindow sleepWindow, {
+    PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async =>
       Ok(SleepPeriodData(sessions: sessions));

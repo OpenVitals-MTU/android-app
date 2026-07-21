@@ -3,7 +3,6 @@ import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/sleep_models.dart';
-import '../../../domain/preferences/sleep_window.dart';
 import '../../../domain/query/sleep_period_data.dart';
 
 /// Port of the Kotlin `SleepRepository` contract.
@@ -12,8 +11,7 @@ import '../../../domain/query/sleep_period_data.dart';
 /// read, so there is no synchronous cached-state probe to stay bare.
 abstract interface class SleepRepository {
   Future<Result<SleepPeriodData>> loadSleepPeriod(
-    PeriodLoadQuery query,
-    SleepWindow sleepWindow, {
+    PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   });
 

@@ -4,7 +4,6 @@ import '../../../core/time/local_date.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/model/sleep_session_merging.dart';
-import '../../../domain/preferences/sleep_window.dart';
 import '../../../domain/query/sleep_period_data.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
@@ -24,8 +23,7 @@ class SleepRepositoryImpl implements SleepRepository {
 
   @override
   Future<Result<SleepPeriodData>> loadSleepPeriod(
-    PeriodLoadQuery query,
-    SleepWindow sleepWindow, {
+    PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) =>
       runCatching(() async {
@@ -34,12 +32,12 @@ class SleepRepositoryImpl implements SleepRepository {
           return const SleepPeriodData();
         }
         final windows = query.windows;
-        final current =
-            await _dataSource.readSleepData(windows.current.start, windows.current.end, sleepWindow);
+        final current = await _dataSource.readSleepData(
+            windows.current.start, windows.current.end);
         final previous = await _dataSource.readSleepData(
-            windows.previous.start, windows.previous.end, sleepWindow);
+            windows.previous.start, windows.previous.end);
         final baseline = await _dataSource.readSleepData(
-            windows.baseline.start, windows.baseline.end, sleepWindow);
+            windows.baseline.start, windows.baseline.end);
         return SleepPeriodData(
           sessions: current.sessions,
           previousSessions: previous.sessions,

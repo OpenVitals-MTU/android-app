@@ -130,8 +130,9 @@ void main() {
       ]),
     );
 
-    expect(display.sortedPeriodSessions.first.id, 'newer');
-    expect(display.sortedPeriodSessions.last.id, 'older');
+    // The merged night per date, newest first.
+    expect(display.periodNights.first.id, 'newer');
+    expect(display.periodNights.last.id, 'older');
     // ...while the raw period list stays in date order, as the schedule and
     // confidence readings expect it.
     expect(display.periodSessions.first.id, 'older');

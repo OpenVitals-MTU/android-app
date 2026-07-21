@@ -398,7 +398,6 @@ class DashboardDataLoader {
     final data = await _hc.readSleepData(
       date.minusDays(sleepScoreLookbackDays - 1),
       date,
-      sleepWindow,
     );
     final sessions = data.sessions;
     // The night's wall-clock duration, not the Health-Connect start-date aggregate
