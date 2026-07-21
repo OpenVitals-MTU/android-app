@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 /// Little-endian write cursor.
@@ -52,6 +53,21 @@ class GarminByteWriter {
     _ensure(bytes.length);
     _view.buffer.asUint8List().setRange(_pos, _pos + bytes.length, bytes);
     _pos += bytes.length;
+  }
+
+  /// A length-prefixed UTF-8 string, NUL-terminated inside the length — the
+  /// shape `MessageWriter.writeString` produces and the watch expects.
+  ///
+  /// Truncated to fit the single length byte (including the NUL), because an
+  /// over-long device name must not corrupt every field after it in the frame.
+  void writeString(String value) {
+    final encoded = utf8.encode(value);
+    final bytes = encoded.length > 254
+        ? Uint8List.sublistView(Uint8List.fromList(encoded), 0, 254)
+        : Uint8List.fromList(encoded);
+    writeByte(bytes.length + 1);
+    writeBytes(bytes);
+    writeByte(0);
   }
 
   /// Overwrites 2 bytes at [offset] — used to backfill the frame length once the

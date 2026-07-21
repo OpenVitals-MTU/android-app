@@ -134,6 +134,70 @@ class GarminFileTransferData extends GarminInboundMessage {
   final Uint8List data;
 }
 
+/// The watch introducing itself (type 5024). Sent unprompted on connect and
+/// answered with [buildDeviceInformationResponse].
+///
+/// [maxPacketSize] is the one field the transport needs: it caps how much of a
+/// GFDI frame fits in a single write.
+class GarminDeviceInformation extends GarminInboundMessage {
+  const GarminDeviceInformation({
+    required this.protocolVersion,
+    required this.productNumber,
+    required this.unitNumber,
+    required this.softwareVersion,
+    required this.maxPacketSize,
+    required this.bluetoothFriendlyName,
+    required this.deviceName,
+    required this.deviceModel,
+  });
+
+  final int protocolVersion;
+  final int productNumber;
+  final int unitNumber;
+  final int softwareVersion;
+  final int maxPacketSize;
+  final String bluetoothFriendlyName;
+  final String deviceName;
+  final String deviceModel;
+
+  /// e.g. `19.15` — major/minor split at 100, as Gadgetbridge renders it.
+  String get softwareVersionText =>
+      '${softwareVersion ~/ 100}.${(softwareVersion % 100).toString().padLeft(2, '0')}';
+}
+
+/// The watch's authentication challenge (type 5101).
+///
+/// GFDI has no real authentication: the answer is "yes, fine" with the flags
+/// echoed back. The Bluetooth bond is the actual security boundary, which is why
+/// onboarding refuses to register a watch that would not bond.
+class GarminAuthNegotiation extends GarminInboundMessage {
+  const GarminAuthNegotiation({required this.unknown, required this.authFlags});
+  final int unknown;
+  final int authFlags;
+}
+
+/// The watch's answer to [buildSupportedFileTypesRequest]: which
+/// `(dataType, subType)` pairs it holds.
+class GarminSupportedFileTypes extends GarminInboundMessage {
+  const GarminSupportedFileTypes({required this.status, required this.types});
+  final GarminStatus status;
+
+  /// Every advertised pair, including ones this app does not map — the raw list
+  /// is what makes an empty-vs-unmapped diagnosis possible.
+  final List<GarminSupportedFileType> types;
+}
+
+class GarminSupportedFileType {
+  const GarminSupportedFileType({
+    required this.dataType,
+    required this.subType,
+    required this.name,
+  });
+  final int dataType;
+  final int subType;
+  final String name;
+}
+
 /// A message outside the sync vocabulary — kept (with its type) for logging,
 /// never acted on.
 class GarminUnhandledMessage extends GarminInboundMessage {
@@ -148,14 +212,60 @@ GarminInboundMessage decodeGarminMessage(GarminGfdiFrame frame) {
       return _decodeStatus(frame.payload);
     case GarminMessageId.fileTransferData:
       return _decodeFileTransferData(frame.payload);
+    case GarminMessageId.deviceInformation:
+      return _decodeDeviceInformation(frame.payload);
+    case GarminMessageId.authNegotiation:
+      return _decodeAuthNegotiation(frame.payload);
     default:
       return GarminUnhandledMessage(frame.messageType);
   }
 }
 
+GarminInboundMessage _decodeDeviceInformation(Uint8List payload) {
+  final reader = GarminByteReader(payload);
+  return GarminDeviceInformation(
+    protocolVersion: reader.readShort(),
+    productNumber: reader.readShort(),
+    unitNumber: reader.readInt(),
+    softwareVersion: reader.readShort(),
+    maxPacketSize: reader.readShort(),
+    bluetoothFriendlyName: reader.readString(),
+    deviceName: reader.readString(),
+    deviceModel: reader.readString(),
+  );
+}
+
+GarminInboundMessage _decodeAuthNegotiation(Uint8List payload) {
+  final reader = GarminByteReader(payload);
+  return GarminAuthNegotiation(
+    unknown: reader.readByte(),
+    authFlags: reader.readInt(),
+  );
+}
+
+GarminInboundMessage _decodeSupportedFileTypes(GarminByteReader reader) {
+  final status = GarminStatus.fromCode(reader.readByte());
+  if (status != GarminStatus.ack) {
+    return GarminSupportedFileTypes(status: status, types: const []);
+  }
+  final count = reader.readByte();
+  final types = <GarminSupportedFileType>[];
+  for (var i = 0; i < count && reader.remaining >= 2; i++) {
+    types.add(GarminSupportedFileType(
+      dataType: reader.readByte(),
+      subType: reader.readByte(),
+      name: reader.readString(),
+    ));
+  }
+  return GarminSupportedFileTypes(status: status, types: types);
+}
+
 GarminInboundMessage _decodeStatus(Uint8List payload) {
   final reader = GarminByteReader(payload);
   final originalType = reader.readShort();
+  if (originalType == GarminMessageId.supportedFileTypesRequest) {
+    return _decodeSupportedFileTypes(reader);
+  }
   if (originalType == GarminMessageId.downloadRequest) {
     final status = GarminStatus.fromCode(reader.readByte());
     if (status != GarminStatus.ack) {
@@ -259,3 +369,51 @@ Uint8List buildSupportedFileTypesRequest() =>
       GarminMessageId.supportedFileTypesRequest,
       Uint8List(0),
     );
+
+/// Our half of the device-information exchange: a RESPONSE envelope that both
+/// ACKs the watch's message and describes this phone.
+///
+/// The sentinel values are Gadgetbridge's, kept verbatim because they are what a
+/// watch has been observed to accept: protocol 150, software 7791, and `-1`
+/// (all-ones) for unit/product/max-packet, i.e. "unspecified".
+///
+/// `protocolFlags` mirrors the watch's own protocol generation — 1 when it
+/// reports a 1xx protocol, else 0.
+Uint8List buildDeviceInformationResponse({
+  required GarminDeviceInformation incoming,
+  required String bluetoothName,
+  required String manufacturer,
+  required String model,
+}) {
+  const ourProtocolVersion = 150;
+  const ourSoftwareVersion = 7791;
+  const unspecifiedShort = 0xFFFF;
+  const unspecifiedInt = 0xFFFFFFFF;
+
+  final writer = GarminByteWriter()
+    ..writeShort(GarminMessageId.deviceInformation)
+    ..writeByte(GarminStatus.ack.code)
+    ..writeShort(ourProtocolVersion)
+    ..writeShort(unspecifiedShort) // product number
+    ..writeInt(unspecifiedInt) // unit number
+    ..writeShort(ourSoftwareVersion)
+    ..writeShort(unspecifiedShort) // max packet size
+    ..writeString(bluetoothName)
+    ..writeString(manufacturer)
+    ..writeString(model)
+    ..writeByte(incoming.protocolVersion ~/ 100 == 1 ? 1 : 0);
+  return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
+}
+
+/// Answers the auth challenge with ACK + `GUESS_OK`, echoing the watch's own
+/// unknown byte and flags back at it — the "no authentication" handshake.
+Uint8List buildAuthNegotiationResponse(GarminAuthNegotiation incoming) {
+  const guessOk = 0;
+  final writer = GarminByteWriter()
+    ..writeShort(GarminMessageId.authNegotiation)
+    ..writeByte(GarminStatus.ack.code)
+    ..writeByte(guessOk)
+    ..writeByte(incoming.unknown)
+    ..writeInt(incoming.authFlags);
+  return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
+}
