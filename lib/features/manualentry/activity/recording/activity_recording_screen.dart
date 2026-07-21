@@ -99,6 +99,8 @@ class _ActivityRecordingScreenState
   @override
   void initState() {
     super.initState();
+    // Seed so the first didUpdateWidget doesn't see a spurious type change.
+    _dashboardEditTypeId = widget.state.activityTypeId;
     _syncTicker();
     _syncWakelock();
   }
@@ -106,8 +108,25 @@ class _ActivityRecordingScreenState
   @override
   void didUpdateWidget(ActivityRecordingScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _syncEditMode();
     _syncTicker();
     _syncWakelock();
+  }
+
+  /// Kotlin resets the dashboard-edit toggle when recording resumes, when focus
+  /// mode is entered, and when the activity type changes. These only change when
+  /// the parent pushes a new widget, so this belongs here — not in build(), where
+  /// mutating State is invisible to hot-reload reasoning and re-runs needlessly.
+  void _syncEditMode() {
+    final state = widget.state;
+    if (state.status == ActivityRecordingStatus.recording ||
+        widget.isFocusMode) {
+      _isEditingDashboard = false;
+    }
+    if (_dashboardEditTypeId != state.activityTypeId) {
+      _dashboardEditTypeId = state.activityTypeId;
+      _isEditingDashboard = false;
+    }
   }
 
   @override
@@ -163,17 +182,7 @@ class _ActivityRecordingScreenState
   Widget build(BuildContext context) {
     final state = widget.state;
 
-    // Kotlin resets the edit toggle when recording resumes, when focus mode is
-    // entered, and when the activity type changes.
-    if (state.status == ActivityRecordingStatus.recording ||
-        widget.isFocusMode) {
-      _isEditingDashboard = false;
-    }
-    if (_dashboardEditTypeId != state.activityTypeId) {
-      _dashboardEditTypeId = state.activityTypeId;
-      _isEditingDashboard = false;
-    }
-
+    // Edit-toggle resets moved to _syncEditMode (initState/didUpdateWidget).
     final movingTime = state.movingDuration(_now);
     final totalTime = state.recordingKind == ActivityRecordingKind.repetition
         ? movingTime + state.restDuration(_now)
