@@ -89,6 +89,25 @@ class BleUuids {
   static const String garminGfdiReceiveV1 =
       '6a4ecd28-667b-11e3-949a-0800200c9a66';
 
+  /// Garmin's V2 multi-link service — what a vívoactive 5 actually exposes
+  /// (confirmed by the on-device GATT probe). Also GATT-only, never advertised.
+  static const String garminMlServiceV2 =
+      '6a4e2800-667b-11e3-949a-0800200c9a66';
+
+  /// V2 receive (notify) characteristic handles. Each is paired with a send
+  /// characteristic at `handle + 0x10`, and the first pair that exists on the
+  /// device is the one to use (`CommunicatorV2.initializeDevice`).
+  static const int garminMlFirstReceiveHandle = 0x2810;
+  static const int garminMlLastReceiveHandle = 0x2814;
+  static const int garminMlSendHandleOffset = 0x10;
+
+  /// Builds a Garmin 128-bit UUID from its 16-bit handle, splicing it into
+  /// Gadgetbridge's `BASE_UUID` (`6A4E%04X-667B-11E3-949A-0800200C9A66`).
+  /// Lowercase, to match `flutter_blue_plus` `Guid.str128`.
+  static String garminUuidForHandle(int handle) =>
+      '6a4e${handle.toRadixString(16).padLeft(4, '0')}'
+      '-667b-11e3-949a-0800200c9a66';
+
   static const List<String> scanServiceUuids = [
     '0000180d-0000-1000-8000-00805f9b34fb', // heartRate
     '0000fee0-0000-1000-8000-00805f9b34fb', // heartRateMiband
