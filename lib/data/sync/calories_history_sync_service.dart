@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 
 import '../../core/time/local_date.dart';
 import '../../domain/health/health_permissions.dart';
@@ -60,9 +61,12 @@ class CaloriesHistorySyncService {
       } else {
         await _incrementalSync(token);
       }
-    } catch (_) {
+    } catch (e, s) {
       // Best-effort: a failed sync just leaves the screen on its live read and
-      // retries on the next open. Never surfaced.
+      // retries on the next open. Never surfaced to the user — but logged, so a
+      // forever-retrying DAO/PK error isn't invisible.
+      debugPrint(
+          'CaloriesHistorySyncService: sync failed, will retry next open: $e\n$s');
     }
   }
 

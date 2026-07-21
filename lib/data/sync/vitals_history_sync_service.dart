@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 
 import '../../core/time/local_date.dart';
 import '../../domain/health/health_permissions.dart';
@@ -46,8 +47,12 @@ class VitalsHistorySyncService {
     final granted = await _dataSource.grantedIfAvailable();
     await Future.wait([
       for (final metric in _metrics())
-        _syncMetric(metric, granted).catchError((_) {
+        _syncMetric(metric, granted).catchError((Object e, StackTrace s) {
           // One metric's failure must not abort the others; it retries next run.
+          // Log it, though — an unlogged swallow is the exact failure mode the
+          // native _catch guard argues against (silent forever-retry).
+          debugPrint('VitalsHistorySyncService: ${metric.metric.name} sync '
+              'failed, will retry next run: $e\n$s');
         }),
     ]);
   }

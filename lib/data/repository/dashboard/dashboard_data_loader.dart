@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+
 import '../../../core/period/time_range.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
@@ -74,7 +76,9 @@ class DashboardDataLoader {
     if (!enabled || !granted.contains(permission)) return null;
     try {
       return await block();
-    } catch (_) {
+    } catch (e, s) {
+      debugPrint(
+          'DashboardDataLoader: $permission read failed, metric hidden: $e\n$s');
       return null;
     }
   }
@@ -386,7 +390,8 @@ class DashboardDataLoader {
   Future<T?> _guard<T>(Future<T> Function() block) async {
     try {
       return await block();
-    } catch (_) {
+    } catch (e, s) {
+      debugPrint('DashboardDataLoader: guarded read failed, value null: $e\n$s');
       return null;
     }
   }
