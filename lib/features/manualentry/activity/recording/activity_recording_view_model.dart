@@ -104,8 +104,6 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
   ActivityRecordingController get _service =>
       ref.read(activityRecordingControllerProvider);
 
-  Timer? _ticker;
-
   @override
   ActivityRecordingUiState build() {
     final service = _service;
@@ -113,40 +111,23 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
     void listener() {
       final recording = service.state.value;
       state = state.copyWith(recording: recording, now: DateTime.now());
-      _syncTicker(recording);
     }
 
     service.state.addListener(listener);
-    ref.onDispose(() {
-      service.state.removeListener(listener);
-      _ticker?.cancel();
-      _ticker = null;
-    });
+    ref.onDispose(() => service.state.removeListener(listener));
 
-    final restored = service.state.value;
-    // A recording restored from disk after process death is already running by
-    // the time the screen asks for it, so its clock has to be ticking already.
-    _syncTicker(restored);
     return ActivityRecordingUiState(
-      recording: restored,
+      recording: service.state.value,
       now: DateTime.now(),
     );
   }
 
-  /// The clock only runs while there is something to count. Mirrors the
-  /// `LaunchedEffect(state.status)` the Kotlin screen ticked on.
-  void _syncTicker(ActivityRecordingState recording) {
-    final shouldTick = recording.isActive;
-    if (shouldTick && _ticker == null) {
-      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (!ref.mounted) return;
-        state = state.copyWith(now: DateTime.now());
-      });
-    } else if (!shouldTick && _ticker != null) {
-      _ticker!.cancel();
-      _ticker = null;
-    }
-  }
+  // The recording SCREEN runs its own 1 s ticker (setState) and computes the
+  // displayed durations from it; this view-model no longer ticks. The old
+  // per-second `copyWith(now:)` here rebuilt the whole entry screen (which
+  // watches this provider) every second for a `now` nothing on the render path
+  // read. `now` is still set on each genuine state change so the `movingTime` /
+  // `totalTime` getters (used by tests) resolve against a captured clock.
 
   // ── Commands ─────────────────────────────────────────────────────────────
 
@@ -181,7 +162,6 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
               ),
             ),
     );
-    _syncTicker(recording);
   }
 
   /// Starts a guided heart-rate-recovery test. Same shape as [startRecording] — the
@@ -206,7 +186,6 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
               ),
             ),
     );
-    _syncTicker(recording);
   }
 
   /// "I am done" — ends the effort and starts the five minutes that are the measurement.
@@ -233,7 +212,6 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
             )
           : CommandState.success(snapshot),
     );
-    _syncTicker(recording);
   }
 
   /// Throws the session away. Both commands go back to rest: there is nothing
@@ -248,7 +226,6 @@ class ActivityRecordingViewModel extends Notifier<ActivityRecordingUiState> {
       start: const CommandState.idle(),
       save: const CommandState.idle(),
     );
-    _syncTicker(recording);
   }
 
   // ── Screen-owned surface ─────────────────────────────────────────────────
