@@ -275,8 +275,10 @@ class BluetoothSyncNativePlugin :
         ioScope.launch {
             try {
                 active.write(chunk)
+                Log.i(SyncBluetooth.TAG, "sent ${chunk.size} bytes")
                 withContext(Dispatchers.Main) { callback(Result.success(Unit)) }
             } catch (e: IOException) {
+                Log.w(SyncBluetooth.TAG, "send failed: ${e.message}")
                 withContext(Dispatchers.Main) { callback(Result.failure(e)) }
             }
         }
@@ -376,6 +378,7 @@ class BluetoothSyncNativePlugin :
     }
 
     private fun emitBytes(bytes: ByteArray) {
+        Log.i(SyncBluetooth.TAG, "recv ${bytes.size} bytes")
         mainScope.launch { flutterApi?.onBytesReceived(bytes) {} }
     }
 }

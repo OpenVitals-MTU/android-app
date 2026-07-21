@@ -44,7 +44,12 @@ class BluetoothSyncService implements BluetoothSyncFlutterApi {
   final _devices = StreamController<DiscoveredSyncDevice>.broadcast();
   final _discoveryFinished = StreamController<void>.broadcast();
   final _connection = StreamController<SyncConnectionState>.broadcast();
-  final _inbound = StreamController<Uint8List>.broadcast();
+  // Single-subscription (NOT broadcast) so inbound bytes that arrive after the
+  // socket opens but before the SyncSession attaches its listener are BUFFERED
+  // and replayed on listen, instead of being silently dropped. The native reader
+  // starts pumping the moment the socket connects — seconds before the session
+  // runs — so a broadcast controller here loses the peer's opening frames.
+  final _inbound = StreamController<Uint8List>();
 
   /// Devices found during the current/most-recent discovery.
   Stream<DiscoveredSyncDevice> get devices => _devices.stream;
@@ -83,7 +88,9 @@ class BluetoothSyncService implements BluetoothSyncFlutterApi {
     await _devices.close();
     await _discoveryFinished.close();
     await _connection.close();
-    await _inbound.close();
+    // A never-listened single-subscription controller's close() only completes
+    // once listened, so don't await it (mirrors the SyncSession cleanup guard).
+    unawaited(_inbound.close());
   }
 
   // ── BluetoothSyncFlutterApi (events from Kotlin) ──────────────────────────
