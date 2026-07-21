@@ -37,14 +37,7 @@ class HeartVitalsOverviewScreen extends ConsumerStatefulWidget {
 
 class _HeartVitalsOverviewScreenState
     extends ConsumerState<HeartVitalsOverviewScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Kick the daily-aggregate history sync once per open (deduped by the
-    // service). When it lands, re-derive so long-range charts that were reading
-    // "Building history…" pick up the freshly cached days (e.g. respiratory).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncHistory());
-  }
+  bool _syncKicked = false;
 
   Future<void> _syncHistory() async {
     await ref.read(vitalsHistorySyncServiceProvider).syncAll();
@@ -54,6 +47,21 @@ class _HeartVitalsOverviewScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Kick the daily-aggregate history sync only AFTER the first foreground load
+    // finishes — never alongside it. The sync fans out seven 730-day reads;
+    // running them next to the screen's own budgeted reads makes Health Connect
+    // serialize everything and the 6s per-metric budget times out spuriously
+    // (the 30s→80s contention the calories screen documents). Sequenced, the
+    // screen loads first (live, once), then the cache fills in the background so
+    // long-range charts stuck on "Building history…" pick up the fresh days.
+    // Guarded to fire once per open.
+    ref.listen(heartVitalsOverviewProvider.select((s) => s.isLoading),
+        (prev, next) {
+      if (prev == true && next == false && !_syncKicked) {
+        _syncKicked = true;
+        _syncHistory();
+      }
+    });
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(heartVitalsOverviewProvider);
     final notifier = ref.read(heartVitalsOverviewProvider.notifier);

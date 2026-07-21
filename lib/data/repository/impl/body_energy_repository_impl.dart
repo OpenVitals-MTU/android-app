@@ -75,25 +75,35 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
   Future<Result<BodyEnergyTimelineResult>> loadTimeline(
     BodyEnergyTimelineQuery query,
   ) =>
-      runCatching(() async {
-        final calibration = _preferences.bodyEnergyCalibrationListenable.value;
-        final bodyProfile = _preferences.bodyProfileListenable.value;
-        final permissionSignature = await _permissionSignature();
+      // Wrap in the shared read budget like loadVitalsPeriod/loadHeartPeriod: a
+      // cold multi-day timeline is the read most likely to hang on a huge raw
+      // heart-rate scan, and this was the one period load still unbounded.
+      runCatching(() => _loadTimelineRaw(query).timeout(healthReadBudget));
 
-        final days = <BodyEnergyTimeline>[];
-        var date = query.period.start;
-        while (!date.isAfter(query.period.end)) {
-          days.add(await _loadDay(
-            date: date,
-            refreshMode: query.refreshMode,
-            permissionSignature: permissionSignature,
-            calibration: calibration,
-            bodyProfile: bodyProfile,
-          ));
-          date = date.plusDays(1);
-        }
-        return BodyEnergyTimelineResult(query: query, days: days);
-      });
+  Future<BodyEnergyTimelineResult> _loadTimelineRaw(
+    BodyEnergyTimelineQuery query,
+  ) async {
+    final calibration = _preferences.bodyEnergyCalibrationListenable.value;
+    final bodyProfile = _preferences.bodyProfileListenable.value;
+    final permissionSignature = await _permissionSignature();
+
+    // The day loop stays sequential: each day seeds `previousEndScore` from the
+    // prior day's freshly-saved cache entry. The within-day reads are what run
+    // concurrently now (see _loadDay).
+    final days = <BodyEnergyTimeline>[];
+    var date = query.period.start;
+    while (!date.isAfter(query.period.end)) {
+      days.add(await _loadDay(
+        date: date,
+        refreshMode: query.refreshMode,
+        permissionSignature: permissionSignature,
+        calibration: calibration,
+        bodyProfile: bodyProfile,
+      ));
+      date = date.plusDays(1);
+    }
+    return BodyEnergyTimelineResult(query: query, days: days);
+  }
 
   Future<BodyEnergyTimeline> _loadDay({
     required LocalDate date,
@@ -120,32 +130,45 @@ class BodyEnergyRepositoryImpl implements BodyEnergyRepository {
     final baselineStart = date.minusDays(_baselineDays);
     final baselineEnd = date.minusDays(1);
 
-    final baselines = await _loadBaselines(
+    // Independent reads run concurrently: start every future, then await. This
+    // is the within-repo parallelism the heart/vitals halves already have —
+    // body energy was the one day load still issuing ~8 reads one after the
+    // next. The baseline runs alongside them; only respiratory depends on it.
+    final baselinesF = _loadBaselines(
       date: date,
       baselineStart: baselineStart,
       baselineEnd: baselineEnd,
       dayStart: dayStart,
       signature: _baselineSignature(permissionSignature),
     );
-
-    final heartRateSamples =
-        (await _heart.loadRawHeartRateSamplesForDayGraph(date)).orThrow();
-    final hrvSamples = (await _heart.loadHrvSamples(dayStart, dayEnd)).orThrow();
-    final sleepSessions =
-        (await _sleep.loadSleepSessions(date.minusDays(1), date)).orThrow();
-    final workouts = (await _activity.loadWorkouts(date, date)).orThrow();
+    final heartRateF = _heart.loadRawHeartRateSamplesForDayGraph(date);
+    final hrvF = _heart.loadHrvSamples(dayStart, dayEnd);
+    final sleepF = _sleep.loadSleepSessions(date.minusDays(1), date);
+    final workoutsF = _activity.loadWorkouts(date, date);
     // Hourly steps + active calories, and the basal rate — the energy-balance
     // inputs the heart-rate-zone model alone was missing.
-    final activityProgress =
-        (await _activity.loadActivityProgress(date: date)).orThrow();
-    final basalMetabolicRate = (await _body.loadLatestBMR()).orThrow();
+    final activityProgressF = _activity.loadActivityProgress(date: date);
+    final basalMetabolicRateF = _body.loadLatestBMR();
+    final restingHrF = _heart.loadRestingHeartRate(date);
+
+    final baselines = await baselinesF;
     // Kotlin loads respiratory only when a respiratory baseline exists (the
-    // stress factor is inert without one).
-    final List<RespiratoryRateEntry> respiratory =
-        baselines.respiratoryRateBaseline != null
-            ? (await _vitals.loadRespiratoryRate(date, date)).orThrow()
-            : const <RespiratoryRateEntry>[];
-    final restingHr = (await _heart.loadRestingHeartRate(date)).orThrow();
+    // stress factor is inert without one), so it can only start after the
+    // baseline resolves.
+    final respiratoryF = baselines.respiratoryRateBaseline != null
+        ? _vitals.loadRespiratoryRate(date, date)
+        : null;
+
+    final heartRateSamples = (await heartRateF).orThrow();
+    final hrvSamples = (await hrvF).orThrow();
+    final sleepSessions = (await sleepF).orThrow();
+    final workouts = (await workoutsF).orThrow();
+    final activityProgress = (await activityProgressF).orThrow();
+    final basalMetabolicRate = (await basalMetabolicRateF).orThrow();
+    final restingHr = (await restingHrF).orThrow();
+    final List<RespiratoryRateEntry> respiratory = respiratoryF != null
+        ? (await respiratoryF).orThrow()
+        : const <RespiratoryRateEntry>[];
     // Kotlin seeds the day from the previous day's cached score.
     final previousEndScore =
         _cache.load(date.minusDays(1), signature)?.currentScore;
