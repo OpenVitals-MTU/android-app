@@ -79,8 +79,11 @@ class BluetoothSyncService implements BluetoothSyncFlutterApi {
   Future<void> connect(String address) => _api.connect(address);
 
   /// The transport over the live connection. Valid only while
-  /// [connectionState] is [SyncConnectionState.connected].
-  SyncByteTransport get transport => _BluetoothSyncTransport(_api, _inbound.stream);
+  /// [connectionState] is [SyncConnectionState.connected]. Cached so its send
+  /// serialization chain is stable across accesses.
+  late final _BluetoothSyncTransport _transport =
+      _BluetoothSyncTransport(_api, _inbound.stream);
+  SyncByteTransport get transport => _transport;
 
   Future<void> dispose() async {
     BluetoothSyncFlutterApi.setUp(null);
@@ -133,12 +136,23 @@ class _BluetoothSyncTransport implements SyncByteTransport {
 
   final BluetoothSyncHostApi _api;
   final Stream<Uint8List> _inbound;
+  Future<void> _sendChain = Future<void>.value();
 
   @override
   Stream<Uint8List> get inbound => _inbound;
 
   @override
-  Future<void> send(Uint8List bytes) => _api.sendBytes(bytes);
+  Future<void> send(Uint8List bytes) {
+    // Serialize every outbound write. The session's sender and receiver loops
+    // both call send() concurrently over ONE RFCOMM socket; unordered concurrent
+    // writes corrupt frames AND let a flood of acks starve a data batch (the
+    // small side's batch was sent last and its ack timed out). Chaining sends
+    // preserves call order, one write at a time — so a data batch enqueued
+    // before the acks goes out first.
+    final result = _sendChain.then((_) => _api.sendBytes(bytes));
+    _sendChain = result.then((_) {}, onError: (_) {});
+    return result;
+  }
 
   @override
   Future<void> close() => _api.disconnect();

@@ -281,6 +281,11 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
         deviceName: 'OpenVitals phone',
         supportedTypes: kSyncableRecordTypes,
         selectedTypes: state.selectedTypes.toList(),
+        // Real datasets can be large (a CGM alone is ~100k readings/year). Bigger
+        // batches cut the number of stop-and-wait round-trips, and a generous ack
+        // timeout tolerates the slow side writing a big batch to Health Connect.
+        batchSize: 500,
+        batchTimeout: const Duration(minutes: 3),
       ),
     );
     _progressSub = session.progress.listen(
