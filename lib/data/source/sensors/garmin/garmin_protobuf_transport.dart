@@ -21,10 +21,15 @@ import 'garmin_protobuf.dart';
 /// currently arise. Sending something larger throws rather than silently
 /// truncating.
 class GarminProtobufTransport {
-  GarminProtobufTransport({required this.send});
+  GarminProtobufTransport({required this.send, this.onUnsolicited});
 
   /// Hands a built GFDI frame to the layer below.
   final Future<void> Function(Uint8List frame) send;
+
+  /// Called with a message the watch sent on its own account — one that answers
+  /// no outstanding request. The watch narrates state changes this way, so a
+  /// caller waiting on something can learn it has already happened.
+  void Function(Uint8List payload)? onUnsolicited;
 
   /// The largest payload the watch accepts in one message, from Gadgetbridge's
   /// `ProtocolBufferHandler` (measured on a Vívomove Style).
@@ -98,11 +103,16 @@ class GarminProtobufTransport {
       // The watch's own request, not a reply to ours. Logged and dropped: this
       // app answers none of them, and the generic ACK the session already sends
       // is enough to stop it retransmitting.
-      debugPrint('[GARMIN-PB] ← unsolicited #$requestId (${bytes.length}B)');
+      debugPrint('[GARMIN-PB] ← unsolicited #$requestId '
+          '(${bytes.length}B) ${_hex(bytes)}');
+      onUnsolicited?.call(bytes);
       return true;
     }
 
     if (totalLength == chunkLength && dataOffset == 0) {
+      // Logged in full: a reply that decodes to "refused" is indistinguishable
+      // from one this app misread, and only the bytes tell them apart.
+      debugPrint('[GARMIN-PB] ← #$requestId (${bytes.length}B) ${_hex(bytes)}');
       if (!completer.isCompleted) completer.complete(bytes);
       return true;
     }
@@ -129,6 +139,9 @@ class GarminProtobufTransport {
     _incoming.clear();
   }
 
+  static String _hex(Uint8List bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+
   int _nextRequestId() => _lastRequestId = (_lastRequestId + 1) % 65536;
 
   Uint8List _frame(int messageType, int requestId, Uint8List payload) {
@@ -142,6 +155,21 @@ class GarminProtobufTransport {
   }
 }
 
+/// What the watch said about a find request.
+enum GarminFindOutcome {
+  /// It answered OK.
+  ok,
+
+  /// It answered ERROR — the only reading that means the watch declined.
+  error,
+
+  /// It answered something this app does not recognise, or did not answer.
+  /// Treated as "probably ringing", because it demonstrably can be.
+  unknown;
+
+  bool get declined => this == GarminFindOutcome.error;
+}
+
 /// Builds the `Smart` message that starts a find, and the one that stops it.
 ///
 /// Find is a TOGGLE, not a one-shot: the request carries a timeout in seconds
@@ -153,6 +181,7 @@ class GarminFindMyWatch {
   static const int _findRequest = 1;
   static const int _findResponse = 2;
   static const int _cancelRequest = 3;
+  static const int _cancelResponse = 4;
   static const int _timeout = 1;
   static const int _status = 1;
 
@@ -177,26 +206,41 @@ class GarminFindMyWatch {
         .toBytes();
   }
 
-  /// Whether a reply says the watch accepted the request.
+  /// Whether [payload] is the watch reporting on a find, rather than one of the
+  /// many other things it narrates unprompted.
+  static bool isFindMessage(Uint8List payload) =>
+      protobufField(readProtobuf(payload), GarminSmartService.findMyWatch) !=
+          null;
+
+  /// What a reply says about the request — including "it did not say".
   ///
-  /// `OK` is 100 and `ERROR` is 200 — not 0 and 1 — so a missing status must
-  /// not be read as success by defaulting to zero.
-  static bool accepted(Uint8List? reply) {
-    if (reply == null) return false;
+  /// Three outcomes, not two. The watch was observed to ring while this code
+  /// read its reply as a refusal, and treating "I could not parse that" as
+  /// failure is what left it ringing with the phone convinced nothing had
+  /// happened. Only an explicit ERROR means the watch declined.
+  static GarminFindOutcome outcome(Uint8List? reply) {
+    if (reply == null || reply.isEmpty) return GarminFindOutcome.unknown;
     final service = protobufField(
       readProtobuf(reply),
       GarminSmartService.findMyWatch,
     );
     final bytes = service?.bytes;
-    if (bytes == null) return false;
+    if (bytes == null) return GarminFindOutcome.unknown;
     final fields = readProtobuf(bytes);
-    // A cancel is answered in field 4, a find in field 2; either is an answer.
-    for (final field in [_findResponse, 4]) {
+    // A find is answered in field 2, a cancel in field 4; either is an answer.
+    for (final field in [_findResponse, _cancelResponse]) {
       final response = protobufField(fields, field)?.bytes;
       if (response == null) continue;
       final status = protobufField(readProtobuf(response), _status)?.varint;
-      return status == 100;
+      // A real vívoactive 5 answers `62 02 12 00` — the response message with
+      // NO status field at all, which the schema allows since status is
+      // optional. So the presence of the response IS the acknowledgement, and
+      // only an explicit ERROR is a refusal. OK is 100 and ERROR is 200, not 0
+      // and 1, so a missing status must never be read as zero.
+      if (status == null || status == 100) return GarminFindOutcome.ok;
+      if (status == 200) return GarminFindOutcome.error;
+      return GarminFindOutcome.unknown;
     }
-    return false;
+    return GarminFindOutcome.unknown;
   }
 }

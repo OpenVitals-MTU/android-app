@@ -73,10 +73,38 @@ void main() {
         return (ProtobufWriter()..nested(12, service)).toBytes();
       }
 
-      expect(GarminFindMyWatch.accepted(reply(100)), isTrue);
-      expect(GarminFindMyWatch.accepted(reply(200)), isFalse); // ERROR
-      expect(GarminFindMyWatch.accepted(reply(0)), isFalse); // UNKNOWN
-      expect(GarminFindMyWatch.accepted(null), isFalse);
+      expect(GarminFindMyWatch.outcome(reply(100)), GarminFindOutcome.ok);
+      expect(GarminFindMyWatch.outcome(reply(200)), GarminFindOutcome.error);
+      expect(GarminFindMyWatch.outcome(reply(0)), GarminFindOutcome.unknown);
+    });
+
+    test('an EMPTY response is acceptance — the real watch sends no status', () {
+      // Captured from a vívoactive 5: `62 02 12 00` is find_response present
+      // with no status field, and the watch was ringing when it sent it.
+      expect(
+        GarminFindMyWatch.outcome(_b([0x62, 0x02, 0x12, 0x00])),
+        GarminFindOutcome.ok,
+      );
+      // And the cancel it answers with, field 4.
+      expect(
+        GarminFindMyWatch.outcome(_b([0x62, 0x02, 0x22, 0x00])),
+        GarminFindOutcome.ok,
+      );
+    });
+
+    test('an unreadable reply is UNKNOWN, never a refusal', () {
+      // The watch was seen ringing while its reply was being read as a
+      // refusal. Only an explicit ERROR means it declined; everything else has
+      // to leave the alert stoppable rather than abandoning it.
+      expect(GarminFindMyWatch.outcome(null), GarminFindOutcome.unknown);
+      expect(GarminFindMyWatch.outcome(Uint8List(0)), GarminFindOutcome.unknown);
+      // Service present, but no response field inside it.
+      expect(GarminFindMyWatch.outcome(_b([0x62, 0x00])), GarminFindOutcome.unknown);
+      expect(GarminFindMyWatch.outcome(_b([0xFF, 0xFF])), GarminFindOutcome.unknown);
+      for (final o in [GarminFindOutcome.ok, GarminFindOutcome.unknown]) {
+        expect(o.declined, isFalse);
+      }
+      expect(GarminFindOutcome.error.declined, isTrue);
     });
   });
 

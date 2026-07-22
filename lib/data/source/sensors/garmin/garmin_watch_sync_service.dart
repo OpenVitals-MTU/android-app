@@ -50,17 +50,29 @@ class GarminWatchSyncService {
   }) async {
     final transport = GarminBleTransport(address: address);
     final ready = Completer<void>();
+    // The watch narrates a find it has ended itself — dismissed on the wrist,
+    // or run out. Without listening for that, the phone holds "Stop" for the
+    // full minute after the alert has already stopped, which is what a real
+    // wearer hit first.
+    final endedOnWatch = Completer<void>();
     final session = GarminSession(
       send: (frame) => transport.mlOrThrow.sendFrame(frame),
       bluetoothName: phoneName,
       manufacturer: manufacturer,
       model: model,
+      syncFiles: false,
       onHandshakeReady: () {
         if (!ready.isCompleted) ready.complete();
       },
     );
+    session.protobuf.onUnsolicited = (payload) {
+      if (!GarminFindMyWatch.isFindMessage(payload)) return;
+      debugPrint('[GARMIN-FIND] the watch says the alert ended');
+      if (!endedOnWatch.isCompleted) endedOnWatch.complete();
+    };
 
     StreamSubscription<String>? dropSub;
+    var ringing = false;
     try {
       await transport.connect(onFrame: session.handleFrame);
       dropSub = transport.onDisconnected.listen(session.abort);
@@ -73,24 +85,38 @@ class GarminWatchSyncService {
         GarminFindMyWatch.start(timeout: timeout),
         label: 'find start',
       );
-      final accepted = GarminFindMyWatch.accepted(reply);
-      debugPrint('[GARMIN-FIND] ${accepted ? "ringing" : "refused"}');
-      if (!accepted) return false;
+      final outcome = GarminFindMyWatch.outcome(reply);
+      debugPrint('[GARMIN-FIND] ${outcome.name}');
+      // Only an explicit ERROR is a refusal. A reply this app cannot read is
+      // NOT: the watch was seen ringing while an unparsed reply was being
+      // treated as failure, and bailing here is what left it ringing with no
+      // way to stop it.
+      if (outcome.declined) return false;
 
+      ringing = true;
       // Hold the link for the alert, or until the user stops it.
       await Future.any([
         Future<void>.delayed(timeout),
+        endedOnWatch.future,
         ?cancelled,
       ]);
-      await session.protobuf.request(
-        GarminFindMyWatch.cancel(),
-        label: 'find cancel',
-      );
       return true;
     } on TimeoutException {
       debugPrint('[GARMIN-FIND] the watch never finished its handshake');
       return false;
     } finally {
+      // ALWAYS cancel a started alert, on every path out — including a thrown
+      // error and a user who backed out. A buzzing watch that the phone has
+      // forgotten about is the one outcome worth writing code to prevent.
+      if (ringing) {
+        try {
+          await session.protobuf
+              .request(GarminFindMyWatch.cancel(), label: 'find cancel')
+              .timeout(const Duration(seconds: 3));
+        } catch (error) {
+          debugPrint('[GARMIN-FIND] could not cancel: $error');
+        }
+      }
       await dropSub?.cancel();
       session.protobuf.abort();
       await transport.close();

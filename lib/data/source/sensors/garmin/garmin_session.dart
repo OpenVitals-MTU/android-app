@@ -57,6 +57,7 @@ class GarminSession {
     this.emptyGrace = const Duration(seconds: 6),
     this.keepAnsweringAfterSync = false,
     this.onHandshakeReady,
+    this.syncFiles = true,
   });
 
   /// Hands one built GFDI frame to the transport below. The session never sees
@@ -97,6 +98,14 @@ class GarminSession {
   /// Earlier than that it is still introducing itself and drops what it is sent;
   /// later would mean waiting for a whole file sync to finish.
   final void Function()? onHandshakeReady;
+
+  /// Whether to pull files at all.
+  ///
+  /// False for a session opened to DO something rather than to collect
+  /// something — finding the watch, say. Without this the find session dragged a
+  /// full sync along behind it and then failed mid-transfer when the link closed
+  /// under it, which is noise at best and a lost file at worst.
+  final bool syncFiles;
 
   /// Diagnostic only: keep decoding and acknowledging what the watch sends after
   /// the sync has finished, instead of ignoring it.
@@ -251,6 +260,7 @@ class GarminSession {
         // empty from a watch that demonstrably held a night of sleep — and the
         // watch processes our writes in order, so by the time it answers the
         // directory request it has already seen the filter.
+        if (!syncFiles) break;
         await send(buildFilterMessage());
         _report(GarminSyncPhase.listing);
         await _requestDirectory();
@@ -271,6 +281,7 @@ class GarminSession {
         if (message.shouldProceed) {
           // Cancel any pending give-up: the watch has just told us it holds
           // something, so re-read the listing rather than finishing empty.
+          if (!syncFiles) break;
           _graceTimer?.cancel();
           _graceTimer = null;
           await send(buildFilterMessage());
