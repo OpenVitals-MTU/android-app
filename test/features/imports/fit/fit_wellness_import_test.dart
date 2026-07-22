@@ -11,6 +11,8 @@ import 'package:openvitals/features/manualentry/activity/routeimport/fit_route_p
 /// an `event`/74 start/stop pair for the bounds and `sleep_level` transitions
 /// for the stages. See docs/reference/garmin-fit-files.md.
 void main() {
+  _incrementalSyncRegression();
+
   final start = DateTime.utc(2024, 1, 1, 23, 0, 0);
   final stop = DateTime.utc(2024, 1, 2, 6, 0, 0);
   // (transition, sleep_level enum: 0 unmeasurable,1 awake,2 light,3 deep,4 rem)
@@ -415,4 +417,85 @@ Uint8List _fitMonitoringSeriesBytes({
   }
 
   return _wrap(data.toBytes());
+}
+
+/// Regression: successive syncs within one hour must not overwrite each other.
+///
+/// The hourly clientRecordId assumed one file per day. A watch sync delivers a
+/// fresh file every few minutes, so several land in the same hour — and sharing
+/// a key made each one REPLACE the last, collapsing an hour of heart rate to
+/// whichever sliver synced most recently.
+void _incrementalSyncRegression() {
+  FitMonitoringSummary monitoringWith({
+    required List<(DateTime, int)> hr,
+    List<(DateTime, double)> respiration = const [],
+  }) =>
+      FitMonitoringSummary(
+        heartRateSamples: hr,
+        respiration: respiration,
+        stepPoints: const [],
+        distancePoints: const [],
+        caloriePoints: const [],
+      );
+
+  group('incremental files in the same hour', () {
+    test('two HR chunks produce two distinct records', () {
+      // Two consecutive sync windows, both inside the 10:00 hour.
+      final first = fitMonitoringImportRecords(monitoringWith(hr: [
+        (DateTime.utc(2026, 7, 22, 10, 5), 70),
+        (DateTime.utc(2026, 7, 22, 10, 6), 71),
+      ])).whereType<HeartRateImportRecord>().single;
+      final second = fitMonitoringImportRecords(monitoringWith(hr: [
+        (DateTime.utc(2026, 7, 22, 10, 40), 74),
+        (DateTime.utc(2026, 7, 22, 10, 41), 75),
+      ])).whereType<HeartRateImportRecord>().single;
+
+      expect(
+        first.clientRecordId,
+        isNot(second.clientRecordId),
+        reason: 'a shared id makes Health Connect upsert one over the other',
+      );
+    });
+
+    test('re-importing the same chunk stays idempotent', () {
+      final samples = [
+        (DateTime.utc(2026, 7, 22, 10, 5), 70),
+        (DateTime.utc(2026, 7, 22, 10, 6), 71),
+      ];
+      final a = fitMonitoringImportRecords(monitoringWith(hr: samples))
+          .whereType<HeartRateImportRecord>()
+          .single;
+      final b = fitMonitoringImportRecords(monitoringWith(hr: samples))
+          .whereType<HeartRateImportRecord>()
+          .single;
+
+      // Same data must keep the same id, so a repeat sync overwrites itself
+      // rather than duplicating.
+      expect(a.clientRecordId, b.clientRecordId);
+    });
+
+    test('a whole-day file still yields one record per hour', () {
+      final records = fitMonitoringImportRecords(monitoringWith(hr: [
+        for (var h = 0; h < 24; h++)
+          (DateTime.utc(2026, 7, 22, h, 30), 60 + h),
+      ])).whereType<HeartRateImportRecord>();
+
+      expect(records, hasLength(24));
+      expect(records.map((r) => r.clientRecordId).toSet(), hasLength(24));
+    });
+
+    test('respiration is keyed and timed on its first reading', () {
+      final record = fitMonitoringImportRecords(monitoringWith(
+        hr: const [],
+        respiration: [
+          (DateTime.utc(2026, 7, 22, 10, 5), 14.0),
+          (DateTime.utc(2026, 7, 22, 10, 6), 16.0),
+        ],
+      )).whereType<RespiratoryRateImportRecord>().single;
+
+      // Not the top of the hour, which every file in that hour would claim.
+      expect(record.time, DateTime.utc(2026, 7, 22, 10, 5));
+      expect(record.rate, 15.0);
+    });
+  });
 }

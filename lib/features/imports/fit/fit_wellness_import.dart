@@ -95,6 +95,14 @@ List<ImportRecord> fitMonitoringImportRecords(FitMonitoringSummary m) {
   }
 
   // HR — one series record per hour, samples packed in.
+  //
+  // Keyed on the bucket's FIRST SAMPLE, not on the hour. Keying on the hour
+  // assumed one file per day, so no two files could ever touch the same hour.
+  // A watch sync breaks that: it delivers a fresh file every few minutes, so
+  // several files land in one hour and, sharing a clientRecordId, each REPLACED
+  // the last — an hour of heart rate collapsing to whichever sliver synced most
+  // recently. First-sample keying stays idempotent for a re-imported file (same
+  // samples, same key) while letting successive files coexist.
   for (final entry in _bucketByHour(m.heartRateSamples, (s) => s.$1).entries) {
     final samples = entry.value..sort((a, b) => a.$1.compareTo(b.$1));
     final start = samples.first.$1;
@@ -102,7 +110,7 @@ List<ImportRecord> fitMonitoringImportRecords(FitMonitoringSummary m) {
         ? samples.last.$1
         : start.add(const Duration(seconds: 1));
     records.add(HeartRateImportRecord(
-      clientRecordId: 'garmin_fit_hr_${entry.key}',
+      clientRecordId: 'garmin_fit_hr_${start.millisecondsSinceEpoch}',
       startTime: start,
       startZoneOffset: null,
       endTime: end,
@@ -111,13 +119,17 @@ List<ImportRecord> fitMonitoringImportRecords(FitMonitoringSummary m) {
     ));
   }
 
-  // Respiration — one hourly-average reading per hour.
+  // Respiration — one averaged reading per hour bucket, keyed and timed on its
+  // first sample for the same reason as HR above. Stamping it at the top of the
+  // hour additionally made every file in that hour claim the same instant.
   for (final entry in _bucketByHour(m.respiration, (r) => r.$1).entries) {
-    final avg = entry.value.map((r) => r.$2).reduce((a, b) => a + b) /
-        entry.value.length;
+    final readings = entry.value..sort((a, b) => a.$1.compareTo(b.$1));
+    final avg =
+        readings.map((r) => r.$2).reduce((a, b) => a + b) / readings.length;
+    final at = readings.first.$1;
     records.add(RespiratoryRateImportRecord(
-      clientRecordId: 'garmin_fit_resp_${entry.key}',
-      time: DateTime.fromMillisecondsSinceEpoch(entry.key, isUtc: true),
+      clientRecordId: 'garmin_fit_resp_${at.millisecondsSinceEpoch}',
+      time: at,
       zoneOffset: null,
       rate: avg,
     ));
