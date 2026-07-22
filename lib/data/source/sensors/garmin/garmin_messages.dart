@@ -22,10 +22,12 @@ class GarminMessageId {
   static const int response = 5000; // status/ack envelope
   static const int downloadRequest = 5002;
   static const int fileTransferData = 5004;
+  static const int filter = 5007;
   static const int setFileFlags = 5008;
   static const int deviceInformation = 5024;
   static const int systemEvent = 5030;
   static const int supportedFileTypesRequest = 5031;
+  static const int synchronization = 5037;
   static const int authNegotiation = 5101;
 }
 
@@ -198,11 +200,49 @@ class GarminSupportedFileType {
   final String name;
 }
 
-/// A message outside the sync vocabulary — kept (with its type) for logging,
-/// never acted on.
+/// The watch announcing what it has to offer (type 5037), as a bitmask over
+/// `SynchronizationMessage.FileType` ordinals.
+///
+/// Gadgetbridge answers this with a [buildFilterMessage] and only then downloads
+/// the directory — which is the exchange that appears to make the watch
+/// populate its listing at all.
+class GarminSynchronization extends GarminInboundMessage {
+  const GarminSynchronization({
+    required this.syncType,
+    required this.bitmask,
+  });
+
+  final int syncType;
+  final int bitmask;
+
+  /// Ordinals of the categories worth acting on
+  /// (`SynchronizationMessage.shouldProceed`).
+  static const int _workouts = 3;
+  static const int _activities = 5;
+  static const int _activitySummary = 21;
+  static const int _sleep = 26;
+
+  bool _has(int ordinal) => (bitmask >> ordinal) & 1 == 1;
+
+  /// Whether the announcement contains anything this app would want.
+  bool get shouldProceed =>
+      _has(_workouts) ||
+      _has(_activities) ||
+      _has(_activitySummary) ||
+      _has(_sleep);
+
+  /// The set bits, for the log — the raw evidence of what the watch is holding.
+  List<int> get setBits =>
+      [for (var i = 0; i < 64; i++) if (_has(i)) i];
+}
+
+/// A message outside the sync vocabulary. Carries its payload so an unexpected
+/// message can be identified from a device log rather than vanishing — the
+/// blind spot that hid whether the watch was talking to us at all.
 class GarminUnhandledMessage extends GarminInboundMessage {
-  const GarminUnhandledMessage(this.messageType);
+  const GarminUnhandledMessage(this.messageType, this.payload);
   final int messageType;
+  final Uint8List payload;
 }
 
 /// Parses a decoded [GarminGfdiFrame] into a typed [GarminInboundMessage].
@@ -216,9 +256,24 @@ GarminInboundMessage decodeGarminMessage(GarminGfdiFrame frame) {
       return _decodeDeviceInformation(frame.payload);
     case GarminMessageId.authNegotiation:
       return _decodeAuthNegotiation(frame.payload);
+    case GarminMessageId.synchronization:
+      return _decodeSynchronization(frame.payload);
     default:
-      return GarminUnhandledMessage(frame.messageType);
+      return GarminUnhandledMessage(frame.messageType, frame.payload);
   }
+}
+
+GarminInboundMessage _decodeSynchronization(Uint8List payload) {
+  final reader = GarminByteReader(payload);
+  final syncType = reader.readByte();
+  final size = reader.readByte();
+  // The watch sends the bitmask as either 4 or 8 bytes.
+  final bitmask = switch (size) {
+    8 => reader.readLong(),
+    4 => reader.readInt(),
+    _ => 0,
+  };
+  return GarminSynchronization(syncType: syncType, bitmask: bitmask);
 }
 
 GarminInboundMessage _decodeDeviceInformation(Uint8List payload) {
@@ -403,6 +458,17 @@ Uint8List buildDeviceInformationResponse({
     ..writeString(model)
     ..writeByte(incoming.protocolVersion ~/ 100 == 1 ? 1 : 0);
   return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
+}
+
+/// Answers a [GarminSynchronization] announcement (`FilterMessage`).
+///
+/// The single payload byte is `FilterType.UNK_3` — Gadgetbridge's name for it,
+/// meaning nobody has worked out what the other values do. It is sent verbatim
+/// because it is what a real watch is known to accept.
+Uint8List buildFilterMessage() {
+  const filterTypeUnk3 = 3;
+  final writer = GarminByteWriter()..writeByte(filterTypeUnk3);
+  return GarminGfdiFrame.build(GarminMessageId.filter, writer.toBytes());
 }
 
 /// Answers the auth challenge with ACK + `GUESS_OK`, echoing the watch's own

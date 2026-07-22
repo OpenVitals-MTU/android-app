@@ -168,6 +168,7 @@ Future<List<GarminDownloadedFile>> _runSync(
     model: 'raven',
     alreadySynced: alreadySynced,
     onProgress: progress?.add,
+    emptyGrace: Duration.zero,
   )..start();
 
   // The watch speaks first.
@@ -349,6 +350,55 @@ void main() {
       expect(requested, [0, 6]);
     });
 
+    test('a FILTER is sent before the directory is requested', () async {
+      final watch = _FakeWatch(files: {0: _directory([])});
+
+      await _runSync(watch);
+
+      final order = watch.received.map((f) => f.messageType).toList();
+      final filterAt = order.indexOf(GarminMessageId.filter);
+      final directoryAt = order.indexOf(GarminMessageId.downloadRequest);
+      expect(filterAt, isNonNegative, reason: 'the filter must be sent');
+      expect(
+        filterAt,
+        lessThan(directoryAt),
+        reason: 'the watch processes writes in order, so the filter has to '
+            'land before the listing is asked for',
+      );
+    });
+
+    test('a synchronization announcement re-reads the listing', () async {
+      // First listing empty, then the watch announces it holds sleep data.
+      final watch = _AnnouncingWatch(files: {
+        0: _directory([(5, 128, 49, 1)]),
+        5: _b([1, 2, 3]),
+      });
+
+      final files = await _runSync(watch);
+
+      // The re-read must find the file the first pass could not.
+      expect(files.map((f) => f.entry.fileIndex), [5]);
+      // Two directory requests: the initial one and the post-announcement one.
+      final directoryRequests = watch.received
+          .where((f) => f.messageType == GarminMessageId.downloadRequest)
+          .where((f) => (f.payload[0] | (f.payload[1] << 8)) == 0);
+      expect(directoryRequests, hasLength(2));
+    });
+
+    test('an announcement with nothing we want does not re-read', () async {
+      final watch = _AnnouncingWatch(
+        files: {0: _directory([])},
+        // Bit 1 is SETTINGS — not one of the categories worth acting on.
+        bitmask: 1 << 1,
+      );
+
+      await _runSync(watch);
+
+      final directoryRequests = watch.received
+          .where((f) => f.messageType == GarminMessageId.downloadRequest);
+      expect(directoryRequests, hasLength(1));
+    });
+
     test('abort keeps what was already downloaded', () async {
       final session = GarminSession(
         send: (_) async {},
@@ -369,6 +419,7 @@ void main() {
         bluetoothName: 'Pixel',
         manufacturer: 'Google',
         model: 'raven',
+        emptyGrace: Duration.zero,
       )..start();
       watch.outbox
         ..add(watch.deviceInformation())
@@ -403,5 +454,37 @@ class _CorruptingWatch extends _FakeWatch {
     outbox.add(_downloadStatus(ok: true, size: content.length));
     // Deliberately wrong running CRC.
     outbox.add(_fileChunk(offset: 0, crc: 0xDEAD, data: content));
+  }
+}
+
+/// A watch that serves an EMPTY listing first, then announces it holds sleep
+/// data — the shape observed on a real vívoactive 5.
+class _AnnouncingWatch extends _FakeWatch {
+  _AnnouncingWatch({required super.files, this.bitmask = 1 << 26});
+
+  /// Bit 26 is SLEEP in SynchronizationMessage.FileType.
+  final int bitmask;
+
+  bool _announced = false;
+
+  @override
+  void _startServing(int index) {
+    if (index == 0 && !_announced) {
+      // The first listing is empty; the announcement follows it.
+      _announced = true;
+      outbox.add(_downloadStatus(ok: true, size: 0));
+      outbox.add(_synchronization());
+      return;
+    }
+    super._startServing(index);
+  }
+
+  Uint8List _synchronization() {
+    final w = GarminByteWriter()
+      ..writeByte(0) // TYPE_0
+      ..writeByte(8) // 8-byte bitmask
+      ..writeLong(bitmask);
+    return GarminGfdiFrame.build(
+        GarminMessageId.synchronization, w.toBytes());
   }
 }

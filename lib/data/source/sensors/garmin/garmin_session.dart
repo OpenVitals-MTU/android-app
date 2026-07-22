@@ -51,6 +51,7 @@ class GarminSession {
     required this.model,
     this.alreadySynced = const {},
     this.onProgress,
+    this.emptyGrace = const Duration(seconds: 6),
   });
 
   /// Hands one built GFDI frame to the transport below. The session never sees
@@ -68,6 +69,14 @@ class GarminSession {
   final Set<String> alreadySynced;
 
   final void Function(GarminSyncProgress)? onProgress;
+
+  /// How long to keep a fruitless sync open before giving up.
+  ///
+  /// The watch may announce what it holds (SYNCHRONIZATION) a moment after the
+  /// listing is served. Finishing the instant an empty directory arrives races
+  /// that announcement and throws it away, which looks identical to "the watch
+  /// has nothing". Injectable so tests need not wait it out.
+  final Duration emptyGrace;
 
   final Completer<List<GarminDownloadedFile>> _done =
       Completer<List<GarminDownloadedFile>>();
@@ -157,8 +166,13 @@ class GarminSession {
         // GarminFileType codes a real watch actually offers.
         debugPrint('[GARMIN-SYNC] watch supports ${message.types.length} types: '
             '${message.types.map((t) => "${t.dataType}/${t.subType}:${t.name}").join(", ")}');
-        // SYNC_READY, then pull file index 0 — the directory.
         await send(buildSystemEvent(GarminSystemEventType.syncReady));
+        // FILTER before the listing. Gadgetbridge only ever sends this in reply
+        // to a SYNCHRONIZATION announcement, but an unfiltered listing came back
+        // empty from a watch that demonstrably held a night of sleep — and the
+        // watch processes our writes in order, so by the time it answers the
+        // directory request it has already seen the filter.
+        await send(buildFilterMessage());
         _report(GarminSyncPhase.listing);
         await _requestDirectory();
 
@@ -168,17 +182,42 @@ class GarminSession {
       case GarminFileTransferData():
         await _onFileChunk(message);
 
+      case GarminSynchronization():
+        // The watch announcing what it holds. Gadgetbridge answers this with a
+        // FILTER and only then lists files — and an unfiltered listing came
+        // back empty on a watch that demonstrably had a night of sleep on it,
+        // so this exchange looks like what actually populates the directory.
+        debugPrint('[GARMIN-SYNC] synchronization type=${message.syncType} '
+            'bits=${message.setBits} proceed=${message.shouldProceed}');
+        if (message.shouldProceed) {
+          // Cancel any pending give-up: the watch has just told us it holds
+          // something, so re-read the listing rather than finishing empty.
+          _graceTimer?.cancel();
+          _graceTimer = null;
+          await send(buildFilterMessage());
+          _directoryFetched = false;
+          await _requestDirectory();
+        }
+
       case GarminGenericStatus():
-        // ACKs for our own sends. Nothing to do; a NAK is logged because it is
-        // the only visible sign the watch rejected something we asked for.
+        // ACKs for our own sends. A NAK is logged because it is the only
+        // visible sign the watch rejected something we asked for.
         if (message.status != GarminStatus.ack) {
           debugPrint('[GARMIN-SYNC] NAK ${message.status.name} for '
               'message ${message.originalMessageType}');
+          break;
+        }
+        if (message.originalMessageType == GarminMessageId.filter) {
+          debugPrint('[GARMIN-SYNC] filter accepted');
         }
 
       case GarminUnhandledMessage():
-        // Music/notification chatter a read-only sync ignores by design.
-        break;
+        // Logged, not silent: a read-only sync ignores music and notification
+        // chatter, but "the watch said something we did not expect" is exactly
+        // the evidence a stalled sync needs, and swallowing it hid whether the
+        // watch was talking to us at all.
+        debugPrint('[GARMIN-SYNC] unhandled message ${message.messageType} '
+            '(${message.payload.length}B) ${_hex(message.payload, max: 32)}');
     }
   }
 
@@ -295,9 +334,26 @@ class GarminSession {
     await send(buildDownloadRequest(fileIndex: entry.fileIndex));
   }
 
+  Timer? _graceTimer;
+  bool _graceUsed = false;
+
   Future<void> _complete() async {
     if (_finished) return;
+    if (_downloaded.isEmpty && !_graceUsed) {
+      _graceUsed = true;
+      debugPrint('[GARMIN-SYNC] nothing listed; waiting '
+          '${emptyGrace.inSeconds}s in case the watch announces');
+      _graceTimer = Timer(emptyGrace, () => unawaited(_finish()));
+      return;
+    }
+    await _finish();
+  }
+
+  Future<void> _finish() async {
+    if (_finished) return;
     _finished = true;
+    _graceTimer?.cancel();
+    _graceTimer = null;
     await send(buildSystemEvent(GarminSystemEventType.syncComplete));
     _report(GarminSyncPhase.complete);
     debugPrint('[GARMIN-SYNC] complete: ${_downloaded.length} files');
