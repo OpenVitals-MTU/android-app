@@ -44,13 +44,23 @@ class GarminProtobufTransport {
 
   int _lastRequestId = 0;
   final Map<int, Completer<Uint8List>> _pending = {};
-  final Map<int, BytesBuilder> _incoming = {};
+  /// Chunks in flight: request id → offset → bytes.
+  ///
+  /// Keyed by OFFSET rather than appended, because the watch retransmits chunks
+  /// it thinks were not acknowledged. Appending them grew a 1017-byte message to
+  /// 1461 and only parsed by luck, protobuf reading the declared length and
+  /// ignoring the tail.
+  final Map<int, Map<int, Uint8List>> _incoming = {};
 
   /// Sends [payload] as a `Smart` message and waits for the watch's reply.
   ///
   /// Returns the reply's protobuf bytes, or null when it does not arrive in
   /// time — a caller that only wants fire-and-forget can ignore the result.
-  Future<Uint8List?> request(Uint8List payload, {String? label}) async {
+  Future<Uint8List?> request(
+    Uint8List payload, {
+    String? label,
+    Duration? timeout,
+  }) async {
     if (payload.length > maxChunkSize) {
       throw ArgumentError(
         'Protobuf request is ${payload.length}B, over the $maxChunkSize B '
@@ -67,10 +77,10 @@ class GarminProtobufTransport {
     await send(_frame(GarminMessageId.protobufRequest, requestId, payload));
 
     try {
-      return await completer.future.timeout(replyTimeout);
+      return await completer.future.timeout(timeout ?? replyTimeout);
     } on TimeoutException {
       debugPrint('[GARMIN-PB] ✗ no reply to #$requestId within '
-          '${replyTimeout.inSeconds}s');
+          '${(timeout ?? replyTimeout).inSeconds}s');
       return null;
     } finally {
       _pending.remove(requestId);
@@ -103,8 +113,8 @@ class GarminProtobufTransport {
     // request under an id OF ITS OWN rather than echoing ours, so treating an
     // unmatched id as unchunked lost every screen after the first 487 bytes.
     if (totalLength != chunkLength || dataOffset != 0) {
-      final buffer = _incoming.putIfAbsent(requestId, BytesBuilder.new);
-      buffer.add(bytes);
+      final chunks = _incoming.putIfAbsent(requestId, () => <int, Uint8List>{});
+      chunks[dataOffset] = bytes;
       // A chunk needs an acknowledgement that names it, or the watch never
       // sends the next one.
       unawaited(send(buildProtobufChunkAck(
@@ -112,13 +122,19 @@ class GarminProtobufTransport {
         requestId: requestId,
         dataOffset: dataOffset + chunkLength,
       )));
-      if (buffer.length < totalLength) {
-        debugPrint('[GARMIN-PB] ← #$requestId chunk '
-            '${buffer.length}/$totalLength B');
+      final held = chunks.values.fold<int>(0, (sum, c) => sum + c.length);
+      if (held < totalLength) {
+        debugPrint('[GARMIN-PB] ← #$requestId chunk $held/$totalLength B');
         return true;
       }
-      _deliver(requestId, buffer.takeBytes());
+      // Assembled in offset order, so a retransmission that arrived late lands
+      // where it belongs rather than at the end.
+      final assembled = BytesBuilder();
+      for (final offset in chunks.keys.toList()..sort()) {
+        assembled.add(chunks[offset]!);
+      }
       _incoming.remove(requestId);
+      _deliver(requestId, assembled.takeBytes());
       return true;
     }
 

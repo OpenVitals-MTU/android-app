@@ -28,12 +28,42 @@ class GarminSettingsService {
   static const int _reqUnk2 = 2;
   static const int _reqLanguage = 3;
 
+  // ScreenDefinition / ScreenEntry / Target fields.
+  static const int _defEntry = 5;
+  static const int _entryTitle = 3;
+  static const int _entryTarget = 9;
+  static const int _targetType = 1;
+  static const int _targetSubscreen = 2;
+  static const int _labelText = 2;
+
   // InitRequest fields.
   static const int _initLanguage = 1;
   static const int _initRegion = 2;
 
   /// The tree's root, from Gadgetbridge's `GarminRealtimeSettingsFragment`.
   static const int rootScreenId = 36352;
+
+  /// How long the watch may take to build a screen.
+  ///
+  /// Measured: a root definition arrived after more than ten seconds, so the
+  /// transport's default timed the request out and a later, unrelated settings
+  /// message was mistaken for the answer.
+  static const Duration replyTimeout = Duration(seconds: 30);
+
+  /// The SettingsService field a reply of each kind arrives in.
+  static const int definitionResponseField = _definitionResponse;
+  static const int stateResponseField = _stateResponse;
+
+  /// Whether [reply] carries the response field [responseField].
+  ///
+  /// Correlating on "is this a settings message" was not enough: the watch
+  /// sends several, and the first to arrive was a five-byte one on field 7 that
+  /// answered nothing we asked.
+  static bool carries(Uint8List? reply, int responseField) {
+    final service = unwrap(reply);
+    if (service == null) return false;
+    return protobufField(readProtobuf(service), responseField) != null;
+  }
 
   /// Opens the settings service for a locale.
   ///
@@ -96,6 +126,42 @@ class GarminSettingsService {
     return protobufField(readProtobuf(service), _stateResponse) != null;
   }
 
+  /// One entry on a screen that leads somewhere else.
+  static List<GarminSettingsSubscreen> subscreens(Uint8List reply) {
+    final service = unwrap(reply);
+    if (service == null) return const [];
+    final response =
+        protobufField(readProtobuf(service), _definitionResponse)?.bytes;
+    if (response == null) return const [];
+    final definition = protobufField(readProtobuf(response), 2)?.bytes;
+    if (definition == null) return const [];
+
+    final out = <GarminSettingsSubscreen>[];
+    for (final field in readProtobuf(definition)) {
+      if (field.field != _defEntry) continue;
+      final entry = field.bytes;
+      if (entry == null) continue;
+      final fields = readProtobuf(entry);
+      final target = protobufField(fields, _entryTarget)?.bytes;
+      if (target == null) continue;
+      final targetFields = readProtobuf(target);
+      // Target type 0 is "another screen"; 6 opens an activity ON the watch and
+      // 7 is hidden, neither of which this app can walk into.
+      if (protobufField(targetFields, _targetType)?.varint != 0) continue;
+      final screenId = protobufField(targetFields, _targetSubscreen)?.varint;
+      if (screenId == null) continue;
+
+      String? title;
+      final label = protobufField(fields, _entryTitle)?.bytes;
+      if (label != null) {
+        final text = protobufField(readProtobuf(label), _labelText)?.bytes;
+        if (text != null) title = String.fromCharCodes(text);
+      }
+      out.add(GarminSettingsSubscreen(screenId: screenId, title: title));
+    }
+    return out;
+  }
+
   /// Prints a reply's structure, field by field, without interpreting it.
   ///
   /// The point of the first exchange is to SEE what the watch sends. Naming the
@@ -137,4 +203,13 @@ class GarminSettingsService {
 
   static String _hex(Uint8List bytes) =>
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+}
+
+
+/// An entry that leads to another screen: where it goes, and what it is called.
+class GarminSettingsSubscreen {
+  const GarminSettingsSubscreen({required this.screenId, this.title});
+
+  final int screenId;
+  final String? title;
 }

@@ -171,51 +171,76 @@ class GarminWatchSyncService {
         }
       };
 
-      Future<Uint8List?> ask(Uint8List request, String label) async {
-        final byContent = settingsReplies.stream.first
-            .timeout(const Duration(seconds: 12), onTimeout: () => Uint8List(0));
-        final byId = session.protobuf.request(request, label: label);
-        // Whichever arrives — some replies echo our id, some do not.
+      /// Sends a settings request and waits for the reply that ANSWERS it.
+      ///
+      /// Matched on the response field, not merely on "is this settings
+      /// traffic": the watch emits several settings messages unprompted, and
+      /// the first to arrive was a five-byte one answering nothing we had
+      /// asked. Matched on content rather than id because the watch replies
+      /// under an id of its own.
+      Future<Uint8List?> ask(
+        Uint8List request,
+        String label, {
+        required int responseField,
+      }) async {
+        final byContent = settingsReplies.stream
+            .firstWhere((r) => GarminSettingsService.carries(r, responseField))
+            .timeout(
+              GarminSettingsService.replyTimeout,
+              onTimeout: () => Uint8List(0),
+            );
+        final byId = session.protobuf.request(
+          request,
+          label: label,
+          timeout: GarminSettingsService.replyTimeout,
+        );
         final replies = await Future.wait([byId, byContent]);
-        final echoed = replies[0];
-        if (echoed != null && GarminSettingsService.unwrap(echoed) != null) {
-          return echoed;
+        // Some replies echo our id, some arrive as the watch's own traffic.
+        for (final reply in replies) {
+          if (reply != null &&
+              GarminSettingsService.carries(reply, responseField)) {
+            return reply;
+          }
         }
-        final pushed = replies[1];
-        return (pushed != null && pushed.isNotEmpty) ? pushed : null;
+        return null;
       }
 
-      final init = await ask(
+      /// Fetches one screen and prints it.
+      Future<Uint8List?> fetchScreen(int screenId, String label) async {
+        final definition = await ask(
+          GarminSettingsService.screenDefinition(screenId, language: language),
+          '$label definition',
+          responseField: GarminSettingsService.definitionResponseField,
+        );
+        debugPrint('[GARMIN-SETTINGS] $label definition: '
+            '${definition == null ? "none" : "${definition.length}B"}');
+        if (definition != null) GarminSettingsService.describe(definition);
+        return definition;
+      }
+
+      // Init is fire-and-forget: it opens the service for a locale and the
+      // watch answers on a field of its own, which nothing downstream needs.
+      unawaited(session.protobuf.request(
         GarminSettingsService.init(language: language, region: region),
-        'settings init',
-      );
-      debugPrint('[GARMIN-SETTINGS] init reply: '
-          '${init == null ? "none" : "${init.length}B"}');
-      if (init != null) GarminSettingsService.describe(init);
+        label: 'settings init',
+        timeout: GarminSettingsService.replyTimeout,
+      ));
 
-      final definition = await ask(
-        GarminSettingsService.screenDefinition(
-          GarminSettingsService.rootScreenId,
-          language: language,
-        ),
-        'root definition',
-      );
-      debugPrint('[GARMIN-SETTINGS] root definition: '
-          '${definition == null ? "none" : "${definition.length}B"} '
-          '(recognised=${GarminSettingsService.hasDefinition(definition)})');
-      if (definition != null) GarminSettingsService.describe(definition);
+      final root = await fetchScreen(GarminSettingsService.rootScreenId, 'root');
+      if (root == null) {
+        await settingsReplies.close();
+        return false;
+      }
 
-      final state = await ask(
-        GarminSettingsService.screenState(GarminSettingsService.rootScreenId),
-        'root state',
-      );
-      debugPrint('[GARMIN-SETTINGS] root state: '
-          '${state == null ? "none" : "${state.length}B"} '
-          '(recognised=${GarminSettingsService.hasState(state)})');
-      if (state != null) GarminSettingsService.describe(state);
+      // Walk into every subscreen the root offers, which is where alarms live —
+      // the root itself carries only categories.
+      for (final entry in GarminSettingsService.subscreens(root)) {
+        await fetchScreen(entry.screenId, 'screen ${entry.screenId} '
+            '(${entry.title ?? "untitled"})');
+      }
 
       await settingsReplies.close();
-      return definition != null;
+      return true;
     } on TimeoutException {
       debugPrint('[GARMIN-SETTINGS] the watch never finished its handshake');
       return false;
