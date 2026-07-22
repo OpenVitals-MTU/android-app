@@ -201,6 +201,15 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
     await ref.read(garminWellnessDaoProvider).upsertSamples(rows);
     debugPrint('[GARMIN-SYNC] stored ${rows.length} watch-only samples '
         '(stress + body battery)');
+
+    // Let the new Body Battery teach the Body Energy gains. Best-effort by
+    // design: calibration is an enhancement, so a failure here must not fail a
+    // sync whose data has already landed.
+    try {
+      await ref.read(fitBodyEnergyFromWatchUseCaseProvider)();
+    } catch (error) {
+      debugPrint('[GARMIN-SYNC] body-energy calibration skipped: $error');
+    }
   }
 
   /// Clears the finished/failed banner so the row goes back to normal.
