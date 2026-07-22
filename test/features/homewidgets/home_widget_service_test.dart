@@ -31,6 +31,30 @@ void main() {
   });
 
   group('homeWidgetDataMap', () {
+    test('a plot series rides as one comma-separated value', () {
+      // One key rather than forty-eight: the plugin's storage is a flat map
+      // shared by every widget, and a key per point would dwarf everything else
+      // in it on each refresh.
+      final data = homeWidgetDataMap(
+        const HomeWidgetSnapshot(title: 'Body Energy', series: [70, 62, 55]),
+        prefix: 'body_energy.',
+      );
+
+      expect(data['body_energy.series'], '70,62,55');
+    });
+
+    test('a widget with no plot writes an empty series, not a missing key', () {
+      // The native side reads this as "nothing to draw" and falls back to the
+      // rows. A stale value left behind from a previous push would draw
+      // yesterday's day under today's number.
+      final data = homeWidgetDataMap(
+        const HomeWidgetSnapshot(title: 'Steps'),
+        prefix: 'metric.',
+      );
+
+      expect(data['metric.series'], '');
+    });
+
     test('maps the snapshot to the Kotlin key layout, under the prefix', () {
       final data = homeWidgetDataMap(
         const HomeWidgetSnapshot(

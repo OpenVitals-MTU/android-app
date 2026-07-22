@@ -54,6 +54,8 @@ internal data class HomeWidgetSnapshot(
     val subtitle: String = "",
     val route: String = DefaultRoute,
     val rows: List<HomeWidgetRow> = emptyList(),
+    /** Day values for a widget that draws a plot. Empty for the others. */
+    val series: List<Int> = emptyList(),
 ) {
     companion object {
         /** Dart's `HomeWidgetSnapshot.defaultRoute` / Kotlin's `Screen.Dashboard.route`. */
@@ -87,7 +89,20 @@ internal fun SharedPreferences.readHomeWidgetSnapshot(prefix: String): HomeWidge
         subtitle = getString("${prefix}subtitle", null).orEmpty(),
         route = getString("${prefix}route", null) ?: HomeWidgetSnapshot.DefaultRoute,
         rows = rows,
+        series = parseSeries(getString("${prefix}series", null)),
     )
+}
+
+/**
+ * Reads the comma-separated plot values Dart wrote.
+ *
+ * Anything unparseable is DROPPED rather than defaulted to zero: a zero is a
+ * legitimate score, so substituting one would draw a cliff to the floor that
+ * the day never had.
+ */
+private fun parseSeries(raw: String?): List<Int> {
+    if (raw.isNullOrBlank()) return emptyList()
+    return raw.split(',').mapNotNull { it.trim().toIntOrNull() }
 }
 
 /** `"<label>: <value>[ - <subtitle>]"`. Kotlin `HomeMetricWidgetRow.displayText()`. */

@@ -9,6 +9,7 @@ import 'package:openvitals/domain/model/dashboard_data.dart';
 import 'package:openvitals/domain/model/dashboard_query.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
+import 'package:openvitals/features/homewidgets/home_widget_service.dart';
 import 'package:openvitals/features/homewidgets/home_widget_snapshots.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
@@ -30,6 +31,7 @@ BodyEnergyTimeline _timeline({
   int startScore = 70,
   int charged = 30,
   int drained = 12,
+  List<int> scores = const [],
 }) =>
     BodyEnergyTimeline(
       date: LocalDate(2026, 7, 10),
@@ -37,7 +39,23 @@ BodyEnergyTimeline _timeline({
       currentScore: currentScore,
       charged: charged,
       drained: drained,
-      points: const [],
+      points: [
+        for (var i = 0; i < scores.length; i++)
+          BodyEnergyTimelinePoint(
+            time: DateTime(2026, 7, 10).add(Duration(minutes: 5 * i)),
+            score: scores[i],
+            delta: 0,
+            state: BodyEnergyBucketState.rest,
+            confidence: BodyEnergyConfidence.high,
+            charge: 0,
+            intensityDrain: 0,
+            activityEnergyDrain: 0,
+            basalDrain: 0,
+            stressDrain: 0,
+            recoveryDebtDrain: 0,
+            primaryInfluence: BodyEnergyPrimaryInfluence.steady,
+          ),
+      ],
       confidence: BodyEnergyConfidence.high,
       confidenceReason: 'test',
     );
@@ -153,6 +171,40 @@ void main() {
       expect(statusFor(40), l10n.homeWidgetBodyEnergyLimited);
       expect(statusFor(39), l10n.homeWidgetBodyEnergyLow);
       expect(statusFor(0), l10n.homeWidgetBodyEnergyLow);
+    });
+
+    test('carries the day as a series the widget can plot', () {
+      final snapshot = buildBodyEnergySnapshot(
+        DashboardData(
+          date: LocalDate(2026, 7, 10),
+          bodyEnergyTimeline:
+              _timeline(currentScore: 55, scores: const [70, 62, 58, 55]),
+        ),
+        l10n,
+      );
+
+      expect(snapshot.series, [70, 62, 58, 55]);
+    });
+
+    test('a full day is thinned, and still ends where the number says', () {
+      // Body Energy is computed in five-minute buckets — 288 of them — which is
+      // more than the widget can draw and more than belongs in the shared
+      // preferences file on every refresh.
+      final day = [for (var i = 0; i < 288; i++) 100 - (i ~/ 6)];
+      final snapshot = buildBodyEnergySnapshot(
+        DashboardData(
+          date: LocalDate(2026, 7, 10),
+          bodyEnergyTimeline: _timeline(currentScore: day.last, scores: day),
+        ),
+        l10n,
+      );
+
+      expect(snapshot.series, hasLength(maxHomeWidgetSeriesPoints));
+      expect(snapshot.series.first, day.first);
+      // The last point IS the current score. A line ending anywhere else would
+      // visibly disagree with the number printed beside it.
+      expect(snapshot.series.last, day.last);
+      expect(snapshot.value, '${day.last}');
     });
 
     test('falls back to "--" with no rows when the timeline is absent', () {

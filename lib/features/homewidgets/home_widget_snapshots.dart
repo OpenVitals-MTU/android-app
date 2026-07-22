@@ -89,6 +89,9 @@ HomeWidgetSnapshot buildBodyEnergySnapshot(
     value: '${timeline.currentScore}',
     subtitle: homeWidgetBodyEnergyStatus(timeline.currentScore, l10n),
     route: route,
+    series: homeWidgetSeries(
+      [for (final point in timeline.points) point.score],
+    ),
     rows: [
       HomeWidgetRow(
         label: l10n.bodyEnergyTimelineStart,
@@ -104,6 +107,23 @@ HomeWidgetSnapshot buildBodyEnergySnapshot(
       ),
     ],
   );
+}
+
+/// Thins [values] down to at most [maxHomeWidgetSeriesPoints], evenly.
+///
+/// The LAST value always survives. It is the one the widget also prints as the
+/// current score, and a plot whose line ended somewhere other than the number
+/// beside it would be visibly disagreeing with itself.
+List<int> homeWidgetSeries(List<int> values) {
+  if (values.length <= maxHomeWidgetSeriesPoints) return List.of(values);
+  final out = <int>[];
+  // Spread the sample points across the whole range rather than taking every
+  // Nth from the start, which would stop short of the end by up to N.
+  final step = (values.length - 1) / (maxHomeWidgetSeriesPoints - 1);
+  for (var i = 0; i < maxHomeWidgetSeriesPoints; i++) {
+    out.add(values[(i * step).round()]);
+  }
+  return out;
 }
 
 /// The one-word body-energy status (Kotlin `bodyEnergyStatus`).

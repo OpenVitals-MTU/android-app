@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Placed four cells by two so a NEW widget lands in the larger of the two
+    responsive buckets, which is the one that draws the day's curve. At the
+    default two-by-one it would come out in the small bucket and show only the
+    numbers, and nobody would find the plot by guessing they should drag it
+    wider. Existing widgets keep whatever size they were given.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="220dp"
     android:minHeight="110dp"
-    android:targetCellWidth="2"
-    android:targetCellHeight="1"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
     android:maxResizeWidth="360dp"
     android:maxResizeHeight="220dp"
+    android:minResizeWidth="220dp"
+    android:minResizeHeight="110dp"
     android:updatePeriodMillis="1800000"
     android:description="@string/home_body_energy_widget_description"
     android:initialLayout="@layout/glance_default_loading_layout"

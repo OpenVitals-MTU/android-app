@@ -20,6 +20,9 @@ import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
@@ -79,20 +82,16 @@ class HomeDailyReadinessWidgetReceiver :
 class HomeBodyEnergyWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<HomeWidgetGlanceState> =
         HomeWidgetGlanceStateDefinition()
-    override val sizeMode = SizeMode.Responsive(HomeStatusWidgetSizes)
+    // EXACT, not Responsive: the curve is drawn to fit the width it is given, so
+    // it needs the width the widget actually has. Responsive reports the largest
+    // DECLARED size that fits, which on a 309dp widget is the 220dp bucket — and
+    // the plot was then drawn 70dp wide inside a card nearly a third of a screen
+    // across, with the rest of it empty.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            HomeStatusWidgetContentFromState(
-                prefix = BodyEnergyPrefix,
-                fallback = { fallbackContext ->
-                    fallbackStatusSnapshot(
-                        context = fallbackContext,
-                        title = fallbackContext.getString(R.string.screen_body_energy),
-                        route = HomeWidgetSnapshot.DefaultRoute,
-                    )
-                },
-            )
+            HomeBodyEnergyContentFromState()
         }
     }
 }
@@ -113,6 +112,133 @@ class HomeTodayVitalsWidget : GlanceAppWidget() {
 
 class HomeTodayVitalsWidgetReceiver : HomeWidgetGlanceWidgetReceiver<HomeTodayVitalsWidget>() {
     override val glanceAppWidget = HomeTodayVitalsWidget()
+}
+
+/**
+ * Body Energy: the numbers, and the day's curve beside them.
+ *
+ * One layout at every size rather than a stacked variant for tall widgets. The
+ * numbers are what the widget is for and the curve is context around them, so
+ * the text column keeps what it needs and the curve takes the whole of the rest
+ * — all the leftover width, all the height. Making it wider or taller grows the
+ * plot; making it narrower shrinks the plot, and nothing else moves.
+ *
+ * Only when the leftover is too thin to hold a shape does the plot go.
+ */
+@Composable
+private fun HomeBodyEnergyContentFromState() {
+    val context = LocalContext.current
+    val size = LocalSize.current
+    val preferences = currentState<HomeWidgetGlanceState>().preferences
+    val snapshot = preferences.readHomeWidgetSnapshot(BodyEnergyPrefix)
+        ?: fallbackStatusSnapshot(
+            context = context,
+            title = context.getString(R.string.screen_body_energy),
+            route = HomeWidgetSnapshot.DefaultRoute,
+        )
+
+    // Sized to the widest line it holds ("Charged: +34" at 11sp) rather than
+    // padded out: every dp kept here is a dp the curve does not get.
+    val textWidth = 108.dp
+    val gap = 10.dp
+    val plotWidth = size.width.value - 2 * BodyEnergyPadding.value - textWidth.value - gap.value
+    val plotHeight = size.height.value - 2 * BodyEnergyPadding.value
+
+    val plot = if (snapshot.series.size >= 2 && plotWidth >= BodyEnergyMinPlotWidth) {
+        renderPlot(
+            context = context,
+            series = snapshot.series,
+            widthDp = plotWidth,
+            heightDp = plotHeight,
+        )
+    } else {
+        null
+    }
+    if (plot == null) {
+        HomeMetricWidgetContent(snapshot = snapshot)
+        return
+    }
+
+    Row(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(HomeWidgetTokens.BackgroundProvider)
+            .clickable(openRouteAction(context, snapshot.route))
+            .padding(BodyEnergyPadding),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+    ) {
+        Column(modifier = GlanceModifier.width(textWidth)) {
+            Text(
+                text = snapshot.title,
+                maxLines = 1,
+                style = TextStyle(
+                    color = HomeWidgetTokens.MutedTextProvider,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+            Text(
+                text = snapshot.value,
+                maxLines = 1,
+                style = TextStyle(
+                    color = HomeWidgetTokens.PrimaryTextProvider,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+            if (snapshot.subtitle.isNotBlank()) {
+                Text(
+                    text = snapshot.subtitle,
+                    maxLines = 1,
+                    style = TextStyle(
+                        color = HomeWidgetTokens.MutedTextProvider,
+                        fontSize = 13.sp,
+                    ),
+                )
+            }
+            // Only where there is height to hold them. On a short widget these
+            // are what gives way, not the score or the curve.
+            if (plotHeight >= BodyEnergyRowsMinHeight) {
+                snapshot.rows.take(2).forEach { row ->
+                    Text(
+                        text = row.displayText(),
+                        maxLines = 1,
+                        style = TextStyle(
+                            color = HomeWidgetTokens.PrimaryTextProvider,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                    )
+                }
+            }
+        }
+        Spacer(modifier = GlanceModifier.width(gap))
+        Image(
+            provider = ImageProvider(plot),
+            // Described by what it shows, not as "chart": a screen reader saying
+            // "39 Low" reads the same thing the sighted user does.
+            contentDescription = "${snapshot.value} ${snapshot.subtitle}".trim(),
+            contentScale = ContentScale.FillBounds,
+            modifier = GlanceModifier.width(plotWidth.dp).height(plotHeight.dp),
+        )
+    }
+}
+
+/** Rasterises the curve at the exact size it will be drawn at. */
+private fun renderPlot(
+    context: Context,
+    series: List<Int>,
+    widthDp: Float,
+    heightDp: Float,
+): android.graphics.Bitmap? {
+    if (widthDp <= 0f || heightDp <= 0f) return null
+    val density = context.resources.displayMetrics.density
+    return BodyEnergyPlot.render(
+        series = series,
+        widthPx = (widthDp * density).toInt(),
+        heightPx = (heightDp * density).toInt(),
+        density = density,
+    )
 }
 
 @Composable
@@ -360,6 +486,20 @@ private fun todayVitalsFallbackSnapshot(context: Context): HomeWidgetSnapshot =
 
 /** Kotlin `Screen.DailyReadiness.route`. */
 private const val DailyReadinessRoute = "daily_readiness"
+
+/**
+ * The width at which the day curve replaces the rows.
+ *
+ * The larger of the widget's two declared sizes. Below it a 24-hour line is a
+ * few pixels per hour, which reads as noise rather than as a shape.
+ */
+/** Below this the leftover strip is too thin to read a day off. */
+private const val BodyEnergyMinPlotWidth = 48f
+
+/** Below this there is no room for the start/charged lines under the score. */
+private const val BodyEnergyRowsMinHeight = 96f
+
+private val BodyEnergyPadding = 16.dp
 
 private val HomeStatusWidgetSizes = setOf(
     DpSize(220.dp, 110.dp),

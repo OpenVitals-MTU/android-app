@@ -113,6 +113,7 @@ class HomeWidgetSnapshot {
     this.subtitle = '',
     this.route = defaultRoute,
     this.rows = const <HomeWidgetRow>[],
+    this.series = const <int>[],
   });
 
   final String title;
@@ -122,12 +123,29 @@ class HomeWidgetSnapshot {
   final String route;
   final List<HomeWidgetRow> rows;
 
+  /// A day's worth of values for a widget that draws a plot rather than only
+  /// naming a number. Empty for every widget that does not.
+  ///
+  /// Deliberately just the values: the widget draws one point per entry, evenly
+  /// spaced across its width, so it needs no timestamps and no scale. Whatever
+  /// samples this came from are thinned to [maxHomeWidgetSeriesPoints] before
+  /// they get here.
+  final List<int> series;
+
   /// Fallback navigation target (the dashboard), matching `Screen.Dashboard`.
   static const String defaultRoute = 'dashboard';
 }
 
 /// Maximum rows persisted per widget, matching the Kotlin `MaxHomeWidgetRows`.
 const int maxHomeWidgetRows = 12;
+
+/// Most plot points persisted for one widget.
+///
+/// Body Energy is computed in five-minute buckets — 288 a day — which is far
+/// more than a widget a few hundred pixels wide can draw, and all of it would
+/// sit in the shared preferences file every refresh. Forty-eight is a point
+/// every half hour, which is smooth at this size.
+const int maxHomeWidgetSeriesPoints = 48;
 
 /// Pure mapper: [snapshot] → the flat `key → value` payload written to widget
 /// storage, every key under [prefix].
@@ -159,6 +177,9 @@ Map<String, Object> homeWidgetDataMap(
     '${prefix}subtitle': snapshot.subtitle,
     '${prefix}route': snapshot.route,
     '${prefix}row_count': rowCount,
+    // One string rather than a key per point: the plugin's storage is a flat
+    // map, and forty-eight keys per refresh would dwarf everything else in it.
+    '${prefix}series': snapshot.series.join(','),
   };
   for (var index = 0; index < rowCount; index++) {
     final row = snapshot.rows[index];
