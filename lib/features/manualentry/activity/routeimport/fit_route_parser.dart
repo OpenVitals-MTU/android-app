@@ -80,6 +80,8 @@ class FitMonitoringSummary {
     this.stepPoints = const [],
     this.distancePoints = const [],
     this.caloriePoints = const [],
+    this.stress = const [],
+    this.bodyEnergy = const [],
   });
 
   final DateTime? restingHeartRateTime;
@@ -98,6 +100,17 @@ class FitMonitoringSummary {
   final List<FitMonitoringPoint> distancePoints;
   final List<FitMonitoringPoint> caloriePoints;
 
+  /// Garmin stress score `(time, 0..100)`. Health Connect has no type for this,
+  /// so it is kept in the app's own database rather than exported.
+  final List<(DateTime, int)> stress;
+
+  /// Garmin Body Battery `(time, 0..100)`. Same story — no Health Connect type.
+  ///
+  /// Note this is the WATCH's measure, distinct from the app's own computed
+  /// Body Energy timeline; they are two independent estimates of a similar idea
+  /// and must not be conflated.
+  final List<(DateTime, int)> bodyEnergy;
+
   bool get isEmpty =>
       restingHeartRateBpm == null &&
       bmrKcalPerDay == null &&
@@ -105,7 +118,9 @@ class FitMonitoringSummary {
       respiration.isEmpty &&
       stepPoints.isEmpty &&
       distancePoints.isEmpty &&
-      caloriePoints.isEmpty;
+      caloriePoints.isEmpty &&
+      stress.isEmpty &&
+      bodyEnergy.isEmpty;
 }
 
 /// The wellness data a FIT file carried, from one decode pass. Each Garmin file
@@ -452,6 +467,8 @@ class _FitMonitoringRaw {
     this.bmrKcalPerDay,
     this.heartRate = const [],
     this.respiration = const [],
+    this.stress = const [],
+    this.bodyEnergy = const [],
     this.steps = const [],
     this.distance = const [],
     this.calories = const [],
@@ -463,6 +480,8 @@ class _FitMonitoringRaw {
   final double? bmrKcalPerDay;
   final List<(DateTime, int)> heartRate;
   final List<(DateTime, double)> respiration;
+  final List<(DateTime, int)> stress;
+  final List<(DateTime, int)> bodyEnergy;
   final List<FitMonitoringPoint> steps;
   final List<FitMonitoringPoint> distance;
   final List<FitMonitoringPoint> calories;
@@ -474,6 +493,8 @@ class _FitMonitoringRaw {
         bmrKcalPerDay: other.bmrKcalPerDay ?? bmrKcalPerDay,
         heartRate: [...heartRate, ...other.heartRate],
         respiration: [...respiration, ...other.respiration],
+        stress: [...stress, ...other.stress],
+        bodyEnergy: [...bodyEnergy, ...other.bodyEnergy],
         steps: [...steps, ...other.steps],
         distance: [...distance, ...other.distance],
         calories: [...calories, ...other.calories],
@@ -487,6 +508,8 @@ class _FitMonitoringRaw {
       bmrKcalPerDay: bmrKcalPerDay,
       heartRateSamples: heartRate,
       respiration: respiration,
+      stress: stress,
+      bodyEnergy: bodyEnergy,
       stepPoints: steps,
       distancePoints: distance,
       caloriePoints: calories,
@@ -738,6 +761,8 @@ class _FitSingleFileDecoder {
   int? _monCurrentActivityType;
   final List<(DateTime, int)> _monHeartRate = [];
   final List<(DateTime, double)> _respiration = [];
+  final List<(DateTime, int)> _stress = [];
+  final List<(DateTime, int)> _bodyEnergy = [];
   final List<FitMonitoringPoint> _monSteps = [];
   final List<FitMonitoringPoint> _monDistance = [];
   final List<FitMonitoringPoint> _monCalories = [];
@@ -776,6 +801,8 @@ class _FitSingleFileDecoder {
         bmrKcalPerDay: _bmrKcalPerDay,
         heartRate: _monHeartRate,
         respiration: _respiration,
+        stress: _stress,
+        bodyEnergy: _bodyEnergy,
         steps: _monSteps,
         distance: _monDistance,
         calories: _monCalories,
@@ -959,6 +986,26 @@ class _FitSingleFileDecoder {
         break;
       case _fitMonitoringMessageNumber:
         _readMonitoring(values, messageTimestamp);
+        break;
+      case _fitStressLevelMessageNumber:
+        // The stress message carries BOTH the stress score and Body Battery —
+        // Body Battery has no message of its own. Its own timestamp field is
+        // preferred over the record header's, as Gadgetbridge does.
+        final stressTimeRaw =
+            values[_fitStressLevelTimeFieldNumber] ?? messageTimestamp;
+        if (stressTimeRaw != null) {
+          final at = _fitDateTimeInstant(stressTimeRaw);
+          final stress = values[_fitStressLevelValueFieldNumber];
+          // Negative is Garmin's "not measurable" (asleep, moving, poor
+          // contact), not a low score — dropped rather than clamped to 0.
+          if (stress != null && stress >= 0 && stress <= 100) {
+            _stress.add((at, stress));
+          }
+          final energy = values[_fitStressBodyEnergyFieldNumber];
+          if (energy != null && energy >= 0 && energy <= 100) {
+            _bodyEnergy.add((at, energy));
+          }
+        }
         break;
       case _fitRespirationRateMessageNumber:
         final rateRaw = values[_fitRespirationRateFieldNumber];
@@ -1547,6 +1594,14 @@ const int _fitUint8Invalid = 0xFF;
 // `timestamp` (253). See docs/reference/garmin-fit-files.md.
 const int _fitMonitoringMessageNumber = 55;
 const int _fitRespirationRateMessageNumber = 297;
+
+// stress_level (227) carries the stress score AND Body Battery; the latter has
+// no message of its own. Field numbers from Gadgetbridge's
+// AbstractFitStressLevel (AGPLv3).
+const int _fitStressLevelMessageNumber = 227;
+const int _fitStressLevelValueFieldNumber = 0; // sint8, 0..100 (negative = n/a)
+const int _fitStressLevelTimeFieldNumber = 1; // uint32, Garmin epoch seconds
+const int _fitStressBodyEnergyFieldNumber = 3; // uint8, 0..100
 const int _fitMonitoringDistanceFieldNumber = 2; // uint32, ÷100 m, cumulative
 const int _fitMonitoringStepsFieldNumber = 3; // uint32, raw == steps (walk/run)
 const int _fitMonitoringActivityTypeFieldNumber = 5;
@@ -1649,4 +1704,5 @@ const Set<int> _fitParsedMessageNumbers = {
   _fitMonitoringInfoMessageNumber,
   _fitMonitoringMessageNumber,
   _fitRespirationRateMessageNumber,
+  _fitStressLevelMessageNumber,
 };

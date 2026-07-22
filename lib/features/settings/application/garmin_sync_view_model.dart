@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../data/local/open_vitals_database.dart';
 import '../../../data/source/sensors/garmin/garmin_ble_transport.dart';
 import '../../../data/source/sensors/garmin/garmin_session.dart';
 import '../../../di/providers.dart';
 import '../../../state/app_providers.dart';
 import '../../imports/application/route_bulk_import_view_model.dart';
+import '../../manualentry/activity/routeimport/fit_route_parser.dart';
 
 part 'garmin_sync_view_model.freezed.dart';
 
@@ -122,6 +124,10 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
               ],
               ref.read(unitSystemProvider),
             );
+        // Stress and Body Battery have no Health Connect type, so they go to the
+        // app's own table instead — separately from the import above, which only
+        // handles what Health Connect can hold.
+        await _storeWatchOnlyMetrics(downloaded);
       } catch (error) {
         // The importer tolerates a bad FILE internally, so reaching here means
         // the write path itself is unavailable (no Health Connect, permissions
@@ -152,6 +158,49 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
       lastFileCount: downloaded.length,
     );
     return downloaded.length;
+  }
+
+  /// Extracts the watch-only metrics from the downloaded files and upserts them.
+  ///
+  /// Deliberately re-decodes each file rather than threading these through the
+  /// Health Connect importer: that pipeline is about records Health Connect can
+  /// hold, and widening it to carry passengers it cannot store would blur what
+  /// it is for. Decoding a kilobyte twice costs nothing.
+  Future<void> _storeWatchOnlyMetrics(
+    List<GarminDownloadedFile> downloaded,
+  ) async {
+    final rows = <GarminWellnessSamplesCompanion>[];
+    for (final file in downloaded) {
+      final FitWellness wellness;
+      try {
+        wellness = FitRouteParser.parseWellness(
+          file.bytes,
+          fileName: file.entry.type.name,
+        );
+      } catch (_) {
+        continue; // A file the decoder rejects is the importer's problem to log.
+      }
+      final monitoring = wellness.monitoring;
+      if (monitoring == null) continue;
+      for (final (at, value) in monitoring.stress) {
+        rows.add(GarminWellnessSamplesCompanion.insert(
+          metric: GarminWellnessMetric.stress.storageName,
+          timeMillis: at.toUtc().millisecondsSinceEpoch,
+          value: value,
+        ));
+      }
+      for (final (at, value) in monitoring.bodyEnergy) {
+        rows.add(GarminWellnessSamplesCompanion.insert(
+          metric: GarminWellnessMetric.bodyEnergy.storageName,
+          timeMillis: at.toUtc().millisecondsSinceEpoch,
+          value: value,
+        ));
+      }
+    }
+    if (rows.isEmpty) return;
+    await ref.read(garminWellnessDaoProvider).upsertSamples(rows);
+    debugPrint('[GARMIN-SYNC] stored ${rows.length} watch-only samples '
+        '(stress + body battery)');
   }
 
   /// Clears the finished/failed banner so the row goes back to normal.

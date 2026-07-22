@@ -110,6 +110,12 @@ final vitalsDailyCacheDaoProvider = Provider<VitalsDailyCacheDao>(
   (ref) => ref.watch(openVitalsDatabaseProvider).vitalsDailyCacheDao,
 );
 
+/// Stress + Body Battery from a Garmin watch. These have no Health Connect type,
+/// so this table is their system of record rather than a cache.
+final garminWellnessDaoProvider = Provider<GarminWellnessDao>(
+  (ref) => ref.watch(openVitalsDatabaseProvider).garminWellnessDao,
+);
+
 final vitalsHistorySyncServiceProvider = Provider<VitalsHistorySyncService>(
   (ref) => VitalsHistorySyncService(
     ref.watch(vitalsDailyCacheDaoProvider),
