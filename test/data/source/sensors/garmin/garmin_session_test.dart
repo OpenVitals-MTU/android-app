@@ -350,6 +350,41 @@ void main() {
       expect(requested, [0, 6]);
     });
 
+    test('the capabilities exchange is answered with our own bitmap', () async {
+      final watch = _ChattyWatch(files: {0: _directory([])});
+
+      await _runSync(watch);
+
+      // Not just an ACK: the watch waits for a CONFIGURATION of our own, and
+      // without it a real device re-sent its own and listed nothing.
+      final config = watch.received
+          .where((f) => f.messageType == GarminMessageId.configuration)
+          .toList();
+      expect(config, hasLength(1));
+      // [byte length][bitmap] — 15 bytes, matching what the watch sends.
+      expect(config.single.payload.first, 15);
+      expect(config.single.payload.length, 16);
+    });
+
+    test('notification subscription gets a full status, not a bare ACK',
+        () async {
+      final watch = _ChattyWatch(files: {0: _directory([])});
+
+      await _runSync(watch);
+
+      final replies = watch.received
+          .where((f) => f.messageType == GarminMessageId.response)
+          .where((f) =>
+              (f.payload[0] | (f.payload[1] << 8)) ==
+              GarminMessageId.notificationSubscription)
+          .toList();
+      expect(replies, hasLength(1));
+      // [short type][status][notificationStatus][enable][unk] — the short form
+      // is what made the watch ask again every second.
+      expect(replies.single.payload, hasLength(6));
+      expect(replies.single.payload[3], 1, reason: 'DISABLED — we forward none');
+    });
+
     test('every unanswered inbound message gets a generic ACK', () async {
       // The watch retransmits anything it thinks was lost and will not move on,
       // which is exactly how a real vívoactive 5 stalled with an empty
@@ -362,9 +397,8 @@ void main() {
           .where((f) => f.messageType == GarminMessageId.response)
           .map((f) => f.payload[0] | (f.payload[1] << 8))
           .toList();
-      expect(acked, contains(5050)); // CONFIGURATION
+      expect(acked, contains(GarminMessageId.configuration));
       expect(acked, contains(5043)); // PROTOBUF_REQUEST
-      expect(acked, contains(5036)); // NOTIFICATION_SUBSCRIPTION
     });
 
     test('an ACK is never itself ACKed', () async {
@@ -550,9 +584,13 @@ class _ChattyWatch extends _FakeWatch {
       _chattered = true;
       // Queued BEFORE the listing, as observed on the device.
       outbox
-        ..add(GarminGfdiFrame.build(5050, _b([0x0f, 0xfb, 0xff, 0x3d])))
+        // CONFIGURATION: [length][15 capability bytes], as the real watch sends.
+        ..add(GarminGfdiFrame.build(
+            GarminMessageId.configuration,
+            _b([15, ...List<int>.filled(15, 0xAA)])))
         ..add(GarminGfdiFrame.build(5043, _b([0x8f, 0x03, 0x00, 0x00])))
-        ..add(GarminGfdiFrame.build(5036, _b([0x00, 0x00])));
+        ..add(GarminGfdiFrame.build(
+            GarminMessageId.notificationSubscription, _b([0x00, 0x00])));
     }
     super._startServing(index);
   }

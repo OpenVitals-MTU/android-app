@@ -167,6 +167,21 @@ class GarminSession {
       case GarminAuthNegotiation():
         await send(buildAuthNegotiationResponse(message));
 
+      case GarminConfiguration():
+        // The capabilities exchange. The watch has told us what it can do and
+        // is waiting to hear what WE can do; a bare ACK left it re-sending this
+        // and never listing any files.
+        debugPrint('[GARMIN-SYNC] configuration: '
+            '${message.capabilityBits.length}B of capabilities from the watch');
+        await send(buildConfigurationResponse());
+
+      case GarminNotificationSubscription():
+        // Answered honestly (we forward nothing) but answered — the watch asks
+        // roughly once a second until it gets a properly shaped status.
+        debugPrint('[GARMIN-SYNC] notification subscription '
+            'enable=${message.enable}; replying disabled');
+        await send(buildNotificationSubscriptionStatus(message));
+
       case GarminSupportedFileTypes():
         supportedTypes = message.types;
         // The raw pairs, not just a count: they are the ground truth for which

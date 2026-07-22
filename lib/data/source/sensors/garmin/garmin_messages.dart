@@ -27,7 +27,9 @@ class GarminMessageId {
   static const int deviceInformation = 5024;
   static const int systemEvent = 5030;
   static const int supportedFileTypesRequest = 5031;
+  static const int notificationSubscription = 5036;
   static const int synchronization = 5037;
+  static const int configuration = 5050;
   static const int authNegotiation = 5101;
 }
 
@@ -236,6 +238,33 @@ class GarminSynchronization extends GarminInboundMessage {
       [for (var i = 0; i < 64; i++) if (_has(i)) i];
 }
 
+/// The watch's capability bitmap (type 5050) — the capabilities exchange.
+///
+/// This is not informational. The watch expects OUR capabilities back, and in
+/// Gadgetbridge receiving it is what raises the event that completes
+/// initialisation. Answering it with only a bare ACK left a real vívoactive 5
+/// re-sending it and never populating its directory.
+class GarminConfiguration extends GarminInboundMessage {
+  const GarminConfiguration(this.capabilityBits);
+
+  /// The raw bitmap, one bit per capability ordinal.
+  final Uint8List capabilityBits;
+}
+
+/// The watch asking whether to route phone notifications (type 5036).
+///
+/// Needs a purpose-built status reply, not the generic ACK: the watch expects
+/// four payload bytes after the message id and retransmits about once a second
+/// until it gets them.
+class GarminNotificationSubscription extends GarminInboundMessage {
+  const GarminNotificationSubscription({
+    required this.enable,
+    required this.unknown,
+  });
+  final bool enable;
+  final int unknown;
+}
+
 /// A message outside the sync vocabulary. Carries its payload so an unexpected
 /// message can be identified from a device log rather than vanishing — the
 /// blind spot that hid whether the watch was talking to us at all.
@@ -258,6 +287,10 @@ GarminInboundMessage decodeGarminMessage(GarminGfdiFrame frame) {
       return _decodeAuthNegotiation(frame.payload);
     case GarminMessageId.synchronization:
       return _decodeSynchronization(frame.payload);
+    case GarminMessageId.configuration:
+      return _decodeConfiguration(frame.payload);
+    case GarminMessageId.notificationSubscription:
+      return _decodeNotificationSubscription(frame.payload);
     default:
       return GarminUnhandledMessage(frame.messageType, frame.payload);
   }
@@ -296,6 +329,20 @@ GarminInboundMessage _decodeAuthNegotiation(Uint8List payload) {
     unknown: reader.readByte(),
     authFlags: reader.readInt(),
   );
+}
+
+GarminInboundMessage _decodeConfiguration(Uint8List payload) {
+  final reader = GarminByteReader(payload);
+  final length = reader.readByte();
+  final available = length > reader.remaining ? reader.remaining : length;
+  return GarminConfiguration(reader.readBytes(available));
+}
+
+GarminInboundMessage _decodeNotificationSubscription(Uint8List payload) {
+  final reader = GarminByteReader(payload);
+  final enable = reader.readByte() == 1;
+  final unknown = reader.remaining > 0 ? reader.readByte() : 0;
+  return GarminNotificationSubscription(enable: enable, unknown: unknown);
 }
 
 GarminInboundMessage _decodeSupportedFileTypes(GarminByteReader reader) {
@@ -403,6 +450,9 @@ const Set<int> garminSelfAcknowledgedTypes = {
   GarminMessageId.deviceInformation,
   GarminMessageId.authNegotiation,
   GarminMessageId.fileTransferData,
+  // Gets a purpose-built status carrying four extra payload bytes; a generic
+  // ACK is too short and the watch keeps asking.
+  GarminMessageId.notificationSubscription,
 };
 
 /// Acknowledges a received file-transfer chunk: `RESPONSE` envelope naming
@@ -485,6 +535,55 @@ Uint8List buildDeviceInformationResponse({
     ..writeString(manufacturer)
     ..writeString(model)
     ..writeByte(incoming.protocolVersion ~/ 100 == 1 ? 1 : 0);
+  return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
+}
+
+/// This app's capability bitmap, the reply to a [GarminConfiguration].
+///
+/// One bit per `GarminCapability` ordinal, 120 capabilities in 15 bytes —
+/// exactly the length a real vívoactive 5 sends. The value is Gadgetbridge's
+/// `OUR_CAPABILITIES`: everything set except `UNK_104..UNK_111` and
+/// `UNK_114..UNK_119`, which its authors note have never been seen in a Garmin
+/// Connect dump. Computed from that enum rather than hand-transcribed, because
+/// getting one of 120 bit positions wrong would be invisible here and baffling
+/// on the wire.
+///
+/// Claiming capabilities this app does not implement (music, LiveTrack, ConnectIQ)
+/// is deliberate and matches Gadgetbridge: the watch uses the bitmap to decide
+/// what it may OFFER, and a narrower claim has been observed to make devices
+/// withhold data. Nothing is obliged to act on an offer it never accepts.
+final Uint8List garminOurCapabilities = Uint8List.fromList(const [
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, //
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x03,
+]);
+
+/// Sends our capabilities back (`ConfigurationMessage`). Note this is a
+/// CONFIGURATION message in its own right, not a RESPONSE envelope — the watch
+/// gets both this and a plain ACK, as Gadgetbridge sends both.
+Uint8List buildConfigurationResponse() {
+  final writer = GarminByteWriter()
+    ..writeByte(garminOurCapabilities.length)
+    ..writeBytes(garminOurCapabilities);
+  return GarminGfdiFrame.build(
+      GarminMessageId.configuration, writer.toBytes());
+}
+
+/// Answers a notification-subscription request
+/// (`NotificationSubscriptionStatusMessage`).
+///
+/// Reports DISABLED because this app forwards no notifications — it syncs health
+/// files and nothing else. The watch's own flag and unknown byte are echoed
+/// back, as Gadgetbridge does.
+Uint8List buildNotificationSubscriptionStatus(
+  GarminNotificationSubscription incoming,
+) {
+  const notificationStatusDisabled = 1;
+  final writer = GarminByteWriter()
+    ..writeShort(GarminMessageId.notificationSubscription)
+    ..writeByte(GarminStatus.ack.code)
+    ..writeByte(notificationStatusDisabled)
+    ..writeByte(incoming.enable ? 1 : 0)
+    ..writeByte(incoming.unknown);
   return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
 }
 
