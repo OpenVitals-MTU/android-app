@@ -217,20 +217,29 @@ void _chunkingTests() {
       expect(delivered.single, b([1, 2, 3, 4, 5, 6]));
     });
 
-    test('acknowledges each chunk, or the watch sends no more', () async {
+    test('acknowledges a chunk with the offset IT declared', () async {
+      // Not the next offset. Echoing `dataOffset + chunkLength` meant the watch
+      // never saw an acknowledgement for the chunk it had sent, so it resent
+      // chunk zero forever and the screen never completed.
       final acks = <GarminGfdiFrame>[];
       final transport = GarminProtobufTransport(
         send: (frame) async => acks.add(GarminGfdiFrame.parse(frame)),
         onUnsolicited: (_) {},
       );
 
-      transport.handleInbound(chunk(324, [1, 2, 3], 0, 6));
+      transport.handleInbound(chunk(324, [4, 5, 6], 3, 6));
       await Future<void>.delayed(Duration.zero);
 
-      // A generic ACK is not enough for a chunk: it has to name the request and
-      // the offset consumed.
+      final payload = acks.single.payload;
       expect(acks.single.messageType, GarminMessageId.response);
-      expect(acks.single.payload.length, greaterThan(3));
+      // [u16 originalType][u8 status][u16 requestId][u32 dataOffset][u8][u8]
+      final requestId = payload[3] | (payload[4] << 8);
+      final offset = payload[5] |
+          (payload[6] << 8) |
+          (payload[7] << 16) |
+          (payload[8] << 24);
+      expect(requestId, 324);
+      expect(offset, 3, reason: 'the offset received, not the next expected');
     });
   });
 }

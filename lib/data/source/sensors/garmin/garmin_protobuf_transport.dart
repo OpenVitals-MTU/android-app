@@ -117,10 +117,14 @@ class GarminProtobufTransport {
       chunks[dataOffset] = bytes;
       // A chunk needs an acknowledgement that names it, or the watch never
       // sends the next one.
+      // The offset AS RECEIVED, not the next one. Gadgetbridge echoes what the
+      // chunk declared; acknowledging `dataOffset + chunkLength` instead left
+      // the watch resending chunk zero forever, because it never saw an
+      // acknowledgement for the chunk it had actually sent.
       unawaited(send(buildProtobufChunkAck(
         originalMessageType: frame.messageType,
         requestId: requestId,
-        dataOffset: dataOffset + chunkLength,
+        dataOffset: dataOffset,
       )));
       final held = chunks.values.fold<int>(0, (sum, c) => sum + c.length);
       if (held < totalLength) {

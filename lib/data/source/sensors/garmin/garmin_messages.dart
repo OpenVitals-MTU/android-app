@@ -449,8 +449,11 @@ Uint8List buildGenericAck(int originalMessageType) {
 /// arrives as 487 bytes and stops.
 ///
 /// Shape from Gadgetbridge's `ProtobufStatusMessage`: the usual response
-/// envelope, then the request id, the offset consumed, and two status bytes
-/// (chunk kept = 0, no error = 0).
+/// envelope, then the request id, THE OFFSET THE CHUNK DECLARED, and two status
+/// bytes (chunk kept = 0, no error = 0).
+///
+/// [dataOffset] is the offset received, not the next one expected — echoing the
+/// next left the watch resending chunk zero indefinitely.
 Uint8List buildProtobufChunkAck({
   required int originalMessageType,
   required int requestId,
