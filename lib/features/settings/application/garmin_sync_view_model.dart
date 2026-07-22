@@ -12,6 +12,7 @@ import '../../../state/app_providers.dart';
 import '../../imports/application/route_bulk_import_view_model.dart';
 import '../../manualentry/activity/routeimport/fit_route_parser.dart';
 import 'watch_metrics_view_model.dart';
+import 'watch_settings_view_model.dart';
 
 part 'garmin_sync_view_model.freezed.dart';
 
@@ -95,6 +96,12 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
       syncingDeviceId: deviceId,
       phase: GarminSyncPhase.handshake,
     );
+
+    // A watch has ONE link. Browsing its settings holds it open for a while
+    // after the screen closes, and a sync starting inside that window used to
+    // connect against a radio already in use and never come back — no error, no
+    // log, just a spinner. Take the link back first.
+    await releaseWatchSettingsLink(deviceId);
 
     final List<GarminDownloadedFile> downloaded;
     try {

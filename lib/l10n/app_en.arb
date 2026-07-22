@@ -4176,5 +4176,14 @@
   "settingsWatchSettingsUnanswered": "The watch did not answer. Check the watch to see whether it changed.",
   "settingsWatchSettingsRetry": "Try again",
   "settingsWatchSettingsFromWatch": "Read live from your watch. Changes apply to the watch itself.",
-  "settingsWatchSettingsNoState": "The watch sent this screen but not its current values, so nothing here can be changed yet."
+  "settingsWatchSettingsNoState": "The watch sent this screen but not its current values, so nothing here can be changed yet.",
+  "settingsWatchSettingsConfirmAction": "Apply “{arg0}”?",
+  "@settingsWatchSettingsConfirmAction": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchSettingsConfirmActionBody": "This runs the action on the watch and cannot be undone from here."
 }

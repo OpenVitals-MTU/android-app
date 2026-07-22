@@ -26,6 +26,10 @@ enum GarminEntryKind {
   /// A number the watch bounds itself.
   number,
 
+  /// A button rather than a setting: no target, and no value to show. The
+  /// watch's own "Delete" row on an alarm is one.
+  action,
+
   /// Present on the screen but not something a phone can act on: it opens
   /// something ON the watch, or is hidden outright.
   inert,
@@ -53,6 +57,7 @@ class GarminSettingsEntry {
     this.subscreenId,
     this.options = const [],
     this.switchedOn,
+    this.rawTargetType,
   });
 
   /// Identifies the entry within its screen — what a change names.
@@ -72,6 +77,21 @@ class GarminSettingsEntry {
   /// Only meaningful for [GarminEntryKind.toggle]; null when the state has not
   /// been read.
   final bool? switchedOn;
+
+  /// The target type the watch declared, kept even when it is one this app does
+  /// not handle. An entry that came out [GarminEntryKind.inert] is otherwise
+  /// indistinguishable from a hidden row, and the number is what says which
+  /// control it really is.
+  final int? rawTargetType;
+
+  /// A row carrying nothing a person could read — an unused slot in a list that
+  /// reserves one per position. Worth hiding rather than drawing as a blank.
+  ///
+  /// An untitled inert row counts even when it carries a summary: a value with
+  /// no name is not something anybody can read. Real alarms put their time in
+  /// the TITLE, so nothing legible is lost.
+  bool get isBlank =>
+      kind == GarminEntryKind.inert && (title == null || title!.trim().isEmpty);
 
   /// Whether a phone can do anything with this row.
   bool get isActionable => kind != GarminEntryKind.inert;
@@ -122,7 +142,7 @@ GarminSettingsScreen? parseGarminSettingsScreen(
   final entries = <GarminSettingsEntry>[];
   for (final field in fields) {
     if (field.field != _entry) continue;
-    final entry = _parseEntry(field.bytes, states);
+    final entry = _parseEntry(field.bytes, states, stateReply != null);
     if (entry != null) entries.add(entry);
   }
 
@@ -137,6 +157,7 @@ GarminSettingsScreen? parseGarminSettingsScreen(
 GarminSettingsEntry? _parseEntry(
   Uint8List? bytes,
   Map<int, _EntryState> states,
+  bool stateAvailable,
 ) {
   if (bytes == null) return null;
   final fields = readProtobuf(bytes);
@@ -150,11 +171,25 @@ GarminSettingsEntry? _parseEntry(
   // No target at all: a switch, which carries its value in the STATE rather
   // than declaring anything in the definition.
   if (target == null) {
+    // A switch and a button are both target-less; what separates them is the
+    // STATE. A switch has a position to report, a button has nothing to report
+    // because there is nothing to be in.
+    //
+    // So a button can only be identified when the state ARRIVED. Without it the
+    // two are indistinguishable, and calling a switch a button would offer to
+    // "Status" the action reserved for "Delete" — which is how a missing reply
+    // turns into a deleted alarm.
+    final GarminEntryKind kind;
+    if (state?.switchedOn != null) {
+      kind = GarminEntryKind.toggle;
+    } else if (stateAvailable && title != null && title.isNotEmpty) {
+      kind = GarminEntryKind.action;
+    } else {
+      kind = GarminEntryKind.inert;
+    }
     return GarminSettingsEntry(
       id: id,
-      kind: state?.switchedOn != null
-          ? GarminEntryKind.toggle
-          : GarminEntryKind.inert,
+      kind: kind,
       title: title,
       summary: state?.summary,
       switchedOn: state?.switchedOn,
@@ -209,12 +244,14 @@ GarminSettingsEntry? _parseEntry(
     default:
       // Type 6 opens something ON the watch and 7 is hidden. Anything else is a
       // control this app has never seen, and rendering a guess at it would put
-      // the wrong widget in front of a real setting.
+      // the wrong widget in front of a real setting. The declared type is kept
+      // so it can be identified rather than merely dismissed.
       return GarminSettingsEntry(
         id: id,
         kind: GarminEntryKind.inert,
         title: title,
         summary: state?.summary,
+        rawTargetType: targetType,
       );
   }
 }

@@ -354,6 +354,10 @@ class GarminWatchSyncService {
 
     StreamSubscription<String>? dropSub;
     try {
+      // Logged BEFORE connecting: a sync that wedged inside connect produced no
+      // output whatsoever, which read as "nothing happened" rather than "stuck
+      // on the radio".
+      debugPrint('[GARMIN-SYNC] connecting to $address');
       await transport.connect(onFrame: session.handleFrame);
       // A dropped link ends the sync with what it has rather than hanging on
       // `done` forever waiting for frames that will never arrive.

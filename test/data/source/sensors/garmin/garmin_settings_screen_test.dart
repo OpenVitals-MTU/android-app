@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/data/source/sensors/garmin/garmin_protobuf.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_settings_screen.dart';
+import 'package:openvitals/data/source/sensors/garmin/garmin_settings_service.dart';
 
 /// Rebuilds the reply the watch sends, so the parser is exercised against the
 /// real wire shape rather than a convenient one.
@@ -143,16 +144,66 @@ void main() {
       expect(off.entries.first.switchedOn, isFalse);
     });
 
-    test('without a state, a switch is not rendered as one', () {
-      // Its value lives only in the state; drawing a toggle without knowing
-      // which way it points would show every alarm as OFF.
+    test('without a state, a switch is neither a toggle NOR a button', () {
+      // Its value lives only in the state, so a toggle drawn without one would
+      // show every alarm as OFF. And a target-less row cannot be told apart
+      // from an action button without the state either — treating it as one
+      // would offer "Status" the action reserved for "Delete", which is how a
+      // dropped reply becomes a deleted alarm.
       final screen = parseGarminSettingsScreen(alarmScreen())!;
       expect(screen.entries.first.kind, GarminEntryKind.inert);
       expect(screen.entries.first.switchedOn, isNull);
     });
+
+    test('a target-less row WITH state is a button, not a switch', () {
+      // "Delete" on a real alarm screen: no target, no switch state, but the
+      // state reply did arrive — so the absence means "nothing to be in".
+      final screen = parseGarminSettingsScreen(
+        _definitionReply(
+          screenId: 65600,
+          entries: [
+            _entry(id: 0, title: 'Status'),
+            _entry(id: 4, title: 'Delete'),
+          ],
+        ),
+        stateReply: _stateReply(
+          screenId: 65600,
+          states: [_switchState(id: 0, on: true)],
+        ),
+      )!;
+      expect(screen.entries.first.kind, GarminEntryKind.toggle);
+      expect(screen.entries.last.kind, GarminEntryKind.action);
+    });
   });
 
   group('rows a phone cannot act on', () {
+    test('an unused slot is blank, and blank rows are droppable', () {
+      // A real alarm list came back as twenty rows with no title at all plus
+      // one "Add Alarm" — drawn literally, that is twenty empty cards.
+      final screen = parseGarminSettingsScreen(_definitionReply(
+        screenId: 68,
+        entries: [
+          _entry(id: 0),
+          _entry(id: 20, title: 'Add Alarm', targetType: 0, subscreen: 999),
+        ],
+      ))!;
+      expect(screen.entries.first.isBlank, isTrue);
+      expect(screen.entries.last.isBlank, isFalse);
+    });
+
+    test('an unhandled target keeps the type it declared', () {
+      // "Delete" on an alarm's screen came out inert, which is
+      // indistinguishable from a hidden row without the number that says what
+      // control it really is.
+      final screen = parseGarminSettingsScreen(_definitionReply(
+        screenId: 65600,
+        entries: [_entry(id: 4, title: 'Delete', targetType: 11)],
+      ))!;
+      expect(screen.entries.single.kind, GarminEntryKind.inert);
+      expect(screen.entries.single.rawTargetType, 11);
+      expect(screen.entries.single.isBlank, isFalse);
+    });
+
     test('an empty alarm slot leads nowhere', () {
       // The Alarms list reserves a row per slot and points unused ones at
       // screen zero.
@@ -206,6 +257,67 @@ void main() {
           [GarminEntryKind.subscreen, GarminEntryKind.subscreen]);
       expect([for (final e in screen.entries) e.subscreenId], [64, 738]);
     });
+  });
+
+  group('telling one screen\'s reply from another', () {
+    test('a definition names the screen it describes', () {
+      expect(
+        GarminSettingsService.screenIdOf(
+          _definitionReply(screenId: 65600),
+          GarminSettingsService.definitionResponseField,
+        ),
+        65600,
+      );
+    });
+
+    test('a state names it too', () {
+      expect(
+        GarminSettingsService.screenIdOf(
+          _stateReply(screenId: 68),
+          GarminSettingsService.stateResponseField,
+        ),
+        68,
+      );
+    });
+
+    test('a change response names it from a field of its own', () {
+      // Captured from a vívoactive 5 answering a delete: the change response
+      // nests its screen at field 3, not field 2 like the other two.
+      final reply = Uint8List.fromList([
+        0xd2, 0x02, 0x19, 0x32, 0x17, 0x08, 0x00, 0x1a, 0x11, //
+        0x08, 0xc0, 0x80, 0x8c, 0x08, 0x10, 0x00, 0x18, 0xa8, 0x88, 0x68,
+        0x22, 0x04, 0x08, 0x04, 0x4a, 0x00, 0x28, 0x01,
+      ]);
+      expect(
+        GarminSettingsService.screenIdOf(
+          reply,
+          GarminSettingsService.changeResponseField,
+        ),
+        16973888,
+      );
+    });
+
+    test('a reply about another screen is not this screen\'s answer', () {
+      // The watch retransmits anything it thinks went unacknowledged, so the
+      // alarm LIST's definition arrived while one alarm's screen was pending
+      // and was taken as the answer — pairing one screen's rows with another's
+      // values.
+      final list = GarminSettingsService.screenIdOf(
+        _definitionReply(screenId: 68),
+        GarminSettingsService.definitionResponseField,
+      );
+      expect(list, isNot(65600));
+    });
+  });
+
+  test('a nameless row is hidden even when it carries a value', () {
+    // After a delete the freed slots came back with a leftover summary and no
+    // title at all, which drew two empty grey cards under the real alarms.
+    final screen = parseGarminSettingsScreen(_definitionReply(
+      screenId: 68,
+      entries: [_entry(id: 2)],
+    ))!;
+    expect(screen.entries.single.isBlank, isTrue);
   });
 
   test('a reply that is not a definition yields no screen', () {

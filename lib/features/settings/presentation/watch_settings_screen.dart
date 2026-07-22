@@ -78,8 +78,12 @@ class WatchSettingsScreenPage extends ConsumerWidget {
                         ),
                   ),
                 ),
+              // Blank rows are dropped: an alarm list reserves one per slot and
+              // leaves the unused ones with no title at all, which drew twenty
+              // empty cards under a single real alarm.
               for (final entry in screen.entries)
-                _EntryRow(deviceId: deviceId, target: target, entry: entry),
+                if (!entry.isBlank)
+                  _EntryRow(deviceId: deviceId, target: target, entry: entry),
             ],
           );
         },
@@ -141,25 +145,70 @@ class _EntryRowState extends ConsumerState<_EntryRow> {
           title: Text(title),
           subtitle: entry.summary == null ? null : Text(entry.summary!),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.push(
-            AppRoutes.watchSettingsLocation(
-              widget.deviceId,
-              entry.subscreenId!,
-            ),
-            extra: title,
-          ),
+          onTap: () => _openSubscreen(entry.subscreenId!, title),
         ));
 
       case GarminEntryKind.options:
+        // Only offered when the watch actually sent choices. An empty list here
+        // would open a dialog with nothing in it.
+        final canChoose = entry.options.isNotEmpty && !_busy;
+        return card(ListTile(
+          title: Text(title),
+          subtitle: entry.summary == null ? null : Text(entry.summary!),
+          trailing: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.chevron_right),
+          enabled: canChoose,
+          onTap: canChoose ? _chooseOption : null,
+        ));
+
       case GarminEntryKind.time:
+        return card(ListTile(
+          title: Text(title),
+          subtitle: entry.summary == null ? null : Text(entry.summary!),
+          trailing: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.schedule),
+          enabled: !_busy,
+          onTap: _busy ? null : _chooseTime,
+        ));
+
       case GarminEntryKind.number:
-        // Readable now, not yet editable — a picker for each is the next piece.
-        // Shown with its current value rather than hidden: knowing an alarm
-        // repeats on weekdays is useful even before it can be changed here.
+        // The watch bounds these itself and does not send the bounds, so a
+        // picker here could offer a value it will refuse. Left readable until
+        // the limits are known.
         return card(ListTile(
           title: Text(title),
           subtitle: entry.summary == null ? null : Text(entry.summary!),
           enabled: false,
+        ));
+
+      case GarminEntryKind.action:
+        // A button the WATCH put here, run under the watch's own label. Asked
+        // first, always: an action row has no value to inspect beforehand and
+        // no way to undo afterwards.
+        return card(ListTile(
+          title: Text(
+            title,
+            style: TextStyle(color: theme.colorScheme.error),
+          ),
+          trailing: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : null,
+          enabled: !_busy,
+          onTap: _busy ? null : _runAction,
         ));
 
       case GarminEntryKind.inert:
@@ -176,17 +225,135 @@ class _EntryRowState extends ConsumerState<_EntryRow> {
     }
   }
 
+  /// Walks into a subscreen, and re-reads THIS one on the way back.
+  ///
+  /// What happens in there changes what belongs here: "Add Alarm" opens a
+  /// screen that creates an alarm, and returning to a list still showing the
+  /// rows from before it existed makes the watch and the phone disagree about
+  /// something the person just did.
+  Future<void> _openSubscreen(int subscreenId, String title) async {
+    await context.push(
+      AppRoutes.watchSettingsLocation(widget.deviceId, subscreenId),
+      extra: title,
+    );
+    if (!mounted) return;
+    ref.invalidate(watchSettingsScreenProvider(widget.target));
+  }
+
+  /// Offers the options the WATCH sent, and applies the one chosen.
+  Future<void> _chooseOption() async {
+    final entry = widget.entry;
+    final chosen = await showDialog<GarminSettingsOption>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(entry.title ?? ''),
+        children: [
+          for (final option in entry.options)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(option),
+              child: Row(
+                children: [
+                  // Matched on the text the watch renders in BOTH places, which
+                  // is the only thing the two have in common — the state does
+                  // not say which index is selected.
+                  Icon(
+                    option.title == entry.summary
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(option.title)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    await _apply((ref) => setWatchOption(
+          ref,
+          widget.target,
+          entry.id,
+          chosen.index,
+        ));
+  }
+
+  /// Runs an action row, after asking.
+  Future<void> _runAction() async {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final title = widget.entry.title ?? '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        // The watch's own wording, not ours: this app does not know what the
+        // row does beyond what the watch called it, and inventing a friendlier
+        // description would be claiming knowledge it does not have.
+        title: Text(l10n.settingsWatchSettingsConfirmAction(title)),
+        content: Text(l10n.settingsWatchSettingsConfirmActionBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style:
+                TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+            child: Text(title),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final result =
+        await _apply((ref) => deleteWatchEntry(ref, widget.target, widget.entry.id));
+    // The screen this row sat on described the thing just deleted, so staying
+    // on it would leave a page for something that no longer exists — and the
+    // watch answers a dead screen's id with its parent's contents. Back out to
+    // the list, which re-reads itself.
+    if (result == WatchSettingsChangeResult.applied &&
+        mounted &&
+        context.canPop()) {
+      context.pop();
+    }
+  }
+
+  Future<void> _chooseTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      helpText: widget.entry.title,
+    );
+    if (picked == null || !mounted) return;
+    await _apply((ref) => setWatchTime(
+          ref,
+          widget.target,
+          widget.entry.id,
+          Duration(hours: picked.hour, minutes: picked.minute),
+        ));
+  }
+
   Future<void> _setSwitch(bool value) async {
+    await _apply((ref) => setWatchSwitch(
+          ref,
+          widget.target,
+          widget.entry.id,
+          value,
+        ));
+  }
+
+  /// Runs one change and reports what the watch made of it.
+  Future<WatchSettingsChangeResult> _apply(
+    Future<WatchSettingsChangeResult> Function(WidgetRef) change,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
-    final result = await setWatchSwitch(
-      ref,
-      widget.target,
-      widget.entry.id,
-      value,
-    );
-    if (!mounted) return;
+    final result = await change(ref);
+    if (!mounted) return result;
     setState(() => _busy = false);
     switch (result) {
       case WatchSettingsChangeResult.applied:
@@ -202,6 +369,7 @@ class _EntryRowState extends ConsumerState<_EntryRow> {
           SnackBar(content: Text(l10n.settingsWatchSettingsUnanswered)),
         );
     }
+    return result;
   }
 }
 

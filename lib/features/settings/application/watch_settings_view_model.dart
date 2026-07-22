@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,13 +25,38 @@ class WatchSettingsTarget {
   int get hashCode => Object.hash(deviceId, screenId);
 }
 
+/// How long a link outlives the last screen watching it.
+///
+/// Long enough to walk from the Alarms list into one alarm without paying for a
+/// second handshake, short enough that backing out of settings gives the radio
+/// back. There is only ONE link to a watch: while this is held, a file sync
+/// cannot connect.
+const Duration _linkGrace = Duration(seconds: 20);
+
+/// The links currently open, by device.
+///
+/// A watch has one radio, so this is not a cache — it is the record of who
+/// holds it. A file sync consults it to take the link back rather than opening
+/// a second one alongside, which is what silently wedged Sync: after browsing
+/// Alarms the settings link stayed up, and the sync's connect never returned.
+final Map<String, GarminSettingsLink> _openLinks = {};
+
+/// Closes any settings link held on [deviceId], and waits for it to be gone.
+///
+/// Awaited rather than fired off, because the caller wants the radio.
+Future<void> releaseWatchSettingsLink(String deviceId) async {
+  final link = _openLinks.remove(deviceId);
+  if (link == null) return;
+  debugPrint('[GARMIN-SETTINGS] releasing the link for $deviceId');
+  await link.close();
+}
+
 /// One open settings link per watch, shared by every screen browsing it.
 ///
 /// The link is the expensive part — a connection plus a handshake — so walking
-/// from the Alarms list into one alarm must not pay for it twice. It stays
-/// alive while any screen is watching and closes when the last one leaves,
-/// which is what `autoDispose` gives: a watch should not be left holding a
-/// connection open because somebody backed out of a menu.
+/// from the Alarms list into one alarm must not pay for it twice. It outlives
+/// the last screen by [_linkGrace] and then goes: a watch should not be left
+/// holding a connection open because somebody backed out of a menu.
 final watchSettingsLinkProvider =
     FutureProvider.autoDispose.family<GarminSettingsLink, String>(
   (ref, deviceId) async {
@@ -47,10 +74,21 @@ final watchSettingsLinkProvider =
       manufacturer: phone.manufacturer,
       model: phone.model,
     );
-    ref.onDispose(link.close);
-    // Held while the screen is open; without this the link would be torn down
-    // between a read and the change that follows it.
-    ref.keepAlive();
+    _openLinks[deviceId] = link;
+    ref.onDispose(() {
+      _openLinks.remove(deviceId);
+      link.close();
+    });
+
+    // Kept alive across the gap between one screen letting go and the next
+    // subscribing — but on a timer, not forever. A permanent keepAlive() held
+    // the radio for the rest of the session, so a later Sync had nothing to
+    // connect with and hung with no output at all.
+    final keep = ref.keepAlive();
+    Timer? expiry;
+    ref.onCancel(() => expiry = Timer(_linkGrace, keep.close));
+    ref.onResume(() => expiry?.cancel());
+    ref.onDispose(() => expiry?.cancel());
     return link;
   },
 );
@@ -79,22 +117,102 @@ enum WatchSettingsChangeResult {
   unanswered,
 }
 
+/// Chooses one of the options the WATCH supplied for an entry.
+///
+/// [index] is a position in that list, never an ordinal this app decided.
+Future<WatchSettingsChangeResult> setWatchOption(
+  WidgetRef ref,
+  WatchSettingsTarget target,
+  int entryId,
+  int index,
+) =>
+    _change(
+      ref,
+      target,
+      (link) => link.setOption(
+        screenId: target.screenId,
+        entryId: entryId,
+        index: index,
+      ),
+    );
+
+/// Sets a time of day, as seconds since midnight.
+Future<WatchSettingsChangeResult> setWatchTime(
+  WidgetRef ref,
+  WatchSettingsTarget target,
+  int entryId,
+  Duration sinceMidnight,
+) =>
+    _change(
+      ref,
+      target,
+      (link) => link.setTime(
+        screenId: target.screenId,
+        entryId: entryId,
+        sinceMidnight: sinceMidnight,
+      ),
+    );
+
+/// Activates a row that deletes something, and re-reads what is left.
+///
+/// A refusal is reported as a refusal rather than smoothed over, because the
+/// alternative is telling somebody their alarm is gone when it is not.
+Future<WatchSettingsChangeResult> deleteWatchEntry(
+  WidgetRef ref,
+  WatchSettingsTarget target,
+  int entryId,
+) =>
+    _change(
+      ref,
+      target,
+      (link) => link.delete(screenId: target.screenId, entryId: entryId),
+      // A delete does not change a value on this screen — it removes the thing
+      // the screen describes, and the LIST that pointed here is now stale too.
+      // Re-reading only this screen left the deleted alarm sitting in the list
+      // behind it, and the watch answered the dead screen's id with its
+      // parent's contents.
+      invalidateEverything: true,
+    );
+
 /// Applies a change and re-reads the screen it belongs to.
 Future<WatchSettingsChangeResult> setWatchSwitch(
   WidgetRef ref,
   WatchSettingsTarget target,
   int entryId,
   bool value,
-) async {
+) =>
+    _change(
+      ref,
+      target,
+      (link) => link.setSwitch(
+        screenId: target.screenId,
+        entryId: entryId,
+        value: value,
+      ),
+    );
+
+/// The shape every change shares: apply, then RE-READ.
+///
+/// Re-reading is not belt and braces. The watch owns these settings and can
+/// clamp, round or ignore what it is asked; showing the value we requested
+/// rather than the one it now holds would quietly disagree with the wrist.
+Future<WatchSettingsChangeResult> _change(
+  WidgetRef ref,
+  WatchSettingsTarget target,
+  Future<bool?> Function(GarminSettingsLink) apply, {
+  bool invalidateEverything = false,
+}) async {
   try {
     final link =
         await ref.read(watchSettingsLinkProvider(target.deviceId).future);
-    final ok = await link.setSwitch(
-      screenId: target.screenId,
-      entryId: entryId,
-      value: value,
-    );
-    ref.invalidate(watchSettingsScreenProvider(target));
+    final ok = await apply(link);
+    if (invalidateEverything) {
+      // Every screen of this watch at once. Only the ones still on screen
+      // actually re-read; the rest are already gone.
+      ref.invalidate(watchSettingsScreenProvider);
+    } else {
+      ref.invalidate(watchSettingsScreenProvider(target));
+    }
     return switch (ok) {
       true => WatchSettingsChangeResult.applied,
       false => WatchSettingsChangeResult.refused,

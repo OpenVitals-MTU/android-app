@@ -46,6 +46,15 @@ class GarminSettingsService {
   static const int _changeOption = 4;
   static const int _changeTime = 6;
   static const int _changeNumber = 8;
+  static const int _changePosition = 11;
+  static const int _positionDelete = 2;
+
+  // Where each response nests the thing it is about, and where that thing names
+  // its screen. Read off a vívoactive 5: the definition and state responses use
+  // field 2, the change response field 3.
+  static const int _responseInner = 2;
+  static const int _changeResponseInner = 3;
+  static const int _responseScreenId = 1;
 
   // InitRequest fields.
   static const int _initLanguage = 1;
@@ -84,6 +93,29 @@ class GarminSettingsService {
     final service = unwrap(reply);
     if (service == null) return false;
     return protobufField(readProtobuf(service), responseField) != null;
+  }
+
+  /// Which SCREEN a reply is about, or null if it does not say.
+  ///
+  /// Every response nests the screen it describes at the same place, which is
+  /// the only way to tell one from another: the watch retransmits anything it
+  /// thinks went unacknowledged, so a definition for a screen asked about
+  /// minutes ago can arrive while a different one is pending. Matching on the
+  /// response field alone handed the alarm LIST's layout back as the answer for
+  /// one alarm's screen, which drew a list of rows whose titles and values came
+  /// from two different places.
+  static int? screenIdOf(Uint8List? reply, int responseField) {
+    final service = unwrap(reply);
+    if (service == null) return null;
+    final response =
+        protobufField(readProtobuf(service), responseField)?.bytes;
+    if (response == null) return null;
+    final innerField = responseField == _changeResponse
+        ? _changeResponseInner
+        : _responseInner;
+    final inner = protobufField(readProtobuf(response), innerField)?.bytes;
+    if (inner == null) return null;
+    return protobufField(readProtobuf(inner), _responseScreenId)?.varint;
   }
 
   /// Opens the settings service for a locale.
@@ -191,6 +223,19 @@ class GarminSettingsService {
     return _change(screenId, entryId, _changeTime,
         (ProtobufWriter()..varint(1, seconds)).toBytes());
   }
+
+  /// Activates a row that deletes something.
+  ///
+  /// The row carries no target at all — it is a button, not a setting — and
+  /// `ChangeRequest` has no field for "activate this". `Position { index,
+  /// delete }` is its only delete-shaped member, and a vívoactive 5 accepted it
+  /// and removed the alarm, so that is what this sends.
+  static Uint8List changeDelete({
+    required int screenId,
+    required int entryId,
+  }) =>
+      _change(screenId, entryId, _changePosition,
+          (ProtobufWriter()..varint(_positionDelete, 1)).toBytes());
 
   static Uint8List changeNumber({
     required int screenId,

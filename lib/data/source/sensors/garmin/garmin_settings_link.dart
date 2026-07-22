@@ -116,6 +116,7 @@ class GarminSettingsLink {
       GarminSettingsService.screenDefinition(screenId),
       'screen $screenId definition',
       responseField: GarminSettingsService.definitionResponseField,
+      expectScreen: screenId,
     );
     if (definition == null) return null;
 
@@ -127,6 +128,7 @@ class GarminSettingsLink {
       GarminSettingsService.screenState(screenId),
       'screen $screenId state',
       responseField: GarminSettingsService.stateResponseField,
+      expectScreen: screenId,
     );
     if (state == null && isOpen) {
       debugPrint('[GARMIN-SETTINGS] no state for $screenId, asking again');
@@ -134,13 +136,29 @@ class GarminSettingsLink {
         GarminSettingsService.screenState(screenId),
         'screen $screenId state (retry)',
         responseField: GarminSettingsService.stateResponseField,
+        expectScreen: screenId,
       );
     }
     if (state == null) {
       debugPrint('[GARMIN-SETTINGS] screen $screenId has no state — every '
           'switch on it will render inert');
     }
-    return parseGarminSettingsScreen(definition, stateReply: state);
+    final screen = parseGarminSettingsScreen(definition, stateReply: state);
+    if (screen != null) {
+      // Every row as parsed, not as raw bytes: a long hex dump is truncated by
+      // logcat, and what matters when a control is missing is which KIND each
+      // row came out as.
+      debugPrint('[GARMIN-SETTINGS] screen $screenId "${screen.title}" '
+          '${screen.entries.length} rows, state=${screen.hasState}');
+      for (final entry in screen.entries) {
+        if (entry.isBlank) continue;
+        debugPrint('[GARMIN-SETTINGS]   ${entry.id}: ${entry.kind.name} '
+            '"${entry.title}" summary="${entry.summary}" '
+            'sub=${entry.subscreenId} options=${entry.options.length} '
+            'targetType=${entry.rawTargetType}');
+      }
+    }
+    return screen;
   }
 
   /// Flips a switch on the watch, and reports whether the watch agreed.
@@ -163,6 +181,7 @@ class GarminSettingsLink {
       ),
       'change switch',
       responseField: GarminSettingsService.changeResponseField,
+      expectScreen: screenId,
     );
     final ok = GarminSettingsService.changeSucceeded(reply);
     debugPrint('[GARMIN-SETTINGS] ← switch ${ok ?? "no answer"}');
@@ -183,8 +202,24 @@ class GarminSettingsLink {
       ),
       'change option',
       responseField: GarminSettingsService.changeResponseField,
+      expectScreen: screenId,
     );
     return GarminSettingsService.changeSucceeded(reply);
+  }
+
+  /// Activates a delete row. The answer matters more here than anywhere else:
+  /// this is the one operation that cannot be undone.
+  Future<bool?> delete({required int screenId, required int entryId}) async {
+    debugPrint('[GARMIN-SETTINGS] → delete $screenId/$entryId');
+    final reply = await _ask(
+      GarminSettingsService.changeDelete(screenId: screenId, entryId: entryId),
+      'delete',
+      responseField: GarminSettingsService.changeResponseField,
+      expectScreen: screenId,
+    );
+    final ok = GarminSettingsService.changeSucceeded(reply);
+    debugPrint('[GARMIN-SETTINGS] ← delete ${ok ?? "no answer"}');
+    return ok;
   }
 
   /// Sets a time of day.
@@ -201,6 +236,7 @@ class GarminSettingsLink {
       ),
       'change time',
       responseField: GarminSettingsService.changeResponseField,
+      expectScreen: screenId,
     );
     return GarminSettingsService.changeSucceeded(reply);
   }
@@ -222,18 +258,32 @@ class GarminSettingsLink {
   /// request id and some arrive as the watch's own traffic, and waiting for both
   /// made every screen cost the full timeout, because the id-based one never
   /// completes on this watch.
+  /// [expectScreen] is the screen the reply must be ABOUT. Without it, a
+  /// retransmitted definition for some other screen satisfies the wait, and the
+  /// caller pairs one screen's layout with another's values — an alarm list
+  /// whose titles came from the old read and whose times came from the alarm
+  /// underneath it.
   Future<Uint8List?> _ask(
     Uint8List request,
     String label, {
     required int responseField,
+    int? expectScreen,
   }) async {
     if (_closed) return null;
     final answer = Completer<Uint8List?>();
     void offer(Uint8List? reply) {
       if (answer.isCompleted) return;
-      if (reply != null && GarminSettingsService.carries(reply, responseField)) {
-        answer.complete(reply);
+      if (reply == null) return;
+      if (!GarminSettingsService.carries(reply, responseField)) return;
+      if (expectScreen != null) {
+        final about = GarminSettingsService.screenIdOf(reply, responseField);
+        if (about != null && about != expectScreen) {
+          debugPrint('[GARMIN-SETTINGS] ignoring a reply about screen $about '
+              'while waiting for $expectScreen');
+          return;
+        }
       }
+      answer.complete(reply);
     }
 
     final subscription = _replies.stream.listen(offer);
