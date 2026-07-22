@@ -353,6 +353,70 @@ void main() {
     });
   });
 
+  group('the value behind a row, as the watch reports it', () {
+    /// The state a vívoactive 5 sent for an alarm's Repeat and Time rows,
+    /// rebuilt field for field: a chosen option is a POSITION, and a time is
+    /// seconds since midnight.
+    Uint8List valueState() => _stateReply(screenId: 65600, states: [
+          (ProtobufWriter()
+                ..varint(1, 2)
+                ..nested(
+                    4,
+                    (ProtobufWriter()
+                          ..nested(1, _label('Once'))
+                          ..nested(2, (ProtobufWriter()..varint(1, 0)).toBytes()))
+                        .toBytes()))
+              .toBytes(),
+          (ProtobufWriter()
+                ..varint(1, 1)
+                ..nested(
+                    4,
+                    (ProtobufWriter()
+                          ..nested(1, _label('11:10 am'))
+                          ..nested(
+                              4,
+                              (ProtobufWriter()..varint(1, 40200)).toBytes()))
+                        .toBytes()))
+              .toBytes(),
+        ]);
+
+    Uint8List definition() => _definitionReply(screenId: 65600, entries: [
+          _entry(
+            id: 1,
+            title: 'Time',
+            targetType: 3,
+          ),
+          _entry(
+            id: 2,
+            title: 'Repeat',
+            targetType: 1,
+            options: ['Once', 'Daily', 'Weekday', 'Weekend'],
+          ),
+        ]);
+
+    test('a chosen option is a position, not the summary text', () {
+      // Matching the summary against the option titles held up until a screen
+      // arrived whose summary was EMPTY — and then nothing looked selected.
+      final repeat = parseGarminSettingsScreen(definition(),
+              stateReply: valueState())!
+          .entries
+          .firstWhere((e) => e.id == 2);
+      expect(repeat.selectedIndex, 0);
+      expect(repeat.options[repeat.selectedIndex!].title, 'Once');
+    });
+
+    test('a time comes back as the time, not just its rendering', () {
+      // 40200 seconds is 11:10 — the same instant the watch spelled out beside
+      // it. The picker opens here; starting from "now" reset any alarm it was
+      // used on.
+      final time = parseGarminSettingsScreen(definition(),
+              stateReply: valueState())!
+          .entries
+          .firstWhere((e) => e.id == 1);
+      expect(time.time, const Duration(hours: 11, minutes: 10));
+    });
+  });
+
   test('a nameless row is hidden even when it carries a value', () {
     // After a delete the freed slots came back with a leftover summary and no
     // title at all, which drew two empty grey cards under the real alarms.

@@ -185,9 +185,13 @@ class _EntryRowState extends ConsumerState<_EntryRow> {
         // The watch bounds these itself and does not send the bounds, so a
         // picker here could offer a value it will refuse. Left readable until
         // the limits are known.
+        final value = [
+          if (entry.summary != null && entry.summary!.isNotEmpty) entry.summary!,
+          if (entry.unit != null && entry.unit!.isNotEmpty) entry.unit!,
+        ].join(' ');
         return card(ListTile(
           title: Text(title),
-          subtitle: entry.summary == null ? null : Text(entry.summary!),
+          subtitle: value.isEmpty ? null : Text(value),
           enabled: false,
         ));
 
@@ -253,11 +257,12 @@ class _EntryRowState extends ConsumerState<_EntryRow> {
               onPressed: () => Navigator.of(context).pop(option),
               child: Row(
                 children: [
-                  // Matched on the text the watch renders in BOTH places, which
-                  // is the only thing the two have in common — the state does
-                  // not say which index is selected.
+                  // By POSITION, which is what the watch actually reports.
+                  // Matching the summary text against the titles held up until
+                  // a screen arrived with an empty summary, and then nothing
+                  // looked selected at all.
                   Icon(
-                    option.title == entry.summary
+                    option.index == entry.selectedIndex
                         ? Icons.radio_button_checked
                         : Icons.radio_button_unchecked,
                     size: 20,
@@ -322,9 +327,18 @@ class _EntryRowState extends ConsumerState<_EntryRow> {
   }
 
   Future<void> _chooseTime() async {
+    // Opened at the watch's OWN time. Starting from "now" meant every edit
+    // began at the wrong number, so nudging an alarm by ten minutes actually
+    // reset it to whenever you happened to open the picker.
+    final current = widget.entry.time;
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: current == null
+          ? TimeOfDay.now()
+          : TimeOfDay(
+              hour: current.inHours % 24,
+              minute: current.inMinutes % 60,
+            ),
       helpText: widget.entry.title,
     );
     if (picked == null || !mounted) return;

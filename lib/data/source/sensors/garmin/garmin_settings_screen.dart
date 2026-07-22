@@ -59,6 +59,9 @@ class GarminSettingsEntry {
     this.options = const [],
     this.switchedOn,
     this.rawTargetType,
+    this.selectedIndex,
+    this.time,
+    this.unit,
   });
 
   /// Identifies the entry within its screen — what a change names.
@@ -78,6 +81,23 @@ class GarminSettingsEntry {
   /// Only meaningful for [GarminEntryKind.toggle]; null when the state has not
   /// been read.
   final bool? switchedOn;
+
+  /// Which of [options] the watch says is chosen, as a POSITION in the list it
+  /// sent.
+  ///
+  /// The value, not a re-derivation of it: matching the summary text against
+  /// the option titles worked until a screen arrived whose summary was empty,
+  /// and then every option looked unselected.
+  final int? selectedIndex;
+
+  /// The time behind a [GarminEntryKind.time] row, as the watch holds it.
+  ///
+  /// Opening the picker at the CURRENT time instead meant every edit started
+  /// from the wrong number, which is how a nudge to an alarm becomes a reset.
+  final Duration? time;
+
+  /// What a number is measured in, when the watch said. Its own word for it.
+  final String? unit;
 
   /// The target type the watch declared, kept even when it is one this app does
   /// not handle. An entry that came out [GarminEntryKind.inert] is otherwise
@@ -228,6 +248,7 @@ GarminSettingsEntry? _parseEntry(
         title: title,
         summary: state?.summary,
         options: _options(protobufField(targetFields, _targetOptionList)?.bytes),
+        selectedIndex: state?.selectedIndex,
       );
     case _targetTime:
       return GarminSettingsEntry(
@@ -235,6 +256,7 @@ GarminSettingsEntry? _parseEntry(
         kind: GarminEntryKind.time,
         title: title,
         summary: state?.summary,
+        time: state?.time,
       );
     case _targetNumberPicker:
       return GarminSettingsEntry(
@@ -242,6 +264,7 @@ GarminSettingsEntry? _parseEntry(
         kind: GarminEntryKind.number,
         title: title,
         summary: state?.summary,
+        unit: state?.unit,
       );
     default:
       // Type 6 opens something ON the watch and 7 is hidden. Anything else is a
@@ -292,11 +315,36 @@ Map<int, _EntryState> _statesById(Uint8List? reply) {
     if (id == null) continue;
     final switchBytes = protobufField(fields, _stateSwitch)?.bytes;
     final summaryBytes = protobufField(fields, _stateSummary)?.bytes;
+    final summaryFields =
+        summaryBytes == null ? null : readProtobuf(summaryBytes);
+    final list = summaryFields == null
+        ? null
+        : protobufField(summaryFields, _summaryValueList)?.bytes;
+    final timeValue = summaryFields == null
+        ? null
+        : protobufField(summaryFields, _summaryValueTime)?.bytes;
+    final number = summaryFields == null
+        ? null
+        : protobufField(summaryFields, _summaryValueNumber)?.bytes;
+
     out[id] = _EntryState(
       // Present, even empty, is the whole signal. It is not in Gadgetbridge's
       // schema at all — that proto is older than this firmware — so it is read
       // for its PRESENCE and nothing is assumed about what it contains.
       removable: protobufField(fields, _stateRemovable) != null,
+      selectedIndex: list == null
+          ? null
+          : protobufField(readProtobuf(list), _valueIndex)?.varint,
+      time: timeValue == null
+          ? null
+          : switch (protobufField(readProtobuf(timeValue), _valueSeconds)
+              ?.varint) {
+              final int seconds => Duration(seconds: seconds),
+              null => null,
+            },
+      unit: number == null
+          ? null
+          : _labelText(protobufField(readProtobuf(number), _numberUnit)?.bytes),
       switchedOn: switchBytes == null
           ? null
           : (protobufField(readProtobuf(switchBytes), 1)?.varint ?? 0) != 0,
@@ -310,13 +358,24 @@ Map<int, _EntryState> _statesById(Uint8List? reply) {
 
 @immutable
 class _EntryState {
-  const _EntryState({this.switchedOn, this.summary, this.removable = false});
+  const _EntryState({
+    this.switchedOn,
+    this.summary,
+    this.removable = false,
+    this.selectedIndex,
+    this.time,
+    this.unit,
+  });
 
   final bool? switchedOn;
   final String? summary;
 
   /// The watch marked this row as one it will accept a removal for.
   final bool removable;
+
+  final int? selectedIndex;
+  final Duration? time;
+  final String? unit;
 }
 
 Uint8List? _definitionOf(Uint8List? reply) {
@@ -365,3 +424,14 @@ const int _stateSummary = 4;
 /// Set — present but empty — on the one row of an alarm's screen that deletes
 /// it, and on nothing at the root of the tree. Not in Gadgetbridge's schema.
 const int _stateRemovable = 9;
+
+// Inside a Summary: the VALUE behind a row, in a shape that depends on the kind
+// of control. Read off a vívoactive 5 — an alarm's Repeat came back as
+// `valueList{index:0}` beside the label "Once", and its Time as
+// `valueTime{seconds:40200}` beside "11:10 am".
+const int _summaryValueList = 2;
+const int _summaryValueTime = 4;
+const int _summaryValueNumber = 6;
+const int _valueIndex = 1;
+const int _valueSeconds = 1;
+const int _numberUnit = 4;
