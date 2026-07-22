@@ -71,6 +71,20 @@ class WatchDeviceScreen extends ConsumerWidget {
           _StatusCard(device: device, sync: sync),
           const SizedBox(height: 12),
           _Actions(device: device, sync: sync, supports: supports),
+          if (sync.isFindingDevice(device.id) || sync.findFailed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                sync.isFindingDevice(device.id)
+                    ? l10n.settingsWatchFindRinging
+                    : l10n.settingsWatchFindFailed,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: sync.findFailed
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+            ),
           // No "Latest" band: it showed the same numbers the Data action opens,
           // one tap away, so the screen said everything twice.
           // Only for a watch that says it HAS a settings tree. A watch without
@@ -193,7 +207,10 @@ class _Actions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final busy = sync.isSyncing;
+    final finding = sync.isFindingDevice(device.id);
+    // One radio: syncing and finding cannot overlap, and neither can a find on
+    // a second watch. Stopping THIS find stays available throughout.
+    final busy = (sync.isSyncing || sync.findingDeviceId != null) && !finding;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       child: Row(
@@ -211,7 +228,7 @@ class _Actions extends ConsumerWidget {
             busy: sync.isSyncingDevice(device.id),
             // One radio, one sync: disabled while ANY watch is syncing, the
             // same rule the summary tile uses, because they share this state.
-            onPressed: busy
+            onPressed: busy || finding
                 ? null
                 : () => ref
                     .read(garminSyncViewModelProvider.notifier)
@@ -239,9 +256,18 @@ class _Actions extends ConsumerWidget {
             ),
           if (supports(GarminCapability.findMyWatch))
             WatchAction(
-              icon: Icons.wifi_tethering,
-              label: l10n.settingsWatchActionFind,
-              onPressed: null,
+              // A toggle, not a one-shot: the watch alerts for a minute unless
+              // stopped, so the same control stops it — in place, because you
+              // are rummaging through a bag one-handed.
+              icon: finding ? Icons.stop : Icons.wifi_tethering,
+              label: finding
+                  ? l10n.settingsWatchFindStop
+                  : l10n.settingsWatchActionFind,
+              onPressed: busy
+                  ? null
+                  : () => ref
+                      .read(garminSyncViewModelProvider.notifier)
+                      .toggleFind(device.id),
             ),
         ],
       ),

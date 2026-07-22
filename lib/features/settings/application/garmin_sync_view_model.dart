@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -40,11 +42,20 @@ abstract class GarminSyncState with _$GarminSyncState {
     /// Files downloaded and handed to the importer by the last completed run.
     int? lastFileCount,
     String? errorMessage,
+
+    /// The watch currently being made to ring, or null.
+    String? findingDeviceId,
+
+    /// The last find was refused by the watch. A flag, not a message: the
+    /// wording is the screen's job, and this layer has no localizations.
+    @Default(false) bool findFailed,
   }) = _GarminSyncState;
 
   bool get isSyncing => syncingDeviceId != null;
 
   bool isSyncingDevice(String deviceId) => syncingDeviceId == deviceId;
+
+  bool isFindingDevice(String deviceId) => findingDeviceId == deviceId;
 }
 
 /// Runs a Garmin watch sync and feeds what it downloads into the existing FIT
@@ -175,6 +186,55 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
     );
     return downloaded.length;
   }
+
+  /// Makes the watch ring, and stops it.
+  ///
+  /// A toggle rather than a fire-and-forget: the protocol alerts for a minute
+  /// unless cancelled, so the same control has to be able to stop it — and the
+  /// link stays open for the duration, which is why this cannot share the sync
+  /// path that closes it a second in.
+  Future<void> toggleFind(String deviceId) async {
+    if (state.isFindingDevice(deviceId)) {
+      _findCancel?.complete();
+      return;
+    }
+    if (state.isSyncing || state.findingDeviceId != null) return;
+
+    final devices = ref.read(readPairedBleDevicesUseCaseProvider)();
+    final device = devices.where((d) => d.id == deviceId).firstOrNull;
+    if (device == null || !device.isWatch) return;
+
+    final cancel = Completer<void>();
+    _findCancel = cancel;
+    state = state.copyWith(
+      findingDeviceId: deviceId,
+      findFailed: false,
+      errorMessage: null,
+    );
+    try {
+      final accepted =
+          await ref.read(garminWatchSyncServiceProvider).findWatch(
+                address: device.address,
+                phoneName: ref.read(phoneIdentityProvider).bluetoothName,
+                manufacturer: ref.read(phoneIdentityProvider).manufacturer,
+                model: ref.read(phoneIdentityProvider).model,
+                cancelled: cancel.future,
+              );
+      if (!ref.mounted) return;
+      state = state.copyWith(findingDeviceId: null, findFailed: !accepted);
+    } catch (error) {
+      if (!ref.mounted) return;
+      debugPrint('[GARMIN-FIND] failed: $error');
+      state = state.copyWith(
+        findingDeviceId: null,
+        errorMessage: _describe(error),
+      );
+    } finally {
+      _findCancel = null;
+    }
+  }
+
+  Completer<void>? _findCancel;
 
   /// Extracts the watch-only metrics from the downloaded files and upserts them.
   ///

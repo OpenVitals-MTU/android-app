@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'garmin_ble_transport.dart';
 import 'garmin_capabilities.dart';
+import 'garmin_protobuf_transport.dart';
 import 'garmin_file_store.dart';
 import 'garmin_session.dart';
 
@@ -28,6 +29,74 @@ class GarminWatchSyncService {
   /// an importer bug means the data is unrecoverable, since archiving stops the
   /// watch ever offering the file again.
   final GarminFileStore? fileStore;
+
+  /// Makes the watch at [address] alert, and keeps the link open while it does.
+  ///
+  /// Find is a TOGGLE with a timeout, not a one-shot: the watch alerts for
+  /// [timeout] unless cancelled, so the link has to stay open for the duration —
+  /// a sync closes it in about a second, which would end the alert with it.
+  /// Completing [cancelled] stops the alert early.
+  ///
+  /// Returns whether the watch ACCEPTED the request. That is not the same as
+  /// "the watch is ringing": the protocol answers OK (100) or ERROR (200), and
+  /// only the first means anything happened.
+  Future<bool> findWatch({
+    required String address,
+    required String phoneName,
+    required String manufacturer,
+    required String model,
+    Duration timeout = GarminFindMyWatch.defaultTimeout,
+    Future<void>? cancelled,
+  }) async {
+    final transport = GarminBleTransport(address: address);
+    final ready = Completer<void>();
+    final session = GarminSession(
+      send: (frame) => transport.mlOrThrow.sendFrame(frame),
+      bluetoothName: phoneName,
+      manufacturer: manufacturer,
+      model: model,
+      onHandshakeReady: () {
+        if (!ready.isCompleted) ready.complete();
+      },
+    );
+
+    StreamSubscription<String>? dropSub;
+    try {
+      await transport.connect(onFrame: session.handleFrame);
+      dropSub = transport.onDisconnected.listen(session.abort);
+      session.start();
+      // The watch ignores anything sent before it has finished introducing
+      // itself, so wait for the handshake rather than racing it.
+      await ready.future.timeout(const Duration(seconds: 15));
+
+      final reply = await session.protobuf.request(
+        GarminFindMyWatch.start(timeout: timeout),
+        label: 'find start',
+      );
+      final accepted = GarminFindMyWatch.accepted(reply);
+      debugPrint('[GARMIN-FIND] ${accepted ? "ringing" : "refused"}');
+      if (!accepted) return false;
+
+      // Hold the link for the alert, or until the user stops it.
+      await Future.any([
+        Future<void>.delayed(timeout),
+        ?cancelled,
+      ]);
+      await session.protobuf.request(
+        GarminFindMyWatch.cancel(),
+        label: 'find cancel',
+      );
+      return true;
+    } on TimeoutException {
+      debugPrint('[GARMIN-FIND] the watch never finished its handshake');
+      return false;
+    } finally {
+      await dropSub?.cancel();
+      session.protobuf.abort();
+      await transport.close();
+      debugPrint('[GARMIN-FIND] link closed');
+    }
+  }
 
   /// Syncs the watch at [address].
   ///

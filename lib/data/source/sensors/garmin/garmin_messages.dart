@@ -29,6 +29,8 @@ class GarminMessageId {
   static const int supportedFileTypesRequest = 5031;
   static const int notificationSubscription = 5036;
   static const int synchronization = 5037;
+  static const int protobufRequest = 5043;
+  static const int protobufResponse = 5044;
   static const int configuration = 5050;
   static const int authNegotiation = 5101;
 }

@@ -104,9 +104,10 @@ void main() {
     expect(find.text('Remove watch'), findsOneWidget);
   });
 
-  testWidgets('unbuilt actions are shown disabled, not hidden', (tester) async {
-    // The watch CAN do these; the app cannot yet. Greyed says that. Hiding them
-    // would say the watch cannot, which is a different and untrue claim.
+  testWidgets('Alarms is disabled but Find is live', (tester) async {
+    // Find works now — it is the first consumer of the protobuf layer. Alarms
+    // still needs the watch's settings tree, so it stays greyed: the watch CAN
+    // do it and the app cannot, which is what disabled says.
     final container = await _container();
     await tester.pumpWidget(_harness(container));
     await tester.pumpAndSettle();
@@ -115,7 +116,7 @@ void main() {
     expect(find.text('Find'), findsOneWidget);
     expect(find.text('Settings on the watch'), findsOneWidget);
 
-    for (final label in ['Alarms', 'Find']) {
+    for (final label in ['Alarms']) {
       final button = tester.widget<IconButton>(
         find.ancestor(
           of: find.text(label),

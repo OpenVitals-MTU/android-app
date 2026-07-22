@@ -4164,5 +4164,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "settingsWatchFindStop": "Stop",
+  "settingsWatchFindRinging": "Listen for your watch",
+  "settingsWatchFindFailed": "The watch did not answer. Bring it closer and try again."
 }

@@ -9,6 +9,7 @@ import 'garmin_directory.dart';
 import 'garmin_file_types.dart';
 import 'garmin_gfdi_frame.dart';
 import 'garmin_messages.dart';
+import 'garmin_protobuf_transport.dart';
 
 /// One downloaded file and the directory entry it came from.
 class GarminDownloadedFile {
@@ -55,6 +56,7 @@ class GarminSession {
     this.onFileDownloaded,
     this.emptyGrace = const Duration(seconds: 6),
     this.keepAnsweringAfterSync = false,
+    this.onHandshakeReady,
   });
 
   /// Hands one built GFDI frame to the transport below. The session never sees
@@ -89,6 +91,13 @@ class GarminSession {
   /// has nothing". Injectable so tests need not wait it out.
   final Duration emptyGrace;
 
+  /// Called once the capabilities exchange is answered — the first moment the
+  /// watch will accept anything this app initiates.
+  ///
+  /// Earlier than that it is still introducing itself and drops what it is sent;
+  /// later would mean waiting for a whole file sync to finish.
+  final void Function()? onHandshakeReady;
+
   /// Diagnostic only: keep decoding and acknowledging what the watch sends after
   /// the sync has finished, instead of ignoring it.
   ///
@@ -102,6 +111,11 @@ class GarminSession {
   /// What the watch said it can do, once the handshake has reached
   /// CONFIGURATION. Empty before that.
   Set<GarminCapability> capabilities = const {};
+
+  /// Protobuf exchanges ride the same link. Constructed lazily so a session
+  /// that never sends one costs nothing.
+  late final GarminProtobufTransport protobuf =
+      GarminProtobufTransport(send: send);
 
   final Completer<List<GarminDownloadedFile>> _done =
       Completer<List<GarminDownloadedFile>>();
@@ -166,6 +180,7 @@ class GarminSession {
       if (!garminSelfAcknowledgedTypes.contains(frame.messageType)) {
         await send(buildGenericAck(frame.messageType));
       }
+      if (protobuf.handleInbound(frame)) return;
       await _dispatch(decodeGarminMessage(frame));
     } catch (error, stack) {
       if (_finished) {
@@ -215,6 +230,7 @@ class GarminSession {
         debugPrint('[GARMIN-CAPS] '
             '${capabilities.map((c) => c.wireName).join(", ")}');
         await send(buildConfigurationResponse());
+        onHandshakeReady?.call();
 
       case GarminNotificationSubscription():
         // Answered honestly (we forward nothing) but answered — the watch asks
@@ -457,6 +473,7 @@ class GarminSession {
   /// downloaded is still returned — a night of sleep already on the phone should
   /// not be thrown away because the walk home ended the connection.
   void abort([Object? reason]) {
+    protobuf.abort();
     if (_finished) return;
     _finished = true;
     _report(GarminSyncPhase.failed);

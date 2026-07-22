@@ -36,6 +36,26 @@ class _FakeSyncService implements GarminWatchSyncService {
   Set<GarminCapability> reportCapabilities = const {};
   int calls = 0;
 
+  /// Records a find, so the toggle can be asserted without a radio.
+  String? seenFindAddress;
+  bool findAccepted = true;
+
+  @override
+  Future<bool> findWatch({
+    required String address,
+    required String phoneName,
+    required String manufacturer,
+    required String model,
+    Duration timeout = const Duration(seconds: 60),
+    Future<void>? cancelled,
+  }) async {
+    seenFindAddress = address;
+    // Ends when the caller cancels, as the real one does — a find that returned
+    // immediately would never exercise the toggle's stop path.
+    if (cancelled != null) await cancelled;
+    return findAccepted;
+  }
+
   @override
   Future<List<GarminDownloadedFile>> sync({
     required String address,
@@ -217,5 +237,35 @@ void main() {
     // next run must fetch these files again.
     expect(repo.syncedFileKeys(watch.id), isEmpty);
     expect(repo.devices.single.lastSyncedAt, isNull);
+  });
+
+  test('find is a toggle: a second tap stops it', () async {
+    // The watch alerts for a minute unless cancelled, so the control that
+    // starts it has to be the one that stops it.
+    await setUp0();
+
+    final running = notifier().toggleFind(watch.id);
+    await Future<void>.delayed(Duration.zero);
+    expect(state().isFindingDevice(watch.id), isTrue);
+    expect(service.seenFindAddress, watch.address);
+
+    await notifier().toggleFind(watch.id); // stop
+    await running;
+    expect(state().findingDeviceId, isNull);
+  });
+
+  test('a refused find is reported as a flag, not a message', () async {
+    // The wording belongs to the screen; this layer has no localizations, and
+    // one that invented an English string would leak it into every locale.
+    await setUp0();
+    service.findAccepted = false;
+
+    final running = notifier().toggleFind(watch.id);
+    await Future<void>.delayed(Duration.zero);
+    await notifier().toggleFind(watch.id);
+    await running;
+
+    expect(state().findFailed, isTrue);
+    expect(state().errorMessage, isNull);
   });
 }
