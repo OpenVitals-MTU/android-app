@@ -134,11 +134,11 @@ void main() {
           _summaryFor(supported, l10n, includeUnsupported: true);
 
       expect(_titles(summary), contains('Blood oxygen'));
-      expect(summary.unsupportedTitles, contains('Blood oxygen'));
+      expect(summary.unsupportedIds, contains(DashboardMetric.spo2.name));
       // An unsupported tile is empty, like any other metric with no reading.
       expect(_tile(summary, 'Blood oxygen').value, isEmpty);
       // Supported metrics are not mistaken for unsupported ones.
-      expect(summary.unsupportedTitles, hasLength(1));
+      expect(summary.unsupportedIds, hasLength(1));
     });
 
     test('materialises every metric when the device supports nothing', () {
@@ -149,7 +149,7 @@ void main() {
       );
 
       expect(summary.tiles, isNotEmpty);
-      expect(summary.unsupportedTitles, hasLength(summary.tiles.length));
+      expect(summary.unsupportedIds, hasLength(summary.tiles.length));
     });
 
     test('defaults to false: unsupported metrics stay dropped', () {
@@ -158,7 +158,7 @@ void main() {
       final summary = _summaryFor(supported, l10n);
 
       expect(_titles(summary), isNot(contains('Blood oxygen')));
-      expect(summary.unsupportedTitles, isEmpty);
+      expect(summary.unsupportedIds, isEmpty);
     });
   });
 

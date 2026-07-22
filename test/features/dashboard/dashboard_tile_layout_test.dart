@@ -4,6 +4,9 @@ import 'package:openvitals/core/presentation/reorder.dart';
 import 'package:openvitals/features/dashboard/application/dashboard_display.dart';
 
 StatTileData _tile(String title) => StatTileData(
+      // The layout keys on id; these fixtures use the same string for both so
+      // the test reads as before.
+      id: title,
       title: title,
       value: '1',
       icon: Icons.circle,
@@ -15,6 +18,8 @@ List<String> _titles(List<StatTileData> tiles) =>
     [for (final t in tiles) t.title];
 
 void main() {
+  _migrationTests();
+
   final tiles = [for (final t in ['A', 'B', 'C', 'D']) _tile(t)];
 
   group('applyDashboardTileLayout', () {
@@ -80,6 +85,45 @@ void main() {
       expect(reorderOntoDropTarget(ids, 2, 2), ids);
       expect(reorderOntoDropTarget(ids, 0, 4), ids);
       expect(reorderOntoDropTarget(ids, -1, 2), ids);
+    });
+  });
+}
+
+void _migrationTests() {
+  group('migrateDashboardLayoutKeys', () {
+    // The order and hidden set were originally persisted as tile TITLES. Titles
+    // are display text, so they change with wording and could never identify a
+    // per-device tile whose name the user can edit.
+    const idByTitle = {'Beverages': 'hydration', 'Distance': 'distance'};
+
+    test('translates a legacy title to its id', () {
+      expect(
+        migrateDashboardLayoutKeys(['Beverages', 'Distance'], idByTitle),
+        ['hydration', 'distance'],
+      );
+    });
+
+    test('leaves ids alone, so migrating twice is a no-op', () {
+      final once = migrateDashboardLayoutKeys(['Beverages'], idByTitle);
+      expect(migrateDashboardLayoutKeys(once, idByTitle), once);
+    });
+
+    test('keeps a key it cannot resolve', () {
+      // A layout saved on a device with more metrics must survive a device with
+      // fewer — setTileOrder deliberately preserves what it does not recognise.
+      expect(
+        migrateDashboardLayoutKeys(['Distance', 'Something else'], idByTitle),
+        ['distance', 'Something else'],
+      );
+    });
+
+    test('collapses a title and its id to one entry', () {
+      // Possible mid-migration: a write that mixed vocabularies would otherwise
+      // leave the same tile listed twice and fighting itself for a position.
+      expect(
+        migrateDashboardLayoutKeys(['Distance', 'distance'], idByTitle),
+        ['distance'],
+      );
     });
   });
 }

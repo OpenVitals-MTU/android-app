@@ -178,3 +178,41 @@ int watchDaysSince(DateTime at, DateTime now) {
   final b = DateTime(now.year, now.month, now.day);
   return b.difference(a).inDays;
 }
+
+/// Confirms removing a paired device.
+///
+/// Both kinds ask, because both lose something the user cannot get back by
+/// re-pairing: a sensor loses its capability assignment and wheel size, and a
+/// watch additionally drops its Bluetooth bond, its companion association and
+/// the record of which files it has already copied. The body says which.
+Future<bool> confirmRemoveDevice(
+  BuildContext context, {
+  required String deviceName,
+  required bool isWatch,
+}) async {
+  final l10n = AppLocalizations.of(context);
+  final theme = Theme.of(context);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(l10n.settingsDeviceRemoveConfirmTitle(deviceName)),
+      content: Text(
+        isWatch
+            ? l10n.settingsWatchRemoveConfirmBody
+            : l10n.settingsSensorRemoveConfirmBody,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.actionCancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+          child: Text(l10n.actionRemove),
+        ),
+      ],
+    ),
+  );
+  return confirmed ?? false;
+}

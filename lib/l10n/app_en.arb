@@ -4134,5 +4134,16 @@
       }
     }
   },
-  "settingsWatchSyncing": "Syncing"
+  "settingsWatchSyncing": "Syncing",
+  "actionRemove": "Remove",
+  "settingsDeviceRemoveConfirmTitle": "Remove {arg0}?",
+  "@settingsDeviceRemoveConfirmTitle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSensorRemoveConfirmBody": "It will stop recording during activities. You can pair it again whenever you like.",
+  "settingsWatchRemoveConfirmBody": "OpenVitals will unpair the watch and forget which files it has already copied, so a future pairing starts fresh. Data already saved to Health Connect is kept."
 }

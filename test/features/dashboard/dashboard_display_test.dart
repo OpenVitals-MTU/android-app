@@ -71,6 +71,9 @@ void main() {
         hiddenTiles: hiddenTiles,
       );
 
+  List<String> trayTitles(DashboardDisplay d) =>
+      [for (final e in d.trayEntries) e.title];
+
   test('a fully-supported day maps both rings and every tile', () {
     final display = build(_data());
 
@@ -78,9 +81,9 @@ void main() {
         <String>['Steps', 'Weekly cardio']);
     expect(display.visibleRings, hasLength(2));
     expect(_titles(display.visibleTiles), contains('Distance'));
-    expect(display.hiddenTitles, isEmpty);
-    expect(display.trayTitles, isEmpty);
-    expect(display.unsupportedTitles, isEmpty);
+    expect(display.hiddenIds, isEmpty);
+    expect(display.trayEntries, isEmpty);
+    expect(display.unsupportedIds, isEmpty);
   });
 
   test('empty data still renders the rings and the empty tiles', () {
@@ -97,7 +100,7 @@ void main() {
     expect(display.orderedRings.first.value, '0');
     expect(display.orderedRings.last.value, '—');
     expect(display.activities, isEmpty);
-    expect(display.trayTitles, isEmpty);
+    expect(display.trayEntries, isEmpty);
   });
 
   test('the saved order and hidden set are already applied', () {
@@ -114,7 +117,13 @@ void main() {
     expect([for (final r in display.orderedRings) r.title],
         <String>['Weekly cardio', 'Steps']);
     // A removed tile is offered back in the tray.
-    expect(display.trayTitles, contains('Distance'));
+    expect(trayTitles(display), contains('Distance'));
+    // The saved layout came in as legacy TITLES and is handed back as ids, so
+    // the caller can write the translated form once instead of forever.
+    // 'Beverages' is the DISPLAY of the hydration metric — the exact reason a
+    // title cannot be an identity.
+    expect(display.migratedTileOrder, ['hydration', 'distance']);
+    expect(display.migratedHiddenTiles, {'distance'});
   });
 
   test('a hidden hero ring leaves the row and joins the tray', () {
@@ -122,7 +131,8 @@ void main() {
 
     expect([for (final r in display.visibleRings) r.title],
         <String>['Weekly cardio']);
-    expect(display.trayTitles.first, 'Steps');
+    expect(trayTitles(display).first, 'Steps');
+    expect(display.migratedHiddenTiles, {'steps'});
   });
 
   test('edit mode materialises an unsupported metric into the tray, not the '
@@ -132,15 +142,15 @@ void main() {
 
     final normal = build(_data(supported: supported));
     expect(_titles(normal.orderedTiles), isNot(contains('Blood oxygen')));
-    expect(normal.unsupportedTitles, isEmpty);
+    expect(normal.unsupportedIds, isEmpty);
 
     final editing = build(_data(supported: supported), editing: true);
     // Materialised, but treated as hidden until the user deliberately places it.
     expect(_titles(editing.orderedTiles), contains('Blood oxygen'));
     expect(_titles(editing.visibleTiles), isNot(contains('Blood oxygen')));
-    expect(editing.unsupportedTitles, contains('Blood oxygen'));
-    expect(editing.hiddenTitles, contains('Blood oxygen'));
-    expect(editing.trayTitles, contains('Blood oxygen'));
+    expect(editing.unsupportedIds, contains(DashboardMetric.spo2.name));
+    expect(editing.hiddenIds, contains(DashboardMetric.spo2.name));
+    expect(trayTitles(editing), contains('Blood oxygen'));
 
     // Recording it in the tile order is what marks it as placed.
     final placed = build(
@@ -149,7 +159,7 @@ void main() {
       tileOrder: const ['Blood oxygen'],
     );
     expect(_titles(placed.visibleTiles), contains('Blood oxygen'));
-    expect(placed.trayTitles, isNot(contains('Blood oxygen')));
+    expect(trayTitles(placed), isNot(contains('Blood oxygen')));
   });
 
   test('the goals reach the ring, not the defaults', () {

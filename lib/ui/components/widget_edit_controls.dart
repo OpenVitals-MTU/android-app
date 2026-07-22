@@ -124,12 +124,20 @@ class HiddenWidgetsSection extends StatelessWidget {
     super.key,
     required this.titles,
     required this.onAdd,
+    this.ids,
     this.padding = const EdgeInsets.fromLTRB(16, 20, 16, 0),
     this.heading,
   });
 
   final List<String> titles;
-  final void Function(String title) onAdd;
+
+  /// Stable keys parallel to [titles], when the caller identifies its widgets
+  /// by something other than their display text. [onAdd] receives the id at the
+  /// tapped index when this is supplied, and the title when it is not — which is
+  /// what keeps the recording dashboard, still title-keyed, working unchanged.
+  final List<String>? ids;
+
+  final void Function(String idOrTitle) onAdd;
   final EdgeInsetsGeometry padding;
 
   /// Overrides the "Add widgets" heading. The recording dashboard names the
@@ -163,11 +171,13 @@ class HiddenWidgetsSection extends StatelessWidget {
               ),
             )
           else
-            for (final title in titles)
+            for (final (index, title) in titles.indexed)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: OutlinedButton.icon(
-                  onPressed: () => onAdd(title),
+                  onPressed: () => onAdd(
+                    (ids != null && index < ids!.length) ? ids![index] : title,
+                  ),
                   icon: const Icon(Icons.add, size: 18),
                   label: Align(
                     alignment: Alignment.centerLeft,

@@ -210,12 +210,12 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
                       rings: visibleRings,
                       onReorder: (from, to) => notifier.setRingOrder(
                         reorderOntoDropTarget(
-                          [for (final r in visibleRings) r.title],
+                          [for (final r in visibleRings) r.id],
                           from,
                           to,
                         ),
                       ),
-                      onRemove: (title) => notifier.setTileHidden(title, true),
+                      onRemove: (id) => notifier.setTileHidden(id, true),
                     )
                   : Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,12 +257,12 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
                   tiles: visibleTiles,
                   onReorder: (from, to) => notifier.setTileOrder(
                     reorderOntoDropTarget(
-                      [for (final t in visibleTiles) t.title],
+                      [for (final t in visibleTiles) t.id],
                       from,
                       to,
                     ),
                   ),
-                  onRemove: (title) => notifier.setTileHidden(title, true),
+                  onRemove: (id) => notifier.setTileHidden(id, true),
                 ),
               )
             else if (visibleTiles.isNotEmpty)
@@ -278,10 +278,12 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
           // nothing to reorder, but the user still needs a way to add them back.
           if (state.editing)
             HiddenWidgetsSection(
-              titles: display.trayTitles,
-              onAdd: (title) => notifier.addWidget(
-                title,
-                recordPlacement: display.unsupportedTitles.contains(title),
+              // Shows the title, adds by id.
+              titles: [for (final e in display.trayEntries) e.title],
+              ids: [for (final e in display.trayEntries) e.id],
+              onAdd: (id) => notifier.addWidget(
+                id,
+                recordPlacement: display.unsupportedIds.contains(id),
               ),
             ),
           // DELIBERATE DEVIATION from the Kotlin app — do not "fix" this back.
@@ -492,7 +494,7 @@ class _MetricCarousel extends StatefulWidget {
   final bool editing;
   final void Function(String location)? onOpen;
   final void Function(int from, int to)? onReorder;
-  final void Function(String title)? onRemove;
+  final void Function(String id)? onRemove;
 
   static const int _columns = 2;
   static const int _rowsPerPage = 3;
@@ -801,7 +803,7 @@ class _MetricCarouselState extends State<_MetricCarousel> {
           top: 2,
           right: 2,
           child: RemoveWidgetButton(
-            onPressed: () => widget.onRemove?.call(tile.title),
+            onPressed: () => widget.onRemove?.call(tile.id),
           ),
         ),
       ],
@@ -822,7 +824,7 @@ class _HeroRingEditRow extends StatelessWidget {
 
   final List<RingCardData> rings;
   final void Function(int from, int to) onReorder;
-  final void Function(String title) onRemove;
+  final void Function(String id) onRemove;
 
   static const double _gap = 12;
 
@@ -870,7 +872,7 @@ class _HeroRingEditRow extends StatelessWidget {
         Positioned(
           top: 2,
           right: 2,
-          child: RemoveWidgetButton(onPressed: () => onRemove(ring.title)),
+          child: RemoveWidgetButton(onPressed: () => onRemove(ring.id)),
         ),
       ],
     );

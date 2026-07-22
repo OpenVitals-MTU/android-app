@@ -10,6 +10,7 @@ import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../application/ble_devices_view_model.dart';
+import 'watch_common.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 
 /// The Sensors settings screen: list paired BLE sensors (enable / edit / remove)
@@ -156,7 +157,14 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
                 onToggleEnabled: (enabled) =>
                     _notifier.setDeviceEnabled(device.id, enabled),
                 onEdit: () => _startEditFlow(device.id),
-                onRemove: () => _notifier.removeDevice(device.id),
+                onRemove: () async {
+                  final confirmed = await confirmRemoveDevice(
+                    context,
+                    deviceName: device.displayName,
+                    isWatch: device.isWatch,
+                  );
+                  if (confirmed) _notifier.removeDevice(device.id);
+                },
                 onOpen: device.isWatch
                     ? () => context.push(AppRoutes.watchDeviceLocation(device.id))
                     : null,

@@ -251,7 +251,13 @@ class _DeviceSettings extends ConsumerWidget {
                 l10n.settingsWatchRemove,
                 style: TextStyle(color: theme.colorScheme.error),
               ),
-              onTap: () {
+              onTap: () async {
+                final confirmed = await confirmRemoveDevice(
+                  context,
+                  deviceName: device.displayName,
+                  isWatch: true,
+                );
+                if (!confirmed || !context.mounted) return;
                 notifier.removeDevice(device.id);
                 context.pop();
               },

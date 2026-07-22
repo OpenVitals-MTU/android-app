@@ -172,7 +172,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
     _rebuildDisplay();
   }
 
-  /// Hides or shows a tile (by its title-key).
+  /// Hides or shows a tile by its stable id.
   void setTileHidden(String id, bool hidden) {
     final next = {...state.hiddenTiles};
     if (hidden) {
@@ -190,12 +190,12 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// [recordPlacement] is for a widget the device does not support: those have
   /// no tile outside edit mode, so the layout treats them as *absent* rather
   /// than merely hidden, and un-hiding alone would leave them in the tray.
-  /// Recording the title in [DashboardState.tileOrder] is what marks it as
+  /// Recording the id in [DashboardState.tileOrder] is what marks it as
   /// deliberately placed (the Kotlin allow-list append).
-  void addWidget(String title, {bool recordPlacement = false}) {
-    setTileHidden(title, false);
-    if (!recordPlacement || state.tileOrder.contains(title)) return;
-    final merged = <String>[...state.tileOrder, title];
+  void addWidget(String id, {bool recordPlacement = false}) {
+    setTileHidden(id, false);
+    if (!recordPlacement || state.tileOrder.contains(id)) return;
+    final merged = <String>[...state.tileOrder, id];
     ref.read(preferencesRepositoryProvider).setDashboardWidgetOrder(merged);
     state = state.copyWith(tileOrder: merged);
     _rebuildDisplay();
@@ -421,7 +421,38 @@ class DashboardViewModel extends Notifier<DashboardState> {
   void _rebuildDisplay() {
     final data = state.data;
     if (data == null) return;
-    state = state.copyWith(display: _buildDisplay(data));
+    final display = _buildDisplay(data);
+    state = state.copyWith(display: display);
+    _persistMigratedLayout(display);
+  }
+
+  /// Writes back a layout that was saved under the old title keys.
+  ///
+  /// The display translates on read so nothing is lost, but leaving the stored
+  /// value in the old vocabulary means every later write mixes ids with titles
+  /// — so the translated form is persisted the first time it differs, and the
+  /// question never arises again.
+  void _persistMigratedLayout(DashboardDisplay display) {
+    final prefs = ref.read(preferencesRepositoryProvider);
+    var changed = false;
+    if (!listEquals(display.migratedTileOrder, state.tileOrder)) {
+      prefs.setDashboardWidgetOrder(display.migratedTileOrder);
+      changed = true;
+    }
+    if (!listEquals(display.migratedRingOrder, state.ringOrder)) {
+      prefs.setDashboardRingOrder(display.migratedRingOrder);
+      changed = true;
+    }
+    if (!setEquals(display.migratedHiddenTiles, state.hiddenTiles)) {
+      prefs.setDashboardHiddenWidgets(display.migratedHiddenTiles);
+      changed = true;
+    }
+    if (!changed) return;
+    state = state.copyWith(
+      tileOrder: display.migratedTileOrder,
+      ringOrder: display.migratedRingOrder,
+      hiddenTiles: display.migratedHiddenTiles,
+    );
   }
 
   DashboardDisplay _buildDisplay(DashboardData data) => buildDashboardDisplay(
