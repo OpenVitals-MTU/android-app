@@ -1,5 +1,52 @@
 # Changelog
 
+## 2.3.0 - 2026-07-22
+
+### English
+
+- **Garmin watch sync.** Pair a Garmin watch and copy what it recorded straight off the wrist over Bluetooth, with no Garmin account and no Connect app. Sleep, heart rate, HRV, VO2 max, SpO2, steps and workouts go to Health Connect; stress, Body Battery, intensity minutes, training readiness and training load are kept in the app on a Watch data screen.
+- **Your watch's alarms and settings, from your phone.** Switch alarms on and off, retime, rename, add and delete them, and browse the watch's own settings menus, read live in the language the watch is set to. A Find button makes the watch alert when you have mislaid it.
+- **Sync with another phone.** Copy Health Connect records to a nearby phone over Bluetooth, with no account and no internet. All 41 record types are supported, the phones pair with a code you confirm on both, and a report tells you what moved.
+- **Body Energy on your home screen,** where the widget now draws the day's curve beside the score. Sleep also gains a night window you set yourself, replacing the fixed range modes.
+- **Much faster.** The Calories year view used to take up to half a minute and now opens straight away; the dashboard reads its metrics concurrently, the charts stop repainting every frame, and recording no longer writes every sensor event to disk.
+- **Fixes:** sleep draws a partly-staged night and a night split by waking correctly, a day's steps are no longer doubled by syncing twice, reminders survive a long absence, reading the log or importing a route no longer freezes the app, and home-screen widgets stop showing stale data.
+
+### Espanol
+
+- **Sincronizacion con relojes Garmin.** Vincula un reloj Garmin y copia lo que grabo directamente desde la muneca por Bluetooth, sin cuenta de Garmin y sin la app Connect. El sueno, la frecuencia cardiaca, la VFC, el VO2 max, la SpO2, los pasos y los entrenamientos van a Health Connect; el estres, Body Battery, los minutos de intensidad, la disposicion para entrenar y la carga de entrenamiento se guardan en la app en una pantalla de datos del reloj.
+- **Las alarmas y los ajustes del reloj, desde el telefono.** Activa y desactiva alarmas, cambia su hora, renombralas, anadelas y borralas, y navega por los menus de ajustes del propio reloj, leidos en vivo en el idioma configurado en el reloj. Un boton Buscar hace sonar el reloj cuando no sabes donde esta.
+- **Sincroniza con otro telefono.** Copia registros de Health Connect a un telefono cercano por Bluetooth, sin cuenta y sin internet. Se admiten los 41 tipos de registro, los telefonos se emparejan con un codigo que confirmas en ambos, y un informe te dice que se movio.
+- **Body Energy en la pantalla de inicio:** el widget ahora dibuja la curva del dia junto a la puntuacion. El sueno tambien gana una ventana nocturna que defines tu, en lugar de los modos de rango fijos.
+- **Mucho mas rapido.** La vista anual de Calorias tardaba hasta medio minuto y ahora se abre al instante; el panel lee sus metricas en paralelo, las graficas dejan de redibujarse en cada fotograma y la grabacion ya no escribe en disco cada evento de sensor.
+- **Correcciones:** el sueno dibuja bien una noche parcialmente clasificada y una noche partida por un despertar, los pasos de un dia ya no se duplican al sincronizar dos veces, los recordatorios sobreviven a una ausencia larga, leer el registro o importar una ruta ya no bloquea la app, y los widgets dejan de mostrar datos antiguos.
+
+### Deutsch
+
+- **Garmin-Uhren-Synchronisierung.** Koppele eine Garmin-Uhr und kopiere direkt vom Handgelenk per Bluetooth, was sie aufgezeichnet hat - ohne Garmin-Konto und ohne Connect-App. Schlaf, Herzfrequenz, HRV, VO2 max, SpO2, Schritte und Trainings gehen an Health Connect; Stress, Body Battery, Intensitaetsminuten, Trainingsbereitschaft und Trainingslast bleiben in der App auf einem eigenen Bildschirm.
+- **Die Alarme und Einstellungen der Uhr, vom Telefon aus.** Schalte Alarme ein und aus, aendere ihre Zeit, benenne sie um, lege neue an und loesche sie, und blaettere durch die Einstellungsmenues der Uhr selbst, live gelesen in der Sprache, auf die die Uhr eingestellt ist. Eine Suchen-Taste laesst die Uhr sich melden, wenn du sie verlegt hast.
+- **Mit einem anderen Telefon synchronisieren.** Kopiere Health-Connect-Datensaetze per Bluetooth auf ein Telefon in der Naehe, ohne Konto und ohne Internet. Alle 41 Datensatztypen werden unterstuetzt, die Telefone koppeln sich mit einem Code, den du auf beiden bestaetigst, und ein Bericht sagt dir, was uebertragen wurde.
+- **Body Energy auf dem Startbildschirm:** Das Widget zeichnet jetzt die Tageskurve neben dem Wert. Der Schlaf erhaelt ausserdem ein Nachtfenster, das du selbst festlegst, anstelle der festen Bereichsmodi.
+- **Deutlich schneller.** Die Kalorien-Jahresansicht brauchte bis zu einer halben Minute und oeffnet nun sofort; das Dashboard liest seine Werte parallel, die Diagramme zeichnen nicht mehr in jedem Frame neu, und die Aufzeichnung schreibt nicht mehr jedes Sensorereignis auf die Platte.
+- **Korrekturen:** Der Schlaf zeichnet eine teilweise klassifizierte Nacht und eine durch Aufwachen geteilte Nacht richtig, die Schritte eines Tages verdoppeln sich beim zweiten Sync nicht mehr, Erinnerungen ueberstehen eine lange Abwesenheit, das Lesen des Protokolls oder der Import einer Route blockiert die App nicht mehr, und Widgets zeigen keine veralteten Daten mehr.
+
+### Italiano
+
+- **Sincronizzazione con orologi Garmin.** Associa un orologio Garmin e copia cio che ha registrato direttamente dal polso via Bluetooth, senza account Garmin e senza l'app Connect. Sonno, frequenza cardiaca, HRV, VO2 max, SpO2, passi e allenamenti vanno in Health Connect; stress, Body Battery, minuti di intensita, prontezza all'allenamento e carico di allenamento restano nell'app in una schermata dedicata.
+- **Le sveglie e le impostazioni dell'orologio, dal telefono.** Attiva e disattiva le sveglie, cambiane l'ora, rinominale, aggiungile ed eliminale, e sfoglia i menu di impostazioni dell'orologio stesso, letti in tempo reale nella lingua impostata sull'orologio. Un pulsante Trova fa suonare l'orologio quando non sai dove sia.
+- **Sincronizza con un altro telefono.** Copia i record di Health Connect su un telefono vicino via Bluetooth, senza account e senza internet. Sono supportati tutti e 41 i tipi di record, i telefoni si associano con un codice che confermi su entrambi, e un rapporto ti dice cosa e stato trasferito.
+- **Body Energy sulla schermata iniziale:** il widget ora disegna la curva della giornata accanto al punteggio. Il sonno guadagna anche una finestra notturna che imposti tu, al posto delle modalita di intervallo fisse.
+- **Molto piu veloce.** La vista annuale delle Calorie impiegava fino a mezzo minuto e ora si apre subito; la dashboard legge le sue metriche in parallelo, i grafici smettono di ridisegnarsi a ogni fotogramma e la registrazione non scrive piu ogni evento del sensore su disco.
+- **Correzioni:** il sonno disegna correttamente una notte parzialmente classificata e una notte divisa da un risveglio, i passi di una giornata non si raddoppiano sincronizzando due volte, i promemoria sopravvivono a una lunga assenza, leggere il registro o importare un percorso non blocca piu l'app, e i widget smettono di mostrare dati vecchi.
+
+### Eesti
+
+- **Garmini kella sunkroonimine.** Seo Garmini kell ja kopeeri Bluetoothi kaudu otse randmelt see, mille kell salvestas - ilma Garmini kontota ja ilma Connecti rakenduseta. Uni, pulss, HRV, VO2 max, SpO2, sammud ja treeningud lahevad Health Connecti; stress, Body Battery, intensiivsusminutid, treeninguvalmidus ja treeningukoormus jaavad rakendusse omaette vaatesse.
+- **Kella aratused ja seaded telefonist.** Lulita aratusi sisse ja valja, muuda nende aega, nimeta umber, lisa ja kustuta neid ning sirvi kella enda seadete menuusid, mida loetakse reaalajas kella keeles. Otsimisnupp paneb kella endast margi andma, kui sa ei tea, kuhu see jai.
+- **Sunkrooni teise telefoniga.** Kopeeri Health Connecti kirjed Bluetoothi kaudu lahedalasuvasse telefoni, ilma kontota ja ilma internetita. Toetatud on koik 41 kirjetuupi, telefonid seotakse koodiga, mille kinnitad molemas, ja aruanne utleb, mis ule kanti.
+- **Body Energy avakuval:** vidin joonistab nuud paeva kover joone skoori korvale. Uni saab ka oo akna, mille maarad ise, fikseeritud vahemikureziimide asemel.
+- **Palju kiirem.** Kalorite aastavaade vottis varem kuni pool minutit ja avaneb nuud kohe; toolaud loeb oma naitajad paralleelselt, graafikud ei joonista end enam iga kaadri kaupa umber ja salvestamine ei kirjuta enam iga anduri sundmust kettale.
+- **Parandused:** uni joonistab oigesti osaliselt liigitatud oo ja arkamisega pooleks jaanud oo, paeva sammud ei kahekordistu enam kahekordsel sunkroonimisel, meeldetuletused elavad ule pika eemaloleku, logi lugemine voi marsruudi import ei blokeeri enam rakendust ja vidinad ei naita enam vana teavet.
+
 ## 2.2.8 - 2026-07-20
 
 ### English
