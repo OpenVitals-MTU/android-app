@@ -53,6 +53,7 @@ class GarminSession {
     this.onProgress,
     this.onFileDownloaded,
     this.emptyGrace = const Duration(seconds: 6),
+    this.keepAnsweringAfterSync = false,
   });
 
   /// Hands one built GFDI frame to the transport below. The session never sees
@@ -86,6 +87,16 @@ class GarminSession {
   /// that announcement and throws it away, which looks identical to "the watch
   /// has nothing". Injectable so tests need not wait it out.
   final Duration emptyGrace;
+
+  /// Diagnostic only: keep decoding and acknowledging what the watch sends after
+  /// the sync has finished, instead of ignoring it.
+  ///
+  /// A sync lasts about a second, so anything the watch volunteers on its own
+  /// schedule — or in response to being touched — lands long after the session
+  /// is done and is normally dropped on the floor by [_handleFrameSerially].
+  /// Acknowledging still matters while listening: an unanswered message is
+  /// retransmitted on a timer and eventually takes the link down with it.
+  final bool keepAnsweringAfterSync;
 
   final Completer<List<GarminDownloadedFile>> _done =
       Completer<List<GarminDownloadedFile>>();
@@ -141,7 +152,7 @@ class GarminSession {
   }
 
   Future<void> _handleFrameSerially(GarminGfdiFrame frame) async {
-    if (_finished) return;
+    if (_finished && !keepAnsweringAfterSync) return;
     try {
       // Acknowledge FIRST, as Gadgetbridge does: an unacknowledged message is
       // treated as lost, and the watch retransmits it on a timer instead of
@@ -152,6 +163,13 @@ class GarminSession {
       }
       await _dispatch(decodeGarminMessage(frame));
     } catch (error, stack) {
+      if (_finished) {
+        // Past the sync, so there is no result left to fail — but _fail() would
+        // return silently here and a listening pass whose whole purpose is to
+        // see what the watch sends must not swallow the one frame it choked on.
+        debugPrint('[GARMIN-LISTEN] frame ${frame.messageType} threw: $error');
+        return;
+      }
       _fail(error, stack);
     }
   }
@@ -247,8 +265,12 @@ class GarminSession {
         // chatter, but "the watch said something we did not expect" is exactly
         // the evidence a stalled sync needs, and swallowing it hid whether the
         // watch was talking to us at all.
+        // Truncated normally, whole while listening: 32 bytes is enough to tell
+        // a stalled sync what the watch is repeating, but a diagnostic pass is
+        // trying to decode the thing and half a protobuf decodes to nothing.
         debugPrint('[GARMIN-SYNC] unhandled message ${message.messageType} '
-            '(${message.payload.length}B) ${_hex(message.payload, max: 32)}');
+            '(${message.payload.length}B) '
+            '${_hex(message.payload, max: keepAnsweringAfterSync ? 512 : 32)}');
     }
   }
 
@@ -403,6 +425,9 @@ class GarminSession {
     await send(buildSystemEvent(GarminSystemEventType.syncComplete));
     _report(GarminSyncPhase.complete);
     debugPrint('[GARMIN-SYNC] complete: ${_downloaded.length} files');
+    if (keepAnsweringAfterSync) {
+      debugPrint('[GARMIN-LISTEN] sync done; still answering the watch');
+    }
     if (!_done.isCompleted) _done.complete(List.unmodifiable(_downloaded));
   }
 

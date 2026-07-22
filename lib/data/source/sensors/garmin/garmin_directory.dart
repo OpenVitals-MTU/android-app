@@ -75,6 +75,7 @@ class GarminDirectoryListing {
     required this.entries,
     required this.totalRecords,
     required this.skipped,
+    this.allIndexes = const [],
   });
 
   final List<GarminDirectoryEntry> entries;
@@ -82,11 +83,21 @@ class GarminDirectoryListing {
   /// Every 16-byte record read, before any filtering.
   final int totalRecords;
 
-  /// `(dataType, subType)` of each record that was dropped, and why.
+  /// `index:dataType/subType` of each record that was dropped, and why.
+  ///
+  /// The INDEX matters as much as the type: the watch also announces files over
+  /// the protobuf FileSyncService by index, and without it there is no way to
+  /// tell whether an announced file is one the legacy directory already lists
+  /// and we skip, or one it never mentions at all.
   final List<String> skipped;
 
+  /// The indexes of every record read, kept or dropped, so a listing can be
+  /// matched against what other channels claim exists.
+  final List<int> allIndexes;
+
   String describe() => 'records=$totalRecords kept=${entries.length} '
-      'skipped=[${skipped.join(", ")}]';
+      'skipped=[${skipped.join(", ")}] '
+      'indexes=[${allIndexes.join(",")}]';
 }
 
 class GarminDirectory {
@@ -101,6 +112,7 @@ class GarminDirectory {
   static GarminDirectoryListing parseWithDiagnostics(Uint8List data) {
     final entries = <GarminDirectoryEntry>[];
     final skipped = <String>[];
+    final allIndexes = <int>[];
     var totalRecords = 0;
     // A trailing partial record is truncated data, not an entry — stop before it
     // rather than read past the buffer.
@@ -115,6 +127,7 @@ class GarminDirectory {
       final fileFlags = reader.readByte();
       final fileSize = reader.readInt();
       final wireTimestamp = reader.readInt();
+      allIndexes.add(fileIndex);
 
       // The device's end-of-list padding: every field zero. Skipping it is what
       // stops the caller re-requesting index 0 (the directory itself) forever.
@@ -123,17 +136,17 @@ class GarminDirectory {
           subType == 0 &&
           fileNumber == 0 &&
           fileSize == 0) {
-        skipped.add('pad');
+        skipped.add('$fileIndex:pad');
         continue;
       }
 
       final type = GarminFileType.fromCodes(dataType, subType);
       if (type == null) {
-        skipped.add('$dataType/$subType?');
+        skipped.add('$fileIndex:$dataType/$subType?');
         continue;
       }
       if (!type.wanted) {
-        skipped.add('${type.name}!');
+        skipped.add('$fileIndex:${type.name}!');
         continue;
       }
 
@@ -151,6 +164,7 @@ class GarminDirectory {
       entries: entries,
       totalRecords: totalRecords,
       skipped: skipped,
+      allIndexes: allIndexes,
     );
   }
 }

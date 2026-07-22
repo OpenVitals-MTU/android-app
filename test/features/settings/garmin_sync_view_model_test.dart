@@ -29,6 +29,7 @@ class _FakeSyncService implements GarminWatchSyncService {
   /// What the view-model asked for, so the dedup wiring can be asserted.
   Set<String>? seenAlreadySynced;
   String? seenAddress;
+  Duration? seenListenAfter;
   int calls = 0;
 
   @override
@@ -39,10 +40,12 @@ class _FakeSyncService implements GarminWatchSyncService {
     required String model,
     Set<String> alreadySynced = const {},
     void Function(GarminSyncProgress)? onProgress,
+    Duration listenAfter = Duration.zero,
   }) async {
     calls++;
     seenAddress = address;
     seenAlreadySynced = alreadySynced;
+    seenListenAfter = listenAfter;
     if (error != null) throw error!;
     onProgress?.call(const GarminSyncProgress(
       phase: GarminSyncPhase.downloading,

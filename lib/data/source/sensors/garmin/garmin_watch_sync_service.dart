@@ -45,6 +45,7 @@ class GarminWatchSyncService {
     required String model,
     Set<String> alreadySynced = const {},
     void Function(GarminSyncProgress)? onProgress,
+    Duration listenAfter = Duration.zero,
   }) async {
     final transport = GarminBleTransport(address: address);
     late final GarminSession session;
@@ -61,6 +62,7 @@ class GarminWatchSyncService {
       onFileDownloaded: fileStore == null
           ? null
           : (file) => fileStore!.save(file, now: DateTime.now()),
+      keepAnsweringAfterSync: listenAfter > Duration.zero,
     );
 
     // Housekeeping before the link opens, so it cannot delay the sync itself.
@@ -73,7 +75,18 @@ class GarminWatchSyncService {
       // `done` forever waiting for frames that will never arrive.
       dropSub = transport.onDisconnected.listen(session.abort);
       session.start();
-      return await session.done;
+      final files = await session.done;
+      if (listenAfter > Duration.zero) {
+        // Diagnostic pass: the sync itself takes about a second, so holding the
+        // link open is the only way to see what the watch sends unprompted.
+        // Whatever arrives is logged by the session; the files are returned and
+        // imported as usual once the window closes.
+        debugPrint('[GARMIN-LISTEN] holding the link open for '
+            '${listenAfter.inMinutes}m — touch the watch now');
+        await Future<void>.delayed(listenAfter);
+        debugPrint('[GARMIN-LISTEN] window closed');
+      }
+      return files;
     } finally {
       await dropSub?.cancel();
       await transport.close();

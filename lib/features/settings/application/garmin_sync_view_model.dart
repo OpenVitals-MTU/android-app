@@ -60,7 +60,15 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
   ///
   /// One sync at a time: the radio is a single resource, and two sessions
   /// against one watch would fight over its ML handles.
-  Future<int> syncDevice(String deviceId) async {
+  ///
+  /// [listenAfter] is a diagnostic: the link normally closes the moment the sync
+  /// finishes, about a second in, so anything the watch volunteers on its own
+  /// schedule is never seen. A non-zero window holds it open and logs what
+  /// arrives. Debug builds only — see the long-press on "Sync now".
+  Future<int> syncDevice(
+    String deviceId, {
+    Duration listenAfter = Duration.zero,
+  }) async {
     if (state.isSyncing) return 0;
 
     final devices = ref.read(readPairedBleDevicesUseCaseProvider)();
@@ -84,6 +92,7 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
         manufacturer: phone.manufacturer,
         model: phone.model,
         alreadySynced: repository.syncedFileKeys(deviceId),
+        listenAfter: listenAfter,
         onProgress: (progress) {
           if (!ref.mounted || state.syncingDeviceId != deviceId) return;
           state = state.copyWith(

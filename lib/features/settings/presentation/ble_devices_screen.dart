@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -321,6 +322,15 @@ class _WatchSyncRow extends ConsumerWidget {
                 : () => ref
                     .read(garminSyncViewModelProvider.notifier)
                     .syncDevice(device.id),
+            // Debug-only diagnostic: sync, then hold the link open so what the
+            // watch sends unprompted can be read from the log. Deliberately
+            // undiscoverable — it pins the radio for minutes.
+            onLongPress: !kDebugMode || sync.isSyncing
+                ? null
+                : () => ref
+                    .read(garminSyncViewModelProvider.notifier)
+                    .syncDevice(device.id,
+                        listenAfter: const Duration(minutes: 10)),
             icon: const Icon(Icons.sync, size: 18),
             label: Text(l10n.settingsWatchSyncNow),
           ),

@@ -599,6 +599,36 @@ void main() {
       await session.handleFrame(GarminGfdiFrame.parse(watch.authNegotiation()));
       expect(await session.done, isEmpty);
     });
+
+    test('keeps acknowledging after completion when listening', () async {
+      final watch = _FakeWatch(files: {0: _directory([])});
+      final session = GarminSession(
+        send: (frame) async => watch.onFrame(GarminGfdiFrame.parse(frame)),
+        bluetoothName: 'Pixel',
+        manufacturer: 'Google',
+        model: 'raven',
+        emptyGrace: Duration.zero,
+        keepAnsweringAfterSync: true,
+      )..start();
+      watch.outbox
+        ..add(watch.deviceInformation())
+        ..add(watch.authNegotiation());
+      while (watch.outbox.isNotEmpty) {
+        await session.handleFrame(
+          GarminGfdiFrame.parse(watch.outbox.removeAt(0)),
+        );
+      }
+      await session.done;
+
+      final before = watch.received.length;
+      await session.handleFrame(GarminGfdiFrame.parse(watch.authNegotiation()));
+
+      // The point of the diagnostic window: a frame arriving after the sync is
+      // still answered. Silence here would make the watch retransmit on a timer
+      // and eventually drop the link the pass depends on.
+      expect(watch.received.length, greaterThan(before));
+      expect(await session.done, isEmpty);
+    });
   });
 }
 

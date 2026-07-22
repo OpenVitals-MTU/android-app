@@ -134,9 +134,12 @@ void main() {
       ]));
       expect(filtered.totalRecords, 2);
       expect(filtered.entries, isEmpty);
-      // The raw codes are what make an unmapped type diagnosable on a device.
-      expect(filtered.skipped, contains('128/55?'));
-      expect(filtered.skipped, contains('deviceXml!'));
+      // The raw codes are what make an unmapped type diagnosable on a device,
+      // and the INDEX is what lets an entry be matched against the files the
+      // watch announces separately over the protobuf FileSyncService.
+      expect(filtered.skipped, contains('6:128/55?'));
+      expect(filtered.skipped, contains('7:deviceXml!'));
+      expect(filtered.allIndexes, [6, 7]);
     });
 
     test('a trailing partial record is ignored', () {
