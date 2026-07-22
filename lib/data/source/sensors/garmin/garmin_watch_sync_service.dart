@@ -260,33 +260,38 @@ class GarminWatchSyncService {
 
       // Walk into every subscreen the root offers, which is where alarms live —
       // the root itself carries only categories.
-      // Breadth-first from the root. Bounded three ways, because the tree is
-      // the WATCH's and nothing here knows how deep or how wide it goes: a
-      // visited set (screens are reachable from more than one parent, and a
-      // cycle would loop forever), a depth limit, and a total cap. Each screen
-      // costs a round trip of up to thirty seconds, so an unbounded walk would
-      // hold the link for as long as the watch tolerated it.
+      // DEPTH-first from the root. Breadth-first spent the entire screen
+      // budget on the top level and stopped before reaching anything at depth
+      // three — an alarm's own screen is exactly there (Settings → Clocks →
+      // Alarms → the alarm), so the interesting leaves were always the ones cut
+      // off. Going deep first reaches one in three hops.
+      //
+      // Bounded three ways, because the tree is the WATCH's and nothing here
+      // knows how deep or wide it goes: a visited set (screens are reachable
+      // from more than one parent, and a cycle would loop forever), a depth
+      // limit, and a total cap. Each screen costs a round trip.
       final visited = <int>{GarminSettingsService.rootScreenId};
-      var frontier = <GarminSettingsSubscreen>[
-        ...GarminSettingsService.subscreens(root),
-      ];
-      for (var depth = 1; depth <= maxSettingsDepth; depth++) {
-        final next = <GarminSettingsSubscreen>[];
-        for (final entry in frontier) {
-          if (!visited.add(entry.screenId)) continue;
-          if (visited.length > maxSettingsScreens) {
-            debugPrint('[GARMIN-SETTINGS] stopping at $maxSettingsScreens '
-                'screens — the rest of the tree is not walked');
-            break;
-          }
-          final label = '[$depth] ${entry.screenId} '
-              '(${entry.title ?? "untitled"})';
-          final screen = await fetchScreen(entry.screenId, label);
-          if (screen == null) continue;
-          next.addAll(GarminSettingsService.subscreens(screen));
+
+      Future<void> walk(GarminSettingsSubscreen entry, int depth) async {
+        if (depth > maxSettingsDepth) return;
+        if (visited.length >= maxSettingsScreens) return;
+        if (!visited.add(entry.screenId)) return;
+        final label = '[$depth] ${entry.screenId} '
+            '(${entry.title ?? "untitled"})';
+        final screen = await fetchScreen(entry.screenId, label);
+        if (screen == null) return;
+        for (final child in GarminSettingsService.subscreens(screen)) {
+          await walk(child, depth + 1);
         }
-        if (next.isEmpty || visited.length > maxSettingsScreens) break;
-        frontier = next;
+      }
+
+      for (final entry in GarminSettingsService.subscreens(root)) {
+        await walk(entry, 1);
+        if (visited.length >= maxSettingsScreens) {
+          debugPrint('[GARMIN-SETTINGS] stopping at $maxSettingsScreens '
+              'screens — the rest of the tree is not walked');
+          break;
+        }
       }
 
       await settingsReplies.close();
