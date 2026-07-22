@@ -309,8 +309,10 @@ class GarminSession {
       _directoryFetched = true;
       final listing = GarminDirectory.parseWithDiagnostics(bytes);
       // Skip what a previous sync already imported — bandwidth only.
+      // A null dedup key means the file cannot be identified across syncs, so it
+      // is always fetched rather than guessed at — see [dedupKey].
       final fresh = listing.entries
-          .where((e) => !alreadySynced.contains(e.dedupKey))
+          .where((e) => e.dedupKey == null || !alreadySynced.contains(e.dedupKey))
           .toList();
       _queue
         ..clear()

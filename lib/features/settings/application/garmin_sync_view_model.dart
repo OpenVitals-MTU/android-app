@@ -113,8 +113,11 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
                 for (final file in downloaded)
                   ActivityRouteFileSource.ofBytes(
                     bytes: file.bytes,
+                    // Indexed, not numbered: several files share the 65535
+                    // "unset" file number, and identically-named entries in the
+                    // import log cannot be told apart when one of them fails.
                     fileName: '${file.entry.type.name}_'
-                        '${file.entry.fileNumber}.fit',
+                        '${file.entry.fileIndex}.fit',
                   ),
               ],
               ref.read(unitSystemProvider),
@@ -137,7 +140,9 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
       // rather than skipping files that never reached Health Connect.
       repository.recordSyncedFileKeys(
         deviceId,
-        downloaded.map((f) => f.entry.dedupKey),
+        // Files with no stable key are not recorded — they are re-fetched every
+        // sync by design rather than skipped on a key that identifies nothing.
+        downloaded.map((f) => f.entry.dedupKey).whereType<String>(),
       );
     }
 

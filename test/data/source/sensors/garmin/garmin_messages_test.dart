@@ -105,6 +105,23 @@ void main() {
       expect(GarminDirectory.parse(data).single.fileDate, isNull);
     });
 
+    test('an unset file number yields NO dedup key', () {
+      // A real vívoactive 5 returned two DIFFERENT sleep files both numbered
+      // 65535. Keying on that collapsed them into one and would have made every
+      // future sleep file look already-synced — silent, permanent data loss.
+      final entries = GarminDirectory.parse(_b([
+        ...entry(index: 113, dataType: 128, subType: 49, number: 0xFFFF),
+        ...entry(index: 116, dataType: 128, subType: 49, number: 0xFFFF),
+        ...entry(index: 121, dataType: 128, subType: 32, number: 136),
+      ]));
+
+      expect(entries, hasLength(3));
+      expect(entries[0].dedupKey, isNull);
+      expect(entries[1].dedupKey, isNull);
+      // A real file number still keys normally.
+      expect(entries[2].dedupKey, '128/32/136');
+    });
+
     test('diagnostics distinguish empty from filtered-out', () {
       // "0 entries" has several causes; the listing must say which.
       final empty = GarminDirectory.parseWithDiagnostics(Uint8List(0));

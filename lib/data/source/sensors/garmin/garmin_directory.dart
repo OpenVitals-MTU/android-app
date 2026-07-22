@@ -32,9 +32,27 @@ class GarminDirectoryEntry {
   /// (wire timestamp 0).
   final DateTime? fileDate;
 
+  /// The watch's "no file number" sentinel. Observed on a real vívoactive 5 for
+  /// sleep and HRV files, where several DIFFERENT files all carry it.
+  static const int unsetFileNumber = 0xFFFF;
+
   /// A stable key for cross-sync dedup: type + file number identify the same
   /// recording across re-syncs, independent of the volatile file index.
-  String get dedupKey => '${type.dataType}/${type.subType}/$fileNumber';
+  ///
+  /// **Null when the file number is [unsetFileNumber]**, because then it
+  /// identifies nothing: a real watch returned two distinct sleep files both
+  /// numbered 65535, which collapsed to one key and would have made every
+  /// future sleep file look already-synced — silent, permanent data loss.
+  ///
+  /// Declining to dedup those is safe in a way that guessing is not. The archive
+  /// flag set on the watch is the PRIMARY mechanism and still applies, and
+  /// Health Connect's `clientRecordId` makes any re-import idempotent, so the
+  /// worst case is re-downloading a file. Keying on the volatile [fileIndex]
+  /// instead was rejected for the opposite reason: an index the watch later
+  /// reuses would skip a genuinely new file.
+  String? get dedupKey => fileNumber == unsetFileNumber
+      ? null
+      : '${type.dataType}/${type.subType}/$fileNumber';
 }
 
 /// Parses a downloaded directory file into the entries worth pulling.

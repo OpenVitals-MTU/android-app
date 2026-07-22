@@ -306,6 +306,19 @@ void main() {
       expect(files.map((f) => f.entry.fileIndex), [6]);
     });
 
+    test('files with no dedup key are always fetched, never skipped', () async {
+      final watch = _FakeWatch(files: {
+        0: _directory([(5, 128, 49, 0xFFFF)]), // sleep, unset file number
+        5: _b([1, 2, 3]),
+      });
+
+      // Even with a key that WOULD match if one existed, an unkeyed file must
+      // still be fetched — the alternative is losing every future sleep file.
+      final files = await _runSync(watch, alreadySynced: {'128/49/65535'});
+
+      expect(files, hasLength(1));
+    });
+
     test('a directory with nothing new completes without downloading', () async {
       final watch = _FakeWatch(files: {
         0: _directory([(5, 128, 49, 1)]),
