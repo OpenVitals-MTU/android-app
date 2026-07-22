@@ -79,11 +79,16 @@ class _SavedDrinkEntryDialog extends StatefulWidget {
 }
 
 class _SavedDrinkEntryDialogState extends State<_SavedDrinkEntryDialog> {
-  /// Seeded in the user's own unit, not raw millilitres.
-  late final TextEditingController _amount = TextEditingController(
-    text: widget.formatter.millilitersToVolumeInput(
-      widget.drink.volumeMilliliters,
+  /// Seeded in the user's own unit, not raw millilitres. The initial value is
+  /// selected so the autofocused field replaces the preset on first keystroke.
+  late final TextEditingController _amount = TextEditingController.fromValue(
+    TextEditingValue(
+      text: _initialAmount,
+      selection: TextSelection(baseOffset: 0, extentOffset: _initialAmount.length),
     ),
+  );
+  late final String _initialAmount = widget.formatter.millilitersToVolumeInput(
+    widget.drink.volumeMilliliters,
   );
   DateTime _time = DateTime.now();
   bool _invalid = false;
