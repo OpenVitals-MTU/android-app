@@ -116,6 +116,9 @@ void main() {
       late final GarminProtobufTransport transport;
       transport = GarminProtobufTransport(send: (frame) async {
         final parsed = GarminGfdiFrame.parse(frame);
+        // Answer the REQUEST only. The transport now sends its own
+        // acknowledgements through this hook, and replying to those recurses.
+        if (parsed.messageType != GarminMessageId.protobufRequest) return;
         sent.add(parsed);
         final requestId = parsed.payload[0] | (parsed.payload[1] << 8);
         transport.handleInbound(_reply(requestId, _b([0x62, 0x00])));
@@ -131,6 +134,7 @@ void main() {
       late final GarminProtobufTransport transport;
       transport = GarminProtobufTransport(send: (frame) async {
         final parsed = GarminGfdiFrame.parse(frame);
+        if (parsed.messageType != GarminMessageId.protobufRequest) return;
         final id = parsed.payload[0] | (parsed.payload[1] << 8);
         ids.add(id);
         transport.handleInbound(_reply(id, _b([0x00])));

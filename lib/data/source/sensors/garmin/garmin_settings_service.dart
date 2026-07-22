@@ -34,7 +34,18 @@ class GarminSettingsService {
   static const int _entryTarget = 9;
   static const int _targetType = 1;
   static const int _targetSubscreen = 2;
+  static const int _targetSubscreenWithOptions = 9;
   static const int _labelText = 2;
+
+  // ChangeRequest fields.
+  static const int _changeRequest = 5;
+  static const int _changeResponse = 6;
+  static const int _changeScreenId = 1;
+  static const int _changeEntryId = 2;
+  static const int _changeSwitch = 3;
+  static const int _changeOption = 4;
+  static const int _changeTime = 6;
+  static const int _changeNumber = 8;
 
   // InitRequest fields.
   static const int _initLanguage = 1;
@@ -53,6 +64,7 @@ class GarminSettingsService {
   /// The SettingsService field a reply of each kind arrives in.
   static const int definitionResponseField = _definitionResponse;
   static const int stateResponseField = _stateResponse;
+  static const int changeResponseField = _changeResponse;
 
   /// Whether [reply] carries the response field [responseField].
   ///
@@ -126,6 +138,91 @@ class GarminSettingsService {
     return protobufField(readProtobuf(service), _stateResponse) != null;
   }
 
+  /// Changes ONE entry on ONE screen.
+  ///
+  /// The only write in this whole stack — everything else reads. A malformed
+  /// change does not fail politely: it is applied to a real watch someone
+  /// depends on, so each value kind is a separate constructor rather than one
+  /// generic setter that could put a time in a switch's field.
+  ///
+  /// The reply carries a status AND the screen's new state, so a caller can
+  /// confirm what the watch actually did rather than assume the request landed.
+  static Uint8List changeSwitch({
+    required int screenId,
+    required int entryId,
+    required bool value,
+  }) =>
+      _change(screenId, entryId, _changeSwitch,
+          (ProtobufWriter()..varint(1, value ? 1 : 0)).toBytes());
+
+  /// [index] is a position in the option list the DEFINITION supplied for this
+  /// entry — never a guessed ordinal.
+  static Uint8List changeOption({
+    required int screenId,
+    required int entryId,
+    required int index,
+  }) =>
+      _change(screenId, entryId, _changeOption,
+          (ProtobufWriter()..varint(1, index)).toBytes());
+
+  /// Seconds since midnight, which is how the watch stores a time of day.
+  static Uint8List changeTime({
+    required int screenId,
+    required int entryId,
+    required Duration sinceMidnight,
+  }) {
+    final seconds = sinceMidnight.inSeconds;
+    if (seconds < 0 || seconds >= Duration.secondsPerDay) {
+      throw ArgumentError.value(
+        seconds,
+        'sinceMidnight',
+        'must be within one day — the watch takes seconds since midnight',
+      );
+    }
+    return _change(screenId, entryId, _changeTime,
+        (ProtobufWriter()..varint(1, seconds)).toBytes());
+  }
+
+  static Uint8List changeNumber({
+    required int screenId,
+    required int entryId,
+    required int value,
+  }) =>
+      _change(screenId, entryId, _changeNumber,
+          (ProtobufWriter()..varint(1, value)).toBytes());
+
+  static Uint8List _change(
+    int screenId,
+    int entryId,
+    int valueField,
+    Uint8List value,
+  ) {
+    final request = (ProtobufWriter()
+          ..varint(_changeScreenId, screenId)
+          ..varint(_changeEntryId, entryId)
+          ..nested(valueField, value))
+        .toBytes();
+    final service =
+        (ProtobufWriter()..nested(_changeRequest, request)).toBytes();
+    return _smart(service);
+  }
+
+  /// What the watch made of a change: null when it did not answer with one.
+  ///
+  /// SUCCESS is 0 here — unlike the find service, where OK is 100. Two enums,
+  /// two meanings for zero, which is exactly the kind of thing that turns a
+  /// refusal into a silent success.
+  static bool? changeSucceeded(Uint8List? reply) {
+    final service = unwrap(reply);
+    if (service == null) return null;
+    final response =
+        protobufField(readProtobuf(service), _changeResponse)?.bytes;
+    if (response == null) return null;
+    final status = protobufField(readProtobuf(response), 1)?.varint;
+    // Absent status on a present response means it was accepted.
+    return status == null || status == 0;
+  }
+
   /// One entry on a screen that leads somewhere else.
   static List<GarminSettingsSubscreen> subscreens(Uint8List reply) {
     final service = unwrap(reply);
@@ -145,11 +242,16 @@ class GarminSettingsService {
       final target = protobufField(fields, _entryTarget)?.bytes;
       if (target == null) continue;
       final targetFields = readProtobuf(target);
-      // Target type 0 is "another screen"; 6 opens an activity ON the watch and
-      // 7 is hidden, neither of which this app can walk into.
-      if (protobufField(targetFields, _targetType)?.varint != 0) continue;
+      // Types 0 and 9 are both "another screen" — 9 carries an option list with
+      // it, which is what an alarm's own screen is. Type 6 opens an activity ON
+      // the watch and 7 is hidden; neither can be walked into.
+      final targetType = protobufField(targetFields, _targetType)?.varint;
+      if (targetType != 0 && targetType != _targetSubscreenWithOptions) continue;
       final screenId = protobufField(targetFields, _targetSubscreen)?.varint;
-      if (screenId == null) continue;
+      // Screen zero is how an EMPTY slot is written — an alarm list reserves a
+      // row per slot and points the unused ones at nothing. Requesting it would
+      // ask the watch for a screen that does not exist.
+      if (screenId == null || screenId == 0) continue;
 
       String? title;
       final label = protobufField(fields, _entryTitle)?.bytes;

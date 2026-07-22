@@ -217,7 +217,11 @@ class GarminWatchSyncService {
         }
       }
 
-      /// Fetches one screen and prints it.
+      /// Fetches one screen — its layout AND the values currently behind it.
+      ///
+      /// Both, because they answer different questions: the definition says
+      /// there is a "Repeat" row, the state says it is set to Mon–Fri. A control
+      /// rendered from the definition alone cannot show what it is set to.
       Future<Uint8List?> fetchScreen(int screenId, String label) async {
         final definition = await ask(
           GarminSettingsService.screenDefinition(screenId, language: language),
@@ -227,6 +231,16 @@ class GarminWatchSyncService {
         debugPrint('[GARMIN-SETTINGS] $label definition: '
             '${definition == null ? "none" : "${definition.length}B"}');
         if (definition != null) GarminSettingsService.describe(definition);
+
+        final state = await ask(
+          GarminSettingsService.screenState(screenId),
+          '$label state',
+          responseField: GarminSettingsService.stateResponseField,
+        );
+        debugPrint('[GARMIN-SETTINGS] $label state: '
+            '${state == null ? "none" : "${state.length}B"}');
+        if (state != null) GarminSettingsService.describe(state);
+
         return definition;
       }
 

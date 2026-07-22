@@ -99,13 +99,20 @@ class GarminProtobufTransport {
       return false;
     }
     final payload = frame.payload;
-    if (payload.length < 14) return false;
+    if (payload.length < 14) {
+      // Malformed, but still ours — acknowledge it or the watch repeats it.
+      unawaited(send(buildGenericAck(frame.messageType)));
+      return true;
+    }
     final data = ByteData.sublistView(payload);
     final requestId = data.getUint16(0, Endian.little);
     final dataOffset = data.getUint32(2, Endian.little);
     final totalLength = data.getUint32(6, Endian.little);
     final chunkLength = data.getUint32(10, Endian.little);
-    if (payload.length < 14 + chunkLength) return false;
+    if (payload.length < 14 + chunkLength) {
+      unawaited(send(buildGenericAck(frame.messageType)));
+      return true;
+    }
     final bytes = Uint8List.sublistView(payload, 14, 14 + chunkLength);
 
     // Chunked, whoever it belongs to. Accumulation is keyed on the id alone,
@@ -142,6 +149,9 @@ class GarminProtobufTransport {
       return true;
     }
 
+    // Complete in one message: the plain acknowledgement, which the session no
+    // longer sends on our behalf.
+    unawaited(send(buildGenericAck(frame.messageType)));
     _deliver(requestId, bytes);
     return true;
   }
