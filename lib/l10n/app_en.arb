@@ -4175,5 +4175,6 @@
   "settingsWatchSettingsRefused": "The watch would not change that.",
   "settingsWatchSettingsUnanswered": "The watch did not answer. Check the watch to see whether it changed.",
   "settingsWatchSettingsRetry": "Try again",
-  "settingsWatchSettingsFromWatch": "Read live from your watch. Changes apply to the watch itself."
+  "settingsWatchSettingsFromWatch": "Read live from your watch. Changes apply to the watch itself.",
+  "settingsWatchSettingsNoState": "The watch sent this screen but not its current values, so nothing here can be changed yet."
 }

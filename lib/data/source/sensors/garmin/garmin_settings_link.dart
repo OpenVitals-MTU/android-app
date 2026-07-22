@@ -31,6 +31,12 @@ class GarminSettingsLink {
 
   bool _closed = false;
 
+  /// Completes the moment the link goes away, so a request in flight fails at
+  /// once instead of waiting out a timeout for a reply that can never arrive.
+  /// A dropped watch left the screen saying "Reading from the watch…" for
+  /// thirty seconds with nothing on the other end.
+  final Completer<void> _gone = Completer<void>();
+
   /// Whether the link is still usable. A watch that walks away closes it, and
   /// every later request would otherwise wait out its full timeout.
   bool get isOpen => !_closed;
@@ -84,6 +90,7 @@ class GarminSettingsLink {
       debugPrint('[GARMIN-SETTINGS] link dropped: $reason');
       session.abort(reason);
       link._closed = true;
+      if (!link._gone.isCompleted) link._gone.complete();
     });
 
     unawaited(link._ask(
@@ -111,11 +118,28 @@ class GarminSettingsLink {
       responseField: GarminSettingsService.definitionResponseField,
     );
     if (definition == null) return null;
-    final state = await _ask(
+
+    // Asked twice if need be. The state is what makes a switch a switch — a
+    // screen without it renders every toggle inert — and a single dropped reply
+    // was enough to leave an alarm looking uncontrollable. One retry costs a
+    // round trip; getting it wrong costs the whole point of the screen.
+    var state = await _ask(
       GarminSettingsService.screenState(screenId),
       'screen $screenId state',
       responseField: GarminSettingsService.stateResponseField,
     );
+    if (state == null && isOpen) {
+      debugPrint('[GARMIN-SETTINGS] no state for $screenId, asking again');
+      state = await _ask(
+        GarminSettingsService.screenState(screenId),
+        'screen $screenId state (retry)',
+        responseField: GarminSettingsService.stateResponseField,
+      );
+    }
+    if (state == null) {
+      debugPrint('[GARMIN-SETTINGS] screen $screenId has no state — every '
+          'switch on it will render inert');
+    }
     return parseGarminSettingsScreen(definition, stateReply: state);
   }
 
@@ -184,6 +208,7 @@ class GarminSettingsLink {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    if (!_gone.isCompleted) _gone.complete();
     await _dropListener?.cancel();
     await _replies.close();
     _session.protobuf.abort();
@@ -212,6 +237,10 @@ class GarminSettingsLink {
     }
 
     final subscription = _replies.stream.listen(offer);
+    // A dropped link resolves the wait immediately — see [_gone].
+    unawaited(_gone.future.then((_) {
+      if (!answer.isCompleted) answer.complete(null);
+    }));
     unawaited(_session.protobuf
         .request(request,
             label: label, timeout: GarminSettingsService.replyTimeout)

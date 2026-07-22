@@ -84,11 +84,18 @@ class GarminSettingsScreen {
     required this.screenId,
     this.title,
     this.entries = const [],
+    this.hasState = true,
   });
 
   final int screenId;
   final String? title;
   final List<GarminSettingsEntry> entries;
+
+  /// Whether the watch supplied the CURRENT VALUES alongside the layout.
+  ///
+  /// False leaves every switch inert, which on its own looks like a bug rather
+  /// than a missing reply — so the screen says which it is.
+  final bool hasState;
 
   bool get isEmpty => entries.isEmpty;
 }
@@ -123,6 +130,7 @@ GarminSettingsScreen? parseGarminSettingsScreen(
     screenId: screenId,
     title: _labelText(protobufField(fields, _screenTitle)?.bytes),
     entries: entries,
+    hasState: stateReply != null && states.isNotEmpty,
   );
 }
 

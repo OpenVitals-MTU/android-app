@@ -68,6 +68,16 @@ class WatchSettingsScreenPage extends ConsumerWidget {
                       ),
                 ),
               ),
+              if (!screen.hasState)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    l10n.settingsWatchSettingsNoState,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                  ),
+                ),
               for (final entry in screen.entries)
                 _EntryRow(deviceId: deviceId, target: target, entry: entry),
             ],
