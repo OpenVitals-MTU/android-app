@@ -46,17 +46,49 @@ class GarminDirectoryEntry {
 /// Entries are dropped when: the type is unknown to this app, the type is not
 /// [GarminFileType.wanted], or the record is the all-zero sentinel (which the
 /// watch emits and which would otherwise loop the downloader forever).
+/// What a directory parse found, including what it threw away.
+///
+/// The rejects are carried, not just counted: "zero entries" has several very
+/// different causes — an empty listing, a listing of types this app does not
+/// map, a listing of types it maps but does not want — and only the raw
+/// `(dataType, subType)` pairs tell them apart on a device.
+class GarminDirectoryListing {
+  const GarminDirectoryListing({
+    required this.entries,
+    required this.totalRecords,
+    required this.skipped,
+  });
+
+  final List<GarminDirectoryEntry> entries;
+
+  /// Every 16-byte record read, before any filtering.
+  final int totalRecords;
+
+  /// `(dataType, subType)` of each record that was dropped, and why.
+  final List<String> skipped;
+
+  String describe() => 'records=$totalRecords kept=${entries.length} '
+      'skipped=[${skipped.join(", ")}]';
+}
+
 class GarminDirectory {
   const GarminDirectory._();
 
   static const int _entrySize = 16;
 
-  static List<GarminDirectoryEntry> parse(Uint8List data) {
+  /// Convenience for callers that only want the usable entries.
+  static List<GarminDirectoryEntry> parse(Uint8List data) =>
+      parseWithDiagnostics(data).entries;
+
+  static GarminDirectoryListing parseWithDiagnostics(Uint8List data) {
     final entries = <GarminDirectoryEntry>[];
+    final skipped = <String>[];
+    var totalRecords = 0;
     // A trailing partial record is truncated data, not an entry — stop before it
     // rather than read past the buffer.
     final reader = GarminByteReader(data);
     while (reader.remaining >= _entrySize) {
+      totalRecords++;
       final fileIndex = reader.readShort();
       final dataType = reader.readByte();
       final subType = reader.readByte();
@@ -73,11 +105,19 @@ class GarminDirectory {
           subType == 0 &&
           fileNumber == 0 &&
           fileSize == 0) {
+        skipped.add('pad');
         continue;
       }
 
       final type = GarminFileType.fromCodes(dataType, subType);
-      if (type == null || !type.wanted) continue;
+      if (type == null) {
+        skipped.add('$dataType/$subType?');
+        continue;
+      }
+      if (!type.wanted) {
+        skipped.add('${type.name}!');
+        continue;
+      }
 
       entries.add(GarminDirectoryEntry(
         fileIndex: fileIndex,
@@ -89,6 +129,10 @@ class GarminDirectory {
         fileDate: wireTimestamp == 0 ? null : GarminTime.toDateTime(wireTimestamp),
       ));
     }
-    return entries;
+    return GarminDirectoryListing(
+      entries: entries,
+      totalRecords: totalRecords,
+      skipped: skipped,
+    );
   }
 }

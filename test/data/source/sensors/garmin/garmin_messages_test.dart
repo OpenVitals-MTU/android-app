@@ -105,6 +105,23 @@ void main() {
       expect(GarminDirectory.parse(data).single.fileDate, isNull);
     });
 
+    test('diagnostics distinguish empty from filtered-out', () {
+      // "0 entries" has several causes; the listing must say which.
+      final empty = GarminDirectory.parseWithDiagnostics(Uint8List(0));
+      expect(empty.totalRecords, 0);
+      expect(empty.entries, isEmpty);
+
+      final filtered = GarminDirectory.parseWithDiagnostics(_b([
+        ...entry(index: 6, dataType: 128, subType: 55), // unmapped
+        ...entry(index: 7, dataType: 8, subType: 255), // known but not wanted
+      ]));
+      expect(filtered.totalRecords, 2);
+      expect(filtered.entries, isEmpty);
+      // The raw codes are what make an unmapped type diagnosable on a device.
+      expect(filtered.skipped, contains('128/55?'));
+      expect(filtered.skipped, contains('deviceXml!'));
+    });
+
     test('a trailing partial record is ignored', () {
       final data = _b([
         ...entry(index: 5, dataType: 128, subType: 4),

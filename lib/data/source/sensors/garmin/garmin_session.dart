@@ -153,7 +153,10 @@ class GarminSession {
 
       case GarminSupportedFileTypes():
         supportedTypes = message.types;
-        debugPrint('[GARMIN-SYNC] watch supports ${message.types.length} types');
+        // The raw pairs, not just a count: they are the ground truth for which
+        // GarminFileType codes a real watch actually offers.
+        debugPrint('[GARMIN-SYNC] watch supports ${message.types.length} types: '
+            '${message.types.map((t) => "${t.dataType}/${t.subType}:${t.name}").join(", ")}');
         // SYNC_READY, then pull file index 0 — the directory.
         await send(buildSystemEvent(GarminSystemEventType.syncReady));
         _report(GarminSyncPhase.listing);
@@ -243,17 +246,19 @@ class GarminSession {
 
     if (active.entry.type == GarminFileType.directory) {
       _directoryFetched = true;
-      final entries = GarminDirectory.parse(bytes);
+      final listing = GarminDirectory.parseWithDiagnostics(bytes);
       // Skip what a previous sync already imported — bandwidth only.
-      final fresh = entries
+      final fresh = listing.entries
           .where((e) => !alreadySynced.contains(e.dedupKey))
           .toList();
       _queue
         ..clear()
         ..addAll(fresh);
       _filesTotal = fresh.length;
-      debugPrint('[GARMIN-SYNC] directory: ${entries.length} wanted, '
-          '${fresh.length} new');
+      // Full diagnostics: "0 files" has several very different causes and only
+      // the raw record counts and rejected type codes tell them apart.
+      debugPrint('[GARMIN-SYNC] directory ${bytes.length}B '
+          '${listing.describe()} new=${fresh.length}');
       _report(GarminSyncPhase.downloading);
       await _next();
       return;
