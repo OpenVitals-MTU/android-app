@@ -441,20 +441,26 @@ Uint8List buildGenericAck(int originalMessageType) {
   return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
 }
 
-/// The acknowledgement a CHUNKED protobuf message needs.
+/// The acknowledgement a protobuf message needs — chunked or not.
 ///
-/// A generic ACK is enough for a complete one, but a chunk has to name which
-/// chunk was kept — without that the watch sends the first piece and waits
-/// forever for a signal that never comes, so a 1013-byte settings screen
-/// arrives as 487 bytes and stops.
+/// A generic ACK says the FRAME arrived; this says the protobuf message with
+/// that request id was kept. Both are needed, and sending only the generic one
+/// is why the watch retransmitted its own settings messages every five seconds
+/// for as long as the link stayed open: at the protobuf layer they had never
+/// been acknowledged at all. Gadgetbridge starts a complete message with a
+/// generic status and then replaces it with this one the moment its handler
+/// takes the message (`ProtocolBufferHandler.processIncoming`).
+///
+/// For a chunk it also unblocks the next piece: without it the watch sends the
+/// first 487 bytes of a 1013-byte screen and waits forever.
 ///
 /// Shape from Gadgetbridge's `ProtobufStatusMessage`: the usual response
-/// envelope, then the request id, THE OFFSET THE CHUNK DECLARED, and two status
-/// bytes (chunk kept = 0, no error = 0).
+/// envelope, then the request id, THE OFFSET THE MESSAGE DECLARED, and two
+/// status bytes (kept = 0, no error = 0).
 ///
 /// [dataOffset] is the offset received, not the next one expected — echoing the
 /// next left the watch resending chunk zero indefinitely.
-Uint8List buildProtobufChunkAck({
+Uint8List buildProtobufAck({
   required int originalMessageType,
   required int requestId,
   required int dataOffset,

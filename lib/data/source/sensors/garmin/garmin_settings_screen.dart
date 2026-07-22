@@ -26,8 +26,9 @@ enum GarminEntryKind {
   /// A number the watch bounds itself.
   number,
 
-  /// A button rather than a setting: no target, and no value to show. The
-  /// watch's own "Delete" row on an alarm is one.
+  /// A button rather than a setting: the watch MARKS this row as one it can be
+  /// asked to remove. Its "Delete" row on an alarm is the case this was built
+  /// for, and the mark is what says so — see [GarminSettingsEntry.isRemovable].
   action,
 
   /// Present on the screen but not something a phone can act on: it opens
@@ -171,18 +172,19 @@ GarminSettingsEntry? _parseEntry(
   // No target at all: a switch, which carries its value in the STATE rather
   // than declaring anything in the definition.
   if (target == null) {
-    // A switch and a button are both target-less; what separates them is the
-    // STATE. A switch has a position to report, a button has nothing to report
-    // because there is nothing to be in.
+    // A switch and a button are both target-less. What separates them is not
+    // the absence of anything — it is a MARK the watch puts on the row it will
+    // accept a removal for, and only on that row.
     //
-    // So a button can only be identified when the state ARRIVED. Without it the
-    // two are indistinguishable, and calling a switch a button would offer to
-    // "Status" the action reserved for "Delete" — which is how a missing reply
-    // turns into a deleted alarm.
+    // Inferring the button from "no target, but it has a name" was wrong and
+    // dangerous: at the root of the tree it caught Finish Setup, Shortcut, Help
+    // & Info, Software Update and Find My Device, none of which are buttons.
+    // Tapping Find My Device sent the watch a DELETE for that row. It refused —
+    // by its own choice, not because the app stopped itself.
     final GarminEntryKind kind;
     if (state?.switchedOn != null) {
       kind = GarminEntryKind.toggle;
-    } else if (stateAvailable && title != null && title.isNotEmpty) {
+    } else if (stateAvailable && state?.removable == true) {
       kind = GarminEntryKind.action;
     } else {
       kind = GarminEntryKind.inert;
@@ -291,6 +293,10 @@ Map<int, _EntryState> _statesById(Uint8List? reply) {
     final switchBytes = protobufField(fields, _stateSwitch)?.bytes;
     final summaryBytes = protobufField(fields, _stateSummary)?.bytes;
     out[id] = _EntryState(
+      // Present, even empty, is the whole signal. It is not in Gadgetbridge's
+      // schema at all — that proto is older than this firmware — so it is read
+      // for its PRESENCE and nothing is assumed about what it contains.
+      removable: protobufField(fields, _stateRemovable) != null,
       switchedOn: switchBytes == null
           ? null
           : (protobufField(readProtobuf(switchBytes), 1)?.varint ?? 0) != 0,
@@ -304,10 +310,13 @@ Map<int, _EntryState> _statesById(Uint8List? reply) {
 
 @immutable
 class _EntryState {
-  const _EntryState({this.switchedOn, this.summary});
+  const _EntryState({this.switchedOn, this.summary, this.removable = false});
 
   final bool? switchedOn;
   final String? summary;
+
+  /// The watch marked this row as one it will accept a removal for.
+  final bool removable;
 }
 
 Uint8List? _definitionOf(Uint8List? reply) {
@@ -352,3 +361,7 @@ const int _optionEntry = 1;
 const int _entryState = 4;
 const int _stateSwitch = 3;
 const int _stateSummary = 4;
+
+/// Set — present but empty — on the one row of an alarm's screen that deletes
+/// it, and on nothing at the root of the tree. Not in Gadgetbridge's schema.
+const int _stateRemovable = 9;

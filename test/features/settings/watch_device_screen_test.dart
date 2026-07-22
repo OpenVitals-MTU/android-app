@@ -104,11 +104,11 @@ void main() {
     expect(find.text('Remove watch'), findsOneWidget);
   });
 
-  testWidgets('Alarms and Find are live; the settings tree is not yet',
+  testWidgets('Alarms, Find and the whole settings tree are live',
       (tester) async {
-    // Alarms opens a screen in the watch's own settings tree, so it is no
-    // longer a drawing. Browsing the whole tree still is — that row stays
-    // greyed, which says the watch CAN do it and the app cannot yet.
+    // All three reach the watch's own settings service. Alarms is a shortcut to
+    // one screen in the tree; the settings row opens its root, from which the
+    // rest of the tree is whatever the watch sends.
     final container = await _container();
     await tester.pumpWidget(_harness(container));
     await tester.pumpAndSettle();
@@ -132,6 +132,8 @@ void main() {
         matching: find.byType(ListTile),
       ),
     );
-    expect(settingsRow.enabled, isFalse);
+    expect(settingsRow.enabled, isTrue);
+    expect(settingsRow.onTap, isNotNull,
+        reason: 'the settings tree must be reachable');
   });
 }

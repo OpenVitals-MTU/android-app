@@ -93,7 +93,7 @@ class WatchDeviceScreen extends ConsumerWidget {
           // claiming a feature the hardware does not have.
           if (supports(GarminCapability.realtimeSettings)) ...[
             _SectionHeader(title: l10n.settingsWatchSettingsSection),
-            const _OnDeviceSettingsRow(),
+            _OnDeviceSettingsRow(deviceId: device.id),
           ],
           _SectionHeader(title: l10n.settingsWatchSectionDevice),
           _DeviceSettings(device: device),
@@ -326,29 +326,40 @@ Future<void> _probeSettings(
   );
 }
 
+/// The way into the watch's OWN settings, at the root of its tree.
+///
+/// Not a screen this app designed: the watch sends its menu — every screen,
+/// row, option list and current value — already translated into the locale it
+/// was handed, and the browser renders whatever arrives. So this is one tap to
+/// the root and nothing else; there is no list of supported settings to keep in
+/// step with a firmware.
 class _OnDeviceSettingsRow extends StatelessWidget {
-  const _OnDeviceSettingsRow();
+  const _OnDeviceSettingsRow({required this.deviceId});
+
+  final String deviceId;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Card(
         child: ListTile(
-          enabled: false,
-          leading: Icon(Icons.brightness_5_outlined, color: muted),
-          title: Text(
-            l10n.settingsWatchOnDeviceSettings,
-            style: TextStyle(color: muted),
-          ),
+          leading: const Icon(Icons.brightness_5_outlined),
+          title: Text(l10n.settingsWatchOnDeviceSettings),
           subtitle: Text(
-            l10n.settingsWatchNotAvailableYet,
-            style: theme.textTheme.bodySmall?.copyWith(color: muted),
+            l10n.settingsWatchOnDeviceSettingsBody,
+            style: theme.textTheme.bodySmall,
           ),
-          trailing: Icon(Icons.chevron_right, color: muted),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(
+            AppRoutes.watchSettingsLocation(
+              deviceId,
+              GarminSettingsService.rootScreenId,
+            ),
+            extra: l10n.settingsWatchOnDeviceSettings,
+          ),
         ),
       ),
     );

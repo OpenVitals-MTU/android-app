@@ -74,6 +74,19 @@ Uint8List _switchState({required int id, required bool on}) => (ProtobufWriter()
       ..nested(3, (ProtobufWriter()..varint(1, on ? 1 : 0)).toBytes()))
     .toBytes();
 
+/// A row the watch marked as removable: field 9, present and EMPTY. That mark
+/// is the only thing separating an alarm's "Delete" from the untargeted rows at
+/// the root of the tree.
+Uint8List _removableState({required int id}) => (ProtobufWriter()
+      ..varint(1, id)
+      ..nested(9, Uint8List(0)))
+    .toBytes();
+
+/// A row the watch mentioned and said nothing about — how the root's own rows
+/// arrive.
+Uint8List _bareState({required int id}) =>
+    (ProtobufWriter()..varint(1, id)).toBytes();
+
 void main() {
   group("an alarm's own screen, as a vívoactive 5 sends it", () {
     /// Screen 64, titled "Customize", captured from a real watch: a switch with
@@ -155,9 +168,9 @@ void main() {
       expect(screen.entries.first.switchedOn, isNull);
     });
 
-    test('a target-less row WITH state is a button, not a switch', () {
-      // "Delete" on a real alarm screen: no target, no switch state, but the
-      // state reply did arrive — so the absence means "nothing to be in".
+    test('a button is the row the WATCH marked, not one we inferred', () {
+      // "Delete" on a real alarm screen carries field 9 in its state. Nothing
+      // else on the screen does.
       final screen = parseGarminSettingsScreen(
         _definitionReply(
           screenId: 65600,
@@ -168,11 +181,41 @@ void main() {
         ),
         stateReply: _stateReply(
           screenId: 65600,
-          states: [_switchState(id: 0, on: true)],
+          states: [
+            _switchState(id: 0, on: true),
+            _removableState(id: 4),
+          ],
         ),
       )!;
       expect(screen.entries.first.kind, GarminEntryKind.toggle);
       expect(screen.entries.last.kind, GarminEntryKind.action);
+    });
+
+    test('an untargeted row the watch did NOT mark is never a button', () {
+      // The root of the tree, as a vívoactive 5 sends it: Finish Setup, Help &
+      // Info, Software Update and Find My Device all arrive with no target and
+      // a bare state. Read as buttons, they offered a DELETE — and tapping Find
+      // My Device sent the watch one. It refused, by its own choice.
+      final screen = parseGarminSettingsScreen(
+        _definitionReply(
+          screenId: 36352,
+          entries: [
+            _entry(id: 1, title: 'Finish Setup'),
+            _entry(id: 24, title: 'Help & Info'),
+            _entry(id: 25, title: 'Find My Device'),
+          ],
+        ),
+        stateReply: _stateReply(
+          screenId: 36352,
+          states: [
+            _bareState(id: 1),
+            _bareState(id: 24),
+            _bareState(id: 25),
+          ],
+        ),
+      )!;
+      expect([for (final e in screen.entries) e.kind],
+          everyElement(GarminEntryKind.inert));
     });
   });
 

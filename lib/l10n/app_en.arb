@@ -4156,7 +4156,6 @@
   "settingsWatchSettingsSection": "Watch settings",
   "settingsWatchOnDeviceSettings": "Settings on the watch",
   "settingsWatchOnDeviceSettingsBody": "Backlight, sounds, watch face…",
-  "settingsWatchNotAvailableYet": "Not available yet",
   "settingsWatchSyncedFiles": "{arg0, plural, =1{1 file} other{{arg0} files}}",
   "@settingsWatchSyncedFiles": {
     "placeholders": {

@@ -145,6 +145,29 @@ void main() {
       expect(ids, [1, 2]);
     });
 
+    test('a COMPLETE message is acknowledged by request id, not generically',
+        () async {
+      // A generic ack says the frame arrived. The watch also wants to hear that
+      // the protobuf message itself was kept, and without that it retransmitted
+      // every message it had ever sent, every five seconds, for as long as the
+      // link stayed open — which is how a stale reply came to be in flight while
+      // a different request was pending.
+      final acks = <GarminGfdiFrame>[];
+      final transport = GarminProtobufTransport(send: (frame) async {
+        final parsed = GarminGfdiFrame.parse(frame);
+        if (parsed.messageType == GarminMessageId.response) acks.add(parsed);
+      });
+
+      transport.handleInbound(_reply(4242, _b([0x62, 0x00])));
+
+      final ack = acks.single.payload;
+      // [u16 acked type][u8 ACK][u16 requestId][u32 offset][kept][no error]
+      expect(ack.length, 11);
+      expect(ack[3] | (ack[4] << 8), 4242);
+      expect(ack.sublist(5, 9), [0, 0, 0, 0]);
+      expect(ack.sublist(9), [0, 0]);
+    });
+
     test('a reply for an unknown id is consumed, not mistaken for ours', () {
       final transport = GarminProtobufTransport(send: (_) async {});
       // The watch starts conversations of its own; an unmatched id is one of

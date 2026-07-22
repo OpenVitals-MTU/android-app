@@ -128,7 +128,7 @@ class GarminProtobufTransport {
       // chunk declared; acknowledging `dataOffset + chunkLength` instead left
       // the watch resending chunk zero forever, because it never saw an
       // acknowledgement for the chunk it had actually sent.
-      unawaited(send(buildProtobufChunkAck(
+      unawaited(send(buildProtobufAck(
         originalMessageType: frame.messageType,
         requestId: requestId,
         dataOffset: dataOffset,
@@ -149,9 +149,17 @@ class GarminProtobufTransport {
       return true;
     }
 
-    // Complete in one message: the plain acknowledgement, which the session no
-    // longer sends on our behalf.
-    unawaited(send(buildGenericAck(frame.messageType)));
+    // Complete in one message — and still acknowledged BY REQUEST ID, not just
+    // generically. A generic ack says the frame arrived; the watch also wants
+    // to hear that the protobuf message itself was kept, and without that it
+    // retransmitted every message it had ever sent us, every five seconds, for
+    // as long as the link stayed open. That storm is what let a stale reply
+    // arrive while a different request was pending.
+    unawaited(send(buildProtobufAck(
+      originalMessageType: frame.messageType,
+      requestId: requestId,
+      dataOffset: dataOffset,
+    )));
     _deliver(requestId, bytes);
     return true;
   }
