@@ -536,6 +536,27 @@ class _FitSleepRaw {
       stages.add(FitSleepStage(start: stageStart, end: stageEnd, level: level));
     }
     if (stages.isEmpty) return null;
+    // DIAGNOSTIC: the raw transitions and what they add up to. A real vívoactive
+    // 5 reported 3 min awake where this produced 59, so the question is whether
+    // the file says something different from the watch's own screen or whether
+    // these stages are being derived wrongly — and only the raw series answers it.
+    final totals = <FitSleepLevel, int>{};
+    for (final stage in stages) {
+      totals[stage.level] = (totals[stage.level] ?? 0) +
+          stage.end.difference(stage.start).inMinutes;
+    }
+    final covered = totals.values.fold(0, (a, b) => a + b);
+    debugPrint('[FIT-SLEEP] session ${sessionStart.toIso8601String()} → '
+        '${sessionEnd.toIso8601String()} '
+        '(${sessionEnd.difference(sessionStart).inMinutes}m) '
+        'transitions=${sorted.length} stages=${stages.length} '
+        'covered=${covered}m');
+    debugPrint('[FIT-SLEEP] totals: '
+        '${totals.entries.map((e) => "${e.key.name}=${e.value}m").join(" ")}');
+    for (final (transition, rawLevel) in sorted) {
+      debugPrint('[FIT-SLEEP]   ${transition.toIso8601String()} raw=$rawLevel '
+          '(${_fitSleepLevelFromRaw(rawLevel)?.name ?? "UNKNOWN"})');
+    }
     return FitSleepSession(
       start: sessionStart,
       end: sessionEnd,

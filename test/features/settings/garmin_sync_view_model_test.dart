@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_ble_transport.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_directory.dart';
+import 'package:openvitals/data/source/sensors/garmin/garmin_file_store.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_file_types.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_session.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_watch_sync_service.dart';
@@ -16,6 +17,11 @@ import 'package:openvitals/features/settings/application/garmin_sync_view_model.
 
 /// Stands in for the whole radio + protocol stack.
 class _FakeSyncService implements GarminWatchSyncService {
+  /// The real service keeps a copy of every download before archiving; this
+  /// fake never touches the radio, so there is nothing to keep.
+  @override
+  GarminFileStore? get fileStore => null;
+
   /// Set by a test to control what the fake radio comes back with.
   List<GarminDownloadedFile> files = const [];
   Object? error;

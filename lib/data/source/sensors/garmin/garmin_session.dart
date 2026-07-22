@@ -51,6 +51,7 @@ class GarminSession {
     required this.model,
     this.alreadySynced = const {},
     this.onProgress,
+    this.onFileDownloaded,
     this.emptyGrace = const Duration(seconds: 6),
   });
 
@@ -69,6 +70,14 @@ class GarminSession {
   final Set<String> alreadySynced;
 
   final void Function(GarminSyncProgress)? onProgress;
+
+  /// Called with each completed file BEFORE it is archived on the watch.
+  ///
+  /// Archiving is destructive: once flagged, the watch never offers that file
+  /// again. So if this throws, the file is deliberately NOT archived — better to
+  /// re-download it next sync than to lose it because the copy that was supposed
+  /// to outlive the download never landed.
+  final Future<void> Function(GarminDownloadedFile)? onFileDownloaded;
 
   /// How long to keep a fruitless sync open before giving up.
   ///
@@ -333,15 +342,28 @@ class GarminSession {
       return;
     }
 
-    _downloaded.add(
-      GarminDownloadedFile(entry: active.entry, bytes: bytes),
-    );
+    final file = GarminDownloadedFile(entry: active.entry, bytes: bytes);
+    _downloaded.add(file);
     debugPrint('[GARMIN-SYNC] got ${active.entry.type.name} '
         'index=${active.entry.fileIndex} bytes=${bytes.length}');
-    // Archive so the watch stops offering it next time.
-    await send(
-      buildSetFileFlags(active.entry.fileIndex, GarminFileFlag.archive),
-    );
+
+    // Persist first, archive second. Archiving is irreversible from our side, so
+    // a file we could not keep must stay on offer rather than vanish.
+    var safeToArchive = true;
+    if (onFileDownloaded != null) {
+      try {
+        await onFileDownloaded!(file);
+      } catch (error) {
+        safeToArchive = false;
+        debugPrint('[GARMIN-SYNC] not archiving index='
+            '${active.entry.fileIndex}: could not keep a copy ($error)');
+      }
+    }
+    if (safeToArchive) {
+      await send(
+        buildSetFileFlags(active.entry.fileIndex, GarminFileFlag.archive),
+      );
+    }
     await _next();
   }
 

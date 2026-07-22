@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -491,6 +492,75 @@ void main() {
       final directoryRequests = watch.received
           .where((f) => f.messageType == GarminMessageId.downloadRequest);
       expect(directoryRequests, hasLength(1));
+    });
+
+    test('a file is kept before it is archived', () async {
+      final watch = _FakeWatch(files: {
+        0: _directory([(5, 128, 49, 1)]),
+        5: _b([1, 2, 3]),
+      });
+      final order = <String>[];
+
+      final session = GarminSession(
+        send: (frame) async {
+          final parsed = GarminGfdiFrame.parse(frame);
+          if (parsed.messageType == GarminMessageId.setFileFlags) {
+            order.add('archive');
+          }
+          watch.onFrame(parsed);
+        },
+        bluetoothName: 'Pixel',
+        manufacturer: 'Google',
+        model: 'raven',
+        emptyGrace: Duration.zero,
+        onFileDownloaded: (_) async => order.add('kept'),
+      )..start();
+      watch.outbox
+        ..add(watch.deviceInformation())
+        ..add(watch.authNegotiation());
+      while (watch.outbox.isNotEmpty) {
+        await session.handleFrame(
+          GarminGfdiFrame.parse(watch.outbox.removeAt(0)),
+        );
+      }
+      await session.done;
+
+      // Archiving is irreversible from our side, so the copy must land first.
+      expect(order, ['kept', 'archive']);
+    });
+
+    test('a file that could not be kept is NOT archived', () async {
+      final watch = _FakeWatch(files: {
+        0: _directory([(5, 128, 49, 1)]),
+        5: _b([1, 2, 3]),
+      });
+
+      final session = GarminSession(
+        send: (frame) async => watch.onFrame(GarminGfdiFrame.parse(frame)),
+        bluetoothName: 'Pixel',
+        manufacturer: 'Google',
+        model: 'raven',
+        emptyGrace: Duration.zero,
+        onFileDownloaded: (_) async => throw const FileSystemException('disk'),
+      )..start();
+      watch.outbox
+        ..add(watch.deviceInformation())
+        ..add(watch.authNegotiation());
+      while (watch.outbox.isNotEmpty) {
+        await session.handleFrame(
+          GarminGfdiFrame.parse(watch.outbox.removeAt(0)),
+        );
+      }
+      final files = await session.done;
+
+      // The file is still returned for import, but the watch keeps offering it
+      // — better a redundant download than data we can never fetch again.
+      expect(files, hasLength(1));
+      expect(
+        watch.received.where((f) =>
+            f.messageType == GarminMessageId.setFileFlags),
+        isEmpty,
+      );
     });
 
     test('abort keeps what was already downloaded', () async {

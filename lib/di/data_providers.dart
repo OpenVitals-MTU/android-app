@@ -3,6 +3,7 @@ import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
 import '../data/source/sensors/ble/ble_watch_pairing.dart';
+import '../data/source/sensors/garmin/garmin_file_store.dart';
 import '../data/source/sensors/garmin/garmin_gatt_probe.dart';
 import '../data/source/sensors/garmin/garmin_phone_identity.dart';
 import '../data/source/sensors/garmin/garmin_watch_sync_service.dart';
@@ -253,7 +254,13 @@ final garminTransportProbeProvider = Provider<GarminTransportProbe>(
 
 /// Drives one end-to-end GFDI sync (link, session, downloaded files).
 final garminWatchSyncServiceProvider = Provider<GarminWatchSyncService>(
-  (ref) => const GarminWatchSyncService(),
+  (ref) => GarminWatchSyncService(
+    fileStore: GarminFileStore(
+      resolveDirectory: () async => Directory(
+        p.join((await getApplicationDocumentsDirectory()).path, 'garmin'),
+      ),
+    ),
+  ),
 );
 
 /// How this phone names itself to a watch. See [GarminPhoneIdentity] for why

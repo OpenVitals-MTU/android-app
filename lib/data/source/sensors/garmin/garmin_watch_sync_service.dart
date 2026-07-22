@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'garmin_ble_transport.dart';
+import 'garmin_file_store.dart';
 import 'garmin_session.dart';
 
 /// Drives one end-to-end sync with a watch: open the link, run the GFDI
@@ -18,7 +19,14 @@ import 'garmin_session.dart';
 /// error tolerance included — rather than growing a second write path that
 /// would drift from it.
 class GarminWatchSyncService {
-  const GarminWatchSyncService();
+  const GarminWatchSyncService({this.fileStore});
+
+  /// Keeps a copy of every download before the watch is told to archive it.
+  ///
+  /// Null disables that safety net, which only makes sense in tests: without it,
+  /// an importer bug means the data is unrecoverable, since archiving stops the
+  /// watch ever offering the file again.
+  final GarminFileStore? fileStore;
 
   /// Syncs the watch at [address].
   ///
@@ -50,7 +58,13 @@ class GarminWatchSyncService {
       model: model,
       alreadySynced: alreadySynced,
       onProgress: onProgress,
+      onFileDownloaded: fileStore == null
+          ? null
+          : (file) => fileStore!.save(file, now: DateTime.now()),
     );
+
+    // Housekeeping before the link opens, so it cannot delay the sync itself.
+    await fileStore?.prune(now: DateTime.now());
 
     StreamSubscription<String>? dropSub;
     try {
