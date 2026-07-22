@@ -322,6 +322,25 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Skip HRV SDNN import because the current Health Connect mapping is incompatible with that Apple Health record type.
 - No rollback/delete flow is provided for an Apple Health import after records are written.
 
+### Garmin Watch Sync
+
+- Pair a Garmin watch over Bluetooth, including the Android bond and the optional companion-device association.
+- Decline the companion association and still pair and sync, without the background priority it grants.
+- Detect a watch whose Bluetooth transport the app cannot read, and say so instead of pairing it.
+- Sync on demand from the watch's device view or from its tile on the summary screen; there is no background sync.
+- Insert supported watch records into Health Connect including sleep sessions and stages, heart rate, resting heart rate, HRV, VO2 max, oxygen saturation, respiratory rate, steps, distance, active calories, BMR, and recorded workouts with routes.
+- Store watch measures Health Connect has no type for in the app's own database: stress, Body Battery, intensity minutes, recovery time, training readiness, acute and chronic training load, sleep score, awakenings, time awake, sleep pressure, sleep need, and Health Snapshot samples.
+- Feed watch Body Battery into the app's own Body Energy calibration.
+- Skip files a previous sync already imported, and deduplicate anything that does arrive twice using stable client record IDs.
+- Keep a copy of every downloaded file before telling the watch it may archive it.
+- Gate each watch action on the capability list the watch itself reports.
+- Read the watch's own settings tree live, including alarms, and render whatever screens the watch sends in the watch's own language.
+- Switch, retime, relabel, add, and delete alarms on the watch.
+- Show settings rows the phone cannot act on as unavailable rather than hiding them.
+- Make the watch alert to find it, and stop the alert early.
+- Sleep stage durations derived from watch files disagree with the watch's own time-awake figure and are not yet reliable.
+- Number settings are read-only because the watch does not send their allowed range.
+
 ### View-Only Or External-Only Data
 
 - Sleep sessions are view-only in the app.

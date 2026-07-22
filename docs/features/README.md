@@ -40,6 +40,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Recording of activity](activity-recording.md): GPS and repetition-oriented activity recording before saving to Health Connect.
 - [Activity and training plans](activity-training-plans.md): planned workouts, activity setup defaults, favorite activities, repetitions, sets, and review flows.
 - [Bluetooth LE sensors](ble-sensors.md): supported heart-rate, cadence, power, and footpod sensors during activity recording.
+- [Garmin watch sync](garmin-watch-sync.md): pair a Garmin watch and copy what it recorded over Bluetooth, plus its alarms and on-watch settings.
 - [GPX/KML/KMZ route import](route-file-import.md): route file import for review before saving.
 - [FIT files import](fit-files-import.md): Settings Data Importers support for FIT activity, course, and workout files.
 - [Offline maps support](offline-maps-support.md): PMTiles or Mapsforge packs for local activity maps.

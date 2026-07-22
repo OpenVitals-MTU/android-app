@@ -4,9 +4,11 @@
 > **Audience:** Users and contributors.
 > **Implementation:** `lib/features/settings/presentation/ble_devices_screen.dart` + `ble_devices_notifier.dart`, `lib/features/manualentry/activity/recording/`, `lib/data/repository/contract/ble_device_repository.dart` (+ `impl/ble_device_repository_impl.dart`), `lib/domain/model/ble_sensor_models.dart`.
 > **Navigation:** `/settings/sensors` (the Sensors section renders `BleDevicesScreen` rather than the generic section screen), `/manual_entry/activity`.
-> **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Permissions](../app/permissions.md).
+> **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Garmin watch sync](garmin-watch-sync.md), [Permissions](../app/permissions.md).
 
 OpenVitals has experimental Bluetooth LE support for activity recording.
+
+This page covers sensors that **stream while you record** — a chest strap, a cadence sensor, a power meter. A watch is a separate section (**Settings › Watches**) because it does the opposite: it hands over files for what it already recorded, afterwards. See [Garmin watch sync](garmin-watch-sync.md). The two shared a screen only because they share a radio.
 
 ## How to use it
 
