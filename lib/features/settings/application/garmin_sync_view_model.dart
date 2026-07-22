@@ -236,6 +236,34 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
 
   Completer<void>? _findCancel;
 
+  /// Debug-only: opens the watch's settings service and dumps its root screen.
+  ///
+  /// A diagnostic rather than a feature — the tree is defined by the watch and
+  /// read with a schema older than its firmware, so the first step is to look at
+  /// what actually comes back before drawing anything from it.
+  Future<void> probeSettings(String deviceId) async {
+    if (state.isSyncing || state.findingDeviceId != null) return;
+    final device = ref
+        .read(readPairedBleDevicesUseCaseProvider)()
+        .where((d) => d.id == deviceId)
+        .firstOrNull;
+    if (device == null || !device.isWatch) return;
+
+    final phone = ref.read(phoneIdentityProvider);
+    final locale = PlatformDispatcher.instance.locale;
+    await ref.read(garminWatchSyncServiceProvider).probeSettings(
+          address: device.address,
+          phoneName: phone.bluetoothName,
+          manufacturer: phone.manufacturer,
+          model: phone.model,
+          // The watch translates the whole tree with this, so it must be the
+          // phone's locale rather than a hard-coded en_US.
+          language: '${locale.languageCode}_'
+              '${(locale.countryCode ?? 'US').toUpperCase()}',
+          region: (locale.countryCode ?? 'US').toLowerCase(),
+        );
+  }
+
   /// Extracts the watch-only metrics from the downloaded files and upserts them.
   ///
   /// Deliberately re-decodes each file rather than threading these through the

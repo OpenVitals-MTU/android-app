@@ -253,6 +253,15 @@ class _Actions extends ConsumerWidget {
               icon: Icons.alarm,
               label: l10n.settingsWatchActionAlarms,
               onPressed: null,
+              // Debug-only, on a gesture the disabled button leaves unused:
+              // opens the watch's settings service and dumps its root screen to
+              // the log. Alarms live somewhere in that tree, and this is how we
+              // find out what it actually looks like before building on it.
+              onLongPress: !kDebugMode || busy
+                  ? null
+                  : () => ref
+                      .read(garminSyncViewModelProvider.notifier)
+                      .probeSettings(device.id),
             ),
           if (supports(GarminCapability.findMyWatch))
             WatchAction(

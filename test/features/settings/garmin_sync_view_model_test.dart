@@ -36,6 +36,23 @@ class _FakeSyncService implements GarminWatchSyncService {
   Set<GarminCapability> reportCapabilities = const {};
   int calls = 0;
 
+  /// The locale the settings probe was opened with, so it can be asserted to
+  /// follow the phone rather than a hard-coded en_US.
+  String? seenSettingsLanguage;
+
+  @override
+  Future<bool> probeSettings({
+    required String address,
+    required String phoneName,
+    required String manufacturer,
+    required String model,
+    String language = 'en_US',
+    String region = 'us',
+  }) async {
+    seenSettingsLanguage = language;
+    return true;
+  }
+
   /// Records a find, so the toggle can be asserted without a radio.
   String? seenFindAddress;
   bool findAccepted = true;

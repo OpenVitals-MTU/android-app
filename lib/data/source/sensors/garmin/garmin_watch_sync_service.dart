@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'garmin_ble_transport.dart';
 import 'garmin_capabilities.dart';
 import 'garmin_protobuf_transport.dart';
+import 'garmin_settings_service.dart';
 import 'garmin_file_store.dart';
 import 'garmin_session.dart';
 
@@ -121,6 +122,85 @@ class GarminWatchSyncService {
       session.protobuf.abort();
       await transport.close();
       debugPrint('[GARMIN-FIND] link closed');
+    }
+  }
+
+  /// Opens the watch's settings service and fetches its root screen, printing
+  /// what came back.
+  ///
+  /// A DIAGNOSTIC, not a feature: the settings tree is defined entirely by the
+  /// watch, and the schema this app reads it with is older than the firmware
+  /// sending it. Building UI on an assumed shape would produce a screen of
+  /// plausible but wrong controls, so the first step is to look.
+  Future<bool> probeSettings({
+    required String address,
+    required String phoneName,
+    required String manufacturer,
+    required String model,
+    String language = 'en_US',
+    String region = 'us',
+  }) async {
+    final transport = GarminBleTransport(address: address);
+    final ready = Completer<void>();
+    final session = GarminSession(
+      send: (frame) => transport.mlOrThrow.sendFrame(frame),
+      bluetoothName: phoneName,
+      manufacturer: manufacturer,
+      model: model,
+      syncFiles: false,
+      onHandshakeReady: () {
+        if (!ready.isCompleted) ready.complete();
+      },
+    );
+
+    StreamSubscription<String>? dropSub;
+    try {
+      await transport.connect(onFrame: session.handleFrame);
+      dropSub = transport.onDisconnected.listen(session.abort);
+      session.start();
+      await ready.future.timeout(const Duration(seconds: 15));
+
+      final init = await session.protobuf.request(
+        GarminSettingsService.init(language: language, region: region),
+        label: 'settings init',
+      );
+      debugPrint('[GARMIN-SETTINGS] init reply: '
+          '${init == null ? "none" : "${init.length}B"}');
+      if (init != null) GarminSettingsService.describe(init);
+
+      final definition = await session.protobuf.request(
+        GarminSettingsService.screenDefinition(
+          GarminSettingsService.rootScreenId,
+          language: language,
+        ),
+        label: 'root definition',
+      );
+      debugPrint('[GARMIN-SETTINGS] root definition: '
+          '${definition == null ? "none" : "${definition.length}B"} '
+          '(recognised=${GarminSettingsService.hasDefinition(definition)})');
+      if (definition != null) GarminSettingsService.describe(definition);
+
+      final state = await session.protobuf.request(
+        GarminSettingsService.screenState(GarminSettingsService.rootScreenId),
+        label: 'root state',
+      );
+      debugPrint('[GARMIN-SETTINGS] root state: '
+          '${state == null ? "none" : "${state.length}B"} '
+          '(recognised=${GarminSettingsService.hasState(state)})');
+      if (state != null) GarminSettingsService.describe(state);
+
+      return definition != null;
+    } on TimeoutException {
+      debugPrint('[GARMIN-SETTINGS] the watch never finished its handshake');
+      return false;
+    } catch (error) {
+      debugPrint('[GARMIN-SETTINGS] failed: $error');
+      return false;
+    } finally {
+      await dropSub?.cancel();
+      session.protobuf.abort();
+      await transport.close();
+      debugPrint('[GARMIN-SETTINGS] link closed');
     }
   }
 
