@@ -134,6 +134,13 @@ class GarminSession {
   Future<void> _handleFrameSerially(GarminGfdiFrame frame) async {
     if (_finished) return;
     try {
+      // Acknowledge FIRST, as Gadgetbridge does: an unacknowledged message is
+      // treated as lost, and the watch retransmits it on a timer instead of
+      // moving on. Types that get their own response envelope are excluded —
+      // that response IS their acknowledgement.
+      if (!garminSelfAcknowledgedTypes.contains(frame.messageType)) {
+        await send(buildGenericAck(frame.messageType));
+      }
       await _dispatch(decodeGarminMessage(frame));
     } catch (error, stack) {
       _fail(error, stack);

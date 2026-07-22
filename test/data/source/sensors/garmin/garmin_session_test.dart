@@ -350,6 +350,53 @@ void main() {
       expect(requested, [0, 6]);
     });
 
+    test('every unanswered inbound message gets a generic ACK', () async {
+      // The watch retransmits anything it thinks was lost and will not move on,
+      // which is exactly how a real vívoactive 5 stalled with an empty
+      // directory while re-sending its CONFIGURATION message.
+      final watch = _ChattyWatch(files: {0: _directory([])});
+
+      await _runSync(watch);
+
+      final acked = watch.received
+          .where((f) => f.messageType == GarminMessageId.response)
+          .map((f) => f.payload[0] | (f.payload[1] << 8))
+          .toList();
+      expect(acked, contains(5050)); // CONFIGURATION
+      expect(acked, contains(5043)); // PROTOBUF_REQUEST
+      expect(acked, contains(5036)); // NOTIFICATION_SUBSCRIPTION
+    });
+
+    test('an ACK is never itself ACKed', () async {
+      final watch = _FakeWatch(files: {0: _directory([])});
+
+      await _runSync(watch);
+
+      // A RESPONSE naming RESPONSE would bounce between the two forever.
+      final acked = watch.received
+          .where((f) => f.messageType == GarminMessageId.response)
+          .map((f) => f.payload[0] | (f.payload[1] << 8));
+      expect(acked, isNot(contains(GarminMessageId.response)));
+    });
+
+    test('messages with their own response are not double-acked', () async {
+      final watch = _FakeWatch(files: {0: _directory([])});
+
+      await _runSync(watch);
+
+      // Device information and auth each get exactly one reply — the response
+      // that carries our details IS the acknowledgement.
+      for (final type in [
+        GarminMessageId.deviceInformation,
+        GarminMessageId.authNegotiation,
+      ]) {
+        final replies = watch.received
+            .where((f) => f.messageType == GarminMessageId.response)
+            .where((f) => (f.payload[0] | (f.payload[1] << 8)) == type);
+        expect(replies, hasLength(1), reason: 'type $type');
+      }
+    });
+
     test('a FILTER is sent before the directory is requested', () async {
       final watch = _FakeWatch(files: {0: _directory([])});
 
@@ -486,5 +533,27 @@ class _AnnouncingWatch extends _FakeWatch {
       ..writeLong(bitmask);
     return GarminGfdiFrame.build(
         GarminMessageId.synchronization, w.toBytes());
+  }
+}
+
+/// A watch that also emits the chatter a real vívoactive 5 sends during the
+/// handshake — configuration, protobuf requests, notification subscription —
+/// none of which this app answers with a response of its own.
+class _ChattyWatch extends _FakeWatch {
+  _ChattyWatch({required super.files});
+
+  bool _chattered = false;
+
+  @override
+  void _startServing(int index) {
+    if (index == 0 && !_chattered) {
+      _chattered = true;
+      // Queued BEFORE the listing, as observed on the device.
+      outbox
+        ..add(GarminGfdiFrame.build(5050, _b([0x0f, 0xfb, 0xff, 0x3d])))
+        ..add(GarminGfdiFrame.build(5043, _b([0x8f, 0x03, 0x00, 0x00])))
+        ..add(GarminGfdiFrame.build(5036, _b([0x00, 0x00])));
+    }
+    super._startServing(index);
   }
 }

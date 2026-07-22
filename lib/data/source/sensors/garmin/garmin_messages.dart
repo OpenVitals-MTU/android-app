@@ -377,6 +377,34 @@ Uint8List buildDownloadRequest({
   return GarminGfdiFrame.build(GarminMessageId.downloadRequest, writer.toBytes());
 }
 
+/// Acknowledges any inbound message: a `RESPONSE` envelope naming what is being
+/// acknowledged, plus ACK (`GenericStatusMessage`).
+///
+/// Gadgetbridge sends one of these for EVERY message it receives
+/// (`GarminSupport.onMessage` → `sendAck`). Without them the watch treats its
+/// message as lost and retransmits, and will not move on — which is exactly what
+/// a real vívoactive 5 did, re-sending its CONFIGURATION message on a timer
+/// while its directory stayed empty.
+Uint8List buildGenericAck(int originalMessageType) {
+  final writer = GarminByteWriter()
+    ..writeShort(originalMessageType)
+    ..writeByte(GarminStatus.ack.code);
+  return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
+}
+
+/// Message types this app answers with their OWN response envelope, which
+/// already serves as the acknowledgement — sending a second, generic one would
+/// be a duplicate reply to the same message.
+///
+/// `response` itself is here because an ack must never be acked (Gadgetbridge's
+/// "don't ack the ack"), which would otherwise bounce forever.
+const Set<int> garminSelfAcknowledgedTypes = {
+  GarminMessageId.response,
+  GarminMessageId.deviceInformation,
+  GarminMessageId.authNegotiation,
+  GarminMessageId.fileTransferData,
+};
+
 /// Acknowledges a received file-transfer chunk: `RESPONSE` envelope naming
 /// FILE_TRANSFER_DATA, ACK + OK, and the offset reached
 /// (`FileTransferDataStatusMessage`).
