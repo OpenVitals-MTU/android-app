@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'garmin_log.dart';
 import 'garmin_protobuf.dart';
 
 /// The watch's own settings tree, over the protobuf settings service.
@@ -328,22 +329,22 @@ class GarminSettingsService {
     for (final field in readProtobuf(payload)) {
       final bytes = field.bytes;
       if (bytes == null) {
-        debugPrint('$indent${field.field}: ${field.varint}');
+        garminLog('$indent${field.field}: ${field.varint}');
         continue;
       }
       final text = _asText(bytes);
       if (text != null) {
-        debugPrint('$indent${field.field}: "$text"');
+        garminLog('$indent${field.field}: "$text"');
         continue;
       }
       final nested = readProtobuf(bytes);
       if (nested.isEmpty) {
-        debugPrint('$indent${field.field}: (${bytes.length}B) ${_hex(bytes)}');
+        garminLog('$indent${field.field}: (${bytes.length}B) ${_hex(bytes)}');
         continue;
       }
-      debugPrint('$indent${field.field}: {');
+      garminLog('$indent${field.field}: {');
       describe(bytes, indent: '$indent  ');
-      debugPrint('$indent}');
+      garminLog('$indent}');
     }
   }
 

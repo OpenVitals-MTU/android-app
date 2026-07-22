@@ -6,6 +6,7 @@ import 'garmin_byte_reader.dart';
 import 'garmin_byte_writer.dart';
 import 'garmin_cobs.dart';
 import 'garmin_gfdi_frame.dart';
+import 'garmin_log.dart';
 
 /// Garmin's multi-link (ML) transport — the V2 layer that carries GFDI.
 ///
@@ -226,4 +227,4 @@ class GarminMlTransport {
 
 /// Convenience for logging through [debugPrint] without the transport importing
 /// Flutter into its own tests.
-void garminMlDebugLog(String message) => debugPrint(message);
+void garminMlDebugLog(String message) => garminLog(message);

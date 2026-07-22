@@ -494,6 +494,44 @@ void main() {
       expect(directoryRequests, hasLength(1));
     });
 
+    test('a link that dies during the empty grace still settles the sync',
+        () async {
+      // The grace window waits out a watch that announces late — and it is
+      // exactly when a watch walks out of range. The send inside the timer
+      // throws then, and an unawaited future that rejects is an unhandled async
+      // error that leaves `done` pending forever.
+      final watch = _FakeWatch(files: {0: _directory([])});
+      var connected = true;
+      late final GarminSession session;
+      session = GarminSession(
+        send: (frame) async {
+          if (!connected) throw StateError('link dropped');
+          watch.onFrame(GarminGfdiFrame.parse(frame));
+        },
+        bluetoothName: 'Pixel',
+        manufacturer: 'Google',
+        model: 'raven',
+        emptyGrace: const Duration(milliseconds: 20),
+      )..start();
+
+      watch.outbox
+        ..add(watch.deviceInformation())
+        ..add(watch.authNegotiation());
+      while (watch.outbox.isNotEmpty) {
+        await session.handleFrame(
+          GarminGfdiFrame.parse(watch.outbox.removeAt(0)),
+        );
+      }
+      // The listing came back empty, so the grace timer is now armed. Take the
+      // link away before it fires.
+      connected = false;
+
+      await expectLater(
+        session.done.timeout(const Duration(seconds: 2)),
+        completion(isEmpty),
+      );
+    });
+
     test('a file is kept before it is archived', () async {
       final watch = _FakeWatch(files: {
         0: _directory([(5, 128, 49, 1)]),

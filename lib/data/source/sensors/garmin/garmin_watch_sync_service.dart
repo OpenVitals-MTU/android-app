@@ -4,10 +4,11 @@ import 'package:flutter/foundation.dart';
 
 import 'garmin_ble_transport.dart';
 import 'garmin_capabilities.dart';
-import 'garmin_protobuf_transport.dart';
-import 'garmin_settings_service.dart';
 import 'garmin_file_store.dart';
+import 'garmin_log.dart';
+import 'garmin_protobuf_transport.dart';
 import 'garmin_session.dart';
+import 'garmin_settings_service.dart';
 
 /// Drives one end-to-end sync with a watch: open the link, run the GFDI
 /// session, hand back whatever it downloaded.
@@ -68,7 +69,7 @@ class GarminWatchSyncService {
     );
     session.protobuf.onUnsolicited = (payload) {
       if (!GarminFindMyWatch.isFindMessage(payload)) return;
-      debugPrint('[GARMIN-FIND] the watch says the alert ended');
+      garminLog('[GARMIN-FIND] the watch says the alert ended');
       if (!endedOnWatch.isCompleted) endedOnWatch.complete();
     };
 
@@ -87,7 +88,7 @@ class GarminWatchSyncService {
         label: 'find start',
       );
       final outcome = GarminFindMyWatch.outcome(reply);
-      debugPrint('[GARMIN-FIND] ${outcome.name}');
+      garminLog('[GARMIN-FIND] ${outcome.name}');
       // Only an explicit ERROR is a refusal. A reply this app cannot read is
       // NOT: the watch was seen ringing while an unparsed reply was being
       // treated as failure, and bailing here is what left it ringing with no
@@ -103,7 +104,7 @@ class GarminWatchSyncService {
       ]);
       return true;
     } on TimeoutException {
-      debugPrint('[GARMIN-FIND] the watch never finished its handshake');
+      garminLog('[GARMIN-FIND] the watch never finished its handshake');
       return false;
     } finally {
       // ALWAYS cancel a started alert, on every path out — including a thrown
@@ -115,13 +116,13 @@ class GarminWatchSyncService {
               .request(GarminFindMyWatch.cancel(), label: 'find cancel')
               .timeout(const Duration(seconds: 3));
         } catch (error) {
-          debugPrint('[GARMIN-FIND] could not cancel: $error');
+          garminLog('[GARMIN-FIND] could not cancel: $error');
         }
       }
       await dropSub?.cancel();
       session.protobuf.abort();
       await transport.close();
-      debugPrint('[GARMIN-FIND] link closed');
+      garminLog('[GARMIN-FIND] link closed');
     }
   }
 
@@ -228,7 +229,7 @@ class GarminWatchSyncService {
           '$label definition',
           responseField: GarminSettingsService.definitionResponseField,
         );
-        debugPrint('[GARMIN-SETTINGS] $label definition: '
+        garminLog('[GARMIN-SETTINGS] $label definition: '
             '${definition == null ? "none" : "${definition.length}B"}');
         if (definition != null) GarminSettingsService.describe(definition);
 
@@ -237,7 +238,7 @@ class GarminWatchSyncService {
           '$label state',
           responseField: GarminSettingsService.stateResponseField,
         );
-        debugPrint('[GARMIN-SETTINGS] $label state: '
+        garminLog('[GARMIN-SETTINGS] $label state: '
             '${state == null ? "none" : "${state.length}B"}');
         if (state != null) GarminSettingsService.describe(state);
 
@@ -288,26 +289,26 @@ class GarminWatchSyncService {
       for (final entry in GarminSettingsService.subscreens(root)) {
         await walk(entry, 1);
         if (visited.length >= maxSettingsScreens) {
-          debugPrint('[GARMIN-SETTINGS] stopping at $maxSettingsScreens '
+          garminLog('[GARMIN-SETTINGS] stopping at $maxSettingsScreens '
               'screens — the rest of the tree is not walked');
           break;
         }
       }
 
       await settingsReplies.close();
-      debugPrint('[GARMIN-SETTINGS] walked ${visited.length} screens');
+      garminLog('[GARMIN-SETTINGS] walked ${visited.length} screens');
       return visited.length;
     } on TimeoutException {
-      debugPrint('[GARMIN-SETTINGS] the watch never finished its handshake');
+      garminLog('[GARMIN-SETTINGS] the watch never finished its handshake');
       return 0;
     } catch (error) {
-      debugPrint('[GARMIN-SETTINGS] failed: $error');
+      garminLog('[GARMIN-SETTINGS] failed: $error');
       return 0;
     } finally {
       await dropSub?.cancel();
       session.protobuf.abort();
       await transport.close();
-      debugPrint('[GARMIN-SETTINGS] link closed');
+      garminLog('[GARMIN-SETTINGS] link closed');
     }
   }
 
@@ -357,7 +358,7 @@ class GarminWatchSyncService {
       // Logged BEFORE connecting: a sync that wedged inside connect produced no
       // output whatsoever, which read as "nothing happened" rather than "stuck
       // on the radio".
-      debugPrint('[GARMIN-SYNC] connecting to $address');
+      garminLog('[GARMIN-SYNC] connecting to $address');
       await transport.connect(onFrame: session.handleFrame);
       // A dropped link ends the sync with what it has rather than hanging on
       // `done` forever waiting for frames that will never arrive.
@@ -370,16 +371,16 @@ class GarminWatchSyncService {
         // link open is the only way to see what the watch sends unprompted.
         // Whatever arrives is logged by the session; the files are returned and
         // imported as usual once the window closes.
-        debugPrint('[GARMIN-LISTEN] holding the link open for '
+        garminLog('[GARMIN-LISTEN] holding the link open for '
             '${listenAfter.inMinutes}m — touch the watch now');
         await Future<void>.delayed(listenAfter);
-        debugPrint('[GARMIN-LISTEN] window closed');
+        garminLog('[GARMIN-LISTEN] window closed');
       }
       return files;
     } finally {
       await dropSub?.cancel();
       await transport.close();
-      debugPrint('[GARMIN-SYNC] link closed');
+      garminLog('[GARMIN-SYNC] link closed');
     }
   }
 }

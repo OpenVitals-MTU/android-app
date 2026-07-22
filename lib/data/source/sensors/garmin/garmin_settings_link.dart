@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'garmin_ble_transport.dart';
+import 'garmin_log.dart';
 import 'garmin_session.dart';
 import 'garmin_settings_screen.dart';
 import 'garmin_settings_service.dart';
@@ -31,11 +32,16 @@ class GarminSettingsLink {
 
   bool _closed = false;
 
-  /// Completes the moment the link goes away, so a request in flight fails at
-  /// once instead of waiting out a timeout for a reply that can never arrive.
-  /// A dropped watch left the screen saying "Reading from the watch…" for
-  /// thirty seconds with nothing on the other end.
-  final Completer<void> _gone = Completer<void>();
+  /// Fires the moment the link goes away, so a request in flight fails at once
+  /// instead of waiting out a timeout for a reply that can never arrive. A
+  /// dropped watch left the screen saying "Reading from the watch…" for thirty
+  /// seconds with nothing on the other end.
+  ///
+  /// A broadcast stream rather than a completer so a request can stop listening
+  /// when it finishes. A completer cannot: every request registered a callback
+  /// that lived as long as the link, and a long browse accumulated one per
+  /// screen read.
+  final StreamController<void> _gone = StreamController<void>.broadcast();
 
   /// Whether the link is still usable. A watch that walks away closes it, and
   /// every later request would otherwise wait out its full timeout.
@@ -87,10 +93,10 @@ class GarminSettingsLink {
       }
     };
     link._dropListener = transport.onDisconnected.listen((reason) {
-      debugPrint('[GARMIN-SETTINGS] link dropped: $reason');
+      garminLog('[GARMIN-SETTINGS] link dropped: $reason');
       session.abort(reason);
       link._closed = true;
-      if (!link._gone.isCompleted) link._gone.complete();
+      link._signalGone();
     });
 
     unawaited(link._ask(
@@ -131,7 +137,7 @@ class GarminSettingsLink {
       expectScreen: screenId,
     );
     if (state == null && isOpen) {
-      debugPrint('[GARMIN-SETTINGS] no state for $screenId, asking again');
+      garminLog('[GARMIN-SETTINGS] no state for $screenId, asking again');
       state = await _ask(
         GarminSettingsService.screenState(screenId),
         'screen $screenId state (retry)',
@@ -140,7 +146,7 @@ class GarminSettingsLink {
       );
     }
     if (state == null) {
-      debugPrint('[GARMIN-SETTINGS] screen $screenId has no state — every '
+      garminLog('[GARMIN-SETTINGS] screen $screenId has no state — every '
           'switch on it will render inert');
     }
     final screen = parseGarminSettingsScreen(definition, stateReply: state);
@@ -148,11 +154,11 @@ class GarminSettingsLink {
       // Every row as parsed, not as raw bytes: a long hex dump is truncated by
       // logcat, and what matters when a control is missing is which KIND each
       // row came out as.
-      debugPrint('[GARMIN-SETTINGS] screen $screenId "${screen.title}" '
+      garminLog('[GARMIN-SETTINGS] screen $screenId "${screen.title}" '
           '${screen.entries.length} rows, state=${screen.hasState}');
       for (final entry in screen.entries) {
         if (entry.isBlank) continue;
-        debugPrint('[GARMIN-SETTINGS]   ${entry.id}: ${entry.kind.name} '
+        garminLog('[GARMIN-SETTINGS]   ${entry.id}: ${entry.kind.name} '
             '"${entry.title}" summary="${entry.summary}" '
             'sub=${entry.subscreenId} options=${entry.options.length} '
             'targetType=${entry.rawTargetType}');
@@ -172,7 +178,7 @@ class GarminSettingsLink {
     required int entryId,
     required bool value,
   }) async {
-    debugPrint('[GARMIN-SETTINGS] → switch $screenId/$entryId = $value');
+    garminLog('[GARMIN-SETTINGS] → switch $screenId/$entryId = $value');
     final reply = await _ask(
       GarminSettingsService.changeSwitch(
         screenId: screenId,
@@ -184,7 +190,7 @@ class GarminSettingsLink {
       expectScreen: screenId,
     );
     final ok = GarminSettingsService.changeSucceeded(reply);
-    debugPrint('[GARMIN-SETTINGS] ← switch ${ok ?? "no answer"}');
+    garminLog('[GARMIN-SETTINGS] ← switch ${ok ?? "no answer"}');
     return ok;
   }
 
@@ -210,7 +216,7 @@ class GarminSettingsLink {
   /// Activates a delete row. The answer matters more here than anywhere else:
   /// this is the one operation that cannot be undone.
   Future<bool?> delete({required int screenId, required int entryId}) async {
-    debugPrint('[GARMIN-SETTINGS] → delete $screenId/$entryId');
+    garminLog('[GARMIN-SETTINGS] → delete $screenId/$entryId');
     final reply = await _ask(
       GarminSettingsService.changeDelete(screenId: screenId, entryId: entryId),
       'delete',
@@ -218,7 +224,7 @@ class GarminSettingsLink {
       expectScreen: screenId,
     );
     final ok = GarminSettingsService.changeSucceeded(reply);
-    debugPrint('[GARMIN-SETTINGS] ← delete ${ok ?? "no answer"}');
+    garminLog('[GARMIN-SETTINGS] ← delete ${ok ?? "no answer"}');
     return ok;
   }
 
@@ -244,12 +250,12 @@ class GarminSettingsLink {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
-    if (!_gone.isCompleted) _gone.complete();
+    _signalGone();
     await _dropListener?.cancel();
     await _replies.close();
     _session.protobuf.abort();
     await _transport.close();
-    debugPrint('[GARMIN-SETTINGS] link closed');
+    garminLog('[GARMIN-SETTINGS] link closed');
   }
 
   /// Sends a request and waits for the reply that ANSWERS it.
@@ -278,7 +284,7 @@ class GarminSettingsLink {
       if (expectScreen != null) {
         final about = GarminSettingsService.screenIdOf(reply, responseField);
         if (about != null && about != expectScreen) {
-          debugPrint('[GARMIN-SETTINGS] ignoring a reply about screen $about '
+          garminLog('[GARMIN-SETTINGS] ignoring a reply about screen $about '
               'while waiting for $expectScreen');
           return;
         }
@@ -287,10 +293,12 @@ class GarminSettingsLink {
     }
 
     final subscription = _replies.stream.listen(offer);
-    // A dropped link resolves the wait immediately — see [_gone].
-    unawaited(_gone.future.then((_) {
+    // A dropped link resolves the wait immediately — see [_gone]. Cancelled
+    // alongside the reply subscription below, so a long browse does not leave a
+    // listener behind per screen read.
+    final goneSubscription = _gone.stream.listen((_) {
       if (!answer.isCompleted) answer.complete(null);
-    }));
+    });
     unawaited(_session.protobuf
         .request(request,
             label: label, timeout: GarminSettingsService.replyTimeout)
@@ -303,6 +311,14 @@ class GarminSettingsLink {
       );
     } finally {
       await subscription.cancel();
+      await goneSubscription.cancel();
     }
+  }
+
+  /// Tells every waiting request that nothing more is coming.
+  void _signalGone() {
+    if (_gone.isClosed) return;
+    _gone.add(null);
+    unawaited(_gone.close());
   }
 }

@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
-
 import 'garmin_byte_writer.dart';
 import 'garmin_gfdi_frame.dart';
+import 'garmin_log.dart';
 import 'garmin_messages.dart';
 import 'garmin_protobuf.dart';
 
@@ -72,14 +71,14 @@ class GarminProtobufTransport {
     final completer = Completer<Uint8List>();
     _pending[requestId] = completer;
 
-    debugPrint('[GARMIN-PB] → ${label ?? "request"} #$requestId '
+    garminLog('[GARMIN-PB] → ${label ?? "request"} #$requestId '
         '(${payload.length}B)');
     await send(_frame(GarminMessageId.protobufRequest, requestId, payload));
 
     try {
       return await completer.future.timeout(timeout ?? replyTimeout);
     } on TimeoutException {
-      debugPrint('[GARMIN-PB] ✗ no reply to #$requestId within '
+      garminLog('[GARMIN-PB] ✗ no reply to #$requestId within '
           '${(timeout ?? replyTimeout).inSeconds}s');
       return null;
     } finally {
@@ -135,7 +134,7 @@ class GarminProtobufTransport {
       )));
       final held = chunks.values.fold<int>(0, (sum, c) => sum + c.length);
       if (held < totalLength) {
-        debugPrint('[GARMIN-PB] ← #$requestId chunk $held/$totalLength B');
+        garminLog('[GARMIN-PB] ← #$requestId chunk $held/$totalLength B');
         return true;
       }
       // Assembled in offset order, so a retransmission that arrived late lands
@@ -169,13 +168,13 @@ class GarminProtobufTransport {
   void _deliver(int requestId, Uint8List bytes) {
     final completer = _pending[requestId];
     if (completer != null) {
-      debugPrint('[GARMIN-PB] ← #$requestId (${bytes.length}B) ${_hex(bytes)}');
+      garminLog('[GARMIN-PB] ← #$requestId (${bytes.length}B) ${_hex(bytes)}');
       if (!completer.isCompleted) completer.complete(bytes);
       return;
     }
     // Not an answer to anything outstanding — either the watch started this
     // conversation, or it answered one of ours under its own id.
-    debugPrint('[GARMIN-PB] ← unsolicited #$requestId '
+    garminLog('[GARMIN-PB] ← unsolicited #$requestId '
         '(${bytes.length}B) ${_hex(bytes)}');
     onUnsolicited?.call(bytes);
   }

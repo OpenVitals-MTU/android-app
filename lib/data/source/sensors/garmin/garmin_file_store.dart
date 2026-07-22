@@ -1,7 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-
+import 'garmin_log.dart';
 import 'garmin_session.dart';
 
 /// Keeps the raw FIT files pulled off a watch.
@@ -50,7 +49,7 @@ class GarminFileStore {
         '${now.toUtc().millisecondsSinceEpoch}.fit';
     final path = '${directory.path}${Platform.pathSeparator}$name';
     await File(path).writeAsBytes(file.bytes, flush: true);
-    debugPrint('[GARMIN-STORE] saved $name (${file.bytes.length}B)');
+    garminLog('[GARMIN-STORE] saved $name (${file.bytes.length}B)');
     return path;
   }
 
@@ -66,11 +65,11 @@ class GarminFileStore {
         final stat = await entity.stat();
         if (stat.modified.isBefore(cutoff)) {
           await entity.delete();
-          debugPrint('[GARMIN-STORE] pruned ${entity.path}');
+          garminLog('[GARMIN-STORE] pruned ${entity.path}');
         }
       }
     } catch (error) {
-      debugPrint('[GARMIN-STORE] prune failed: $error');
+      garminLog('[GARMIN-STORE] prune failed: $error');
     }
   }
 }

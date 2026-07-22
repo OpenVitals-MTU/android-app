@@ -271,6 +271,25 @@ void main() {
     expect(state().findingDeviceId, isNull);
   });
 
+  test('stopping twice before the watch answers does not throw', () async {
+    // Stop stays enabled until the watch acknowledges the cancel — a full round
+    // trip — so an impatient second tap lands inside that window. Completing an
+    // already-completed completer throws, and it threw straight out of the
+    // button's callback.
+    await setUp0();
+
+    final running = notifier().toggleFind(watch.id);
+    await Future<void>.delayed(Duration.zero);
+    expect(state().isFindingDevice(watch.id), isTrue);
+
+    // Both taps before the first stop has come back.
+    final first = notifier().toggleFind(watch.id);
+    final second = notifier().toggleFind(watch.id);
+    await Future.wait([first, second, running]);
+
+    expect(state().findingDeviceId, isNull);
+  });
+
   test('a refused find is reported as a flag, not a message', () async {
     // The wording belongs to the screen; this layer has no localizations, and
     // one that invented an English string would leak it into every locale.

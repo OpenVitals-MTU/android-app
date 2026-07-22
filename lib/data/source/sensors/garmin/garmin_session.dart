@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
-
-import 'garmin_crc.dart';
 import 'garmin_capabilities.dart';
+import 'garmin_crc.dart';
 import 'garmin_directory.dart';
 import 'garmin_file_types.dart';
 import 'garmin_gfdi_frame.dart';
+import 'garmin_log.dart';
 import 'garmin_messages.dart';
 import 'garmin_protobuf_transport.dart';
 
@@ -119,7 +118,8 @@ class GarminSession {
 
   /// What the watch said it can do, once the handshake has reached
   /// CONFIGURATION. Empty before that.
-  Set<GarminCapability> capabilities = const {};
+  Set<GarminCapability> get capabilities => _capabilities;
+  Set<GarminCapability> _capabilities = const {};
 
   /// Protobuf exchanges ride the same link. Constructed lazily so a session
   /// that never sends one costs nothing.
@@ -135,8 +135,13 @@ class GarminSession {
   /// Entries still to fetch, filled from the directory.
   final List<GarminDirectoryEntry> _queue = [];
 
-  GarminDeviceInformation? deviceInformation;
-  List<GarminSupportedFileType> supportedTypes = const [];
+  /// How the watch introduced itself, once it has.
+  GarminDeviceInformation? get deviceInformation => _deviceInformation;
+  GarminDeviceInformation? _deviceInformation;
+
+  /// The file types the watch offered.
+  List<GarminSupportedFileType> get supportedTypes => _supportedTypes;
+  List<GarminSupportedFileType> _supportedTypes = const [];
 
   /// The transfer in flight, or null between files.
   _ActiveDownload? _active;
@@ -196,7 +201,7 @@ class GarminSession {
         // Past the sync, so there is no result left to fail — but _fail() would
         // return silently here and a listening pass whose whole purpose is to
         // see what the watch sends must not swallow the one frame it choked on.
-        debugPrint('[GARMIN-LISTEN] frame ${frame.messageType} threw: $error');
+        garminLog('[GARMIN-LISTEN] frame ${frame.messageType} threw: $error');
         return;
       }
       _fail(error, stack);
@@ -206,8 +211,8 @@ class GarminSession {
   Future<void> _dispatch(GarminInboundMessage message) async {
     switch (message) {
       case GarminDeviceInformation():
-        deviceInformation = message;
-        debugPrint('[GARMIN-SYNC] device ${message.deviceName} '
+        _deviceInformation = message;
+        garminLog('[GARMIN-SYNC] device ${message.deviceName} '
             '${message.deviceModel} sw=${message.softwareVersionText} '
             'maxPacket=${message.maxPacketSize}');
         await send(buildDeviceInformationResponse(
@@ -232,11 +237,11 @@ class GarminSession {
         // whether a watch has FIND_MY_WATCH or REALTIME_SETTINGS, and the
         // latter decides whether alarms live in the watch's settings tree or in
         // an uploaded FIT file — two completely different implementations.
-        capabilities = decodeGarminCapabilities(message.capabilityBits);
-        debugPrint('[GARMIN-SYNC] configuration: '
+        _capabilities = decodeGarminCapabilities(message.capabilityBits);
+        garminLog('[GARMIN-SYNC] configuration: '
             '${message.capabilityBits.length}B, '
             '${capabilities.length} capabilities');
-        debugPrint('[GARMIN-CAPS] '
+        garminLog('[GARMIN-CAPS] '
             '${capabilities.map((c) => c.wireName).join(", ")}');
         await send(buildConfigurationResponse());
         onHandshakeReady?.call();
@@ -244,15 +249,15 @@ class GarminSession {
       case GarminNotificationSubscription():
         // Answered honestly (we forward nothing) but answered — the watch asks
         // roughly once a second until it gets a properly shaped status.
-        debugPrint('[GARMIN-SYNC] notification subscription '
+        garminLog('[GARMIN-SYNC] notification subscription '
             'enable=${message.enable}; replying disabled');
         await send(buildNotificationSubscriptionStatus(message));
 
       case GarminSupportedFileTypes():
-        supportedTypes = message.types;
+        _supportedTypes = message.types;
         // The raw pairs, not just a count: they are the ground truth for which
         // GarminFileType codes a real watch actually offers.
-        debugPrint('[GARMIN-SYNC] watch supports ${message.types.length} types: '
+        garminLog('[GARMIN-SYNC] watch supports ${message.types.length} types: '
             '${message.types.map((t) => "${t.dataType}/${t.subType}:${t.name}").join(", ")}');
         await send(buildSystemEvent(GarminSystemEventType.syncReady));
         // FILTER before the listing. Gadgetbridge only ever sends this in reply
@@ -276,7 +281,7 @@ class GarminSession {
         // FILTER and only then lists files — and an unfiltered listing came
         // back empty on a watch that demonstrably had a night of sleep on it,
         // so this exchange looks like what actually populates the directory.
-        debugPrint('[GARMIN-SYNC] synchronization type=${message.syncType} '
+        garminLog('[GARMIN-SYNC] synchronization type=${message.syncType} '
             'bits=${message.setBits} proceed=${message.shouldProceed}');
         if (message.shouldProceed) {
           // Cancel any pending give-up: the watch has just told us it holds
@@ -293,12 +298,12 @@ class GarminSession {
         // ACKs for our own sends. A NAK is logged because it is the only
         // visible sign the watch rejected something we asked for.
         if (message.status != GarminStatus.ack) {
-          debugPrint('[GARMIN-SYNC] NAK ${message.status.name} for '
+          garminLog('[GARMIN-SYNC] NAK ${message.status.name} for '
               'message ${message.originalMessageType}');
           break;
         }
         if (message.originalMessageType == GarminMessageId.filter) {
-          debugPrint('[GARMIN-SYNC] filter accepted');
+          garminLog('[GARMIN-SYNC] filter accepted');
         }
 
       case GarminUnhandledMessage():
@@ -309,8 +314,8 @@ class GarminSession {
         // Truncated normally, whole while listening: 32 bytes is enough to tell
         // a stalled sync what the watch is repeating, but a diagnostic pass is
         // trying to decode the thing and half a protobuf decodes to nothing.
-        debugPrint('[GARMIN-SYNC] unhandled message ${message.messageType} '
-            '(${message.payload.length}B) '
+        garminLogLazy(() => '[GARMIN-SYNC] unhandled message '
+            '${message.messageType} (${message.payload.length}B) '
             '${_hex(message.payload, max: keepAnsweringAfterSync ? 512 : 32)}');
     }
   }
@@ -335,7 +340,7 @@ class GarminSession {
     if (active == null) return; // Status for a transfer we already abandoned.
 
     if (!status.canProceed) {
-      debugPrint('[GARMIN-SYNC] download refused for index '
+      garminLog('[GARMIN-SYNC] download refused for index '
           '${active.entry.fileIndex}: ${status.downloadStatus.name}');
       // One unreadable file must not end the sync — skip to the next, exactly
       // as the bulk importer tolerates one bad file in a batch.
@@ -360,7 +365,7 @@ class GarminSession {
     if (!appended) {
       // A CRC or offset mismatch means the stream desynchronised. Abandoning
       // this file (rather than the sync) keeps the rest of the night's data.
-      debugPrint('[GARMIN-SYNC] chunk rejected for index '
+      garminLog('[GARMIN-SYNC] chunk rejected for index '
           '${active.entry.fileIndex}; skipping file');
       _active = null;
       await _next();
@@ -392,13 +397,13 @@ class GarminSession {
       _filesTotal = fresh.length;
       // Full diagnostics: "0 files" has several very different causes and only
       // the raw record counts and rejected type codes tell them apart.
-      debugPrint('[GARMIN-SYNC] directory ${bytes.length}B '
+      garminLog('[GARMIN-SYNC] directory ${bytes.length}B '
           '${listing.describe()} new=${fresh.length}');
       if (listing.entries.isEmpty && bytes.isNotEmpty) {
         // Nothing usable came back. The raw listing is small (16 bytes a
         // record) and is the only thing that separates "the watch has nothing"
         // from "the watch answers somewhere else" — dump it rather than guess.
-        debugPrint('[GARMIN-SYNC] raw directory: ${_hex(bytes)}');
+        garminLogLazy(() => '[GARMIN-SYNC] raw directory: ${_hex(bytes)}');
       }
       _report(GarminSyncPhase.downloading);
       await _next();
@@ -407,7 +412,7 @@ class GarminSession {
 
     final file = GarminDownloadedFile(entry: active.entry, bytes: bytes);
     _downloaded.add(file);
-    debugPrint('[GARMIN-SYNC] got ${active.entry.type.name} '
+    garminLog('[GARMIN-SYNC] got ${active.entry.type.name} '
         'index=${active.entry.fileIndex} bytes=${bytes.length}');
 
     // Persist first, archive second. Archiving is irreversible from our side, so
@@ -418,7 +423,7 @@ class GarminSession {
         await onFileDownloaded!(file);
       } catch (error) {
         safeToArchive = false;
-        debugPrint('[GARMIN-SYNC] not archiving index='
+        garminLog('[GARMIN-SYNC] not archiving index='
             '${active.entry.fileIndex}: could not keep a copy ($error)');
       }
     }
@@ -450,9 +455,21 @@ class GarminSession {
     if (_finished) return;
     if (_downloaded.isEmpty && !_graceUsed) {
       _graceUsed = true;
-      debugPrint('[GARMIN-SYNC] nothing listed; waiting '
+      garminLog('[GARMIN-SYNC] nothing listed; waiting '
           '${emptyGrace.inSeconds}s in case the watch announces');
-      _graceTimer = Timer(emptyGrace, () => unawaited(_finish()));
+      // Total by construction: _finish() sends a frame, and the link can drop
+      // during the six seconds this waits — which is exactly when a watch walks
+      // out of range. An unawaited future that rejects is an unhandled async
+      // error, so the result is settled here either way.
+      _graceTimer = Timer(emptyGrace, () async {
+        try {
+          await _finish();
+        } catch (error) {
+          garminLog('[GARMIN-SYNC] could not close out an empty sync: $error');
+          _finished = true;
+          if (!_done.isCompleted) _done.complete(List.unmodifiable(_downloaded));
+        }
+      });
       return;
     }
     await _finish();
@@ -465,9 +482,9 @@ class GarminSession {
     _graceTimer = null;
     await send(buildSystemEvent(GarminSystemEventType.syncComplete));
     _report(GarminSyncPhase.complete);
-    debugPrint('[GARMIN-SYNC] complete: ${_downloaded.length} files');
+    garminLog('[GARMIN-SYNC] complete: ${_downloaded.length} files');
     if (keepAnsweringAfterSync) {
-      debugPrint('[GARMIN-LISTEN] sync done; still answering the watch');
+      garminLog('[GARMIN-LISTEN] sync done; still answering the watch');
     }
     if (!_done.isCompleted) _done.complete(List.unmodifiable(_downloaded));
   }
@@ -476,7 +493,7 @@ class GarminSession {
     if (_finished) return;
     _finished = true;
     _report(GarminSyncPhase.failed);
-    debugPrint('[GARMIN-SYNC] failed: $error');
+    garminLog('[GARMIN-SYNC] failed: $error');
     if (!_done.isCompleted) _done.completeError(error, stack);
   }
 
@@ -488,7 +505,7 @@ class GarminSession {
     if (_finished) return;
     _finished = true;
     _report(GarminSyncPhase.failed);
-    debugPrint('[GARMIN-SYNC] aborted: ${reason ?? "no reason given"}');
+    garminLog('[GARMIN-SYNC] aborted: ${reason ?? "no reason given"}');
     if (!_done.isCompleted) _done.complete(List.unmodifiable(_downloaded));
   }
 }

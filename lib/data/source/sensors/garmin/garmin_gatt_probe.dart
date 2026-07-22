@@ -1,9 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../../../domain/model/garmin_transport.dart';
 import '../../../../domain/port/garmin_transport_probe.dart';
 import '../ble/ble_uuids.dart';
+import 'garmin_log.dart';
 
 /// [GarminTransportProbe] over `flutter_blue_plus`.
 ///
@@ -46,7 +46,7 @@ class GarminGattProbe implements GarminTransportProbe {
         timeout: _connectTimeout,
       );
     } catch (error) {
-      debugPrint('[GARMIN-GATT] $address connect failed: $error');
+      garminLog('[GARMIN-GATT] $address connect failed: $error');
       return _unreachable(address);
     }
 
@@ -71,11 +71,11 @@ class GarminGattProbe implements GarminTransportProbe {
       // debugPrint chunks long strings; emit line by line so nothing is dropped
       // or reordered in logcat.
       for (final line in report.describe().split('\n')) {
-        debugPrint(line);
+        garminLog(line);
       }
       return report;
     } catch (error) {
-      debugPrint('[GARMIN-GATT] $address discoverServices failed: $error');
+      garminLog('[GARMIN-GATT] $address discoverServices failed: $error');
       return _unreachable(address);
     } finally {
       try {

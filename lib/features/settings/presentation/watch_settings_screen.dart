@@ -56,35 +56,54 @@ class WatchSettingsScreenPage extends ConsumerWidget {
               retryLabel: l10n.settingsWatchSettingsRetry,
             );
           }
-          return ListView(
+          // Blank rows are dropped: an alarm list reserves one per slot and
+          // leaves the unused ones with no title at all, which drew twenty
+          // empty cards under a single real alarm.
+          final rows = [
+            for (final entry in screen.entries)
+              if (!entry.isBlank) entry,
+          ];
+          // Built lazily. The row count comes from the WATCH, not from this
+          // app — a settings screen on another model is unbounded as far as
+          // this code knows.
+          return ListView.builder(
             padding: screenScrollPadding(context),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Text(
-                  l10n.settingsWatchSettingsFromWatch,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+            itemCount: rows.length + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.settingsWatchSettingsFromWatch,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                       ),
-                ),
-              ),
-              if (!screen.hasState)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Text(
-                    l10n.settingsWatchSettingsNoState,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
+                      if (!screen.hasState)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            l10n.settingsWatchSettingsNoState,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.error,
+                                    ),
+                          ),
                         ),
+                    ],
                   ),
-                ),
-              // Blank rows are dropped: an alarm list reserves one per slot and
-              // leaves the unused ones with no title at all, which drew twenty
-              // empty cards under a single real alarm.
-              for (final entry in screen.entries)
-                if (!entry.isBlank)
-                  _EntryRow(deviceId: deviceId, target: target, entry: entry),
-            ],
+                );
+              }
+              return _EntryRow(
+                deviceId: deviceId,
+                target: target,
+                entry: rows[index - 1],
+              );
+            },
           );
         },
       ),

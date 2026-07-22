@@ -490,9 +490,9 @@ const Set<int> garminSelfAcknowledgedTypes = {
   // ACK is too short and the watch keeps asking.
   GarminMessageId.notificationSubscription,
   // Acknowledged by the protobuf transport itself, which is the only thing that
-  // knows whether a message was complete (generic ACK) or a chunk (a status
-  // naming the request and offset). Acking here as well sent BOTH for every
-  // chunk, and the watch answered that by retransmitting.
+  // knows the request id and offset a protobuf status has to name — complete or
+  // chunked, both get one. Acking here as well sent TWO for every message, and
+  // the watch answered that by retransmitting.
   GarminMessageId.protobufRequest,
   GarminMessageId.protobufResponse,
 };

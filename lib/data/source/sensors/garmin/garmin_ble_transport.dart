@@ -5,6 +5,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../ble/ble_uuids.dart';
 import 'garmin_gfdi_frame.dart';
+import 'garmin_log.dart';
 import 'garmin_ml_transport.dart';
 
 /// Thrown when the watch cannot be reached or does not expose the V2 transport.
@@ -68,7 +69,7 @@ class GarminBleTransport {
   }
 
   void _log(String message) {
-    debugPrint(message);
+    garminLog(message);
     onLog?.call(message);
   }
 

@@ -97,14 +97,21 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
       phase: GarminSyncPhase.handshake,
     );
 
-    // A watch has ONE link. Browsing its settings holds it open for a while
-    // after the screen closes, and a sync starting inside that window used to
-    // connect against a radio already in use and never come back — no error, no
-    // log, just a spinner. Take the link back first.
-    await releaseWatchSettingsLink(deviceId);
-
     final List<GarminDownloadedFile> downloaded;
     try {
+      // A watch has ONE link. Browsing its settings holds it open for a while
+      // after the screen closes, and a sync starting inside that window used to
+      // connect against a radio already in use and never come back — no error,
+      // no log, just a spinner. Take the link back first.
+      //
+      // Inside the try, because `state` already says "syncing": a throw out
+      // here would leave that stuck forever, and the guard at the top of this
+      // method would then refuse every future sync until the app restarted.
+      await releaseWatchSettingsLink(deviceId);
+      // The provider still holds the link that was just closed. Without this an
+      // open settings screen keeps a dead one and quietly reports that the
+      // watch sent nothing.
+      ref.invalidate(watchSettingsLinkProvider(deviceId));
       downloaded = await service.sync(
         address: device.address,
         phoneName: phone.bluetoothName,
@@ -202,7 +209,11 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
   /// path that closes it a second in.
   Future<void> toggleFind(String deviceId) async {
     if (state.isFindingDevice(deviceId)) {
-      _findCancel?.complete();
+      // Stop stays enabled until the watch answers the cancel — a full round
+      // trip — so this branch is reachable twice, and completing a completed
+      // completer throws.
+      final cancel = _findCancel;
+      if (cancel != null && !cancel.isCompleted) cancel.complete();
       return;
     }
     if (state.isSyncing || state.findingDeviceId != null) return;
