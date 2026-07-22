@@ -160,35 +160,61 @@ class GarminWatchSyncService {
       session.start();
       await ready.future.timeout(const Duration(seconds: 15));
 
-      final init = await session.protobuf.request(
+      // The watch answers a settings request under an id OF ITS OWN rather
+      // than echoing ours, so the reply arrives as unsolicited traffic and has
+      // to be correlated by CONTENT. Collect every settings payload and match
+      // each request against the next one that fits.
+      final settingsReplies = StreamController<Uint8List>.broadcast();
+      session.protobuf.onUnsolicited = (payload) {
+        if (GarminSettingsService.unwrap(payload) != null) {
+          settingsReplies.add(payload);
+        }
+      };
+
+      Future<Uint8List?> ask(Uint8List request, String label) async {
+        final byContent = settingsReplies.stream.first
+            .timeout(const Duration(seconds: 12), onTimeout: () => Uint8List(0));
+        final byId = session.protobuf.request(request, label: label);
+        // Whichever arrives — some replies echo our id, some do not.
+        final replies = await Future.wait([byId, byContent]);
+        final echoed = replies[0];
+        if (echoed != null && GarminSettingsService.unwrap(echoed) != null) {
+          return echoed;
+        }
+        final pushed = replies[1];
+        return (pushed != null && pushed.isNotEmpty) ? pushed : null;
+      }
+
+      final init = await ask(
         GarminSettingsService.init(language: language, region: region),
-        label: 'settings init',
+        'settings init',
       );
       debugPrint('[GARMIN-SETTINGS] init reply: '
           '${init == null ? "none" : "${init.length}B"}');
       if (init != null) GarminSettingsService.describe(init);
 
-      final definition = await session.protobuf.request(
+      final definition = await ask(
         GarminSettingsService.screenDefinition(
           GarminSettingsService.rootScreenId,
           language: language,
         ),
-        label: 'root definition',
+        'root definition',
       );
       debugPrint('[GARMIN-SETTINGS] root definition: '
           '${definition == null ? "none" : "${definition.length}B"} '
           '(recognised=${GarminSettingsService.hasDefinition(definition)})');
       if (definition != null) GarminSettingsService.describe(definition);
 
-      final state = await session.protobuf.request(
+      final state = await ask(
         GarminSettingsService.screenState(GarminSettingsService.rootScreenId),
-        label: 'root state',
+        'root state',
       );
       debugPrint('[GARMIN-SETTINGS] root state: '
           '${state == null ? "none" : "${state.length}B"} '
           '(recognised=${GarminSettingsService.hasState(state)})');
       if (state != null) GarminSettingsService.describe(state);
 
+      await settingsReplies.close();
       return definition != null;
     } on TimeoutException {
       debugPrint('[GARMIN-SETTINGS] the watch never finished its handshake');

@@ -27,6 +27,8 @@ List<int> _u32(int v) =>
     [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF];
 
 void main() {
+  _chunkingTests();
+
   group('protobuf encoding', () {
     test('a varint field encodes key then value', () {
       expect((ProtobufWriter()..varint(1, 60)).toBytes(), _b([0x08, 0x3C]));
@@ -149,7 +151,11 @@ void main() {
     test('reassembles a chunked reply', () async {
       late final GarminProtobufTransport transport;
       transport = GarminProtobufTransport(send: (frame) async {
-        final id = GarminGfdiFrame.parse(frame).payload[0];
+        final parsed = GarminGfdiFrame.parse(frame);
+        // Answer the REQUEST only. Chunk acknowledgements go out through this
+        // same hook, and replying to those too would recurse forever.
+        if (parsed.messageType != GarminMessageId.protobufRequest) return;
+        final id = parsed.payload[0];
         transport.handleInbound(_reply(id, _b([1, 2, 3]), offset: 0, total: 6));
         transport.handleInbound(_reply(id, _b([4, 5, 6]), offset: 3, total: 6));
       });
@@ -172,6 +178,59 @@ void main() {
         () => transport.request(Uint8List(400)),
         throwsA(isA<ArgumentError>()),
       );
+    });
+  });
+}
+
+void _chunkingTests() {
+  Uint8List b(List<int> xs) => Uint8List.fromList(xs);
+  List<int> u32(int v) =>
+      [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF];
+  GarminGfdiFrame chunk(int id, List<int> payload, int offset, int total) {
+    final bb = BytesBuilder()
+      ..add([id & 0xFF, (id >> 8) & 0xFF])
+      ..add(u32(offset))
+      ..add(u32(total))
+      ..add(u32(payload.length))
+      ..add(payload);
+    return GarminGfdiFrame.parse(
+      GarminGfdiFrame.build(GarminMessageId.protobufRequest, bb.takeBytes()),
+    );
+  }
+
+  group('unsolicited chunking', () {
+    test('reassembles a message the watch sent under its OWN id', () async {
+      // The watch answers a settings request with an id of its own rather than
+      // echoing ours, so accumulation cannot be keyed on "am I waiting for
+      // this" — doing that lost every screen after the first chunk.
+      final delivered = <Uint8List>[];
+      final acks = <GarminGfdiFrame>[];
+      final transport = GarminProtobufTransport(
+        send: (frame) async => acks.add(GarminGfdiFrame.parse(frame)),
+        onUnsolicited: delivered.add,
+      );
+
+      transport.handleInbound(chunk(324, [1, 2, 3], 0, 6));
+      expect(delivered, isEmpty, reason: 'incomplete must not be delivered');
+      transport.handleInbound(chunk(324, [4, 5, 6], 3, 6));
+
+      expect(delivered.single, b([1, 2, 3, 4, 5, 6]));
+    });
+
+    test('acknowledges each chunk, or the watch sends no more', () async {
+      final acks = <GarminGfdiFrame>[];
+      final transport = GarminProtobufTransport(
+        send: (frame) async => acks.add(GarminGfdiFrame.parse(frame)),
+        onUnsolicited: (_) {},
+      );
+
+      transport.handleInbound(chunk(324, [1, 2, 3], 0, 6));
+      await Future<void>.delayed(Duration.zero);
+
+      // A generic ACK is not enough for a chunk: it has to name the request and
+      // the offset consumed.
+      expect(acks.single.messageType, GarminMessageId.response);
+      expect(acks.single.payload.length, greaterThan(3));
     });
   });
 }

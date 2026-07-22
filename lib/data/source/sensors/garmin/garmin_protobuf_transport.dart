@@ -98,33 +98,48 @@ class GarminProtobufTransport {
     if (payload.length < 14 + chunkLength) return false;
     final bytes = Uint8List.sublistView(payload, 14, 14 + chunkLength);
 
-    final completer = _pending[requestId];
-    if (completer == null) {
-      // The watch's own request, not a reply to ours. Logged and dropped: this
-      // app answers none of them, and the generic ACK the session already sends
-      // is enough to stop it retransmitting.
-      debugPrint('[GARMIN-PB] ← unsolicited #$requestId '
-          '(${bytes.length}B) ${_hex(bytes)}');
-      onUnsolicited?.call(bytes);
+    // Chunked, whoever it belongs to. Accumulation is keyed on the id alone,
+    // NOT on whether we are waiting for that id: the watch answers a settings
+    // request under an id OF ITS OWN rather than echoing ours, so treating an
+    // unmatched id as unchunked lost every screen after the first 487 bytes.
+    if (totalLength != chunkLength || dataOffset != 0) {
+      final buffer = _incoming.putIfAbsent(requestId, BytesBuilder.new);
+      buffer.add(bytes);
+      // A chunk needs an acknowledgement that names it, or the watch never
+      // sends the next one.
+      unawaited(send(buildProtobufChunkAck(
+        originalMessageType: frame.messageType,
+        requestId: requestId,
+        dataOffset: dataOffset + chunkLength,
+      )));
+      if (buffer.length < totalLength) {
+        debugPrint('[GARMIN-PB] ← #$requestId chunk '
+            '${buffer.length}/$totalLength B');
+        return true;
+      }
+      _deliver(requestId, buffer.takeBytes());
+      _incoming.remove(requestId);
       return true;
     }
 
-    if (totalLength == chunkLength && dataOffset == 0) {
-      // Logged in full: a reply that decodes to "refused" is indistinguishable
-      // from one this app misread, and only the bytes tell them apart.
+    _deliver(requestId, bytes);
+    return true;
+  }
+
+  /// Hands a COMPLETE message to whoever is waiting for it, or to the
+  /// unsolicited hook when nobody is.
+  void _deliver(int requestId, Uint8List bytes) {
+    final completer = _pending[requestId];
+    if (completer != null) {
       debugPrint('[GARMIN-PB] ← #$requestId (${bytes.length}B) ${_hex(bytes)}');
       if (!completer.isCompleted) completer.complete(bytes);
-      return true;
+      return;
     }
-
-    // Chunked: accumulate until the offsets add up to the declared total.
-    final buffer = _incoming.putIfAbsent(requestId, BytesBuilder.new);
-    buffer.add(bytes);
-    if (buffer.length >= totalLength) {
-      if (!completer.isCompleted) completer.complete(buffer.takeBytes());
-      _incoming.remove(requestId);
-    }
-    return true;
+    // Not an answer to anything outstanding — either the watch started this
+    // conversation, or it answered one of ours under its own id.
+    debugPrint('[GARMIN-PB] ← unsolicited #$requestId '
+        '(${bytes.length}B) ${_hex(bytes)}');
+    onUnsolicited?.call(bytes);
   }
 
   /// Fails every outstanding request, so a dropped link does not leave a caller

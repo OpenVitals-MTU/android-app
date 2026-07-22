@@ -441,6 +441,31 @@ Uint8List buildGenericAck(int originalMessageType) {
   return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
 }
 
+/// The acknowledgement a CHUNKED protobuf message needs.
+///
+/// A generic ACK is enough for a complete one, but a chunk has to name which
+/// chunk was kept — without that the watch sends the first piece and waits
+/// forever for a signal that never comes, so a 1013-byte settings screen
+/// arrives as 487 bytes and stops.
+///
+/// Shape from Gadgetbridge's `ProtobufStatusMessage`: the usual response
+/// envelope, then the request id, the offset consumed, and two status bytes
+/// (chunk kept = 0, no error = 0).
+Uint8List buildProtobufChunkAck({
+  required int originalMessageType,
+  required int requestId,
+  required int dataOffset,
+}) {
+  final writer = GarminByteWriter()
+    ..writeShort(originalMessageType)
+    ..writeByte(GarminStatus.ack.code)
+    ..writeShort(requestId)
+    ..writeInt(dataOffset)
+    ..writeByte(0) // ProtobufChunkStatus.KEPT
+    ..writeByte(0); // ProtobufStatusCode.NO_ERROR
+  return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
+}
+
 /// Message types this app answers with their OWN response envelope, which
 /// already serves as the acknowledgement — sending a second, generic one would
 /// be a duplicate reply to the same message.
