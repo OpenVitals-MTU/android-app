@@ -420,6 +420,18 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
 
   void setDeviceEnabled(String deviceId, bool enabled) =>
       _edit(SetBleDeviceEnabled(deviceId, enabled));
+
+  /// Renames a device without touching anything else it holds.
+  ///
+  /// Separate from the edit sheet on purpose: a watch has no capabilities to
+  /// pick, so its whole "edit" is a name, and routing that through
+  /// [saveEditedDevice] would drag the capability rules along with it. Every
+  /// other field is left null, which the repository reads as unchanged.
+  void renameDevice(String deviceId, String displayName) {
+    final trimmed = displayName.trim();
+    if (trimmed.isEmpty) return;
+    _edit(UpdateBleDevice(deviceId: deviceId, displayName: trimmed));
+  }
 }
 
 final bleDevicesViewModelProvider =

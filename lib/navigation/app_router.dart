@@ -44,6 +44,8 @@ import '../features/recovery/presentation/sleep_efficiency_detail_screen.dart';
 import '../features/devicesync/presentation/device_sync_screen.dart';
 import '../features/recovery/presentation/sleep_score_detail_screen.dart';
 import '../features/settings/presentation/ble_devices_screen.dart';
+import '../features/settings/presentation/watch_data_screen.dart';
+import '../features/settings/presentation/watch_device_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/settings/presentation/settings_section.dart';
 import '../features/settings/presentation/settings_section_screen.dart';
@@ -128,6 +130,23 @@ List<RouteBase> _buildRoutes(Ref ref) => [
       ..._readinessRoutes(),
       ..._metricSectionRoutes(),
       ..._manualEntryRoutes(),
+      // The device view is a top-level route, not a child of Settings: it is
+      // reached from the summary tile as well as from the Watches list, and a
+      // watch has exactly one home whichever door was used.
+      GoRoute(
+        path: '/watch/:${AppRoutes.watchDeviceIdArg}',
+        builder: (context, state) => WatchDeviceScreen(
+          deviceId: state.pathParameters[AppRoutes.watchDeviceIdArg]!,
+        ),
+        routes: [
+          GoRoute(
+            path: 'data',
+            builder: (context, state) => WatchDataScreen(
+              deviceId: state.pathParameters[AppRoutes.watchDeviceIdArg]!,
+            ),
+          ),
+        ],
+      ),
       ..._settingsSectionRoutes(),
     ];
 

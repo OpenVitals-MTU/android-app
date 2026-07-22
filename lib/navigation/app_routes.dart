@@ -29,6 +29,7 @@ class AppRoutes {
   static const String mindfulnessEntryIdArg = 'mindfulnessEntryId';
   static const String vitalsMeasurementTypeArg = 'vitalsMeasurementType';
   static const String vitalsEntryIdArg = 'vitalsEntryId';
+  static const String watchDeviceIdArg = 'watchDeviceId';
   static const String stressDateArg = 'stressDate';
   static const String bodyEnergyDateArg = 'bodyEnergyDate';
   static const String trainingReadinessDateArg = 'trainingReadinessDate';
@@ -137,6 +138,13 @@ class AppRoutes {
       '/sleep_detail/${Uri.encodeComponent(sleepId)}';
   static String metricLocation(String metricId) =>
       '/metric/${Uri.encodeComponent(metricId)}';
+
+  /// The one device view. Reached from the Watches list AND from the summary
+  /// tile — deliberately the same destination, so a watch has one home.
+  static String watchDeviceLocation(String deviceId) =>
+      '/watch/${Uri.encodeComponent(deviceId)}';
+  static String watchDataLocation(String deviceId) =>
+      '/watch/${Uri.encodeComponent(deviceId)}/data';
 
   /// Query parameter carrying the day a metric detail screen should OPEN on.
   static const String selectedDayArg = 'day';
