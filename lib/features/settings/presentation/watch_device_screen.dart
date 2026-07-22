@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/local/open_vitals_database.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 import '../application/ble_devices_view_model.dart';
 import '../application/garmin_sync_view_model.dart';
-import '../application/watch_metrics_view_model.dart';
 import 'watch_common.dart';
 
 /// One watch, and everything about it.
@@ -45,7 +43,6 @@ class WatchDeviceScreen extends ConsumerWidget {
     }
 
     final sync = ref.watch(garminSyncViewModelProvider);
-    final metrics = ref.watch(watchMetricsProvider).asData?.value;
 
     return Scaffold(
       appBar: AppBar(title: Text(device.displayName)),
@@ -55,18 +52,8 @@ class WatchDeviceScreen extends ConsumerWidget {
           _StatusCard(device: device),
           const SizedBox(height: 8),
           _Actions(device: device, sync: sync),
-          if (metrics != null && !metrics.isEmpty) ...[
-            _SectionHeader(title: l10n.settingsWatchSectionLatest),
-            ..._latestRows(context, metrics),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: OutlinedButton(
-                onPressed: () =>
-                    context.push(AppRoutes.watchDataLocation(device.id)),
-                child: Text(l10n.settingsWatchAllData),
-              ),
-            ),
-          ],
+          // No "Latest" band: it showed the same numbers the Data action opens,
+          // one tap away, so the screen said everything twice.
           _SectionHeader(title: l10n.settingsWatchSectionDevice),
           _DeviceSettings(device: device),
         ],
@@ -74,38 +61,6 @@ class WatchDeviceScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _latestRows(BuildContext context, WatchMetrics metrics) {
-    final l10n = AppLocalizations.of(context);
-    final rows = <Widget>[];
-
-    final score = metrics[GarminWellnessMetric.sleepScore];
-    if (score != null) {
-      final awake = metrics.valueOf(GarminWellnessMetric.sleepAwakeSeconds);
-      rows.add(WatchValueRow(
-        label: l10n.settingsWatchMetricSleepScore,
-        supporting: awake == null
-            ? null
-            : '${l10n.settingsWatchMetricAwake} '
-                '${formatWatchDuration(l10n, Duration(seconds: awake))}',
-        value: '${score.value}',
-      ));
-    }
-    final energy = metrics[GarminWellnessMetric.bodyEnergy];
-    if (energy != null) {
-      rows.add(WatchValueRow(
-        label: l10n.settingsWatchMetricBodyBattery,
-        value: '${energy.value}',
-      ));
-    }
-    final stress = metrics[GarminWellnessMetric.stress];
-    if (stress != null) {
-      rows.add(WatchValueRow(
-        label: l10n.settingsWatchMetricStress,
-        value: '${stress.value}',
-      ));
-    }
-    return rows;
-  }
 }
 
 class _StatusCard extends StatelessWidget {
