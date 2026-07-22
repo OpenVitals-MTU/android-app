@@ -125,6 +125,12 @@ class GarminWatchSyncService {
     }
   }
 
+  /// How deep to follow the settings tree, and how many screens to fetch at
+  /// most. Alarms sits two levels down (Settings → Clocks → Alarms), so three
+  /// reaches it with room to spare without walking the whole watch.
+  static const int maxSettingsDepth = 3;
+  static const int maxSettingsScreens = 24;
+
   /// Opens the watch's settings service and fetches its root screen, printing
   /// what came back.
   ///
@@ -183,26 +189,32 @@ class GarminWatchSyncService {
         String label, {
         required int responseField,
       }) async {
-        final byContent = settingsReplies.stream
-            .firstWhere((r) => GarminSettingsService.carries(r, responseField))
-            .timeout(
-              GarminSettingsService.replyTimeout,
-              onTimeout: () => Uint8List(0),
-            );
-        final byId = session.protobuf.request(
-          request,
-          label: label,
-          timeout: GarminSettingsService.replyTimeout,
-        );
-        final replies = await Future.wait([byId, byContent]);
-        // Some replies echo our id, some arrive as the watch's own traffic.
-        for (final reply in replies) {
+        // RACED, not awaited together. Both sources are tried because some
+        // replies echo our request id and some arrive as the watch's own
+        // traffic — but waiting for both meant every screen cost the full
+        // timeout, since the id-based one never completes on this watch. Six
+        // screens took three minutes when they should have taken six seconds.
+        final answer = Completer<Uint8List?>();
+        void offer(Uint8List? reply) {
+          if (answer.isCompleted) return;
           if (reply != null &&
               GarminSettingsService.carries(reply, responseField)) {
-            return reply;
+            answer.complete(reply);
           }
         }
-        return null;
+
+        final subscription = settingsReplies.stream.listen(offer);
+        unawaited(session.protobuf
+            .request(request,
+                label: label, timeout: GarminSettingsService.replyTimeout)
+            .then(offer)
+            .catchError((_) {}));
+        try {
+          return await answer.future
+              .timeout(GarminSettingsService.replyTimeout, onTimeout: () => null);
+        } finally {
+          await subscription.cancel();
+        }
       }
 
       /// Fetches one screen and prints it.
@@ -234,9 +246,33 @@ class GarminWatchSyncService {
 
       // Walk into every subscreen the root offers, which is where alarms live —
       // the root itself carries only categories.
-      for (final entry in GarminSettingsService.subscreens(root)) {
-        await fetchScreen(entry.screenId, 'screen ${entry.screenId} '
-            '(${entry.title ?? "untitled"})');
+      // Breadth-first from the root. Bounded three ways, because the tree is
+      // the WATCH's and nothing here knows how deep or how wide it goes: a
+      // visited set (screens are reachable from more than one parent, and a
+      // cycle would loop forever), a depth limit, and a total cap. Each screen
+      // costs a round trip of up to thirty seconds, so an unbounded walk would
+      // hold the link for as long as the watch tolerated it.
+      final visited = <int>{GarminSettingsService.rootScreenId};
+      var frontier = <GarminSettingsSubscreen>[
+        ...GarminSettingsService.subscreens(root),
+      ];
+      for (var depth = 1; depth <= maxSettingsDepth; depth++) {
+        final next = <GarminSettingsSubscreen>[];
+        for (final entry in frontier) {
+          if (!visited.add(entry.screenId)) continue;
+          if (visited.length > maxSettingsScreens) {
+            debugPrint('[GARMIN-SETTINGS] stopping at $maxSettingsScreens '
+                'screens — the rest of the tree is not walked');
+            break;
+          }
+          final label = '[$depth] ${entry.screenId} '
+              '(${entry.title ?? "untitled"})';
+          final screen = await fetchScreen(entry.screenId, label);
+          if (screen == null) continue;
+          next.addAll(GarminSettingsService.subscreens(screen));
+        }
+        if (next.isEmpty || visited.length > maxSettingsScreens) break;
+        frontier = next;
       }
 
       await settingsReplies.close();
