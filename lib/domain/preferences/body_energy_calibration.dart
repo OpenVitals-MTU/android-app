@@ -69,6 +69,11 @@ abstract class BodyEnergyCalibration with _$BodyEnergyCalibration {
     // How many feel-checks have informed the gains, for display ("learned from
     // N check-ins").
     @Default(0) int feelCheckCount,
+    // How many watch readings (Garmin Body Battery) have informed them.
+    // Counted SEPARATELY from feel-checks so the check-in figure keeps meaning
+    // what it says — folding hundreds of watch samples into it would claim
+    // check-ins the user never made.
+    @Default(0) int watchObservationCount,
   }) = _BodyEnergyCalibration;
 
   static const double minGain = 0.5;
@@ -91,8 +96,13 @@ abstract class BodyEnergyCalibration with _$BodyEnergyCalibration {
       basalDrainGain: _clampedBasalDrainGain,
       stressDrainGain: _clampedStressDrainGain,
       feelCheckCount: feelCheckCount < 0 ? 0 : feelCheckCount,
+      watchObservationCount:
+          watchObservationCount < 0 ? 0 : watchObservationCount,
     );
   }
+
+  /// Whether a watch has contributed to the gains, for the calibration copy.
+  bool get hasWatchObservations => watchObservationCount > 0;
 
   /// Whether the gains differ from the neutral defaults.
   bool get hasPersonalGains =>
