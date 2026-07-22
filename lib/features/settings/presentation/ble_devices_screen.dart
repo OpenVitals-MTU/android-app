@@ -41,9 +41,19 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
   void dispose() {
     // Kotlin `onDispose { stopScan() }`; also reset any open flow so re-entry
     // starts clean (hiltViewModel is screen-scoped in Kotlin).
-    _notifier
-      ..closeAddFlow()
-      ..closeEditDevice();
+    //
+    // Deferred past this frame, NOT called inline. These mutate a provider this
+    // same widget watches with `.select`, so doing it synchronously here made
+    // Riverpod notify an element that was already tearing down — an
+    // `_ElementLifecycle.defunct` assertion, seen on device after leaving the
+    // screen. By the next frame the element has unmounted and unsubscribed, so
+    // the notification has nowhere to land.
+    final notifier = _notifier;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifier
+        ..closeAddFlow()
+        ..closeEditDevice();
+    });
     super.dispose();
   }
 
