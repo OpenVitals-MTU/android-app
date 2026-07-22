@@ -262,6 +262,17 @@ void main() {
     final harness = await container();
 
     await harness.read(appleHealthImportProvider.notifier).importSelected();
+    // Building the notifier starts background work of its own — restoring the
+    // last persisted report, and re-attaching to an import that might still be
+    // running — and neither is awaited by the thing under test. Draining the
+    // queue first means this asserts on a settled state rather than racing that
+    // work: if the background work ever DID touch the state, this now fails
+    // every time instead of only on a loaded machine.
+    //
+    // This test failed once on CI and never once locally, including 25 runs of
+    // this file, four full-suite runs, and a run under deliberate CPU
+    // contention. The race above is the one mechanism visible in the code.
+    await pumpEventQueue();
 
     expect(harness.read(appleHealthImportProvider), const AppleHealthImportUiState());
   });
