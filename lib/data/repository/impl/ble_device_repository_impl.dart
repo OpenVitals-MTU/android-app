@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../source/sensors/garmin/garmin_capabilities.dart';
 import '../contract/ble_device_repository.dart';
 
 /// Port of the Kotlin `BleDeviceRepository` — a SharedPreferences-backed sensor
@@ -139,6 +140,9 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
     // start clean, not silently skip files because a previous pairing under a
     // different id had already seen them.
     clearSyncedFileKeys(deviceId);
+    // And what it said it could do: a re-pairing must re-learn that from a
+    // handshake rather than trust a record of a device that is no longer here.
+    _prefs.remove(_capabilitiesPrefsKey(deviceId));
     _persist(_devices.where((d) => d.id != deviceId).toList());
   }
 
@@ -174,6 +178,28 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
 
   String _syncedKeysPrefsKey(String deviceId) =>
       'ble_synced_files_$deviceId';
+
+  String _capabilitiesPrefsKey(String deviceId) =>
+      'garmin_capabilities_$deviceId';
+
+  @override
+  Set<GarminCapability> capabilities(String deviceId) {
+    final raw = _prefs.getStringList(_capabilitiesPrefsKey(deviceId));
+    if (raw == null) return const {};
+    // Matched by WIRE NAME, not index: the enum's order is the bitmap's order,
+    // so storing indexes would rot the moment a flag is named.
+    final byName = {for (final c in GarminCapability.values) c.wireName: c};
+    return {for (final name in raw) if (byName[name] != null) byName[name]!};
+  }
+
+  @override
+  void recordCapabilities(String deviceId, Set<GarminCapability> capabilities) {
+    if (capabilities.isEmpty) return;
+    _prefs.setStringList(
+      _capabilitiesPrefsKey(deviceId),
+      [for (final c in capabilities) c.wireName],
+    );
+  }
 
   @override
   Set<String> syncedFileKeys(String deviceId) {

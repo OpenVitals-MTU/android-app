@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/source/sensors/garmin/garmin_capabilities.dart';
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
@@ -43,6 +45,14 @@ class WatchDeviceScreen extends ConsumerWidget {
     }
 
     final sync = ref.watch(garminSyncViewModelProvider);
+    final capabilities =
+        ref.watch(bleDeviceRepositoryProvider).capabilities(deviceId);
+    // Unknown means SHOW, not hide: capabilities arrive in a handshake, so a
+    // watch that has never synced would otherwise look feature-less. Everything
+    // gated this way is disabled anyway, so showing it cannot mislead about
+    // what works — only about what the hardware has, and only until first sync.
+    bool supports(GarminCapability capability) =>
+        capabilities.isEmpty || capabilities.contains(capability);
 
     return Scaffold(
       appBar: AppBar(
@@ -60,11 +70,16 @@ class WatchDeviceScreen extends ConsumerWidget {
         children: [
           _StatusCard(device: device, sync: sync),
           const SizedBox(height: 12),
-          _Actions(device: device, sync: sync),
+          _Actions(device: device, sync: sync, supports: supports),
           // No "Latest" band: it showed the same numbers the Data action opens,
           // one tap away, so the screen said everything twice.
-          _SectionHeader(title: l10n.settingsWatchSettingsSection),
-          const _OnDeviceSettingsRow(),
+          // Only for a watch that says it HAS a settings tree. A watch without
+          // REALTIME_SETTINGS has no such screen to browse, so the band would be
+          // claiming a feature the hardware does not have.
+          if (supports(GarminCapability.realtimeSettings)) ...[
+            _SectionHeader(title: l10n.settingsWatchSettingsSection),
+            const _OnDeviceSettingsRow(),
+          ],
           _SectionHeader(title: l10n.settingsWatchSectionDevice),
           _DeviceSettings(device: device),
         ],
@@ -162,10 +177,18 @@ class _StatusCard extends StatelessWidget {
 }
 
 class _Actions extends ConsumerWidget {
-  const _Actions({required this.device, required this.sync});
+  const _Actions({
+    required this.device,
+    required this.sync,
+    required this.supports,
+  });
 
   final BleSensorDevice device;
   final GarminSyncState sync;
+
+  /// Whether the watch declared a capability — shared with the screen so the
+  /// action row and the settings band cannot disagree about the same watch.
+  final bool Function(GarminCapability) supports;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -208,16 +231,18 @@ class _Actions extends ConsumerWidget {
           // and neither transport exists yet. Showing them greyed says the watch
           // can do this and the app cannot — which is true — where hiding them
           // would say the watch cannot.
-          WatchAction(
-            icon: Icons.alarm,
-            label: l10n.settingsWatchActionAlarms,
-            onPressed: null,
-          ),
-          WatchAction(
-            icon: Icons.wifi_tethering,
-            label: l10n.settingsWatchActionFind,
-            onPressed: null,
-          ),
+          if (supports(GarminCapability.realtimeSettings))
+            WatchAction(
+              icon: Icons.alarm,
+              label: l10n.settingsWatchActionAlarms,
+              onPressed: null,
+            ),
+          if (supports(GarminCapability.findMyWatch))
+            WatchAction(
+              icon: Icons.wifi_tethering,
+              label: l10n.settingsWatchActionFind,
+              onPressed: null,
+            ),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'garmin_ble_transport.dart';
+import 'garmin_capabilities.dart';
 import 'garmin_file_store.dart';
 import 'garmin_session.dart';
 
@@ -46,6 +47,7 @@ class GarminWatchSyncService {
     Set<String> alreadySynced = const {},
     void Function(GarminSyncProgress)? onProgress,
     Duration listenAfter = Duration.zero,
+    void Function(Set<GarminCapability>)? onCapabilities,
   }) async {
     final transport = GarminBleTransport(address: address);
     late final GarminSession session;
@@ -76,6 +78,7 @@ class GarminWatchSyncService {
       dropSub = transport.onDisconnected.listen(session.abort);
       session.start();
       final files = await session.done;
+      onCapabilities?.call(session.capabilities);
       if (listenAfter > Duration.zero) {
         // Diagnostic pass: the sync itself takes about a second, so holding the
         // link open is the only way to see what the watch sends unprompted.

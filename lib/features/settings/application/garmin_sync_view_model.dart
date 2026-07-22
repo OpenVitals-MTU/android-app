@@ -94,6 +94,8 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
         model: phone.model,
         alreadySynced: repository.syncedFileKeys(deviceId),
         listenAfter: listenAfter,
+        onCapabilities: (capabilities) =>
+            repository.recordCapabilities(deviceId, capabilities),
         onProgress: (progress) {
           if (!ref.mounted || state.syncingDeviceId != deviceId) return;
           state = state.copyWith(

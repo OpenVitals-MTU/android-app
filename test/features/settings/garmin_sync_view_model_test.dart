@@ -9,6 +9,7 @@ import 'package:openvitals/data/source/sensors/garmin/garmin_ble_transport.dart'
 import 'package:openvitals/data/source/sensors/garmin/garmin_directory.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_file_store.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_file_types.dart';
+import 'package:openvitals/data/source/sensors/garmin/garmin_capabilities.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_session.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_watch_sync_service.dart';
 import 'package:openvitals/di/providers.dart';
@@ -30,6 +31,9 @@ class _FakeSyncService implements GarminWatchSyncService {
   Set<String>? seenAlreadySynced;
   String? seenAddress;
   Duration? seenListenAfter;
+
+  /// What the fake watch declares, so the persistence can be asserted.
+  Set<GarminCapability> reportCapabilities = const {};
   int calls = 0;
 
   @override
@@ -41,7 +45,9 @@ class _FakeSyncService implements GarminWatchSyncService {
     Set<String> alreadySynced = const {},
     void Function(GarminSyncProgress)? onProgress,
     Duration listenAfter = Duration.zero,
+    void Function(Set<GarminCapability>)? onCapabilities,
   }) async {
+    onCapabilities?.call(reportCapabilities);
     calls++;
     seenAddress = address;
     seenAlreadySynced = alreadySynced;

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 import 'garmin_crc.dart';
+import 'garmin_capabilities.dart';
 import 'garmin_directory.dart';
 import 'garmin_file_types.dart';
 import 'garmin_gfdi_frame.dart';
@@ -97,6 +98,10 @@ class GarminSession {
   /// Acknowledging still matters while listening: an unanswered message is
   /// retransmitted on a timer and eventually takes the link down with it.
   final bool keepAnsweringAfterSync;
+
+  /// What the watch said it can do, once the handshake has reached
+  /// CONFIGURATION. Empty before that.
+  Set<GarminCapability> capabilities = const {};
 
   final Completer<List<GarminDownloadedFile>> _done =
       Completer<List<GarminDownloadedFile>>();
@@ -198,8 +203,17 @@ class GarminSession {
         // The capabilities exchange. The watch has told us what it can do and
         // is waiting to hear what WE can do; a bare ACK left it re-sending this
         // and never listing any files.
+        //
+        // Decoded, not just counted: this bitmap is the only thing that says
+        // whether a watch has FIND_MY_WATCH or REALTIME_SETTINGS, and the
+        // latter decides whether alarms live in the watch's settings tree or in
+        // an uploaded FIT file — two completely different implementations.
+        capabilities = decodeGarminCapabilities(message.capabilityBits);
         debugPrint('[GARMIN-SYNC] configuration: '
-            '${message.capabilityBits.length}B of capabilities from the watch');
+            '${message.capabilityBits.length}B, '
+            '${capabilities.length} capabilities');
+        debugPrint('[GARMIN-CAPS] '
+            '${capabilities.map((c) => c.wireName).join(", ")}');
         await send(buildConfigurationResponse());
 
       case GarminNotificationSubscription():

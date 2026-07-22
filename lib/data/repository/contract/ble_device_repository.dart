@@ -1,4 +1,5 @@
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../source/sensors/garmin/garmin_capabilities.dart';
 
 /// Port of the Kotlin `BleDeviceRepository` (a SharedPreferences-backed sensor
 /// registry; not Health Connect). Kotlin exposes a `StateFlow`; here the
@@ -71,6 +72,15 @@ abstract interface class BleDeviceRepository {
   /// Adds to that set. Bounded, oldest-dropped-first: a watch worn for years
   /// would otherwise grow an unbounded list in SharedPreferences.
   void recordSyncedFileKeys(String deviceId, Iterable<String> keys);
+
+  /// What the watch declared it can do, from the last handshake.
+  ///
+  /// Persisted per device because it is the only thing that says whether a
+  /// watch supports finding, alarms or its own settings tree — and the UI has
+  /// to decide that before a sync has run, not during one.
+  Set<GarminCapability> capabilities(String deviceId);
+
+  void recordCapabilities(String deviceId, Set<GarminCapability> capabilities);
 
   /// Drops a watch's recorded keys, so a re-pair starts clean.
   void clearSyncedFileKeys(String deviceId);
