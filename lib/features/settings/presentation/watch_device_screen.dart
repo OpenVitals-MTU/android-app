@@ -45,15 +45,26 @@ class WatchDeviceScreen extends ConsumerWidget {
     final sync = ref.watch(garminSyncViewModelProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(device.displayName)),
+      appBar: AppBar(
+        title: Text(device.displayName),
+        actions: [
+          IconButton(
+            onPressed: () => _rename(context, ref, device),
+            tooltip: l10n.settingsWatchRename,
+            icon: const Icon(Icons.edit_outlined),
+          ),
+        ],
+      ),
       body: ListView(
         padding: screenScrollPadding(context),
         children: [
-          _StatusCard(device: device),
-          const SizedBox(height: 8),
+          _StatusCard(device: device, sync: sync),
+          const SizedBox(height: 12),
           _Actions(device: device, sync: sync),
           // No "Latest" band: it showed the same numbers the Data action opens,
           // one tap away, so the screen said everything twice.
+          _SectionHeader(title: l10n.settingsWatchSettingsSection),
+          const _OnDeviceSettingsRow(),
           _SectionHeader(title: l10n.settingsWatchSectionDevice),
           _DeviceSettings(device: device),
         ],
@@ -61,12 +72,26 @@ class WatchDeviceScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _rename(
+    BuildContext context,
+    WidgetRef ref,
+    BleSensorDevice device,
+  ) async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameDialog(initialName: device.displayName),
+    );
+    if (name == null || name.isEmpty) return;
+    ref.read(bleDevicesViewModelProvider.notifier).renameDevice(device.id, name);
+  }
+
 }
 
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.device});
+  const _StatusCard({required this.device, required this.sync});
 
   final BleSensorDevice device;
+  final GarminSyncState sync;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +99,22 @@ class _StatusCard extends StatelessWidget {
     final theme = Theme.of(context);
     final battery = device.batteryPercent;
     final syncedAt = device.lastSyncedAt;
+    final files = sync.lastFileCount;
+
+    final buffer = StringBuffer();
+    if (syncedAt == null) {
+      buffer.write(l10n.settingsWatchNeverSynced);
+    } else {
+      buffer.write(
+        l10n.settingsWatchLastSynced(formatWatchSyncTime(context, syncedAt)),
+      );
+      // Only after a sync THIS session — the count is not persisted, and an
+      // invented one would be worse than none.
+      if (files != null && files > 0) {
+        buffer.write(' · ${l10n.settingsWatchSyncedFiles(files)}');
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Card(
@@ -81,8 +122,8 @@ class _StatusCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              const WatchAvatar(),
-              const SizedBox(width: 12),
+              const WatchAvatar(size: 44),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,14 +132,12 @@ class _StatusCard extends StatelessWidget {
                       device.enabled
                           ? l10n.settingsWatchConnected
                           : l10n.settingsWatchNotConnected,
-                      style: theme.textTheme.titleMedium,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      syncedAt == null
-                          ? l10n.settingsWatchNeverSynced
-                          : l10n.settingsWatchLastSynced(
-                              formatWatchSyncTime(context, syncedAt),
-                            ),
+                      buffer.toString(),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -106,8 +145,14 @@ class _StatusCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (battery != null)
-                Text('$battery%', style: theme.textTheme.titleMedium),
+              if (battery != null) ...[
+                const SizedBox(width: 12),
+                Text(
+                  '$battery%',
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
             ],
           ),
         ),
@@ -129,6 +174,7 @@ class _Actions extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           WatchAction(
             icon: Icons.insights_outlined,
@@ -136,7 +182,6 @@ class _Actions extends ConsumerWidget {
             onPressed: () =>
                 context.push(AppRoutes.watchDataLocation(device.id)),
           ),
-          const SizedBox(width: 12),
           WatchAction(
             icon: Icons.sync,
             label: l10n.settingsWatchActionSync,
@@ -158,7 +203,54 @@ class _Actions extends ConsumerWidget {
                     .syncDevice(device.id,
                         listenAfter: const Duration(minutes: 10)),
           ),
+          // Present but disabled, not hidden: setting an alarm means uploading a
+          // FIT settings file and finding the watch means a protobuf request,
+          // and neither transport exists yet. Showing them greyed says the watch
+          // can do this and the app cannot — which is true — where hiding them
+          // would say the watch cannot.
+          WatchAction(
+            icon: Icons.alarm,
+            label: l10n.settingsWatchActionAlarms,
+            onPressed: null,
+          ),
+          WatchAction(
+            icon: Icons.wifi_tethering,
+            label: l10n.settingsWatchActionFind,
+            onPressed: null,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// The watch's own settings tree, which arrives over the protobuf settings
+/// service. Confirmed present on the device (its handshake asks us about it),
+/// but the protobuf layer is not written, so the row is disabled.
+class _OnDeviceSettingsRow extends StatelessWidget {
+  const _OnDeviceSettingsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Card(
+        child: ListTile(
+          enabled: false,
+          leading: Icon(Icons.brightness_5_outlined, color: muted),
+          title: Text(
+            l10n.settingsWatchOnDeviceSettings,
+            style: TextStyle(color: muted),
+          ),
+          subtitle: Text(
+            l10n.settingsWatchNotAvailableYet,
+            style: theme.textTheme.bodySmall?.copyWith(color: muted),
+          ),
+          trailing: Icon(Icons.chevron_right, color: muted),
+        ),
       ),
     );
   }
@@ -181,23 +273,13 @@ class _DeviceSettings extends ConsumerWidget {
           child: Card(
             child: SwitchListTile(
               title: Text(l10n.settingsWatchEnabled),
-              subtitle: Text(l10n.settingsWatchEnabledBody),
               value: device.enabled,
               onChanged: (value) => notifier.setDeviceEnabled(device.id, value),
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Card(
-            child: ListTile(
-              title: Text(l10n.settingsWatchNameLabel),
-              subtitle: Text(device.displayName),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _rename(context, ref, device),
-            ),
-          ),
-        ),
+        // Last, and its own card: a destructive action wants distance from the
+        // switch above it, not adjacency.
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: Card(
@@ -222,39 +304,6 @@ class _DeviceSettings extends ConsumerWidget {
       ],
     );
   }
-
-  Future<void> _rename(
-    BuildContext context,
-    WidgetRef ref,
-    BleSensorDevice device,
-  ) async {
-    final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController(text: device.displayName);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.settingsWatchRename),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(labelText: l10n.settingsWatchNameLabel),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.actionCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text(l10n.actionSave),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (name == null || name.isEmpty) return;
-    ref.read(bleDevicesViewModelProvider.notifier).renameDevice(device.id, name);
-  }
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -267,12 +316,77 @@ class _SectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Text(
-        title,
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: theme.colorScheme.outlineVariant,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+
+/// The rename dialog, owning its own controller.
+///
+/// A StatefulWidget and not a bare `showDialog` closure because the controller
+/// has to outlive the route's exit animation: disposing it the moment
+/// `showDialog` returned tore it down while the still-mounted TextField was
+/// depending on it, which surfaced as an `_dependents.isEmpty` assertion during
+/// the dialog's own teardown. Owning it here ties its lifetime to exactly the
+/// element that uses it.
+class _RenameDialog extends StatefulWidget {
+  const _RenameDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialName);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.of(context).pop(_controller.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l10n.settingsWatchRename),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(labelText: l10n.settingsWatchNameLabel),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.actionCancel),
+        ),
+        TextButton(onPressed: _submit, child: Text(l10n.actionSave)),
+      ],
     );
   }
 }

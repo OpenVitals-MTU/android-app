@@ -56,8 +56,10 @@ class WatchAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final enabled = onPressed != null;
     return Semantics(
       button: true,
+      enabled: enabled,
       label: label,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -79,7 +81,14 @@ class WatchAction extends StatelessWidget {
           ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: theme.textTheme.labelSmall),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: enabled
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+          ),
         ],
       ),
     );

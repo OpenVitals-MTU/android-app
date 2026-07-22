@@ -4150,5 +4150,19 @@
   "settingsWatchesEmptyTitle": "No watch paired",
   "settingsWatchesEmptyBody": "Pairing a watch lets OpenVitals copy what it recorded — sleep stages, resting heart rate, stress and Body Battery — without sending anything to the internet.",
   "settingsWatchesAdd": "Pair a watch",
-  "settingsSensorsIntro": "Used while recording an activity."
+  "settingsSensorsIntro": "Used while recording an activity.",
+  "settingsWatchActionAlarms": "Alarms",
+  "settingsWatchActionFind": "Find",
+  "settingsWatchSettingsSection": "Watch settings",
+  "settingsWatchOnDeviceSettings": "Settings on the watch",
+  "settingsWatchOnDeviceSettingsBody": "Backlight, sounds, watch face…",
+  "settingsWatchNotAvailableYet": "Not available yet",
+  "settingsWatchSyncedFiles": "{arg0, plural, =1{1 file} other{{arg0} files}}",
+  "@settingsWatchSyncedFiles": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  }
 }
