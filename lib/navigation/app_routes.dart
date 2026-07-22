@@ -95,6 +95,7 @@ class AppRoutes {
   static const String settingsDisplay = '/settings/display';
   static const String settingsActivities = '/settings/activities';
   static const String settingsSensors = '/settings/sensors';
+  static const String settingsWatches = '/settings/watches';
   static const String settingsNutrition = '/settings/nutrition';
   static const String settingsCalories = '/settings/calories';
   static const String settingsCaffeine = '/settings/caffeine';

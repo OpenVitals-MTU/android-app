@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../presentation/watch_summary_tile.dart';
+import '../../../ui/theme/app_colors.dart';
+import '../../../navigation/app_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -464,6 +468,22 @@ class DashboardViewModel extends Notifier<DashboardState> {
         tileOrder: state.tileOrder,
         ringOrder: state.ringOrder,
         hiddenTiles: state.hiddenTiles,
+        // Devices are not health metrics, so they are not built by the summary
+        // mapper — but they ARE carousel tiles, and being real tiles is what
+        // gives them reordering and hiding for free.
+        extraTiles: [
+          for (final device in ref.read(summaryWatchesProvider))
+            StatTileData(
+              id: watchTileId(device.id),
+              title: device.displayName,
+              // Rendered by WatchSummaryTile, which computes its own value from
+              // live sync state; these are what the EDIT grid shows.
+              value: '',
+              icon: Icons.watch_outlined,
+              accent: AppColors.workout,
+              location: AppRoutes.watchDeviceLocation(device.id),
+            ),
+        ],
       );
 
   /// The localizations the tile mapper needs, resolved without a

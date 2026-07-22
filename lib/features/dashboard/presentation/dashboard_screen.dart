@@ -26,6 +26,7 @@ import '../../../ui/components/widget_edit_controls.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../activity/presentation/exercise_labels.dart';
 import '../application/dashboard_view_model.dart';
+import 'watch_summary_tile.dart';
 import '../../../ui/components/accent_icon_chip.dart';
 
 /// The OpenVitals summary dashboard — the nav-suite home branch rendered inside
@@ -755,6 +756,22 @@ class _MetricCarouselState extends State<_MetricCarousel> {
     final tile = pageTiles[localIndex];
 
     if (!widget.editing) {
+      // A watch tile is a real carousel tile — it orders and hides like any
+      // other — but it renders itself, because it carries live sync state and a
+      // second tap target the data model has no business describing.
+      final deviceId = watchTileDeviceId(tile.id);
+      if (deviceId != null) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final device = ref
+                .watch(summaryWatchesProvider)
+                .where((d) => d.id == deviceId)
+                .firstOrNull;
+            if (device == null) return const SizedBox.shrink();
+            return WatchSummaryTile(device: device);
+          },
+        );
+      }
       return MetricStatCard(
         title: tile.title,
         value: tile.value,

@@ -75,6 +75,7 @@ DashboardDisplay buildDashboardDisplay(
   List<String> tileOrder = const <String>[],
   List<String> ringOrder = const <String>[],
   Set<String> hiddenTiles = const <String>{},
+  List<StatTileData> extraTiles = const <StatTileData>[],
 }) {
   // Edit mode materialises a tile for every metric, device-supported or not, so
   // one the user removed can always be added back (Kotlin expands the spec list
@@ -111,7 +112,7 @@ DashboardDisplay buildDashboardDisplay(
   // All data-present tiles in the user's saved order (hidden included, for the
   // edit grid); the carousel shows only the non-hidden subset.
   final orderedTiles = applyDashboardTileLayout(
-    summary.tiles,
+    [...summary.tiles, ...extraTiles],
     order: tileOrder,
     includeHidden: true,
   );

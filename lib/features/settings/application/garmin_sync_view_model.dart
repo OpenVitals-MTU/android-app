@@ -9,6 +9,7 @@ import '../../../di/providers.dart';
 import '../../../state/app_providers.dart';
 import '../../imports/application/route_bulk_import_view_model.dart';
 import '../../manualentry/activity/routeimport/fit_route_parser.dart';
+import 'watch_metrics_view_model.dart';
 
 part 'garmin_sync_view_model.freezed.dart';
 
@@ -162,6 +163,10 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
     }
 
     repository.markSynced(deviceId, DateTime.now().toUtc());
+    // The device view, the watch-data screen and the summary tile all read the
+    // stored metrics; without this they keep showing what was there before the
+    // sync that just ran.
+    ref.invalidate(watchMetricsProvider);
     state = GarminSyncState(
       phase: GarminSyncPhase.complete,
       lastFileCount: downloaded.length,

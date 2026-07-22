@@ -2,7 +2,6 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../domain/model/garmin_transport.dart';
@@ -19,8 +18,19 @@ import '../../../ui/components/screen_scroll_padding.dart';
 /// Port of the Kotlin `BleDevicesSettingsScreen` + `BleDevicesViewModel`. The
 /// scan/connect stack is device-dependent; this screen drives the ported
 /// [BleDevicesViewModel] over `flutter_blue_plus`.
+/// The paired-device list, for ONE kind of device.
+///
+/// Sensors and watches share the radio, the registry and the add flow, and
+/// nothing else: a sensor streams while you record and is configured by which
+/// capabilities it claims; a watch hands over files afterwards and is opened,
+/// not configured. One screen serving both meant every row was half blank —
+/// capability chips a watch never has, a sync time a sensor never has.
 class BleDevicesScreen extends ConsumerStatefulWidget {
-  const BleDevicesScreen({super.key});
+  const BleDevicesScreen({this.kind = BleDeviceKind.sensor, super.key});
+
+  final BleDeviceKind kind;
+
+  bool get isWatches => kind == BleDeviceKind.watch;
 
   @override
   ConsumerState<BleDevicesScreen> createState() => _BleDevicesScreenState();
@@ -101,19 +111,25 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final devices = ref.watch(
-      bleDevicesViewModelProvider.select((s) => s.devices),
-    );
+    final watches = widget.isWatches;
+    final devices = ref
+        .watch(bleDevicesViewModelProvider.select((s) => s.devices))
+        .where((d) => d.kind == widget.kind)
+        .toList();
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsSensorsGroupTitle)),
+      appBar: AppBar(
+        title: Text(watches
+            ? l10n.settingsWatchesGroupTitle
+            : l10n.settingsSensorsGroupTitle),
+      ),
       body: ListView(
         padding: screenScrollPadding(context, vertical: 12),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              l10n.settingsSensorsGroupBody,
+              watches ? l10n.settingsWatchesIntro : l10n.settingsSensorsIntro,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -129,12 +145,16 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        l10n.settingsSensorsEmptyTitle,
+                        watches
+                            ? l10n.settingsWatchesEmptyTitle
+                            : l10n.settingsSensorsEmptyTitle,
                         style: theme.textTheme.titleSmall,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        l10n.settingsSensorsEmptyBody,
+                        watches
+                            ? l10n.settingsWatchesEmptyBody
+                            : l10n.settingsSensorsEmptyBody,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -143,7 +163,9 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
                       FilledButton.icon(
                         onPressed: _startAddFlow,
                         icon: const Icon(Icons.add, size: 18),
-                        label: Text(l10n.settingsSensorsAddDevice),
+                        label: Text(watches
+                            ? l10n.settingsWatchesAdd
+                            : l10n.settingsSensorsAddDevice),
                       ),
                     ],
                   ),
@@ -174,7 +196,9 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
               child: OutlinedButton.icon(
                 onPressed: _startAddFlow,
                 icon: const Icon(Icons.add, size: 18),
-                label: Text(l10n.settingsSensorsAddDevice),
+                label: Text(watches
+                    ? l10n.settingsWatchesAdd
+                    : l10n.settingsSensorsAddDevice),
               ),
             ),
           ],
@@ -225,8 +249,14 @@ class _BleDeviceRow extends StatelessWidget {
                         children: [
                           Text(device.displayName,
                               style: theme.textTheme.titleSmall),
+                          // A watch is usually named after its Bluetooth name,
+                          // so repeating it says nothing — its state does.
                           Text(
-                            device.bluetoothName ?? device.address,
+                            device.isWatch
+                                ? (device.enabled
+                                    ? l10n.settingsWatchConnected
+                                    : l10n.settingsWatchNotConnected)
+                                : (device.bluetoothName ?? device.address),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -300,12 +330,9 @@ String _lastSyncedLabel(
 ) {
   final syncedAt = device.lastSyncedAt;
   if (syncedAt == null) return l10n.settingsWatchNeverSynced;
-  final locale = Localizations.localeOf(context).toLanguageTag();
-  final local = syncedAt.toLocal();
-  return l10n.settingsWatchLastSynced(
-    '${DateFormat.yMMMd(locale).format(local)} '
-    '${DateFormat.jm(locale).format(local)}',
-  );
+  // The time alone for today, the date once it is older — a bare "14:23" is a
+  // lie after midnight, and a full date is noise before it.
+  return l10n.settingsWatchLastSynced(formatWatchSyncTime(context, syncedAt));
 }
 
 class _AddDeviceDialog extends ConsumerStatefulWidget {
