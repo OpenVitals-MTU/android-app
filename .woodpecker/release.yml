@@ -47,7 +47,12 @@ steps:
           echo "Skipping prerelease unit tests for production deployment."
           exit 0
         fi
-      - scripts/ci-flutter.sh test
+      # Goldens are excluded here for the same reason as in test.yml: they are
+      # engine-sensitive pixels and CI pins a different Flutter patch than the
+      # local toolchain, so they are the refactor's safety net rather than a
+      # gate. Running them only in the release pipeline made this the slowest
+      # and busiest of the two, which is where a racy test finally showed up.
+      - scripts/ci-flutter.sh test --exclude-tags golden
 
   - name: release-preflight
     depends_on:
