@@ -138,7 +138,7 @@ class GarminWatchSyncService {
   /// watch, and the schema this app reads it with is older than the firmware
   /// sending it. Building UI on an assumed shape would produce a screen of
   /// plausible but wrong controls, so the first step is to look.
-  Future<bool> probeSettings({
+  Future<int> probeSettings({
     required String address,
     required String phoneName,
     required String manufacturer,
@@ -255,7 +255,7 @@ class GarminWatchSyncService {
       final root = await fetchScreen(GarminSettingsService.rootScreenId, 'root');
       if (root == null) {
         await settingsReplies.close();
-        return false;
+        return 0;
       }
 
       // Walk into every subscreen the root offers, which is where alarms live —
@@ -290,13 +290,14 @@ class GarminWatchSyncService {
       }
 
       await settingsReplies.close();
-      return true;
+      debugPrint('[GARMIN-SETTINGS] walked ${visited.length} screens');
+      return visited.length;
     } on TimeoutException {
       debugPrint('[GARMIN-SETTINGS] the watch never finished its handshake');
-      return false;
+      return 0;
     } catch (error) {
       debugPrint('[GARMIN-SETTINGS] failed: $error');
-      return false;
+      return 0;
     } finally {
       await dropSub?.cancel();
       session.protobuf.abort();

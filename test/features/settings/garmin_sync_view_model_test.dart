@@ -41,7 +41,7 @@ class _FakeSyncService implements GarminWatchSyncService {
   String? seenSettingsLanguage;
 
   @override
-  Future<bool> probeSettings({
+  Future<int> probeSettings({
     required String address,
     required String phoneName,
     required String manufacturer,
@@ -50,7 +50,7 @@ class _FakeSyncService implements GarminWatchSyncService {
     String region = 'us',
   }) async {
     seenSettingsLanguage = language;
-    return true;
+    return 3;
   }
 
   /// Records a find, so the toggle can be asserted without a radio.

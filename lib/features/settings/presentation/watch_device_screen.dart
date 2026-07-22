@@ -259,9 +259,7 @@ class _Actions extends ConsumerWidget {
               // find out what it actually looks like before building on it.
               onLongPress: !kDebugMode || busy
                   ? null
-                  : () => ref
-                      .read(garminSyncViewModelProvider.notifier)
-                      .probeSettings(device.id),
+                  : () => _probeSettings(context, ref, device.id),
             ),
           if (supports(GarminCapability.findMyWatch))
             WatchAction(
@@ -287,6 +285,36 @@ class _Actions extends ConsumerWidget {
 /// The watch's own settings tree, which arrives over the protobuf settings
 /// service. Confirmed present on the device (its handshake asks us about it),
 /// but the protobuf layer is not written, so the row is disabled.
+/// Runs the settings probe and SAYS SO.
+///
+/// It reads the whole tree over a minute or more and reports only to the log,
+/// which is indistinguishable from a dead button — the first person to try it
+/// concluded nothing had happened. Debug-only, so the strings are deliberately
+/// not localized: they would otherwise reach translators as work that no user
+/// will ever see.
+Future<void> _probeSettings(
+  BuildContext context,
+  WidgetRef ref,
+  String deviceId,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.showSnackBar(
+    const SnackBar(
+      content: Text('Reading the watch settings tree — see logcat'),
+      duration: Duration(seconds: 4),
+    ),
+  );
+  final screens =
+      await ref.read(garminSyncViewModelProvider.notifier).probeSettings(deviceId);
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(screens == 0
+          ? 'The watch did not answer'
+          : 'Read $screens settings screens'),
+    ),
+  );
+}
+
 class _OnDeviceSettingsRow extends StatelessWidget {
   const _OnDeviceSettingsRow();
 
