@@ -184,7 +184,40 @@ class GarminWellnessSamples extends Table {
 /// renaming a Dart identifier cannot orphan rows.
 enum GarminWellnessMetric {
   stress('stress'),
-  bodyEnergy('body_energy');
+  bodyEnergy('body_energy'),
+
+  /// Garmin intensity minutes — the running daily totals, in minutes.
+  moderateMinutes('moderate_minutes'),
+  vigorousMinutes('vigorous_minutes'),
+
+  /// From the metrics file. Health Connect holds VO2 max, so it is NOT here;
+  /// these are the estimates it has no type for.
+  ///
+  /// [recoveryTime] is in minutes, [trainingReadiness] is 0..100, and the two
+  /// training loads are Garmin's own unitless scale.
+  recoveryTime('recovery_time'),
+  trainingReadiness('training_readiness'),
+  trainingLoadAcute('training_load_acute'),
+  trainingLoadChronic('training_load_chronic'),
+
+  /// The watch's own sleep score for a night, 0..100, timestamped at the
+  /// session start. Distinct from anything the app derives from stages.
+  sleepScore('sleep_score'),
+  sleepAwakenings('sleep_awakenings'),
+
+  /// How long the watch itself counted the sleeper awake, in SECONDS.
+  ///
+  /// The number to compare our stage-derived total against — they have
+  /// disagreed by nearly an hour on a real night.
+  sleepAwakeSeconds('sleep_awake_seconds'),
+
+  /// Garmin's undocumented "sleep pressure", stored raw.
+  sleepPressure('sleep_pressure'),
+
+  /// Sleep Coach, in minutes: the usual nightly need, and what the night's
+  /// strain actually called for.
+  sleepNeedNormalMinutes('sleep_need_normal_minutes'),
+  sleepNeedMinutes('sleep_need_minutes');
 
   const GarminWellnessMetric(this.storageName);
   final String storageName;

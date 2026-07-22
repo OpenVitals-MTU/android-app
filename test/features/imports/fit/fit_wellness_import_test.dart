@@ -200,9 +200,65 @@ void main() {
       expect(resp.first.rate, closeTo(14.0, 0.001)); // avg(13,15)
 
       final steps = records.whereType<StepsImportRecord>().single;
-      expect(steps.count, 1200); // max - min
-      expect(steps.startTime, DateTime.utc(2024, 1, 18, 9, 0));
-      expect(steps.endTime, DateTime.utc(2024, 1, 18, 11, 0));
+      expect(steps.count, 1200); // the day's running total, not a delta
+      // The counter is the whole day's total, so the record spans the whole
+      // local day up to the last sample — attributing it to the two hours the
+      // file happened to cover would misplace the day's steps.
+      final lastLocal = DateTime.utc(2024, 1, 18, 11).toLocal();
+      expect(
+        steps.startTime,
+        DateTime(lastLocal.year, lastLocal.month, lastLocal.day),
+      );
+      expect(steps.endTime, lastLocal);
+    });
+
+    test('re-syncing a day overwrites it instead of adding to it', () {
+      // The bug this pins: 540 steps on the wrist became 1403 in Health
+      // Connect over thirteen syncs of one day. Health Connect upserts on
+      // clientRecordId, so the fix is that every file touching a day produces
+      // the SAME key — a per-file key made each sync a fresh, additive record.
+      List<StepsImportRecord> stepsFor(List<(DateTime, int)> cumulative) {
+        final m = FitRouteParser.parseWellness(
+          _fitMonitoringSeriesBytes(stepsCumulative: cumulative),
+        ).monitoring!;
+        return fitMonitoringImportRecords(m)
+            .whereType<StepsImportRecord>()
+            .toList();
+      }
+
+      final early = stepsFor([
+        (DateTime.utc(2024, 1, 18, 9), 200),
+        (DateTime.utc(2024, 1, 18, 10), 350),
+      ]).single;
+      // A later sync whose file restates the day from zero, as a real watch does.
+      final later = stepsFor([
+        (DateTime.utc(2024, 1, 18, 11), 0),
+        (DateTime.utc(2024, 1, 18, 12), 540),
+      ]).single;
+
+      expect(later.clientRecordId, early.clientRecordId);
+      // Last write wins, and it is the day's total — not 350 + 540.
+      expect(early.count, 350);
+      expect(later.count, 540);
+    });
+
+    test('activity-type counters are summed, never subtracted', () {
+      // A walking counter at 540 beside a generic one still at 0 is not a
+      // 540-step change. Taking max - min across all points made it one, which
+      // is how a file with no new steps still wrote a full day's worth.
+      final m = FitRouteParser.parseWellness(
+        _fitMonitoringSeriesBytes(
+          stepsCumulative: [
+            (DateTime.utc(2024, 1, 18, 9), 540),
+            (DateTime.utc(2024, 1, 18, 10), 0),
+          ],
+        ),
+      ).monitoring!;
+
+      final steps = fitMonitoringImportRecords(m)
+          .whereType<StepsImportRecord>()
+          .single;
+      expect(steps.count, 540);
     });
   });
 }

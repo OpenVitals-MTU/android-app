@@ -28,8 +28,21 @@ enum GarminFileType {
   /// Sleep session with stages.
   sleep(128, 49),
 
+  /// Fitness metrics: VO2 max, recovery time, training readiness and load.
+  ///
+  /// The watch keeps these listed and re-offers them every sync — they were
+  /// being skipped as an unrecognised type long after the transport worked.
+  metrics(128, 44),
+
   /// HRV status readings.
-  hrvStatus(128, 68);
+  hrvStatus(128, 68),
+
+  /// Health Snapshot: a two-minute on-demand recording of SpO2, stress,
+  /// respiration and Body Battery, each as packed sample arrays.
+  ///
+  /// Only written when the wearer runs Health Snapshot on the watch, so an
+  /// empty directory here means "none recorded", not "not supported".
+  hsa(128, 70);
 
   const GarminFileType(this.dataType, this.subType, {this.wanted = true});
 

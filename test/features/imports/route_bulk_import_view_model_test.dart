@@ -161,6 +161,57 @@ ActivityRouteFileSource _handle(String name) => ActivityRouteFileSource.ofBytes(
       fileName: name,
     );
 
+/// A real FIT ACTIVITY file (`file_id.type` 4) that also carries a wellness
+/// message — `physiological_metrics` with only `recovery_time`, exactly as a
+/// Garmin writes into the workout it has just recorded.
+///
+/// The point is that it yields wellness data but NO Health Connect record, which
+/// is the combination that once diverted a workout into the wellness path.
+Uint8List _activityFitWithMetrics() {
+  final b = <int>[];
+  void u8(int v) => b.add(v & 0xFF);
+  void u16(int v) => b.addAll([v & 0xFF, (v >> 8) & 0xFF]);
+  void u32(int v) => b.addAll(
+      [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]);
+
+  // file_id: type = 4 (activity)
+  u8(0x40);
+  u8(0);
+  u8(0);
+  u16(0);
+  u8(1);
+  b.addAll([0, 1, 0]);
+  u8(0);
+  u8(4);
+  // physiological_metrics (140): timestamp + recovery_time only.
+  u8(0x41);
+  u8(0);
+  u8(0);
+  u16(140);
+  u8(2);
+  b.addAll([253, 4, 134]);
+  b.addAll([9, 2, 132]);
+  u8(0x01);
+  u32(1153639209);
+  u16(180);
+
+  final data = Uint8List.fromList(b);
+  final out = <int>[];
+  out.addAll([14, 16]);
+  out.addAll([0, 0]);
+  out.addAll([
+    data.length & 0xFF,
+    (data.length >> 8) & 0xFF,
+    (data.length >> 16) & 0xFF,
+    (data.length >> 24) & 0xFF,
+  ]);
+  out.addAll([0x2E, 0x46, 0x49, 0x54]);
+  out.addAll([0, 0]);
+  out.addAll(data);
+  out.addAll([0, 0]);
+  return Uint8List.fromList(out);
+}
+
 Future<ProviderContainer> _container({
   required FakeActivityRepository repository,
   FakeRouteFileImporter? importer,
@@ -430,6 +481,32 @@ void main() {
     expect(repository.writes.length, 1);
     expect(state.result?.importedFiles, 1);
     expect(state.result?.failedFiles, 1);
+  });
+
+  test('an activity FIT file is imported as an activity, not skipped as wellness',
+      () async {
+    // Regression: a Garmin writes VO2 max and recovery time INTO the activity it
+    // just recorded. Once those messages were parsed, the file started yielding
+    // wellness data, the importer branched on that rather than on the file type,
+    // and a real 6.5 KB workout was silently skipped instead of imported.
+    final repository = FakeActivityRepository();
+    final container = await _container(repository: repository);
+
+    await container.read(routeBulkImportProvider.notifier).importRouteFiles(
+      [
+        ActivityRouteFileSource.ofBytes(
+          bytes: _activityFitWithMetrics(),
+          fileName: 'activity_120.fit',
+        ),
+      ],
+      UnitSystem.metric,
+    );
+
+    final state = container.read(routeBulkImportProvider);
+    expect(repository.writes.length, 1, reason: 'the workout must be written');
+    expect(state.result?.importedFiles, 1);
+    expect(state.result?.skippedFiles, 0);
+    expect(state.result?.failedFiles, 0);
   });
 
   test('an empty pick does nothing', () async {

@@ -189,27 +189,121 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
       } catch (_) {
         continue; // A file the decoder rejects is the importer's problem to log.
       }
-      final monitoring = wellness.monitoring;
-      if (monitoring == null) continue;
-      for (final (at, value) in monitoring.stress) {
+      void add(GarminWellnessMetric metric, DateTime at, int value) {
         rows.add(GarminWellnessSamplesCompanion.insert(
-          metric: GarminWellnessMetric.stress.storageName,
+          metric: metric.storageName,
           timeMillis: at.toUtc().millisecondsSinceEpoch,
           value: value,
         ));
       }
+
+      // The metrics file: one snapshot, several unrelated numbers. VO2 max is
+      // absent on purpose — Health Connect has a type for it, so it goes down
+      // the import path with everything else it can hold.
+      final metrics = wellness.metrics;
+      final metricsAt = metrics?.time;
+      if (metrics != null && metricsAt != null) {
+        final recovery = metrics.recoveryTimeMinutes;
+        if (recovery != null) {
+          add(GarminWellnessMetric.recoveryTime, metricsAt, recovery);
+        }
+        final readiness = metrics.trainingReadiness;
+        if (readiness != null) {
+          add(GarminWellnessMetric.trainingReadiness, metricsAt, readiness);
+        }
+        final acute = metrics.trainingLoadAcute;
+        if (acute != null) {
+          add(GarminWellnessMetric.trainingLoadAcute, metricsAt, acute);
+        }
+        final chronic = metrics.trainingLoadChronic;
+        if (chronic != null) {
+          add(GarminWellnessMetric.trainingLoadChronic, metricsAt, chronic);
+        }
+      }
+
+      // daily_sleep: the watch's own nightly summary, which arrives in the
+      // METRICS file rather than the sleep file. Keyed to the night's end,
+      // which is the only instant the message carries.
+      final daily = wellness.dailySleep;
+      final dailyAt = daily?.endTime;
+      if (daily != null && dailyAt != null) {
+        final score = daily.score;
+        if (score != null) {
+          add(GarminWellnessMetric.sleepScore, dailyAt, score);
+        }
+        final awake = daily.awakeDuration;
+        if (awake != null) {
+          add(GarminWellnessMetric.sleepAwakeSeconds, dailyAt, awake.inSeconds);
+          debugPrint('[FIT-SLEEP] watch awake_duration=${awake.inMinutes}m '
+              'for the night ending ${dailyAt.toIso8601String()}');
+        }
+        final pressure = daily.pressure;
+        if (pressure != null) {
+          add(GarminWellnessMetric.sleepPressure, dailyAt, pressure);
+        }
+      }
+
+      // Sleep Coach.
+      final demand = wellness.sleepDemand;
+      final demandAt = demand?.time;
+      if (demand != null && demandAt != null) {
+        final normal = demand.normal;
+        if (normal != null) {
+          add(GarminWellnessMetric.sleepNeedNormalMinutes, demandAt,
+              normal.inMinutes);
+        }
+        final needed = demand.demand;
+        if (needed != null) {
+          add(GarminWellnessMetric.sleepNeedMinutes, demandAt,
+              needed.inMinutes);
+        }
+      }
+
+      // The watch's own verdict on a night, keyed to when the night began.
+      final sleep = wellness.sleep;
+      if (sleep != null) {
+        final score = sleep.overallScore;
+        if (score != null) {
+          add(GarminWellnessMetric.sleepScore, sleep.start, score);
+        }
+        final awakenings = sleep.awakeningsCount;
+        if (awakenings != null) {
+          add(GarminWellnessMetric.sleepAwakenings, sleep.start, awakenings);
+        }
+      }
+
+      // Health Snapshot stress / Body Battery. Stored under the same metrics as
+      // the all-day series: they are the same quantity on the same scale, just
+      // measured deliberately rather than passively, and the (metric, time) key
+      // keeps them from colliding.
+      final snapshot = wellness.healthSnapshot;
+      if (snapshot != null) {
+        for (final (at, value) in snapshot.stress) {
+          add(GarminWellnessMetric.stress, at, value);
+        }
+        for (final (at, value) in snapshot.bodyEnergy) {
+          add(GarminWellnessMetric.bodyEnergy, at, value);
+        }
+      }
+
+      final monitoring = wellness.monitoring;
+      if (monitoring == null) continue;
+      for (final (at, value) in monitoring.stress) {
+        add(GarminWellnessMetric.stress, at, value);
+      }
       for (final (at, value) in monitoring.bodyEnergy) {
-        rows.add(GarminWellnessSamplesCompanion.insert(
-          metric: GarminWellnessMetric.bodyEnergy.storageName,
-          timeMillis: at.toUtc().millisecondsSinceEpoch,
-          value: value,
-        ));
+        add(GarminWellnessMetric.bodyEnergy, at, value);
+      }
+      for (final (at, value) in monitoring.moderateMinutes) {
+        add(GarminWellnessMetric.moderateMinutes, at, value);
+      }
+      for (final (at, value) in monitoring.vigorousMinutes) {
+        add(GarminWellnessMetric.vigorousMinutes, at, value);
       }
     }
     if (rows.isEmpty) return;
     await ref.read(garminWellnessDaoProvider).upsertSamples(rows);
-    debugPrint('[GARMIN-SYNC] stored ${rows.length} watch-only samples '
-        '(stress + body battery)');
+    debugPrint('[GARMIN-SYNC] stored ${rows.length} watch-only samples');
 
     // Let the new Body Battery teach the Body Energy gains. Best-effort by
     // design: calibration is an enhancement, so a failure here must not fail a
