@@ -54,6 +54,15 @@ class GarminSettingsService {
   /// The tree's root, from Gadgetbridge's `GarminRealtimeSettingsFragment`.
   static const int rootScreenId = 36352;
 
+  /// The Alarms list, measured on a vívoactive 5 (Settings → Clocks → Alarms).
+  ///
+  /// A well-known id rather than a walk from the root: reaching it by walking
+  /// costs four round trips every time somebody taps Alarms, and the id has been
+  /// stable across every read of this watch. If a future model moves it, the
+  /// screen will come back empty rather than wrong — which is why the caller
+  /// reports "the watch sent nothing" instead of inventing a list.
+  static const int alarmsScreenId = 68;
+
   /// How long the watch may take to build a screen.
   ///
   /// Measured: a root definition arrived after more than ten seconds, so the

@@ -1,0 +1,229 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
+import 'garmin_ble_transport.dart';
+import 'garmin_session.dart';
+import 'garmin_settings_screen.dart';
+import 'garmin_settings_service.dart';
+
+/// An OPEN conversation with the watch's settings service.
+///
+/// Held open on purpose. The file sync connects, works and closes in about a
+/// second; browsing settings is the opposite shape — a person reads a screen,
+/// decides, taps, reads the result — and reconnecting per request would cost a
+/// handshake every time and lose the watch's own idea of where it is in the
+/// tree.
+///
+/// Everything here is correlated by CONTENT rather than request id: the watch
+/// answers a settings request under an id of its own, so a reply is
+/// indistinguishable from traffic it started, and matching on "is this settings
+/// traffic" is not enough either — several arrive unprompted, and the first one
+/// seen answered nothing that had been asked.
+class GarminSettingsLink {
+  GarminSettingsLink._(this._transport, this._session);
+
+  final GarminBleTransport _transport;
+  final GarminSession _session;
+
+  final StreamController<Uint8List> _replies =
+      StreamController<Uint8List>.broadcast();
+
+  bool _closed = false;
+
+  /// Whether the link is still usable. A watch that walks away closes it, and
+  /// every later request would otherwise wait out its full timeout.
+  bool get isOpen => !_closed;
+
+  /// Connects, completes the handshake, and opens the settings service for a
+  /// locale.
+  ///
+  /// The locale is not cosmetic: the watch translates every title it later
+  /// sends using it, so this decides what language the whole tree comes back in.
+  static Future<GarminSettingsLink> open({
+    required String address,
+    required String phoneName,
+    required String manufacturer,
+    required String model,
+    String language = 'en_US',
+    String region = 'us',
+  }) async {
+    final transport = GarminBleTransport(address: address);
+    final ready = Completer<void>();
+    final session = GarminSession(
+      send: (frame) => transport.mlOrThrow.sendFrame(frame),
+      bluetoothName: phoneName,
+      manufacturer: manufacturer,
+      model: model,
+      // Nothing to collect: this link exists to read settings, and a file sync
+      // running underneath would fight it for the radio and die when it closes.
+      syncFiles: false,
+      onHandshakeReady: () {
+        if (!ready.isCompleted) ready.complete();
+      },
+    );
+
+    try {
+      await transport.connect(onFrame: session.handleFrame);
+      session.start();
+      // Anything sent before the watch finishes introducing itself is dropped.
+      await ready.future.timeout(const Duration(seconds: 15));
+    } catch (error) {
+      // Nothing is listening yet, so the transport is the only thing to undo.
+      await transport.close();
+      rethrow;
+    }
+
+    final link = GarminSettingsLink._(transport, session);
+    session.protobuf.onUnsolicited = (payload) {
+      if (GarminSettingsService.unwrap(payload) != null) {
+        if (!link._replies.isClosed) link._replies.add(payload);
+      }
+    };
+    link._dropListener = transport.onDisconnected.listen((reason) {
+      debugPrint('[GARMIN-SETTINGS] link dropped: $reason');
+      session.abort(reason);
+      link._closed = true;
+    });
+
+    unawaited(link._ask(
+      GarminSettingsService.init(language: language, region: region),
+      'init',
+      // The init reply lands on a field of its own that nothing downstream
+      // needs; it is sent to open the service, not to be read.
+      responseField: GarminSettingsService.definitionResponseField,
+    ));
+    return link;
+  }
+
+  StreamSubscription<String>? _dropListener;
+
+  /// Fetches one screen: its layout AND the values currently behind it.
+  ///
+  /// Both, because they answer different questions — the definition says there
+  /// is a "Repeat" row, the state says it is set to Weekday. A screen built from
+  /// the definition alone cannot show what anything is set to, and a switch has
+  /// no value at all outside the state.
+  Future<GarminSettingsScreen?> screen(int screenId) async {
+    final definition = await _ask(
+      GarminSettingsService.screenDefinition(screenId),
+      'screen $screenId definition',
+      responseField: GarminSettingsService.definitionResponseField,
+    );
+    if (definition == null) return null;
+    final state = await _ask(
+      GarminSettingsService.screenState(screenId),
+      'screen $screenId state',
+      responseField: GarminSettingsService.stateResponseField,
+    );
+    return parseGarminSettingsScreen(definition, stateReply: state);
+  }
+
+  /// Flips a switch on the watch, and reports whether the watch agreed.
+  ///
+  /// The FIRST write in this stack — everything else reads. Returns null when
+  /// the watch did not answer at all, which is deliberately distinct from
+  /// false: "it refused" and "it never heard" call for different words on
+  /// screen, and collapsing them would report a lost message as a rejection.
+  Future<bool?> setSwitch({
+    required int screenId,
+    required int entryId,
+    required bool value,
+  }) async {
+    debugPrint('[GARMIN-SETTINGS] → switch $screenId/$entryId = $value');
+    final reply = await _ask(
+      GarminSettingsService.changeSwitch(
+        screenId: screenId,
+        entryId: entryId,
+        value: value,
+      ),
+      'change switch',
+      responseField: GarminSettingsService.changeResponseField,
+    );
+    final ok = GarminSettingsService.changeSucceeded(reply);
+    debugPrint('[GARMIN-SETTINGS] ← switch ${ok ?? "no answer"}');
+    return ok;
+  }
+
+  /// Chooses one of the options the watch supplied for an entry.
+  Future<bool?> setOption({
+    required int screenId,
+    required int entryId,
+    required int index,
+  }) async {
+    final reply = await _ask(
+      GarminSettingsService.changeOption(
+        screenId: screenId,
+        entryId: entryId,
+        index: index,
+      ),
+      'change option',
+      responseField: GarminSettingsService.changeResponseField,
+    );
+    return GarminSettingsService.changeSucceeded(reply);
+  }
+
+  /// Sets a time of day.
+  Future<bool?> setTime({
+    required int screenId,
+    required int entryId,
+    required Duration sinceMidnight,
+  }) async {
+    final reply = await _ask(
+      GarminSettingsService.changeTime(
+        screenId: screenId,
+        entryId: entryId,
+        sinceMidnight: sinceMidnight,
+      ),
+      'change time',
+      responseField: GarminSettingsService.changeResponseField,
+    );
+    return GarminSettingsService.changeSucceeded(reply);
+  }
+
+  Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+    await _dropListener?.cancel();
+    await _replies.close();
+    _session.protobuf.abort();
+    await _transport.close();
+    debugPrint('[GARMIN-SETTINGS] link closed');
+  }
+
+  /// Sends a request and waits for the reply that ANSWERS it.
+  ///
+  /// Both sources are RACED rather than awaited together: some replies echo the
+  /// request id and some arrive as the watch's own traffic, and waiting for both
+  /// made every screen cost the full timeout, because the id-based one never
+  /// completes on this watch.
+  Future<Uint8List?> _ask(
+    Uint8List request,
+    String label, {
+    required int responseField,
+  }) async {
+    if (_closed) return null;
+    final answer = Completer<Uint8List?>();
+    void offer(Uint8List? reply) {
+      if (answer.isCompleted) return;
+      if (reply != null && GarminSettingsService.carries(reply, responseField)) {
+        answer.complete(reply);
+      }
+    }
+
+    final subscription = _replies.stream.listen(offer);
+    unawaited(_session.protobuf
+        .request(request,
+            label: label, timeout: GarminSettingsService.replyTimeout)
+        .then(offer)
+        .catchError((_) {}));
+    try {
+      return await answer.future.timeout(
+        GarminSettingsService.replyTimeout,
+        onTimeout: () => null,
+      );
+    } finally {
+      await subscription.cancel();
+    }
+  }
+}

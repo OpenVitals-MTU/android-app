@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../data/source/sensors/garmin/garmin_capabilities.dart';
+import '../../../data/source/sensors/garmin/garmin_settings_service.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -252,7 +253,17 @@ class _Actions extends ConsumerWidget {
             WatchAction(
               icon: Icons.alarm,
               label: l10n.settingsWatchActionAlarms,
-              onPressed: null,
+              // Alarms are not a feature of their own: they are a screen in the
+              // watch's settings tree, reached at a well-known id.
+              onPressed: busy
+                  ? null
+                  : () => context.push(
+                        AppRoutes.watchSettingsLocation(
+                          device.id,
+                          GarminSettingsService.alarmsScreenId,
+                        ),
+                        extra: l10n.settingsWatchAlarmsTitle,
+                      ),
               // Debug-only, on a gesture the disabled button leaves unused:
               // opens the watch's settings service and dumps its root screen to
               // the log. Alarms live somewhere in that tree, and this is how we

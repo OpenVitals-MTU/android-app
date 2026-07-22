@@ -30,6 +30,7 @@ class AppRoutes {
   static const String vitalsMeasurementTypeArg = 'vitalsMeasurementType';
   static const String vitalsEntryIdArg = 'vitalsEntryId';
   static const String watchDeviceIdArg = 'watchDeviceId';
+  static const String watchScreenIdArg = 'watchScreenId';
   static const String stressDateArg = 'stressDate';
   static const String bodyEnergyDateArg = 'bodyEnergyDate';
   static const String trainingReadinessDateArg = 'trainingReadinessDate';
@@ -146,6 +147,11 @@ class AppRoutes {
       '/watch/${Uri.encodeComponent(deviceId)}';
   static String watchDataLocation(String deviceId) =>
       '/watch/${Uri.encodeComponent(deviceId)}/data';
+
+  /// One screen of the watch's OWN settings tree. The id is the watch's, so a
+  /// deep link only means anything while that watch is the one paired.
+  static String watchSettingsLocation(String deviceId, int screenId) =>
+      '/watch/${Uri.encodeComponent(deviceId)}/settings/$screenId';
 
   /// Query parameter carrying the day a metric detail screen should OPEN on.
   static const String selectedDayArg = 'day';

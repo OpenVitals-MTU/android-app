@@ -4167,5 +4167,13 @@
   },
   "settingsWatchFindStop": "Stop",
   "settingsWatchFindRinging": "Listen for your watch",
-  "settingsWatchFindFailed": "The watch did not answer. Bring it closer and try again."
+  "settingsWatchFindFailed": "The watch did not answer. Bring it closer and try again.",
+  "settingsWatchAlarmsTitle": "Alarms",
+  "settingsWatchSettingsReading": "Reading from the watch…",
+  "settingsWatchSettingsUnreachable": "Could not read this from the watch. Bring it closer and try again.",
+  "settingsWatchSettingsEmpty": "The watch sent nothing for this screen.",
+  "settingsWatchSettingsRefused": "The watch would not change that.",
+  "settingsWatchSettingsUnanswered": "The watch did not answer. Check the watch to see whether it changed.",
+  "settingsWatchSettingsRetry": "Try again",
+  "settingsWatchSettingsFromWatch": "Read live from your watch. Changes apply to the watch itself."
 }

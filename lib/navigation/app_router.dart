@@ -47,6 +47,7 @@ import '../domain/model/ble_sensor_models.dart';
 import '../features/settings/presentation/ble_devices_screen.dart';
 import '../features/settings/presentation/watch_data_screen.dart';
 import '../features/settings/presentation/watch_device_screen.dart';
+import '../features/settings/presentation/watch_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/settings/presentation/settings_section.dart';
 import '../features/settings/presentation/settings_section_screen.dart';
@@ -144,6 +145,18 @@ List<RouteBase> _buildRoutes(Ref ref) => [
             path: 'data',
             builder: (context, state) => WatchDataScreen(
               deviceId: state.pathParameters[AppRoutes.watchDeviceIdArg]!,
+            ),
+          ),
+          GoRoute(
+            path: 'settings/:${AppRoutes.watchScreenIdArg}',
+            builder: (context, state) => WatchSettingsScreenPage(
+              deviceId: state.pathParameters[AppRoutes.watchDeviceIdArg]!,
+              screenId: int.parse(
+                state.pathParameters[AppRoutes.watchScreenIdArg]!,
+              ),
+              // The parent row's title, so the app bar reads correctly while
+              // the watch is still sending the screen.
+              titleOverride: state.extra as String?,
             ),
           ),
         ],

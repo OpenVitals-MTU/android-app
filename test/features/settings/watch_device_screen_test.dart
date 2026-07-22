@@ -104,34 +104,34 @@ void main() {
     expect(find.text('Remove watch'), findsOneWidget);
   });
 
-  testWidgets('Alarms is disabled but Find is live', (tester) async {
-    // Find works now — it is the first consumer of the protobuf layer. Alarms
-    // still needs the watch's settings tree, so it stays greyed: the watch CAN
-    // do it and the app cannot, which is what disabled says.
+  testWidgets('Alarms and Find are live; the settings tree is not yet',
+      (tester) async {
+    // Alarms opens a screen in the watch's own settings tree, so it is no
+    // longer a drawing. Browsing the whole tree still is — that row stays
+    // greyed, which says the watch CAN do it and the app cannot yet.
     final container = await _container();
     await tester.pumpWidget(_harness(container));
     await tester.pumpAndSettle();
 
     expect(find.text('Alarms'), findsOneWidget);
     expect(find.text('Find'), findsOneWidget);
-    expect(find.text('Settings on the watch'), findsOneWidget);
 
-    for (final label in ['Alarms']) {
-      final button = tester.widget<IconButton>(
-        find.ancestor(
-          of: find.text(label),
-          matching: find.byType(Column),
-        ).first.evaluate().isEmpty
-            ? find.byType(IconButton).first
-            : find.descendant(
-                of: find.ancestor(
-                  of: find.text(label),
-                  matching: find.byType(Column),
-                ).first,
-                matching: find.byType(IconButton),
-              ),
-      );
-      expect(button.onPressed, isNull, reason: '\$label must not be tappable');
-    }
+    final alarms = tester.widget<IconButton>(
+      find.descendant(
+        of: find
+            .ancestor(of: find.text('Alarms'), matching: find.byType(Column))
+            .first,
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(alarms.onPressed, isNotNull, reason: 'Alarms must be tappable');
+
+    final settingsRow = tester.widget<ListTile>(
+      find.ancestor(
+        of: find.text('Settings on the watch'),
+        matching: find.byType(ListTile),
+      ),
+    );
+    expect(settingsRow.enabled, isFalse);
   });
 }
