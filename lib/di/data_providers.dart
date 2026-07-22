@@ -2,7 +2,14 @@ import '../domain/model/vitals_models.dart';
 import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
+import '../data/source/sensors/ble/ble_watch_pairing.dart';
+import '../data/source/sensors/garmin/garmin_file_store.dart';
+import '../data/source/sensors/garmin/garmin_gatt_probe.dart';
+import '../data/source/sensors/garmin/garmin_phone_identity.dart';
+import '../data/source/sensors/garmin/garmin_watch_sync_service.dart';
 import '../data/repository/contract/ble_sensor_repository.dart';
+import '../domain/port/garmin_transport_probe.dart';
+import '../domain/port/watch_pairing_port.dart';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -101,6 +108,12 @@ final feelCheckDaoProvider = Provider<FeelCheckDao>(
 
 final vitalsDailyCacheDaoProvider = Provider<VitalsDailyCacheDao>(
   (ref) => ref.watch(openVitalsDatabaseProvider).vitalsDailyCacheDao,
+);
+
+/// Stress + Body Battery from a Garmin watch. These have no Health Connect type,
+/// so this table is their system of record rather than a cache.
+final garminWellnessDaoProvider = Provider<GarminWellnessDao>(
+  (ref) => ref.watch(openVitalsDatabaseProvider).garminWellnessDao,
 );
 
 final vitalsHistorySyncServiceProvider = Provider<VitalsHistorySyncService>(
@@ -232,6 +245,34 @@ final hydrationRepositoryProvider = Provider<HydrationRepository>(
 
 final bleDeviceRepositoryProvider = Provider<BleDeviceRepository>(
   (ref) => BleDeviceRepositoryImpl(ref.watch(sharedPreferencesProvider)),
+);
+
+/// Bonding + companion association for Garmin watch onboarding. A provider so a
+/// widget test can substitute one and never touch a radio.
+final watchPairingPortProvider = Provider<WatchPairingPort>(
+  (ref) => BleWatchPairing(),
+);
+
+/// Reads a bonded watch's GATT map to decide which GFDI transport it speaks.
+final garminTransportProbeProvider = Provider<GarminTransportProbe>(
+  (ref) => const GarminGattProbe(),
+);
+
+/// Drives one end-to-end GFDI sync (link, session, downloaded files).
+final garminWatchSyncServiceProvider = Provider<GarminWatchSyncService>(
+  (ref) => GarminWatchSyncService(
+    fileStore: GarminFileStore(
+      resolveDirectory: () async => Directory(
+        p.join((await getApplicationDocumentsDirectory()).path, 'garmin'),
+      ),
+    ),
+  ),
+);
+
+/// How this phone names itself to a watch. See [GarminPhoneIdentity] for why
+/// these are constants rather than a device-info lookup.
+final phoneIdentityProvider = Provider<GarminPhoneIdentity>(
+  (ref) => const GarminPhoneIdentity(),
 );
 
 final appleHealthImportRepositoryProvider =

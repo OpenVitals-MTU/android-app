@@ -24,14 +24,19 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 
 /**
- * Flutter plugin bridging to Android Bluetooth Classic (RFCOMM) for
- * phone-to-phone Health Connect sync.
+ * Flutter plugin for the Bluetooth capabilities `flutter_blue_plus` cannot
+ * reach: Bluetooth Classic (RFCOMM) transport for phone-to-phone Health Connect
+ * sync, and CompanionDeviceManager association for Garmin watch onboarding.
  *
  * Moves BYTES ONLY. Discoverability, discovery, one RFCOMM socket (server or
  * client), and byte pumps — nothing about health records or the wire protocol,
  * which lives in pure Dart. Each `@async` host call runs its blocking Bluetooth
  * work on [Dispatchers.IO]; inbound events are pushed up through
  * [BluetoothSyncFlutterApi] on the main thread.
+ *
+ * The companion-association half is delegated wholesale to [CompanionDevices];
+ * it shares only this class's Activity binding, since its system dialog needs
+ * one. See that file for why every one of its failures is quiet.
  *
  * The plugin assumes the Dart layer has already obtained the runtime Bluetooth
  * permissions (SCAN / CONNECT / ADVERTISE) via permission_handler before calling
@@ -56,6 +61,8 @@ class BluetoothSyncNativePlugin :
 
     private var discoveryReceiver: BluetoothDiscoveryReceiver? = null
 
+    private var companionDevices: CompanionDevices? = null
+
     /** Launcher + pending callback for the ACTION_REQUEST_DISCOVERABLE result. */
     private var discoverableLauncher: ActivityResultLauncher<Intent>? = null
     private var pendingDiscoverableCallback: ((Result<Long>) -> Unit)? = null
@@ -72,6 +79,7 @@ class BluetoothSyncNativePlugin :
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         applicationContext = binding.applicationContext
+        companionDevices = CompanionDevices(binding.applicationContext)
         flutterApi = BluetoothSyncFlutterApi(binding.binaryMessenger)
         BluetoothSyncHostApi.setUp(binding.binaryMessenger, this)
     }
@@ -80,6 +88,8 @@ class BluetoothSyncNativePlugin :
         BluetoothSyncHostApi.setUp(binding.binaryMessenger, null)
         disconnect()
         stopDiscoveryReceiver()
+        companionDevices?.detachFromActivity()
+        companionDevices = null
         flutterApi = null
         applicationContext = null
         ioScope.cancel()
@@ -93,6 +103,7 @@ class BluetoothSyncNativePlugin :
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
         registerDiscoverableLauncher(binding.activity)
+        companionDevices?.attachToActivity(binding.activity)
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) =
@@ -103,6 +114,7 @@ class BluetoothSyncNativePlugin :
     override fun onDetachedFromActivity() {
         discoverableLauncher?.unregister()
         discoverableLauncher = null
+        companionDevices?.detachFromActivity()
         activity = null
     }
 
@@ -289,6 +301,28 @@ class BluetoothSyncNativePlugin :
         channel = null
         server?.cancel()
         server = null
+    }
+
+    // --- CompanionDeviceManager ------------------------------------------------
+
+    override fun associateCompanionDevice(
+        address: String,
+        displayName: String?,
+        callback: (Result<Boolean>) -> Unit,
+    ) {
+        val companion = companionDevices
+        if (companion == null) {
+            callback(Result.success(false))
+            return
+        }
+        companion.associate(address, displayName, callback)
+    }
+
+    override fun isCompanionAssociated(address: String): Boolean =
+        companionDevices?.isAssociated(address) ?: false
+
+    override fun disassociateCompanionDevice(address: String) {
+        companionDevices?.disassociate(address)
     }
 
     // ---------------------------------------------------------------------------

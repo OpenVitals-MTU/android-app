@@ -43,7 +43,11 @@ import '../features/readiness/presentation/training_readiness_details_screen.dar
 import '../features/recovery/presentation/sleep_efficiency_detail_screen.dart';
 import '../features/devicesync/presentation/device_sync_screen.dart';
 import '../features/recovery/presentation/sleep_score_detail_screen.dart';
+import '../domain/model/ble_sensor_models.dart';
 import '../features/settings/presentation/ble_devices_screen.dart';
+import '../features/settings/presentation/watch_data_screen.dart';
+import '../features/settings/presentation/watch_device_screen.dart';
+import '../features/settings/presentation/watch_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/settings/presentation/settings_section.dart';
 import '../features/settings/presentation/settings_section_screen.dart';
@@ -128,6 +132,35 @@ List<RouteBase> _buildRoutes(Ref ref) => [
       ..._readinessRoutes(),
       ..._metricSectionRoutes(),
       ..._manualEntryRoutes(),
+      // The device view is a top-level route, not a child of Settings: it is
+      // reached from the summary tile as well as from the Watches list, and a
+      // watch has exactly one home whichever door was used.
+      GoRoute(
+        path: '/watch/:${AppRoutes.watchDeviceIdArg}',
+        builder: (context, state) => WatchDeviceScreen(
+          deviceId: state.pathParameters[AppRoutes.watchDeviceIdArg]!,
+        ),
+        routes: [
+          GoRoute(
+            path: 'data',
+            builder: (context, state) => WatchDataScreen(
+              deviceId: state.pathParameters[AppRoutes.watchDeviceIdArg]!,
+            ),
+          ),
+          GoRoute(
+            path: 'settings/:${AppRoutes.watchScreenIdArg}',
+            builder: (context, state) => WatchSettingsScreenPage(
+              deviceId: state.pathParameters[AppRoutes.watchDeviceIdArg]!,
+              screenId: int.parse(
+                state.pathParameters[AppRoutes.watchScreenIdArg]!,
+              ),
+              // The parent row's title, so the app bar reads correctly while
+              // the watch is still sending the screen.
+              titleOverride: state.extra as String?,
+            ),
+          ),
+        ],
+      ),
       ..._settingsSectionRoutes(),
     ];
 
@@ -349,6 +382,8 @@ List<RouteBase> _settingsSectionRoutes() => [
             path: section.route,
             builder: (context, state) => switch (section) {
               SettingsSection.sensors => const BleDevicesScreen(),
+              SettingsSection.watches =>
+                const BleDevicesScreen(kind: BleDeviceKind.watch),
               SettingsSection.deviceSync => const DeviceSyncScreen(),
               _ => SettingsSectionScreen(section: section),
             },

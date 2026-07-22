@@ -3,7 +3,7 @@
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
 > **Implementation:** `lib/features/settings/`, `lib/data/prefs/preferences_repository.dart`, `lib/state/app_providers.dart`.
-> **Navigation:** `/settings` plus one pushed route per `SettingsSection` (`lib/features/settings/presentation/settings_section.dart`): `/settings/display`, `/activities`, `/sensors`, `/nutrition`, `/recovery`, `/data_import`, `/health_connect`, and `/debug_diagnostics` in diagnostics builds only.
+> **Navigation:** `/settings` plus one pushed route per `SettingsSection` (`lib/features/settings/presentation/settings_section.dart`): `/settings/display`, `/activities`, `/sensors`, `/watches`, `/nutrition`, `/recovery`, `/data_import`, `/health_connect`, and `/debug_diagnostics` in diagnostics builds only.
 > **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Metric detail customization](metric-detail-customization.md).
 
 Settings centralize app preferences, Health Connect access, imports, sensors, goals, reminders, and diagnostics.
@@ -17,6 +17,7 @@ Open **Settings** from the gear icon in the dashboard's top bar. It's a list of 
 | **Display** | Language, **Units** (Metric / Imperial), **Theme** (System / Light / Dark / AMOLED), Dynamic color, chart aggregation. |
 | **Activities** | Calendar vs **Rolling** date windows, **Favorite activity**, split distance, recording preferences (incl. keep-screen-on), and **Offline maps** import. |
 | **Sensors & devices** | Pair and manage **Bluetooth LE** heart-rate, cadence, and power sensors — see [Bluetooth LE sensors](ble-sensors.md). |
+| **Watches** | Pair a Garmin watch, sync what it recorded, and change its alarms and on-watch settings — see [Garmin watch sync](garmin-watch-sync.md). |
 | **Nutrition** | **Total calories** mode, **Hydration goal** stepper, and the **Caffeine model** — see [Beverage logging and caffeine](beverage-logging-and-caffeine.md). |
 | **Recovery** | **Sleep range** boundary, high/low heart-rate alerts, body profile, and **Body Energy calibration** — see [Body Energy](body-energy.md). |
 | **Data Importers** | **Apple Health**, **route file** (GPX/KML/KMZ/TCX), and **FIT** imports. |

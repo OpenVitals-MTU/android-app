@@ -6,7 +6,10 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../data/repository/contract/ble_sensor_repository.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../../domain/model/garmin_transport.dart';
+import '../../../domain/port/watch_pairing_port.dart';
 import '../../../domain/usecase/edit_ble_device_registry_use_case.dart';
+import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
 
 part 'ble_devices_view_model.freezed.dart';
 
@@ -35,15 +38,45 @@ abstract class BleDevicesUiState with _$BleDevicesUiState {
     @Default(<BleSensorCapability, BleSensorDevice>{})
     Map<BleSensorCapability, BleSensorDevice> capabilityConflicts,
     String? editingDeviceId,
+
+    /// Whether [editingDeviceId] names a watch. Stored rather than derived from
+    /// [devices]: that list arrives over a stream, so a getter would read false
+    /// for the frame between opening the sheet and the stream's first emission —
+    /// long enough to render the capability picker for a watch. Set from the
+    /// same synchronous registry snapshot [openEditDevice] prefills from.
+    @Default(false) bool isEditingWatch,
     @Default('') String editDisplayName,
     @Default(<BleSensorCapability>{}) Set<BleSensorCapability> editCapabilities,
     @Default(true) bool editEnabled,
     @Default('') String editWheelCircumferenceMm,
     String? errorMessage,
     @Default(false) bool showAddFlow,
+
+    /// A Garmin watch is being bonded/associated right now. Distinct from
+    /// [isDiscoveringCapabilities]: that probe is silent and cancellable, this
+    /// one puts two OS dialogs in front of the user and must not be interrupted.
+    @Default(false) bool isOnboardingWatch,
+
+    /// Which OS dialog the onboarding is waiting on, so the sheet can name it
+    /// before it appears over the app.
+    GarminOnboardStep? onboardStep,
+
+    /// Set when a watch onboarded but the companion association was declined or
+    /// unavailable. Not an error — a note that background syncs are likelier to
+    /// be interrupted.
+    @Default(false) bool watchOnboardedWithoutCompanion,
+
+    /// Which GFDI transport the last onboarded watch speaks. Null until one is
+    /// onboarded. Surfaced so an unsupported watch says so instead of sitting in
+    /// the list looking healthy and never syncing.
+    GarminTransportVariant? watchTransport,
   }) = _BleDevicesUiState;
 
   int get enabledDeviceCount => devices.where((d) => d.enabled).length;
+
+  /// True while the add sheet is showing a watch rather than a sensor — the two
+  /// share the sheet but ask completely different questions.
+  bool get isAddingWatch => selectedDevice?.isGarminSyncDevice ?? false;
 }
 
 /// Riverpod port of the Kotlin `BleDevicesViewModel`.
@@ -103,6 +136,11 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
           BleSensorDevice.defaultWheelCircumferenceMm.toString(),
       capabilityConflicts: const {},
       errorMessage: null,
+      // Describes the LAST onboarding's outcome, and the screen reads it after
+      // the sheet pops — so it is cleared when a new flow starts, not when the
+      // old one closes.
+      watchOnboardedWithoutCompanion: false,
+      watchTransport: null,
     ));
   }
 
@@ -144,6 +182,24 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
   }
 
   Future<void> selectDiscoveredDevice(BleDiscoveredDevice device) async {
+    // A watch answers a different question. It streams nothing live, so probing
+    // it for capabilities would connect, find no standard service and report
+    // nothing — the sheet asks the user to bond it instead.
+    if (device.isGarminSyncDevice) {
+      _setLocal(_local.copyWith(
+        selectedDevice: device,
+        addDisplayName: device.name ?? device.address,
+        addCapabilities: const {},
+        discoveredCapabilities: const {},
+        capabilityConflicts: const {},
+        isDiscoveringCapabilities: false,
+        errorMessage: null,
+      ));
+      // The scan competes with the connect that bonding needs, and the user has
+      // chosen — nothing more will be picked from the list.
+      stopScan();
+      return;
+    }
     _setLocal(_local.copyWith(
       selectedDevice: device,
       addDisplayName: device.name ?? device.address,
@@ -205,6 +261,65 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
     closeAddFlow();
   }
 
+  /// Bonds and registers the selected Garmin watch. Returns false when the user
+  /// refused the pairing dialog or the watch could not be reached — the sheet
+  /// stays open in that case so they can retry without re-scanning.
+  ///
+  /// The companion association is not part of that verdict: a watch onboards
+  /// successfully whether or not it was granted (see [OnboardGarminWatchUseCase]).
+  Future<bool> onboardSelectedWatch() async {
+    final selected = state.selectedDevice;
+    if (selected == null || state.isOnboardingWatch) return false;
+
+    _setLocal(_local.copyWith(
+      isOnboardingWatch: true,
+      onboardStep: GarminOnboardStep.bonding,
+      errorMessage: null,
+      watchOnboardedWithoutCompanion: false,
+    ));
+
+    final displayName = state.addDisplayName.trim().isEmpty
+        ? (selected.name ?? selected.address)
+        : state.addDisplayName.trim();
+
+    final outcome = await ref.read(onboardGarminWatchUseCaseProvider)(
+      selected,
+      displayName: displayName,
+      onStep: (step) {
+        // The sheet may be gone by the time a step fires — the OS dialogs run
+        // over it and the user can dismiss everything.
+        if (ref.mounted && _local.isOnboardingWatch) {
+          _setLocal(_local.copyWith(onboardStep: step));
+        }
+      },
+    );
+    if (!ref.mounted) return false;
+
+    switch (outcome) {
+      case GarminOnboardFailed(:final reason):
+        _setLocal(_local.copyWith(
+          isOnboardingWatch: false,
+          onboardStep: null,
+          errorMessage: switch (reason) {
+            WatchBondResult.unreachable =>
+              'Could not reach the watch. Wake it up and keep it close, then try again.',
+            _ =>
+              'Pairing was not completed. Confirm the code on the watch to finish.',
+          },
+        ));
+        return false;
+      case GarminOnboardSucceeded(:final associated, :final transport):
+        _setLocal(_local.copyWith(
+          isOnboardingWatch: false,
+          onboardStep: null,
+          watchOnboardedWithoutCompanion: !associated,
+          watchTransport: transport.variant,
+        ));
+        closeAddFlow();
+        return true;
+    }
+  }
+
   void openEditDevice(String deviceId) {
     // The registry snapshot, not the streamed copy: the form must prefill from
     // what is stored right now.
@@ -214,6 +329,7 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
     final device = matches.first;
     _setLocal(_local.copyWith(
       editingDeviceId: device.id,
+      isEditingWatch: device.isWatch,
       editDisplayName: device.displayName,
       editCapabilities: device.capabilities,
       editEnabled: device.enabled,
@@ -230,6 +346,7 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
   void closeEditDevice() {
     _setLocal(_local.copyWith(
       editingDeviceId: null,
+      isEditingWatch: false,
       capabilityConflicts: const {},
       errorMessage: null,
     ));
@@ -260,7 +377,9 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
     final s = state;
     final deviceId = s.editingDeviceId;
     if (deviceId == null) return;
-    if (s.editCapabilities.isEmpty) {
+    // A watch is legitimately capability-less, so the sensor rule would reject
+    // every edit to one — renaming it included.
+    if (s.editCapabilities.isEmpty && !s.isEditingWatch) {
       _setLocal(_local.copyWith(errorMessage: 'Select at least one capability.'));
       return;
     }
@@ -280,12 +399,39 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
   }
 
   void removeDevice(String deviceId) {
+    // Read the device BEFORE forgetting it — the OS-level cleanup below needs
+    // its address, which the registry is about to stop holding.
+    final device = ref
+        .read(readPairedBleDevicesUseCaseProvider)()
+        .where((d) => d.id == deviceId)
+        .firstOrNull;
     _edit(ForgetBleDevice(deviceId));
+    if (device != null && device.isWatch) {
+      // Fire-and-forget, like every other registry mutation here: dropping the
+      // bond and association is housekeeping the user does not wait on, and a
+      // failure leaves nothing worse than a stale OS pairing they can clear in
+      // Android's own Bluetooth settings.
+      unawaited(
+        ref.read(onboardGarminWatchUseCaseProvider).forget(device.address),
+      );
+    }
     if (state.editingDeviceId == deviceId) closeEditDevice();
   }
 
   void setDeviceEnabled(String deviceId, bool enabled) =>
       _edit(SetBleDeviceEnabled(deviceId, enabled));
+
+  /// Renames a device without touching anything else it holds.
+  ///
+  /// Separate from the edit sheet on purpose: a watch has no capabilities to
+  /// pick, so its whole "edit" is a name, and routing that through
+  /// [saveEditedDevice] would drag the capability rules along with it. Every
+  /// other field is left null, which the repository reads as unchanged.
+  void renameDevice(String deviceId, String displayName) {
+    final trimmed = displayName.trim();
+    if (trimmed.isEmpty) return;
+    _edit(UpdateBleDevice(deviceId: deviceId, displayName: trimmed));
+  }
 }
 
 final bleDevicesViewModelProvider =

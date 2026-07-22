@@ -246,6 +246,7 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
       // .kt:302-312). The route is only reachable in debug builds.
       return const [DebugDiagnosticsCard()];
     case SettingsSection.sensors:
+    case SettingsSection.watches:
     case SettingsSection.deviceSync:
       // Both route to bespoke screens (BleDevicesScreen / DeviceSyncScreen), so
       // SettingsSectionScreen never renders cards for them.

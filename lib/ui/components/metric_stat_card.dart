@@ -21,6 +21,7 @@ class MetricStatCard extends StatelessWidget {
     this.showTitle = true,
     this.progress,
     this.onTap,
+    this.trailing,
   });
 
   final String title;
@@ -33,6 +34,14 @@ class MetricStatCard extends StatelessWidget {
   final IconData icon;
   final Color accentColor;
   final String? subtitle;
+
+  /// An optional control in the card's trailing edge, with its own tap target.
+  ///
+  /// Used by the device tile, whose Sync button acts in place while the rest of
+  /// the card opens the device view. Deliberately narrow: it is the only action
+  /// allowed outside that view, and only because a watch that has stopped
+  /// syncing is noticed here.
+  final Widget? trailing;
 
   /// A no-data / loading message shown in place of the value, in the muted
   /// on-surface-variant colour.
@@ -116,6 +125,10 @@ class MetricStatCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 6),
+                    trailing!,
+                  ],
                 ],
               ),
             ),

@@ -13,19 +13,28 @@
 //
 // DESIGN NOTE
 // -----------
-// This plugin moves ONLY BYTES. It knows nothing about health records, the wire
-// protocol, framing, gzip, or dedup — all of that lives in pure Dart
-// (`lib/data/source/sync/`) so it can be unit-tested over an in-memory pipe with
-// no Bluetooth. The plugin's whole job is: make this phone discoverable, find
-// nearby phones, open one RFCOMM socket (as server or client), and pump raw
-// chunks in and out. Records travel as opaque `Uint8List` payloads.
+// This plugin is the app's escape hatch for Bluetooth capabilities
+// `flutter_blue_plus` cannot reach. It holds NO protocol logic of its own: every
+// wire format, handshake, framing and dedup rule lives in pure Dart so it can be
+// unit-tested with no Bluetooth at all. Two unrelated features share it because
+// they share that one constraint:
 //
-// Bluetooth Classic RFCOMM (not BLE, not Wi-Fi) is deliberate: the app ships NO
-// `android.permission.INTERNET`, and any TCP/UDP socket on Android requires it.
-// RFCOMM does not, so peer-to-peer transfer preserves the app's no-network
-// stance. `flutter_blue_plus` (the app's existing BT dependency) is central-only
-// — it cannot advertise or open a server socket — so this native code is the
-// only way to reach RFCOMM from Flutter.
+//   1. RFCOMM byte transport for phone-to-phone Health Connect sync. Makes this
+//      phone discoverable, finds nearby phones, opens ONE socket (server or
+//      client) and pumps raw chunks. Protocol in `lib/data/source/sync/`.
+//   2. CompanionDeviceManager association for onboarding a Garmin watch.
+//      `flutter_blue_plus` covers scanning and bonding (`createBond`), but the
+//      companion association — which is what earns the app background
+//      reconnect priority — is a platform API with no plugin.
+//
+// Records and GFDI frames alike travel as opaque `Uint8List` payloads.
+//
+// Bluetooth Classic RFCOMM (not BLE, not Wi-Fi) is deliberate for (1): the app
+// ships NO `android.permission.INTERNET`, and any TCP/UDP socket on Android
+// requires it. RFCOMM does not, so peer-to-peer transfer preserves the app's
+// no-network stance. `flutter_blue_plus` is central-only — it cannot advertise
+// or open a server socket — so this native code is the only way to reach RFCOMM
+// from Flutter.
 import 'package:pigeon/pigeon.dart';
 
 /// A Bluetooth device surfaced during discovery (or a bonded peer).
@@ -131,6 +140,35 @@ abstract class BluetoothSyncHostApi {
   /// Closes the active socket (client or accepted server) and stops both byte
   /// pumps. Idempotent.
   void disconnect();
+
+  // --- CompanionDeviceManager (Garmin watch onboarding) ---------------------
+  //
+  // An association is what lets the OS keep this app alive to talk to the watch
+  // and raises its process priority when the watch comes into range. It is
+  // ALWAYS OPTIONAL: the user can decline the system dialog, and the API only
+  // exists on API 26+ (presence observation on 31+). Every method below degrades
+  // to "not associated" rather than failing, so a watch stays usable either way.
+
+  /// Shows the system `Allow <app> to access <device>?` dialog for [address]
+  /// and resolves true once the user allows it.
+  ///
+  /// Resolves false when the user declines, when the OS is older than API 26,
+  /// or when no host Activity is attached. Resolves true immediately — with no
+  /// dialog — if an association for [address] already exists, which is also
+  /// what makes calling this on every onboarding idempotent.
+  ///
+  /// [displayName] is only used for logging; the system dialog shows the
+  /// device's own advertised name.
+  @async
+  bool associateCompanionDevice(String address, String? displayName);
+
+  /// Whether this app already holds a companion association for [address].
+  /// False on API < 26.
+  bool isCompanionAssociated(String address);
+
+  /// Drops the association for [address] (used when the user forgets a watch).
+  /// Silent no-op when there is nothing associated or the API is too old.
+  void disassociateCompanionDevice(String address);
 }
 
 /// Flutter (Dart) API surface the Kotlin side calls to push events up. The Dart

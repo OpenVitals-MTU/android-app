@@ -246,18 +246,20 @@ void main() {
     await pumpEventQueue();
     final notifier = container.read(dashboardProvider.notifier);
 
-    notifier.setTileHidden('Distance', true);
+    // Hiding is by stable id, not by the title on the card.
+    notifier.setTileHidden(DashboardMetric.distance.name, true);
 
     var display = container.read(dashboardProvider).display!;
     expect([for (final t in display.visibleTiles) t.title],
         isNot(contains('Distance')));
-    expect(display.trayTitles, contains('Distance'));
+    expect([for (final e in display.trayEntries) e.title], contains('Distance'));
 
-    notifier.addWidget('Distance');
+    notifier.addWidget(DashboardMetric.distance.name);
 
     display = container.read(dashboardProvider).display!;
     expect([for (final t in display.visibleTiles) t.title],
         contains('Distance'));
-    expect(display.trayTitles, isNot(contains('Distance')));
+    expect([for (final e in display.trayEntries) e.title],
+        isNot(contains('Distance')));
   });
 }

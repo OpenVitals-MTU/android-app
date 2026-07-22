@@ -31,11 +31,24 @@ class FitSleepSession {
     required this.start,
     required this.end,
     required this.stages,
+    this.overallScore,
+    this.awakeningsCount,
   });
 
   final DateTime start;
   final DateTime end;
   final List<FitSleepStage> stages;
+
+  /// The watch's own sleep score, 0..100, as shown on the wrist.
+  ///
+  /// Deliberately kept alongside [stages] rather than folded into them: this is
+  /// Garmin's verdict on the night, while the stages are transitions we
+  /// interpret ourselves. Where the two disagree, having both is what makes the
+  /// disagreement visible instead of silently picking one.
+  final int? overallScore;
+
+  /// How many times the watch counted the sleeper waking.
+  final int? awakeningsCount;
 }
 
 /// A decoded Garmin HRV nightly reading (file type 68):
@@ -80,6 +93,10 @@ class FitMonitoringSummary {
     this.stepPoints = const [],
     this.distancePoints = const [],
     this.caloriePoints = const [],
+    this.moderateMinutes = const [],
+    this.vigorousMinutes = const [],
+    this.stress = const [],
+    this.bodyEnergy = const [],
   });
 
   final DateTime? restingHeartRateTime;
@@ -98,6 +115,22 @@ class FitMonitoringSummary {
   final List<FitMonitoringPoint> distancePoints;
   final List<FitMonitoringPoint> caloriePoints;
 
+  /// Running daily totals of Garmin's intensity minutes `(time, minutes)`.
+  /// Cumulative like the step counter, not per-message increments.
+  final List<(DateTime, int)> moderateMinutes;
+  final List<(DateTime, int)> vigorousMinutes;
+
+  /// Garmin stress score `(time, 0..100)`. Health Connect has no type for this,
+  /// so it is kept in the app's own database rather than exported.
+  final List<(DateTime, int)> stress;
+
+  /// Garmin Body Battery `(time, 0..100)`. Same story — no Health Connect type.
+  ///
+  /// Note this is the WATCH's measure, distinct from the app's own computed
+  /// Body Energy timeline; they are two independent estimates of a similar idea
+  /// and must not be conflated.
+  final List<(DateTime, int)> bodyEnergy;
+
   bool get isEmpty =>
       restingHeartRateBpm == null &&
       bmrKcalPerDay == null &&
@@ -105,13 +138,150 @@ class FitMonitoringSummary {
       respiration.isEmpty &&
       stepPoints.isEmpty &&
       distancePoints.isEmpty &&
-      caloriePoints.isEmpty;
+      caloriePoints.isEmpty &&
+      moderateMinutes.isEmpty &&
+      vigorousMinutes.isEmpty &&
+      stress.isEmpty &&
+      bodyEnergy.isEmpty;
+}
+
+/// The fitness metrics a metrics file (Garmin type 44) carried.
+///
+/// Each is a snapshot the watch recomputes rather than a series, so at most one
+/// of each survives a file — the last seen. Only VO2 max has a Health Connect
+/// type; the rest are Garmin's own estimates and stay in the app's database,
+/// the same split stress and Body Battery already follow.
+class FitMetricsSummary {
+  const FitMetricsSummary({
+    this.time,
+    this.vo2Max,
+    this.recoveryTimeMinutes,
+    this.trainingReadiness,
+    this.trainingLoadAcute,
+    this.trainingLoadChronic,
+  });
+
+  /// When the watch computed these. Null when no message carried a timestamp,
+  /// which makes the whole snapshot unplaceable and therefore unusable.
+  final DateTime? time;
+
+  /// mL/kg/min.
+  final double? vo2Max;
+
+  /// How long the watch thinks recovery still needs, in minutes.
+  final int? recoveryTimeMinutes;
+
+  /// 0..100.
+  final int? trainingReadiness;
+
+  final int? trainingLoadAcute;
+  final int? trainingLoadChronic;
+
+  bool get isEmpty =>
+      vo2Max == null &&
+      recoveryTimeMinutes == null &&
+      trainingReadiness == null &&
+      trainingLoadAcute == null &&
+      trainingLoadChronic == null;
+}
+
+/// The watch's own summary of a night (`daily_sleep`), computed on the wrist.
+///
+/// Entirely independent of [FitSleepSession]: that is built from stage
+/// transitions this app interprets, while these are the numbers the watch shows
+/// its wearer. Keeping both is what makes a disagreement between them visible.
+class FitDailySleep {
+  const FitDailySleep({
+    this.endTime,
+    this.score,
+    this.awakeDuration,
+    this.pressure,
+  });
+
+  /// When the night ended, per the watch.
+  final DateTime? endTime;
+
+  /// 0..100.
+  final int? score;
+
+  /// How long the watch counted the sleeper as awake during the night.
+  final Duration? awakeDuration;
+
+  /// Garmin's "sleep pressure" figure. Kept raw — its scale is undocumented and
+  /// guessing at units would be worse than passing the number through.
+  final int? pressure;
+
+  bool get isEmpty =>
+      score == null && awakeDuration == null && pressure == null;
+}
+
+/// Sleep Coach (`sleep_demand`): how much sleep the watch thinks is normally
+/// needed, and how much last night's strain called for.
+class FitSleepDemand {
+  const FitSleepDemand({this.time, this.normal, this.demand});
+
+  final DateTime? time;
+
+  /// The usual nightly need.
+  final Duration? normal;
+
+  /// What this particular night demanded — higher after a hard day.
+  final Duration? demand;
+
+  bool get isEmpty => normal == null && demand == null;
+}
+
+/// One Health Snapshot recording: the two-minute on-demand measurement the
+/// watch takes when the wearer asks for it.
+///
+/// Separate from the monitoring series even though three of the four metrics
+/// overlap: these are a deliberate spot measurement at rest, sampled far more
+/// densely, and averaging them into the all-day series would blur both.
+class FitHealthSnapshot {
+  const FitHealthSnapshot({
+    this.spo2 = const [],
+    this.respiration = const [],
+    this.stress = const [],
+    this.bodyEnergy = const [],
+  });
+
+  /// Blood oxygen `(time, percent)` — the only Pulse Ox this watch has been
+  /// seen to write anywhere.
+  final List<(DateTime, int)> spo2;
+  final List<(DateTime, double)> respiration;
+  final List<(DateTime, int)> stress;
+  final List<(DateTime, int)> bodyEnergy;
+
+  bool get isEmpty =>
+      spo2.isEmpty &&
+      respiration.isEmpty &&
+      stress.isEmpty &&
+      bodyEnergy.isEmpty;
+}
+
+/// A daytime nap the watch recorded, bounded by its own start/end fields rather
+/// than the `event`/74 pair that bounds a night.
+class FitNap {
+  const FitNap({required this.start, required this.end});
+
+  final DateTime start;
+  final DateTime end;
 }
 
 /// The wellness data a FIT file carried, from one decode pass. Each Garmin file
 /// is a single type, so at most one of these is populated (activities have none).
 class FitWellness {
-  const FitWellness({this.fileType, this.sleep, this.hrv, this.monitoring});
+  const FitWellness({
+    this.fileType,
+    this.sleep,
+    this.hrv,
+    this.monitoring,
+    this.metrics,
+    this.naps = const [],
+    this.dailySleep,
+    this.sleepDemand,
+    this.healthSnapshot,
+  });
 
   /// `file_id.type` — lets the caller tell a non-activity file with no mappable
   /// data (skip it) from an activity file (parse it as an exercise).
@@ -119,8 +289,28 @@ class FitWellness {
   final FitSleepSession? sleep;
   final FitHrvReading? hrv;
   final FitMonitoringSummary? monitoring;
+  final FitMetricsSummary? metrics;
 
-  bool get isEmpty => sleep == null && hrv == null && monitoring == null;
+  /// Daytime naps. A list, not a single value: one sleep file can hold several.
+  final List<FitNap> naps;
+
+  /// The watch's own nightly summary and Sleep Coach figures. These arrive in
+  /// the METRICS file on a vívoactive 5, not the sleep file.
+  final FitDailySleep? dailySleep;
+  final FitSleepDemand? sleepDemand;
+
+  /// From a Health Snapshot file (type 70).
+  final FitHealthSnapshot? healthSnapshot;
+
+  bool get isEmpty =>
+      sleep == null &&
+      hrv == null &&
+      monitoring == null &&
+      metrics == null &&
+      naps.isEmpty &&
+      dailySleep == null &&
+      sleepDemand == null &&
+      healthSnapshot == null;
 
   /// True for `activity` (4), `workout` (5) and `course` (6) — the types the
   /// exercise/route importer handles. Everything else is wellness data.
@@ -138,9 +328,11 @@ class FitRouteParser {
   static RouteFileImport parse(Uint8List fitBytes, {String? fileName}) {
     // DIAGNOSTIC: log every file that reaches the decoder before it can throw, so
     // a header/structure failure is still attributable to a filename in logcat.
-    debugPrint(
-      '[FIT] decode start file=${fileName ?? "?"} bytes=${fitBytes.length}',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        '[FIT] decode start file=${fileName ?? "?"} bytes=${fitBytes.length}',
+      );
+    }
     final result = _FitDecoder(fitBytes).decode();
     final samples = result.samples.resolve(
       isCycling: _fitSportIsCycling(result.summary.sport),
@@ -155,12 +347,14 @@ class FitRouteParser {
     // course/workout vs monitoring/sleep/etc.), whether a session start_time was
     // found, and how many timestamped route points survived — the three inputs the
     // reject-at-line-46 decision reads.
-    debugPrint(
-      '[FIT] decoded file=${fileName ?? "?"} '
-      'fileType=${result.summary.fileType} sport=${result.summary.sport} '
-      'subSport=${result.summary.subSport} start=${result.summary.startTime} '
-      'end=${result.summary.endTime} routePoints=${routePoints.length}',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        '[FIT] decoded file=${fileName ?? "?"} '
+        'fileType=${result.summary.fileType} sport=${result.summary.sport} '
+        'subSport=${result.summary.subSport} start=${result.summary.startTime} '
+        'end=${result.summary.endTime} routePoints=${routePoints.length}',
+      );
+    }
     switch (result.summary.fileType) {
       case _fitFileTypeCourse:
         // A course is a planned route: it has no recorded series to carry.
@@ -184,6 +378,11 @@ class FitRouteParser {
       sleep: result.sleep.toSession(),
       hrv: result.hrv.toReading(),
       monitoring: result.monitoring.toSummary(),
+      metrics: result.metrics.toSummary(),
+      naps: result.sleep.naps,
+      dailySleep: result.metrics.toDailySleep(),
+      sleepDemand: result.metrics.toSleepDemand(),
+      healthSnapshot: result.metrics.toHealthSnapshot(),
     );
   }
 
@@ -349,6 +548,7 @@ class _FitDecodeResult {
     this.sleep,
     this.hrv,
     this.monitoring,
+    this.metrics,
   );
 
   final List<ExerciseRoutePoint> points;
@@ -357,6 +557,7 @@ class _FitDecodeResult {
   final _FitSleepRaw sleep;
   final _FitHrvRaw hrv;
   final _FitMonitoringRaw monitoring;
+  final _FitMetricsRaw metrics;
 }
 
 /// The per-record series, before the sport is known.
@@ -412,6 +613,7 @@ class _FitFileDecodeResult {
     this.sleep,
     this.hrv,
     this.monitoring,
+    this.metrics,
     this.nextOffset,
   );
 
@@ -421,6 +623,7 @@ class _FitFileDecodeResult {
   final _FitSleepRaw sleep;
   final _FitHrvRaw hrv;
   final _FitMonitoringRaw monitoring;
+  final _FitMetricsRaw metrics;
   final int nextOffset;
 }
 
@@ -452,9 +655,13 @@ class _FitMonitoringRaw {
     this.bmrKcalPerDay,
     this.heartRate = const [],
     this.respiration = const [],
+    this.stress = const [],
+    this.bodyEnergy = const [],
     this.steps = const [],
     this.distance = const [],
     this.calories = const [],
+    this.moderateMinutes = const [],
+    this.vigorousMinutes = const [],
   });
 
   final DateTime? restingHrTime;
@@ -463,9 +670,13 @@ class _FitMonitoringRaw {
   final double? bmrKcalPerDay;
   final List<(DateTime, int)> heartRate;
   final List<(DateTime, double)> respiration;
+  final List<(DateTime, int)> stress;
+  final List<(DateTime, int)> bodyEnergy;
   final List<FitMonitoringPoint> steps;
   final List<FitMonitoringPoint> distance;
   final List<FitMonitoringPoint> calories;
+  final List<(DateTime, int)> moderateMinutes;
+  final List<(DateTime, int)> vigorousMinutes;
 
   _FitMonitoringRaw merge(_FitMonitoringRaw other) => _FitMonitoringRaw(
         restingHrTime: other.restingHrTime ?? restingHrTime,
@@ -474,9 +685,13 @@ class _FitMonitoringRaw {
         bmrKcalPerDay: other.bmrKcalPerDay ?? bmrKcalPerDay,
         heartRate: [...heartRate, ...other.heartRate],
         respiration: [...respiration, ...other.respiration],
+        stress: [...stress, ...other.stress],
+        bodyEnergy: [...bodyEnergy, ...other.bodyEnergy],
         steps: [...steps, ...other.steps],
         distance: [...distance, ...other.distance],
         calories: [...calories, ...other.calories],
+        moderateMinutes: [...moderateMinutes, ...other.moderateMinutes],
+        vigorousMinutes: [...vigorousMinutes, ...other.vigorousMinutes],
       );
 
   FitMonitoringSummary? toSummary() {
@@ -487,9 +702,13 @@ class _FitMonitoringRaw {
       bmrKcalPerDay: bmrKcalPerDay,
       heartRateSamples: heartRate,
       respiration: respiration,
+      stress: stress,
+      bodyEnergy: bodyEnergy,
       stepPoints: steps,
       distancePoints: distance,
       caloriePoints: calories,
+      moderateMinutes: moderateMinutes,
+      vigorousMinutes: vigorousMinutes,
     );
     return summary.isEmpty ? null : summary;
   }
@@ -499,7 +718,14 @@ class _FitMonitoringRaw {
 /// bounds and the `sleep_level` transitions. Turned into a [FitSleepSession]
 /// once the whole file (or chain of files) is decoded.
 class _FitSleepRaw {
-  const _FitSleepRaw({this.start, this.stop, this.levels = const []});
+  const _FitSleepRaw({
+    this.start,
+    this.stop,
+    this.levels = const [],
+    this.overallScore,
+    this.awakeningsCount,
+    this.naps = const [],
+  });
 
   final DateTime? start;
   final DateTime? stop;
@@ -507,10 +733,17 @@ class _FitSleepRaw {
   /// Each entry is `(transitionTime, sleepLevelEnumValue)`, in file order.
   final List<(DateTime, int)> levels;
 
+  final int? overallScore;
+  final int? awakeningsCount;
+  final List<FitNap> naps;
+
   _FitSleepRaw merge(_FitSleepRaw other) => _FitSleepRaw(
         start: start ?? other.start,
         stop: stop ?? other.stop,
         levels: [...levels, ...other.levels],
+        overallScore: overallScore ?? other.overallScore,
+        awakeningsCount: awakeningsCount ?? other.awakeningsCount,
+        naps: [...naps, ...other.naps],
       );
 
   FitSleepSession? toSession() {
@@ -536,11 +769,161 @@ class _FitSleepRaw {
       stages.add(FitSleepStage(start: stageStart, end: stageEnd, level: level));
     }
     if (stages.isEmpty) return null;
+    // DIAGNOSTIC: the raw transitions and what they add up to. A real vívoactive
+    // 5 reported 3 min awake where this produced 59, so the question is whether
+    // the file says something different from the watch's own screen or whether
+    // these stages are being derived wrongly — and only the raw series answers
+    // it. Still unresolved, which is why this is still here.
+    //
+    // Debug builds only, and the whole block rather than each line: this prints
+    // a person's night, transition by transition, and `debugPrint` is NOT
+    // stripped from a release build. Guarding the block also keeps the totals
+    // from being computed for a log nobody will read.
+    if (kDebugMode) {
+      final totals = <FitSleepLevel, int>{};
+      for (final stage in stages) {
+        totals[stage.level] = (totals[stage.level] ?? 0) +
+            stage.end.difference(stage.start).inMinutes;
+      }
+      final covered = totals.values.fold(0, (a, b) => a + b);
+      debugPrint('[FIT-SLEEP] session ${sessionStart.toIso8601String()} → '
+          '${sessionEnd.toIso8601String()} '
+          '(${sessionEnd.difference(sessionStart).inMinutes}m) '
+          'transitions=${sorted.length} stages=${stages.length} '
+          'covered=${covered}m');
+      debugPrint('[FIT-SLEEP] totals: '
+          '${totals.entries.map((e) => "${e.key.name}=${e.value}m").join(" ")}');
+      for (final (transition, rawLevel) in sorted) {
+        debugPrint('[FIT-SLEEP]   ${transition.toIso8601String()} raw=$rawLevel '
+            '(${_fitSleepLevelFromRaw(rawLevel)?.name ?? "UNKNOWN"})');
+      }
+      // The watch's own verdict on the same night, for comparison against what
+      // the stages above add up to.
+      debugPrint('[FIT-SLEEP] watch says: score=${overallScore ?? "-"} '
+          'awakenings=${awakeningsCount ?? "-"}');
+    }
     return FitSleepSession(
       start: sessionStart,
       end: sessionEnd,
       stages: stages,
+      overallScore: overallScore,
+      awakeningsCount: awakeningsCount,
     );
+  }
+}
+
+/// The metrics-file snapshots a decode pass collected. Last seen wins for each,
+/// independently: one file can carry a VO2 max message and a training-load
+/// message with nothing in common but the file they share.
+class _FitMetricsRaw {
+  const _FitMetricsRaw({
+    this.time,
+    this.vo2Max,
+    this.recoveryTimeMinutes,
+    this.trainingReadiness,
+    this.trainingLoadAcute,
+    this.trainingLoadChronic,
+    this.dailySleepEndTime,
+    this.dailySleepScore,
+    this.dailySleepAwakeSeconds,
+    this.dailySleepPressure,
+    this.sleepDemandTime,
+    this.sleepDemandNormalMinutes,
+    this.sleepDemandMinutes,
+    this.hsaSpo2 = const [],
+    this.hsaRespiration = const [],
+    this.hsaStress = const [],
+    this.hsaBodyEnergy = const [],
+  });
+
+  final DateTime? time;
+  final double? vo2Max;
+  final int? recoveryTimeMinutes;
+  final int? trainingReadiness;
+  final int? trainingLoadAcute;
+  final int? trainingLoadChronic;
+
+  // Sleep summaries that share the metrics file rather than the sleep file.
+  final DateTime? dailySleepEndTime;
+  final int? dailySleepScore;
+  final int? dailySleepAwakeSeconds;
+  final int? dailySleepPressure;
+  final DateTime? sleepDemandTime;
+  final int? sleepDemandNormalMinutes;
+  final int? sleepDemandMinutes;
+
+  // Health Snapshot samples. They ride here rather than in their own result
+  // slot because the decode result is positional and this is already the
+  // "everything that is not a session, a night or a monitoring series" carrier.
+  final List<(DateTime, int)> hsaSpo2;
+  final List<(DateTime, double)> hsaRespiration;
+  final List<(DateTime, int)> hsaStress;
+  final List<(DateTime, int)> hsaBodyEnergy;
+
+  _FitMetricsRaw merge(_FitMetricsRaw other) => _FitMetricsRaw(
+        time: other.time ?? time,
+        vo2Max: other.vo2Max ?? vo2Max,
+        recoveryTimeMinutes: other.recoveryTimeMinutes ?? recoveryTimeMinutes,
+        trainingReadiness: other.trainingReadiness ?? trainingReadiness,
+        trainingLoadAcute: other.trainingLoadAcute ?? trainingLoadAcute,
+        trainingLoadChronic: other.trainingLoadChronic ?? trainingLoadChronic,
+        dailySleepEndTime: other.dailySleepEndTime ?? dailySleepEndTime,
+        dailySleepScore: other.dailySleepScore ?? dailySleepScore,
+        dailySleepAwakeSeconds:
+            other.dailySleepAwakeSeconds ?? dailySleepAwakeSeconds,
+        dailySleepPressure: other.dailySleepPressure ?? dailySleepPressure,
+        sleepDemandTime: other.sleepDemandTime ?? sleepDemandTime,
+        sleepDemandNormalMinutes:
+            other.sleepDemandNormalMinutes ?? sleepDemandNormalMinutes,
+        sleepDemandMinutes: other.sleepDemandMinutes ?? sleepDemandMinutes,
+        hsaSpo2: [...hsaSpo2, ...other.hsaSpo2],
+        hsaRespiration: [...hsaRespiration, ...other.hsaRespiration],
+        hsaStress: [...hsaStress, ...other.hsaStress],
+        hsaBodyEnergy: [...hsaBodyEnergy, ...other.hsaBodyEnergy],
+      );
+
+  FitDailySleep? toDailySleep() {
+    final awake = dailySleepAwakeSeconds;
+    final summary = FitDailySleep(
+      endTime: dailySleepEndTime,
+      score: dailySleepScore,
+      awakeDuration: awake == null ? null : Duration(seconds: awake),
+      pressure: dailySleepPressure,
+    );
+    return summary.isEmpty ? null : summary;
+  }
+
+  FitHealthSnapshot? toHealthSnapshot() {
+    final snapshot = FitHealthSnapshot(
+      spo2: hsaSpo2,
+      respiration: hsaRespiration,
+      stress: hsaStress,
+      bodyEnergy: hsaBodyEnergy,
+    );
+    return snapshot.isEmpty ? null : snapshot;
+  }
+
+  FitSleepDemand? toSleepDemand() {
+    final normal = sleepDemandNormalMinutes;
+    final demand = sleepDemandMinutes;
+    final summary = FitSleepDemand(
+      time: sleepDemandTime,
+      normal: normal == null ? null : Duration(minutes: normal),
+      demand: demand == null ? null : Duration(minutes: demand),
+    );
+    return summary.isEmpty ? null : summary;
+  }
+
+  FitMetricsSummary? toSummary() {
+    final summary = FitMetricsSummary(
+      time: time,
+      vo2Max: vo2Max,
+      recoveryTimeMinutes: recoveryTimeMinutes,
+      trainingReadiness: trainingReadiness,
+      trainingLoadAcute: trainingLoadAcute,
+      trainingLoadChronic: trainingLoadChronic,
+    );
+    return summary.isEmpty ? null : summary;
   }
 }
 
@@ -647,6 +1030,7 @@ class _FitDecoder {
     var sleep = const _FitSleepRaw();
     var hrv = const _FitHrvRaw();
     var monitoring = const _FitMonitoringRaw();
+    var metrics = const _FitMetricsRaw();
     var offset = 0;
     var decodedAnyFile = false;
 
@@ -664,11 +1048,12 @@ class _FitDecoder {
       sleep = sleep.merge(result.sleep);
       hrv = hrv.merge(result.hrv);
       monitoring = monitoring.merge(result.monitoring);
+      metrics = metrics.merge(result.metrics);
       decodedAnyFile = true;
       offset = result.nextOffset;
     }
     return _FitDecodeResult(
-        points, summary, samples, sleep, hrv, monitoring);
+        points, summary, samples, sleep, hrv, monitoring, metrics);
   }
 }
 
@@ -698,6 +1083,32 @@ class _FitSingleFileDecoder {
   DateTime? _sleepStart;
   DateTime? _sleepStop;
   final List<(DateTime, int)> _sleepLevels = [];
+  int? _sleepOverallScore;
+  int? _sleepAwakenings;
+  final List<FitNap> _naps = [];
+
+  // Health Snapshot (file type 70): dense sample arrays, one recording.
+  final List<(DateTime, int)> _hsaSpo2 = [];
+  final List<(DateTime, double)> _hsaRespiration = [];
+  final List<(DateTime, int)> _hsaStress = [];
+  final List<(DateTime, int)> _hsaBodyEnergy = [];
+
+  // daily_sleep / sleep_demand, which share the metrics file.
+  DateTime? _dailySleepEndTime;
+  int? _dailySleepScore;
+  int? _dailySleepAwakeSeconds;
+  int? _dailySleepPressure;
+  DateTime? _sleepDemandTime;
+  int? _sleepDemandNormalMinutes;
+  int? _sleepDemandMinutes;
+
+  // Metrics (file type 44): four one-per-file snapshots, last seen wins.
+  DateTime? _metricsTime;
+  double? _vo2Max;
+  int? _recoveryTimeMinutes;
+  int? _trainingReadiness;
+  int? _trainingLoadAcute;
+  int? _trainingLoadChronic;
 
   // HRV (file type 68): the last `hrv_status_summary.last_night_average` seen.
   DateTime? _hrvTime;
@@ -717,9 +1128,13 @@ class _FitSingleFileDecoder {
   int? _monCurrentActivityType;
   final List<(DateTime, int)> _monHeartRate = [];
   final List<(DateTime, double)> _respiration = [];
+  final List<(DateTime, int)> _stress = [];
+  final List<(DateTime, int)> _bodyEnergy = [];
   final List<FitMonitoringPoint> _monSteps = [];
   final List<FitMonitoringPoint> _monDistance = [];
   final List<FitMonitoringPoint> _monCalories = [];
+  final List<(DateTime, int)> _monModerateMinutes = [];
+  final List<(DateTime, int)> _monVigorousMinutes = [];
 
   _FitFileDecodeResult decode() {
     final headerSize = fileBytes[startOffset] & 0xFF;
@@ -746,7 +1161,14 @@ class _FitSingleFileDecoder {
       _points,
       _fitSummary(),
       samples,
-      _FitSleepRaw(start: _sleepStart, stop: _sleepStop, levels: _sleepLevels),
+      _FitSleepRaw(
+        start: _sleepStart,
+        stop: _sleepStop,
+        levels: _sleepLevels,
+        overallScore: _sleepOverallScore,
+        awakeningsCount: _sleepAwakenings,
+        naps: _naps,
+      ),
       _FitHrvRaw(time: _hrvTime, rmssdMillis: _hrvRmssdMillis),
       _FitMonitoringRaw(
         restingHrTime: _restingHrTime,
@@ -755,9 +1177,32 @@ class _FitSingleFileDecoder {
         bmrKcalPerDay: _bmrKcalPerDay,
         heartRate: _monHeartRate,
         respiration: _respiration,
+        stress: _stress,
+        bodyEnergy: _bodyEnergy,
         steps: _monSteps,
         distance: _monDistance,
         calories: _monCalories,
+        moderateMinutes: _monModerateMinutes,
+        vigorousMinutes: _monVigorousMinutes,
+      ),
+      _FitMetricsRaw(
+        time: _metricsTime,
+        vo2Max: _vo2Max,
+        recoveryTimeMinutes: _recoveryTimeMinutes,
+        trainingReadiness: _trainingReadiness,
+        trainingLoadAcute: _trainingLoadAcute,
+        trainingLoadChronic: _trainingLoadChronic,
+        dailySleepEndTime: _dailySleepEndTime,
+        dailySleepScore: _dailySleepScore,
+        dailySleepAwakeSeconds: _dailySleepAwakeSeconds,
+        dailySleepPressure: _dailySleepPressure,
+        sleepDemandTime: _sleepDemandTime,
+        sleepDemandNormalMinutes: _sleepDemandNormalMinutes,
+        sleepDemandMinutes: _sleepDemandMinutes,
+        hsaSpo2: _hsaSpo2,
+        hsaRespiration: _hsaRespiration,
+        hsaStress: _hsaStress,
+        hsaBodyEnergy: _hsaBodyEnergy,
       ),
       next > fileBytes.length ? fileBytes.length : next,
     );
@@ -832,7 +1277,10 @@ class _FitSingleFileDecoder {
     }
     final values = <int, int>{};
     final strings = <int, String>{};
+    final arrays = <int, List<int>>{};
     final parsed = _fitParsedMessageNumbers.contains(definition.globalMessageNumber);
+    final packsArrays =
+        _fitArrayMessageNumbers.contains(definition.globalMessageNumber);
     for (final field in definition.fieldList) {
       final fieldBytes = reader.readBytes(field.size);
       if (field.number == _fitTimestampFieldNumber || parsed) {
@@ -840,6 +1288,10 @@ class _FitSingleFileDecoder {
         if (longValue != null) values[field.number] = longValue;
         final stringValue = _fitString(fieldBytes, field);
         if (stringValue != null) strings[field.number] = stringValue;
+        if (packsArrays) {
+          arrays[field.number] =
+              _fitLongArray(fieldBytes, field, definition.littleEndian);
+        }
       }
     }
     for (final size in definition.developerFields) {
@@ -939,6 +1391,133 @@ class _FitSingleFileDecoder {
       case _fitMonitoringMessageNumber:
         _readMonitoring(values, messageTimestamp);
         break;
+      case _fitStressLevelMessageNumber:
+        // The stress message carries BOTH the stress score and Body Battery —
+        // Body Battery has no message of its own. Its own timestamp field is
+        // preferred over the record header's, as Gadgetbridge does.
+        final stressTimeRaw =
+            values[_fitStressLevelTimeFieldNumber] ?? messageTimestamp;
+        if (stressTimeRaw != null) {
+          final at = _fitDateTimeInstant(stressTimeRaw);
+          final stress = values[_fitStressLevelValueFieldNumber];
+          // Negative is Garmin's "not measurable" (asleep, moving, poor
+          // contact), not a low score — dropped rather than clamped to 0.
+          if (stress != null && stress >= 0 && stress <= 100) {
+            _stress.add((at, stress));
+          }
+          final energy = values[_fitStressBodyEnergyFieldNumber];
+          if (energy != null && energy >= 0 && energy <= 100) {
+            _bodyEnergy.add((at, energy));
+          }
+        }
+        break;
+      case _fitSleepStatsMessageNumber:
+        final score = values[_fitOverallSleepScoreFieldNumber];
+        if (score != null && score != _fitUint8Invalid && score <= 100) {
+          _sleepOverallScore = score;
+        }
+        final awakenings = values[_fitAwakeningsCountFieldNumber];
+        if (awakenings != null && awakenings != _fitUint8Invalid) {
+          _sleepAwakenings = awakenings;
+        }
+        break;
+      case _fitNapMessageNumber:
+        final napStart = values[_fitNapStartFieldNumber];
+        final napEnd = values[_fitNapEndFieldNumber];
+        if (napStart != null && napEnd != null && napEnd > napStart) {
+          _naps.add(FitNap(
+            start: _fitDateTimeInstant(napStart),
+            end: _fitDateTimeInstant(napEnd),
+          ));
+        }
+        break;
+      case _fitHsaSpo2MessageNumber:
+      case _fitHsaStressMessageNumber:
+      case _fitHsaRespirationMessageNumber:
+      case _fitHsaBodyBatteryMessageNumber:
+        _readHsaSamples(
+          definition.globalMessageNumber,
+          values,
+          arrays,
+          messageTimestamp,
+        );
+        break;
+      case _fitDailySleepMessageNumber:
+        final dailyScore = values[_fitDailySleepScoreFieldNumber];
+        if (dailyScore != null &&
+            dailyScore != _fitUint8Invalid &&
+            dailyScore <= 100) {
+          _dailySleepScore = dailyScore;
+        }
+        final awake = values[_fitDailySleepAwakeDurationFieldNumber];
+        if (awake != null && awake != _fitUint16Invalid) {
+          _dailySleepAwakeSeconds = awake;
+        }
+        final endRaw = values[_fitDailySleepEndTimeFieldNumber];
+        if (endRaw != null) _dailySleepEndTime = _fitDateTimeInstant(endRaw);
+        final pressure = values[_fitDailySleepPressureFieldNumber];
+        if (pressure != null && pressure != _fitSint16Invalid) {
+          _dailySleepPressure = pressure;
+        }
+        break;
+      case _fitSleepDemandMessageNumber:
+        final normal = values[_fitSleepDemandNormalFieldNumber];
+        if (normal != null && normal != _fitUint16Invalid) {
+          _sleepDemandNormalMinutes = normal;
+        }
+        final demand = values[_fitSleepDemandDemandFieldNumber];
+        if (demand != null && demand != _fitUint16Invalid) {
+          _sleepDemandMinutes = demand;
+        }
+        if (messageTimestamp != null) {
+          _sleepDemandTime = _fitDateTimeInstant(messageTimestamp);
+        }
+        break;
+      case _fitMaxMetDataMessageNumber:
+        final vo2 = values[_fitVo2MaxFieldNumber];
+        if (vo2 != null && vo2 != _fitUint16Invalid && vo2 > 0) {
+          _vo2Max = vo2 / _fitVo2MaxScale;
+          if (messageTimestamp != null) {
+            _metricsTime = _fitDateTimeInstant(messageTimestamp);
+          }
+        }
+        break;
+      case _fitTrainingReadinessMessageNumber:
+        final readiness = values[_fitTrainingReadinessFieldNumber];
+        if (readiness != null &&
+            readiness != _fitUint8Invalid &&
+            readiness <= 100) {
+          _trainingReadiness = readiness;
+          if (messageTimestamp != null) {
+            _metricsTime ??= _fitDateTimeInstant(messageTimestamp);
+          }
+        }
+        break;
+      case _fitTrainingLoadMessageNumber:
+        final acute = values[_fitTrainingLoadAcuteFieldNumber];
+        if (acute != null && acute != _fitUint16Invalid) {
+          _trainingLoadAcute = acute;
+        }
+        final chronic = values[_fitTrainingLoadChronicFieldNumber];
+        if (chronic != null && chronic != _fitUint16Invalid) {
+          _trainingLoadChronic = chronic;
+        }
+        if (messageTimestamp != null) {
+          _metricsTime ??= _fitDateTimeInstant(messageTimestamp);
+        }
+        break;
+      case _fitPhysiologicalMetricsMessageNumber:
+        // Only recovery_time is taken. This message also carries VO2 max under
+        // a different scale, but max_met_data above is the one the watch keeps
+        // current, and reading both would let a stale copy win at random.
+        final recovery = values[_fitRecoveryTimeFieldNumber];
+        if (recovery != null && recovery != _fitUint16Invalid) {
+          _recoveryTimeMinutes = recovery;
+          if (messageTimestamp != null) {
+            _metricsTime ??= _fitDateTimeInstant(messageTimestamp);
+          }
+        }
+        break;
       case _fitRespirationRateMessageNumber:
         final rateRaw = values[_fitRespirationRateFieldNumber];
         if (rateRaw != null && messageTimestamp != null) {
@@ -949,6 +1528,57 @@ class _FitSingleFileDecoder {
           }
         }
         break;
+    }
+  }
+
+  /// One Health Snapshot message: a whole recording packed into one record.
+  ///
+  /// The samples are laid out FORWARD from the record's timestamp, `interval`
+  /// seconds apart. That is an assumption — nothing documents it and
+  /// Gadgetbridge never parses these — so the shape is logged on every record:
+  /// compare the printed span against the Health Snapshot on the watch, and if
+  /// the window is shifted by its own length, the timestamp marks the END and
+  /// this needs inverting.
+  void _readHsaSamples(
+    int messageNumber,
+    Map<int, int> values,
+    Map<int, List<int>> arrays,
+    int? messageTimestamp,
+  ) {
+    if (messageTimestamp == null) return;
+    final samples = arrays[_fitHsaValueFieldNumber] ?? const [];
+    if (samples.isEmpty) return;
+    // A zero or missing interval would stack every sample on one instant.
+    final interval = values[_fitHsaIntervalFieldNumber] ?? 0;
+    if (interval <= 0) {
+      if (kDebugMode) {
+        debugPrint('[FIT-HSA] message $messageNumber: ${samples.length} samples '
+            'with no usable interval ($interval) — dropped');
+      }
+      return;
+    }
+    final start = _fitDateTimeInstant(messageTimestamp);
+    for (var i = 0; i < samples.length; i++) {
+      final at = start.add(Duration(seconds: interval * i));
+      final raw = samples[i];
+      switch (messageNumber) {
+        case _fitHsaSpo2MessageNumber:
+          if (raw > 0 && raw <= 100) _hsaSpo2.add((at, raw));
+        case _fitHsaStressMessageNumber:
+          // Negative is Garmin's "not measurable", as in stress_level (227).
+          if (raw >= 0 && raw <= 100) _hsaStress.add((at, raw));
+        case _fitHsaRespirationMessageNumber:
+          final rate = raw / _fitHsaRespirationScale;
+          if (rate > 0 && rate < 100) _hsaRespiration.add((at, rate));
+        case _fitHsaBodyBatteryMessageNumber:
+          if (raw >= 0 && raw <= 100) _hsaBodyEnergy.add((at, raw));
+      }
+    }
+    if (kDebugMode) {
+      debugPrint('[FIT-HSA] message $messageNumber: ${samples.length} samples '
+          'every ${interval}s from ${start.toIso8601String()} '
+          'spanning ${interval * (samples.length - 1)}s '
+          '(first=${samples.first} last=${samples.last})');
     }
   }
 
@@ -996,6 +1626,16 @@ class _FitSingleFileDecoder {
     if (calories != null) {
       _monCalories.add(FitMonitoringPoint(
           time: time, activityType: activityType, value: calories));
+    }
+    final moderate = values[_fitMonitoringModerateMinutesFieldNumber] ??
+        values[_fitMonitoringModerateMinutesAltFieldNumber];
+    if (moderate != null && moderate != _fitUint16Invalid) {
+      _monModerateMinutes.add((time, moderate));
+    }
+    final vigorous = values[_fitMonitoringVigorousMinutesFieldNumber] ??
+        values[_fitMonitoringVigorousMinutesAltFieldNumber];
+    if (vigorous != null && vigorous != _fitUint16Invalid) {
+      _monVigorousMinutes.add((time, vigorous));
     }
   }
 
@@ -1281,6 +1921,32 @@ int _readInt32(Uint8List bytes, int index, bool littleEndian) {
   return raw >= 0x80000000 ? raw - 0x100000000 : raw;
 }
 
+/// Every element of an array field, invalid sentinels dropped.
+///
+/// FIT expresses an array as a field whose declared size is a multiple of its
+/// base type's — the Health Snapshot messages pack a whole two-minute recording
+/// into one record this way. [_fitLong] reads only the first element, which is
+/// right for every scalar field and silently loses the rest of an array.
+List<int> _fitLongArray(
+  Uint8List bytes,
+  _FitFieldDefinition field,
+  bool littleEndian,
+) {
+  final baseType = field.baseType & _fitBaseTypeMask;
+  final size = _fitBaseTypeSize(baseType);
+  if (size <= 0) return const [];
+  final out = <int>[];
+  for (var offset = 0; offset + size <= bytes.length; offset += size) {
+    final value = _fitLong(
+      Uint8List.sublistView(bytes, offset, offset + size),
+      field,
+      littleEndian,
+    );
+    if (value != null) out.add(value);
+  }
+  return out;
+}
+
 int? _fitLong(Uint8List bytes, _FitFieldDefinition field, bool littleEndian) {
   final baseType = field.baseType & _fitBaseTypeMask;
   final baseTypeSize = _fitBaseTypeSize(baseType);
@@ -1526,6 +2192,14 @@ const int _fitUint8Invalid = 0xFF;
 // `timestamp` (253). See docs/reference/garmin-fit-files.md.
 const int _fitMonitoringMessageNumber = 55;
 const int _fitRespirationRateMessageNumber = 297;
+
+// stress_level (227) carries the stress score AND Body Battery; the latter has
+// no message of its own. Field numbers from Gadgetbridge's
+// AbstractFitStressLevel (AGPLv3).
+const int _fitStressLevelMessageNumber = 227;
+const int _fitStressLevelValueFieldNumber = 0; // sint8, 0..100 (negative = n/a)
+const int _fitStressLevelTimeFieldNumber = 1; // uint32, Garmin epoch seconds
+const int _fitStressBodyEnergyFieldNumber = 3; // uint8, 0..100
 const int _fitMonitoringDistanceFieldNumber = 2; // uint32, ÷100 m, cumulative
 const int _fitMonitoringStepsFieldNumber = 3; // uint32, raw == steps (walk/run)
 const int _fitMonitoringActivityTypeFieldNumber = 5;
@@ -1537,6 +2211,77 @@ const int _fitMonitoringActivityTypeMask = 0x1F;
 const int _fitMonitoringTimestamp16FieldNumber = 26;
 const int _fitMonitoringHeartRateFieldNumber = 27; // uint8, bpm
 const int _fitRespirationRateFieldNumber = 0; // sint16, ÷100 breaths/min
+// Intensity minutes. Garmin writes the running daily totals into 37/38 on this
+// watch; 33/34 are the same quantity under the names the FIT profile documents.
+// Both are read, later-wins, because which pair a device populates varies.
+const int _fitMonitoringModerateMinutesFieldNumber = 37; // uint16, minutes
+const int _fitMonitoringVigorousMinutesFieldNumber = 38; // uint16, minutes
+const int _fitMonitoringModerateMinutesAltFieldNumber = 33;
+const int _fitMonitoringVigorousMinutesAltFieldNumber = 34;
+
+// Metrics (Garmin file type 44). Four unrelated messages share the file; each
+// is a one-per-file snapshot rather than a series, so the last seen wins.
+const int _fitMaxMetDataMessageNumber = 229;
+const int _fitVo2MaxFieldNumber = 2; // uint16, scale 10, mL/kg/min
+const double _fitVo2MaxScale = 10.0;
+const int _fitTrainingReadinessMessageNumber = 369;
+const int _fitTrainingReadinessFieldNumber = 0; // uint8, 0..100
+const int _fitTrainingLoadMessageNumber = 378;
+const int _fitTrainingLoadAcuteFieldNumber = 3; // uint16
+const int _fitTrainingLoadChronicFieldNumber = 4; // uint16
+const int _fitPhysiologicalMetricsMessageNumber = 140;
+const int _fitRecoveryTimeFieldNumber = 9; // uint16, minutes
+
+// daily_sleep (384) and sleep_demand (410) — what a vívoactive 5 actually puts
+// in its metrics file, in place of the training-load messages other Garmins
+// use. This is the watch's own verdict on a night, computed on the wrist.
+const int _fitDailySleepMessageNumber = 384;
+const int _fitDailySleepScoreFieldNumber = 2; // uint8, 0..100
+// awake_duration is in SECONDS, not the minutes Garmin's FIT profile claims: a
+// real night read 1020 here inside an 8.7-hour window, and 1020 minutes is 17
+// hours. Reading it as minutes would report more time awake than time in bed.
+const int _fitDailySleepAwakeDurationFieldNumber = 3; // uint16, seconds
+const int _fitDailySleepEndTimeFieldNumber = 11; // uint32, Garmin epoch
+const int _fitDailySleepPressureFieldNumber = 22; // sint16
+const int _fitSleepDemandMessageNumber = 410;
+const int _fitSleepDemandNormalFieldNumber = 0; // uint16, minutes
+const int _fitSleepDemandDemandFieldNumber = 1; // uint16, minutes
+const int _fitSint16Invalid = 0x7FFF;
+
+// Health Snapshot (Garmin file type 70). Each message packs a whole recording
+// into ONE record: field 0 is the seconds between samples and field 1 (plus 2/3
+// for Body Battery) is an ARRAY of readings. Gadgetbridge pulls this file and
+// never parses it, so there is no port to follow and nothing documents how the
+// samples line up against the record timestamp — see the diagnostic in
+// [_readHsaSamples].
+const int _fitHsaSpo2MessageNumber = 305;
+const int _fitHsaStressMessageNumber = 306;
+const int _fitHsaRespirationMessageNumber = 307;
+const int _fitHsaBodyBatteryMessageNumber = 314;
+const int _fitHsaIntervalFieldNumber = 0; // uint16, seconds between samples
+const int _fitHsaValueFieldNumber = 1; // array of readings
+const double _fitHsaRespirationScale = 100.0;
+
+/// Messages whose fields must be decoded as arrays, not scalars. Kept to the
+/// few that need it so every other message keeps the cheaper scalar path.
+const Set<int> _fitArrayMessageNumbers = {
+  _fitHsaSpo2MessageNumber,
+  _fitHsaStressMessageNumber,
+  _fitHsaRespirationMessageNumber,
+  _fitHsaBodyBatteryMessageNumber,
+};
+
+// Sleep extras, in the same type-49 file the stage transitions come from.
+// sleep_stats (346) is the watch's OWN assessment of the night — the scores it
+// shows on the wrist — which is independent of the stages we derive ourselves.
+const int _fitSleepStatsMessageNumber = 346;
+const int _fitOverallSleepScoreFieldNumber = 6; // uint8, 0..100
+const int _fitAwakeningsCountFieldNumber = 11; // uint8
+// nap (412) bounds a daytime sleep with its own start/end, separate from the
+// night's event/74 pair.
+const int _fitNapMessageNumber = 412;
+const int _fitNapStartFieldNumber = 0; // uint32, Garmin epoch seconds
+const int _fitNapEndFieldNumber = 2; // uint32, Garmin epoch seconds
 const double _fitRespirationScale = 100.0;
 const int _fitCourseMessageNumber = 31;
 const int _fitCourseSportFieldNumber = 4;
@@ -1628,4 +2373,17 @@ const Set<int> _fitParsedMessageNumbers = {
   _fitMonitoringInfoMessageNumber,
   _fitMonitoringMessageNumber,
   _fitRespirationRateMessageNumber,
+  _fitStressLevelMessageNumber,
+  _fitMaxMetDataMessageNumber,
+  _fitTrainingReadinessMessageNumber,
+  _fitTrainingLoadMessageNumber,
+  _fitPhysiologicalMetricsMessageNumber,
+  _fitSleepStatsMessageNumber,
+  _fitNapMessageNumber,
+  _fitDailySleepMessageNumber,
+  _fitSleepDemandMessageNumber,
+  _fitHsaSpo2MessageNumber,
+  _fitHsaStressMessageNumber,
+  _fitHsaRespirationMessageNumber,
+  _fitHsaBodyBatteryMessageNumber,
 };

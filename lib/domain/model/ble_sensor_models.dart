@@ -1,6 +1,33 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'garmin_device_names.dart';
+
 part 'ble_sensor_models.freezed.dart';
+
+/// What a registered Bluetooth device IS, which decides how the app talks to it.
+///
+/// A [sensor] streams live values over standard GATT services while a recording
+/// runs (heart-rate strap, power meter) and owns [BleSensorCapability]s. A
+/// [watch] streams nothing: it holds recorded FIT files that are pulled over
+/// GFDI on demand, so it carries no capabilities and must never take part in
+/// capability assignment.
+enum BleDeviceKind {
+  sensor('SENSOR'),
+  watch('WATCH');
+
+  const BleDeviceKind(this.storageName);
+
+  /// Persisted form, so renaming the Dart identifier can't orphan stored
+  /// devices. Same convention as [BleSensorCapability.storageName].
+  final String storageName;
+
+  static BleDeviceKind? fromStorage(String value) {
+    for (final entry in values) {
+      if (entry.storageName == value) return entry;
+    }
+    return null;
+  }
+}
 
 enum BleSensorCapability {
   heartRate('HEART_RATE'),
@@ -44,7 +71,17 @@ abstract class BleSensorDevice with _$BleSensorDevice {
     int? batteryPercent,
     DateTime? batteryUpdatedAt,
     required DateTime addedAt,
+    /// Defaulted rather than required so every existing call site — and every
+    /// device already in storage, written before this field existed — keeps
+    /// meaning what it meant.
+    @Default(BleDeviceKind.sensor) BleDeviceKind kind,
+
+    /// When this device's recorded files were last pulled. Null for a watch
+    /// that has never synced, and always null for a [BleDeviceKind.sensor].
+    DateTime? lastSyncedAt,
   }) = _BleSensorDevice;
+
+  bool get isWatch => kind == BleDeviceKind.watch;
 
   BleSensorDevice normalized() {
     final trimmedDisplayName = displayName.trim();
@@ -269,10 +306,25 @@ List<T> _takeLast<T>(List<T> items, int count) {
 
 @freezed
 abstract class BleDiscoveredDevice with _$BleDiscoveredDevice {
+  const BleDiscoveredDevice._();
+
   const factory BleDiscoveredDevice({
     required String address,
     required String? name,
     required int? rssi,
     required Set<BleSensorCapability> suggestedCapabilities,
+
+    /// The advertisement carried Garmin's member service UUID (`0xFE1F`). This
+    /// is the authoritative signal — [isGarminSyncDeviceName] is the fallback
+    /// for a watch that advertises a name but not the service.
+    ///
+    /// Deliberately NOT the GFDI UUID: that is a GATT service, invisible until
+    /// the device is connected, so no advertisement ever carries it.
+    @Default(false) bool advertisesGarminService,
   }) = _BleDiscoveredDevice;
+
+  /// True when this is a Garmin device to onboard as a [BleDeviceKind.watch]
+  /// (pull FIT files) rather than as a live-streaming sensor.
+  bool get isGarminSyncDevice =>
+      advertisesGarminService || isGarminSyncDeviceName(name);
 }

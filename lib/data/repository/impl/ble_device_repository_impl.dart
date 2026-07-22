@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../source/sensors/garmin/garmin_capabilities.dart';
 import '../contract/ble_device_repository.dart';
 
 /// Port of the Kotlin `BleDeviceRepository` — a SharedPreferences-backed sensor
@@ -41,6 +42,10 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
   Map<BleSensorCapability, BleSensorDevice> resolveCapabilityAssignments() {
     final assignments = <BleSensorCapability, BleSensorDevice>{};
     for (final device in enabledDevices) {
+      // A watch holds no capabilities anyway, but the guard is explicit: it is
+      // what stops a stored watch from ever being connected to and polled by
+      // the recording coordinator.
+      if (device.kind != BleDeviceKind.sensor) continue;
       for (final capability in device.capabilities) {
         assignments.putIfAbsent(capability, () => device);
       }
@@ -69,6 +74,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
     required String? bluetoothName,
     required Set<BleSensorCapability> capabilities,
     int? wheelCircumferenceMm,
+    BleDeviceKind kind = BleDeviceKind.sensor,
   }) {
     final normalizedAddress = address.toUpperCase();
     final existing = _devices.firstWhereOrNull(
@@ -81,6 +87,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
         capabilities: capabilities,
         enabled: true,
         wheelCircumferenceMm: wheelCircumferenceMm ?? existing.wheelCircumferenceMm,
+        kind: kind,
       );
     }
     final device = BleSensorDevice(
@@ -92,6 +99,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
       enabled: true,
       wheelCircumferenceMm: wheelCircumferenceMm,
       addedAt: DateTime.now().toUtc(),
+      kind: kind,
     ).normalized();
     _persist([..._devices, device]);
     return device;
@@ -104,6 +112,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
     Set<BleSensorCapability>? capabilities,
     bool? enabled,
     int? wheelCircumferenceMm,
+    BleDeviceKind? kind,
   }) {
     final current = _devices.firstWhereOrNull((d) => d.id == deviceId);
     if (current == null) {
@@ -116,6 +125,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
           enabled: enabled ?? current.enabled,
           wheelCircumferenceMm:
               wheelCircumferenceMm ?? current.wheelCircumferenceMm,
+          kind: kind ?? current.kind,
         )
         .normalized();
     _persist([
@@ -126,6 +136,13 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
 
   @override
   void removeDevice(String deviceId) {
+    // Forget the sync history too: a watch that is removed and re-added should
+    // start clean, not silently skip files because a previous pairing under a
+    // different id had already seen them.
+    clearSyncedFileKeys(deviceId);
+    // And what it said it could do: a re-pairing must re-learn that from a
+    // handshake rather than trust a record of a device that is no longer here.
+    _prefs.remove(_capabilitiesPrefsKey(deviceId));
     _persist(_devices.where((d) => d.id != deviceId).toList());
   }
 
@@ -151,6 +168,73 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
           )
         else
           d,
+    ]);
+  }
+
+  /// Cap on remembered file keys per watch. A few years of daily monitor, sleep
+  /// and HRV files plus activities lands well inside this; the cap only exists
+  /// so the list cannot grow without bound in SharedPreferences.
+  static const int _maxSyncedFileKeys = 4000;
+
+  String _syncedKeysPrefsKey(String deviceId) =>
+      'ble_synced_files_$deviceId';
+
+  String _capabilitiesPrefsKey(String deviceId) =>
+      'garmin_capabilities_$deviceId';
+
+  @override
+  Set<GarminCapability> capabilities(String deviceId) {
+    final raw = _prefs.getStringList(_capabilitiesPrefsKey(deviceId));
+    if (raw == null) return const {};
+    // Matched by WIRE NAME, not index: the enum's order is the bitmap's order,
+    // so storing indexes would rot the moment a flag is named.
+    final byName = {for (final c in GarminCapability.values) c.wireName: c};
+    return {for (final name in raw) if (byName[name] != null) byName[name]!};
+  }
+
+  @override
+  void recordCapabilities(String deviceId, Set<GarminCapability> capabilities) {
+    if (capabilities.isEmpty) return;
+    _prefs.setStringList(
+      _capabilitiesPrefsKey(deviceId),
+      [for (final c in capabilities) c.wireName],
+    );
+  }
+
+  @override
+  Set<String> syncedFileKeys(String deviceId) {
+    final raw = _prefs.getStringList(_syncedKeysPrefsKey(deviceId));
+    return raw == null ? <String>{} : raw.toSet();
+  }
+
+  @override
+  void recordSyncedFileKeys(String deviceId, Iterable<String> keys) {
+    if (keys.isEmpty) return;
+    final key = _syncedKeysPrefsKey(deviceId);
+    // Order matters for the cap: a List keeps insertion order, so trimming from
+    // the front drops the OLDEST keys, which are the least likely to be
+    // re-offered by the watch.
+    final existing = _prefs.getStringList(key) ?? const <String>[];
+    final merged = <String>[
+      ...existing,
+      ...keys.where((k) => !existing.contains(k)),
+    ];
+    final trimmed = merged.length > _maxSyncedFileKeys
+        ? merged.sublist(merged.length - _maxSyncedFileKeys)
+        : merged;
+    _prefs.setStringList(key, trimmed);
+  }
+
+  @override
+  void clearSyncedFileKeys(String deviceId) =>
+      _prefs.remove(_syncedKeysPrefsKey(deviceId));
+
+  @override
+  void markSynced(String deviceId, DateTime at) {
+    if (!_devices.any((d) => d.id == deviceId)) return;
+    _persist([
+      for (final d in _devices)
+        if (d.id == deviceId) d.copyWith(lastSyncedAt: at.toUtc()) else d,
     ]);
   }
 
@@ -192,6 +276,8 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
         'batteryPercent': device.batteryPercent,
         'batteryUpdatedAt': device.batteryUpdatedAt?.millisecondsSinceEpoch,
         'addedAt': device.addedAt.millisecondsSinceEpoch,
+        'kind': device.kind.storageName,
+        'lastSyncedAt': device.lastSyncedAt?.millisecondsSinceEpoch,
       };
 
   BleSensorDevice? _fromJson(Map<String, dynamic> json) {
@@ -205,6 +291,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
         ?BleSensorCapability.fromStorage(raw.toString()),
     };
     final batteryUpdatedAt = (json['batteryUpdatedAt'] as num?)?.toInt();
+    final lastSyncedAt = (json['lastSyncedAt'] as num?)?.toInt();
     return BleSensorDevice(
       id: id,
       displayName: displayName,
@@ -220,6 +307,13 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
       addedAt: addedAtMillis == null
           ? DateTime.now().toUtc()
           : DateTime.fromMillisecondsSinceEpoch(addedAtMillis, isUtc: true),
+      // Absent for every device stored before watches existed — those are all
+      // sensors, which is exactly what the fallback says.
+      kind: BleDeviceKind.fromStorage(json['kind']?.toString() ?? '') ??
+          BleDeviceKind.sensor,
+      lastSyncedAt: lastSyncedAt == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(lastSyncedAt, isUtc: true),
     ).normalized();
   }
 

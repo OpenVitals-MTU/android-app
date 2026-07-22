@@ -39,17 +39,25 @@ abstract class DashboardDisplay with _$DashboardDisplay {
     /// The hero rings the top row actually shows.
     required List<RingCardData> visibleRings,
 
-    /// The effective hidden set: the saved one, plus (while editing) every
-    /// unsupported tile the user has never deliberately placed.
-    required Set<String> hiddenTitles,
+    /// The effective hidden set, by id: the saved one, plus (while editing)
+    /// every unsupported tile the user has never deliberately placed.
+    required Set<String> hiddenIds,
 
-    /// The titles materialised only because the device does not support the
-    /// metric (see [DashboardSummary.unsupportedTitles]). Empty outside edit
-    /// mode.
-    required Set<String> unsupportedTitles,
+    /// The ids materialised only because the device does not support the metric
+    /// (see [DashboardSummary.unsupportedIds]). Empty outside edit mode.
+    required Set<String> unsupportedIds,
 
-    /// The add-tray: the removed rings and tiles, in layout order.
-    required List<String> trayTitles,
+    /// The add-tray: the removed rings and tiles, in layout order. Carries both
+    /// halves because the tray SHOWS a title but must ADD by id.
+    required List<({String id, String title})> trayEntries,
+
+    /// The saved layout after legacy title keys were translated to ids. The
+    /// caller persists these when they differ from what it holds, so a layout
+    /// saved before ids existed converges instead of being re-translated on
+    /// every rebuild.
+    required List<String> migratedTileOrder,
+    required List<String> migratedRingOrder,
+    required Set<String> migratedHiddenTiles,
 
     /// Today's activities, with the single-workout fallback already folded in.
     required List<ExerciseData> activities,
@@ -67,6 +75,7 @@ DashboardDisplay buildDashboardDisplay(
   List<String> tileOrder = const <String>[],
   List<String> ringOrder = const <String>[],
   Set<String> hiddenTiles = const <String>{},
+  List<StatTileData> extraTiles = const <StatTileData>[],
 }) {
   // Edit mode materialises a tile for every metric, device-supported or not, so
   // one the user removed can always be added back (Kotlin expands the spec list
@@ -82,16 +91,28 @@ DashboardDisplay buildDashboardDisplay(
   // allow-list, so a freshly-materialised unsupported tile would default to
   // *visible* in the carousel. Treat one the user has never placed as hidden:
   // it belongs in the add-tray until they choose it.
+  // Legacy layouts stored TITLES; ids are what everything keys on now. The
+  // translation happens here, on read, so a saved order survives the change —
+  // see [migrateDashboardLayoutKeys].
+  final byTitle = <String, String>{
+    for (final r in <RingCardData>[summary.steps, summary.weeklyCardio])
+      r.title: r.id,
+    for (final t in summary.tiles) t.title: t.id,
+  };
+  tileOrder = migrateDashboardLayoutKeys(tileOrder, byTitle);
+  ringOrder = migrateDashboardLayoutKeys(ringOrder, byTitle);
+  hiddenTiles = migrateDashboardLayoutKeys(hiddenTiles.toList(), byTitle).toSet();
+
   final hidden = <String>{
     ...hiddenTiles,
     if (editing)
-      for (final title in summary.unsupportedTitles)
-        if (!tileOrder.contains(title)) title,
+      for (final id in summary.unsupportedIds)
+        if (!tileOrder.contains(id)) id,
   };
   // All data-present tiles in the user's saved order (hidden included, for the
   // edit grid); the carousel shows only the non-hidden subset.
   final orderedTiles = applyDashboardTileLayout(
-    summary.tiles,
+    [...summary.tiles, ...extraTiles],
     order: tileOrder,
     includeHidden: true,
   );
@@ -99,7 +120,7 @@ DashboardDisplay buildDashboardDisplay(
   // stored separately (they render in their own top row).
   final orderedRings = applyDashboardLayout(
     <RingCardData>[summary.steps, summary.weeklyCardio],
-    (r) => r.title,
+    (r) => r.id,
     order: ringOrder,
     includeHidden: true,
   );
@@ -107,20 +128,23 @@ DashboardDisplay buildDashboardDisplay(
     orderedTiles: orderedTiles,
     visibleTiles: [
       for (final t in orderedTiles)
-        if (!hidden.contains(t.title)) t,
+        if (!hidden.contains(t.id)) t,
     ],
     orderedRings: orderedRings,
     visibleRings: [
       for (final r in orderedRings)
-        if (!hidden.contains(r.title)) r,
+        if (!hidden.contains(r.id)) r,
     ],
-    hiddenTitles: hidden,
-    unsupportedTitles: summary.unsupportedTitles,
-    trayTitles: [
+    migratedTileOrder: tileOrder,
+    migratedRingOrder: ringOrder,
+    migratedHiddenTiles: hiddenTiles,
+    hiddenIds: hidden,
+    unsupportedIds: summary.unsupportedIds,
+    trayEntries: [
       for (final r in orderedRings)
-        if (hidden.contains(r.title)) r.title,
+        if (hidden.contains(r.id)) (id: r.id, title: r.title),
       for (final t in orderedTiles)
-        if (hidden.contains(t.title)) t.title,
+        if (hidden.contains(t.id)) (id: t.id, title: t.title),
     ],
     activities: data.workouts.isNotEmpty
         ? data.workouts
@@ -134,6 +158,7 @@ DashboardDisplay buildDashboardDisplay(
 /// Port of the Kotlin `DashboardSummaryCard` inputs.
 class RingCardData {
   const RingCardData({
+    required this.id,
     required this.title,
     required this.value,
     required this.accent,
@@ -141,6 +166,11 @@ class RingCardData {
     required this.location,
     this.subtitle,
   });
+
+  /// Stable across renames, wording changes and translation — the key the
+  /// saved order and hidden set are stored under. [title] is display text and
+  /// must never be used as an identity.
+  final String id;
 
   final String title;
   final String value;
@@ -154,6 +184,7 @@ class RingCardData {
 /// Kotlin `MetricStatCard` / `DashboardPresentationMapper` widget models.
 class StatTileData {
   const StatTileData({
+    required this.id,
     required this.title,
     required this.value,
     required this.icon,
@@ -165,6 +196,10 @@ class StatTileData {
     this.showTitle = true,
     this.progress,
   });
+
+  /// Stable across renames, wording changes and translation — see
+  /// [RingCardData.id].
+  final String id;
 
   final String title;
   final String value;
@@ -185,17 +220,17 @@ class DashboardSummary {
     required this.steps,
     required this.weeklyCardio,
     required this.tiles,
-    this.unsupportedTitles = const <String>{},
+    this.unsupportedIds = const <String>{},
   });
 
   final RingCardData steps;
   final RingCardData weeklyCardio;
   final List<StatTileData> tiles;
 
-  /// The titles of tiles that were only materialised because
+  /// The ids of tiles that were only materialised because
   /// `buildDashboardSummary(includeUnsupported: true)` was asked for — i.e. the
   /// device does not support the metric. Always empty otherwise.
-  final Set<String> unsupportedTitles;
+  final Set<String> unsupportedIds;
 }
 
 /// The user's daily goals, driving every ring/tile progress fraction and the
@@ -310,7 +345,7 @@ int? _positiveInt(int? value) => (value != null && value > 0) ? value : null;
 /// or not — the Kotlin `DashboardContent` edit-mode expansion to
 /// `DashboardWidgetId.entries`. Without it a metric the provider cannot serve
 /// gets no tile at all, so a user who removes one can never add it back. The
-/// titles so materialised are reported in [DashboardSummary.unsupportedTitles];
+/// ids so materialised are reported in [DashboardSummary.unsupportedIds];
 /// the caller is expected to keep them out of the live carousel.
 DashboardSummary buildDashboardSummary(
   DashboardData data,
@@ -319,8 +354,9 @@ DashboardSummary buildDashboardSummary(
   required DashboardGoals goals,
   bool includeUnsupported = false,
 }) {
-  final unsupportedTitles = <String>{};
+  final unsupportedIds = <String>{};
   final steps = RingCardData(
+    id: 'steps',
     title: 'Steps',
     value: f.count(data.steps),
     subtitle: 'steps of ${f.count(goals.steps.round())}',
@@ -332,6 +368,7 @@ DashboardSummary buildDashboardSummary(
   final wcl = data.weeklyCardioLoad;
   final weeklyCardio = wcl != null
       ? RingCardData(
+          id: 'weekly_cardio',
           title: 'Weekly cardio',
           value: '${wcl.progressPercent}%',
           subtitle: '${wcl.currentScore} of ${wcl.targetScore}',
@@ -340,6 +377,7 @@ DashboardSummary buildDashboardSummary(
           location: AppRoutes.cardioLoadDetail,
         )
       : const RingCardData(
+          id: 'weekly_cardio',
           title: 'Weekly cardio',
           value: '—',
           subtitle: 'No data',
@@ -368,9 +406,10 @@ DashboardSummary buildDashboardSummary(
   }) {
     final supported = data.supportedMetrics.contains(metric);
     if (!includeUnsupported && !supported) return;
-    if (!supported) unsupportedTitles.add(title);
+    if (!supported) unsupportedIds.add(metric.name);
     final empty = value == null;
     tiles.add(StatTileData(
+      id: metric.name,
       title: title,
       value: value ?? '',
       unit: empty ? null : unit,
@@ -851,7 +890,7 @@ DashboardSummary buildDashboardSummary(
     steps: steps,
     weeklyCardio: weeklyCardio,
     tiles: tiles,
-    unsupportedTitles: unsupportedTitles,
+    unsupportedIds: unsupportedIds,
   );
 }
 
@@ -883,7 +922,7 @@ List<T> applyDashboardLayout<T>(
   return [for (final e in indexed) e.$2];
 }
 
-/// Metric-tile specialization of [applyDashboardLayout], keyed by tile title.
+/// Metric-tile specialization of [applyDashboardLayout], keyed by tile id.
 List<StatTileData> applyDashboardTileLayout(
   List<StatTileData> tiles, {
   List<String> order = const <String>[],
@@ -892,7 +931,7 @@ List<StatTileData> applyDashboardTileLayout(
 }) =>
     applyDashboardLayout(
       tiles,
-      (t) => t.title,
+      (t) => t.id,
       order: order,
       hidden: hidden,
       includeHidden: includeHidden,
@@ -904,4 +943,28 @@ String _sleepRating(int score) {
   if (score >= 80) return 'Good';
   if (score >= 60) return 'Fair';
   return 'Poor';
+}
+
+/// Translates a saved dashboard layout from the legacy title keys to ids.
+///
+/// The order and hidden set were originally persisted as tile TITLES, which are
+/// display text: they change when wording is revised, and they could never have
+/// identified a per-device tile whose title is a name the user can edit. Ids are
+/// stable, so stored keys are translated on read.
+///
+/// A key that is already an id, or that matches nothing at all, passes through
+/// untouched — an unknown key costs only a tile that keeps its default position,
+/// and `setTileOrder` deliberately preserves keys it does not recognise so a
+/// layout saved on a device with more metrics is not destroyed by one with fewer.
+List<String> migrateDashboardLayoutKeys(
+  List<String> stored,
+  Map<String, String> idByTitle,
+) {
+  if (stored.isEmpty) return stored;
+  final out = <String>[];
+  for (final key in stored) {
+    final migrated = idByTitle[key] ?? key;
+    if (!out.contains(migrated)) out.add(migrated);
+  }
+  return out;
 }

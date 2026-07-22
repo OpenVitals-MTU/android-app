@@ -333,6 +333,19 @@ class PreferencesRepository {
 
   BodyEnergyCalibration bodyEnergyCalibration() => _bodyEnergyCalibration.value;
 
+  /// Start of the last hour BUCKET whose watch body-energy reading was folded
+  /// into the gains.
+  ///
+  /// A bucket, not a sample: an hour must contribute exactly one observation
+  /// however many syncs touch it, or the learning rate would scale with how
+  /// often the user taps Sync rather than with elapsed time. 0 means nothing
+  /// has been fitted yet.
+  int get bodyEnergyWatchFitWatermarkMillis =>
+      _prefs.getInt(_keyBodyEnergyWatchFitWatermarkMillis) ?? 0;
+
+  set bodyEnergyWatchFitWatermarkMillis(int value) =>
+      _store.putInt(_keyBodyEnergyWatchFitWatermarkMillis, value);
+
   void setBodyEnergyCalibration(BodyEnergyCalibration calibration) {
     final normalized = calibration.normalized();
     _store.putBool(_keyBodyEnergyUseManualZones, normalized.useManualZones);
@@ -354,6 +367,10 @@ class PreferencesRepository {
     _store.putDouble(_keyBodyEnergyBasalDrainGain, normalized.basalDrainGain);
     _store.putDouble(_keyBodyEnergyStressDrainGain, normalized.stressDrainGain);
     _store.putInt(_keyBodyEnergyFeelCheckCount, normalized.feelCheckCount);
+    _store.putInt(
+      _keyBodyEnergyWatchObservationCount,
+      normalized.watchObservationCount,
+    );
     _bodyEnergyCalibration.value = normalized;
   }
 
@@ -683,6 +700,8 @@ class PreferencesRepository {
         basalDrainGain: _prefs.getDouble(_keyBodyEnergyBasalDrainGain) ?? 1.0,
         stressDrainGain: _prefs.getDouble(_keyBodyEnergyStressDrainGain) ?? 1.0,
         feelCheckCount: _prefs.getInt(_keyBodyEnergyFeelCheckCount) ?? 0,
+        watchObservationCount:
+            _prefs.getInt(_keyBodyEnergyWatchObservationCount) ?? 0,
       ).normalized();
 
   BodyProfile _readBodyProfile() => BodyProfile(
@@ -768,6 +787,10 @@ class PreferencesRepository {
       'body_energy_stress_drain_gain';
   static const String _keyBodyEnergyFeelCheckCount =
       'body_energy_feel_check_count';
+  static const String _keyBodyEnergyWatchObservationCount =
+      'body_energy_watch_observation_count';
+  static const String _keyBodyEnergyWatchFitWatermarkMillis =
+      'body_energy_watch_fit_watermark_millis';
   static const String _keyMindfulnessTimerDurationMinutes =
       'mindfulness_timer_duration_minutes';
   static const String _keyMindfulnessTimerIntervalMinutes =

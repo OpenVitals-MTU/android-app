@@ -24,6 +24,15 @@ enum SettingsSection {
     summary: 'Connect Bluetooth heart-rate sensors',
     icon: Icons.bluetooth,
   ),
+  // Its own section, not a group inside Sensors: a sensor streams while you
+  // record and a watch hands over files afterwards. They shared a screen only
+  // because they share a radio.
+  watches(
+    route: AppRoutes.settingsWatches,
+    title: 'Watches',
+    summary: 'Copy what your watch recorded',
+    icon: Icons.watch_outlined,
+  ),
   nutrition(
     route: AppRoutes.settingsNutrition,
     title: 'Nutrition',
@@ -98,6 +107,8 @@ extension SettingsSectionL10n on SettingsSection {
         return l10n.settingsActivitiesGroupTitle;
       case SettingsSection.sensors:
         return l10n.settingsSensorsGroupTitle;
+      case SettingsSection.watches:
+        return l10n.settingsWatchesGroupTitle;
       case SettingsSection.nutrition:
         return l10n.settingsNutritionGroupTitle;
       case SettingsSection.recovery:
@@ -121,6 +132,8 @@ extension SettingsSectionL10n on SettingsSection {
         return l10n.settingsActivitiesGroupBody;
       case SettingsSection.sensors:
         return l10n.settingsSensorsGroupBody;
+      case SettingsSection.watches:
+        return l10n.settingsWatchesGroupBody;
       case SettingsSection.nutrition:
         return l10n.settingsNutritionGroupBody;
       case SettingsSection.recovery:

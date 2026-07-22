@@ -199,28 +199,51 @@
     "description": "As above, for an activity type that counts steps: the step detector needs no position either."
   },
   "caffeineEntriesTitle": "Drinks",
-  "@caffeineEntriesTitle": { "description": "Section listing the caffeinated drinks logged." },
+  "@caffeineEntriesTitle": {
+    "description": "Section listing the caffeinated drinks logged."
+  },
   "caffeineEntriesEmpty": "No caffeinated drinks logged for this day.",
-  "@caffeineEntriesEmpty": { "description": "Empty state for the drinks list." },
+  "@caffeineEntriesEmpty": {
+    "description": "Empty state for the drinks list."
+  },
   "caffeineDrinkTitle": "Drink",
-  "@caffeineDrinkTitle": { "description": "Title of the per-drink detail screen." },
+  "@caffeineDrinkTitle": {
+    "description": "Title of the per-drink detail screen."
+  },
   "caffeineDrinkPeak": "Peak",
-  "@caffeineDrinkPeak": { "description": "The most of this drink that was in the body at once." },
+  "@caffeineDrinkPeak": {
+    "description": "The most of this drink that was in the body at once."
+  },
   "caffeineDrinkNow": "Right now",
-  "@caffeineDrinkNow": { "description": "How much of this drink is still in the body." },
+  "@caffeineDrinkNow": {
+    "description": "How much of this drink is still in the body."
+  },
   "caffeineDrinkHalfGone": "Half gone",
-  "@caffeineDrinkHalfGone": { "description": "When half of this drink's peak has been eliminated." },
+  "@caffeineDrinkHalfGone": {
+    "description": "When half of this drink's peak has been eliminated."
+  },
   "caffeineDrinkGone": "Effectively gone",
-  "@caffeineDrinkGone": { "description": "When what remains of this drink stops mattering." },
+  "@caffeineDrinkGone": {
+    "description": "When what remains of this drink stops mattering."
+  },
   "caffeineDrinkStillGoing": "Still going after {hours}h",
   "@caffeineDrinkStillGoing": {
     "description": "Shown when the drink has not faded within the horizon.",
-    "placeholders": { "hours": { "type": "String", "example": "36" } }
+    "placeholders": {
+      "hours": {
+        "type": "String",
+        "example": "36"
+      }
+    }
   },
   "caffeineDrinkCurveTitle": "This drink on its own",
-  "@caffeineDrinkCurveTitle": { "description": "Chart of one drink's rise and decline, separate from the day's total." },
+  "@caffeineDrinkCurveTitle": {
+    "description": "Chart of one drink's rise and decline, separate from the day's total."
+  },
   "caffeineDrinkPeakExplainer": "The peak is lower than the amount you drank: your body starts clearing caffeine before it has finished absorbing it.",
-  "@caffeineDrinkPeakExplainer": { "description": "Explains why peak < dose, which otherwise looks like a bug." },
+  "@caffeineDrinkPeakExplainer": {
+    "description": "Explains why peak < dose, which otherwise looks like a bug."
+  },
   "activityEntrySubtitle": "Create a Health Connect activity session. Imported route or activity details are written only when you save.",
   "activityEntryPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add activities, we need Health Connect write permissions for sessions, routes, distance, elevation, calories, and recorded sensor metrics such as heart rate; treadmill entries ask for steps when needed. OpenVitals will not store these entries; they are saved in Health Connect.",
   "activityEntrySourceBody": "Create an activity manually, use an existing plan, or record a GPS route.",
@@ -2053,6 +2076,49 @@
     }
   },
   "settingsSensorsWheelCircumference": "Wheel circumference (mm)",
+  "settingsWatchPairTitle": "Pair this watch",
+  "settingsWatchPairBody": "OpenVitals will pair with the watch, then copy its recorded activity, sleep and health files. Confirm the code shown on the watch when it appears.",
+  "settingsWatchStepBonding": "Pairing with the watch",
+  "settingsWatchStepAssociating": "Asking Android for access",
+  "settingsWatchStepAssociatingHint": "Optional. Allowing this lets syncing continue reliably in the background.",
+  "settingsWatchStepProbing": "Checking what the watch supports",
+  "settingsWatchUnsupportedNotice": "Paired, but this watch uses a connection OpenVitals does not support yet, so it cannot sync.",
+  "settingsWatchPairAction": "Pair",
+  "settingsWatchNeverSynced": "Never synced",
+  "settingsWatchLastSynced": "Last synced {arg0}",
+  "@settingsWatchLastSynced": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchNoCompanionNotice": "Paired, but Android access was not granted. Syncing works while OpenVitals is open.",
+  "settingsWatchRemove": "Remove watch",
+  "settingsWatchSyncNow": "Sync now",
+  "settingsWatchSyncConnecting": "Connecting to the watch…",
+  "settingsWatchSyncListing": "Looking for new data…",
+  "settingsWatchSyncDownloading": "Copying {arg0} of {arg1}",
+  "@settingsWatchSyncDownloading": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsWatchSyncImporting": "Saving to Health Connect…",
+  "settingsWatchSyncNothingNew": "Already up to date",
+  "settingsWatchSyncDone": "Synced {arg0} files",
+  "@settingsWatchSyncDone": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
   "activityRecordingSensorsTitle": "Sensors",
   "activityRecordingSensorsAddInSettings": "Add sensors in Settings",
   "activityRecordingSensorsNotConfigured": "Not configured",
@@ -2106,11 +2172,17 @@
   "healthConnectAccessDoubleCancelTitle": "Permissions need attention",
   "healthConnectAccessDoubleCancelBody": "Health Connect permissions were not granted. Open Health Connect settings to choose which data to share with OpenVitals.",
   "healthConnectGateErrorTitle": "Couldn't reach Health Connect",
-  "@healthConnectGateErrorTitle": {"description": "Title when the availability/permission read fails."},
+  "@healthConnectGateErrorTitle": {
+    "description": "Title when the availability/permission read fails."
+  },
   "healthConnectGateErrorBody": "Something went wrong reading your health data. Check that Health Connect is installed and up to date, then try again.",
-  "@healthConnectGateErrorBody": {"description": "Body when the availability/permission read fails."},
+  "@healthConnectGateErrorBody": {
+    "description": "Body when the availability/permission read fails."
+  },
   "healthConnectGateRetry": "Try again",
-  "@healthConnectGateRetry": {"description": "Retry button on the gate error state."},
+  "@healthConnectGateRetry": {
+    "description": "Retry button on the gate error state."
+  },
   "healthConnectSyncPaused": "Health Connect sync is paused",
   "healthConnectSyncInProgress": "Syncing with Health Connect…",
   "healthConnectDataSourceManage": "Manage data sources",
@@ -3357,14 +3429,16 @@
   "bodyEnergyReasonNoDataDetail": "Health Connect did not provide enough signal for this bucket.",
   "bodyEnergyReasonSteadyDetail": "Baseline metabolism drew a steady, gentle amount.",
   "bodyEnergyFeelCheckTitle": "How's your energy?",
-  "bodyEnergyFeelCheckPrompt": "Rate it 0\u201310. Your answers quietly tune Body Energy to how activity, sleep and stress actually affect you.",
-  "bodyEnergyFeelCheckSaved": "Thanks \u2014 Body Energy will learn from that.",
+  "bodyEnergyFeelCheckPrompt": "Rate it 0–10. Your answers quietly tune Body Energy to how activity, sleep and stress actually affect you.",
+  "bodyEnergyFeelCheckSaved": "Thanks — Body Energy will learn from that.",
   "bodyEnergyFeelCheckError": "Could not save that check-in. Please try again.",
   "bodyEnergyPersonalizationTitle": "Personal tuning",
   "bodyEnergyPersonalizationBody": "{count, plural, =0{Rate your energy on Body Energy to start personalising these.} =1{Learned from 1 check-in. Each is a plain multiplier you can see below.} other{Learned from {count} check-ins. Each is a plain multiplier you can see below.}}",
   "@bodyEnergyPersonalizationBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "bodyEnergyGainActivity": "Everyday activity tires you",
@@ -3696,146 +3770,419 @@
     "description": "Settings hub card summary for phone-to-phone Bluetooth sync."
   },
   "deviceSyncTitle": "Sync with another phone",
-  "@deviceSyncTitle": {"description": "App-bar title of the device-sync wizard."},
+  "@deviceSyncTitle": {
+    "description": "App-bar title of the device-sync wizard."
+  },
   "deviceSyncRoleHeading": "Move your data, no cloud",
-  "@deviceSyncRoleHeading": {"description": "Heading on the role-choice step."},
+  "@deviceSyncRoleHeading": {
+    "description": "Heading on the role-choice step."
+  },
   "deviceSyncRoleBody": "Copy Health Connect records straight to another phone over Bluetooth. Nothing leaves your devices.",
-  "@deviceSyncRoleBody": {"description": "Body on the role-choice step."},
+  "@deviceSyncRoleBody": {
+    "description": "Body on the role-choice step."
+  },
   "deviceSyncHostOption": "Make this phone discoverable",
-  "@deviceSyncHostOption": {"description": "Host-role option title."},
+  "@deviceSyncHostOption": {
+    "description": "Host-role option title."
+  },
   "deviceSyncHostOptionBody": "Show a code the other phone types in.",
-  "@deviceSyncHostOptionBody": {"description": "Host-role option subtitle."},
+  "@deviceSyncHostOptionBody": {
+    "description": "Host-role option subtitle."
+  },
   "deviceSyncGuestOption": "Find a phone to sync with",
-  "@deviceSyncGuestOption": {"description": "Guest-role option title."},
+  "@deviceSyncGuestOption": {
+    "description": "Guest-role option title."
+  },
   "deviceSyncGuestOptionBody": "Scan nearby and enter its code.",
-  "@deviceSyncGuestOptionBody": {"description": "Guest-role option subtitle."},
+  "@deviceSyncGuestOptionBody": {
+    "description": "Guest-role option subtitle."
+  },
   "deviceSyncPrivacyNote": "Transfer runs on a paired, encrypted Bluetooth link. OpenVitals has no internet permission, so this never touches a network.",
-  "@deviceSyncPrivacyNote": {"description": "Privacy reassurance on the role step."},
+  "@deviceSyncPrivacyNote": {
+    "description": "Privacy reassurance on the role step."
+  },
   "deviceSyncBluetoothOff": "Turn on Bluetooth to sync with another phone.",
-  "@deviceSyncBluetoothOff": {"description": "Shown when Bluetooth is disabled."},
+  "@deviceSyncBluetoothOff": {
+    "description": "Shown when Bluetooth is disabled."
+  },
   "deviceSyncHostHeading": "Waiting for the other phone",
-  "@deviceSyncHostHeading": {"description": "Heading while the host is discoverable."},
+  "@deviceSyncHostHeading": {
+    "description": "Heading while the host is discoverable."
+  },
   "deviceSyncHostBody": "On the other phone, choose Find a phone, tap this device, and type the code below.",
-  "@deviceSyncHostBody": {"description": "Body while the host is discoverable."},
+  "@deviceSyncHostBody": {
+    "description": "Body while the host is discoverable."
+  },
   "deviceSyncCodeLabel": "Pairing code",
-  "@deviceSyncCodeLabel": {"description": "Label above the 6-digit pairing code."},
+  "@deviceSyncCodeLabel": {
+    "description": "Label above the 6-digit pairing code."
+  },
   "deviceSyncWaiting": "Waiting for a connection...",
-  "@deviceSyncWaiting": {"description": "Host waiting-for-connection status."},
+  "@deviceSyncWaiting": {
+    "description": "Host waiting-for-connection status."
+  },
   "deviceSyncScanHeading": "Scanning nearby",
-  "@deviceSyncScanHeading": {"description": "Heading on the guest scan step."},
+  "@deviceSyncScanHeading": {
+    "description": "Heading on the guest scan step."
+  },
   "deviceSyncScanBody": "Pick the phone showing a pairing code. Make sure it is discoverable.",
-  "@deviceSyncScanBody": {"description": "Body on the guest scan step."},
+  "@deviceSyncScanBody": {
+    "description": "Body on the guest scan step."
+  },
   "deviceSyncNoDevices": "No phones found. Make sure the other phone is on the Make discoverable screen, then scan again.",
-  "@deviceSyncNoDevices": {"description": "Empty state after a scan finds no devices."},
+  "@deviceSyncNoDevices": {
+    "description": "Empty state after a scan finds no devices."
+  },
   "deviceSyncRescan": "Scan again",
-  "@deviceSyncRescan": {"description": "Button to restart discovery."},
+  "@deviceSyncRescan": {
+    "description": "Button to restart discovery."
+  },
   "deviceSyncPaired": "Paired",
-  "@deviceSyncPaired": {"description": "Subtitle marking an already-bonded device."},
+  "@deviceSyncPaired": {
+    "description": "Subtitle marking an already-bonded device."
+  },
   "deviceSyncCodeHeading": "Code from {deviceName}",
   "@deviceSyncCodeHeading": {
     "description": "Heading on the code-entry step, naming the selected device.",
-    "placeholders": {"deviceName": {"type": "String"}}
+    "placeholders": {
+      "deviceName": {
+        "type": "String"
+      }
+    }
   },
   "deviceSyncCodeBody": "Type the six digits shown on the other phone to confirm it is really that device.",
-  "@deviceSyncCodeBody": {"description": "Body on the code-entry step."},
+  "@deviceSyncCodeBody": {
+    "description": "Body on the code-entry step."
+  },
   "deviceSyncWrongCode": "That code did not match. Check the other phone and try again.",
-  "@deviceSyncWrongCode": {"description": "Wrong-code error on the code-entry step."},
+  "@deviceSyncWrongCode": {
+    "description": "Wrong-code error on the code-entry step."
+  },
   "deviceSyncConnect": "Connect",
-  "@deviceSyncConnect": {"description": "Connect button on the code-entry step."},
+  "@deviceSyncConnect": {
+    "description": "Connect button on the code-entry step."
+  },
   "deviceSyncCancel": "Cancel",
-  "@deviceSyncCancel": {"description": "Cancel button on the waiting/scanning/syncing steps."},
+  "@deviceSyncCancel": {
+    "description": "Cancel button on the waiting/scanning/syncing steps."
+  },
   "deviceSyncErrorHeading": "Sync didn't finish",
-  "@deviceSyncErrorHeading": {"description": "Heading on the report step when the sync failed or was aborted."},
+  "@deviceSyncErrorHeading": {
+    "description": "Heading on the report step when the sync failed or was aborted."
+  },
   "deviceSyncErrorGeneric": "The sync could not be completed. Please try again.",
-  "@deviceSyncErrorGeneric": {"description": "Generic sync failure message."},
+  "@deviceSyncErrorGeneric": {
+    "description": "Generic sync failure message."
+  },
   "deviceSyncErrorConnect": "Could not connect to the other phone. Make sure it's nearby and try again.",
-  "@deviceSyncErrorConnect": {"description": "Connection failure/timeout message."},
+  "@deviceSyncErrorConnect": {
+    "description": "Connection failure/timeout message."
+  },
   "deviceSyncErrorPermission": "Bluetooth permission is needed to sync with another phone.",
-  "@deviceSyncErrorPermission": {"description": "Bluetooth permission denied message."},
+  "@deviceSyncErrorPermission": {
+    "description": "Bluetooth permission denied message."
+  },
   "deviceSyncErrorDiscoverable": "This phone needs to be discoverable to sync. Try again and allow the request.",
-  "@deviceSyncErrorDiscoverable": {"description": "Discoverability declined message."},
+  "@deviceSyncErrorDiscoverable": {
+    "description": "Discoverability declined message."
+  },
   "deviceSyncAborted": "The sync ended before it finished.",
-  "@deviceSyncAborted": {"description": "Shown on the report step when the session aborted."},
+  "@deviceSyncAborted": {
+    "description": "Shown on the report step when the session aborted."
+  },
   "deviceSyncRangeHeading": "How far back to sync",
-  "@deviceSyncRangeHeading": {"description": "Heading on the time-range step."},
+  "@deviceSyncRangeHeading": {
+    "description": "Heading on the time-range step."
+  },
   "deviceSyncRangeBody": "Older data takes longer to read and send. You can always run it again for more.",
-  "@deviceSyncRangeBody": {"description": "Body on the time-range step."},
+  "@deviceSyncRangeBody": {
+    "description": "Body on the time-range step."
+  },
   "deviceSyncRange30": "Last 30 days",
-  "@deviceSyncRange30": {"description": "30-day sync range option."},
+  "@deviceSyncRange30": {
+    "description": "30-day sync range option."
+  },
   "deviceSyncRange6mo": "Last 6 months",
-  "@deviceSyncRange6mo": {"description": "6-month sync range option."},
+  "@deviceSyncRange6mo": {
+    "description": "6-month sync range option."
+  },
   "deviceSyncRange1y": "Last year",
-  "@deviceSyncRange1y": {"description": "1-year sync range option."},
+  "@deviceSyncRange1y": {
+    "description": "1-year sync range option."
+  },
   "deviceSyncRangeAll": "Everything",
-  "@deviceSyncRangeAll": {"description": "All-time sync range option."},
+  "@deviceSyncRangeAll": {
+    "description": "All-time sync range option."
+  },
   "deviceSyncNext": "Choose data types",
-  "@deviceSyncNext": {"description": "Advance button from range to types."},
+  "@deviceSyncNext": {
+    "description": "Advance button from range to types."
+  },
   "deviceSyncTypesHeading": "What to accept",
-  "@deviceSyncTypesHeading": {"description": "Heading on the data-types step."},
+  "@deviceSyncTypesHeading": {
+    "description": "Heading on the data-types step."
+  },
   "deviceSyncTypesBody": "Both phones agreed on the types below. Uncheck anything you would rather not sync.",
-  "@deviceSyncTypesBody": {"description": "Body on the data-types step."},
+  "@deviceSyncTypesBody": {
+    "description": "Body on the data-types step."
+  },
   "deviceSyncCategoryBody": "Body measurements",
-  "@deviceSyncCategoryBody": {"description": "Body-measurements category label."},
+  "@deviceSyncCategoryBody": {
+    "description": "Body-measurements category label."
+  },
   "deviceSyncCategoryVitals": "Vitals",
-  "@deviceSyncCategoryVitals": {"description": "Vitals category label."},
+  "@deviceSyncCategoryVitals": {
+    "description": "Vitals category label."
+  },
   "deviceSyncCategoryHydration": "Hydration",
-  "@deviceSyncCategoryHydration": {"description": "Hydration category label."},
+  "@deviceSyncCategoryHydration": {
+    "description": "Hydration category label."
+  },
   "deviceSyncCategoryMindfulness": "Mindfulness",
-  "@deviceSyncCategoryMindfulness": {"description": "Mindfulness category label."},
+  "@deviceSyncCategoryMindfulness": {
+    "description": "Mindfulness category label."
+  },
   "deviceSyncCategoryActivity": "Activity",
-  "@deviceSyncCategoryActivity": {"description": "Activity (steps, distance, calories) category label."},
+  "@deviceSyncCategoryActivity": {
+    "description": "Activity (steps, distance, calories) category label."
+  },
   "deviceSyncCategoryWorkouts": "Workouts",
-  "@deviceSyncCategoryWorkouts": {"description": "Workouts (exercise sessions) category label."},
+  "@deviceSyncCategoryWorkouts": {
+    "description": "Workouts (exercise sessions) category label."
+  },
   "deviceSyncCategoryHeart": "Heart",
-  "@deviceSyncCategoryHeart": {"description": "Heart (heart rate, HRV) category label."},
+  "@deviceSyncCategoryHeart": {
+    "description": "Heart (heart rate, HRV) category label."
+  },
   "deviceSyncCategorySleep": "Sleep",
-  "@deviceSyncCategorySleep": {"description": "Sleep category label."},
+  "@deviceSyncCategorySleep": {
+    "description": "Sleep category label."
+  },
   "deviceSyncCategoryNutrition": "Nutrition",
-  "@deviceSyncCategoryNutrition": {"description": "Nutrition category label."},
+  "@deviceSyncCategoryNutrition": {
+    "description": "Nutrition category label."
+  },
   "deviceSyncCategoryCycle": "Cycle tracking",
-  "@deviceSyncCategoryCycle": {"description": "Menstrual cycle tracking category label."},
+  "@deviceSyncCategoryCycle": {
+    "description": "Menstrual cycle tracking category label."
+  },
   "deviceSyncStartSync": "Start sync, {count} selected",
   "@deviceSyncStartSync": {
     "description": "Start-sync button with the count of selected categories/types.",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "deviceSyncProgressHeading": "Syncing",
-  "@deviceSyncProgressHeading": {"description": "Heading on the transfer step."},
+  "@deviceSyncProgressHeading": {
+    "description": "Heading on the transfer step."
+  },
   "deviceSyncPhaseHandshake": "Handshake and dedup check",
-  "@deviceSyncPhaseHandshake": {"description": "Transfer phase: handshake."},
+  "@deviceSyncPhaseHandshake": {
+    "description": "Transfer phase: handshake."
+  },
   "deviceSyncPhaseExchanging": "Exchanging records",
-  "@deviceSyncPhaseExchanging": {"description": "Transfer phase: exchange."},
+  "@deviceSyncPhaseExchanging": {
+    "description": "Transfer phase: exchange."
+  },
   "deviceSyncPhaseWriting": "Writing to Health Connect",
-  "@deviceSyncPhaseWriting": {"description": "Transfer phase: writing."},
+  "@deviceSyncPhaseWriting": {
+    "description": "Transfer phase: writing."
+  },
   "deviceSyncSent": "Sent",
-  "@deviceSyncSent": {"description": "Transfer stat: records sent."},
+  "@deviceSyncSent": {
+    "description": "Transfer stat: records sent."
+  },
   "deviceSyncReceived": "Received",
-  "@deviceSyncReceived": {"description": "Transfer stat: records received."},
+  "@deviceSyncReceived": {
+    "description": "Transfer stat: records received."
+  },
   "deviceSyncWritten": "Written",
-  "@deviceSyncWritten": {"description": "Transfer stat: records written."},
+  "@deviceSyncWritten": {
+    "description": "Transfer stat: records written."
+  },
   "deviceSyncReportHeading": "Merged {count} records",
   "@deviceSyncReportHeading": {
     "description": "Report heading with the number of records merged.",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "deviceSyncImported": "Imported",
-  "@deviceSyncImported": {"description": "Report counter: imported records."},
+  "@deviceSyncImported": {
+    "description": "Report counter: imported records."
+  },
   "deviceSyncDuplicates": "Already had (skipped)",
-  "@deviceSyncDuplicates": {"description": "Report counter: duplicate records skipped."},
+  "@deviceSyncDuplicates": {
+    "description": "Report counter: duplicate records skipped."
+  },
   "deviceSyncDone": "Done",
-  "@deviceSyncDone": {"description": "Finish button on the report step."},
+  "@deviceSyncDone": {
+    "description": "Finish button on the report step."
+  },
   "deviceSyncNotificationChannel": "Phone-to-phone sync",
-  "@deviceSyncNotificationChannel": {"description": "Notification channel name for the sync foreground service."},
+  "@deviceSyncNotificationChannel": {
+    "description": "Notification channel name for the sync foreground service."
+  },
   "deviceSyncNotificationTitle": "Syncing with another phone",
-  "@deviceSyncNotificationTitle": {"description": "Foreground-service notification title during a sync."},
+  "@deviceSyncNotificationTitle": {
+    "description": "Foreground-service notification title during a sync."
+  },
   "deviceSyncNotificationText": "Keep both phones nearby until the sync finishes.",
-  "@deviceSyncNotificationText": {"description": "Foreground-service notification body during a sync."},
+  "@deviceSyncNotificationText": {
+    "description": "Foreground-service notification body during a sync."
+  },
   "deviceSyncReportCopied": "Report copied to the clipboard.",
-  "@deviceSyncReportCopied": {"description": "Snackbar after copying the sync report."},
+  "@deviceSyncReportCopied": {
+    "description": "Snackbar after copying the sync report."
+  },
   "deviceSyncReportSaved": "Report saved.",
-  "@deviceSyncReportSaved": {"description": "Snackbar after saving the sync report."},
+  "@deviceSyncReportSaved": {
+    "description": "Snackbar after saving the sync report."
+  },
   "deviceSyncCopyReport": "Copy report",
-  "@deviceSyncCopyReport": {"description": "Button to copy the sync report to the clipboard."},
+  "@deviceSyncCopyReport": {
+    "description": "Button to copy the sync report to the clipboard."
+  },
   "deviceSyncSaveReport": "Save report",
-  "@deviceSyncSaveReport": {"description": "Button to save the sync report to a file."}
+  "@deviceSyncSaveReport": {
+    "description": "Button to save the sync report to a file."
+  },
+  "settingsWatchActionData": "Data",
+  "settingsWatchActionSync": "Sync",
+  "settingsWatchSectionDevice": "Device",
+  "settingsWatchEnabled": "Enabled",
+  "settingsWatchEnabledBody": "Sync this watch",
+  "settingsWatchNameLabel": "Name",
+  "settingsWatchRename": "Rename watch",
+  "settingsWatchConnected": "Connected",
+  "settingsWatchNotConnected": "Not connected",
+  "settingsWatchOpen": "Open",
+  "settingsWatchDataTitle": "Watch data",
+  "settingsWatchDataIntro": "Measurements only your watch makes. Health Connect has no place for these, so they stay in OpenVitals.",
+  "settingsWatchDataEmpty": "Nothing yet. Sync your watch and whatever it has recorded will appear here.",
+  "settingsWatchDataMissing": "Not sent by this watch: {arg0}",
+  "@settingsWatchDataMissing": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchDataLastNight": "Last night",
+  "settingsWatchDataTraining": "Training",
+  "settingsWatchMetricStress": "Stress",
+  "settingsWatchMetricBodyBattery": "Body Battery",
+  "settingsWatchMetricIntensityMinutes": "Intensity minutes",
+  "settingsWatchMetricIntensityGoal": "{arg0} of {arg1} this week",
+  "@settingsWatchMetricIntensityGoal": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchMetricSleepScore": "Sleep score",
+  "settingsWatchMetricAwake": "Awake",
+  "settingsWatchMetricAwakenings": "Times woken",
+  "settingsWatchMetricSleepCoach": "Sleep Coach",
+  "settingsWatchMetricSleepCoachBody": "{arg0} above your usual {arg1}",
+  "@settingsWatchMetricSleepCoachBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchMetricSleepCoachEqual": "The same as your usual {arg0}",
+  "@settingsWatchMetricSleepCoachEqual": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchMetricRecoveryTime": "Recovery time",
+  "settingsWatchMetricTrainingReadiness": "Training readiness",
+  "settingsWatchMetricTrainingLoad": "Training load",
+  "settingsWatchNowSuffix": "now",
+  "settingsWatchAveragePrefix": "{arg0} average",
+  "@settingsWatchAveragePrefix": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchStaleDays": "{arg0, plural, =1{1 day} other{{arg0} days}} since last sync",
+  "@settingsWatchStaleDays": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsWatchSyncing": "Syncing",
+  "actionRemove": "Remove",
+  "settingsDeviceRemoveConfirmTitle": "Remove {arg0}?",
+  "@settingsDeviceRemoveConfirmTitle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSensorRemoveConfirmBody": "It will stop recording during activities. You can pair it again whenever you like.",
+  "settingsWatchRemoveConfirmBody": "OpenVitals will unpair the watch and forget which files it has already copied, so a future pairing starts fresh. Data already saved to Health Connect is kept.",
+  "settingsWatchesGroupTitle": "Watches",
+  "settingsWatchesGroupBody": "Copy sleep, heart rate and activities recorded on your watch",
+  "settingsWatchesIntro": "Copies what your watch recorded into OpenVitals. Nothing is sent to the internet.",
+  "settingsWatchesEmptyTitle": "No watch paired",
+  "settingsWatchesEmptyBody": "Pairing a watch lets OpenVitals copy what it recorded — sleep stages, resting heart rate, stress and Body Battery — without sending anything to the internet.",
+  "settingsWatchesAdd": "Pair a watch",
+  "settingsSensorsIntro": "Used while recording an activity.",
+  "settingsWatchActionAlarms": "Alarms",
+  "settingsWatchActionFind": "Find",
+  "settingsWatchSettingsSection": "Watch settings",
+  "settingsWatchOnDeviceSettings": "Settings on the watch",
+  "settingsWatchOnDeviceSettingsBody": "Backlight, sounds, watch face…",
+  "settingsWatchSyncedFiles": "{arg0, plural, =1{1 file} other{{arg0} files}}",
+  "@settingsWatchSyncedFiles": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsWatchFindStop": "Stop",
+  "settingsWatchFindRinging": "Listen for your watch",
+  "settingsWatchFindFailed": "The watch did not answer. Bring it closer and try again.",
+  "settingsWatchAlarmsTitle": "Alarms",
+  "settingsWatchSettingsReading": "Reading from the watch…",
+  "settingsWatchSettingsUnreachable": "Could not read this from the watch. Bring it closer and try again.",
+  "settingsWatchSettingsEmpty": "The watch sent nothing for this screen.",
+  "settingsWatchSettingsRefused": "The watch would not change that.",
+  "settingsWatchSettingsUnanswered": "The watch did not answer. Check the watch to see whether it changed.",
+  "settingsWatchSettingsRetry": "Try again",
+  "settingsWatchSettingsFromWatch": "Read live from your watch. Changes apply to the watch itself.",
+  "settingsWatchSettingsNoState": "The watch sent this screen but not its current values, so nothing here can be changed yet.",
+  "settingsWatchSettingsConfirmAction": "Apply “{arg0}”?",
+  "@settingsWatchSettingsConfirmAction": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWatchSettingsConfirmActionBody": "This runs the action on the watch and cannot be undone from here."
 }

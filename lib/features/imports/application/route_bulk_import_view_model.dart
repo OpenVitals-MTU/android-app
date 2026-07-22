@@ -275,34 +275,39 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         if (isFitFile(bytes)) {
           final wellness =
               FitRouteParser.parseWellness(bytes, fileName: file.fileName);
-          if (!wellness.isEmpty) {
-            final records = <ImportRecord>[
-              if (wellness.sleep != null)
-                ...fitSleepImportRecords(wellness.sleep!),
-              if (wellness.hrv != null) ...fitHrvImportRecords(wellness.hrv!),
-              if (wellness.monitoring != null)
-                ...fitMonitoringImportRecords(wellness.monitoring!),
-            ];
-            if (records.isEmpty) {
-              throw const RouteImportException(
-                'Wellness file had no Health Connect-mappable data.',
-              );
-            }
+          final records = <ImportRecord>[
+            if (wellness.sleep != null) ...fitSleepImportRecords(wellness.sleep!),
+            if (wellness.hrv != null) ...fitHrvImportRecords(wellness.hrv!),
+            if (wellness.monitoring != null)
+              ...fitMonitoringImportRecords(wellness.monitoring!),
+            if (wellness.metrics != null)
+              ...fitMetricsImportRecords(wellness.metrics!),
+            ...fitNapImportRecords(wellness.naps),
+            if (wellness.healthSnapshot != null)
+              ...fitHealthSnapshotImportRecords(wellness.healthSnapshot!),
+          ];
+          if (records.isNotEmpty) {
             wellnessPending.add(records);
             debugPrint('[FIT] queued wellness file=${file.fileName ?? "?"} '
                 'records=${records.length}');
             if (wellnessPending.length >= _maxPendingFiles) {
               await writeWellnessPending();
             }
-            continue;
           }
-          // A non-activity FIT file with nothing this importer can map (Garmin
-          // stress / Body Battery / metrics / sleep-disruption). Skip it — it is
-          // not a broken activity, so it must not read as a failure.
+          // The activity type decides the path, NOT whether wellness data was
+          // found. An activity file carries wellness messages of its own — a
+          // Garmin writes VO2 max and recovery time into the workout it just
+          // recorded — so branching on "did this yield wellness records" sent a
+          // real 6.5 KB workout down the wellness path and dropped it.
           if (!wellness.isActivityType) {
-            skippedFiles += 1;
-            debugPrint('[FIT] skipped file=${file.fileName ?? "?"} '
-                'type=${wellness.fileType} (no Health Connect-mappable data)');
+            if (records.isEmpty) {
+              // Decoded fine, but nothing Health Connect holds — a metrics file
+              // carrying only sleep pressure, say, whose numbers the app keeps
+              // in its own table. A skip, not a failure.
+              skippedFiles += 1;
+              debugPrint('[FIT] skipped file=${file.fileName ?? "?"} '
+                  'type=${wellness.fileType} (nothing for Health Connect)');
+            }
             continue;
           }
         }

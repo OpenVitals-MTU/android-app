@@ -124,6 +124,29 @@
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADVERTISE"
         tools:targetApi="s" />
+    <!--
+        Garmin watch onboarding (bluetooth_sync_native / CompanionDevices.kt).
+        The companion association is what lets the OS keep this app's process
+        alive while the watch is in range, so a FIT-file sync that runs for
+        minutes is not killed halfway through. Both are install-time grants with
+        no runtime prompt of their own — the user's consent IS the system
+        "Allow OpenVitals to access <watch>?" dialog. Declining it is supported:
+        the watch is bonded and syncs regardless, just without the priority
+        boost. Same reasoning as the block above: plugin permissions must be
+        declared by the installable app.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+    <!--
+        Required by start/stopObservingDevicePresence, which is what actually
+        makes the OS bind OpenVitalsCompanionDeviceService when the watch comes
+        into range. Without it those calls throw SecurityException and the
+        association exists but buys nothing.
+
+        Deliberately NOT declared: REQUEST_COMPANION_USE_DATA_IN_BACKGROUND. It
+        governs background NETWORK use, and this app ships no INTERNET
+        permission at all, so asking for it would be meaningless.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
 
     <!-- Foreground service (flutter_foreground_task GPS recorder + geolocator). -->
@@ -194,6 +217,18 @@
         android:required="false" />
     <uses-feature
         android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <!--
+        CompanionDeviceManager (Garmin watch onboarding). NOT optional
+        boilerplate: without this declaration `CompanionDeviceManager.associate`
+        throws "Must declare uses-feature android.software.companion_device_setup
+        in manifest to use this API" from the system service, so the association
+        can never be offered. `required="false"` keeps the app installable on
+        devices that lack companion support, where onboarding degrades to a
+        plain bond that syncs fine without the background priority boost.
+    -->
+    <uses-feature
+        android:name="android.software.companion_device_setup"
         android:required="false" />
 
     <!-- =========================================================================
@@ -444,6 +479,23 @@
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="location|health|connectedDevice|dataSync"
             android:exported="false" />
+
+        <!-- bluetooth_sync_native: bound by the OS while an associated Garmin
+             watch is in range. It runs no logic of its own — the BINDING is the
+             point, because it elevates this process's priority so a multi-minute
+             BLE file sync is not killed by the low-memory killer. `exported` and
+             the BIND_COMPANION_DEVICE_SERVICE permission are both required by
+             the platform contract: the system alone may bind it. API 31+; below
+             that the OS simply never binds it. -->
+        <service
+            android:name="tech.mmarca.openvitals.bluetooth_sync_native.OpenVitalsCompanionDeviceService"
+            android:exported="true"
+            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE"
+            tools:targetApi="s">
+            <intent-filter>
+                <action android:name="android.companion.CompanionDeviceService" />
+            </intent-filter>
+        </service>
 
         <!-- flutter_local_notifications: scheduled + boot-persisted reminders and actions. -->
         <receiver

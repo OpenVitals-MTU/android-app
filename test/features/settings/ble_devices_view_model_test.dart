@@ -6,6 +6,9 @@ import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart'
 import 'package:openvitals/data/repository/contract/ble_sensor_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
+import 'package:openvitals/domain/model/garmin_transport.dart';
+import 'package:openvitals/domain/port/garmin_transport_probe.dart';
+import 'package:openvitals/domain/port/watch_pairing_port.dart';
 import 'package:openvitals/features/settings/application/ble_devices_view_model.dart';
 
 /// Fake coordinator that returns canned capability-discovery results and never
@@ -33,6 +36,42 @@ class _FakeCoordinator implements BleSensorRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Stands in for `flutter_blue_plus` bonding + the CompanionDeviceManager
+/// plugin, so watch onboarding is testable with no radio and no Activity.
+class _FakePairing implements WatchPairingPort {
+  WatchBondResult bondResult = WatchBondResult.bonded;
+  bool associateResult = true;
+
+  final List<String> calls = [];
+
+  @override
+  Future<WatchBondResult> bond(String address) async => bondResult;
+
+  @override
+  Future<void> removeBond(String address) async =>
+      calls.add('removeBond:$address');
+
+  @override
+  Future<bool> associateCompanion(String address, String? displayName) async =>
+      associateResult;
+
+  @override
+  Future<void> disassociateCompanion(String address) async =>
+      calls.add('disassociate:$address');
+}
+
+/// Canned GATT verdict; never opens a connection.
+class _FakeProbe implements GarminTransportProbe {
+  GarminTransportVariant variant = GarminTransportVariant.v1;
+
+  @override
+  Future<GarminGattReport> probe(String address) async => GarminGattReport(
+        address: address,
+        variant: variant,
+        services: const [],
+      );
+}
+
 BleDiscoveredDevice _discovered({
   Set<BleSensorCapability> suggested = const {BleSensorCapability.heartRate},
 }) =>
@@ -43,9 +82,20 @@ BleDiscoveredDevice _discovered({
       suggestedCapabilities: suggested,
     );
 
+/// The device in the screenshots this feature was built from.
+BleDiscoveredDevice _watch() => const BleDiscoveredDevice(
+      address: 'E0:48:24:D5:F7:10',
+      name: 'vívoactive 5',
+      rssi: -55,
+      suggestedCapabilities: {},
+      advertisesGarminService: true,
+    );
+
 void main() {
   late BleDeviceRepositoryImpl repo;
   late _FakeCoordinator coordinator;
+  late _FakePairing pairing;
+  late _FakeProbe probe;
   late ProviderContainer container;
 
   Future<void> setUp0() async {
@@ -53,9 +103,13 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     repo = BleDeviceRepositoryImpl(prefs);
     coordinator = _FakeCoordinator();
+    pairing = _FakePairing();
+    probe = _FakeProbe();
     container = ProviderContainer(overrides: [
       bleDeviceRepositoryProvider.overrideWithValue(repo),
       bleSensorRepositoryProvider.overrideWithValue(coordinator),
+      watchPairingPortProvider.overrideWithValue(pairing),
+      garminTransportProbeProvider.overrideWithValue(probe),
     ]);
     addTearDown(container.dispose);
   }
@@ -287,5 +341,151 @@ void main() {
       const BleDevicesUiState(addDisplayName: 'TICKR'),
       isNot(const BleDevicesUiState(addDisplayName: 'Polar')),
     );
+  });
+
+  group('Garmin watch onboarding', () {
+    test('selecting a watch skips the capability probe entirely', () async {
+      await setUp0();
+      // Armed so the assertion below is about the branch, not about the probe
+      // happening to return nothing.
+      coordinator.discoverResult = {BleSensorCapability.heartRate};
+
+      await notifier().selectDiscoveredDevice(_watch());
+
+      expect(state().isAddingWatch, isTrue);
+      expect(state().isDiscoveringCapabilities, isFalse);
+      expect(state().addCapabilities, isEmpty);
+      expect(state().capabilityConflicts, isEmpty);
+      expect(state().addDisplayName, 'vívoactive 5');
+    });
+
+    test('a sensor still goes through the probe', () async {
+      await setUp0();
+      coordinator.discoverResult = {BleSensorCapability.heartRate};
+
+      await notifier().selectDiscoveredDevice(_discovered());
+
+      expect(state().isAddingWatch, isFalse);
+      expect(state().addCapabilities, {BleSensorCapability.heartRate});
+    });
+
+    test('onboarding registers the watch and closes the sheet', () async {
+      await setUp0();
+      await notifier().selectDiscoveredDevice(_watch());
+
+      expect(await notifier().onboardSelectedWatch(), isTrue);
+
+      expect(repo.devices, hasLength(1));
+      expect(repo.devices.single.kind, BleDeviceKind.watch);
+      expect(state().isOnboardingWatch, isFalse);
+      expect(state().onboardStep, isNull);
+      expect(state().showAddFlow, isFalse);
+    });
+
+    test('a refused pairing keeps the sheet open and explains why', () async {
+      await setUp0();
+      pairing.bondResult = WatchBondResult.refused;
+      await notifier().selectDiscoveredDevice(_watch());
+
+      expect(await notifier().onboardSelectedWatch(), isFalse);
+
+      expect(repo.devices, isEmpty);
+      // The sheet must survive: re-scanning to retry a mistyped code is a
+      // pointless round trip.
+      expect(state().selectedDevice, isNotNull);
+      expect(state().isOnboardingWatch, isFalse);
+      expect(state().errorMessage, isNotNull);
+    });
+
+    test('a declined companion association is recorded, not failed', () async {
+      await setUp0();
+      pairing.associateResult = false;
+      await notifier().selectDiscoveredDevice(_watch());
+
+      expect(await notifier().onboardSelectedWatch(), isTrue);
+
+      expect(repo.devices, hasLength(1));
+      expect(state().watchOnboardedWithoutCompanion, isTrue);
+    });
+
+    test('the no-companion flag survives the sheet closing, then clears',
+        () async {
+      await setUp0();
+      pairing.associateResult = false;
+      await notifier().selectDiscoveredDevice(_watch());
+
+      await notifier().onboardSelectedWatch();
+
+      // onboardSelectedWatch closes the add flow itself, and the screen reads
+      // the flag AFTER the sheet pops to raise its notice — so closing must not
+      // consume it.
+      expect(state().showAddFlow, isFalse);
+      expect(state().watchOnboardedWithoutCompanion, isTrue);
+
+      // Starting a fresh add is what clears it, so the notice fires once.
+      notifier().openAddFlow();
+      expect(state().watchOnboardedWithoutCompanion, isFalse);
+    });
+
+    test('a blank name falls back to the advertised one', () async {
+      await setUp0();
+      await notifier().selectDiscoveredDevice(_watch());
+      notifier().updateAddDisplayName('   ');
+
+      await notifier().onboardSelectedWatch();
+
+      expect(repo.devices.single.displayName, 'vívoactive 5');
+    });
+
+    test('forgetting a watch also drops its bond and association', () async {
+      await setUp0();
+      await notifier().selectDiscoveredDevice(_watch());
+      await notifier().onboardSelectedWatch();
+      final id = repo.devices.single.id;
+      pairing.calls.clear();
+
+      notifier().removeDevice(id);
+      // The cleanup is fire-and-forget, so let the microtasks drain.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repo.devices, isEmpty);
+      expect(pairing.calls, [
+        'disassociate:E0:48:24:D5:F7:10',
+        'removeBond:E0:48:24:D5:F7:10',
+      ]);
+    });
+
+    test('forgetting a sensor touches neither bond nor association', () async {
+      await setUp0();
+      final sensor = repo.addDevice(
+        displayName: 'Chest strap',
+        address: 'AA:BB:CC:DD:EE:FF',
+        bluetoothName: 'Wahoo TICKR',
+        capabilities: const {BleSensorCapability.heartRate},
+      );
+
+      notifier().removeDevice(sensor.id);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repo.devices, isEmpty);
+      expect(pairing.calls, isEmpty);
+    });
+
+    test('a watch can be renamed even though it has no capabilities', () async {
+      await setUp0();
+      await notifier().selectDiscoveredDevice(_watch());
+      await notifier().onboardSelectedWatch();
+      final id = repo.devices.single.id;
+
+      notifier()
+        ..openEditDevice(id)
+        ..updateEditDisplayName('Running watch')
+        ..saveEditedDevice();
+
+      // The sensor rule ("select at least one capability") must not fire here.
+      expect(state().errorMessage, isNull);
+      expect(state().editingDeviceId, isNull);
+      expect(repo.devices.single.displayName, 'Running watch');
+    });
   });
 }

@@ -11,6 +11,8 @@ import 'package:openvitals/features/manualentry/activity/routeimport/fit_route_p
 /// an `event`/74 start/stop pair for the bounds and `sleep_level` transitions
 /// for the stages. See docs/reference/garmin-fit-files.md.
 void main() {
+  _incrementalSyncRegression();
+
   final start = DateTime.utc(2024, 1, 1, 23, 0, 0);
   final stop = DateTime.utc(2024, 1, 2, 6, 0, 0);
   // (transition, sleep_level enum: 0 unmeasurable,1 awake,2 light,3 deep,4 rem)
@@ -198,9 +200,65 @@ void main() {
       expect(resp.first.rate, closeTo(14.0, 0.001)); // avg(13,15)
 
       final steps = records.whereType<StepsImportRecord>().single;
-      expect(steps.count, 1200); // max - min
-      expect(steps.startTime, DateTime.utc(2024, 1, 18, 9, 0));
-      expect(steps.endTime, DateTime.utc(2024, 1, 18, 11, 0));
+      expect(steps.count, 1200); // the day's running total, not a delta
+      // The counter is the whole day's total, so the record spans the whole
+      // local day up to the last sample — attributing it to the two hours the
+      // file happened to cover would misplace the day's steps.
+      final lastLocal = DateTime.utc(2024, 1, 18, 11).toLocal();
+      expect(
+        steps.startTime,
+        DateTime(lastLocal.year, lastLocal.month, lastLocal.day),
+      );
+      expect(steps.endTime, lastLocal);
+    });
+
+    test('re-syncing a day overwrites it instead of adding to it', () {
+      // The bug this pins: 540 steps on the wrist became 1403 in Health
+      // Connect over thirteen syncs of one day. Health Connect upserts on
+      // clientRecordId, so the fix is that every file touching a day produces
+      // the SAME key — a per-file key made each sync a fresh, additive record.
+      List<StepsImportRecord> stepsFor(List<(DateTime, int)> cumulative) {
+        final m = FitRouteParser.parseWellness(
+          _fitMonitoringSeriesBytes(stepsCumulative: cumulative),
+        ).monitoring!;
+        return fitMonitoringImportRecords(m)
+            .whereType<StepsImportRecord>()
+            .toList();
+      }
+
+      final early = stepsFor([
+        (DateTime.utc(2024, 1, 18, 9), 200),
+        (DateTime.utc(2024, 1, 18, 10), 350),
+      ]).single;
+      // A later sync whose file restates the day from zero, as a real watch does.
+      final later = stepsFor([
+        (DateTime.utc(2024, 1, 18, 11), 0),
+        (DateTime.utc(2024, 1, 18, 12), 540),
+      ]).single;
+
+      expect(later.clientRecordId, early.clientRecordId);
+      // Last write wins, and it is the day's total — not 350 + 540.
+      expect(early.count, 350);
+      expect(later.count, 540);
+    });
+
+    test('activity-type counters are summed, never subtracted', () {
+      // A walking counter at 540 beside a generic one still at 0 is not a
+      // 540-step change. Taking max - min across all points made it one, which
+      // is how a file with no new steps still wrote a full day's worth.
+      final m = FitRouteParser.parseWellness(
+        _fitMonitoringSeriesBytes(
+          stepsCumulative: [
+            (DateTime.utc(2024, 1, 18, 9), 540),
+            (DateTime.utc(2024, 1, 18, 10), 0),
+          ],
+        ),
+      ).monitoring!;
+
+      final steps = fitMonitoringImportRecords(m)
+          .whereType<StepsImportRecord>()
+          .single;
+      expect(steps.count, 540);
     });
   });
 }
@@ -415,4 +473,85 @@ Uint8List _fitMonitoringSeriesBytes({
   }
 
   return _wrap(data.toBytes());
+}
+
+/// Regression: successive syncs within one hour must not overwrite each other.
+///
+/// The hourly clientRecordId assumed one file per day. A watch sync delivers a
+/// fresh file every few minutes, so several land in the same hour — and sharing
+/// a key made each one REPLACE the last, collapsing an hour of heart rate to
+/// whichever sliver synced most recently.
+void _incrementalSyncRegression() {
+  FitMonitoringSummary monitoringWith({
+    required List<(DateTime, int)> hr,
+    List<(DateTime, double)> respiration = const [],
+  }) =>
+      FitMonitoringSummary(
+        heartRateSamples: hr,
+        respiration: respiration,
+        stepPoints: const [],
+        distancePoints: const [],
+        caloriePoints: const [],
+      );
+
+  group('incremental files in the same hour', () {
+    test('two HR chunks produce two distinct records', () {
+      // Two consecutive sync windows, both inside the 10:00 hour.
+      final first = fitMonitoringImportRecords(monitoringWith(hr: [
+        (DateTime.utc(2026, 7, 22, 10, 5), 70),
+        (DateTime.utc(2026, 7, 22, 10, 6), 71),
+      ])).whereType<HeartRateImportRecord>().single;
+      final second = fitMonitoringImportRecords(monitoringWith(hr: [
+        (DateTime.utc(2026, 7, 22, 10, 40), 74),
+        (DateTime.utc(2026, 7, 22, 10, 41), 75),
+      ])).whereType<HeartRateImportRecord>().single;
+
+      expect(
+        first.clientRecordId,
+        isNot(second.clientRecordId),
+        reason: 'a shared id makes Health Connect upsert one over the other',
+      );
+    });
+
+    test('re-importing the same chunk stays idempotent', () {
+      final samples = [
+        (DateTime.utc(2026, 7, 22, 10, 5), 70),
+        (DateTime.utc(2026, 7, 22, 10, 6), 71),
+      ];
+      final a = fitMonitoringImportRecords(monitoringWith(hr: samples))
+          .whereType<HeartRateImportRecord>()
+          .single;
+      final b = fitMonitoringImportRecords(monitoringWith(hr: samples))
+          .whereType<HeartRateImportRecord>()
+          .single;
+
+      // Same data must keep the same id, so a repeat sync overwrites itself
+      // rather than duplicating.
+      expect(a.clientRecordId, b.clientRecordId);
+    });
+
+    test('a whole-day file still yields one record per hour', () {
+      final records = fitMonitoringImportRecords(monitoringWith(hr: [
+        for (var h = 0; h < 24; h++)
+          (DateTime.utc(2026, 7, 22, h, 30), 60 + h),
+      ])).whereType<HeartRateImportRecord>();
+
+      expect(records, hasLength(24));
+      expect(records.map((r) => r.clientRecordId).toSet(), hasLength(24));
+    });
+
+    test('respiration is keyed and timed on its first reading', () {
+      final record = fitMonitoringImportRecords(monitoringWith(
+        hr: const [],
+        respiration: [
+          (DateTime.utc(2026, 7, 22, 10, 5), 14.0),
+          (DateTime.utc(2026, 7, 22, 10, 6), 16.0),
+        ],
+      )).whereType<RespiratoryRateImportRecord>().single;
+
+      // Not the top of the hour, which every file in that hour would claim.
+      expect(record.time, DateTime.utc(2026, 7, 22, 10, 5));
+      expect(record.rate, 15.0);
+    });
+  });
 }

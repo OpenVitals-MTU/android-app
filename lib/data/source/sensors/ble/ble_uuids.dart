@@ -58,12 +58,63 @@ class BleUuids {
     measurementUuid: '00002a53-0000-1000-8000-00805f9b34fb',
   );
 
+  /// Garmin's Bluetooth SIG member service (16-bit `0xFE1F`) — what a Garmin
+  /// watch actually puts in its ADVERTISEMENT, and therefore the only Garmin
+  /// UUID a scan filter can match on.
+  ///
+  /// Confirmed against a vívoactive 5, whose advertisement carries exactly
+  /// `mServiceUuids=[0000fe1f-…]`, service data under the same UUID, and
+  /// manufacturer ID 135 (0x0087, Garmin International) — and carries no trace
+  /// of [garminGfdiServiceV1].
+  ///
+  /// A device advertising this is a watch/bike computer to onboard as
+  /// [BleDeviceKind.watch], never a source of live capabilities — which is why
+  /// [capabilitiesForService] returns empty for it.
+  static const String garminMemberService =
+      '0000fe1f-0000-1000-8000-00805f9b34fb';
+
+  /// Garmin's GFDI service — the transport this app pulls FIT files over.
+  ///
+  /// **Not advertised.** This is a GATT service, discoverable only AFTER
+  /// connecting, so it must never go in [scanServiceUuids]: a filter built on
+  /// it matches nothing and hides every Garmin watch from the scan. Kept for the
+  /// connect path. From Gadgetbridge's
+  /// `CommunicatorV1.UUID_SERVICE_GARMIN_GFDI_V1`.
+  static const String garminGfdiServiceV1 =
+      '6a4e2401-667b-11e3-949a-0800200c9a66';
+
+  static const String garminGfdiSendV1 =
+      '6a4e4c80-667b-11e3-949a-0800200c9a66';
+
+  static const String garminGfdiReceiveV1 =
+      '6a4ecd28-667b-11e3-949a-0800200c9a66';
+
+  /// Garmin's V2 multi-link service — what a vívoactive 5 actually exposes
+  /// (confirmed by the on-device GATT probe). Also GATT-only, never advertised.
+  static const String garminMlServiceV2 =
+      '6a4e2800-667b-11e3-949a-0800200c9a66';
+
+  /// V2 receive (notify) characteristic handles. Each is paired with a send
+  /// characteristic at `handle + 0x10`, and the first pair that exists on the
+  /// device is the one to use (`CommunicatorV2.initializeDevice`).
+  static const int garminMlFirstReceiveHandle = 0x2810;
+  static const int garminMlLastReceiveHandle = 0x2814;
+  static const int garminMlSendHandleOffset = 0x10;
+
+  /// Builds a Garmin 128-bit UUID from its 16-bit handle, splicing it into
+  /// Gadgetbridge's `BASE_UUID` (`6A4E%04X-667B-11E3-949A-0800200C9A66`).
+  /// Lowercase, to match `flutter_blue_plus` `Guid.str128`.
+  static String garminUuidForHandle(int handle) =>
+      '6a4e${handle.toRadixString(16).padLeft(4, '0')}'
+      '-667b-11e3-949a-0800200c9a66';
+
   static const List<String> scanServiceUuids = [
     '0000180d-0000-1000-8000-00805f9b34fb', // heartRate
     '0000fee0-0000-1000-8000-00805f9b34fb', // heartRateMiband
     '00001816-0000-1000-8000-00805f9b34fb', // cyclingSpeedCadence
     '00001818-0000-1000-8000-00805f9b34fb', // cyclingPower
     '00001814-0000-1000-8000-00805f9b34fb', // runningSpeedCadence
+    garminMemberService,
   ];
 
   /// Capabilities advertised by a given GATT [serviceUuid] (lowercase 128-bit).

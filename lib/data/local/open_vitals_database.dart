@@ -147,6 +147,135 @@ class VitalsSyncCursors extends Table {
   String get tableName => 'vitals_sync_cursors';
 }
 
+/// Watch-only wellness samples that Health Connect has no type for.
+///
+/// Stress and Body Battery are Garmin-proprietary measures with no Health
+/// Connect equivalent, so unlike everything else the app reads, there is nowhere
+/// else to put them — this table is their system of record, not a cache. That is
+/// what distinguishes it from the universal raw-metric cache that was evaluated
+/// and rejected: nothing is being duplicated here.
+///
+/// One table with a [metric] discriminator rather than two near-identical ones:
+/// both are plain `(instant, integer)` series and arrive from the same FIT
+/// message.
+///
+/// The `(metric, time)` primary key does the deduplication. A watch re-offers
+/// the same monitoring window on successive syncs, so the same sample arrives
+/// repeatedly; an upsert on that key makes a re-import idempotent, the same
+/// guarantee `clientRecordId` gives the Health Connect records.
+class GarminWellnessSamples extends Table {
+  /// `stress` or `body_energy` — see [GarminWellnessMetric].
+  TextColumn get metric => text()();
+
+  /// Sample instant, UTC milliseconds since the epoch.
+  IntColumn get timeMillis => integer().named('time_millis')();
+
+  /// Stress 0..100, Body Battery 0..100. Stored raw, uninterpreted.
+  IntColumn get value => integer()();
+
+  @override
+  Set<Column> get primaryKey => {metric, timeMillis};
+
+  @override
+  String get tableName => 'garmin_wellness_samples';
+}
+
+/// The metrics [GarminWellnessSamples] can hold. The stored name is explicit so
+/// renaming a Dart identifier cannot orphan rows.
+enum GarminWellnessMetric {
+  stress('stress'),
+  bodyEnergy('body_energy'),
+
+  /// Garmin intensity minutes — the running daily totals, in minutes.
+  moderateMinutes('moderate_minutes'),
+  vigorousMinutes('vigorous_minutes'),
+
+  /// From the metrics file. Health Connect holds VO2 max, so it is NOT here;
+  /// these are the estimates it has no type for.
+  ///
+  /// [recoveryTime] is in minutes, [trainingReadiness] is 0..100, and the two
+  /// training loads are Garmin's own unitless scale.
+  recoveryTime('recovery_time'),
+  trainingReadiness('training_readiness'),
+  trainingLoadAcute('training_load_acute'),
+  trainingLoadChronic('training_load_chronic'),
+
+  /// The watch's own sleep score for a night, 0..100, timestamped at the
+  /// session start. Distinct from anything the app derives from stages.
+  sleepScore('sleep_score'),
+  sleepAwakenings('sleep_awakenings'),
+
+  /// How long the watch itself counted the sleeper awake, in SECONDS.
+  ///
+  /// The number to compare our stage-derived total against — they have
+  /// disagreed by nearly an hour on a real night.
+  sleepAwakeSeconds('sleep_awake_seconds'),
+
+  /// Garmin's undocumented "sleep pressure", stored raw.
+  sleepPressure('sleep_pressure'),
+
+  /// Sleep Coach, in minutes: the usual nightly need, and what the night's
+  /// strain actually called for.
+  sleepNeedNormalMinutes('sleep_need_normal_minutes'),
+  sleepNeedMinutes('sleep_need_minutes');
+
+  const GarminWellnessMetric(this.storageName);
+  final String storageName;
+}
+
+@DriftAccessor(tables: [GarminWellnessSamples])
+class GarminWellnessDao extends DatabaseAccessor<OpenVitalsDatabase>
+    with _$GarminWellnessDaoMixin {
+  GarminWellnessDao(super.db);
+
+  /// Upserts a batch. Re-syncing an overlapping window rewrites the same rows
+  /// rather than duplicating them.
+  Future<void> upsertSamples(
+    List<GarminWellnessSamplesCompanion> samples,
+  ) async {
+    if (samples.isEmpty) return;
+    await batch((b) {
+      b.insertAllOnConflictUpdate(garminWellnessSamples, samples);
+    });
+  }
+
+  /// Samples for [metric] in `[fromMillis, toMillis)`, oldest first.
+  Future<List<GarminWellnessSample>> samplesBetween(
+    GarminWellnessMetric metric,
+    int fromMillis,
+    int toMillis,
+  ) {
+    return (select(garminWellnessSamples)
+          ..where((t) =>
+              t.metric.equals(metric.storageName) &
+              t.timeMillis.isBiggerOrEqualValue(fromMillis) &
+              t.timeMillis.isSmallerThanValue(toMillis))
+          ..orderBy([(t) => OrderingTerm(expression: t.timeMillis)]))
+        .get();
+  }
+
+  /// The most recent sample for [metric], or null when none has been synced.
+  Future<GarminWellnessSample?> latest(GarminWellnessMetric metric) {
+    return (select(garminWellnessSamples)
+          ..where((t) => t.metric.equals(metric.storageName))
+          ..orderBy([
+            (t) => OrderingTerm(
+                expression: t.timeMillis, mode: OrderingMode.desc),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Total rows held, for diagnostics.
+  Future<int> countFor(GarminWellnessMetric metric) async {
+    final rows = await (selectOnly(garminWellnessSamples)
+          ..addColumns([garminWellnessSamples.timeMillis.count()])
+          ..where(garminWellnessSamples.metric.equals(metric.storageName)))
+        .get();
+    return rows.first.read(garminWellnessSamples.timeMillis.count()) ?? 0;
+  }
+}
+
 @DriftAccessor(tables: [VitalsDailyAggregates, VitalsSyncCursors])
 class VitalsDailyCacheDao extends DatabaseAccessor<OpenVitalsDatabase>
     with _$VitalsDailyCacheDaoMixin {
@@ -364,8 +493,19 @@ class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
 }
 
 @DriftDatabase(
-  tables: [Beverages, FeelChecks, VitalsDailyAggregates, VitalsSyncCursors],
-  daos: [BeverageDao, FeelCheckDao, VitalsDailyCacheDao],
+  tables: [
+    Beverages,
+    FeelChecks,
+    VitalsDailyAggregates,
+    VitalsSyncCursors,
+    GarminWellnessSamples,
+  ],
+  daos: [
+    BeverageDao,
+    FeelCheckDao,
+    VitalsDailyCacheDao,
+    GarminWellnessDao,
+  ],
 )
 class OpenVitalsDatabase extends _$OpenVitalsDatabase {
   /// Construct with any [QueryExecutor]. Tests pass `NativeDatabase.memory()`
@@ -373,7 +513,7 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
   OpenVitalsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -393,8 +533,24 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
             await customStatement(createVitalsDailyAggregatesTableSql);
             await customStatement(createVitalsSyncCursorsTableSql);
           }
+          // v6 adds the Garmin stress / Body Battery samples, which have no
+          // Health Connect type and so live only here.
+          if (from < 6) {
+            await customStatement(createGarminWellnessSamplesTableSql);
+          }
         },
       );
+
+  /// The `CREATE TABLE` for the watch wellness samples, applied on upgrade
+  /// from < v6.
+  static const String createGarminWellnessSamplesTableSql = '''
+CREATE TABLE IF NOT EXISTS garmin_wellness_samples (
+  metric TEXT NOT NULL,
+  time_millis INTEGER NOT NULL,
+  value INTEGER NOT NULL,
+  PRIMARY KEY (metric, time_millis)
+)
+''';
 
   /// The `CREATE TABLE`s for the daily vitals cache, applied on upgrade from < v5.
   static const String createVitalsDailyAggregatesTableSql = '''

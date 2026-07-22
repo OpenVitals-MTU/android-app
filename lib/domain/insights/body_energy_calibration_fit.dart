@@ -26,6 +26,34 @@ class BodyEnergyFeelCheck {
   int get observedScore => (rating * 10).clamp(0, 100);
 }
 
+/// One reading from a watch that computes its own body-energy score (Garmin
+/// Body Battery), paired with what this app's model predicted for that moment.
+///
+/// Structurally the same observation as a [BodyEnergyFeelCheck] — "the model
+/// predicted P, an independent source says O" — and fed through the same fit.
+/// It is a distinct type because it is NOT the same kind of evidence: a
+/// feel-check is the user's lived experience, while this is another vendor's
+/// MODEL. That earns it less weight per reading, not more, however many of them
+/// arrive.
+class BodyEnergyWatchReading {
+  const BodyEnergyWatchReading({
+    required this.time,
+    required this.observedScore,
+    required this.predictedScore,
+    required this.dominantInfluence,
+  });
+
+  final DateTime time;
+
+  /// The watch's own 0–100 body-energy score.
+  final int observedScore;
+
+  /// This app's score at [time] under the current gains.
+  final int predictedScore;
+
+  final BodyEnergyPrimaryInfluence dominantInfluence;
+}
+
 /// Fits the personal gains from feel-checks — transparently.
 ///
 /// Each feel-check says "the model predicted P, I felt O". A gap means the model
@@ -42,22 +70,33 @@ BodyEnergyCalibration fitBodyEnergyGains(
   BodyEnergyCalibration current,
   List<BodyEnergyFeelCheck> feelChecks, {
   double learningRate = _defaultLearningRate,
+  List<BodyEnergyWatchReading> watchReadings = const [],
+  double watchLearningRate = _defaultWatchLearningRate,
 }) {
-  if (feelChecks.isEmpty) return current.normalized();
+  if (feelChecks.isEmpty && watchReadings.isEmpty) return current.normalized();
 
   var sleep = current.sleepChargeGain;
   var activity = current.activityDrainGain;
   var basal = current.basalDrainGain;
   var stress = current.stressDrainGain;
 
-  for (final check in feelChecks) {
-    // Normalised error in [-1, 1]: positive means the user felt better than
-    // predicted, negative means worse.
-    final error = (check.observedScore - check.predictedScore) / 100.0;
-    if (error == 0.0) continue;
-    final step = learningRate * error;
+  // Both sources are the same shape of evidence — predicted vs observed — so
+  // they run through one loop, differing only in how hard each nudges.
+  final observations = <(int observed, int predicted, BodyEnergyPrimaryInfluence, double rate)>[
+    for (final c in feelChecks)
+      (c.observedScore, c.predictedScore, c.dominantInfluence, learningRate),
+    for (final w in watchReadings)
+      (w.observedScore, w.predictedScore, w.dominantInfluence, watchLearningRate),
+  ];
 
-    switch (check.dominantInfluence) {
+  for (final (observed, predicted, influence, rate) in observations) {
+    // Normalised error in [-1, 1]: positive means the observation was higher
+    // than predicted, negative means lower.
+    final error = (observed - predicted) / 100.0;
+    if (error == 0.0) continue;
+    final step = rate * error;
+
+    switch (influence) {
       case BodyEnergyPrimaryInfluence.sleepRecovery:
         // Felt better → sleep recharged more than modelled → raise the gain.
         sleep += step;
@@ -87,6 +126,8 @@ BodyEnergyCalibration fitBodyEnergyGains(
         basalDrainGain: basal.clamp(lo, hi),
         stressDrainGain: stress.clamp(lo, hi),
         feelCheckCount: current.feelCheckCount + feelChecks.length,
+        watchObservationCount:
+            current.watchObservationCount + watchReadings.length,
       )
       .normalized();
 }
@@ -94,3 +135,17 @@ BodyEnergyCalibration fitBodyEnergyGains(
 /// One feel-check moves a gain at most this far; small so a single mood swing
 /// can't swamp the model, and the gains converge over weeks of check-ins.
 const double _defaultLearningRate = 0.15;
+
+/// A watch reading moves a gain less than a feel-check, but not by much.
+///
+/// Still below the feel-check rate on purpose: a watch reading is another
+/// model's OUTPUT, not the user's lived experience, so a check-in should always
+/// outweigh one. The gap is deliberately modest so the watch actually converges
+/// the gains in days rather than months.
+///
+/// The trade-off that buys: a day of readings that disagree hard and
+/// consistently CAN now reach a gain's clamp. That is judged acceptable — such
+/// a day means the model is badly wrong and a large correction is the right
+/// answer — and the hourly downsampling plus the [BodyEnergyCalibration] bounds
+/// still stop it running away.
+const double _defaultWatchLearningRate = 0.1;
