@@ -12,9 +12,13 @@ import '../insights/body_energy_watch_observations.dart';
 /// Folds newly-synced watch Body Battery readings into the personal gains.
 ///
 /// Follows the feel-check rule exactly: **each observation is counted once**.
-/// A watermark records the newest sample already fitted, and only strictly
-/// newer ones are fed in — so re-syncing an overlapping window, which a watch
-/// does constantly, cannot re-teach the model the same lesson twice.
+///
+/// The unit counted is an hour BUCKET, not a sample. A watermark records the
+/// last bucket already fitted and only later buckets are considered, so an hour
+/// contributes exactly one observation however many times the watch is synced
+/// during it. Keying on the newest sample instead made the learning rate depend
+/// on how often the user tapped Sync — ten syncs an hour taught the model ten
+/// times as fast as one, from identical watch data.
 ///
 /// Everything here is best-effort. Calibration is an enhancement, so a failure
 /// to fit must never fail the sync that triggered it: the watermark simply does
@@ -37,18 +41,18 @@ class FitBodyEnergyFromWatchUseCase {
   /// Returns how many observations were folded in.
   Future<int> call({DateTime? now}) async {
     final at = (now ?? DateTime.now()).toUtc();
-    final watermark = _preferences.bodyEnergyWatchFitWatermarkMillis;
-    final from = watermark > 0
-        ? watermark
+    final bucketMs = watchObservationBucket.inMilliseconds;
+    final fittedBucketStart = _preferences.bodyEnergyWatchFitWatermarkMillis;
+    // Start of the first bucket not yet fitted.
+    final from = fittedBucketStart > 0
+        ? fittedBucketStart + bucketMs
         : at.subtract(_maxLookback).millisecondsSinceEpoch;
 
     final List<GarminWellnessSample> samples;
     try {
       samples = await _dao.samplesBetween(
         GarminWellnessMetric.bodyEnergy,
-        // Strictly newer than the watermark: the boundary sample was already
-        // counted by the previous run.
-        from + 1,
+        from,
         at.millisecondsSinceEpoch + 1,
       );
     } catch (error) {
@@ -70,7 +74,6 @@ class FitBodyEnergyFromWatchUseCase {
     }
 
     var fitted = 0;
-    var newestFitted = watermark;
     for (final entry in byDay.entries) {
       final readings = await _observationsForDay(entry.key, entry.value);
       if (readings.isEmpty) continue;
@@ -82,23 +85,18 @@ class FitBodyEnergyFromWatchUseCase {
         ),
       );
       fitted += readings.length;
-      for (final reading in readings) {
-        final ms = reading.time.toUtc().millisecondsSinceEpoch;
-        if (ms > newestFitted) newestFitted = ms;
-      }
     }
 
     if (fitted > 0) {
-      // Advanced past every sample examined in this run, not merely the ones
-      // that paired, so unpairable readings are not reconsidered forever. Only
-      // reached when something WAS fitted: a run that produced nothing (no
-      // timeline available yet) leaves the watermark alone so those readings
-      // get another chance once the day's data fills in.
-      final newestSeen = samples
-          .map((s) => s.timeMillis)
+      // Advanced past every bucket examined, not merely the ones that paired,
+      // so unpairable readings are not reconsidered forever. Only reached when
+      // something WAS fitted: a run that produced nothing (no timeline yet)
+      // leaves the watermark alone so those readings get another chance once
+      // the day's data fills in.
+      final newestBucket = samples
+          .map((s) => s.timeMillis ~/ bucketMs)
           .reduce((a, b) => a > b ? a : b);
-      _preferences.bodyEnergyWatchFitWatermarkMillis =
-          newestSeen > newestFitted ? newestSeen : newestFitted;
+      _preferences.bodyEnergyWatchFitWatermarkMillis = newestBucket * bucketMs;
       debugPrint('[BODY-ENERGY-FIT] folded $fitted watch readings into the '
           'gains (${_preferences.bodyEnergyCalibration().watchObservationCount} '
           'total)');

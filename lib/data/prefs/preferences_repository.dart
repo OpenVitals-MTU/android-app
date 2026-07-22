@@ -333,11 +333,13 @@ class PreferencesRepository {
 
   BodyEnergyCalibration bodyEnergyCalibration() => _bodyEnergyCalibration.value;
 
-  /// The newest watch body-energy sample already folded into the gains.
+  /// Start of the last hour BUCKET whose watch body-energy reading was folded
+  /// into the gains.
   ///
-  /// The fitter's rule is "count each observation exactly once", so this marks
-  /// where the last fit stopped; a sync only feeds in what is strictly newer.
-  /// 0 means nothing has been fitted yet.
+  /// A bucket, not a sample: an hour must contribute exactly one observation
+  /// however many syncs touch it, or the learning rate would scale with how
+  /// often the user taps Sync rather than with elapsed time. 0 means nothing
+  /// has been fitted yet.
   int get bodyEnergyWatchFitWatermarkMillis =>
       _prefs.getInt(_keyBodyEnergyWatchFitWatermarkMillis) ?? 0;
 

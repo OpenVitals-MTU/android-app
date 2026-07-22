@@ -31,10 +31,24 @@ class WatchBodyEnergySample {
 /// error to a gain the model was not exercising at that time would teach it the
 /// wrong lesson. Points the model itself could not measure are skipped for the
 /// same reason.
+/// How much time one calibration observation stands for.
+///
+/// Shared so the downsampler here and the caller's "which buckets have already
+/// been fitted" bookkeeping cannot drift apart — if they disagree, a bucket is
+/// either fitted twice or never.
+const Duration watchObservationBucket = Duration(hours: 1);
+
+/// The bucket [time] falls in, as an index. Callers persist the last fitted
+/// index so a bucket contributes exactly one observation no matter how many
+/// syncs happen to touch it.
+int watchObservationBucketIndex(DateTime time) =>
+    time.toUtc().millisecondsSinceEpoch ~/
+        watchObservationBucket.inMilliseconds;
+
 List<BodyEnergyWatchReading> buildWatchObservations({
   required List<WatchBodyEnergySample> samples,
   required BodyEnergyTimeline timeline,
-  Duration bucket = const Duration(hours: 1),
+  Duration bucket = watchObservationBucket,
   Duration maxPairingGap = const Duration(minutes: 30),
 }) {
   if (samples.isEmpty || timeline.points.isEmpty) return const [];

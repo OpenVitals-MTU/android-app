@@ -173,6 +173,49 @@ void main() {
     expect(prefs.bodyEnergyWatchFitWatermarkMillis, 0);
   });
 
+  test('an hour contributes ONE observation however often you sync', () async {
+    // The flaw this replaced: each sync downsampled only within its own batch,
+    // so ten syncs in an hour taught the model ten times as fast as one, from
+    // identical watch data. Learning must track elapsed time, not tapping.
+    final hourStart = DateTime.utc(
+      now.year,
+      now.month,
+      now.day,
+      now.subtract(const Duration(hours: 2)).hour,
+    );
+    await setUp0(points: [
+      for (var m = 0; m < 60; m += 5)
+        _point(hourStart.add(Duration(minutes: m)).toLocal(), 80),
+    ]);
+
+    // Six syncs, each bringing ten more minutes of the SAME hour.
+    for (var m = 0; m < 60; m += 10) {
+      await seedBodyEnergy([
+        for (var k = 0; k < 10; k++)
+          (hourStart.add(Duration(minutes: m + k)), 50),
+      ]);
+      await useCase(now: now);
+    }
+
+    expect(prefs.bodyEnergyCalibration().watchObservationCount, 1);
+  });
+
+  test('successive hours each contribute one observation', () async {
+    final base = DateTime.utc(now.year, now.month, now.day,
+        now.subtract(const Duration(hours: 4)).hour);
+    await setUp0(points: [
+      for (var h = 0; h < 3; h++)
+        _point(base.add(Duration(hours: h)).toLocal(), 80),
+    ]);
+
+    for (var h = 0; h < 3; h++) {
+      await seedBodyEnergy([(base.add(Duration(hours: h)), 50)]);
+      await useCase(now: now);
+    }
+
+    expect(prefs.bodyEnergyCalibration().watchObservationCount, 3);
+  });
+
   test('the gains stay in bounds across many runs', () async {
     await setUp0();
     for (var hour = 1; hour <= 24; hour++) {
