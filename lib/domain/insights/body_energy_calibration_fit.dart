@@ -136,11 +136,16 @@ BodyEnergyCalibration fitBodyEnergyGains(
 /// can't swamp the model, and the gains converge over weeks of check-ins.
 const double _defaultLearningRate = 0.15;
 
-/// A watch reading moves a gain far less than a feel-check.
+/// A watch reading moves a gain less than a feel-check, but not by much.
 ///
-/// Two reasons, both deliberate. It is another model's OUTPUT rather than the
-/// user's lived experience, so it deserves less trust per observation. And the
-/// watch produces them by the hundred: at the feel-check rate, a single day
-/// would drive every gain into its clamp and the user's own check-ins would
-/// never be heard again.
-const double _defaultWatchLearningRate = 0.01;
+/// Still below the feel-check rate on purpose: a watch reading is another
+/// model's OUTPUT, not the user's lived experience, so a check-in should always
+/// outweigh one. The gap is deliberately modest so the watch actually converges
+/// the gains in days rather than months.
+///
+/// The trade-off that buys: a day of readings that disagree hard and
+/// consistently CAN now reach a gain's clamp. That is judged acceptable — such
+/// a day means the model is badly wrong and a large correction is the right
+/// answer — and the hourly downsampling plus the [BodyEnergyCalibration] bounds
+/// still stop it running away.
+const double _defaultWatchLearningRate = 0.1;

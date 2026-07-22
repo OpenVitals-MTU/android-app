@@ -230,19 +230,31 @@ void main() {
       expect(fitted.hasWatchObservations, isTrue);
     });
 
-    test('a full day of readings cannot slam a gain into its clamp', () {
-      // 24 hourly observations, all disagreeing hard in the same direction.
+    test('a realistic day of disagreement converges without saturating', () {
+      // 24 hourly readings each ~10 points off — the everyday case. The gain
+      // should move usefully in a day without pinning to its limit.
+      final fitted = fitBodyEnergyGains(
+        const BodyEnergyCalibration(),
+        const [],
+        watchReadings: [for (var i = 0; i < 24; i++) reading(60, 70)],
+      );
+
+      expect(fitted.activityDrainGain, greaterThan(1.1));
+      expect(fitted.activityDrainGain,
+          lessThan(BodyEnergyCalibration.maxGain));
+    });
+
+    test('a day of MAXIMAL disagreement does reach the clamp', () {
+      // 24 readings each 100 points wrong. Documented, not accidental: at this
+      // learning rate such a day means the model is badly wrong, and a large
+      // correction is the right answer. The clamp is what stops it running away.
       final fitted = fitBodyEnergyGains(
         const BodyEnergyCalibration(),
         const [],
         watchReadings: [for (var i = 0; i < 24; i++) reading(0, 100)],
       );
 
-      expect(
-        fitted.activityDrainGain,
-        lessThan(BodyEnergyCalibration.maxGain),
-        reason: 'one day of watch data must not exhaust the adjustment range',
-      );
+      expect(fitted.activityDrainGain, BodyEnergyCalibration.maxGain);
     });
 
     test('gains stay within their bounds however extreme the disagreement', () {
