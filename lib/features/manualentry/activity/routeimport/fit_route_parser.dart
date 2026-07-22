@@ -328,9 +328,11 @@ class FitRouteParser {
   static RouteFileImport parse(Uint8List fitBytes, {String? fileName}) {
     // DIAGNOSTIC: log every file that reaches the decoder before it can throw, so
     // a header/structure failure is still attributable to a filename in logcat.
-    debugPrint(
-      '[FIT] decode start file=${fileName ?? "?"} bytes=${fitBytes.length}',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        '[FIT] decode start file=${fileName ?? "?"} bytes=${fitBytes.length}',
+      );
+    }
     final result = _FitDecoder(fitBytes).decode();
     final samples = result.samples.resolve(
       isCycling: _fitSportIsCycling(result.summary.sport),
@@ -345,12 +347,14 @@ class FitRouteParser {
     // course/workout vs monitoring/sleep/etc.), whether a session start_time was
     // found, and how many timestamped route points survived — the three inputs the
     // reject-at-line-46 decision reads.
-    debugPrint(
-      '[FIT] decoded file=${fileName ?? "?"} '
-      'fileType=${result.summary.fileType} sport=${result.summary.sport} '
-      'subSport=${result.summary.subSport} start=${result.summary.startTime} '
-      'end=${result.summary.endTime} routePoints=${routePoints.length}',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        '[FIT] decoded file=${fileName ?? "?"} '
+        'fileType=${result.summary.fileType} sport=${result.summary.sport} '
+        'subSport=${result.summary.subSport} start=${result.summary.startTime} '
+        'end=${result.summary.endTime} routePoints=${routePoints.length}',
+      );
+    }
     switch (result.summary.fileType) {
       case _fitFileTypeCourse:
         // A course is a planned route: it has no recorded series to carry.
@@ -768,28 +772,36 @@ class _FitSleepRaw {
     // DIAGNOSTIC: the raw transitions and what they add up to. A real vívoactive
     // 5 reported 3 min awake where this produced 59, so the question is whether
     // the file says something different from the watch's own screen or whether
-    // these stages are being derived wrongly — and only the raw series answers it.
-    final totals = <FitSleepLevel, int>{};
-    for (final stage in stages) {
-      totals[stage.level] = (totals[stage.level] ?? 0) +
-          stage.end.difference(stage.start).inMinutes;
+    // these stages are being derived wrongly — and only the raw series answers
+    // it. Still unresolved, which is why this is still here.
+    //
+    // Debug builds only, and the whole block rather than each line: this prints
+    // a person's night, transition by transition, and `debugPrint` is NOT
+    // stripped from a release build. Guarding the block also keeps the totals
+    // from being computed for a log nobody will read.
+    if (kDebugMode) {
+      final totals = <FitSleepLevel, int>{};
+      for (final stage in stages) {
+        totals[stage.level] = (totals[stage.level] ?? 0) +
+            stage.end.difference(stage.start).inMinutes;
+      }
+      final covered = totals.values.fold(0, (a, b) => a + b);
+      debugPrint('[FIT-SLEEP] session ${sessionStart.toIso8601String()} → '
+          '${sessionEnd.toIso8601String()} '
+          '(${sessionEnd.difference(sessionStart).inMinutes}m) '
+          'transitions=${sorted.length} stages=${stages.length} '
+          'covered=${covered}m');
+      debugPrint('[FIT-SLEEP] totals: '
+          '${totals.entries.map((e) => "${e.key.name}=${e.value}m").join(" ")}');
+      for (final (transition, rawLevel) in sorted) {
+        debugPrint('[FIT-SLEEP]   ${transition.toIso8601String()} raw=$rawLevel '
+            '(${_fitSleepLevelFromRaw(rawLevel)?.name ?? "UNKNOWN"})');
+      }
+      // The watch's own verdict on the same night, for comparison against what
+      // the stages above add up to.
+      debugPrint('[FIT-SLEEP] watch says: score=${overallScore ?? "-"} '
+          'awakenings=${awakeningsCount ?? "-"}');
     }
-    final covered = totals.values.fold(0, (a, b) => a + b);
-    debugPrint('[FIT-SLEEP] session ${sessionStart.toIso8601String()} → '
-        '${sessionEnd.toIso8601String()} '
-        '(${sessionEnd.difference(sessionStart).inMinutes}m) '
-        'transitions=${sorted.length} stages=${stages.length} '
-        'covered=${covered}m');
-    debugPrint('[FIT-SLEEP] totals: '
-        '${totals.entries.map((e) => "${e.key.name}=${e.value}m").join(" ")}');
-    for (final (transition, rawLevel) in sorted) {
-      debugPrint('[FIT-SLEEP]   ${transition.toIso8601String()} raw=$rawLevel '
-          '(${_fitSleepLevelFromRaw(rawLevel)?.name ?? "UNKNOWN"})');
-    }
-    // The watch's own verdict on the same night, for comparison against what
-    // the stages above add up to.
-    debugPrint('[FIT-SLEEP] watch says: score=${overallScore ?? "-"} '
-        'awakenings=${awakeningsCount ?? "-"}');
     return FitSleepSession(
       start: sessionStart,
       end: sessionEnd,
@@ -1539,8 +1551,10 @@ class _FitSingleFileDecoder {
     // A zero or missing interval would stack every sample on one instant.
     final interval = values[_fitHsaIntervalFieldNumber] ?? 0;
     if (interval <= 0) {
-      debugPrint('[FIT-HSA] message $messageNumber: ${samples.length} samples '
-          'with no usable interval ($interval) — dropped');
+      if (kDebugMode) {
+        debugPrint('[FIT-HSA] message $messageNumber: ${samples.length} samples '
+            'with no usable interval ($interval) — dropped');
+      }
       return;
     }
     final start = _fitDateTimeInstant(messageTimestamp);
@@ -1560,10 +1574,12 @@ class _FitSingleFileDecoder {
           if (raw >= 0 && raw <= 100) _hsaBodyEnergy.add((at, raw));
       }
     }
-    debugPrint('[FIT-HSA] message $messageNumber: ${samples.length} samples '
-        'every ${interval}s from ${start.toIso8601String()} '
-        'spanning ${interval * (samples.length - 1)}s '
-        '(first=${samples.first} last=${samples.last})');
+    if (kDebugMode) {
+      debugPrint('[FIT-HSA] message $messageNumber: ${samples.length} samples '
+          'every ${interval}s from ${start.toIso8601String()} '
+          'spanning ${interval * (samples.length - 1)}s '
+          '(first=${samples.first} last=${samples.last})');
+    }
   }
 
   /// One `monitoring` message: resolve its timestamp (full or `timestamp_16`

@@ -27,11 +27,13 @@ import androidx.annotation.RequiresApi
  */
 @RequiresApi(Build.VERSION_CODES.S)
 class OpenVitalsCompanionDeviceService : CompanionDeviceService() {
+    // The address is deliberately not logged: `Log` survives into release
+    // builds, and a Bluetooth MAC identifies the person carrying the watch.
     override fun onDeviceAppeared(address: String) {
-        Log.d(SyncBluetooth.TAG, "companion device appeared: $address")
+        Log.d(SyncBluetooth.TAG, "companion device appeared")
     }
 
     override fun onDeviceDisappeared(address: String) {
-        Log.d(SyncBluetooth.TAG, "companion device disappeared: $address")
+        Log.d(SyncBluetooth.TAG, "companion device disappeared")
     }
 }

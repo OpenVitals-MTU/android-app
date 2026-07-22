@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/source/sensors/garmin/garmin_log.dart';
 import '../../../data/source/sensors/garmin/garmin_settings_link.dart';
 import '../../../data/source/sensors/garmin/garmin_settings_screen.dart';
 import '../../../di/providers.dart';
@@ -33,23 +34,41 @@ class WatchSettingsTarget {
 /// cannot connect.
 const Duration _linkGrace = Duration(seconds: 20);
 
-/// The links currently open, by device.
+/// Which watches currently have a settings link open.
 ///
 /// A watch has one radio, so this is not a cache — it is the record of who
 /// holds it. A file sync consults it to take the link back rather than opening
 /// a second one alongside, which is what silently wedged Sync: after browsing
 /// Alarms the settings link stayed up, and the sync's connect never returned.
-final Map<String, GarminSettingsLink> _openLinks = {};
-
-/// Closes any settings link held on [deviceId], and waits for it to be gone.
 ///
-/// Awaited rather than fired off, because the caller wants the radio.
-Future<void> releaseWatchSettingsLink(String deviceId) async {
-  final link = _openLinks.remove(deviceId);
-  if (link == null) return;
-  debugPrint('[GARMIN-SETTINGS] releasing the link for $deviceId');
-  await link.close();
+/// Scoped to the container rather than the library. As a top-level map it
+/// outlived every `ProviderContainer` that filled it, so a widget test that
+/// opened a settings screen leaked a link into the next one with no override
+/// able to reach it.
+class WatchSettingsLinks {
+  final Map<String, GarminSettingsLink> _open = {};
+
+  void register(String deviceId, GarminSettingsLink link) =>
+      _open[deviceId] = link;
+
+  void forget(String deviceId) => _open.remove(deviceId);
+
+  /// Whether a link is being held for [deviceId].
+  bool isHeld(String deviceId) => _open.containsKey(deviceId);
+
+  /// Closes any link held on [deviceId], and waits for it to be gone.
+  ///
+  /// Awaited rather than fired off, because the caller wants the radio.
+  Future<void> release(String deviceId) async {
+    final link = _open.remove(deviceId);
+    if (link == null) return;
+    garminLog('[GARMIN-SETTINGS] releasing the link for $deviceId');
+    await link.close();
+  }
 }
+
+final watchSettingsLinksProvider =
+    Provider<WatchSettingsLinks>((ref) => WatchSettingsLinks());
 
 /// One open settings link per watch, shared by every screen browsing it.
 ///
@@ -74,9 +93,10 @@ final watchSettingsLinkProvider =
       manufacturer: phone.manufacturer,
       model: phone.model,
     );
-    _openLinks[deviceId] = link;
+    final links = ref.read(watchSettingsLinksProvider)
+      ..register(deviceId, link);
     ref.onDispose(() {
-      _openLinks.remove(deviceId);
+      links.forget(deviceId);
       link.close();
     });
 
@@ -219,7 +239,7 @@ Future<WatchSettingsChangeResult> _change(
       null => WatchSettingsChangeResult.unanswered,
     };
   } catch (error) {
-    debugPrint('[GARMIN-SETTINGS] change failed: $error');
+    garminLog('[GARMIN-SETTINGS] change failed: $error');
     return WatchSettingsChangeResult.unanswered;
   }
 }

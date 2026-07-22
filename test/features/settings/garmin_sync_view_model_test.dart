@@ -15,6 +15,7 @@ import 'package:openvitals/data/source/sensors/garmin/garmin_watch_sync_service.
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/features/settings/application/garmin_sync_view_model.dart';
+import 'package:openvitals/features/settings/application/watch_settings_view_model.dart';
 
 /// Stands in for the whole radio + protocol stack.
 class _FakeSyncService implements GarminWatchSyncService {
@@ -269,6 +270,26 @@ void main() {
     await notifier().toggleFind(watch.id); // stop
     await running;
     expect(state().findingDeviceId, isNull);
+  });
+
+  test('the open-link registry belongs to the container, not the library',
+      () async {
+    // It was a top-level map, which outlived every container that filled it: a
+    // widget test that opened a settings screen leaked a link into the next one
+    // and no override could reach it. Two containers must not share the record
+    // of who holds a watch's radio.
+    await setUp0();
+    final first = container.read(watchSettingsLinksProvider);
+
+    final other = ProviderContainer(overrides: [
+      bleDeviceRepositoryProvider.overrideWithValue(repo),
+      garminWatchSyncServiceProvider.overrideWithValue(service),
+    ]);
+    addTearDown(other.dispose);
+    final second = other.read(watchSettingsLinksProvider);
+
+    expect(identical(first, second), isFalse);
+    expect(second.isHeld(watch.id), isFalse);
   });
 
   test('stopping twice before the watch answers does not throw', () async {

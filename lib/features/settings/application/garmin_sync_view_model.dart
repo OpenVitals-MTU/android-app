@@ -107,7 +107,7 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
       // Inside the try, because `state` already says "syncing": a throw out
       // here would leave that stuck forever, and the guard at the top of this
       // method would then refuse every future sync until the app restarted.
-      await releaseWatchSettingsLink(deviceId);
+      await ref.read(watchSettingsLinksProvider).release(deviceId);
       // The provider still holds the link that was just closed. Without this an
       // open settings screen keeps a dead one and quietly reports that the
       // watch sent nothing.

@@ -33,6 +33,10 @@ import androidx.activity.result.contract.ActivityResultContracts
  * still syncs, just without the priority boost. So every method here returns
  * "no association" rather than throwing.
  *
+ * WHAT IS NOT LOGGED: the device address. `Log` is not stripped from a release
+ * build, and a Bluetooth MAC is a stable identifier for the person carrying it.
+ * These lines say what happened, not to whom.
+ *
  * Association is scoped to an Activity: the OS hands back an [IntentSender] that
  * must be launched for result. With no Activity attached (a background isolate),
  * there is no dialog to show and the call resolves false.
@@ -73,7 +77,7 @@ internal class CompanionDevices(
                 pendingAddress = null
                 val allowed = result.resultCode == Activity.RESULT_OK
                 if (allowed && address != null) startObservingPresence(address)
-                Log.i(SyncBluetooth.TAG, "companion association for $address allowed=$allowed")
+                Log.i(SyncBluetooth.TAG, "companion association allowed=$allowed")
                 callback?.invoke(Result.success(allowed))
             }
     }
@@ -94,7 +98,7 @@ internal class CompanionDevices(
 
     fun associate(address: String, displayName: String?, callback: (Result<Boolean>) -> Unit) {
         if (!BluetoothAdapter.checkBluetoothAddress(address)) {
-            Log.w(SyncBluetooth.TAG, "associate: invalid address '$address'")
+            Log.w(SyncBluetooth.TAG, "associate: invalid address")
             callback(Result.success(false))
             return
         }
@@ -108,7 +112,7 @@ internal class CompanionDevices(
         // request, so short-circuiting is what keeps re-onboarding from hanging
         // (Gadgetbridge hits the same trap, BondingUtil.java:377).
         if (isAssociated(address)) {
-            Log.i(SyncBluetooth.TAG, "associate: $address already associated")
+            Log.i(SyncBluetooth.TAG, "associate: already associated")
             startObservingPresence(address)
             callback(Result.success(true))
             return
@@ -140,7 +144,7 @@ internal class CompanionDevices(
 
         pendingCallback = callback
         pendingAddress = address
-        Log.i(SyncBluetooth.TAG, "associate: requesting association with ${displayName ?: address}")
+        Log.i(SyncBluetooth.TAG, "associate: requesting association")
         try {
             manager.associate(
                 request,
@@ -193,7 +197,7 @@ internal class CompanionDevices(
             stopObservingPresence(address)
             @Suppress("DEPRECATION")
             manager.disassociate(address)
-            Log.i(SyncBluetooth.TAG, "disassociated $address")
+            Log.i(SyncBluetooth.TAG, "disassociated")
         } catch (e: Exception) {
             // Nothing associated, or already gone. Forgetting a device must not
             // fail because the OS had nothing to forget.
