@@ -259,6 +259,12 @@ class GarminSession {
       // the raw record counts and rejected type codes tell them apart.
       debugPrint('[GARMIN-SYNC] directory ${bytes.length}B '
           '${listing.describe()} new=${fresh.length}');
+      if (listing.entries.isEmpty && bytes.isNotEmpty) {
+        // Nothing usable came back. The raw listing is small (16 bytes a
+        // record) and is the only thing that separates "the watch has nothing"
+        // from "the watch answers somewhere else" — dump it rather than guess.
+        debugPrint('[GARMIN-SYNC] raw directory: ${_hex(bytes)}');
+      }
       _report(GarminSyncPhase.downloading);
       await _next();
       return;
@@ -316,6 +322,15 @@ class GarminSession {
     debugPrint('[GARMIN-SYNC] aborted: ${reason ?? "no reason given"}');
     if (!_done.isCompleted) _done.complete(List.unmodifiable(_downloaded));
   }
+}
+
+/// Renders bytes as space-separated hex, capped so a stray large buffer cannot
+/// flood the log.
+String _hex(Uint8List bytes, {int max = 256}) {
+  final shown = bytes.length > max ? Uint8List.sublistView(bytes, 0, max) : bytes;
+  final text =
+      shown.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+  return bytes.length > max ? '$text … (+${bytes.length - max}B)' : text;
 }
 
 /// One file being received: the expected size, the bytes so far, and the running
