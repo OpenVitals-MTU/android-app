@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:health_connect_native/health_connect_native.dart';
 
@@ -434,9 +435,10 @@ Duration? _zoneOffset(int? seconds) =>
       'FloorsClimbed.floors',
       'ElevationGained.elevation',
     ];
-    // Today's chart stops at "now" rather than running on to midnight.
+    // Today's chart stops at "now" rather than running on to midnight. Both
+    // reads come from the same clock so the date cannot flip between them.
     final isToday = date == LocalDate.now();
-    final end = isToday ? DateTime.now() : _dayEnd(date);
+    final end = isToday ? clock.now() : _dayEnd(date);
     // Bound the hourly-bucket aggregate: on some devices this Health Connect
     // binder call can stall indefinitely, and it is the ONLY read the Day range
     // issues that the other ranges do not — an unbounded stall here hangs the Day

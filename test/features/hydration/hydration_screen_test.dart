@@ -1,3 +1,4 @@
+import '../../support/today_fixtures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -180,7 +181,9 @@ void main() {
       ],
       entries: [
         _drink(now, 0.5, 'Water bottle'),
-        _drink(now.subtract(const Duration(hours: 2)), 0.3, 'Water bottle'),
+        // Clamped to today: a raw `now - 2h` is yesterday when the suite runs
+        // between midnight and 02:00, and the entry drops out of the day.
+        _drink(earlierToday(const Duration(hours: 2)), 0.3, 'Water bottle'),
       ],
     );
     await tester.pumpWidget(

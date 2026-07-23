@@ -1,3 +1,4 @@
+import '../../support/today_fixtures.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -333,13 +334,15 @@ void main() {
   });
 
   testWidgets('editing an existing entry returns after saving', (tester) async {
-    final now = DateTime.now();
+    // Clamped to today so the entry cannot slide into yesterday when the suite
+    // runs in the first hour after midnight.
+    final anHourAgo = earlierToday(const Duration(hours: 1));
     final hydrationRepo = _FakeHydrationRepository()
       ..hydrationEntries = [
         HydrationEntry(
           id: 'entry-1',
-          startTime: now.subtract(const Duration(hours: 1)),
-          endTime: now.subtract(const Duration(hours: 1)),
+          startTime: anHourAgo,
+          endTime: anHourAgo,
           liters: 0.33,
           source: 'openvitals',
           isOpenVitalsEntry: true,

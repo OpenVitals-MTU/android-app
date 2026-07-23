@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:clock/clock.dart';
+
 /// A date without a time zone, mirroring `java.time.LocalDate`.
 ///
 /// In the Kotlin app instants are `java.time.Instant` and calendar dates are
@@ -25,8 +27,10 @@ class LocalDate implements Comparable<LocalDate> {
   /// 1-31.
   final int day;
 
+  /// Today, per [clock] — the system clock in production, a fixed one under
+  /// `withClock` in tests, so "what day is it" is pinnable across the app.
   factory LocalDate.now() {
-    final now = DateTime.now();
+    final now = clock.now();
     return LocalDate(now.year, now.month, now.day);
   }
 
