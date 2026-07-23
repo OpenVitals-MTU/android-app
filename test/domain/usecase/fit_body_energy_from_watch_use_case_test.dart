@@ -201,8 +201,14 @@ void main() {
   });
 
   test('successive hours each contribute one observation', () async {
-    final base = DateTime.utc(now.year, now.month, now.day,
-        now.subtract(const Duration(hours: 4)).hour);
+    // The top of an hour four hours ago. Built by subtracting from `now`, NOT
+    // by pasting today's date onto the hour-of-day from four hours back: near
+    // midnight UTC those disagree — 02:00 minus four hours is 22:00 YESTERDAY,
+    // and "today at 22:00" is in the FUTURE, past the use case's `<= now`
+    // window, so every sample was filtered out and the count came back 0. The
+    // test failed only when CI happened to run in the small hours.
+    final topOfHour = DateTime.utc(now.year, now.month, now.day, now.hour);
+    final base = topOfHour.subtract(const Duration(hours: 4));
     await setUp0(points: [
       for (var h = 0; h < 3; h++)
         _point(base.add(Duration(hours: h)).toLocal(), 80),
