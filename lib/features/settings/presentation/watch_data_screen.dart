@@ -115,11 +115,14 @@ class WatchDataScreen extends ConsumerWidget {
     if (moderate != null || vigorous != null) {
       // Garmin's own convention: vigorous minutes count double towards the
       // weekly goal, which is why a bare sum would understate the week.
-      final total = (moderate ?? 0) + 2 * (vigorous ?? 0);
+      final today = (moderate ?? 0) + 2 * (vigorous ?? 0);
+      // The goal is weekly, so its progress must be the week's total, not
+      // today's — the watch stores a running daily total that resets nightly.
+      final week = metrics.intensityMinutesWeek ?? today;
       rows.add(WatchValueRow(
         label: l10n.settingsWatchMetricIntensityMinutes,
-        supporting: l10n.settingsWatchMetricIntensityGoal('$total', '150'),
-        value: '$total',
+        supporting: l10n.settingsWatchMetricIntensityGoal('$week', '150'),
+        value: '$today',
       ));
     }
 

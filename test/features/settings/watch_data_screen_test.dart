@@ -25,6 +25,28 @@ Future<ProviderContainer> _containerWith(
         value: value,
       ),
   ]);
+  return _wrap(db);
+}
+
+/// Seeds fully-dated samples, so a test can place readings on specific days of
+/// the current week — what the weekly intensity-minutes total is summed over.
+Future<ProviderContainer> _containerWithDated(
+  List<(GarminWellnessMetric, DateTime, int)> samples,
+) async {
+  final db = OpenVitalsDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  await db.garminWellnessDao.upsertSamples([
+    for (final (metric, at, value) in samples)
+      GarminWellnessSamplesCompanion.insert(
+        metric: metric.storageName,
+        timeMillis: at.toUtc().millisecondsSinceEpoch,
+        value: value,
+      ),
+  ]);
+  return _wrap(db);
+}
+
+Future<ProviderContainer> _wrap(OpenVitalsDatabase db) async {
   final container = ProviderContainer(
     overrides: [openVitalsDatabaseProvider.overrideWithValue(db)],
   );
@@ -107,5 +129,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('50'), findsOneWidget); // 30 + 2*10
+  });
+
+  testWidgets('the weekly goal counts the whole week, not just today',
+      (tester) async {
+    // The watch stores a running daily total that resets each midnight, so the
+    // latest reading is only today's. Two days of this week must add up in the
+    // "of 150 this week" line while the headline stays today's number.
+    final now = DateTime.now();
+    final dayStart = DateTime(now.year, now.month, now.day);
+    final weekStart = dayStart.subtract(Duration(days: dayStart.weekday - 1));
+    final container = await _containerWithDated([
+      (GarminWellnessMetric.moderateMinutes, weekStart.add(const Duration(hours: 12)), 20),
+      (GarminWellnessMetric.moderateMinutes, weekStart.add(const Duration(days: 1, hours: 12)), 30),
+    ]);
+    await tester.pumpWidget(_harness(container));
+    await tester.pumpAndSettle();
+
+    // Headline is the latest day's running total; the goal line sums the week.
+    expect(find.text('30'), findsOneWidget);
+    expect(find.textContaining('50 of 150'), findsOneWidget);
   });
 }
