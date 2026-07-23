@@ -1032,6 +1032,28 @@ class _FitFieldDefinition {
   final int baseType;
 }
 
+/// One decoded FIT data message: its global number, the field maps the generic
+/// walk extracted (by field number), and the resolved record timestamp. This is
+/// the seam between the generic FIT container walk and the domain interpretation
+/// — the walk emits these, the `_dispatch` switch consumes them — and the shape
+/// a future `core/fit` reader would expose so activity and Garmin-wellness
+/// interpreters can consume it independently.
+class _FitMessage {
+  const _FitMessage(
+    this.globalMessageNumber,
+    this.values,
+    this.strings,
+    this.arrays,
+    this.timestamp,
+  );
+
+  final int globalMessageNumber;
+  final Map<int, int> values;
+  final Map<int, String> strings;
+  final Map<int, List<int>> arrays;
+  final int? timestamp;
+}
+
 class _FitDecoder {
   _FitDecoder(this.fileBytes);
 
@@ -1078,6 +1100,7 @@ class _FitSingleFileDecoder {
   final int startOffset;
 
   final Map<int, _FitMessageDefinition> _definitions = {};
+  final List<_FitMessage> _messages = [];
   final List<ExerciseRoutePoint> _points = [];
   int? _fileType;
   String? _metadataName;
@@ -1169,6 +1192,14 @@ class _FitSingleFileDecoder {
     final reader = _FitDataReader(fileBytes, dataStart, dataEnd);
     while (reader.hasRemaining()) {
       _readRecord(reader);
+    }
+    // Interpret only after the whole file is walked: the generic walk above
+    // emits messages knowing no message types, and every accumulator is filled
+    // in this second pass. Message order is preserved, so cases that depend on
+    // an earlier message (file_id before record; monitoring_info before its
+    // series) still see it.
+    for (final message in _messages) {
+      _dispatch(message);
     }
     final next = dataEnd + _fitCrcSize;
     return _FitFileDecodeResult(
@@ -1316,7 +1347,24 @@ class _FitSingleFileDecoder {
     final messageTimestamp = explicitTimestamp ?? compressedTimestamp;
     if (messageTimestamp != null) _lastTimestampRaw = messageTimestamp;
 
-    switch (definition.globalMessageNumber) {
+    _messages.add(_FitMessage(
+      definition.globalMessageNumber,
+      values,
+      strings,
+      arrays,
+      messageTimestamp,
+    ));
+  }
+
+  /// Interprets one decoded message into the accumulators. The second pass, run
+  /// after the whole file is read; locals are bound to the message's fields so
+  /// the switch below is exactly the code that used to run inline in the walk.
+  void _dispatch(_FitMessage message) {
+    final values = message.values;
+    final strings = message.strings;
+    final arrays = message.arrays;
+    final messageTimestamp = message.timestamp;
+    switch (message.globalMessageNumber) {
       case _fitFileIdMessageNumber:
         _addFileId(values);
         break;
@@ -1450,7 +1498,7 @@ class _FitSingleFileDecoder {
       case _fitHsaRespirationMessageNumber:
       case _fitHsaBodyBatteryMessageNumber:
         _readHsaSamples(
-          definition.globalMessageNumber,
+          message.globalMessageNumber,
           values,
           arrays,
           messageTimestamp,
