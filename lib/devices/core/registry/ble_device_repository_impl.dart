@@ -74,6 +74,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
     required Set<BleSensorCapability> capabilities,
     int? wheelCircumferenceMm,
     BleDeviceKind kind = BleDeviceKind.sensor,
+    DeviceIntegration? integration,
   }) {
     final normalizedAddress = address.toUpperCase();
     final existing = _devices.firstWhereOrNull(
@@ -87,6 +88,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
         enabled: true,
         wheelCircumferenceMm: wheelCircumferenceMm ?? existing.wheelCircumferenceMm,
         kind: kind,
+        integration: integration,
       );
     }
     final device = BleSensorDevice(
@@ -99,6 +101,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
       wheelCircumferenceMm: wheelCircumferenceMm,
       addedAt: DateTime.now().toUtc(),
       kind: kind,
+      integration: integration,
     ).normalized();
     _persist([..._devices, device]);
     return device;
@@ -112,6 +115,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
     bool? enabled,
     int? wheelCircumferenceMm,
     BleDeviceKind? kind,
+    DeviceIntegration? integration,
   }) {
     final current = _devices.firstWhereOrNull((d) => d.id == deviceId);
     if (current == null) {
@@ -125,6 +129,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
           wheelCircumferenceMm:
               wheelCircumferenceMm ?? current.wheelCircumferenceMm,
           kind: kind ?? current.kind,
+          integration: integration ?? current.integration,
         )
         .normalized();
     _persist([
@@ -214,6 +219,7 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
         'batteryUpdatedAt': device.batteryUpdatedAt?.millisecondsSinceEpoch,
         'addedAt': device.addedAt.millisecondsSinceEpoch,
         'kind': device.kind.storageName,
+        'integration': device.integration?.storageName,
         'lastSyncedAt': device.lastSyncedAt?.millisecondsSinceEpoch,
       };
 
@@ -248,6 +254,10 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
       // sensors, which is exactly what the fallback says.
       kind: BleDeviceKind.fromStorage(json['kind']?.toString() ?? '') ??
           BleDeviceKind.sensor,
+      // Absent for a sensor and for a Garmin watch stored before this field —
+      // null reads back as Garmin via [isGarminWatch], so nothing migrates.
+      integration:
+          DeviceIntegration.fromStorage(json['integration']?.toString() ?? ''),
       lastSyncedAt: lastSyncedAt == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(lastSyncedAt, isUtc: true),

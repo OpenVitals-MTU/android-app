@@ -39,7 +39,7 @@ class GarminDeviceSyncPort implements DeviceSyncPort {
   final Ref _ref;
 
   @override
-  bool canSync(BleSensorDevice device) => device.isWatch;
+  bool canSync(BleSensorDevice device) => device.isGarminWatch;
 
   @override
   Future<DeviceSyncResult> sync(

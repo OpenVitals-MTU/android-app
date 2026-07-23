@@ -35,6 +35,7 @@ abstract interface class BleDeviceRepository {
     required Set<BleSensorCapability> capabilities,
     int? wheelCircumferenceMm,
     BleDeviceKind kind,
+    DeviceIntegration? integration,
   });
 
   BleSensorDevice updateDevice({
@@ -44,6 +45,7 @@ abstract interface class BleDeviceRepository {
     bool? enabled,
     int? wheelCircumferenceMm,
     BleDeviceKind? kind,
+    DeviceIntegration? integration,
   });
 
   void removeDevice(String deviceId);
