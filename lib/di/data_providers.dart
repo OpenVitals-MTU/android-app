@@ -2,11 +2,13 @@ import '../domain/model/vitals_models.dart';
 import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../devices/core/ble/ble_sensor_coordinator.dart';
+import '../devices/core/ble/device_scan_classifier.dart';
 import '../devices/core/pairing/ble_watch_pairing.dart';
 import '../devices/garmin/garmin_device_state_store.dart';
 import '../devices/garmin/garmin_file_store.dart';
 import '../devices/garmin/garmin_gatt_probe.dart';
 import '../devices/garmin/garmin_phone_identity.dart';
+import '../devices/garmin/garmin_scan_classifier.dart';
 import '../devices/garmin/garmin_watch_sync_service.dart';
 import '../devices/core/ble/ble_sensor_repository.dart';
 import '../devices/garmin/garmin_transport_probe.dart';
@@ -314,11 +316,18 @@ final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
 
 // ── BLE sensors ───────────────────────────────────────────────────────────
 
+/// The scan classifiers, one per file-sync integration, that let the generic
+/// scanner spot a watch to onboard without naming any protocol itself.
+final deviceScanClassifiersProvider = Provider<List<DeviceScanClassifier>>(
+  (ref) => const [GarminScanClassifier()],
+);
+
 /// The app-lifetime BLE coordinator (Kotlin `@Singleton`), bound to its
 /// contract so features never name the service class.
 final bleSensorRepositoryProvider = Provider<BleSensorRepository>((ref) {
   final coordinator = BleSensorCoordinator(
     ref.watch(bleDeviceRepositoryProvider),
+    classifiers: ref.watch(deviceScanClassifiersProvider),
   );
   ref.onDispose(coordinator.dispose);
   return coordinator;

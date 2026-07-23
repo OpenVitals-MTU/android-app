@@ -69,10 +69,10 @@ bool isGarminSyncDeviceName(String? name) {
 /// True when [device] is a Garmin device to onboard as a [BleDeviceKind.watch]
 /// (pull FIT files) rather than as a live-streaming sensor.
 ///
-/// The advertised member service ([BleDiscoveredDevice.advertisesGarminService])
+/// The advertised member service ([BleDiscoveredDevice.advertisesSyncService])
 /// is the authoritative signal; [isGarminSyncDeviceName] is the fallback for a
 /// watch found via "Show all devices", whose advertisement the scan filter never
 /// had to match. Lives here, not on the shared [BleDiscoveredDevice], so the
 /// generic discovery model carries no Garmin classification knowledge.
 bool isGarminSyncDevice(BleDiscoveredDevice device) =>
-    device.advertisesGarminService || isGarminSyncDeviceName(device.name);
+    device.advertisesSyncService || isGarminSyncDeviceName(device.name);

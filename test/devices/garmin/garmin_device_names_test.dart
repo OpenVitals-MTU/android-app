@@ -5,14 +5,14 @@ import 'package:openvitals/devices/garmin/garmin_device_names.dart';
 
 BleDiscoveredDevice _discovered({
   String? name,
-  bool advertisesGarminService = false,
+  bool advertisesSyncService = false,
 }) =>
     BleDiscoveredDevice(
       address: 'E0:48:24:D5:F7:10',
       name: name,
       rssi: -60,
       suggestedCapabilities: const {},
-      advertisesGarminService: advertisesGarminService,
+      advertisesSyncService: advertisesSyncService,
     );
 
 void main() {
@@ -60,7 +60,7 @@ void main() {
   group('isGarminSyncDevice', () {
     test('the advertised Garmin member service settles it even with no name',
         () {
-      expect(isGarminSyncDevice(_discovered(advertisesGarminService: true)),
+      expect(isGarminSyncDevice(_discovered(advertisesSyncService: true)),
           isTrue);
     });
 

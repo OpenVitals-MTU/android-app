@@ -90,7 +90,7 @@ BleDiscoveredDevice _watch() => const BleDiscoveredDevice(
       name: 'vívoactive 5',
       rssi: -55,
       suggestedCapabilities: {},
-      advertisesGarminService: true,
+      advertisesSyncService: true,
     );
 
 void main() {

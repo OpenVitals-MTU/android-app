@@ -9,6 +9,7 @@ import '../registry/ble_device_repository.dart';
 import 'ble_gatt_connection.dart';
 import 'ble_sensor_repository.dart';
 import 'ble_uuids.dart';
+import 'device_scan_classifier.dart';
 
 /// Port of the Kotlin `BleSensorCoordinator` over `flutter_blue_plus`.
 ///
@@ -25,9 +26,16 @@ import 'ble_uuids.dart';
 ///
 /// Runtime verification is deferred; scan/connect are device-dependent.
 class BleSensorCoordinator implements BleSensorRepository {
-  BleSensorCoordinator(this._deviceRepository);
+  BleSensorCoordinator(
+    this._deviceRepository, {
+    this._classifiers = const [],
+  });
 
   final BleDeviceRepository _deviceRepository;
+
+  /// The per-integration classifiers consulted to tell a file-sync watch from a
+  /// live sensor during a scan. Empty in unit tests that never scan.
+  final List<DeviceScanClassifier> _classifiers;
 
   final Map<String, BleGattConnection> _connections = {};
   final Map<BleSensorCapability, BleSensorDevice> _capabilityOwners = {};
@@ -236,11 +244,16 @@ class BleSensorCoordinator implements BleSensorRepository {
       for (final uuid in result.advertisementData.serviceUuids)
         ...BleUuids.capabilitiesForService(uuid.str128),
     };
-    // 0xFE1F, not GFDI: GFDI is a GATT service that only exists once connected,
-    // so an advertisement never carries it.
-    final advertisesGarmin = result.advertisementData.serviceUuids.any(
-      (uuid) => uuid.str128 == BleUuids.garminMemberService,
-    );
+    // Which integration (if any) claims this advertisement as a file-sync watch
+    // rather than a live sensor — asked per integration, so the generic scanner
+    // carries no protocol knowledge of its own. (A watch advertises its member
+    // service, e.g. Garmin's 0xFE1F; the GFDI transport is GATT-only and never
+    // advertised.)
+    final advertisedUuids = [
+      for (final uuid in result.advertisementData.serviceUuids) uuid.str128,
+    ];
+    final advertisesSync =
+        _classifiers.any((c) => c.advertisesSyncService(advertisedUuids));
     final existing = _scanResults[address];
     final name = result.advertisementData.advName.isNotEmpty
         ? result.advertisementData.advName
@@ -255,8 +268,8 @@ class BleSensorCoordinator implements BleSensorRepository {
       },
       // Sticky across advertisements: a watch does not put every service in
       // every packet, so one sighting of GFDI settles it for this scan.
-      advertisesGarminService:
-          advertisesGarmin || (existing?.advertisesGarminService ?? false),
+      advertisesSyncService:
+          advertisesSync || (existing?.advertisesSyncService ?? false),
     );
     _publishScanResults();
   }

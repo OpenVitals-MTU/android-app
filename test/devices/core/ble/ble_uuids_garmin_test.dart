@@ -53,14 +53,14 @@ void main() {
         name: null,
         rssi: -80,
         suggestedCapabilities: {},
-        advertisesGarminService: true,
+        advertisesSyncService: true,
       );
 
       expect(isGarminSyncDevice(device), isTrue);
     });
 
     test('a watch found via "Show all devices" is caught by its name', () {
-      // That path applies no service filter, so advertisesGarminService is
+      // That path applies no service filter, so advertisesSyncService is
       // never set — the name is the only evidence available.
       const device = BleDiscoveredDevice(
         address: 'E0:48:24:D5:F7:10',

@@ -312,14 +312,15 @@ abstract class BleDiscoveredDevice with _$BleDiscoveredDevice {
     required int? rssi,
     required Set<BleSensorCapability> suggestedCapabilities,
 
-    /// The advertisement carried Garmin's member service UUID (`0xFE1F`) — the
-    /// scanner's signal that this is a sync-watch to onboard rather than a live
-    /// sensor. Garmin is the only such device today; the verdict itself lives in
-    /// `isGarminSyncDevice` (garmin_device_names.dart), so this generic model
-    /// holds the evidence, not the classification.
+    /// The advertisement carried a member service that an integration's
+    /// `DeviceScanClassifier` recognised — the scanner's signal that this is a
+    /// file-sync watch to onboard rather than a live sensor. A single integration
+    /// (Garmin) claims these today; the per-integration verdict lives in the
+    /// classifier, so this generic model holds the evidence, not the classification.
     ///
-    /// Deliberately NOT the GFDI UUID: that is a GATT service, invisible until
-    /// the device is connected, so no advertisement ever carries it.
-    @Default(false) bool advertisesGarminService,
+    /// Deliberately the ADVERTISED member service, not a GFDI/transport UUID:
+    /// those are GATT services, invisible until connected, so no advertisement
+    /// ever carries them.
+    @Default(false) bool advertisesSyncService,
   }) = _BleDiscoveredDevice;
 }
