@@ -1,4 +1,4 @@
-import '../../data/repository/contract/ble_device_repository.dart';
+import '../../devices/core/registry/ble_device_repository.dart';
 import '../model/ble_sensor_models.dart';
 
 /// What a set of capabilities would take away from the sensors already paired.

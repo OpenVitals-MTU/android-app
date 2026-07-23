@@ -1,4 +1,4 @@
-import '../../data/repository/contract/ble_device_repository.dart';
+import '../../devices/core/registry/ble_device_repository.dart';
 import '../model/ble_sensor_models.dart';
 import '../model/garmin_transport.dart';
 import '../port/garmin_transport_probe.dart';

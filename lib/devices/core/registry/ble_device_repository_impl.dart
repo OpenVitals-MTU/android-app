@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
-import '../contract/ble_device_repository.dart';
+import 'ble_device_repository.dart';
 
 /// Port of the Kotlin `BleDeviceRepository` — a SharedPreferences-backed sensor
 /// registry (not Health Connect). The Kotlin `StateFlow` is modelled with a

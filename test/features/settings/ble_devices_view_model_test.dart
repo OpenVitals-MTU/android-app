@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart';
-import 'package:openvitals/data/repository/contract/ble_sensor_repository.dart';
+import 'package:openvitals/devices/core/registry/ble_device_repository_impl.dart';
+import 'package:openvitals/devices/core/ble/ble_sensor_repository.dart';
 import 'package:openvitals/devices/garmin/garmin_capabilities.dart';
 import 'package:openvitals/devices/garmin/garmin_device_state_store.dart';
 import 'package:openvitals/di/providers.dart';

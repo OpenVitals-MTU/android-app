@@ -1,4 +1,4 @@
-import '../../data/repository/contract/ble_device_repository.dart';
+import '../../devices/core/registry/ble_device_repository.dart';
 import '../port/ble_capability_probe.dart';
 import '../model/ble_sensor_models.dart';
 

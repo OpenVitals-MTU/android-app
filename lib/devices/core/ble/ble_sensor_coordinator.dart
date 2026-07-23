@@ -4,11 +4,11 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-import '../../../data/repository/contract/ble_device_repository.dart';
 import '../../../domain/model/ble_sensor_models.dart';
+import '../registry/ble_device_repository.dart';
 import 'ble_gatt_connection.dart';
+import 'ble_sensor_repository.dart';
 import 'ble_uuids.dart';
-import '../../../data/repository/contract/ble_sensor_repository.dart';
 
 /// Port of the Kotlin `BleSensorCoordinator` over `flutter_blue_plus`.
 ///

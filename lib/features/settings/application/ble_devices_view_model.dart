@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../../data/repository/contract/ble_sensor_repository.dart';
+import '../../../devices/core/ble/ble_sensor_repository.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../domain/model/garmin_device_names.dart';

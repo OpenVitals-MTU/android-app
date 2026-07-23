@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart';
+import 'package:openvitals/devices/core/registry/ble_device_repository_impl.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/domain/model/garmin_transport.dart';
 import 'package:openvitals/domain/port/garmin_transport_probe.dart';
