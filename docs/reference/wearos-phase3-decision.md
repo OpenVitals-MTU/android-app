@@ -79,13 +79,39 @@ wants a Samsung account and often GMS, which the phone lacks. Test procedure:
 3. Grant openvitals Health Connect **read** permission for heart rate + sleep.
 4. Open Settings → Debug diagnostics → **Health Connect sources** and refresh.
 
-**Result: _pending_** — to be filled in after the on-device run. Outcomes:
-- **Data appears** → the HC path works; the follow-up build is a passive
-  "connected sources" surface (promote the diagnostic), no GMS, no BLE hacks.
-- **No data** → a Samsung WearOS watch cannot feed a de-Googled phone's Health
-  Connect (vendor bridge needs Google/Samsung infra; Data Layer needs GMS), i.e.
-  WearOS is not feasible on this rig without GMS. That is the finding, and Phase 3
-  stops here.
+**Result (2026-07-23, Pixel 6 Pro / Android 17, de-Googled).** The Health Connect
+path is real and works on this rig — but it is **vendor-dependent**:
+
+- **Proven working (Garmin).** The phone already feeds HC from a **Garmin
+  vívoactive 5** via **Garmin Connect** — the debug app read **4,422 HRV + 14
+  exercise sessions + heart-rate** at startup, with **no Play Services**. So a
+  watch's data DOES reach a de-Googled phone's Health Connect when its companion
+  app runs GMS-free. Garmin Connect does.
+- **Blocked (Samsung Galaxy Watch8).** The Watch8 was added to the app as a live
+  **BLE sensor** (HR + spurious cycling caps; see the smartwatch-labelling fix) —
+  that path works for **live** heart rate. But its **all-day** data (sleep/HRV/
+  steps) needs a bridge into HC, and the only official one is **Samsung Health**
+  (Galaxy Watch → Samsung Health → HC, since v6.22.5), which needs a Samsung
+  account + Google Play Services and so is unlikely to run on this de-Googled
+  phone. Health Connect does not support Wear OS devices directly, and Gadgetbridge
+  has no solid Galaxy-Watch-WearOS support. No bridge is installed; no Watch8
+  all-day data reaches HC.
+
+**Conclusion.** The mechanism is sound (Garmin proves it, GMS-free). WearOS
+feasibility is per-vendor: it works where the vendor's HC bridge is GMS-free, and
+is effectively blocked for Samsung on a de-Googled phone. For the Galaxy Watch on
+this rig: live HR via the BLE sensor path (works, now labelled a smartwatch);
+all-day data not available without Samsung Health.
+
+## Follow-up build (conditional, done in part)
+
+- **Smartwatch labelling (done, `ca31b20b6`).** A name-based classifier
+  (`lib/devices/core/ble/smartwatch_names.dart`) gives a Galaxy/Pixel/Wear OS watch
+  a watch glyph on the sensor row — presentation only, still a live sensor, NOT a
+  Garmin sync watch.
+- **HC sources diagnostic (done, `5ed2e52e4`).** Settings → Debug diagnostics →
+  Health Connect sources — the observation surface; the seed of a passive
+  "connected sources" view if the HC path is ever promoted to a user feature.
 
 ## Decision
 
