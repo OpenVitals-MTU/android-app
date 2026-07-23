@@ -474,7 +474,11 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
               // — it is a file source, not a live sensor. What it needs instead
               // is the two OS dialogs, named before they appear.
               if (state.isAddingWatch)
-                _WatchPairSteps(step: state.onboardStep)
+                // A WearOS watch has no bond/probe steps — just pair + add — so
+                // the Garmin step list would be misleading.
+                (state.addingIntegration == DeviceIntegration.wearos
+                    ? const SizedBox.shrink()
+                    : _WatchPairSteps(step: state.onboardStep))
               else if (state.isDiscoveringCapabilities)
                 Text(l10n.settingsSensorsDiscovering)
               else ...[
