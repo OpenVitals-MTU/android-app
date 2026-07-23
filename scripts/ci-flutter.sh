@@ -151,6 +151,24 @@ if [ "${CI_FLUTTER_FORCE_PREPARE:-0}" != "1" ] && [ -f "$prepared_marker" ]; the
 else
     flutter pub get
 
+    # --- build_runner cache (cross-pipeline) ----------------------------------
+    # The 78s the unit-tests step spends in `build_runner build` is mostly the
+    # AOT-compiled build script (.dart_tool/build/entrypoint, ~18MB) and the
+    # asset graph — both fully reusable across pipelines, because the workspace
+    # path, the Flutter/Dart version (pinned image) and PUB_CACHE location are
+    # all stable. The in-workspace cache dies with the pipeline, so seed it from
+    # the mounted cache volume when one exists. Every copy is best-effort: a
+    # torn or stale cache must degrade to a cold (slow, correct) build, never
+    # fail the step — build_runner validates the graph itself and rebuilds
+    # whatever does not match.
+    dart_tool_cache=/woodpecker/cache/dart_tool
+    if [ -d /woodpecker/cache ] && [ ! -d .dart_tool/build ] &&
+       [ -d "$dart_tool_cache/build" ]; then
+        echo "Seeding build_runner cache from $dart_tool_cache"
+        cp -r "$dart_tool_cache/build" .dart_tool/build 2>/dev/null || \
+            rm -rf .dart_tool/build
+    fi
+
     # --- Generated code (freezed + drift) ------------------------------------
     # The *.freezed.dart / *.g.dart outputs are NOT committed (see .gitignore) -- they
     # are reproduced here from their sources, exactly as the l10n outputs already are
@@ -180,6 +198,21 @@ else
             dart run pigeon --input pigeons/messages.dart
         )
     done
+
+    # Publish the freshly-validated build_runner cache for the next pipeline.
+    # Staged next to the destination and swapped, so a pipeline reading the
+    # cache concurrently sees either the old tree or the new one, not a half
+    # copy. Best-effort, same as the seed.
+    if [ -d /woodpecker/cache ] && [ -d .dart_tool/build ]; then
+        (
+            set +e
+            mkdir -p "$dart_tool_cache"
+            rm -rf "$dart_tool_cache/build.tmp"
+            cp -r .dart_tool/build "$dart_tool_cache/build.tmp" &&
+                rm -rf "$dart_tool_cache/build" &&
+                mv "$dart_tool_cache/build.tmp" "$dart_tool_cache/build"
+        ) || true
+    fi
 
     : > "$prepared_marker"
 fi
