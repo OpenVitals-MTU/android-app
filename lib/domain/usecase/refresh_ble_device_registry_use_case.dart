@@ -1,4 +1,4 @@
-import '../../data/repository/contract/ble_device_repository.dart';
+import '../../devices/core/registry/ble_device_repository.dart';
 
 /// Re-reads the sensor registry from storage so its stream re-emits.
 ///

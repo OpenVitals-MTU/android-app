@@ -1,4 +1,4 @@
-import '../../data/repository/contract/ble_device_repository.dart';
+import '../../devices/core/registry/ble_device_repository.dart';
 import '../model/ble_sensor_models.dart';
 
 /// One change to the paired-sensor registry.

@@ -3,13 +3,14 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../../data/repository/contract/ble_sensor_repository.dart';
+import '../../../devices/core/ble/ble_sensor_repository.dart';
+import '../../../devices/core/registry/device_classification.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
-import '../../../domain/model/garmin_transport.dart';
-import '../../../domain/port/watch_pairing_port.dart';
+import '../../../devices/garmin/garmin_transport.dart';
+import '../../../devices/core/pairing/watch_pairing_port.dart';
 import '../../../domain/usecase/edit_ble_device_registry_use_case.dart';
-import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
+import '../../../devices/garmin/onboard_garmin_watch_use_case.dart';
 
 part 'ble_devices_view_model.freezed.dart';
 
@@ -29,6 +30,11 @@ abstract class BleDevicesUiState with _$BleDevicesUiState {
     @Default(false) bool isScanning,
     @Default(false) bool showAllDevices,
     BleDiscoveredDevice? selectedDevice,
+
+    /// How [selectedDevice] maps to an integration + kind — set when it is
+    /// picked, so the add sheet and onboarding route to Garmin vs WearOS vs the
+    /// sensor flow without re-classifying.
+    DeviceClassification? selectedClassification,
     @Default(<BleSensorCapability>{})
     Set<BleSensorCapability> discoveredCapabilities,
     @Default(false) bool isDiscoveringCapabilities,
@@ -76,7 +82,13 @@ abstract class BleDevicesUiState with _$BleDevicesUiState {
 
   /// True while the add sheet is showing a watch rather than a sensor — the two
   /// share the sheet but ask completely different questions.
-  bool get isAddingWatch => selectedDevice?.isGarminSyncDevice ?? false;
+  bool get isAddingWatch =>
+      selectedClassification?.kind == BleDeviceKind.watch;
+
+  /// Which integration will own [selectedDevice] once added, or null for a plain
+  /// sensor — routes the add sheet and onboarding.
+  DeviceIntegration? get addingIntegration =>
+      selectedClassification?.integration;
 }
 
 /// Riverpod port of the Kotlin `BleDevicesViewModel`.
@@ -149,6 +161,7 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
     _setLocal(_local.copyWith(
       showAddFlow: false,
       selectedDevice: null,
+      selectedClassification: null,
       discoveredCapabilities: const {},
       isDiscoveringCapabilities: false,
       errorMessage: null,
@@ -182,12 +195,15 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
   }
 
   Future<void> selectDiscoveredDevice(BleDiscoveredDevice device) async {
+    final classification =
+        classifyDevice(device, ref.read(deviceClassifiersProvider));
     // A watch answers a different question. It streams nothing live, so probing
     // it for capabilities would connect, find no standard service and report
-    // nothing — the sheet asks the user to bond it instead.
-    if (device.isGarminSyncDevice) {
+    // nothing — the sheet asks the user to pair it instead.
+    if (classification.kind == BleDeviceKind.watch) {
       _setLocal(_local.copyWith(
         selectedDevice: device,
+        selectedClassification: classification,
         addDisplayName: device.name ?? device.address,
         addCapabilities: const {},
         discoveredCapabilities: const {},
@@ -195,13 +211,14 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
         isDiscoveringCapabilities: false,
         errorMessage: null,
       ));
-      // The scan competes with the connect that bonding needs, and the user has
+      // The scan competes with the connect that pairing needs, and the user has
       // chosen — nothing more will be picked from the list.
       stopScan();
       return;
     }
     _setLocal(_local.copyWith(
       selectedDevice: device,
+      selectedClassification: classification,
       addDisplayName: device.name ?? device.address,
       addCapabilities: device.suggestedCapabilities,
       isDiscoveringCapabilities: true,
@@ -271,16 +288,38 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
     final selected = state.selectedDevice;
     if (selected == null || state.isOnboardingWatch) return false;
 
+    final displayName = state.addDisplayName.trim().isEmpty
+        ? (selected.name ?? selected.address)
+        : state.addDisplayName.trim();
+
+    // A WearOS watch takes a different, shorter path: no bond, no GFDI probe —
+    // just the optional companion association, then register as a WearOS watch.
+    if (state.addingIntegration == DeviceIntegration.wearos) {
+      _setLocal(_local.copyWith(
+        isOnboardingWatch: true,
+        errorMessage: null,
+        watchOnboardedWithoutCompanion: false,
+      ));
+      final outcome = await ref.read(onboardWearosWatchUseCaseProvider)(
+        selected,
+        displayName: displayName,
+      );
+      if (!ref.mounted) return false;
+      _setLocal(_local.copyWith(
+        isOnboardingWatch: false,
+        onboardStep: null,
+        watchOnboardedWithoutCompanion: !outcome.associated,
+      ));
+      closeAddFlow();
+      return true;
+    }
+
     _setLocal(_local.copyWith(
       isOnboardingWatch: true,
       onboardStep: GarminOnboardStep.bonding,
       errorMessage: null,
       watchOnboardedWithoutCompanion: false,
     ));
-
-    final displayName = state.addDisplayName.trim().isEmpty
-        ? (selected.name ?? selected.address)
-        : state.addDisplayName.trim();
 
     final outcome = await ref.read(onboardGarminWatchUseCaseProvider)(
       selected,
@@ -406,13 +445,24 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
         .where((d) => d.id == deviceId)
         .firstOrNull;
     _edit(ForgetBleDevice(deviceId));
-    if (device != null && device.isWatch) {
+    if (device != null && device.isGarminWatch) {
+      // The watch's Garmin-specific state used to be cleared inside
+      // removeDevice; now that it lives in its own store, this watch-forget
+      // branch — the single path every Garmin removal funnels through — is what
+      // clears it, so a re-pairing starts clean.
+      ref.read(garminDeviceStateStoreProvider).clear(deviceId);
       // Fire-and-forget, like every other registry mutation here: dropping the
       // bond and association is housekeeping the user does not wait on, and a
       // failure leaves nothing worse than a stale OS pairing they can clear in
       // Android's own Bluetooth settings.
       unawaited(
         ref.read(onboardGarminWatchUseCaseProvider).forget(device.address),
+      );
+    } else if (device != null && device.isWearosWatch) {
+      // A WearOS watch has no Garmin state and no bond — only the optional
+      // companion association to drop.
+      unawaited(
+        ref.read(onboardWearosWatchUseCaseProvider).forget(device.address),
       );
     }
     if (state.editingDeviceId == deviceId) closeEditDevice();

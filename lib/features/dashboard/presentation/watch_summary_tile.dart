@@ -8,7 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/components/metric_stat_card.dart';
-import '../../settings/application/garmin_sync_view_model.dart';
+import '../../settings/application/device_sync_view_model.dart';
 import '../../settings/presentation/watch_common.dart';
 
 /// The carousel id for a watch's tile. Namespaced so it can never collide with
@@ -41,7 +41,7 @@ class WatchSummaryTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final sync = ref.watch(garminSyncViewModelProvider);
+    final sync = ref.watch(deviceSyncViewModelProvider);
     final syncingThis = sync.isSyncingDevice(device.id);
     final syncedAt = device.lastSyncedAt?.toLocal();
     final staleDays =
@@ -90,7 +90,7 @@ class WatchSummaryTile extends ConsumerWidget {
         onPressed: sync.isSyncing
             ? null
             : () => ref
-                .read(garminSyncViewModelProvider.notifier)
+                .read(deviceSyncViewModelProvider.notifier)
                 .syncDevice(device.id),
         tooltip: l10n.settingsWatchSyncNow,
         visualDensity: VisualDensity.compact,
@@ -113,7 +113,11 @@ class WatchSummaryTile extends ConsumerWidget {
 /// carousel. The top-bar battery action already covers sensors.
 /// Watches the reactive registry, not a one-shot read: the tile has to notice a
 /// finished sync (a new `lastSyncedAt`) and a watch being paired or removed.
+///
+/// Garmin watches only: this tile is a SYNC-status card (battery, last sync, a
+/// Sync button), and a WearOS watch neither syncs nor reports battery here — its
+/// data arrives through Health Connect — so it would only show a dead control.
 final summaryWatchesProvider = Provider<List<BleSensorDevice>>((ref) {
   final devices = ref.watch(bleDevicesProvider).value ?? const [];
-  return [for (final d in devices) if (d.isWatch) d];
+  return [for (final d in devices) if (d.isGarminWatch) d];
 });

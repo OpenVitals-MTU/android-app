@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/source/sensors/garmin/garmin_capabilities.dart';
-import '../../../data/source/sensors/garmin/garmin_settings_service.dart';
+import '../../../devices/garmin/garmin_capabilities.dart';
+import '../../../devices/garmin/garmin_settings_service.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 import '../application/ble_devices_view_model.dart';
-import '../application/garmin_sync_view_model.dart';
+import '../application/device_sync_view_model.dart';
+import '../application/garmin_watch_actions_view_model.dart';
 import 'watch_common.dart';
 
 /// One watch, and everything about it.
@@ -45,9 +46,14 @@ class WatchDeviceScreen extends ConsumerWidget {
       );
     }
 
-    final sync = ref.watch(garminSyncViewModelProvider);
+    final sync = ref.watch(deviceSyncViewModelProvider);
+    final actions = ref.watch(garminWatchActionsViewModelProvider);
+    // Only a Garmin watch has GFDI sync/settings/find. A WearOS watch speaks none
+    // of it — its heart rate streams over BLE and its recorded data arrives via
+    // Health Connect — so those controls are hidden rather than shown dead.
+    final isGarmin = device.isGarminWatch;
     final capabilities =
-        ref.watch(bleDeviceRepositoryProvider).capabilities(deviceId);
+        ref.watch(garminDeviceStateStoreProvider).capabilities(deviceId);
     // Unknown means SHOW, not hide: capabilities arrive in a handshake, so a
     // watch that has never synced would otherwise look feature-less. Everything
     // gated this way is disabled anyway, so showing it cannot mislead about
@@ -69,29 +75,40 @@ class WatchDeviceScreen extends ConsumerWidget {
       body: ListView(
         padding: screenScrollPadding(context),
         children: [
-          _StatusCard(device: device, sync: sync),
+          _StatusCard(device: device, sync: sync, isGarmin: isGarmin),
           const SizedBox(height: 12),
-          _Actions(device: device, sync: sync, supports: supports),
-          if (sync.isFindingDevice(device.id) || sync.findFailed)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                sync.isFindingDevice(device.id)
-                    ? l10n.settingsWatchFindRinging
-                    : l10n.settingsWatchFindFailed,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: sync.findFailed
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.primary,
-                    ),
-              ),
+          if (isGarmin) ...[
+            _Actions(
+              device: device,
+              sync: sync,
+              actions: actions,
+              supports: supports,
             ),
+            if (actions.isFindingDevice(device.id) || actions.findFailed)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  actions.isFindingDevice(device.id)
+                      ? l10n.settingsWatchFindRinging
+                      : l10n.settingsWatchFindFailed,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: actions.findFailed
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+              ),
+          ] else
+            // A WearOS watch has no on-device controls here: its data path is
+            // Health Connect + live BLE heart rate, both handled elsewhere. Just
+            // the status and the device settings below.
+            const SizedBox.shrink(),
           // No "Latest" band: it showed the same numbers the Data action opens,
           // one tap away, so the screen said everything twice.
-          // Only for a watch that says it HAS a settings tree. A watch without
-          // REALTIME_SETTINGS has no such screen to browse, so the band would be
-          // claiming a feature the hardware does not have.
-          if (supports(GarminCapability.realtimeSettings)) ...[
+          // Only for a Garmin watch that says it HAS a settings tree. A watch
+          // without REALTIME_SETTINGS (or any WearOS watch) has no such screen to
+          // browse, so the band would claim a feature the hardware does not have.
+          if (isGarmin && supports(GarminCapability.realtimeSettings)) ...[
             _SectionHeader(title: l10n.settingsWatchSettingsSection),
             _OnDeviceSettingsRow(deviceId: device.id),
           ],
@@ -118,10 +135,18 @@ class WatchDeviceScreen extends ConsumerWidget {
 }
 
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.device, required this.sync});
+  const _StatusCard({
+    required this.device,
+    required this.sync,
+    required this.isGarmin,
+  });
 
   final BleSensorDevice device;
-  final GarminSyncState sync;
+  final DeviceSyncState sync;
+
+  /// A WearOS watch has no sync concept, so its status line names the device
+  /// rather than a last-sync time it will never have.
+  final bool isGarmin;
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +157,9 @@ class _StatusCard extends StatelessWidget {
     final files = sync.lastFileCount;
 
     final buffer = StringBuffer();
-    if (syncedAt == null) {
+    if (!isGarmin) {
+      buffer.write(device.bluetoothName ?? device.address);
+    } else if (syncedAt == null) {
       buffer.write(l10n.settingsWatchNeverSynced);
     } else {
       buffer.write(
@@ -195,11 +222,13 @@ class _Actions extends ConsumerWidget {
   const _Actions({
     required this.device,
     required this.sync,
+    required this.actions,
     required this.supports,
   });
 
   final BleSensorDevice device;
-  final GarminSyncState sync;
+  final DeviceSyncState sync;
+  final GarminWatchActionsState actions;
 
   /// Whether the watch declared a capability — shared with the screen so the
   /// action row and the settings band cannot disagree about the same watch.
@@ -208,10 +237,10 @@ class _Actions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final finding = sync.isFindingDevice(device.id);
+    final finding = actions.isFindingDevice(device.id);
     // One radio: syncing and finding cannot overlap, and neither can a find on
     // a second watch. Stopping THIS find stays available throughout.
-    final busy = (sync.isSyncing || sync.findingDeviceId != null) && !finding;
+    final busy = (sync.isSyncing || actions.findingDeviceId != null) && !finding;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       child: Row(
@@ -232,7 +261,7 @@ class _Actions extends ConsumerWidget {
             onPressed: busy || finding
                 ? null
                 : () => ref
-                    .read(garminSyncViewModelProvider.notifier)
+                    .read(deviceSyncViewModelProvider.notifier)
                     .syncDevice(device.id),
             // Debug-only diagnostic: sync, then hold the link open so what the
             // watch sends unprompted can be read from the log. Deliberately
@@ -240,7 +269,7 @@ class _Actions extends ConsumerWidget {
             onLongPress: !kDebugMode || busy
                 ? null
                 : () => ref
-                    .read(garminSyncViewModelProvider.notifier)
+                    .read(deviceSyncViewModelProvider.notifier)
                     .syncDevice(device.id,
                         listenAfter: const Duration(minutes: 10)),
           ),
@@ -284,7 +313,7 @@ class _Actions extends ConsumerWidget {
               onPressed: busy
                   ? null
                   : () => ref
-                      .read(garminSyncViewModelProvider.notifier)
+                      .read(garminWatchActionsViewModelProvider.notifier)
                       .toggleFind(device.id),
             ),
         ],
@@ -315,8 +344,9 @@ Future<void> _probeSettings(
       duration: Duration(seconds: 4),
     ),
   );
-  final screens =
-      await ref.read(garminSyncViewModelProvider.notifier).probeSettings(deviceId);
+  final screens = await ref
+      .read(garminWatchActionsViewModelProvider.notifier)
+      .probeSettings(deviceId);
   messenger.showSnackBar(
     SnackBar(
       content: Text(screens == 0

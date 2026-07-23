@@ -20,7 +20,7 @@ import '../../../imports/applehealth/apple_health_import_foreground_controller.d
     show appleHealthImportOwnsForegroundService;
 import '../../../../l10n/app_localizations.dart';
 import '../../../../navigation/app_routes.dart';
-import '../../../../data/repository/contract/ble_sensor_repository.dart';
+import '../../../../devices/core/ble/ble_sensor_repository.dart';
 import '../../../../domain/model/activity_entry_types.dart';
 import '../repetition_recognizers.dart';
 import 'activity_recording.dart';

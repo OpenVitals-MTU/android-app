@@ -1,15 +1,21 @@
 import '../domain/model/vitals_models.dart';
 import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
-import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
-import '../data/source/sensors/ble/ble_watch_pairing.dart';
-import '../data/source/sensors/garmin/garmin_file_store.dart';
-import '../data/source/sensors/garmin/garmin_gatt_probe.dart';
-import '../data/source/sensors/garmin/garmin_phone_identity.dart';
-import '../data/source/sensors/garmin/garmin_watch_sync_service.dart';
-import '../data/repository/contract/ble_sensor_repository.dart';
-import '../domain/port/garmin_transport_probe.dart';
-import '../domain/port/watch_pairing_port.dart';
+import '../devices/core/ble/ble_sensor_coordinator.dart';
+import '../devices/core/ble/device_scan_classifier.dart';
+import '../devices/core/registry/device_classification.dart';
+import '../devices/garmin/garmin_device_classifier.dart';
+import '../devices/wearos/wearos_device_classifier.dart';
+import '../devices/core/pairing/ble_watch_pairing.dart';
+import '../devices/garmin/garmin_device_state_store.dart';
+import '../devices/garmin/garmin_file_store.dart';
+import '../devices/garmin/garmin_gatt_probe.dart';
+import '../devices/garmin/garmin_phone_identity.dart';
+import '../devices/garmin/garmin_scan_classifier.dart';
+import '../devices/garmin/garmin_watch_sync_service.dart';
+import '../devices/core/ble/ble_sensor_repository.dart';
+import '../devices/garmin/garmin_transport_probe.dart';
+import '../devices/core/pairing/watch_pairing_port.dart';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -28,7 +34,7 @@ import '../data/prefs/preferences_repository.dart';
 import '../data/repository/body_energy_timeline_cache_store.dart';
 import '../data/repository/contract/activity_repository.dart';
 import '../data/repository/contract/apple_health_import_repository.dart';
-import '../data/repository/contract/ble_device_repository.dart';
+import '../devices/core/registry/ble_device_repository.dart';
 import '../data/repository/contract/body_energy_feel_check_repository.dart';
 import '../data/repository/contract/body_energy_repository.dart';
 import '../data/repository/contract/body_repository.dart';
@@ -44,7 +50,7 @@ import '../data/repository/contract/vitals_repository.dart';
 import '../data/repository/impl/activity_marker_repository_impl.dart';
 import '../data/repository/impl/activity_repository_impl.dart';
 import '../data/repository/impl/apple_health_import_repository_impl.dart';
-import '../data/repository/impl/ble_device_repository_impl.dart';
+import '../devices/core/registry/ble_device_repository_impl.dart';
 import '../data/repository/impl/body_energy_feel_check_repository_impl.dart';
 import '../data/repository/impl/body_energy_repository_impl.dart';
 import '../data/repository/impl/body_repository_impl.dart';
@@ -247,6 +253,13 @@ final bleDeviceRepositoryProvider = Provider<BleDeviceRepository>(
   (ref) => BleDeviceRepositoryImpl(ref.watch(sharedPreferencesProvider)),
 );
 
+/// A watch's Garmin-specific per-device state (declared GFDI capabilities +
+/// which files a sync already pulled), kept out of [bleDeviceRepositoryProvider]
+/// so that registry carries no Garmin knowledge.
+final garminDeviceStateStoreProvider = Provider<GarminDeviceStateStore>(
+  (ref) => GarminDeviceStateStore(ref.watch(sharedPreferencesProvider)),
+);
+
 /// Bonding + companion association for Garmin watch onboarding. A provider so a
 /// widget test can substitute one and never touch a radio.
 final watchPairingPortProvider = Provider<WatchPairingPort>(
@@ -306,11 +319,25 @@ final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
 
 // ── BLE sensors ───────────────────────────────────────────────────────────
 
+/// The scan classifiers, one per file-sync integration, that let the generic
+/// scanner spot a watch to onboard without naming any protocol itself.
+final deviceScanClassifiersProvider = Provider<List<DeviceScanClassifier>>(
+  (ref) => const [GarminScanClassifier()],
+);
+
+/// The device classifiers, one per integration, that map a scanned device to how
+/// the app registers and drives it — (integration, kind). Garmin first: its
+/// member-service signal is stronger than a name match. Used via [classifyDevice].
+final deviceClassifiersProvider = Provider<List<DeviceClassifier>>(
+  (ref) => const [GarminDeviceClassifier(), WearosDeviceClassifier()],
+);
+
 /// The app-lifetime BLE coordinator (Kotlin `@Singleton`), bound to its
 /// contract so features never name the service class.
 final bleSensorRepositoryProvider = Provider<BleSensorRepository>((ref) {
   final coordinator = BleSensorCoordinator(
     ref.watch(bleDeviceRepositoryProvider),
+    classifiers: ref.watch(deviceScanClassifiersProvider),
   );
   ref.onDispose(coordinator.dispose);
   return coordinator;

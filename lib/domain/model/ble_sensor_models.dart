@@ -1,7 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'garmin_device_names.dart';
-
 part 'ble_sensor_models.freezed.dart';
 
 /// What a registered Bluetooth device IS, which decides how the app talks to it.
@@ -22,6 +20,31 @@ enum BleDeviceKind {
   final String storageName;
 
   static BleDeviceKind? fromStorage(String value) {
+    for (final entry in values) {
+      if (entry.storageName == value) return entry;
+    }
+    return null;
+  }
+}
+
+/// Which integration owns a [BleDeviceKind.watch]. A Garmin watch speaks GFDI
+/// over BLE (FIT-file sync, settings tree, find). A WearOS watch (Galaxy, Pixel,
+/// …) shares none of that protocol: it is a BLE-discoverable live heart-rate
+/// source whose recorded data arrives through Health Connect, not a FIT pull.
+///
+/// Null for a plain sensor, and for a Garmin watch stored before this field
+/// existed — [BleSensorDevice.isGarminWatch] treats a null-integration watch as
+/// Garmin, the only watch integration that existed then. See
+/// docs/reference/wearos-phase3-decision.md.
+enum DeviceIntegration {
+  garmin('GARMIN'),
+  wearos('WEAROS');
+
+  const DeviceIntegration(this.storageName);
+
+  final String storageName;
+
+  static DeviceIntegration? fromStorage(String value) {
     for (final entry in values) {
       if (entry.storageName == value) return entry;
     }
@@ -76,12 +99,28 @@ abstract class BleSensorDevice with _$BleSensorDevice {
     /// meaning what it meant.
     @Default(BleDeviceKind.sensor) BleDeviceKind kind,
 
+    /// Which integration owns this device when it is a [BleDeviceKind.watch].
+    /// Null for a sensor, and for a Garmin watch stored before this field
+    /// existed — [isGarminWatch] treats a null-integration watch as Garmin.
+    DeviceIntegration? integration,
+
     /// When this device's recorded files were last pulled. Null for a watch
     /// that has never synced, and always null for a [BleDeviceKind.sensor].
     DateTime? lastSyncedAt,
   }) = _BleSensorDevice;
 
   bool get isWatch => kind == BleDeviceKind.watch;
+
+  /// A watch the app drives over Garmin's GFDI protocol (FIT sync, settings,
+  /// find). The Garmin sync port claims only these. A null-integration watch is
+  /// legacy Garmin — the sole watch integration before WearOS.
+  bool get isGarminWatch =>
+      isWatch && integration != DeviceIntegration.wearos;
+
+  /// A WearOS smartwatch (Galaxy, Pixel, …): a watch with no Garmin protocol —
+  /// live heart rate over BLE, recorded data via Health Connect.
+  bool get isWearosWatch =>
+      isWatch && integration == DeviceIntegration.wearos;
 
   BleSensorDevice normalized() {
     final trimmedDisplayName = displayName.trim();
@@ -314,17 +353,15 @@ abstract class BleDiscoveredDevice with _$BleDiscoveredDevice {
     required int? rssi,
     required Set<BleSensorCapability> suggestedCapabilities,
 
-    /// The advertisement carried Garmin's member service UUID (`0xFE1F`). This
-    /// is the authoritative signal — [isGarminSyncDeviceName] is the fallback
-    /// for a watch that advertises a name but not the service.
+    /// The advertisement carried a member service that an integration's
+    /// `DeviceScanClassifier` recognised — the scanner's signal that this is a
+    /// file-sync watch to onboard rather than a live sensor. A single integration
+    /// (Garmin) claims these today; the per-integration verdict lives in the
+    /// classifier, so this generic model holds the evidence, not the classification.
     ///
-    /// Deliberately NOT the GFDI UUID: that is a GATT service, invisible until
-    /// the device is connected, so no advertisement ever carries it.
-    @Default(false) bool advertisesGarminService,
+    /// Deliberately the ADVERTISED member service, not a GFDI/transport UUID:
+    /// those are GATT services, invisible until connected, so no advertisement
+    /// ever carries them.
+    @Default(false) bool advertisesSyncService,
   }) = _BleDiscoveredDevice;
-
-  /// True when this is a Garmin device to onboard as a [BleDeviceKind.watch]
-  /// (pull FIT files) rather than as a live-streaming sensor.
-  bool get isGarminSyncDevice =>
-      advertisesGarminService || isGarminSyncDeviceName(name);
 }

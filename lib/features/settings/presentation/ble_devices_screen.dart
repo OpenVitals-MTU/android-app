@@ -4,8 +4,8 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
-import '../../../domain/model/garmin_transport.dart';
-import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
+import '../../../devices/garmin/garmin_transport.dart';
+import '../../../devices/garmin/onboard_garmin_watch_use_case.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../application/ble_devices_view_model.dart';
@@ -458,7 +458,11 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
               // — it is a file source, not a live sensor. What it needs instead
               // is the two OS dialogs, named before they appear.
               if (state.isAddingWatch)
-                _WatchPairSteps(step: state.onboardStep)
+                // A WearOS watch has no bond/probe steps — just pair + add — so
+                // the Garmin step list would be misleading.
+                (state.addingIntegration == DeviceIntegration.wearos
+                    ? const SizedBox.shrink()
+                    : _WatchPairSteps(step: state.onboardStep))
               else if (state.isDiscoveringCapabilities)
                 Text(l10n.settingsSensorsDiscovering)
               else ...[

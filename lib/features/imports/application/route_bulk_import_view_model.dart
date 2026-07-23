@@ -5,6 +5,8 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
+import '../../../devices/garmin/wellness/fit_wellness_import.dart';
+import '../../../devices/garmin/wellness/garmin_fit_wellness.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/apple_health_import_records.dart';
@@ -17,7 +19,6 @@ import '../../manualentry/activity/activity_entry_providers.dart';
 import '../../manualentry/activity/activity_entry_write_request_builder.dart';
 import '../../manualentry/activity/routeimport/fit_route_parser.dart';
 import '../../manualentry/activity/routeimport/route_file_parser.dart';
-import '../fit/fit_wellness_import.dart';
 
 part 'route_bulk_import_view_model.freezed.dart';
 
@@ -274,7 +275,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         // Connect records. One decode pass yields whichever the file carried.
         if (isFitFile(bytes)) {
           final wellness =
-              FitRouteParser.parseWellness(bytes, fileName: file.fileName);
+              parseGarminWellness(bytes, fileName: file.fileName);
           final records = <ImportRecord>[
             if (wellness.sleep != null) ...fitSleepImportRecords(wellness.sleep!),
             if (wellness.hrv != null) ...fitHrvImportRecords(wellness.hrv!),
