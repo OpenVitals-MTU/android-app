@@ -1,7 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart'; // DIAGNOSTIC: debugPrint to logcat (also re-exports Uint8List)
 
+import '../../../../core/fit/fit_message.dart';
+import '../../../../core/fit/fit_reader.dart';
 import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import 'route_file_parser.dart';
@@ -605,28 +605,6 @@ class _FitSamples {
       );
 }
 
-class _FitFileDecodeResult {
-  const _FitFileDecodeResult(
-    this.points,
-    this.summary,
-    this.samples,
-    this.sleep,
-    this.hrv,
-    this.monitoring,
-    this.metrics,
-    this.nextOffset,
-  );
-
-  final List<ExerciseRoutePoint> points;
-  final _FitActivitySummary summary;
-  final _FitSamples samples;
-  final _FitSleepRaw sleep;
-  final _FitHrvRaw hrv;
-  final _FitMonitoringRaw monitoring;
-  final _FitMetricsRaw metrics;
-  final int nextOffset;
-}
-
 /// The raw HRV reading a file carried (`hrv_status_summary.last_night_average`).
 /// At most one is kept — the last seen — since a status file holds one summary.
 class _FitHrvRaw {
@@ -1010,50 +988,6 @@ class _FitActivitySummary {
       );
 }
 
-class _FitMessageDefinition {
-  const _FitMessageDefinition({
-    required this.globalMessageNumber,
-    required this.littleEndian,
-    required this.fieldList,
-    required this.developerFields,
-  });
-
-  final int globalMessageNumber;
-  final bool littleEndian;
-  final List<_FitFieldDefinition> fieldList;
-  final List<int> developerFields;
-}
-
-class _FitFieldDefinition {
-  const _FitFieldDefinition(this.number, this.size, this.baseType);
-
-  final int number;
-  final int size;
-  final int baseType;
-}
-
-/// One decoded FIT data message: its global number, the field maps the generic
-/// walk extracted (by field number), and the resolved record timestamp. This is
-/// the seam between the generic FIT container walk and the domain interpretation
-/// — the walk emits these, the `_dispatch` switch consumes them — and the shape
-/// a future `core/fit` reader would expose so activity and Garmin-wellness
-/// interpreters can consume it independently.
-class _FitMessage {
-  const _FitMessage(
-    this.globalMessageNumber,
-    this.values,
-    this.strings,
-    this.arrays,
-    this.timestamp,
-  );
-
-  final int globalMessageNumber;
-  final Map<int, int> values;
-  final Map<int, String> strings;
-  final Map<int, List<int>> arrays;
-  final int? timestamp;
-}
-
 class _FitDecoder {
   _FitDecoder(this.fileBytes);
 
@@ -1071,13 +1005,17 @@ class _FitDecoder {
     var decodedAnyFile = false;
 
     while (offset < fileBytes.length) {
-      if (!_isFitFileAt(fileBytes, offset)) {
+      if (!FitReader.isFitFileAt(fileBytes, offset)) {
         if (!decodedAnyFile) {
-          throw const RouteImportException('FIT file header is invalid.');
+          throw const FitFormatException('FIT file header is invalid.');
         }
         break;
       }
-      final result = _FitSingleFileDecoder(fileBytes, offset).decode();
+      // Read then interpret each file on its own, so the per-file merge below is
+      // preserved: a chained stream's later files fall back to — rather than
+      // concatenate with — an earlier file's one-per-file scalar fields.
+      final (messages, next) = FitReader.readFile(fileBytes, offset);
+      final result = _FitInterpreter().interpret(messages);
       points.addAll(result.points);
       summary = summary.merge(result.summary);
       samples = samples.merge(result.samples);
@@ -1086,27 +1024,21 @@ class _FitDecoder {
       monitoring = monitoring.merge(result.monitoring);
       metrics = metrics.merge(result.metrics);
       decodedAnyFile = true;
-      offset = result.nextOffset;
+      offset = next;
     }
     return _FitDecodeResult(
         points, summary, samples, sleep, hrv, monitoring, metrics);
   }
 }
 
-class _FitSingleFileDecoder {
-  _FitSingleFileDecoder(this.fileBytes, this.startOffset);
-
-  final Uint8List fileBytes;
-  final int startOffset;
-
-  final Map<int, _FitMessageDefinition> _definitions = {};
-  final List<_FitMessage> _messages = [];
+/// Interprets one file's decoded [FitMessage]s into the activity + wellness raw
+/// structs. One per file; [_FitDecoder] merges them across a chained stream.
+class _FitInterpreter {
   final List<ExerciseRoutePoint> _points = [];
   int? _fileType;
   String? _metadataName;
   int? _sport;
   int? _subSport;
-  int? _lastTimestampRaw;
   DateTime? _firstRecordTime;
   DateTime? _lastRecordTime;
   _FitActivitySummary _sessionSummary = const _FitActivitySummary();
@@ -1173,36 +1105,14 @@ class _FitSingleFileDecoder {
   final List<(DateTime, int)> _monModerateMinutes = [];
   final List<(DateTime, int)> _monVigorousMinutes = [];
 
-  _FitFileDecodeResult decode() {
-    final headerSize = fileBytes[startOffset] & 0xFF;
-    if (headerSize < _fitMinimumHeaderSize ||
-        startOffset + headerSize > fileBytes.length) {
-      throw const RouteImportException('FIT file header is invalid.');
-    }
-    final dataSize = _readUint32(
-      fileBytes,
-      startOffset + _fitHeaderDataSizeOffset,
-      true,
-    );
-    final dataStart = startOffset + headerSize;
-    final dataEnd = dataStart + dataSize;
-    if (dataEnd > fileBytes.length) {
-      throw const RouteImportException('FIT file data section is incomplete.');
-    }
-    final reader = _FitDataReader(fileBytes, dataStart, dataEnd);
-    while (reader.hasRemaining()) {
-      _readRecord(reader);
-    }
-    // Interpret only after the whole file is walked: the generic walk above
-    // emits messages knowing no message types, and every accumulator is filled
-    // in this second pass. Message order is preserved, so cases that depend on
-    // an earlier message (file_id before record; monitoring_info before its
-    // series) still see it.
-    for (final message in _messages) {
+  _FitDecodeResult interpret(List<FitMessage> messages) {
+    // Every accumulator is filled by dispatching the messages in file order, so
+    // cases that depend on an earlier message (file_id before record;
+    // monitoring_info before its series) still see it.
+    for (final message in messages) {
       _dispatch(message);
     }
-    final next = dataEnd + _fitCrcSize;
-    return _FitFileDecodeResult(
+    return _FitDecodeResult(
       _points,
       _fitSummary(),
       samples,
@@ -1249,117 +1159,13 @@ class _FitSingleFileDecoder {
         hsaStress: _hsaStress,
         hsaBodyEnergy: _hsaBodyEnergy,
       ),
-      next > fileBytes.length ? fileBytes.length : next,
     );
   }
 
-  void _readRecord(_FitDataReader reader) {
-    final header = reader.readUnsignedByte();
-    if (header & _fitCompressedHeaderFlag != 0) {
-      final localMessageType = (header >> _fitCompressedLocalMessageTypeShift) &
-          _fitCompressedLocalMessageTypeMask;
-      final timestamp = _compressedTimestamp(header & _fitCompressedTimestampMask);
-      _readDataMessage(localMessageType, timestamp, reader);
-      return;
-    }
-    final localMessageType = header & _fitNormalLocalMessageTypeMask;
-    if (header & _fitDefinitionMessageFlag != 0) {
-      _definitions[localMessageType] = _readDefinitionMessage(header, reader);
-    } else {
-      _readDataMessage(localMessageType, null, reader);
-    }
-  }
-
-  _FitMessageDefinition _readDefinitionMessage(int header, _FitDataReader reader) {
-    reader.skip(1);
-    final architecture = reader.readUnsignedByte();
-    final bool littleEndian;
-    if (architecture == _fitArchitectureLittleEndian) {
-      littleEndian = true;
-    } else if (architecture == _fitArchitectureBigEndian) {
-      littleEndian = false;
-    } else {
-      throw const RouteImportException('FIT message architecture is invalid.');
-    }
-    final globalMessageNumber = reader.readUnsignedShort(littleEndian);
-    final fieldCount = reader.readUnsignedByte();
-    final fields = <_FitFieldDefinition>[];
-    for (var i = 0; i < fieldCount; i++) {
-      fields.add(
-        _FitFieldDefinition(
-          reader.readUnsignedByte(),
-          reader.readUnsignedByte(),
-          reader.readUnsignedByte(),
-        ),
-      );
-    }
-    final developerFieldSizes = <int>[];
-    if (header & _fitDeveloperDataFlag != 0) {
-      final developerFieldCount = reader.readUnsignedByte();
-      for (var i = 0; i < developerFieldCount; i++) {
-        reader.skip(1);
-        final size = reader.readUnsignedByte();
-        reader.skip(1);
-        developerFieldSizes.add(size);
-      }
-    }
-    return _FitMessageDefinition(
-      globalMessageNumber: globalMessageNumber,
-      littleEndian: littleEndian,
-      fieldList: fields,
-      developerFields: developerFieldSizes,
-    );
-  }
-
-  void _readDataMessage(
-    int localMessageType,
-    int? compressedTimestamp,
-    _FitDataReader reader,
-  ) {
-    final definition = _definitions[localMessageType];
-    if (definition == null) {
-      throw const RouteImportException('FIT data message has no definition.');
-    }
-    final values = <int, int>{};
-    final strings = <int, String>{};
-    final arrays = <int, List<int>>{};
-    final parsed = _fitParsedMessageNumbers.contains(definition.globalMessageNumber);
-    final packsArrays =
-        _fitArrayMessageNumbers.contains(definition.globalMessageNumber);
-    for (final field in definition.fieldList) {
-      final fieldBytes = reader.readBytes(field.size);
-      if (field.number == _fitTimestampFieldNumber || parsed) {
-        final longValue = _fitLong(fieldBytes, field, definition.littleEndian);
-        if (longValue != null) values[field.number] = longValue;
-        final stringValue = _fitString(fieldBytes, field);
-        if (stringValue != null) strings[field.number] = stringValue;
-        if (packsArrays) {
-          arrays[field.number] =
-              _fitLongArray(fieldBytes, field, definition.littleEndian);
-        }
-      }
-    }
-    for (final size in definition.developerFields) {
-      reader.skip(size);
-    }
-
-    final explicitTimestamp = values[_fitTimestampFieldNumber];
-    final messageTimestamp = explicitTimestamp ?? compressedTimestamp;
-    if (messageTimestamp != null) _lastTimestampRaw = messageTimestamp;
-
-    _messages.add(_FitMessage(
-      definition.globalMessageNumber,
-      values,
-      strings,
-      arrays,
-      messageTimestamp,
-    ));
-  }
-
-  /// Interprets one decoded message into the accumulators. The second pass, run
-  /// after the whole file is read; locals are bound to the message's fields so
-  /// the switch below is exactly the code that used to run inline in the walk.
-  void _dispatch(_FitMessage message) {
+  /// Interprets one decoded message into the accumulators. Locals are bound to
+  /// the message's fields so the switch below is exactly the code that used to
+  /// run inline in the walk.
+  void _dispatch(FitMessage message) {
     final values = message.values;
     final strings = message.strings;
     final arrays = message.arrays;
@@ -1407,7 +1213,7 @@ class _FitSingleFileDecoder {
         // ignored here.
         if (values[_fitEventFieldNumber] == _fitSleepEventValue &&
             messageTimestamp != null) {
-          final at = _fitDateTimeInstant(messageTimestamp);
+          final at = fitDateTimeInstant(messageTimestamp);
           switch (values[_fitEventTypeFieldNumber]) {
             case _fitEventTypeStart:
               _sleepStart ??= at;
@@ -1419,13 +1225,13 @@ class _FitSingleFileDecoder {
       case _fitSleepLevelMessageNumber:
         final level = values[_fitSleepLevelFieldNumber];
         if (level != null && messageTimestamp != null) {
-          _sleepLevels.add((_fitDateTimeInstant(messageTimestamp), level));
+          _sleepLevels.add((fitDateTimeInstant(messageTimestamp), level));
         }
         break;
       case _fitHrvStatusSummaryMessageNumber:
         final raw = values[_fitHrvLastNightAverageFieldNumber];
         if (raw != null && raw != _fitUint16Invalid && messageTimestamp != null) {
-          _hrvTime = _fitDateTimeInstant(messageTimestamp);
+          _hrvTime = fitDateTimeInstant(messageTimestamp);
           _hrvRmssdMillis = raw / _fitHrvRmssdScale;
         }
         break;
@@ -1434,7 +1240,7 @@ class _FitSingleFileDecoder {
         if (bpm != null && bpm != _fitUint8Invalid && bpm > 0) {
           _restingHrBpm = bpm;
           if (messageTimestamp != null) {
-            _restingHrTime = _fitDateTimeInstant(messageTimestamp);
+            _restingHrTime = fitDateTimeInstant(messageTimestamp);
           }
         }
         break;
@@ -1446,7 +1252,7 @@ class _FitSingleFileDecoder {
         if (rmr != null && rmr != _fitUint16Invalid && rmr > 0) {
           _bmrKcalPerDay = rmr.toDouble();
           if (messageTimestamp != null) {
-            _bmrTime = _fitDateTimeInstant(messageTimestamp);
+            _bmrTime = fitDateTimeInstant(messageTimestamp);
           }
         }
         break;
@@ -1460,7 +1266,7 @@ class _FitSingleFileDecoder {
         final stressTimeRaw =
             values[_fitStressLevelTimeFieldNumber] ?? messageTimestamp;
         if (stressTimeRaw != null) {
-          final at = _fitDateTimeInstant(stressTimeRaw);
+          final at = fitDateTimeInstant(stressTimeRaw);
           final stress = values[_fitStressLevelValueFieldNumber];
           // Negative is Garmin's "not measurable" (asleep, moving, poor
           // contact), not a low score — dropped rather than clamped to 0.
@@ -1488,8 +1294,8 @@ class _FitSingleFileDecoder {
         final napEnd = values[_fitNapEndFieldNumber];
         if (napStart != null && napEnd != null && napEnd > napStart) {
           _naps.add(FitNap(
-            start: _fitDateTimeInstant(napStart),
-            end: _fitDateTimeInstant(napEnd),
+            start: fitDateTimeInstant(napStart),
+            end: fitDateTimeInstant(napEnd),
           ));
         }
         break;
@@ -1516,7 +1322,7 @@ class _FitSingleFileDecoder {
           _dailySleepAwakeSeconds = awake;
         }
         final endRaw = values[_fitDailySleepEndTimeFieldNumber];
-        if (endRaw != null) _dailySleepEndTime = _fitDateTimeInstant(endRaw);
+        if (endRaw != null) _dailySleepEndTime = fitDateTimeInstant(endRaw);
         final pressure = values[_fitDailySleepPressureFieldNumber];
         if (pressure != null && pressure != _fitSint16Invalid) {
           _dailySleepPressure = pressure;
@@ -1532,7 +1338,7 @@ class _FitSingleFileDecoder {
           _sleepDemandMinutes = demand;
         }
         if (messageTimestamp != null) {
-          _sleepDemandTime = _fitDateTimeInstant(messageTimestamp);
+          _sleepDemandTime = fitDateTimeInstant(messageTimestamp);
         }
         break;
       case _fitMaxMetDataMessageNumber:
@@ -1540,7 +1346,7 @@ class _FitSingleFileDecoder {
         if (vo2 != null && vo2 != _fitUint16Invalid && vo2 > 0) {
           _vo2Max = vo2 / _fitVo2MaxScale;
           if (messageTimestamp != null) {
-            _metricsTime = _fitDateTimeInstant(messageTimestamp);
+            _metricsTime = fitDateTimeInstant(messageTimestamp);
           }
         }
         break;
@@ -1551,7 +1357,7 @@ class _FitSingleFileDecoder {
             readiness <= 100) {
           _trainingReadiness = readiness;
           if (messageTimestamp != null) {
-            _metricsTime ??= _fitDateTimeInstant(messageTimestamp);
+            _metricsTime ??= fitDateTimeInstant(messageTimestamp);
           }
         }
         break;
@@ -1565,7 +1371,7 @@ class _FitSingleFileDecoder {
           _trainingLoadChronic = chronic;
         }
         if (messageTimestamp != null) {
-          _metricsTime ??= _fitDateTimeInstant(messageTimestamp);
+          _metricsTime ??= fitDateTimeInstant(messageTimestamp);
         }
         break;
       case _fitPhysiologicalMetricsMessageNumber:
@@ -1576,7 +1382,7 @@ class _FitSingleFileDecoder {
         if (recovery != null && recovery != _fitUint16Invalid) {
           _recoveryTimeMinutes = recovery;
           if (messageTimestamp != null) {
-            _metricsTime ??= _fitDateTimeInstant(messageTimestamp);
+            _metricsTime ??= fitDateTimeInstant(messageTimestamp);
           }
         }
         break;
@@ -1586,7 +1392,7 @@ class _FitSingleFileDecoder {
           final rate = rateRaw / _fitRespirationScale;
           // Negative / zero is the "not measuring" sentinel.
           if (rate > 0 && rate < 100) {
-            _respiration.add((_fitDateTimeInstant(messageTimestamp), rate));
+            _respiration.add((fitDateTimeInstant(messageTimestamp), rate));
           }
         }
         break;
@@ -1619,7 +1425,7 @@ class _FitSingleFileDecoder {
       }
       return;
     }
-    final start = _fitDateTimeInstant(messageTimestamp);
+    final start = fitDateTimeInstant(messageTimestamp);
     for (var i = 0; i < samples.length; i++) {
       final at = start.add(Duration(seconds: interval * i));
       final raw = samples[i];
@@ -1661,7 +1467,7 @@ class _FitSingleFileDecoder {
       }
     }
     if (tsRaw == null) return;
-    final time = _fitDateTimeInstant(tsRaw);
+    final time = fitDateTimeInstant(tsRaw);
 
     final hr = values[_fitMonitoringHeartRateFieldNumber];
     if (hr != null && hr != _fitUint8Invalid && hr > 0) {
@@ -1732,7 +1538,7 @@ class _FitSingleFileDecoder {
 
   void _rememberRecordTime(int? timestampRaw) {
     if (timestampRaw == null) return;
-    final time = _fitDateTimeInstant(timestampRaw);
+    final time = fitDateTimeInstant(timestampRaw);
     _firstRecordTime = _earliest(_firstRecordTime, time);
     _lastRecordTime = _latest(_lastRecordTime, time);
   }
@@ -1761,7 +1567,7 @@ class _FitSingleFileDecoder {
 
   void _addCourseRecordPoint(Map<int, int> values, int? timestampRaw) {
     final timestamp = timestampRaw != null
-        ? _fitDateTimeInstant(timestampRaw)
+        ? fitDateTimeInstant(timestampRaw)
         : _syntheticFitStartTime.add(Duration(seconds: _courseRecordIndex));
     _courseRecordIndex += 1;
     _addRecordPoint(values, timestamp);
@@ -1810,7 +1616,7 @@ class _FitSingleFileDecoder {
 
   void _addRecordPointRaw(Map<int, int> values, int? timestampRaw) {
     if (timestampRaw == null) return;
-    _addRecordPoint(values, _fitDateTimeInstant(timestampRaw));
+    _addRecordPoint(values, fitDateTimeInstant(timestampRaw));
   }
 
   void _addRecordPoint(Map<int, int> values, DateTime timestamp) {
@@ -1843,19 +1649,10 @@ class _FitSingleFileDecoder {
     );
   }
 
-  int? _compressedTimestamp(int offset) {
-    final previous = _lastTimestampRaw;
-    if (previous == null) return null;
-    final previousOffset = previous & _fitCompressedTimestampMask;
-    final delta = offset < previousOffset
-        ? offset + _fitCompressedTimestampRollover - previousOffset
-        : offset - previousOffset;
-    return previous + delta;
-  }
 
   _FitActivitySummary _toFitActivitySummary(Map<int, int> values, int? timestampRaw) {
     final startRaw = values[_fitStartTimeFieldNumber];
-    final startTime = startRaw == null ? null : _fitDateTimeInstant(startRaw);
+    final startTime = startRaw == null ? null : fitDateTimeInstant(startRaw);
     final durationRaw = values[_fitTotalElapsedTimeFieldNumber] ??
         values[_fitTotalTimerTimeFieldNumber];
     final durationSeconds = durationRaw == null ? null : durationRaw / _fitTimeScale;
@@ -1865,7 +1662,7 @@ class _FitSingleFileDecoder {
         Duration(milliseconds: (durationSeconds * 1000.0).round()),
       );
     } else if (timestampRaw != null) {
-      endTime = _fitDateTimeInstant(timestampRaw);
+      endTime = fitDateTimeInstant(timestampRaw);
     }
     final distanceRaw = values[_fitTotalDistanceFieldNumber];
     final ascentRaw = values[_fitTotalAscentFieldNumber];
@@ -1894,199 +1691,7 @@ class _FitSingleFileDecoder {
   }
 }
 
-class _FitDataReader {
-  _FitDataReader(this.bytes, this.offset, this.endOffset);
-
-  final Uint8List bytes;
-  int offset;
-  final int endOffset;
-
-  bool hasRemaining() => offset < endOffset;
-
-  int readUnsignedByte() {
-    if (offset >= endOffset) {
-      throw const RouteImportException(
-        'FIT file ended before data records were complete.',
-      );
-    }
-    return bytes[offset++] & 0xFF;
-  }
-
-  int readUnsignedShort(bool littleEndian) {
-    if (offset + 2 > endOffset) {
-      throw const RouteImportException(
-        'FIT file ended before data records were complete.',
-      );
-    }
-    final value = _readUint16(bytes, offset, littleEndian);
-    offset += 2;
-    return value;
-  }
-
-  Uint8List readBytes(int size) {
-    if (size < 0 || offset + size > endOffset) {
-      throw const RouteImportException(
-        'FIT file ended before data records were complete.',
-      );
-    }
-    final slice = Uint8List.sublistView(bytes, offset, offset + size);
-    offset += size;
-    return slice;
-  }
-
-  void skip(int size) {
-    if (size < 0 || offset + size > endOffset) {
-      throw const RouteImportException(
-        'FIT file ended before data records were complete.',
-      );
-    }
-    offset += size;
-  }
-}
-
-bool isFitFile(Uint8List bytes) => _isFitFileAt(bytes, 0);
-
-bool _isFitFileAt(Uint8List bytes, int offset) {
-  if (offset < 0 || offset + _fitMinimumHeaderSize > bytes.length) return false;
-  final headerSize = bytes[offset] & 0xFF;
-  return headerSize >= _fitMinimumHeaderSize &&
-      offset + headerSize <= bytes.length &&
-      bytes[offset + _fitHeaderDataTypeOffset] == 0x2E && // '.'
-      bytes[offset + _fitHeaderDataTypeOffset + 1] == 0x46 && // 'F'
-      bytes[offset + _fitHeaderDataTypeOffset + 2] == 0x49 && // 'I'
-      bytes[offset + _fitHeaderDataTypeOffset + 3] == 0x54; // 'T'
-}
-
-int _readUint16(Uint8List bytes, int index, bool littleEndian) {
-  final first = bytes[index] & 0xFF;
-  final second = bytes[index + 1] & 0xFF;
-  return littleEndian ? first | (second << 8) : (first << 8) | second;
-}
-
-int _readSignedShort(Uint8List bytes, int index, bool littleEndian) {
-  final value = _readUint16(bytes, index, littleEndian);
-  return value & 0x8000 != 0 ? value - 0x10000 : value;
-}
-
-int _readUint32(Uint8List bytes, int index, bool littleEndian) {
-  final b0 = bytes[index] & 0xFF;
-  final b1 = bytes[index + 1] & 0xFF;
-  final b2 = bytes[index + 2] & 0xFF;
-  final b3 = bytes[index + 3] & 0xFF;
-  return littleEndian
-      ? b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
-      : (b0 << 24) | (b1 << 16) | (b2 << 8) | b3;
-}
-
-int _readInt32(Uint8List bytes, int index, bool littleEndian) {
-  final raw = _readUint32(bytes, index, littleEndian);
-  return raw >= 0x80000000 ? raw - 0x100000000 : raw;
-}
-
-/// Every element of an array field, invalid sentinels dropped.
-///
-/// FIT expresses an array as a field whose declared size is a multiple of its
-/// base type's — the Health Snapshot messages pack a whole two-minute recording
-/// into one record this way. [_fitLong] reads only the first element, which is
-/// right for every scalar field and silently loses the rest of an array.
-List<int> _fitLongArray(
-  Uint8List bytes,
-  _FitFieldDefinition field,
-  bool littleEndian,
-) {
-  final baseType = field.baseType & _fitBaseTypeMask;
-  final size = _fitBaseTypeSize(baseType);
-  if (size <= 0) return const [];
-  final out = <int>[];
-  for (var offset = 0; offset + size <= bytes.length; offset += size) {
-    final value = _fitLong(
-      Uint8List.sublistView(bytes, offset, offset + size),
-      field,
-      littleEndian,
-    );
-    if (value != null) out.add(value);
-  }
-  return out;
-}
-
-int? _fitLong(Uint8List bytes, _FitFieldDefinition field, bool littleEndian) {
-  final baseType = field.baseType & _fitBaseTypeMask;
-  final baseTypeSize = _fitBaseTypeSize(baseType);
-  if (baseTypeSize <= 0 || bytes.length < baseTypeSize) return null;
-  switch (baseType) {
-    case _fitBaseTypeEnum:
-    case _fitBaseTypeUInt8:
-      final v = bytes[0] & 0xFF;
-      return v == _fitInvalidUInt8 ? null : v;
-    case _fitBaseTypeSInt8:
-      final v = bytes[0] & 0xFF;
-      final signed = v >= 0x80 ? v - 0x100 : v;
-      return signed == _fitInvalidSInt8 ? null : signed;
-    case _fitBaseTypeSInt16:
-      final v = _readSignedShort(bytes, 0, littleEndian);
-      return v == _fitInvalidSInt16 ? null : v;
-    case _fitBaseTypeUInt16:
-      final v = _readUint16(bytes, 0, littleEndian);
-      return v == _fitInvalidUInt16 ? null : v;
-    case _fitBaseTypeSInt32:
-      final v = _readInt32(bytes, 0, littleEndian);
-      return v == _fitInvalidSInt32 ? null : v;
-    case _fitBaseTypeUInt32:
-      final v = _readUint32(bytes, 0, littleEndian);
-      return v == _fitInvalidUInt32 ? null : v;
-    case _fitBaseTypeUInt8z:
-      final v = bytes[0] & 0xFF;
-      return v == 0 ? null : v;
-    case _fitBaseTypeUInt16z:
-      final v = _readUint16(bytes, 0, littleEndian);
-      return v == 0 ? null : v;
-    case _fitBaseTypeUInt32z:
-      final v = _readUint32(bytes, 0, littleEndian);
-      return v == 0 ? null : v;
-    default:
-      return null;
-  }
-}
-
-String? _fitString(Uint8List bytes, _FitFieldDefinition field) {
-  final baseType = field.baseType & _fitBaseTypeMask;
-  if (baseType != _fitBaseTypeString) return null;
-  var decoded = utf8.decode(bytes, allowMalformed: true);
-  var end = decoded.length;
-  while (end > 0 && decoded.codeUnitAt(end - 1) == 0) {
-    end--;
-  }
-  decoded = decoded.substring(0, end);
-  return cleanText(decoded);
-}
-
-int _fitBaseTypeSize(int baseType) {
-  switch (baseType) {
-    case _fitBaseTypeEnum:
-    case _fitBaseTypeSInt8:
-    case _fitBaseTypeUInt8:
-    case _fitBaseTypeString:
-    case _fitBaseTypeUInt8z:
-    case _fitBaseTypeByte:
-      return 1;
-    case _fitBaseTypeSInt16:
-    case _fitBaseTypeUInt16:
-    case _fitBaseTypeUInt16z:
-      return 2;
-    case _fitBaseTypeSInt32:
-    case _fitBaseTypeUInt32:
-    case _fitBaseTypeFloat32:
-    case _fitBaseTypeUInt32z:
-      return 4;
-    case _fitBaseTypeFloat64:
-    case _fitBaseTypeSInt64:
-    case _fitBaseTypeUInt64:
-    case _fitBaseTypeUInt64z:
-      return 8;
-    default:
-      return 0;
-  }
-}
+bool isFitFile(Uint8List bytes) => FitReader.isFitFileAt(bytes, 0);
 
 int? _generic(int? value) =>
     (value == null || value == _fitSportGeneric) ? null : value;
@@ -2096,11 +1701,6 @@ double _fitSemicirclesToDegrees(int value) =>
 
 double _fitAltitudeMeters(int value) =>
     value.toDouble() / _fitAltitudeScale - _fitAltitudeOffsetMeters;
-
-DateTime _fitDateTimeInstant(int value) => DateTime.fromMillisecondsSinceEpoch(
-      (_fitEpochUnixSeconds + value) * 1000,
-      isUtc: true,
-    );
 
 /// FIT sport 2 and 21 are cycling; everything else is on foot or in the water.
 ///
@@ -2201,20 +1801,6 @@ int? _sumInt(int? a, int? b) {
   return a + b;
 }
 
-const int _fitMinimumHeaderSize = 12;
-const int _fitHeaderDataSizeOffset = 4;
-const int _fitHeaderDataTypeOffset = 8;
-const int _fitCrcSize = 2;
-const int _fitCompressedHeaderFlag = 0x80;
-const int _fitCompressedLocalMessageTypeShift = 5;
-const int _fitCompressedLocalMessageTypeMask = 0x03;
-const int _fitCompressedTimestampMask = 0x1F;
-const int _fitCompressedTimestampRollover = 0x20;
-const int _fitDefinitionMessageFlag = 0x40;
-const int _fitDeveloperDataFlag = 0x20;
-const int _fitNormalLocalMessageTypeMask = 0x0F;
-const int _fitArchitectureLittleEndian = 0;
-const int _fitArchitectureBigEndian = 1;
 const int _fitFileIdMessageNumber = 0;
 const int _fitFileIdTypeFieldNumber = 0;
 const int _fitFileTypeWorkout = 5;
@@ -2324,14 +1910,6 @@ const int _fitHsaIntervalFieldNumber = 0; // uint16, seconds between samples
 const int _fitHsaValueFieldNumber = 1; // array of readings
 const double _fitHsaRespirationScale = 100.0;
 
-/// Messages whose fields must be decoded as arrays, not scalars. Kept to the
-/// few that need it so every other message keeps the cheaper scalar path.
-const Set<int> _fitArrayMessageNumbers = {
-  _fitHsaSpo2MessageNumber,
-  _fitHsaStressMessageNumber,
-  _fitHsaRespirationMessageNumber,
-  _fitHsaBodyBatteryMessageNumber,
-};
 
 // Sleep extras, in the same type-49 file the stage transitions come from.
 // sleep_stats (346) is the watch's OWN assessment of the night — the scores it
@@ -2354,7 +1932,6 @@ const int _fitWorkoutNameFieldNumber = 8;
 const int _fitWorkoutStepMessageNumber = 27;
 const int _fitWorkoutStepDurationTypeFieldNumber = 1;
 const int _fitWorkoutStepDurationValueFieldNumber = 2;
-const int _fitTimestampFieldNumber = 253;
 const int _fitStartTimeFieldNumber = 2;
 const int _fitSessionSportFieldNumber = 5;
 
@@ -2382,31 +1959,6 @@ const int _fitRecordPositionLongFieldNumber = 1;
 const int _fitRecordAltitudeFieldNumber = 2;
 const int _fitRecordEnhancedAltitudeFieldNumber = 78;
 const int _fitSportGeneric = 0;
-const int _fitBaseTypeMask = 0x1F;
-const int _fitBaseTypeEnum = 0;
-const int _fitBaseTypeSInt8 = 1;
-const int _fitBaseTypeUInt8 = 2;
-const int _fitBaseTypeSInt16 = 3;
-const int _fitBaseTypeUInt16 = 4;
-const int _fitBaseTypeSInt32 = 5;
-const int _fitBaseTypeUInt32 = 6;
-const int _fitBaseTypeString = 7;
-const int _fitBaseTypeFloat32 = 8;
-const int _fitBaseTypeFloat64 = 9;
-const int _fitBaseTypeUInt8z = 10;
-const int _fitBaseTypeUInt16z = 11;
-const int _fitBaseTypeUInt32z = 12;
-const int _fitBaseTypeByte = 13;
-const int _fitBaseTypeSInt64 = 14;
-const int _fitBaseTypeUInt64 = 15;
-const int _fitBaseTypeUInt64z = 16;
-const int _fitInvalidUInt8 = 0xFF;
-const int _fitInvalidSInt8 = 0x7F;
-const int _fitInvalidUInt16 = 0xFFFF;
-const int _fitInvalidSInt16 = 0x7FFF;
-const int _fitInvalidUInt32 = 0xFFFFFFFF;
-const int _fitInvalidSInt32 = 0x7FFFFFFF;
-const int _fitEpochUnixSeconds = 631065600;
 const double _fitSemicircleDegreesDivisor = 2147483648.0;
 const double _fitAltitudeScale = 5.0;
 const double _fitAltitudeOffsetMeters = 500.0;
@@ -2420,32 +1972,3 @@ const int _fitWorkoutDurationTypeRepetitionTime = 28;
 const int _defaultFitWorkoutDurationSeconds = 30 * 60;
 final DateTime _syntheticFitStartTime =
     DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
-const Set<int> _fitParsedMessageNumbers = {
-  _fitFileIdMessageNumber,
-  _fitRecordMessageNumber,
-  _fitLapMessageNumber,
-  _fitSessionMessageNumber,
-  _fitCourseMessageNumber,
-  _fitWorkoutMessageNumber,
-  _fitWorkoutStepMessageNumber,
-  _fitEventMessageNumber,
-  _fitSleepLevelMessageNumber,
-  _fitHrvStatusSummaryMessageNumber,
-  _fitMonitoringHrDataMessageNumber,
-  _fitMonitoringInfoMessageNumber,
-  _fitMonitoringMessageNumber,
-  _fitRespirationRateMessageNumber,
-  _fitStressLevelMessageNumber,
-  _fitMaxMetDataMessageNumber,
-  _fitTrainingReadinessMessageNumber,
-  _fitTrainingLoadMessageNumber,
-  _fitPhysiologicalMetricsMessageNumber,
-  _fitSleepStatsMessageNumber,
-  _fitNapMessageNumber,
-  _fitDailySleepMessageNumber,
-  _fitSleepDemandMessageNumber,
-  _fitHsaSpo2MessageNumber,
-  _fitHsaStressMessageNumber,
-  _fitHsaRespirationMessageNumber,
-  _fitHsaBodyBatteryMessageNumber,
-};
