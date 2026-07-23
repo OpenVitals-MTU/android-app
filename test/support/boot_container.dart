@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/data/local/open_vitals_database.dart';
 import 'package:openvitals/data/source/health/native/health_connect_native_data_source.dart';
 import 'package:openvitals/di/providers.dart';
+import 'package:openvitals/features/homewidgets/home_widget_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../features/homewidgets/fake_home_widget_client.dart';
 import 'health_connect/fake_health_connect.dart';
 import 'health_connect/hc_fixture.dart';
 
@@ -26,9 +28,10 @@ import 'health_connect/hc_fixture.dart';
 /// wants a degraded device says so in the [FakeHealthConnect] — `granted: {...}` or
 /// `sdkStatus: 2` — rather than reaching past the code it is meant to be exercising.
 ///
-/// And no repository, and no use case. `dashboard_resume_test.dart` overrides
-/// `loadDashboardDayUseCaseProvider`, which short-circuits every layer this harness
-/// exists to run. That is why it proves less than it looks like it does.
+/// And no repository, and no use case. An override of either short-circuits every
+/// layer this harness exists to run — `dashboard_resume_test.dart` once overrode
+/// `loadDashboardDayUseCaseProvider` and proved less than it looked like it did;
+/// it now runs here instead.
 class HealthHarness {
   HealthHarness(this.container, this.hc, this.fixture);
 
@@ -84,6 +87,12 @@ Future<HealthHarness> bootContainer({
       openVitalsDatabaseProvider.overrideWithValue(database),
       // THE seam. The real data source, on a fake host API.
       healthDataSourceProvider.overrideWithValue(dataSource),
+      // The other platform boundary a notifier can stray onto: the dashboard
+      // pushes home-widget snapshots after every load, and the real client is
+      // a method channel with no host behind it under `flutter test`.
+      homeWidgetServiceProvider.overrideWithValue(
+        HomeWidgetService(client: FakeHomeWidgetClient()),
+      ),
     ],
   );
 
