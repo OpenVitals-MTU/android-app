@@ -48,6 +48,10 @@ class WatchDeviceScreen extends ConsumerWidget {
 
     final sync = ref.watch(deviceSyncViewModelProvider);
     final actions = ref.watch(garminWatchActionsViewModelProvider);
+    // Only a Garmin watch has GFDI sync/settings/find. A WearOS watch speaks none
+    // of it — its heart rate streams over BLE and its recorded data arrives via
+    // Health Connect — so those controls are hidden rather than shown dead.
+    final isGarmin = device.isGarminWatch;
     final capabilities =
         ref.watch(garminDeviceStateStoreProvider).capabilities(deviceId);
     // Unknown means SHOW, not hide: capabilities arrive in a handshake, so a
@@ -71,34 +75,40 @@ class WatchDeviceScreen extends ConsumerWidget {
       body: ListView(
         padding: screenScrollPadding(context),
         children: [
-          _StatusCard(device: device, sync: sync),
+          _StatusCard(device: device, sync: sync, isGarmin: isGarmin),
           const SizedBox(height: 12),
-          _Actions(
-            device: device,
-            sync: sync,
-            actions: actions,
-            supports: supports,
-          ),
-          if (actions.isFindingDevice(device.id) || actions.findFailed)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                actions.isFindingDevice(device.id)
-                    ? l10n.settingsWatchFindRinging
-                    : l10n.settingsWatchFindFailed,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: actions.findFailed
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.primary,
-                    ),
-              ),
+          if (isGarmin) ...[
+            _Actions(
+              device: device,
+              sync: sync,
+              actions: actions,
+              supports: supports,
             ),
+            if (actions.isFindingDevice(device.id) || actions.findFailed)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  actions.isFindingDevice(device.id)
+                      ? l10n.settingsWatchFindRinging
+                      : l10n.settingsWatchFindFailed,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: actions.findFailed
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+              ),
+          ] else
+            // A WearOS watch has no on-device controls here: its data path is
+            // Health Connect + live BLE heart rate, both handled elsewhere. Just
+            // the status and the device settings below.
+            const SizedBox.shrink(),
           // No "Latest" band: it showed the same numbers the Data action opens,
           // one tap away, so the screen said everything twice.
-          // Only for a watch that says it HAS a settings tree. A watch without
-          // REALTIME_SETTINGS has no such screen to browse, so the band would be
-          // claiming a feature the hardware does not have.
-          if (supports(GarminCapability.realtimeSettings)) ...[
+          // Only for a Garmin watch that says it HAS a settings tree. A watch
+          // without REALTIME_SETTINGS (or any WearOS watch) has no such screen to
+          // browse, so the band would claim a feature the hardware does not have.
+          if (isGarmin && supports(GarminCapability.realtimeSettings)) ...[
             _SectionHeader(title: l10n.settingsWatchSettingsSection),
             _OnDeviceSettingsRow(deviceId: device.id),
           ],
@@ -125,10 +135,18 @@ class WatchDeviceScreen extends ConsumerWidget {
 }
 
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.device, required this.sync});
+  const _StatusCard({
+    required this.device,
+    required this.sync,
+    required this.isGarmin,
+  });
 
   final BleSensorDevice device;
   final DeviceSyncState sync;
+
+  /// A WearOS watch has no sync concept, so its status line names the device
+  /// rather than a last-sync time it will never have.
+  final bool isGarmin;
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +157,9 @@ class _StatusCard extends StatelessWidget {
     final files = sync.lastFileCount;
 
     final buffer = StringBuffer();
-    if (syncedAt == null) {
+    if (!isGarmin) {
+      buffer.write(device.bluetoothName ?? device.address);
+    } else if (syncedAt == null) {
       buffer.write(l10n.settingsWatchNeverSynced);
     } else {
       buffer.write(
