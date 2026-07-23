@@ -9,7 +9,7 @@ import '../devices/garmin/garmin_gatt_probe.dart';
 import '../devices/garmin/garmin_phone_identity.dart';
 import '../devices/garmin/garmin_watch_sync_service.dart';
 import '../devices/core/ble/ble_sensor_repository.dart';
-import '../domain/port/garmin_transport_probe.dart';
+import '../devices/garmin/garmin_transport_probe.dart';
 import '../devices/core/pairing/watch_pairing_port.dart';
 import 'dart:io';
 

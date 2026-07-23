@@ -26,7 +26,7 @@ import '../domain/usecase/read_hydration_daily_goal_use_case.dart';
 import '../domain/usecase/read_hydration_entry_settings_use_case.dart';
 import '../domain/usecase/read_onboarding_permission_catalog_use_case.dart';
 import '../domain/usecase/fit_body_energy_from_watch_use_case.dart';
-import '../domain/usecase/onboard_garmin_watch_use_case.dart';
+import '../devices/garmin/onboard_garmin_watch_use_case.dart';
 import '../domain/usecase/read_paired_ble_devices_use_case.dart';
 import '../domain/usecase/refresh_ble_device_registry_use_case.dart';
 import '../domain/usecase/request_health_permissions_use_case.dart';

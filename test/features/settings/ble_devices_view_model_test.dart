@@ -8,8 +8,8 @@ import 'package:openvitals/devices/garmin/garmin_capabilities.dart';
 import 'package:openvitals/devices/garmin/garmin_device_state_store.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
-import 'package:openvitals/domain/model/garmin_transport.dart';
-import 'package:openvitals/domain/port/garmin_transport_probe.dart';
+import 'package:openvitals/devices/garmin/garmin_transport.dart';
+import 'package:openvitals/devices/garmin/garmin_transport_probe.dart';
 import 'package:openvitals/devices/core/pairing/watch_pairing_port.dart';
 import 'package:openvitals/features/settings/application/ble_devices_view_model.dart';
 

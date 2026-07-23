@@ -3,10 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/devices/core/registry/ble_device_repository_impl.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
-import 'package:openvitals/domain/model/garmin_transport.dart';
-import 'package:openvitals/domain/port/garmin_transport_probe.dart';
+import 'package:openvitals/devices/garmin/garmin_transport.dart';
+import 'package:openvitals/devices/garmin/garmin_transport_probe.dart';
 import 'package:openvitals/devices/core/pairing/watch_pairing_port.dart';
-import 'package:openvitals/domain/usecase/onboard_garmin_watch_use_case.dart';
+import 'package:openvitals/devices/garmin/onboard_garmin_watch_use_case.dart';
 
 /// Records what the use case asked the platform to do, and answers with whatever
 /// the test set up. No radio, no Activity, no plugin.

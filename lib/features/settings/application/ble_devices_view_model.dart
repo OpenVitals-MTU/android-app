@@ -6,11 +6,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../devices/core/ble/ble_sensor_repository.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
-import '../../../domain/model/garmin_device_names.dart';
-import '../../../domain/model/garmin_transport.dart';
+import '../../../devices/garmin/garmin_device_names.dart';
+import '../../../devices/garmin/garmin_transport.dart';
 import '../../../devices/core/pairing/watch_pairing_port.dart';
 import '../../../domain/usecase/edit_ble_device_registry_use_case.dart';
-import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
+import '../../../devices/garmin/onboard_garmin_watch_use_case.dart';
 
 part 'ble_devices_view_model.freezed.dart';
 

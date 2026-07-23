@@ -17,7 +17,7 @@
 /// devices", whose advertisement the scan filter never had to match.
 library;
 
-import 'ble_sensor_models.dart';
+import '../../domain/model/ble_sensor_models.dart';
 
 /// Product families whose devices speak GFDI and hold FIT files.
 ///

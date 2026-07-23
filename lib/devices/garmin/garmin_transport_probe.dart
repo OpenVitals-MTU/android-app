@@ -1,4 +1,4 @@
-import '../model/garmin_transport.dart';
+import 'garmin_transport.dart';
 
 /// Asks a bonded Garmin device which GFDI transport it speaks.
 ///

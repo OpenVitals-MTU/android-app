@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/domain/model/garmin_transport.dart';
+import 'package:openvitals/devices/garmin/garmin_transport.dart';
 
 GarminGattReport _report(
   GarminTransportVariant variant, {

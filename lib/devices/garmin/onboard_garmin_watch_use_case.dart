@@ -1,8 +1,8 @@
-import '../../devices/core/registry/ble_device_repository.dart';
-import '../model/ble_sensor_models.dart';
-import '../model/garmin_transport.dart';
-import '../port/garmin_transport_probe.dart';
-import '../../devices/core/pairing/watch_pairing_port.dart';
+import '../../domain/model/ble_sensor_models.dart';
+import '../core/pairing/watch_pairing_port.dart';
+import '../core/registry/ble_device_repository.dart';
+import 'garmin_transport.dart';
+import 'garmin_transport_probe.dart';
 
 /// Which platform step the onboarding is on, so the sheet can tell the user
 /// which OS dialog is about to appear over it. The first two show a system

@@ -4,8 +4,8 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
-import '../../../domain/model/garmin_transport.dart';
-import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
+import '../../../devices/garmin/garmin_transport.dart';
+import '../../../devices/garmin/onboard_garmin_watch_use_case.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../application/ble_devices_view_model.dart';
