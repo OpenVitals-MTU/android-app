@@ -113,7 +113,11 @@ class WatchSummaryTile extends ConsumerWidget {
 /// carousel. The top-bar battery action already covers sensors.
 /// Watches the reactive registry, not a one-shot read: the tile has to notice a
 /// finished sync (a new `lastSyncedAt`) and a watch being paired or removed.
+///
+/// Garmin watches only: this tile is a SYNC-status card (battery, last sync, a
+/// Sync button), and a WearOS watch neither syncs nor reports battery here — its
+/// data arrives through Health Connect — so it would only show a dead control.
 final summaryWatchesProvider = Provider<List<BleSensorDevice>>((ref) {
   final devices = ref.watch(bleDevicesProvider).value ?? const [];
-  return [for (final d in devices) if (d.isWatch) d];
+  return [for (final d in devices) if (d.isGarminWatch) d];
 });
