@@ -13,6 +13,7 @@ import '../../../ui/components/screen_scroll_padding.dart';
 import '../application/ble_devices_view_model.dart';
 import '../application/device_sync_view_model.dart';
 import '../application/garmin_watch_actions_view_model.dart';
+import 'ble_devices_screen.dart' show capabilityLabel;
 import 'watch_common.dart';
 
 /// One watch, and everything about it.
@@ -122,6 +123,13 @@ class WatchDeviceScreen extends ConsumerWidget {
           if (isGarmin && supports(GarminCapability.realtimeSettings)) ...[
             _SectionHeader(title: l10n.settingsWatchSettingsSection),
             _OnDeviceSettingsRow(deviceId: device.id),
+          ],
+          // A bike computer can broadcast standard-BLE sensors into a recording.
+          // The role is opt-in from here because broadcast mode is usually only
+          // on during a ride, so it must be detected while the device is live.
+          if (device.isLiveSensorCapable) ...[
+            _SectionHeader(title: l10n.settingsBikeLiveSensorSection),
+            _LiveSensorSection(device: device),
           ],
           _SectionHeader(title: l10n.settingsWatchSectionDevice),
           _DeviceSettings(device: device),
@@ -412,6 +420,99 @@ class _OnDeviceSettingsRow extends StatelessWidget {
               GarminSettingsService.rootScreenId,
             ),
             extra: l10n.settingsWatchOnDeviceSettings,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The live-sensor (BLE broadcast) controls for a bike computer: its currently
+/// assigned capabilities, and a button to (re)detect what the device is
+/// broadcasting right now. Stateful for the in-flight and empty-result feedback,
+/// which is transient UI, not device state.
+class _LiveSensorSection extends ConsumerStatefulWidget {
+  const _LiveSensorSection({required this.device});
+
+  final BleSensorDevice device;
+
+  @override
+  ConsumerState<_LiveSensorSection> createState() => _LiveSensorSectionState();
+}
+
+class _LiveSensorSectionState extends ConsumerState<_LiveSensorSection> {
+  bool _detecting = false;
+  bool _foundNothing = false;
+
+  Future<void> _detect() async {
+    setState(() {
+      _detecting = true;
+      _foundNothing = false;
+    });
+    final found = await ref
+        .read(bleDevicesViewModelProvider.notifier)
+        .detectBroadcastSensors(widget.device.id);
+    if (!mounted) return;
+    setState(() {
+      _detecting = false;
+      _foundNothing = found.isEmpty;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final capabilities = widget.device.capabilities;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.settingsBikeLiveSensorBody,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+              if (capabilities.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final capability in capabilities)
+                      Chip(label: Text(capabilityLabel(l10n, capability))),
+                  ],
+                ),
+              ],
+              if (_foundNothing) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l10n.settingsBikeNoBroadcast,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _detecting ? null : _detect,
+                  icon: _detecting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.bluetooth_searching, size: 18),
+                  label: Text(_detecting
+                      ? l10n.settingsBikeDetecting
+                      : l10n.settingsBikeDetectSensors),
+                ),
+              ),
+            ],
           ),
         ),
       ),

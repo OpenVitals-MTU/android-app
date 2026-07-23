@@ -4054,6 +4054,26 @@
   },
   "settingsWatchActionData": "Data",
   "settingsWatchActionSync": "Sync",
+  "settingsBikeLiveSensorSection": "Live sensor",
+  "@settingsBikeLiveSensorSection": {
+    "description": "Section header on a bike computer's device card for its live BLE broadcast role."
+  },
+  "settingsBikeLiveSensorBody": "Broadcast heart rate, speed, cadence or power to record it live during an activity. Turn on broadcasting on the device first.",
+  "@settingsBikeLiveSensorBody": {
+    "description": "Explains what the live-sensor role of a bike computer does."
+  },
+  "settingsBikeDetectSensors": "Detect broadcast sensors",
+  "@settingsBikeDetectSensors": {
+    "description": "Button that connects to the bike computer to find the standard BLE services it is broadcasting."
+  },
+  "settingsBikeDetecting": "Detecting…",
+  "@settingsBikeDetecting": {
+    "description": "Shown while the app is probing the bike computer for broadcast sensors."
+  },
+  "settingsBikeNoBroadcast": "No broadcast sensors found. Turn on broadcasting on the device, then try again.",
+  "@settingsBikeNoBroadcast": {
+    "description": "Shown when detection found no standard BLE services on the bike computer."
+  },
   "settingsWatchSectionDevice": "Device",
   "settingsWatchEnabled": "Enabled",
   "settingsWatchEnabledBody": "Sync this watch",

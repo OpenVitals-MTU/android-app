@@ -488,6 +488,43 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
     if (trimmed.isEmpty) return;
     _edit(UpdateBleDevice(deviceId: deviceId, displayName: trimmed));
   }
+
+  /// Probes a live-sensor-capable device (an Edge bike computer) for the
+  /// standard GATT services it is broadcasting RIGHT NOW, and persists the
+  /// result as its capabilities so the recording coordinator will connect to it.
+  ///
+  /// Run from the device card, not onboarding: an Edge only exposes its broadcast
+  /// services while the "Broadcast heart rate / sensor data" mode is on — usually
+  /// only during a ride — so detection has to be a thing the user triggers when
+  /// the device is actually broadcasting. Returns the detected capabilities (a
+  /// non-empty result turns the live-sensor role on; an empty one leaves it off).
+  Future<Set<BleSensorCapability>> detectBroadcastSensors(
+      String deviceId) async {
+    final device = ref
+        .read(readPairedBleDevicesUseCaseProvider)()
+        .where((d) => d.id == deviceId)
+        .firstOrNull;
+    if (device == null || !device.isLiveSensorCapable) return const {};
+    final discovery = await ref.read(discoverBleDeviceCapabilitiesUseCaseProvider)(
+      BleDiscoveredDevice(
+        address: device.address,
+        name: device.bluetoothName,
+        rssi: null,
+        // Its already-assigned capabilities are the fallback if the connect
+        // finds nothing (e.g. broadcast mode turned off mid-detect).
+        suggestedCapabilities: device.capabilities,
+      ),
+    );
+    if (!ref.mounted) return const {};
+    // Preserves kind/integration (UpdateBleDevice passes neither), so the Edge
+    // stays a bike computer while gaining its live capabilities.
+    _edit(UpdateBleDevice(
+      deviceId: deviceId,
+      capabilities: discovery.capabilities,
+      wheelCircumferenceMm: device.wheelCircumferenceMm,
+    ));
+    return discovery.capabilities;
+  }
 }
 
 final bleDevicesViewModelProvider =

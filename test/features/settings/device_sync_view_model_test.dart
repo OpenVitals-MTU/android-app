@@ -15,6 +15,7 @@ import 'package:openvitals/devices/garmin/garmin_session.dart';
 import 'package:openvitals/devices/garmin/garmin_watch_sync_service.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
+import 'package:openvitals/features/manualentry/activity/activity_entry_providers.dart';
 import 'package:openvitals/features/settings/application/device_sync_view_model.dart';
 import 'package:openvitals/features/settings/application/watch_settings_view_model.dart';
 
@@ -110,8 +111,12 @@ void main() {
   late _FakeSyncService service;
   late ProviderContainer container;
   late BleSensorDevice watch;
+  // A recording being in progress blocks a sync (they share the radio). Flip
+  // this before setUp0 to exercise the guard.
+  var recordingActive = false;
 
   Future<void> setUp0() async {
+    recordingActive = false;
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
     repo = BleDeviceRepositoryImpl(prefs);
@@ -128,6 +133,7 @@ void main() {
       bleDeviceRepositoryProvider.overrideWithValue(repo),
       garminDeviceStateStoreProvider.overrideWithValue(store),
       garminWatchSyncServiceProvider.overrideWithValue(service),
+      isRecordingActiveProvider.overrideWithValue(() => recordingActive),
     ]);
     addTearDown(container.dispose);
   }
@@ -145,6 +151,18 @@ void main() {
     expect(state().lastFileCount, 0);
     expect(repo.devices.single.lastSyncedAt, isNotNull);
     expect(service.seenAddress, 'E0:48:24:D5:F7:10');
+  });
+
+  test('refuses to sync while a recording is active (shared radio)', () async {
+    await setUp0();
+    // The override reads this lazily, so flipping it after setup takes effect.
+    recordingActive = true;
+
+    final count = await notifier().syncDevice(watch.id);
+
+    expect(count, 0);
+    expect(service.seenAddress, isNull, reason: 'the radio was never touched');
+    expect(repo.devices.single.lastSyncedAt, isNull);
   });
 
   test('passes the previously-synced keys down to the service', () async {
@@ -263,6 +281,7 @@ void main() {
       bleDeviceRepositoryProvider.overrideWithValue(repo),
       garminDeviceStateStoreProvider.overrideWithValue(store),
       garminWatchSyncServiceProvider.overrideWithValue(service),
+      isRecordingActiveProvider.overrideWithValue(() => false),
     ]);
     addTearDown(other.dispose);
     final second = other.read(watchSettingsLinksProvider);

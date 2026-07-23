@@ -41,10 +41,12 @@ class BleDeviceRepositoryImpl implements BleDeviceRepository {
   Map<BleSensorCapability, BleSensorDevice> resolveCapabilityAssignments() {
     final assignments = <BleSensorCapability, BleSensorDevice>{};
     for (final device in enabledDevices) {
-      // A watch holds no capabilities anyway, but the guard is explicit: it is
-      // what stops a stored watch from ever being connected to and polled by
-      // the recording coordinator.
-      if (device.kind != BleDeviceKind.sensor) continue;
+      // A live sensor OR an Edge bike computer that has been given broadcast
+      // capabilities takes part. A watch never does — it streams nothing live —
+      // so it is excluded even if it somehow carried capabilities, which would
+      // otherwise have the recording coordinator connect to it and wait for
+      // notifications it never sends.
+      if (!device.isLiveSensorCapable || device.capabilities.isEmpty) continue;
       for (final capability in device.capabilities) {
         assignments.putIfAbsent(capability, () => device);
       }

@@ -34,6 +34,31 @@ Future<ProviderContainer> _container() async {
   return container;
 }
 
+/// Like [_container], but the paired device is a Garmin Edge bike computer.
+Future<ProviderContainer> _bikeContainer() async {
+  SharedPreferences.setMockInitialValues(const <String, Object>{});
+  final prefs = await SharedPreferences.getInstance();
+  final container = ProviderContainer(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      bleDiscoveredDevicesProvider.overrideWith(
+        (ref) => Stream.value(const <BleDiscoveredDevice>[]),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  final paired = container.read(bleDeviceRepositoryProvider).addDevice(
+        displayName: 'Edge 840',
+        address: 'E0:48:24:D5:F7:20',
+        bluetoothName: 'Edge 840',
+        capabilities: const {},
+        kind: BleDeviceKind.bikeComputer,
+        integration: DeviceIntegration.garmin,
+      );
+  _deviceId = paired.id;
+  return container;
+}
+
 late String _deviceId;
 
 Widget _harness(ProviderContainer container) => UncontrolledProviderScope(
@@ -102,6 +127,23 @@ void main() {
     // The "Latest" band was removed: it duplicated what Data opens.
     expect(find.text('Latest'), findsNothing);
     expect(find.text('Remove watch'), findsOneWidget);
+  });
+
+  testWidgets('a bike computer syncs, offers its live-sensor role, and has no '
+      'wellness Data view', (tester) async {
+    final container = await _bikeContainer();
+    await tester.pumpWidget(_harness(container));
+    await tester.pumpAndSettle();
+
+    // Rides sync; the wrist-wellness "Data" view is meaningless for an Edge.
+    expect(find.text('Sync'), findsOneWidget);
+    expect(find.text('Data'), findsNothing);
+    // The live BLE broadcast role is opt-in from here.
+    expect(find.text('Live sensor'), findsOneWidget);
+    expect(find.text('Detect broadcast sensors'), findsOneWidget);
+    // A cycling glyph, not a watch face.
+    expect(find.byIcon(Icons.directions_bike_outlined), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Alarms, Find and the whole settings tree are live',

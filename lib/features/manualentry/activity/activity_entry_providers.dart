@@ -45,6 +45,17 @@ final activityRecordingControllerProvider =
   (ref) => ref.watch(activityRecordingServiceProvider),
 );
 
+/// Whether a recording is in progress RIGHT NOW — a live read, not a cached
+/// value, so callers get the truth at the moment they ask. Used by features that
+/// must not run concurrently with a recording (device sync shares the radio a
+/// bike computer streams over). A callback rather than a `Provider<bool>` so it
+/// re-reads the service's [ValueListenable] each call instead of caching a stale
+/// snapshot; overriding it lets a test decide without the whole service.
+final isRecordingActiveProvider = Provider<bool Function()>(
+  (ref) =>
+      () => ref.read(activityRecordingServiceProvider).state.value.isActive,
+);
+
 final routeFileImporterProvider = Provider<RouteFileImporter>(
   (ref) => const DefaultRouteFileImporter(),
 );

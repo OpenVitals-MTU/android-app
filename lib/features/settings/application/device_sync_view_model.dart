@@ -4,6 +4,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../devices/core/sync/device_sync_port.dart';
 import '../../../di/providers.dart';
+import '../../manualentry/activity/activity_entry_providers.dart';
 import 'garmin_device_sync_port.dart';
 
 part 'device_sync_view_model.freezed.dart';
@@ -54,6 +55,13 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
     Duration listenAfter = Duration.zero,
   }) async {
     if (state.isSyncing) return 0;
+
+    // One radio: a bike computer can be a live BLE sensor during a recording,
+    // and a GFDI file-sync over the same link would fight it for the device's
+    // handles. So a sync waits until the recording ends. A watch never streams
+    // live, but blocking it too keeps the rule simple and costs a user nothing
+    // they would sensibly want mid-recording.
+    if (ref.read(isRecordingActiveProvider)()) return 0;
 
     final device = ref
         .read(readPairedBleDevicesUseCaseProvider)()

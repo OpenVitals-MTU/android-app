@@ -135,5 +135,39 @@ void main() {
       expect(assignments[BleSensorCapability.heartRate]?.id, sensor.id);
       expect(assignments.values.any((d) => d.isWatch), isFalse);
     });
+
+    test('an Edge bike computer with capabilities DOES take part', () async {
+      await setUpOneDevice();
+      final edge = repo.addDevice(
+        displayName: 'Edge 840',
+        address: 'E0:48:24:D5:F7:20',
+        bluetoothName: 'Edge 840',
+        capabilities: const {BleSensorCapability.cyclingPower},
+        kind: BleDeviceKind.bikeComputer,
+        integration: DeviceIntegration.garmin,
+      );
+
+      final assignments = repo.resolveCapabilityAssignments();
+
+      // Unlike a watch, a bike computer broadcasting standard GATT is a live
+      // source the recording coordinator should connect to.
+      expect(assignments[BleSensorCapability.cyclingPower]?.id, edge.id);
+    });
+
+    test('a bike computer with NO capabilities stays out', () async {
+      await setUpOneDevice();
+      repo.addDevice(
+        displayName: 'Edge 840',
+        address: 'E0:48:24:D5:F7:20',
+        bluetoothName: 'Edge 840',
+        capabilities: const {},
+        kind: BleDeviceKind.bikeComputer,
+        integration: DeviceIntegration.garmin,
+      );
+
+      final assignments = repo.resolveCapabilityAssignments();
+
+      expect(assignments.values.any((d) => d.isBikeComputer), isFalse);
+    });
   });
 }

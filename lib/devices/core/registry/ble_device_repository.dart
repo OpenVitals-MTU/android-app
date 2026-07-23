@@ -19,8 +19,10 @@ abstract interface class BleDeviceRepository {
 
   void refresh();
 
-  /// Only [BleDeviceKind.sensor] devices take part: a watch streams nothing
-  /// live, so it can neither own a capability nor conflict over one.
+  /// Only live-sensor-capable devices with capabilities take part — a plain
+  /// [BleDeviceKind.sensor] or an Edge [BleDeviceKind.bikeComputer] broadcasting
+  /// standard GATT. A watch streams nothing live, so it can neither own a
+  /// capability nor conflict over one.
   Map<BleSensorCapability, BleSensorDevice> resolveCapabilityAssignments();
 
   Map<BleSensorCapability, BleSensorDevice> capabilityConflicts(

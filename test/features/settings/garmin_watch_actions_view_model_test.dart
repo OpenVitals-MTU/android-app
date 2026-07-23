@@ -12,6 +12,7 @@ import 'package:openvitals/devices/garmin/garmin_device_state_store.dart';
 import 'package:openvitals/devices/garmin/garmin_watch_sync_service.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
+import 'package:openvitals/features/manualentry/activity/activity_entry_providers.dart';
 import 'package:openvitals/features/settings/application/device_sync_view_model.dart';
 import 'package:openvitals/features/settings/application/garmin_watch_actions_view_model.dart';
 
@@ -99,6 +100,7 @@ void main() {
       bleDeviceRepositoryProvider.overrideWithValue(repo),
       garminDeviceStateStoreProvider.overrideWithValue(store),
       garminWatchSyncServiceProvider.overrideWithValue(service),
+      isRecordingActiveProvider.overrideWithValue(() => false),
     ]);
     addTearDown(container.dispose);
   }
