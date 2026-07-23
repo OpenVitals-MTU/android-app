@@ -18,6 +18,7 @@ import 'cards/body_energy_calibration_card.dart';
 import 'cards/body_profile_card.dart';
 import 'cards/caffeine_preferences_card.dart';
 import 'cards/debug_diagnostics_card.dart';
+import 'cards/health_connect_sources_card.dart';
 import 'cards/favorite_activity_card.dart';
 import 'cards/fit_import_card.dart';
 import 'cards/permission_categories_card.dart';
@@ -243,8 +244,10 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
       ];
     case SettingsSection.debugDiagnostics:
       // Kotlin DEBUG_DIAGNOSTICS: a single "Save logs" card (SettingsScreenContent
-      // .kt:302-312). The route is only reachable in debug builds.
-      return const [DebugDiagnosticsCard()];
+      // .kt:302-312). The route is only reachable in debug builds. The Health
+      // Connect sources card is a Flutter-only addition for the WearOS viability
+      // check (see docs/reference/device-modularization-plan.md, Phase 3).
+      return const [DebugDiagnosticsCard(), HealthConnectSourcesCard()];
     case SettingsSection.sensors:
     case SettingsSection.watches:
     case SettingsSection.deviceSync:
