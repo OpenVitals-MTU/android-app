@@ -8,7 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/components/metric_stat_card.dart';
-import '../../settings/application/garmin_sync_view_model.dart';
+import '../../settings/application/device_sync_view_model.dart';
 import '../../settings/presentation/watch_common.dart';
 
 /// The carousel id for a watch's tile. Namespaced so it can never collide with
@@ -41,7 +41,7 @@ class WatchSummaryTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final sync = ref.watch(garminSyncViewModelProvider);
+    final sync = ref.watch(deviceSyncViewModelProvider);
     final syncingThis = sync.isSyncingDevice(device.id);
     final syncedAt = device.lastSyncedAt?.toLocal();
     final staleDays =
@@ -90,7 +90,7 @@ class WatchSummaryTile extends ConsumerWidget {
         onPressed: sync.isSyncing
             ? null
             : () => ref
-                .read(garminSyncViewModelProvider.notifier)
+                .read(deviceSyncViewModelProvider.notifier)
                 .syncDevice(device.id),
         tooltip: l10n.settingsWatchSyncNow,
         visualDensity: VisualDensity.compact,

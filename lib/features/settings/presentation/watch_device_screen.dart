@@ -11,7 +11,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 import '../application/ble_devices_view_model.dart';
-import '../application/garmin_sync_view_model.dart';
+import '../application/device_sync_view_model.dart';
+import '../application/garmin_watch_actions_view_model.dart';
 import 'watch_common.dart';
 
 /// One watch, and everything about it.
@@ -45,7 +46,8 @@ class WatchDeviceScreen extends ConsumerWidget {
       );
     }
 
-    final sync = ref.watch(garminSyncViewModelProvider);
+    final sync = ref.watch(deviceSyncViewModelProvider);
+    final actions = ref.watch(garminWatchActionsViewModelProvider);
     final capabilities =
         ref.watch(garminDeviceStateStoreProvider).capabilities(deviceId);
     // Unknown means SHOW, not hide: capabilities arrive in a handshake, so a
@@ -71,16 +73,21 @@ class WatchDeviceScreen extends ConsumerWidget {
         children: [
           _StatusCard(device: device, sync: sync),
           const SizedBox(height: 12),
-          _Actions(device: device, sync: sync, supports: supports),
-          if (sync.isFindingDevice(device.id) || sync.findFailed)
+          _Actions(
+            device: device,
+            sync: sync,
+            actions: actions,
+            supports: supports,
+          ),
+          if (actions.isFindingDevice(device.id) || actions.findFailed)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Text(
-                sync.isFindingDevice(device.id)
+                actions.isFindingDevice(device.id)
                     ? l10n.settingsWatchFindRinging
                     : l10n.settingsWatchFindFailed,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: sync.findFailed
+                      color: actions.findFailed
                           ? Theme.of(context).colorScheme.error
                           : Theme.of(context).colorScheme.primary,
                     ),
@@ -121,7 +128,7 @@ class _StatusCard extends StatelessWidget {
   const _StatusCard({required this.device, required this.sync});
 
   final BleSensorDevice device;
-  final GarminSyncState sync;
+  final DeviceSyncState sync;
 
   @override
   Widget build(BuildContext context) {
@@ -195,11 +202,13 @@ class _Actions extends ConsumerWidget {
   const _Actions({
     required this.device,
     required this.sync,
+    required this.actions,
     required this.supports,
   });
 
   final BleSensorDevice device;
-  final GarminSyncState sync;
+  final DeviceSyncState sync;
+  final GarminWatchActionsState actions;
 
   /// Whether the watch declared a capability — shared with the screen so the
   /// action row and the settings band cannot disagree about the same watch.
@@ -208,10 +217,10 @@ class _Actions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final finding = sync.isFindingDevice(device.id);
+    final finding = actions.isFindingDevice(device.id);
     // One radio: syncing and finding cannot overlap, and neither can a find on
     // a second watch. Stopping THIS find stays available throughout.
-    final busy = (sync.isSyncing || sync.findingDeviceId != null) && !finding;
+    final busy = (sync.isSyncing || actions.findingDeviceId != null) && !finding;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       child: Row(
@@ -232,7 +241,7 @@ class _Actions extends ConsumerWidget {
             onPressed: busy || finding
                 ? null
                 : () => ref
-                    .read(garminSyncViewModelProvider.notifier)
+                    .read(deviceSyncViewModelProvider.notifier)
                     .syncDevice(device.id),
             // Debug-only diagnostic: sync, then hold the link open so what the
             // watch sends unprompted can be read from the log. Deliberately
@@ -240,7 +249,7 @@ class _Actions extends ConsumerWidget {
             onLongPress: !kDebugMode || busy
                 ? null
                 : () => ref
-                    .read(garminSyncViewModelProvider.notifier)
+                    .read(deviceSyncViewModelProvider.notifier)
                     .syncDevice(device.id,
                         listenAfter: const Duration(minutes: 10)),
           ),
@@ -284,7 +293,7 @@ class _Actions extends ConsumerWidget {
               onPressed: busy
                   ? null
                   : () => ref
-                      .read(garminSyncViewModelProvider.notifier)
+                      .read(garminWatchActionsViewModelProvider.notifier)
                       .toggleFind(device.id),
             ),
         ],
@@ -315,8 +324,9 @@ Future<void> _probeSettings(
       duration: Duration(seconds: 4),
     ),
   );
-  final screens =
-      await ref.read(garminSyncViewModelProvider.notifier).probeSettings(deviceId);
+  final screens = await ref
+      .read(garminWatchActionsViewModelProvider.notifier)
+      .probeSettings(deviceId);
   messenger.showSnackBar(
     SnackBar(
       content: Text(screens == 0

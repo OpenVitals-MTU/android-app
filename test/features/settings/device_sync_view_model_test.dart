@@ -15,10 +15,10 @@ import 'package:openvitals/devices/garmin/garmin_session.dart';
 import 'package:openvitals/devices/garmin/garmin_watch_sync_service.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
-import 'package:openvitals/features/settings/application/garmin_sync_view_model.dart';
+import 'package:openvitals/features/settings/application/device_sync_view_model.dart';
 import 'package:openvitals/features/settings/application/watch_settings_view_model.dart';
 
-/// Stands in for the whole radio + protocol stack.
+/// Stands in for the whole radio + protocol stack, behind the Garmin sync port.
 class _FakeSyncService implements GarminWatchSyncService {
   /// The real service keeps a copy of every download before archiving; this
   /// fake never touches the radio, so there is nothing to keep.
@@ -29,7 +29,7 @@ class _FakeSyncService implements GarminWatchSyncService {
   List<GarminDownloadedFile> files = const [];
   Object? error;
 
-  /// What the view-model asked for, so the dedup wiring can be asserted.
+  /// What the port asked for, so the dedup wiring can be asserted.
   Set<String>? seenAlreadySynced;
   String? seenAddress;
   Duration? seenListenAfter;
@@ -37,10 +37,6 @@ class _FakeSyncService implements GarminWatchSyncService {
   /// What the fake watch declares, so the persistence can be asserted.
   Set<GarminCapability> reportCapabilities = const {};
   int calls = 0;
-
-  /// The locale the settings probe was opened with, so it can be asserted to
-  /// follow the phone rather than a hard-coded en_US.
-  String? seenSettingsLanguage;
 
   @override
   Future<int> probeSettings({
@@ -50,14 +46,8 @@ class _FakeSyncService implements GarminWatchSyncService {
     required String model,
     String language = 'en_US',
     String region = 'us',
-  }) async {
-    seenSettingsLanguage = language;
-    return 3;
-  }
-
-  /// Records a find, so the toggle can be asserted without a radio.
-  String? seenFindAddress;
-  bool findAccepted = true;
+  }) async =>
+      3;
 
   @override
   Future<bool> findWatch({
@@ -68,11 +58,8 @@ class _FakeSyncService implements GarminWatchSyncService {
     Duration timeout = const Duration(seconds: 60),
     Future<void>? cancelled,
   }) async {
-    seenFindAddress = address;
-    // Ends when the caller cancels, as the real one does — a find that returned
-    // immediately would never exercise the toggle's stop path.
     if (cancelled != null) await cancelled;
-    return findAccepted;
+    return true;
   }
 
   @override
@@ -145,9 +132,9 @@ void main() {
     addTearDown(container.dispose);
   }
 
-  GarminSyncViewModel notifier() =>
-      container.read(garminSyncViewModelProvider.notifier);
-  GarminSyncState state() => container.read(garminSyncViewModelProvider);
+  DeviceSyncViewModel notifier() =>
+      container.read(deviceSyncViewModelProvider.notifier);
+  DeviceSyncState state() => container.read(deviceSyncViewModelProvider);
 
   test('a sync with nothing new still stamps the device', () async {
     await setUp0();
@@ -252,7 +239,7 @@ void main() {
 
     expect(service.calls, 1);
     // The row must return to idle with an explanation. Before this was caught,
-    // the throw escaped syncDevice and left the spinner up forever.
+    // the throw escaped the port and left the spinner up forever.
     expect(state().isSyncing, isFalse);
     expect(state().errorMessage, isNotNull);
     expect(count, 0);
@@ -262,27 +249,13 @@ void main() {
     expect(repo.devices.single.lastSyncedAt, isNull);
   });
 
-  test('find is a toggle: a second tap stops it', () async {
-    // The watch alerts for a minute unless cancelled, so the control that
-    // starts it has to be the one that stops it.
-    await setUp0();
-
-    final running = notifier().toggleFind(watch.id);
-    await Future<void>.delayed(Duration.zero);
-    expect(state().isFindingDevice(watch.id), isTrue);
-    expect(service.seenFindAddress, watch.address);
-
-    await notifier().toggleFind(watch.id); // stop
-    await running;
-    expect(state().findingDeviceId, isNull);
-  });
-
   test('the open-link registry belongs to the container, not the library',
       () async {
     // It was a top-level map, which outlived every container that filled it: a
     // widget test that opened a settings screen leaked a link into the next one
     // and no override could reach it. Two containers must not share the record
-    // of who holds a watch's radio.
+    // of who holds a watch's radio. The sync port owns the release call, so this
+    // lives with the sync tests.
     await setUp0();
     final first = container.read(watchSettingsLinksProvider);
 
@@ -296,39 +269,5 @@ void main() {
 
     expect(identical(first, second), isFalse);
     expect(second.isHeld(watch.id), isFalse);
-  });
-
-  test('stopping twice before the watch answers does not throw', () async {
-    // Stop stays enabled until the watch acknowledges the cancel — a full round
-    // trip — so an impatient second tap lands inside that window. Completing an
-    // already-completed completer throws, and it threw straight out of the
-    // button's callback.
-    await setUp0();
-
-    final running = notifier().toggleFind(watch.id);
-    await Future<void>.delayed(Duration.zero);
-    expect(state().isFindingDevice(watch.id), isTrue);
-
-    // Both taps before the first stop has come back.
-    final first = notifier().toggleFind(watch.id);
-    final second = notifier().toggleFind(watch.id);
-    await Future.wait([first, second, running]);
-
-    expect(state().findingDeviceId, isNull);
-  });
-
-  test('a refused find is reported as a flag, not a message', () async {
-    // The wording belongs to the screen; this layer has no localizations, and
-    // one that invented an English string would leak it into every locale.
-    await setUp0();
-    service.findAccepted = false;
-
-    final running = notifier().toggleFind(watch.id);
-    await Future<void>.delayed(Duration.zero);
-    await notifier().toggleFind(watch.id);
-    await running;
-
-    expect(state().findFailed, isTrue);
-    expect(state().errorMessage, isNull);
   });
 }
