@@ -218,26 +218,37 @@ class BodyReadingRow extends StatelessWidget {
                 ],
               ),
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(color: _readingColor(reading.kind)),
-                ),
-                if (onEdit != null) ...[
-                  const SizedBox(width: 4),
-                  IconButton(
-                    onPressed: onEdit,
-                    tooltip: l10n.cdEditEntry,
-                    icon: Icon(
-                      Icons.edit_outlined,
-                      color: theme.colorScheme.onSurfaceVariant,
+            // Flexible + scaleDown so a large-font value gives way instead of
+            // overflowing: the icon buttons keep their tap size, the numeral
+            // shrinks only when the row is genuinely out of room, and the
+            // date column keeps its share.
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        value,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(color: _readingColor(reading.kind)),
+                      ),
                     ),
                   ),
+                  if (onEdit != null) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      onPressed: onEdit,
+                      tooltip: l10n.cdEditEntry,
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ),
