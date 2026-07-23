@@ -47,7 +47,7 @@ class WatchDeviceScreen extends ConsumerWidget {
 
     final sync = ref.watch(garminSyncViewModelProvider);
     final capabilities =
-        ref.watch(bleDeviceRepositoryProvider).capabilities(deviceId);
+        ref.watch(garminDeviceStateStoreProvider).capabilities(deviceId);
     // Unknown means SHOW, not hide: capabilities arrive in a handshake, so a
     // watch that has never synced would otherwise look feature-less. Everything
     // gated this way is disabled anyway, so showing it cannot mislead about

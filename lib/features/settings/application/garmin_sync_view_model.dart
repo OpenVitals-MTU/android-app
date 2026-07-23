@@ -89,6 +89,7 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
     if (device == null || !device.isWatch) return 0;
 
     final repository = ref.read(bleDeviceRepositoryProvider);
+    final stateStore = ref.read(garminDeviceStateStoreProvider);
     final service = ref.read(garminWatchSyncServiceProvider);
     final phone = ref.read(phoneIdentityProvider);
 
@@ -117,10 +118,10 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
         phoneName: phone.bluetoothName,
         manufacturer: phone.manufacturer,
         model: phone.model,
-        alreadySynced: repository.syncedFileKeys(deviceId),
+        alreadySynced: stateStore.syncedFileKeys(deviceId),
         listenAfter: listenAfter,
         onCapabilities: (capabilities) =>
-            repository.recordCapabilities(deviceId, capabilities),
+            stateStore.recordCapabilities(deviceId, capabilities),
         onProgress: (progress) {
           if (!ref.mounted || state.syncingDeviceId != deviceId) return;
           state = state.copyWith(
@@ -181,7 +182,7 @@ class GarminSyncViewModel extends Notifier<GarminSyncState> {
 
       // Recorded AFTER the import, so a run that died mid-import re-downloads
       // rather than skipping files that never reached Health Connect.
-      repository.recordSyncedFileKeys(
+      stateStore.recordSyncedFileKeys(
         deviceId,
         // Files with no stable key are not recorded — they are re-fetched every
         // sync by design rather than skipped on a key that identifies nothing.

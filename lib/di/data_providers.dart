@@ -3,6 +3,7 @@ import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
 import '../data/source/sensors/ble/ble_watch_pairing.dart';
+import '../data/source/sensors/garmin/garmin_device_state_store.dart';
 import '../data/source/sensors/garmin/garmin_file_store.dart';
 import '../data/source/sensors/garmin/garmin_gatt_probe.dart';
 import '../data/source/sensors/garmin/garmin_phone_identity.dart';
@@ -245,6 +246,13 @@ final hydrationRepositoryProvider = Provider<HydrationRepository>(
 
 final bleDeviceRepositoryProvider = Provider<BleDeviceRepository>(
   (ref) => BleDeviceRepositoryImpl(ref.watch(sharedPreferencesProvider)),
+);
+
+/// A watch's Garmin-specific per-device state (declared GFDI capabilities +
+/// which files a sync already pulled), kept out of [bleDeviceRepositoryProvider]
+/// so that registry carries no Garmin knowledge.
+final garminDeviceStateStoreProvider = Provider<GarminDeviceStateStore>(
+  (ref) => GarminDeviceStateStore(ref.watch(sharedPreferencesProvider)),
 );
 
 /// Bonding + companion association for Garmin watch onboarding. A provider so a

@@ -411,6 +411,11 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
         .firstOrNull;
     _edit(ForgetBleDevice(deviceId));
     if (device != null && device.isWatch) {
+      // The watch's Garmin-specific state used to be cleared inside
+      // removeDevice; now that it lives in its own store, this watch-forget
+      // branch — the single path every device removal funnels through — is what
+      // clears it, so a re-pairing starts clean.
+      ref.read(garminDeviceStateStoreProvider).clear(deviceId);
       // Fire-and-forget, like every other registry mutation here: dropping the
       // bond and association is housekeeping the user does not wait on, and a
       // failure leaves nothing worse than a stale OS pairing they can clear in

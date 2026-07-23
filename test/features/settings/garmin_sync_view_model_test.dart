@@ -10,6 +10,7 @@ import 'package:openvitals/data/source/sensors/garmin/garmin_directory.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_file_store.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_file_types.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_capabilities.dart';
+import 'package:openvitals/data/source/sensors/garmin/garmin_device_state_store.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_session.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_watch_sync_service.dart';
 import 'package:openvitals/di/providers.dart';
@@ -118,13 +119,16 @@ GarminDownloadedFile _file(int number, {GarminFileType? type}) =>
 
 void main() {
   late BleDeviceRepositoryImpl repo;
+  late GarminDeviceStateStore store;
   late _FakeSyncService service;
   late ProviderContainer container;
   late BleSensorDevice watch;
 
   Future<void> setUp0() async {
     SharedPreferences.setMockInitialValues(const {});
-    repo = BleDeviceRepositoryImpl(await SharedPreferences.getInstance());
+    final prefs = await SharedPreferences.getInstance();
+    repo = BleDeviceRepositoryImpl(prefs);
+    store = GarminDeviceStateStore(prefs);
     watch = repo.addDevice(
       displayName: 'vívoactive 5',
       address: 'E0:48:24:D5:F7:10',
@@ -135,6 +139,7 @@ void main() {
     service = _FakeSyncService();
     container = ProviderContainer(overrides: [
       bleDeviceRepositoryProvider.overrideWithValue(repo),
+      garminDeviceStateStoreProvider.overrideWithValue(store),
       garminWatchSyncServiceProvider.overrideWithValue(service),
     ]);
     addTearDown(container.dispose);
@@ -157,7 +162,7 @@ void main() {
 
   test('passes the previously-synced keys down to the service', () async {
     await setUp0();
-    repo.recordSyncedFileKeys(watch.id, ['128/49/1']);
+    store.recordSyncedFileKeys(watch.id, ['128/49/1']);
 
     await notifier().syncDevice(watch.id);
 
@@ -253,7 +258,7 @@ void main() {
     expect(count, 0);
     // Nothing reached Health Connect, so nothing is remembered as done: the
     // next run must fetch these files again.
-    expect(repo.syncedFileKeys(watch.id), isEmpty);
+    expect(store.syncedFileKeys(watch.id), isEmpty);
     expect(repo.devices.single.lastSyncedAt, isNull);
   });
 
@@ -283,6 +288,7 @@ void main() {
 
     final other = ProviderContainer(overrides: [
       bleDeviceRepositoryProvider.overrideWithValue(repo),
+      garminDeviceStateStoreProvider.overrideWithValue(store),
       garminWatchSyncServiceProvider.overrideWithValue(service),
     ]);
     addTearDown(other.dispose);

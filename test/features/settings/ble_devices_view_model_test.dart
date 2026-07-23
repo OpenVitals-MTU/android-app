@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart';
 import 'package:openvitals/data/repository/contract/ble_sensor_repository.dart';
+import 'package:openvitals/data/source/sensors/garmin/garmin_capabilities.dart';
+import 'package:openvitals/data/source/sensors/garmin/garmin_device_state_store.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/domain/model/garmin_transport.dart';
@@ -96,16 +98,19 @@ void main() {
   late _FakeCoordinator coordinator;
   late _FakePairing pairing;
   late _FakeProbe probe;
+  late SharedPreferences prefs;
   late ProviderContainer container;
 
   Future<void> setUp0() async {
     SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
+    prefs = await SharedPreferences.getInstance();
     repo = BleDeviceRepositoryImpl(prefs);
     coordinator = _FakeCoordinator();
     pairing = _FakePairing();
     probe = _FakeProbe();
     container = ProviderContainer(overrides: [
+      // The Garmin state store reads this; the watch-forget path clears it.
+      sharedPreferencesProvider.overrideWithValue(prefs),
       bleDeviceRepositoryProvider.overrideWithValue(repo),
       bleSensorRepositoryProvider.overrideWithValue(coordinator),
       watchPairingPortProvider.overrideWithValue(pairing),
@@ -443,6 +448,10 @@ void main() {
       await notifier().onboardSelectedWatch();
       final id = repo.devices.single.id;
       pairing.calls.clear();
+      // Give the watch some Garmin state, so we can prove forgetting drops it.
+      GarminDeviceStateStore(prefs)
+        ..recordSyncedFileKeys(id, ['128/49/1'])
+        ..recordCapabilities(id, {GarminCapability.sync});
 
       notifier().removeDevice(id);
       // The cleanup is fire-and-forget, so let the microtasks drain.
@@ -453,6 +462,10 @@ void main() {
         'disassociate:E0:48:24:D5:F7:10',
         'removeBond:E0:48:24:D5:F7:10',
       ]);
+      // The registry no longer clears Garmin state; the watch-forget path does.
+      final leftover = GarminDeviceStateStore(prefs);
+      expect(leftover.syncedFileKeys(id), isEmpty);
+      expect(leftover.capabilities(id), isEmpty);
     });
 
     test('forgetting a sensor touches neither bond nor association', () async {
