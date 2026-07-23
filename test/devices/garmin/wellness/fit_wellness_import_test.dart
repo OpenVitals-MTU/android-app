@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
-import 'package:openvitals/features/imports/fit/fit_wellness_import.dart';
-import 'package:openvitals/features/manualentry/activity/routeimport/fit_route_parser.dart';
+import 'package:openvitals/devices/garmin/wellness/fit_wellness_import.dart';
+import 'package:openvitals/devices/garmin/wellness/garmin_fit_wellness.dart';
 
 /// Sleep import from Garmin FIT (file type 49). The bytes are hand-built so no
 /// real health data is committed; the layout mirrors what a vívoactive writes —
@@ -27,9 +27,9 @@ void main() {
     (DateTime.utc(2024, 1, 2, 6, 0), 2), // light:  00:45 -> 06:00 (to stop)
   ];
 
-  group('parseSleepSession', () {
+  group('parseGarminSleepSession', () {
     test('reads the session bounds and a contiguous stage timeline', () {
-      final session = FitRouteParser.parseSleepSession(
+      final session = parseGarminSleepSession(
         _fitSleepBytes(start: start, stop: stop, levels: levels),
       )!;
 
@@ -54,7 +54,7 @@ void main() {
     });
 
     test('returns null when the file carries no sleep timeline', () {
-      final session = FitRouteParser.parseSleepSession(
+      final session = parseGarminSleepSession(
         _fitSleepBytes(start: start, stop: stop, levels: const []),
       );
       expect(session, isNull);
@@ -63,7 +63,7 @@ void main() {
 
   group('fitSleepImportRecords', () {
     test('maps to one SleepSessionRecord with a deterministic id', () {
-      final session = FitRouteParser.parseSleepSession(
+      final session = parseGarminSleepSession(
         _fitSleepBytes(start: start, stop: stop, levels: levels),
       )!;
 
@@ -92,7 +92,7 @@ void main() {
         (DateTime.utc(2024, 1, 1, 23, 10), 0), // unmeasurable
         (DateTime.utc(2024, 1, 1, 23, 30), 2), // light
       ];
-      final session = FitRouteParser.parseSleepSession(
+      final session = parseGarminSleepSession(
         _fitSleepBytes(start: start, stop: stop, levels: withUnmeasurable),
       )!;
 
@@ -106,7 +106,7 @@ void main() {
     final hrvTime = DateTime.utc(2024, 1, 2, 6, 0, 0);
 
     test('reads last_night_average as an RMSSD in ms', () {
-      final wellness = FitRouteParser.parseWellness(
+      final wellness = parseGarminWellness(
         _fitHrvBytes(time: hrvTime, rmssdMillis: 42.5),
       );
       expect(wellness.sleep, isNull);
@@ -117,7 +117,7 @@ void main() {
     });
 
     test('maps to one HeartRateVariabilityRmssd record', () {
-      final reading = FitRouteParser.parseWellness(
+      final reading = parseGarminWellness(
         _fitHrvBytes(time: hrvTime, rmssdMillis: 42.5),
       ).hrv!;
       final record = fitHrvImportRecords(reading).single
@@ -131,7 +131,7 @@ void main() {
     });
 
     test('the invalid uint16 sentinel is not read as a reading', () {
-      final wellness = FitRouteParser.parseWellness(
+      final wellness = parseGarminWellness(
         _fitHrvBytes(time: hrvTime, rawOverride: 0xFFFF),
       );
       expect(wellness.hrv, isNull);
@@ -142,7 +142,7 @@ void main() {
     final t = DateTime.utc(2024, 1, 18, 13, 42, 0);
 
     test('reads resting HR and BMR, maps to two records', () {
-      final wellness = FitRouteParser.parseWellness(
+      final wellness = parseGarminWellness(
         _fitMonitoringBytes(time: t, restingHrBpm: 65, bmrKcalPerDay: 2265),
       );
       final m = wellness.monitoring!;
@@ -160,7 +160,7 @@ void main() {
     });
 
     test('a file with only resting HR maps to one record', () {
-      final wellness = FitRouteParser.parseWellness(
+      final wellness = parseGarminWellness(
         _fitMonitoringBytes(time: t, restingHrBpm: 58),
       );
       final records = fitMonitoringImportRecords(wellness.monitoring!);
@@ -191,7 +191,7 @@ void main() {
           (DateTime.utc(2024, 1, 18, 11, 0), 1200),
         ],
       );
-      final m = FitRouteParser.parseWellness(bytes).monitoring!;
+      final m = parseGarminWellness(bytes).monitoring!;
       final records = fitMonitoringImportRecords(m);
 
       final hr = records.whereType<HeartRateImportRecord>().toList();
@@ -222,7 +222,7 @@ void main() {
       // clientRecordId, so the fix is that every file touching a day produces
       // the SAME key — a per-file key made each sync a fresh, additive record.
       List<StepsImportRecord> stepsFor(List<(DateTime, int)> cumulative) {
-        final m = FitRouteParser.parseWellness(
+        final m = parseGarminWellness(
           _fitMonitoringSeriesBytes(stepsCumulative: cumulative),
         ).monitoring!;
         return fitMonitoringImportRecords(m)
@@ -250,7 +250,7 @@ void main() {
       // A walking counter at 540 beside a generic one still at 0 is not a
       // 540-step change. Taking max - min across all points made it one, which
       // is how a file with no new steps still wrote a full day's worth.
-      final m = FitRouteParser.parseWellness(
+      final m = parseGarminWellness(
         _fitMonitoringSeriesBytes(
           stepsCumulative: [
             (DateTime.utc(2024, 1, 18, 9), 540),

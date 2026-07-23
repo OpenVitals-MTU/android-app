@@ -6,7 +6,7 @@
 library;
 
 import '../../../domain/model/apple_health_import_records.dart';
-import '../../manualentry/activity/routeimport/fit_route_parser.dart';
+import 'garmin_fit_wellness.dart';
 
 /// Health Connect file type for a Garmin sleep FIT file (`file_id.type`).
 const int fitFileTypeSleep = 49;

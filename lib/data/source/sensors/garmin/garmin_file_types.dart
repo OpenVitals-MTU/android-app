@@ -7,7 +7,7 @@
 ///
 /// Ported from `FileType.java` (AGPLv3). The `wanted` flag is narrower than
 /// Gadgetbridge's `pull`: it marks only the types
-/// `fit_wellness_import.dart` / `FitRouteParser` can actually consume, so a sync
+/// `fit_wellness_import.dart` / `parseGarminWellness` can actually consume, so a sync
 /// does not spend airtime pulling golf scorecards it would only skip.
 enum GarminFileType {
   /// The root directory listing (file index 0). Not a FIT file.

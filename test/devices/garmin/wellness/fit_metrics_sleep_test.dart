@@ -2,9 +2,9 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/features/imports/fit/fit_wellness_import.dart';
+import 'package:openvitals/devices/garmin/wellness/fit_wellness_import.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
-import 'package:openvitals/features/manualentry/activity/routeimport/fit_route_parser.dart';
+import 'package:openvitals/devices/garmin/wellness/garmin_fit_wellness.dart';
 
 /// Garmin device epoch: seconds between the Unix and Garmin epochs.
 const int _garminEpochOffset = 631065600;
@@ -315,7 +315,7 @@ void main() {
       // The capability the parser lacked: every other field is a scalar, and
       // reading only the first element would have silently dropped a whole
       // two-minute recording down to its opening reading.
-      final snapshot = FitRouteParser.parseWellness(_hsaFile(
+      final snapshot = parseGarminWellness(_hsaFile(
         at: at,
         globalMessage: 305, // hsa_spo2_data
         intervalSeconds: 5,
@@ -331,7 +331,7 @@ void main() {
     });
 
     test('SpO2 reaches Health Connect, stress does not', () {
-      final spo2 = FitRouteParser.parseWellness(_hsaFile(
+      final spo2 = parseGarminWellness(_hsaFile(
         at: at,
         globalMessage: 305,
         intervalSeconds: 60,
@@ -344,7 +344,7 @@ void main() {
       // must not overwrite the passive one taken at the same instant.
       expect(records.first.clientRecordId, startsWith('garmin_fit_hsa_spo2_'));
 
-      final stress = FitRouteParser.parseWellness(_hsaFile(
+      final stress = parseGarminWellness(_hsaFile(
         at: at,
         globalMessage: 306, // hsa_stress_data
         intervalSeconds: 60,
@@ -356,7 +356,7 @@ void main() {
     });
 
     test('respiration is scaled by 100', () {
-      final snapshot = FitRouteParser.parseWellness(_hsaFile(
+      final snapshot = parseGarminWellness(_hsaFile(
         at: at,
         globalMessage: 307, // hsa_respiration_data
         intervalSeconds: 30,
@@ -371,7 +371,7 @@ void main() {
     test('a zero interval drops the record rather than stacking samples', () {
       // Every sample would otherwise land on the same instant and the
       // (metric, time) key would collapse the recording to one reading.
-      final wellness = FitRouteParser.parseWellness(_hsaFile(
+      final wellness = parseGarminWellness(_hsaFile(
         at: at,
         globalMessage: 305,
         intervalSeconds: 0,
@@ -381,7 +381,7 @@ void main() {
     });
 
     test('out-of-range readings are dropped', () {
-      final snapshot = FitRouteParser.parseWellness(_hsaFile(
+      final snapshot = parseGarminWellness(_hsaFile(
         at: at,
         globalMessage: 305,
         intervalSeconds: 10,
@@ -400,7 +400,7 @@ void main() {
     test('reads awake duration as SECONDS, not the profile\'s minutes', () {
       // The number from a real night: 1020 inside an 8.7-hour window. Read as
       // minutes it would be 17 HOURS awake — longer than the night itself.
-      final daily = FitRouteParser.parseWellness(_dailySleepFile(
+      final daily = parseGarminWellness(_dailySleepFile(
         endTime: endTime,
         score: 71,
         awakeSeconds: 1020,
@@ -412,7 +412,7 @@ void main() {
     });
 
     test('sleep pressure passes through raw, including negatives', () {
-      final daily = FitRouteParser.parseWellness(
+      final daily = parseGarminWellness(
         _dailySleepFile(endTime: endTime, pressure: -33),
       ).dailySleep!;
       // Undocumented scale — inventing units would be worse than passing it on.
@@ -420,7 +420,7 @@ void main() {
     });
 
     test('reads Sleep Coach need against the usual need', () {
-      final demand = FitRouteParser.parseWellness(_dailySleepFile(
+      final demand = parseGarminWellness(_dailySleepFile(
         endTime: endTime,
         normalMinutes: 470,
         demandMinutes: 520,
@@ -435,7 +435,7 @@ void main() {
       // so a parser that looked only for those saw nothing and the whole file
       // was discarded as unusable.
       final wellness =
-          FitRouteParser.parseWellness(_dailySleepFile(endTime: endTime, score: 71));
+          parseGarminWellness(_dailySleepFile(endTime: endTime, score: 71));
 
       expect(wellness.isEmpty, isFalse);
       expect(wellness.metrics, isNull); // no VO2 max / load in this file
@@ -443,7 +443,7 @@ void main() {
     });
 
     test('invalid sentinels do not become readings', () {
-      final wellness = FitRouteParser.parseWellness(
+      final wellness = parseGarminWellness(
         _dailySleepFile(endTime: endTime),
       );
       expect(wellness.dailySleep, isNull);
@@ -453,7 +453,7 @@ void main() {
 
   group('intensity minutes', () {
     test('reads the running daily totals', () {
-      final m = FitRouteParser.parseWellness(_intensityFile([
+      final m = parseGarminWellness(_intensityFile([
         (at, 12, 4),
         (at.add(const Duration(minutes: 15)), 19, 4),
       ])).monitoring!;
@@ -465,7 +465,7 @@ void main() {
     });
 
     test('reads the alternate field pair too', () {
-      final m = FitRouteParser.parseWellness(
+      final m = parseGarminWellness(
         _intensityFile([(at, 7, 2)], alt: true),
       ).monitoring!;
       expect(m.moderateMinutes, [(at, 7)]);
@@ -476,13 +476,13 @@ void main() {
       // The vívoactive 5 writes 0 all day until minutes are earned; dropping
       // those would make "no data yet" indistinguishable from "not tracked".
       final m =
-          FitRouteParser.parseWellness(_intensityFile([(at, 0, 0)])).monitoring!;
+          parseGarminWellness(_intensityFile([(at, 0, 0)])).monitoring!;
       expect(m.moderateMinutes, [(at, 0)]);
       expect(m.vigorousMinutes, [(at, 0)]);
     });
 
     test('the uint16 invalid sentinel is not a total', () {
-      final m = FitRouteParser.parseWellness(
+      final m = parseGarminWellness(
         _intensityFile([(at, 0xFFFF, 0xFFFF)]),
       ).monitoring;
       expect(m?.moderateMinutes ?? const [], isEmpty);
@@ -492,7 +492,7 @@ void main() {
 
   group('metrics file', () {
     test('reads VO2 max, recovery, readiness and load from one file', () {
-      final metrics = FitRouteParser.parseWellness(_metricsFile(
+      final metrics = parseGarminWellness(_metricsFile(
         at: at,
         vo2MaxTenths: 425,
         recoveryMinutes: 1320,
@@ -513,7 +513,7 @@ void main() {
       // The case that used to read as a failed import: the watch re-offers
       // metrics files constantly and most carry a subset.
       final wellness =
-          FitRouteParser.parseWellness(_metricsFile(at: at, loadAcute: 300));
+          parseGarminWellness(_metricsFile(at: at, loadAcute: 300));
 
       expect(wellness.metrics, isNotNull);
       expect(wellness.metrics!.trainingLoadAcute, 300);
@@ -522,7 +522,7 @@ void main() {
     });
 
     test('only VO2 max reaches Health Connect', () {
-      final wellness = FitRouteParser.parseWellness(_metricsFile(
+      final wellness = parseGarminWellness(_metricsFile(
         at: at,
         vo2MaxTenths: 501,
         recoveryMinutes: 60,
@@ -541,7 +541,7 @@ void main() {
 
     test('a metrics file with no VO2 max maps to nothing', () {
       final wellness =
-          FitRouteParser.parseWellness(_metricsFile(at: at, readiness: 70));
+          parseGarminWellness(_metricsFile(at: at, readiness: 70));
       expect(fitMetricsImportRecords(wellness.metrics!), isEmpty);
     });
   });
@@ -551,7 +551,7 @@ void main() {
     final end = DateTime.utc(2026, 7, 22, 7, 20);
 
     test("carries the watch's own score alongside the derived stages", () {
-      final sleep = FitRouteParser.parseWellness(
+      final sleep = parseGarminWellness(
         _sleepFile(start: start, end: end, score: 74, awakenings: 3),
       ).sleep!;
 
@@ -564,7 +564,7 @@ void main() {
 
     test('a night without sleep_stats still parses', () {
       final sleep =
-          FitRouteParser.parseWellness(_sleepFile(start: start, end: end))
+          parseGarminWellness(_sleepFile(start: start, end: end))
               .sleep!;
       expect(sleep.overallScore, isNull);
       expect(sleep.awakeningsCount, isNull);
@@ -574,7 +574,7 @@ void main() {
     test('naps become their own stage-less sleep sessions', () {
       final napStart = DateTime.utc(2026, 7, 22, 14, 0);
       final napEnd = DateTime.utc(2026, 7, 22, 14, 35);
-      final wellness = FitRouteParser.parseWellness(_sleepFile(
+      final wellness = parseGarminWellness(_sleepFile(
         start: start,
         end: end,
         naps: [(napStart, napEnd)],
@@ -593,7 +593,7 @@ void main() {
     });
 
     test('a nap that ends before it starts is dropped', () {
-      final wellness = FitRouteParser.parseWellness(_sleepFile(
+      final wellness = parseGarminWellness(_sleepFile(
         start: start,
         end: end,
         naps: [(DateTime.utc(2026, 7, 22, 15), DateTime.utc(2026, 7, 22, 14))],
