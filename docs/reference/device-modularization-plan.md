@@ -142,25 +142,32 @@ Kept **outside** `devices/`:
 
 ## Phased plan
 
-Each phase is a reviewable PR that keeps tests green.
+Each phase is a reviewable PR that keeps tests green. **Status: Phases 0–2 DONE;
+Phase 3 (WearOS) built to a working device→integration mapping, then PAUSED — see
+`wearos-phase3-decision.md`.**
 
-- **Phase 0 — prep, zero behavior change.** Rename `garmin_settings_screen`
-  → `garmin_settings_model`. Fix the four inversions: extract `GarminCapability`
-  + watch-sync state off `BleDeviceRepository`; move GFDI/ML UUIDs into the
-  Garmin module; introduce a pluggable device classifier for the scanner. No file
-  relocation yet.
-- **Phase 1 — centralize.** Create `lib/devices/`; move the Garmin data-source
-  stack, Garmin domain (ports/models/usecases), and Garmin presentation into
-  `devices/garmin/**`; move the generic BLE stack + registry + pairing + shared
-  primitives into `devices/core/**`. Pure moves + import fixes + test moves. This
-  is the "centralize Garmin" goal.
-- **Phase 2 — device-integration seam.** Introduce `DeviceSyncPort` /
-  `DeviceIntegration`; de-Garmin the registry, wellness store, and
-  `watch_data`/`watch_metrics` (off `GarminWellnessMetric`); make the dashboard
-  tile + device screen dispatch through the seam. Now a second device type is
-  pluggable.
-- **Phase 3 — WearOS.** New integration implementing the framework, with its own
-  Wear Data Layer plumbing (companion Wear app / Health Connect on watch).
+- **Phase 0 — prep, zero behavior change. DONE.** Renamed `garmin_settings_screen`
+  → `garmin_settings_model`; fixed the inversions (extract `GarminCapability` +
+  watch-sync state off `BleDeviceRepository`; GFDI/ML UUIDs into the Garmin module;
+  pluggable `DeviceScanClassifier` for the scanner).
+- **Phase 1 — centralize. DONE.** `lib/devices/` created; the Garmin data-source
+  stack + Garmin domain moved to `devices/garmin/**`; the generic BLE stack +
+  registry + pairing into `devices/core/**`. (Garmin *presentation* stays in
+  `features/` — it wires Health Connect import + settings providers, and
+  `devices/` never imports `features/`. Sub-layering `devices/garmin/` into
+  protocol/transport/sync is a deferred cosmetic pass.)
+- **Phase 2 — device-integration seam. DONE (seam scope).** `DeviceSyncPort` +
+  `DeviceScanClassifier` landed; the sync view-model is generic and dispatches
+  through the seam. De-Garmining the wellness store / `GarminWellnessMetric` was
+  deferred (YAGNI) — that vocabulary is inherently Garmin.
+- **Phase 3 — WearOS. Mapping DONE, integration PAUSED.** Added the
+  `DeviceIntegration{garmin,wearos}` discriminator, the `DeviceClassification` /
+  `DeviceClassifier` mapping, a sibling `devices/wearos/` module (classifier +
+  onboarding), add-flow routing, and an integration-aware watch screen. A Galaxy
+  Watch now onboards as a first-class WearOS watch. Paused because it has no
+  GMS-free data path on a de-Googled phone and the watch's own setup needs
+  Samsung/Google infra (Walls 2–4, in `wearos-phase3-decision.md`). **No Wear Data
+  Layer / companion Wear app was built** (proprietary GMS, F-Droid-incompatible).
 
 ### Deferred deliberately (YAGNI)
 
@@ -179,3 +186,59 @@ Each phase is a reviewable PR that keeps tests green.
   plugin-touching code must not break the prepare list.
 - Keep `bluetooth_sync_native` (devicesync) strictly separate from the Garmin
   transport throughout.
+
+## The framework, as built (for adding future device types)
+
+The module is now a bounded framework + per-integration siblings. Garmin and
+WearOS both plug into the same seams; a third device type follows the same recipe.
+
+```
+lib/devices/
+  core/                         # framework — device-type-agnostic
+    ble/                        # shared BLE prims: coordinator, gatt connection,
+                                #   uuids, byte codecs, DeviceScanClassifier port,
+                                #   BleSensorRepository (live-sensor contract)
+    registry/                   # BleDeviceRepository (paired-device store) +
+                                #   DeviceClassification / DeviceClassifier (the
+                                #   scanned-device → (integration, kind) mapping)
+    pairing/                    # WatchPairingPort (OS bond + companion assoc.)
+    sync/                       # DeviceSyncPort (pull → import → store → stamp)
+  garmin/                       # integration: GFDI/FIT over BLE (classifier,
+                                #   onboarding, protocol stack, wellness, …)
+  wearos/                       # integration: classifier + onboarding only
+                                #   (data via Health Connect, no protocol stack)
+```
+
+Cross-cutting seam on the device model (`domain/model/ble_sensor_models.dart`):
+`enum DeviceIntegration {garmin, wearos}` + `BleSensorDevice.integration`, with
+`isGarminWatch` / `isWearosWatch` helpers. `kind` is `sensor | watch` today;
+extend it if a future device is neither.
+
+### Recipe: add integration `foo`
+
+1. **Discriminator** — add `foo` to `DeviceIntegration` (+ storageName). Add an
+   `isFooWatch`/`isFooDevice` helper if the UI branches on it.
+2. **Classification** — implement `DeviceClassifier` (`classify(discovered) →
+   DeviceClassification(integration: foo, kind: …)`, else null) in `devices/foo/`;
+   register it in `deviceClassifiersProvider` (`di/data_providers.dart`). Order
+   matters — stronger signals (advertised service) before name matches.
+3. **Scan (only if it advertises a service)** — implement `DeviceScanClassifier`
+   (`advertisesSyncService(uuids)`), register in `deviceScanClassifiersProvider`,
+   and keep its member-service UUID in `core/ble/ble_uuids.dart`'s scan filter.
+   Name-only devices (like WearOS) skip this.
+4. **Onboarding** — a use case in `devices/foo/` that pairs as needed (reuse
+   `WatchPairingPort`) and `addDevice(kind:…, integration: foo)`; a provider in
+   `di/usecase_providers.dart`. `ble_devices_view_model.onboardSelectedWatch`
+   already routes by `addingIntegration`; add a `foo` branch. `removeDevice`
+   routes `forget` by integration too.
+5. **Sync (only if it pull-syncs)** — implement `DeviceSyncPort` (its `canSync`
+   claims only `foo` devices), register in `deviceSyncPortsProvider`
+   (`features/settings/application/device_sync_view_model.dart`, in `features/`
+   because sync orchestrators wire feature providers). No port ⇒ no sync (WearOS).
+6. **UI** — gate integration-specific controls on the integration (see
+   `watch_device_screen.dart`, which shows Garmin sync/settings/find only for
+   `isGarminWatch`). Generic screens (the device list, the sync view-model) need
+   no change.
+
+Garmin implements 1–6; WearOS implements 1, 2, 4, 6 (no advertised service, no
+pull-sync). The generic list/registry/scanner never name an integration.
