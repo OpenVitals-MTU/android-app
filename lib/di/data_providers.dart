@@ -1,8 +1,8 @@
 import '../domain/model/vitals_models.dart';
 import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
-import '../data/source/sensors/ble/ble_sensor_coordinator.dart';
-import '../data/source/sensors/ble/ble_watch_pairing.dart';
+import '../devices/core/ble/ble_sensor_coordinator.dart';
+import '../devices/core/ble/ble_watch_pairing.dart';
 import '../devices/garmin/garmin_device_state_store.dart';
 import '../devices/garmin/garmin_file_store.dart';
 import '../devices/garmin/garmin_gatt_probe.dart';

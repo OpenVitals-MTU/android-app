@@ -1,4 +1,4 @@
-import '../../../../domain/model/ble_sensor_models.dart';
+import '../../../domain/model/ble_sensor_models.dart';
 
 /// A GATT service UUID paired with the measurement (notify) characteristic UUID
 /// carried within it. Port of the Kotlin `BleServiceMeasurementUuid`.

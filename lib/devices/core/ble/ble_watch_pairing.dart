@@ -2,7 +2,7 @@ import 'package:bluetooth_sync_native/bluetooth_sync_native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-import '../../../../domain/port/watch_pairing_port.dart';
+import '../../../domain/port/watch_pairing_port.dart';
 
 /// [WatchPairingPort] over the two platform layers it actually takes.
 ///

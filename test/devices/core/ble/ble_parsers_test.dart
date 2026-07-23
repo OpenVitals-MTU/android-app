@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvitals/data/source/sensors/ble/parsers/ble_parsers.dart';
+import 'package:openvitals/devices/core/ble/parsers/ble_parsers.dart';
 
 /// Byte-exact port of the Kotlin `BleParsersTest`.
 void main() {

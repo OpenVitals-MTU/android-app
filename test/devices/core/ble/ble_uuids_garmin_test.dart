@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/data/source/sensors/ble/ble_uuids.dart';
+import 'package:openvitals/devices/core/ble/ble_uuids.dart';
 import 'package:openvitals/devices/garmin/garmin_uuids.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/domain/model/garmin_device_names.dart';
