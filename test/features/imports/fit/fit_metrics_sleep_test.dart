@@ -150,7 +150,10 @@ Uint8List _sleepFile({
     ..u32(_fitTimestamp(end))
     ..u8(74)
     ..u8(1); // stop
-  // sleep_level (275): one transition to light so a stage exists.
+  // sleep_level (275): one transition to light so a stage exists. Its timestamp
+  // is the stage's UPPER BOUND (its end), so it sits at the session stop and the
+  // light stage spans the night — a transition at the start would name a
+  // zero-length span with nothing before it.
   d
     ..u8(0x42)
     ..u8(0)
@@ -160,7 +163,7 @@ Uint8List _sleepFile({
     ..bytes([253, 4, 134])
     ..bytes([0, 1, 0])
     ..u8(0x02)
-    ..u32(_fitTimestamp(start))
+    ..u32(_fitTimestamp(end))
     ..u8(2); // light
   if (score != null || awakenings != null) {
     d

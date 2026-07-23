@@ -756,24 +756,38 @@ class _FitSleepRaw {
         : sorted.last.$1;
     if (!sessionStart.isBefore(sessionEnd)) return null;
     final stages = <FitSleepStage>[];
+    // Each `sleep_level` timestamp is the UPPER BOUND (end) of the stage it
+    // names, not its start: the stage runs from the previous transition (the
+    // session start for the first) up to this timestamp. Reading it as a start —
+    // the stage running forward to the NEXT transition — shifts every span onto
+    // the wrong stage, which tripled REM and inflated Awake against the watch's
+    // own screen. Confirmed against Gadgetbridge, which fills these with an
+    // UPPER_BOUND RangeMap (GarminActivitySampleProvider.overlaySleep).
+    var boundary = sessionStart;
     for (var i = 0; i < sorted.length; i++) {
       final (transition, rawLevel) = sorted[i];
+      // Clamp into the session so a stray pre-start / post-stop transition can
+      // neither widen a stage nor walk the boundary outside the night.
+      var stageEnd = transition;
+      if (stageEnd.isBefore(sessionStart)) stageEnd = sessionStart;
+      if (stageEnd.isAfter(sessionEnd)) stageEnd = sessionEnd;
+      final stageStart = boundary;
+      boundary = stageEnd;
+      // Advance the boundary for every sample, then skip only an unknown raw
+      // value (null). An `unmeasurable` span is a real level here and is emitted
+      // like any other — it is dropped downstream at the Health Connect mapping,
+      // which has no stage for it, exactly as before.
       final level = _fitSleepLevelFromRaw(rawLevel);
       if (level == null) continue;
-      // A stage runs from its transition to the next one — the last to session
-      // end. Clamp into the session so a stray pre-start transition can't widen it.
-      final stageStart =
-          transition.isBefore(sessionStart) ? sessionStart : transition;
-      final stageEnd = i + 1 < sorted.length ? sorted[i + 1].$1 : sessionEnd;
       if (!stageStart.isBefore(stageEnd)) continue;
       stages.add(FitSleepStage(start: stageStart, end: stageEnd, level: level));
     }
     if (stages.isEmpty) return null;
-    // DIAGNOSTIC: the raw transitions and what they add up to. A real vívoactive
-    // 5 reported 3 min awake where this produced 59, so the question is whether
-    // the file says something different from the watch's own screen or whether
-    // these stages are being derived wrongly — and only the raw series answers
-    // it. Still unresolved, which is why this is still here.
+    // DIAGNOSTIC: the raw transitions and the per-stage totals they produce, to
+    // diff against the watch's own screen. Kept after fixing the upper-bound
+    // interpretation above, because Garmin still smooths the displayed hypnogram
+    // further than the raw `sleep_level` series does, so the two never match to
+    // the minute — this is how we see by how much.
     //
     // Debug builds only, and the whole block rather than each line: this prints
     // a person's night, transition by transition, and `debugPrint` is NOT

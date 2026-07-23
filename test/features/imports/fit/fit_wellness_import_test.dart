@@ -15,13 +15,16 @@ void main() {
 
   final start = DateTime.utc(2024, 1, 1, 23, 0, 0);
   final stop = DateTime.utc(2024, 1, 2, 6, 0, 0);
-  // (transition, sleep_level enum: 0 unmeasurable,1 awake,2 light,3 deep,4 rem)
+  // (transition, sleep_level enum: 0 unmeasurable,1 awake,2 light,3 deep,4 rem).
+  // Each timestamp is the UPPER BOUND of the stage it names: the stage runs from
+  // the previous transition (the session start for the first) up to here. The
+  // last transition is the session stop, as a real Garmin file writes it.
   final levels = <(DateTime, int)>[
-    (DateTime.utc(2024, 1, 1, 23, 10), 2), // light
-    (DateTime.utc(2024, 1, 1, 23, 40), 3), // deep
-    (DateTime.utc(2024, 1, 2, 0, 30), 4), // rem
-    (DateTime.utc(2024, 1, 2, 0, 45), 1), // awake
-    (DateTime.utc(2024, 1, 2, 1, 0), 2), // light (runs to session end)
+    (DateTime.utc(2024, 1, 1, 23, 10), 2), // light: 23:00 -> 23:10
+    (DateTime.utc(2024, 1, 1, 23, 40), 3), // deep:  23:10 -> 23:40
+    (DateTime.utc(2024, 1, 2, 0, 30), 4), // rem:   23:40 -> 00:30
+    (DateTime.utc(2024, 1, 2, 0, 45), 1), // awake: 00:30 -> 00:45
+    (DateTime.utc(2024, 1, 2, 6, 0), 2), // light:  00:45 -> 06:00 (to stop)
   ];
 
   group('parseSleepSession', () {
@@ -34,11 +37,12 @@ void main() {
       expect(session.end, stop);
       expect(session.stages.length, 5);
 
-      // Each stage runs from its transition to the next; the last to session end.
+      // Each stage ends at its transition; the first begins at the session start.
       expect(session.stages.first.level, FitSleepLevel.light);
-      expect(session.stages.first.start, DateTime.utc(2024, 1, 1, 23, 10));
+      expect(session.stages.first.start, start);
+      expect(session.stages.first.end, DateTime.utc(2024, 1, 1, 23, 10));
       expect(session.stages[1].level, FitSleepLevel.deep);
-      expect(session.stages[1].start, DateTime.utc(2024, 1, 1, 23, 40));
+      expect(session.stages[1].end, DateTime.utc(2024, 1, 1, 23, 40));
       expect(session.stages[2].level, FitSleepLevel.rem);
       expect(session.stages.last.level, FitSleepLevel.light);
       expect(session.stages.last.end, stop);
