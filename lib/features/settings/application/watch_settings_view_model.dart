@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/source/sensors/garmin/garmin_log.dart';
-import '../../../data/source/sensors/garmin/garmin_settings_link.dart';
-import '../../../data/source/sensors/garmin/garmin_settings_model.dart';
+import '../../../devices/garmin/garmin_log.dart';
+import '../../../devices/garmin/garmin_settings_link.dart';
+import '../../../devices/garmin/garmin_settings_model.dart';
 import '../../../di/providers.dart';
 
 /// Identifies which screen of which watch is open.

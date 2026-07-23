@@ -4,8 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/data/repository/impl/ble_device_repository_impl.dart';
 import 'package:openvitals/data/repository/contract/ble_sensor_repository.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_capabilities.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_device_state_store.dart';
+import 'package:openvitals/devices/garmin/garmin_capabilities.dart';
+import 'package:openvitals/devices/garmin/garmin_device_state_store.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/domain/model/garmin_transport.dart';

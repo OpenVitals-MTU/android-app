@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/source/sensors/garmin/garmin_capabilities.dart';
-import '../../../data/source/sensors/garmin/garmin_settings_service.dart';
+import '../../../devices/garmin/garmin_capabilities.dart';
+import '../../../devices/garmin/garmin_settings_service.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';

@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../data/local/open_vitals_database.dart';
-import '../../../data/source/sensors/garmin/garmin_ble_transport.dart';
-import '../../../data/source/sensors/garmin/garmin_session.dart';
+import '../../../devices/garmin/garmin_ble_transport.dart';
+import '../../../devices/garmin/garmin_session.dart';
 import '../../../devices/garmin/wellness/garmin_fit_wellness.dart';
 import '../../../di/providers.dart';
 import '../../../state/app_providers.dart';

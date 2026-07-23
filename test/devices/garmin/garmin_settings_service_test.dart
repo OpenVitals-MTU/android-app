@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/data/source/sensors/garmin/garmin_protobuf.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_settings_service.dart';
+import 'package:openvitals/devices/garmin/garmin_protobuf.dart';
+import 'package:openvitals/devices/garmin/garmin_settings_service.dart';
 
 Uint8List _b(List<int> xs) => Uint8List.fromList(xs);
 

@@ -3,12 +3,12 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/data/source/sensors/garmin/garmin_byte_writer.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_crc.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_file_types.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_gfdi_frame.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_messages.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_session.dart';
+import 'package:openvitals/devices/garmin/garmin_byte_writer.dart';
+import 'package:openvitals/devices/garmin/garmin_crc.dart';
+import 'package:openvitals/devices/garmin/garmin_file_types.dart';
+import 'package:openvitals/devices/garmin/garmin_gfdi_frame.dart';
+import 'package:openvitals/devices/garmin/garmin_messages.dart';
+import 'package:openvitals/devices/garmin/garmin_session.dart';
 
 Uint8List _b(List<int> xs) => Uint8List.fromList(xs);
 

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:openvitals/data/source/sensors/garmin/garmin_capabilities.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_device_state_store.dart';
+import 'package:openvitals/devices/garmin/garmin_capabilities.dart';
+import 'package:openvitals/devices/garmin/garmin_device_state_store.dart';
 
 void main() {
   late GarminDeviceStateStore store;

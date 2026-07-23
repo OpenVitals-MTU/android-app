@@ -3,10 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/data/source/sensors/garmin/garmin_directory.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_file_store.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_file_types.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_session.dart';
+import 'package:openvitals/devices/garmin/garmin_directory.dart';
+import 'package:openvitals/devices/garmin/garmin_file_store.dart';
+import 'package:openvitals/devices/garmin/garmin_file_types.dart';
+import 'package:openvitals/devices/garmin/garmin_session.dart';
 
 GarminDownloadedFile _file({
   int index = 5,

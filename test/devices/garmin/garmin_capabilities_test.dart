@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/data/source/sensors/garmin/garmin_capabilities.dart';
+import 'package:openvitals/devices/garmin/garmin_capabilities.dart';
 
 void main() {
   test('the enum order IS the wire order', () {
