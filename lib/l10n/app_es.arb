@@ -2265,5 +2265,201 @@
     "deviceSyncAborted": "No se sincronizó por un error",
     "@deviceSyncAborted": {
         "description": "Shown on the report step when the session aborted."
-    }
+    },
+    "settingsWatchPairTitle": "Enlazar/emparejar este reloj",
+    "settingsWatchPairBody": "OpenVitals se sincronizará con el reloj y copiará sus registros de actividad, sueño y salud. Confirma el código que aparece en el reloj.",
+    "settingsWatchStepBonding": "Vinculando con el reloj",
+    "settingsWatchStepAssociating": "Solicitando acceso a Android",
+    "settingsWatchStepAssociatingHint": "Opcional. Permitir esto hace que la sincronización continúe de forma fiable en segundo plano.",
+    "settingsWatchStepProbing": "Comprobando qué funciones admite el reloj",
+    "settingsWatchUnsupportedNotice": "Emparejado, pero este reloj usa una conexión que OpenVitals aún no admite, por lo que no se puede sincronizar.",
+    "settingsWatchPairAction": "Vincular",
+    "settingsWatchNeverSynced": "Nunca se ha sincronizado",
+    "settingsWatchLastSynced": "Última sincronización: {arg0}",
+    "@settingsWatchLastSynced": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchNoCompanionNotice": "Emparejado, pero no se otorgó el acceso a Android. La sincronización solo funciona mientras OpenVitals está abierta.",
+    "settingsWatchRemove": "Eliminar reloj",
+    "settingsWatchSyncNow": "Sincronizar ahora",
+    "settingsWatchSyncConnecting": "Conectando al reloj…",
+    "settingsWatchSyncListing": "Buscando nuevos datos…",
+    "settingsWatchSyncDownloading": "Copiando {arg0} de {arg1}",
+    "@settingsWatchSyncDownloading": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsWatchSyncImporting": "Guardando en Health Connect…",
+    "settingsWatchSyncNothingNew": "Ya está actualizado",
+    "settingsWatchSyncDone": "Sincronizados {arg0} archivos",
+    "@settingsWatchSyncDone": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsWatchActionData": "Fecha",
+    "settingsWatchActionSync": "Sincronizar",
+    "settingsBikeLiveSensorSection": "Sensor en tiempo real",
+    "@settingsBikeLiveSensorSection": {
+        "description": "Section header on a bike computer's device card for its live BLE broadcast role."
+    },
+    "settingsBikeLiveSensorBody": "Transmite el ritmo cardíaco, la velocidad, la cadencia o la potencia para registrarlo en vivo durante una actividad. Enciende primero la transmisión en el dispositivo.",
+    "@settingsBikeLiveSensorBody": {
+        "description": "Explains what the live-sensor role of a bike computer does."
+    },
+    "settingsBikeDetectSensors": "Detectar sensores de transmisión",
+    "@settingsBikeDetectSensors": {
+        "description": "Button that connects to the bike computer to find the standard BLE services it is broadcasting."
+    },
+    "settingsBikeDetecting": "Detectando…",
+    "@settingsBikeDetecting": {
+        "description": "Shown while the app is probing the bike computer for broadcast sensors."
+    },
+    "settingsBikeNoBroadcast": "No se encontraron sensores de transmisión. Enciende la transmisión en el dispositivo e inténtalo de nuevo.",
+    "@settingsBikeNoBroadcast": {
+        "description": "Shown when detection found no standard BLE services on the bike computer."
+    },
+    "settingsWatchSectionDevice": "Dispositivo",
+    "settingsWatchEnabled": "Activado",
+    "settingsWatchEnabledBody": "Sincronizar este reloj",
+    "settingsWatchNameLabel": "Nombre",
+    "settingsWatchRename": "Renombrar reloj",
+    "settingsWatchConnected": "Conectado",
+    "settingsWatchNotConnected": "No conectado",
+    "settingsWatchOpen": "Abrir",
+    "settingsWatchDataTitle": "Datos del reloj",
+    "settingsWatchDataIntro": "Mediciones que solo realiza tu reloj. Health Connect no las almacena, por lo que permanecen en OpenVitals.",
+    "settingsWatchDataEmpty": "Todavía nada. Sincroniza tu reloj y lo que haya registrado aparecerá aquí.",
+    "settingsWatchDataMissing": "No enviado por este reloj: {arg0}",
+    "@settingsWatchDataMissing": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchDataLastNight": "Anoche",
+    "settingsWatchDataTraining": "Entrenamiento",
+    "settingsWatchMetricStress": "Estrés",
+    "settingsWatchMetricBodyBattery": "Medidor de energía vital",
+    "settingsWatchMetricIntensityMinutes": "Minutos de intensidad",
+    "settingsWatchMetricIntensityGoal": "{arg0} de {arg1} esta semana",
+    "@settingsWatchMetricIntensityGoal": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            },
+            "arg1": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchMetricSleepScore": "Calidad del sueño",
+    "settingsWatchMetricAwake": "Despierto",
+    "settingsWatchMetricAwakenings": "Despertares nocturnos",
+    "settingsWatchMetricSleepCoach": "Asesor del sueño",
+    "settingsWatchMetricSleepCoachBody": "{arg0} por encima de tu {arg1} habitual",
+    "@settingsWatchMetricSleepCoachBody": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            },
+            "arg1": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchMetricSleepCoachEqual": "Igual que tu {arg0} habitual",
+    "@settingsWatchMetricSleepCoachEqual": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchMetricRecoveryTime": "Tiempo de recuperación",
+    "settingsWatchMetricTrainingReadiness": "Predisposición al entrenamiento",
+    "settingsWatchMetricTrainingLoad": "Carga de entrenamiento",
+    "settingsWatchNowSuffix": "ahora",
+    "settingsWatchAveragePrefix": "{arg0} promedio",
+    "@settingsWatchAveragePrefix": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchStaleDays": "{arg0, plural, =1{1 día} other{{arg0} días}} desde la última sincronización",
+    "@settingsWatchStaleDays": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsWatchSyncing": "Sincronizando",
+    "actionRemove": "Quitar",
+    "settingsDeviceRemoveConfirmTitle": "¿Quitar {arg0}?",
+    "@settingsDeviceRemoveConfirmTitle": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsSensorRemoveConfirmBody": "Dejará de grabar durante las actividades. Puedes volver a emparejarlo cuando quieras.",
+    "settingsWatchRemoveConfirmBody": "OpenVitals desvinculará el reloj y olvidará los archivos que ya haya copiado, por lo que un futuro emparejamiento comenzará desde cero. Los datos ya guardados en Health Connect se conservarán.",
+    "settingsWatchesGroupTitle": "Relojes",
+    "settingsWatchesGroupBody": "Copia el sueño, la frecuencia cardíaca y las actividades registradas en tu reloj",
+    "settingsWatchesIntro": "Copia la información que tu reloj registró en OpenVitals. No se envía nada a internet.",
+    "settingsWatchesEmptyTitle": "Sin ningún reloj emparejado",
+    "settingsWatchesEmptyBody": "Al vincular un reloj, OpenVitals puede copiar los datos registrados (fases del sueño, frecuencia cardíaca en reposo, estrés y nivel de energía corporal) sin enviar nada a internet.",
+    "settingsWatchesAdd": "Empareja un reloj",
+    "settingsSensorsIntro": "Utilizado al registrar una actividad.",
+    "settingsWatchActionAlarms": "Alarmas",
+    "settingsWatchActionFind": "Encontrar",
+    "settingsWatchSettingsSection": "Ajustes del reloj",
+    "settingsWatchOnDeviceSettings": "Configuración del reloj",
+    "settingsWatchOnDeviceSettingsBody": "Retroiluminación, sonidos, esfera del reloj…",
+    "settingsWatchSyncedFiles": "{arg0, plural, =1{1 archivo} other{{arg0} archivos}}",
+    "@settingsWatchSyncedFiles": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsWatchFindStop": "Detener",
+    "settingsWatchFindRinging": "Esperando la señal de tu reloj",
+    "settingsWatchFindFailed": "El reloj no respondió. Acércalo e inténtalo de nuevo.",
+    "settingsWatchAlarmsTitle": "Alarmas",
+    "settingsWatchSettingsReading": "Leyendo el reloj…",
+    "settingsWatchSettingsUnreachable": "No se pudo leer en el reloj. Acércalo e inténtalo de nuevo.",
+    "settingsWatchSettingsEmpty": "No hay datos del reloj para mostrar aquí.",
+    "settingsWatchSettingsRefused": "El reloj no tiene control sobre este ajuste.",
+    "settingsWatchSettingsUnanswered": "El reloj no respondió. Comprueba si la hora ha cambiado.",
+    "settingsWatchSettingsRetry": "Intentar otra vez",
+    "settingsWatchSettingsFromWatch": "Lee la información en directo desde tu reloj. Los cambios se aplican al propio reloj.",
+    "settingsWatchSettingsNoState": "El reloj envió esta pantalla, pero no sus valores actuales, por lo que aún no se puede cambiar nada.",
+    "settingsWatchSettingsConfirmAction": "¿Aplicar “{arg0}”?",
+    "@settingsWatchSettingsConfirmAction": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchSettingsConfirmActionBody": "Esto activa la función del reloj y no se puede deshacer desde aquí."
 }
