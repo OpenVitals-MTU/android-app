@@ -4,7 +4,6 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
-import '../../../devices/wearos/wearos_device_names.dart';
 import '../../../devices/garmin/garmin_transport.dart';
 import '../../../devices/garmin/onboard_garmin_watch_use_case.dart';
 import '../../../l10n/app_localizations.dart';
@@ -232,13 +231,6 @@ class _BleDeviceRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final battery = device.batteryPercent;
-    // A smartwatch on the sensor path (e.g. a Galaxy/Pixel Watch streaming heart
-    // rate) — labelled with a watch glyph so it reads as a watch, not a chest
-    // strap. Purely presentational: it stays a live sensor, and is NOT a Garmin
-    // GFDI sync watch (that is `device.isWatch`). Its all-day data arrives via
-    // Health Connect, not here.
-    final isSmartwatch = !device.isWatch &&
-        isSmartwatchName(device.bluetoothName ?? device.displayName);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Card(
@@ -251,14 +243,6 @@ class _BleDeviceRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    if (isSmartwatch) ...[
-                      Icon(
-                        Icons.watch_outlined,
-                        size: 22,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 12),
-                    ],
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
