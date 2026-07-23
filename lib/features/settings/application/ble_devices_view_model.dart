@@ -8,7 +8,7 @@ import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../domain/model/garmin_device_names.dart';
 import '../../../domain/model/garmin_transport.dart';
-import '../../../domain/port/watch_pairing_port.dart';
+import '../../../devices/core/pairing/watch_pairing_port.dart';
 import '../../../domain/usecase/edit_ble_device_registry_use_case.dart';
 import '../../../domain/usecase/onboard_garmin_watch_use_case.dart';
 

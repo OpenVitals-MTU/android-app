@@ -2,7 +2,7 @@ import '../domain/model/vitals_models.dart';
 import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../devices/core/ble/ble_sensor_coordinator.dart';
-import '../devices/core/ble/ble_watch_pairing.dart';
+import '../devices/core/pairing/ble_watch_pairing.dart';
 import '../devices/garmin/garmin_device_state_store.dart';
 import '../devices/garmin/garmin_file_store.dart';
 import '../devices/garmin/garmin_gatt_probe.dart';
@@ -10,7 +10,7 @@ import '../devices/garmin/garmin_phone_identity.dart';
 import '../devices/garmin/garmin_watch_sync_service.dart';
 import '../devices/core/ble/ble_sensor_repository.dart';
 import '../domain/port/garmin_transport_probe.dart';
-import '../domain/port/watch_pairing_port.dart';
+import '../devices/core/pairing/watch_pairing_port.dart';
 import 'dart:io';
 
 import 'package:drift/drift.dart';

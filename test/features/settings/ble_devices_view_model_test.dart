@@ -10,7 +10,7 @@ import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/domain/model/garmin_transport.dart';
 import 'package:openvitals/domain/port/garmin_transport_probe.dart';
-import 'package:openvitals/domain/port/watch_pairing_port.dart';
+import 'package:openvitals/devices/core/pairing/watch_pairing_port.dart';
 import 'package:openvitals/features/settings/application/ble_devices_view_model.dart';
 
 /// Fake coordinator that returns canned capability-discovery results and never
