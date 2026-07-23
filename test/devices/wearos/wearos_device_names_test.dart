@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvitals/devices/core/ble/smartwatch_names.dart';
+import 'package:openvitals/devices/wearos/wearos_device_names.dart';
 
 void main() {
   group('isSmartwatchName', () {

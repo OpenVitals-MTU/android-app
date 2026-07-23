@@ -3,6 +3,9 @@ import '../domain/model/body_models.dart';
 import '../domain/model/ble_sensor_models.dart';
 import '../devices/core/ble/ble_sensor_coordinator.dart';
 import '../devices/core/ble/device_scan_classifier.dart';
+import '../devices/core/registry/device_classification.dart';
+import '../devices/garmin/garmin_device_classifier.dart';
+import '../devices/wearos/wearos_device_classifier.dart';
 import '../devices/core/pairing/ble_watch_pairing.dart';
 import '../devices/garmin/garmin_device_state_store.dart';
 import '../devices/garmin/garmin_file_store.dart';
@@ -320,6 +323,13 @@ final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
 /// scanner spot a watch to onboard without naming any protocol itself.
 final deviceScanClassifiersProvider = Provider<List<DeviceScanClassifier>>(
   (ref) => const [GarminScanClassifier()],
+);
+
+/// The device classifiers, one per integration, that map a scanned device to how
+/// the app registers and drives it — (integration, kind). Garmin first: its
+/// member-service signal is stronger than a name match. Used via [classifyDevice].
+final deviceClassifiersProvider = Provider<List<DeviceClassifier>>(
+  (ref) => const [GarminDeviceClassifier(), WearosDeviceClassifier()],
 );
 
 /// The app-lifetime BLE coordinator (Kotlin `@Singleton`), bound to its

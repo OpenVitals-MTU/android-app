@@ -4,7 +4,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/model/ble_sensor_models.dart';
-import '../../../devices/core/ble/smartwatch_names.dart';
+import '../../../devices/wearos/wearos_device_names.dart';
 import '../../../devices/garmin/garmin_transport.dart';
 import '../../../devices/garmin/onboard_garmin_watch_use_case.dart';
 import '../../../l10n/app_localizations.dart';
