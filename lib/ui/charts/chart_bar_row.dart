@@ -117,7 +117,17 @@ class ChartBarRow extends StatelessWidget {
       ),
     );
 
-    return switch (layout) {
+    // The inline layout budgets a fixed label column plus a natural-width
+    // trailing value, sized for 1.0 text — at large font scales the two eat
+    // the whole row and the Row overflows. The stacked layout was built for
+    // exactly that shortage of horizontal room, so large-font users get it
+    // automatically: full text on its own line, bars still full-width and
+    // aligned. 1.4 is where the inline budget stops fitting a phone width.
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final effectiveLayout =
+        scale >= 1.4 ? ChartBarRowLayout.stacked : layout;
+
+    return switch (effectiveLayout) {
       ChartBarRowLayout.inline => Row(
           children: [
             if (label case final label?)

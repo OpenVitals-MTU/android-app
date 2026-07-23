@@ -31,13 +31,19 @@ class _ReminderResumeBootstrapState
     _listener = AppLifecycleListener(onResume: _replan);
   }
 
-  /// Best-effort: a failed re-plan must never escape a lifecycle callback.
+  /// Best-effort: a failed re-plan must never escape a lifecycle callback —
+  /// and each batch is caught on its own, so a hydration failure cannot starve
+  /// the mindfulness re-plan (one try around both did exactly that).
   Future<void> _replan() async {
     try {
       await ref.read(hydrationReminderControllerProvider).restoreSchedule();
+    } catch (error, stack) {
+      debugPrint('Hydration reminder resume re-plan failed: $error\n$stack');
+    }
+    try {
       await ref.read(mindfulnessReminderControllerProvider).restoreSchedule();
     } catch (error, stack) {
-      debugPrint('Reminder resume re-plan failed: $error\n$stack');
+      debugPrint('Mindfulness reminder resume re-plan failed: $error\n$stack');
     }
   }
 

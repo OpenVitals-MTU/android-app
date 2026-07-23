@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/reminders/reminder_notifications.dart';
@@ -15,9 +16,18 @@ import '../navigation/app_router.dart';
 /// stream) and on a cold start from a notification (via its launch details). The
 /// payload is an in-app go_router location the app sets on its own reminders.
 class ReminderTapBootstrap extends ConsumerStatefulWidget {
-  const ReminderTapBootstrap({super.key, required this.child});
+  const ReminderTapBootstrap({
+    super.key,
+    required this.child,
+    this.launchRoute = reminderNotificationLaunchRoute,
+  });
 
   final Widget child;
+
+  /// Resolves the route of the notification the app was cold-started from.
+  /// Injected so the cold-start path is testable without the plugin's platform
+  /// channel; production always uses [reminderNotificationLaunchRoute].
+  final Future<String?> Function(FlutterLocalNotificationsPlugin) launchRoute;
 
   @override
   ConsumerState<ReminderTapBootstrap> createState() =>
@@ -39,7 +49,7 @@ class _ReminderTapBootstrapState extends ConsumerState<ReminderTapBootstrap> {
     // launched us straight from a notification; handle that after the first frame.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final plugin = ref.read(flutterLocalNotificationsProvider);
-      _open(await reminderNotificationLaunchRoute(plugin));
+      _open(await widget.launchRoute(plugin));
     });
   }
 

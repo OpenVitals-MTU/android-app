@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:health_connect_native/health_connect_native.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/result/result.dart';
@@ -25,8 +27,12 @@ import '../di/providers.dart';
 ///
 /// Use this from every isolate entrypoint. Do not construct
 /// [HealthConnectNativeDataSource] directly.
-Future<Result<HealthDataSource>> openBackgroundHealthAccess() async {
-  final dataSource = await _buildBackgroundHealthDataSource();
+/// [hostApi] exists for tests only, so the refresh-before-handoff contract is
+/// provable against a fake host; production callers never pass it.
+Future<Result<HealthDataSource>> openBackgroundHealthAccess({
+  @visibleForTesting HealthConnectHostApi? hostApi,
+}) async {
+  final dataSource = await _buildBackgroundHealthDataSource(hostApi);
   final refreshed = await HealthRepositoryImpl(dataSource).refreshAvailability();
   return refreshed.map((_) => dataSource);
 }
@@ -39,10 +45,13 @@ Future<Result<HealthDataSource>> openBackgroundHealthAccess() async {
 /// did not, the mindfulness reminder would resolve the feature as unavailable,
 /// read today's minutes as zero, decide the goal was never met, and nag forever —
 /// the silent-empty failure this whole file exists to prevent (AGENTS.md §1).
-Future<HealthDataSource> _buildBackgroundHealthDataSource() async {
+Future<HealthDataSource> _buildBackgroundHealthDataSource(
+  HealthConnectHostApi? hostApi,
+) async {
   final prefs = await SharedPreferences.getInstance();
   final preferences = PreferencesRepository(prefs);
   return HealthConnectNativeDataSource(
+    hostApi: hostApi,
     appPackageName: openVitalsPackageName,
     mindfulnessIntegrationEnabled: () =>
         preferences.healthConnectMindfulnessEnabled,

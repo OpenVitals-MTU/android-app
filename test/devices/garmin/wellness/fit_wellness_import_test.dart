@@ -230,14 +230,18 @@ void main() {
             .toList();
       }
 
+      // Local times, not UTC: the importer groups the counter by LOCAL day —
+      // that is the point of the test — and a UTC fixture crosses local
+      // midnight somewhere (at UTC+14 these two samples split into two records
+      // and `.single` threw).
       final early = stepsFor([
-        (DateTime.utc(2024, 1, 18, 9), 200),
-        (DateTime.utc(2024, 1, 18, 10), 350),
+        (DateTime(2024, 1, 18, 9), 200),
+        (DateTime(2024, 1, 18, 10), 350),
       ]).single;
       // A later sync whose file restates the day from zero, as a real watch does.
       final later = stepsFor([
-        (DateTime.utc(2024, 1, 18, 11), 0),
-        (DateTime.utc(2024, 1, 18, 12), 540),
+        (DateTime(2024, 1, 18, 11), 0),
+        (DateTime(2024, 1, 18, 12), 540),
       ]).single;
 
       expect(later.clientRecordId, early.clientRecordId);

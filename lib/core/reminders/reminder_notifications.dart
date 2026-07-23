@@ -21,9 +21,11 @@ final StreamController<String> _reminderTapRoutes =
 Stream<String> get reminderNotificationTapRoutes => _reminderTapRoutes.stream;
 
 /// Foreground/background tap handler wired into [initializeReminderNotifications].
-/// Must be top-level so the plugin can hold it as a callback.
+/// Must be top-level so the plugin can hold it as a callback. Public so a test
+/// can drive the real tap pipeline — handler → stream → `ReminderTapBootstrap` —
+/// exactly as the plugin does.
 @pragma('vm:entry-point')
-void _onReminderNotificationTap(NotificationResponse response) {
+void handleReminderNotificationTap(NotificationResponse response) {
   final payload = response.payload;
   if (payload != null && payload.isNotEmpty) {
     _reminderTapRoutes.add(payload);
@@ -61,7 +63,7 @@ Future<bool> initializeReminderNotifications(
         android: AndroidInitializationSettings(_androidNotificationIcon),
         iOS: DarwinInitializationSettings(),
       ),
-      onDidReceiveNotificationResponse: _onReminderNotificationTap,
+      onDidReceiveNotificationResponse: handleReminderNotificationTap,
     );
     return result ?? false;
   } catch (_) {

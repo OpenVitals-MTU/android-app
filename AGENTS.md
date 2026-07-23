@@ -134,6 +134,20 @@ After adding any Android-side plugin, build the APK once: some plugins fail only
 
 Every number the app derives from raw data — sleep score, sleep duration/efficiency, daily readiness, body energy, cardio/training load, caffeine clearance, and the like — must carry the research it is based on as a `// Research: <url>` doc comment on the calculation itself, and, where a detail screen explains it to the user, a tappable source link. Health metrics claim to mean something clinical ("time asleep", "readiness"); a formula with no citation is a guess we cannot defend. If a calculation cannot be backed by a source, it does not ship. These citations existed in the Kotlin app and several were dropped in the port — recover them from git history (`git show 23c14d0:app/src/main/kotlin/...`) rather than inventing new ones, and never remove one when refactoring.
 
+### 9. A test is done when it meets the checklist
+
+Every new or touched test:
+
+- The name states the scenario AND the expected outcome — a failure must be diagnosable from the name alone, in the red CI log, without opening the file.
+- It asserts user-visible behaviour or resulting state. Prefer `find.text('84.5 rpm')` over `find.byType(...)`; never count calls on a double when the outcome can be asserted instead.
+- No `DateTime.now()` in a test. Time comes from `earlierToday(...)` (`test/support/today_fixtures.dart`) when "recently, still today" is the point, or a fixed `withClock(Clock.fixed(...), ...)` when the code under test reads the clock — `LocalDate.now()` routes through `package:clock`, so a fixed clock pins the whole app's idea of "today". Five tests once failed every night between midnight and 06:00; that class of flake is extinct and stays extinct.
+- `pumpAndSettle` only where settling *is* the behaviour under test; otherwise a bounded `pump`.
+- Test doubles are hand-written fakes at owned boundaries (the pigeon host API, a method channel, a repository port). A new host-API method lands in `ExhaustiveFakeHostApi` in the same commit — the compiler enforces the override; `bootContainer` fails any test that strays onto an unimplemented method.
+- A bug fix ships its regression test in the same commit, named for the failure mode. Prove it bites: revert the fix locally and watch it go red.
+- A new screen's widget test covers at least one empty/error state, not just the happy path. A new chart gets a golden through `test/support/golden_harness.dart`.
+- Fixture data comes from `HcFixture` named scenarios or builders — never a hardcoded date the corpus happens to contain.
+- Nothing lands skipped. Fix it or delete it before the merge.
+
 ## Do Not Copy These Patterns
 
 - ad hoc `Future`/`setState` loading inside a `StatefulWidget` for new feature work — use a view-model

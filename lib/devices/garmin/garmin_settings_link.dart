@@ -24,6 +24,11 @@ import 'garmin_settings_service.dart';
 class GarminSettingsLink {
   GarminSettingsLink._(this._transport, this._session);
 
+  /// A link over a transport that never connected — for tests that need the
+  /// request/teardown machinery without a watch on the other end.
+  @visibleForTesting
+  GarminSettingsLink.forTest(this._transport, this._session);
+
   final GarminBleTransport _transport;
   final GarminSession _session;
 

@@ -52,7 +52,12 @@ void main() {
 
     final workouts = (await h.container
             .read(activityRepositoryProvider)
-            .loadWorkouts(LocalDate.fromDateTime(start), LocalDate.fromDateTime(end)))
+            // `.toLocal()` per LocalDate.fromDateTime's contract: the repository
+            // expands these to LOCAL-day windows, and the UTC calendar date of
+            // an instant is a different day east of UTC (at UTC+14 the workout
+            // fell on the next local day and this lookup found nothing).
+            .loadWorkouts(LocalDate.fromDateTime(start.toLocal()),
+                LocalDate.fromDateTime(end.toLocal())))
         .orThrow();
     final workout = workouts.firstWhere((w) => w.id == route['id']);
 
@@ -92,7 +97,12 @@ void main() {
 
     final workouts = (await h.container
             .read(activityRepositoryProvider)
-            .loadWorkouts(LocalDate.fromDateTime(start), LocalDate.fromDateTime(end)))
+            // `.toLocal()` per LocalDate.fromDateTime's contract: the repository
+            // expands these to LOCAL-day windows, and the UTC calendar date of
+            // an instant is a different day east of UTC (at UTC+14 the workout
+            // fell on the next local day and this lookup found nothing).
+            .loadWorkouts(LocalDate.fromDateTime(start.toLocal()),
+                LocalDate.fromDateTime(end.toLocal())))
         .orThrow();
     final session = workouts.firstWhere((w) => w.id == workout['id']);
 

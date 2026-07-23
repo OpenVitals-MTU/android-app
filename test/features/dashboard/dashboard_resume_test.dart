@@ -1,162 +1,140 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
-import 'package:openvitals/data/repository/dashboard/dashboard_data_loader.dart';
-import 'package:openvitals/di/providers.dart';
-import 'package:openvitals/domain/model/dashboard_data.dart';
-import 'package:openvitals/domain/model/dashboard_query.dart';
-import 'package:openvitals/domain/model/health_connect_availability.dart';
-import 'package:openvitals/domain/usecase/load_dashboard_day_use_case.dart';
 import 'package:openvitals/features/dashboard/application/dashboard_view_model.dart';
-import 'package:openvitals/data/source/health/health_data_source.dart';
-import 'package:openvitals/ui/components/health_connect_gate.dart';
 
-class _FakeHealthDataSource extends HealthDataSource {
-  _FakeHealthDataSource() {
-    cachedAvailability = HealthConnectAvailability.available;
-  }
+import '../../support/boot_container.dart';
 
-  @override
-  Future<HealthConnectAvailability> availability() async => cachedAvailability;
+/// Resume/pin semantics, driven over the REAL graph — the notifier, the real
+/// `LoadDashboardDayUseCase`, the repositories and the ~2,000-line data source,
+/// down to the fake host API. An earlier version of this file overrode
+/// `loadDashboardDayUseCaseProvider` instead, which short-circuited every layer
+/// below the notifier and proved less than it looked like it did.
+///
+/// The clock is fixed to a day inside the fixture corpus (2025-06-19 to
+/// 2025-06-26), which does two jobs at once: "today" has real records behind
+/// it, and the date cannot flip between the test's idea of today and the
+/// notifier's when the suite runs at midnight.
+final _now = DateTime(2025, 6, 25, 14, 30);
+final _today = LocalDate(2025, 6, 25);
+final _yesterday = LocalDate(2025, 6, 24);
 
-  @override
-  Future<Set<String>> grantedPermissions() async => const <String>{};
-}
+Future<void> _atFixedNow(Future<void> Function() body) =>
+    withClock(Clock.fixed(_now), body);
 
-/// Records every day the notifier asks for, so a reload is observable.
-class _RecordingUseCase extends LoadDashboardDayUseCase {
-  _RecordingUseCase() : super(DashboardDataLoader(HealthDataSource()));
-
-  final List<LocalDate> loadedDates = <LocalDate>[];
-
-  @override
-  Future<Result<DashboardData>> call(DashboardQuery query) async {
-    loadedDates.add(query.date);
-    return Ok(DashboardData(
-      date: query.date,
-      loadedMetrics: query.visibleMetrics,
-      supportedMetrics: DashboardMetric.values.toSet(),
-    ));
-  }
-}
-
-Future<(ProviderContainer, _RecordingUseCase)> _boot() async {
-  SharedPreferences.setMockInitialValues(const <String, Object>{});
-  final prefs = await SharedPreferences.getInstance();
-  final useCase = _RecordingUseCase();
-  final container = ProviderContainer(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      healthDataSourceProvider.overrideWithValue(_FakeHealthDataSource()),
-      healthConnectAvailabilityProvider
-          .overrideWith((ref) async => HealthConnectAvailability.available),
-      grantedHealthPermissionsProvider
-          .overrideWith((ref) async => const <String>{}),
-      loadDashboardDayUseCaseProvider.overrideWithValue(useCase),
-    ],
-  );
-  addTearDown(container.dispose);
-  // Keep the notifier alive and let its initial load settle.
-  container.listen(dashboardProvider, (_, _) {});
+/// Boots the graph, lets the initial dashboard load settle, and clears the
+/// host-API call log so each test observes only the traffic it causes.
+Future<HealthHarness> _boot() async {
+  final h = await bootContainer();
+  h.keepAlive(dashboardProvider);
   await pumpEventQueue();
-  useCase.loadedDates.clear();
-  return (container, useCase);
+  expect(h.container.read(dashboardProvider).isLoading, isFalse,
+      reason: 'the initial dashboard load never settled');
+  h.hc.calls.clear();
+  return h;
 }
 
 void main() {
-  final today = LocalDate.now();
-  final yesterday = today.minusDays(1);
+  // The full dashboard load strays onto a real platform channel (unlike the
+  // period notifiers); with no binding that surfaces as an unhandled-error
+  // stack in the log even though the load itself degrades gracefully.
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('resumeCurrentDay reloads today by default', () async {
-    final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardProvider.notifier);
+  test('resumeCurrentDay reloads today by default', () => _atFixedNow(() async {
+        final h = await _boot();
+        final notifier = h.container.read(dashboardProvider.notifier);
 
-    notifier.resumeCurrentDay();
-    await pumpEventQueue();
+        notifier.resumeCurrentDay();
+        await pumpEventQueue();
 
-    expect(useCase.loadedDates, isNotEmpty);
-    expect(useCase.loadedDates.every((d) => d == today), isTrue);
-    expect(container.read(dashboardProvider).selectedDate, today);
-  });
+        final state = h.container.read(dashboardProvider);
+        expect(h.hc.calls, isNotEmpty,
+            reason: 'resume must re-read the day through the stack, '
+                'not serve whatever state was already there');
+        expect(state.isLoading, isFalse);
+        expect(state.selectedDate, _today);
+        expect(state.data?.date, _today);
+      }));
 
-  test('resumeCurrentDay honours a day the user pinned in the past', () async {
-    final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardProvider.notifier);
+  test('resumeCurrentDay honours a day the user pinned in the past',
+      () => _atFixedNow(() async {
+        final h = await _boot();
+        final notifier = h.container.read(dashboardProvider.notifier);
 
-    notifier.previousDay();
-    await pumpEventQueue();
-    useCase.loadedDates.clear();
+        notifier.previousDay();
+        await pumpEventQueue();
+        h.hc.calls.clear();
 
-    notifier.resumeCurrentDay();
-    await pumpEventQueue();
+        notifier.resumeCurrentDay();
+        await pumpEventQueue();
 
-    // Refreshed in place — never yanked forward to today.
-    expect(useCase.loadedDates, isNotEmpty);
-    expect(useCase.loadedDates.every((d) => d == yesterday), isTrue);
-    expect(container.read(dashboardProvider).selectedDate, yesterday);
-  });
+        // Refreshed in place — never yanked forward to today.
+        final state = h.container.read(dashboardProvider);
+        expect(h.hc.calls, isNotEmpty);
+        expect(state.selectedDate, _yesterday);
+        expect(state.data?.date, _yesterday);
+      }));
 
   test('selectDate on a past day pins it; selecting today clears the pin',
-      () async {
-    final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardProvider.notifier);
+      () => _atFixedNow(() async {
+        final h = await _boot();
+        final notifier = h.container.read(dashboardProvider.notifier);
 
-    notifier.selectDate(today.minusDays(3));
-    await pumpEventQueue();
-    useCase.loadedDates.clear();
+        notifier.selectDate(_today.minusDays(3));
+        await pumpEventQueue();
 
-    notifier.resumeCurrentDay();
-    await pumpEventQueue();
-    expect(useCase.loadedDates.every((d) => d == today.minusDays(3)), isTrue);
+        notifier.resumeCurrentDay();
+        await pumpEventQueue();
+        expect(h.container.read(dashboardProvider).data?.date,
+            _today.minusDays(3));
 
-    notifier.selectDate(today);
-    await pumpEventQueue();
-    useCase.loadedDates.clear();
+        notifier.selectDate(_today);
+        await pumpEventQueue();
+        h.hc.calls.clear();
 
-    notifier.resumeCurrentDay();
-    await pumpEventQueue();
-    expect(useCase.loadedDates, isNotEmpty);
-    expect(useCase.loadedDates.every((d) => d == today), isTrue);
-  });
+        notifier.resumeCurrentDay();
+        await pumpEventQueue();
+        final state = h.container.read(dashboardProvider);
+        expect(h.hc.calls, isNotEmpty);
+        expect(state.data?.date, _today);
+      }));
 
-  test('nextDay onto a still-past day keeps the pin', () async {
-    final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardProvider.notifier);
+  test('nextDay onto a still-past day keeps the pin', () => _atFixedNow(() async {
+        final h = await _boot();
+        final notifier = h.container.read(dashboardProvider.notifier);
 
-    notifier.previousDay();
-    await pumpEventQueue();
-    notifier.previousDay();
-    await pumpEventQueue();
-    // Two days back, then forward one: still in the past, so still pinned.
-    notifier.nextDay();
-    await pumpEventQueue();
-    useCase.loadedDates.clear();
+        notifier.previousDay();
+        await pumpEventQueue();
+        notifier.previousDay();
+        await pumpEventQueue();
+        // Two days back, then forward one: still in the past, so still pinned.
+        notifier.nextDay();
+        await pumpEventQueue();
 
-    notifier.resumeCurrentDay();
-    await pumpEventQueue();
+        notifier.resumeCurrentDay();
+        await pumpEventQueue();
 
-    expect(useCase.loadedDates, isNotEmpty);
-    expect(useCase.loadedDates.every((d) => d == yesterday), isTrue);
-  });
+        final state = h.container.read(dashboardProvider);
+        expect(state.selectedDate, _yesterday);
+        expect(state.data?.date, _yesterday);
+      }));
 
-  test('nextDay back onto today clears the pin', () async {
-    final (container, useCase) = await _boot();
-    final notifier = container.read(dashboardProvider.notifier);
+  test('nextDay back onto today clears the pin', () => _atFixedNow(() async {
+        final h = await _boot();
+        final notifier = h.container.read(dashboardProvider.notifier);
 
-    notifier.previousDay();
-    await pumpEventQueue();
-    notifier.nextDay();
-    await pumpEventQueue();
-    expect(container.read(dashboardProvider).selectedDate, today);
-    useCase.loadedDates.clear();
+        notifier.previousDay();
+        await pumpEventQueue();
+        notifier.nextDay();
+        await pumpEventQueue();
+        expect(h.container.read(dashboardProvider).selectedDate, _today);
 
-    notifier.resumeCurrentDay();
-    await pumpEventQueue();
+        notifier.resumeCurrentDay();
+        await pumpEventQueue();
 
-    expect(useCase.loadedDates, isNotEmpty);
-    expect(useCase.loadedDates.every((d) => d == today), isTrue);
-  });
+        final state = h.container.read(dashboardProvider);
+        expect(state.selectedDate, _today);
+        expect(state.data?.date, _today);
+      }));
 }

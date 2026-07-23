@@ -27,7 +27,12 @@ steps:
       # Goldens are engine-sensitive pixels and CI pins a different Flutter patch
       # than the local toolchain, so they are the REFACTOR's safety net rather than
       # CI's gate. See dart_test.yaml and scripts/goldens.sh.
-      - scripts/ci-flutter.sh test --exclude-tags golden
+      #
+      # Ordering is randomized so hidden test-order dependence surfaces here, on a
+      # PR, instead of years later when a file gets renamed. The chosen seed is
+      # printed at the top of the run; to reproduce a failure locally:
+      #   flutter test --test-randomize-ordering-seed=<seed from the red log>
+      - scripts/ci-flutter.sh test --exclude-tags golden --test-randomize-ordering-seed=random
 
   - name: app-preflight
     depends_on:

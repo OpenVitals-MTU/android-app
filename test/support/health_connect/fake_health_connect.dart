@@ -224,6 +224,32 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
   // ── heart: HRV, resting, aggregated buckets ─────────────────────────────────
 
   @override
+  Future<int?> readAvgHeartRate(int startEpochMs, int endEpochMs) async {
+    calls.add('readAvgHeartRate');
+    final vals = <double>[];
+    for (final r in fixture.records('heartRate')) {
+      for (final sample in _series(r)) {
+        if (sample.$1 >= startEpochMs && sample.$1 < endEpochMs) {
+          vals.add(sample.$2);
+        }
+      }
+    }
+    if (vals.isEmpty) return null;
+    return (vals.reduce((a, b) => a + b) / vals.length).round();
+  }
+
+  @override
+  Future<int?> readRestingHeartRate(int startEpochMs, int endEpochMs) async {
+    calls.add('readRestingHeartRate');
+    final vals = [
+      for (final r in _instantsIn('restingHeartRate', startEpochMs, endEpochMs))
+        (r['v']! as num).toDouble(),
+    ];
+    if (vals.isEmpty) return null;
+    return (vals.reduce((a, b) => a + b) / vals.length).round();
+  }
+
+  @override
   Future<List<HrvSampleMsg>> readHrvSamples(int startEpochMs, int endEpochMs) async {
     calls.add('readHrvSamples');
     return [
@@ -306,6 +332,17 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
   // ── hydration ───────────────────────────────────────────────────────────────
 
   @override
+  Future<double?> readHydrationLiters(int startEpochMs, int endEpochMs) async {
+    calls.add('readHydrationLiters');
+    var sum = 0.0;
+    for (final r in fixture.records('hydration')) {
+      final t = r['start']! as int;
+      if (t >= startEpochMs && t < endEpochMs) sum += (r['v']! as num).toDouble();
+    }
+    return sum > 0 ? sum : null;
+  }
+
+  @override
   Future<List<HydrationEntryMsg>> readHydrationEntries(
     int startEpochMs,
     int endEpochMs,
@@ -371,6 +408,26 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
     bool includeEstimatedCalories,
   ) async =>
       const [];
+
+  @override
+  Future<double?> readCaloriesInKcal(int startEpochMs, int endEpochMs) async =>
+      null;
+
+  @override
+  Future<List<SkinTemperatureEntryMsg>> readSkinTemperatureEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      const [];
+
+  @override
+  Future<BodyMassEntryMsg?> readLatestLeanBodyMass() async => null;
+
+  @override
+  Future<BodyMassEntryMsg?> readLatestBoneMass() async => null;
+
+  @override
+  Future<BodyMassEntryMsg?> readLatestBodyWaterMass() async => null;
 
   @override
   Future<List<BloodPressureEntryMsg>> readBloodPressureEntries(
@@ -623,6 +680,25 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
       const [];
 
   // ── aggregation ─────────────────────────────────────────────────────────────
+
+  @override
+  Future<Map<String, double?>> aggregate(
+    List<String> aggregateMetrics,
+    int startEpochMs,
+    int endEpochMs,
+  ) async {
+    calls.add('aggregate');
+    // One window, same pro-rating rule as the bucketed variant below. A metric
+    // name the fixture does not back aggregates to null, mirroring the native
+    // side reporting nothing for it.
+    return {
+      for (final metric in aggregateMetrics)
+        metric: switch (_metricToFixtureKind[metric]) {
+          null => null,
+          final kind => _prorated(fixture.records(kind), startEpochMs, endEpochMs),
+        },
+    };
+  }
 
   @override
   Future<List<String>> aggregateGroupByDurationJson(

@@ -75,7 +75,7 @@ void main() {
       ..writeAsBytesSync([1]);
     final recent = File('${temp.path}${Platform.pathSeparator}recent.fit')
       ..writeAsBytesSync([1]);
-    final now = DateTime.now();
+    final now = DateTime.utc(2026, 7, 22, 12);
     old.setLastModifiedSync(now.subtract(const Duration(days: 60)));
     recent.setLastModifiedSync(now.subtract(const Duration(days: 2)));
 
@@ -86,11 +86,12 @@ void main() {
   });
 
   test('prune leaves non-FIT files alone', () async {
+    final now = DateTime.utc(2026, 7, 22, 12);
     final other = File('${temp.path}${Platform.pathSeparator}notes.txt')
       ..writeAsBytesSync([1]);
-    other.setLastModifiedSync(DateTime.now().subtract(const Duration(days: 60)));
+    other.setLastModifiedSync(now.subtract(const Duration(days: 60)));
 
-    await store.prune(now: DateTime.now());
+    await store.prune(now: now);
 
     expect(other.existsSync(), isTrue);
   });
@@ -100,6 +101,9 @@ void main() {
       resolveDirectory: () async =>
           Directory('${temp.path}${Platform.pathSeparator}nope'),
     );
-    await expectLater(missing.prune(now: DateTime.now()), completes);
+    await expectLater(
+      missing.prune(now: DateTime.utc(2026, 7, 22, 12)),
+      completes,
+    );
   });
 }

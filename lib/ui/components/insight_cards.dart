@@ -89,31 +89,33 @@ class _InsightStatCard extends StatelessWidget {
           children: [
             Icon(stat.icon, size: 24, color: stat.accentColor),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Flexible(
-                  child: Text(
+            // scaleDown instead of ellipsis: a shrunk numeral stays true where
+            // a truncated one misreads, and the unit could still overflow on
+            // its own at large font scales.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
                     stat.value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
-                ),
-                if (stat.unit.trim().isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    stat.unit,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
+                  if (stat.unit.trim().isNotEmpty) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      stat.unit,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
             const SizedBox(height: 8),
             Text(

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:health_connect_native/health_connect_native.dart';
 import 'package:openvitals/core/time/local_date.dart';
@@ -1363,15 +1364,18 @@ void main() {
 
     test('today stops at now rather than running on to midnight', () async {
       final api = FakeHostApi();
-      final before = DateTime.now();
-      await _source(api).readRawActivityProgress(LocalDate.now());
-      final after = DateTime.now();
+      // A fixed clock instead of bracketing two real DateTime.now() reads: the
+      // bracket version could see the date flip between "before" and the call,
+      // turning today into a past day whose end is midnight.
+      final now = DateTime(2026, 7, 5, 14, 30);
+      await withClock(Clock.fixed(now), () async {
+        await _source(api).readRawActivityProgress(LocalDate.now());
+      });
 
       final end = DateTime.fromMillisecondsSinceEpoch(
         api.lastDurationQuery!.endEpochMs,
       );
-      expect(end.isBefore(before.subtract(const Duration(seconds: 1))), isFalse);
-      expect(end.isAfter(after.add(const Duration(seconds: 1))), isFalse);
+      expect(end, now);
     });
 
     test('no buckets means no points', () async {

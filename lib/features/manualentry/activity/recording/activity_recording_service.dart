@@ -73,7 +73,7 @@ class ActivityRecordingService implements ActivityRecordingController {
     _bleSub =
         bleSensorCoordinator.metricsStream.listen(acceptBleMetrics);
     _scheduleRestCompletion(_state.value);
-    FlutterForegroundTask.addTaskDataCallback(_onNotificationAction);
+    FlutterForegroundTask.addTaskDataCallback(onNotificationAction);
     _resumeRestoredRecording();
   }
 
@@ -109,7 +109,7 @@ class ActivityRecordingService implements ActivityRecordingController {
   String? _lastNotificationSignature;
 
   void dispose() {
-    FlutterForegroundTask.removeTaskDataCallback(_onNotificationAction);
+    FlutterForegroundTask.removeTaskDataCallback(onNotificationAction);
     _positionSub?.cancel();
     _barometerSub?.cancel();
     _accelSub?.cancel();
@@ -148,8 +148,10 @@ class ActivityRecordingService implements ActivityRecordingController {
 
   /// Port of `ActivityRecordingService.onStartCommand`'s pause/resume/discard
   /// intent handling, receiving the notification-button presses relayed from
-  /// the service isolate.
-  void _onNotificationAction(Object data) {
+  /// the service isolate. Visible so a test can press the notification buttons
+  /// without the foreground-service isolate in between.
+  @visibleForTesting
+  void onNotificationAction(Object data) {
     switch (data) {
       case kActivityRecordingActionPause:
         pauseRecording();
@@ -1299,7 +1301,7 @@ class ActivityRecordingService implements ActivityRecordingController {
   }
 
   /// Kotlin's notification action buttons: pause/resume by status, always
-  /// discard. Presses come back through [_onNotificationAction].
+  /// discard. Presses come back through [onNotificationAction].
   static List<NotificationButton> _notificationButtonsFor(
       ActivityRecordingState state, AppLocalizations l10n) {
     return [

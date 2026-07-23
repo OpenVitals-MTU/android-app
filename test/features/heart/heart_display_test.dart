@@ -289,20 +289,23 @@ void main() {
     // and the mean of every reading (11.33) are different numbers, and the
     // screen used to print both — the chart summary said one, the
     // interpretation card said the other, and neither said which.
+    // Local times, not UTC: the display groups readings by LOCAL day, and a
+    // UTC fixture straddles midnight somewhere on the planet (at UTC+14 these
+    // three regrouped as [10] and [12, 13] and the average came out 11.25).
     final display = _display(HeartPeriodLoadResult(
       respiratoryRate: [
         RespiratoryRateEntry(
-          time: DateTime.utc(2026, 3, 2, 8),
+          time: DateTime(2026, 3, 2, 8),
           breathsPerMinute: 10,
           source: 'Test',
         ),
         RespiratoryRateEntry(
-          time: DateTime.utc(2026, 3, 2, 20),
+          time: DateTime(2026, 3, 2, 20),
           breathsPerMinute: 12,
           source: 'Test',
         ),
         RespiratoryRateEntry(
-          time: DateTime.utc(2026, 3, 3, 8),
+          time: DateTime(2026, 3, 3, 8),
           breathsPerMinute: 13,
           source: 'Test',
         ),
