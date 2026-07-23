@@ -103,6 +103,36 @@ is effectively blocked for Samsung on a de-Googled phone. For the Galaxy Watch o
 this rig: live HR via the BLE sensor path (works, now labelled a smartwatch);
 all-day data not available without Samsung Health.
 
+**Bridge investigation (definitive, 2026-07-23).** Chased every GMS-free path to
+get the Galaxy Watch8's all-day data into Health Connect; none exists:
+
+- **Gadgetbridge — does NOT support Samsung Galaxy Watch WearOS models** (Watch
+  4/5/6/7/8). Codeberg issue #3508 open since Jan 2024, no support, no development
+  timeline; would require reverse-engineering Samsung's WearOS protocol. Its HC
+  export (0.89.0) is irrelevant without device support. A CalyxOS user in that
+  thread hit the same login wall.
+- **Samsung Health** (the only official Galaxy Watch → HC bridge) requires Samsung
+  + Google accounts and Play Services — unavailable on a de-Googled phone.
+- **Health Connect on the watch** does not auto-sync to phone HC.
+
+So **there is no GMS-free path for a Samsung Galaxy Watch → phone Health Connect on
+this rig.** The full "watch treatment" is therefore moot (its data would never
+arrive). What remains real for the Galaxy Watch here:
+
+- **Live heart rate during a recording** — as a labelled-smartwatch BLE sensor; and
+  because openvitals records that HR, it reaches Health Connect as an
+  openvitals-sourced record. This is the one working data path (live/active only,
+  not all-day/background).
+
+**Final verdict.** Treat a WearOS watch as a **labelled live-HR sensor + a Health
+Connect source**, never a Garmin-style registry watch. Building the full watch UI
+(generalising the watch/sensor model, de-Garmining WatchDeviceScreen) is not
+warranted: on a de-Googled phone the watch has no all-day data to justify it, and
+on a Google-services phone the watch's own app already populates HC (so the app
+just reads it). The committed groundwork — `DeviceIntegration` ownership discriminator
+(`bd2e02308`), smartwatch labelling (`ca31b20b6`), HC-sources diagnostic
+(`5ed2e52e4`) — is the right stopping point.
+
 ## Follow-up build (conditional, done in part)
 
 - **Smartwatch labelling (done, `ca31b20b6`).** A name-based classifier
