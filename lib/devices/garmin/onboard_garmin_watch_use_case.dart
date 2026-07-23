@@ -61,9 +61,12 @@ class GarminOnboardFailed extends GarminOnboardOutcome {
 ///   4. **Register.** Only now, so a refused pairing cannot leave a watch in the
 ///      list that the app can never actually reach.
 ///
-/// The watch is registered with NO capabilities and [BleDeviceKind.watch]: it
-/// streams nothing live, and must never be picked up by the recording
-/// coordinator's capability assignment.
+/// Registered with NO capabilities, as [BleDeviceKind.watch] or (for a Garmin
+/// Edge) [BleDeviceKind.bikeComputer] per [kind]. A watch streams nothing live.
+/// A bike computer CAN, but its live standard-BLE capabilities are added later
+/// from its device card — broadcast mode is usually only on during a ride — so
+/// it too starts capability-less and out of the recording coordinator's
+/// assignment until the user opts it in.
 class OnboardGarminWatchUseCase {
   const OnboardGarminWatchUseCase(
     this._pairing,
@@ -75,10 +78,13 @@ class OnboardGarminWatchUseCase {
   final BleDeviceRepository _bleDeviceRepository;
   final GarminTransportProbe _transportProbe;
 
-  /// [onStep] fires as each platform dialog is about to be shown.
+  /// [onStep] fires as each platform dialog is about to be shown. [kind] is the
+  /// classified GFDI kind — [BleDeviceKind.watch] (default) or, for a Garmin
+  /// Edge, [BleDeviceKind.bikeComputer].
   Future<GarminOnboardOutcome> call(
     BleDiscoveredDevice device, {
     required String displayName,
+    BleDeviceKind kind = BleDeviceKind.watch,
     void Function(GarminOnboardStep)? onStep,
   }) async {
     onStep?.call(GarminOnboardStep.bonding);
@@ -109,7 +115,7 @@ class OnboardGarminWatchUseCase {
       address: device.address,
       bluetoothName: device.name,
       capabilities: const {},
-      kind: BleDeviceKind.watch,
+      kind: kind,
     );
     return GarminOnboardSucceeded(
       device: registered,

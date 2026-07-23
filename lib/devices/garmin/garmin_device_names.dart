@@ -1,35 +1,29 @@
-/// Recognises a Garmin device that speaks GFDI (the protocol OpenVitals uses to
-/// pull FIT files off a watch) from its advertised Bluetooth name.
+/// Recognises which Garmin device a discovered advertisement is, from its
+/// advertised Bluetooth NAME, so the classifier can decide: a watch family
+/// (vívoactive, fēnix, …) → a GFDI file-sync watch; an Edge → a bike computer;
+/// anything else → a plain live BLE sensor.
 ///
 /// Ported in spirit — not line for line — from Gadgetbridge's per-model
 /// coordinators under `devices/garmin/watches/`, `.../bike/` (AGPLv3, same
 /// licence as this app). Gadgetbridge needs ~100 EXACT-match patterns because
 /// each one selects a coordinator class carrying that model's quirks. This app
-/// needs one bit of information — "does this thing speak GFDI" — so matching by
-/// product FAMILY is both sufficient and more durable: a `vívoactive 7` that
-/// does not exist yet is recognised here and would need a new Gadgetbridge
+/// needs only the product FAMILY — durable against a `vívoactive 7` that does
+/// not exist yet, which is recognised here and would need a new Gadgetbridge
 /// class.
 ///
-/// Name matching is the FALLBACK. The authoritative signal is Garmin's member
-/// service UUID `0xFE1F` in the advertisement (`BleUuids.garminMemberService`) —
-/// some watches advertise a shortened name, or none at all. The name check
-/// still earns its place: it is what classifies a watch found through "Show all
-/// devices", whose advertisement the scan filter never had to match.
+/// The NAME is authoritative for the kind. Garmin's member service UUID `0xFE1F`
+/// (`BleUuids.garminMemberService`) is used only to SURFACE a device in the scan
+/// (`GarminScanClassifier` / `BleDiscoveredDevice.advertisesSyncService`), never
+/// to decide watch-vs-sensor: a device advertising `0xFE1F` but not matching a
+/// known Garmin family is treated as a plain sensor, not swept up as a watch.
+/// Deliberately absent from every family list: `HRM*` chest straps — they expose
+/// the standard Heart Rate GATT service and belong to the live-sensor path.
 library;
 
-import '../../domain/model/ble_sensor_models.dart';
-
-/// Product families whose devices speak GFDI and hold FIT files.
-///
-/// Deliberately absent: `HRM*` (HRM 200, HRMPro+, HRM600). Those are chest
-/// straps that expose the standard Heart Rate GATT service, so they belong to
-/// the live-recording sensor path — classifying one as a file-sync device would
-/// take it out of [BleSensorCapability] assignment and break heart-rate
-/// recording for anyone using one.
-final List<RegExp> _garminFamilies = [
-  // Watches. The accented forms are what the devices actually advertise
-  // ("vívoactive", "fēnix"); the unaccented spellings appear on some firmware
-  // and in some locales, so both are matched.
+/// Watch product families. The accented forms are what the devices actually
+/// advertise ("vívoactive", "fēnix"); the unaccented spellings appear on some
+/// firmware and in some locales, so both are matched.
+final List<RegExp> _garminWatchFamilies = [
   RegExp(r'^v[íi]voactive\b', caseSensitive: false),
   RegExp(r'^v[íi]vomove\b', caseSensitive: false),
   RegExp(r'^v[íi]vosmart\b', caseSensitive: false),
@@ -45,8 +39,15 @@ final List<RegExp> _garminFamilies = [
   RegExp(r'^quatix\b', caseSensitive: false),
   RegExp(r'^lily\b', caseSensitive: false),
   RegExp(r'^swim \d', caseSensitive: false),
-  // Bike computers. Not watches, but they speak the same protocol and carry the
-  // same activity FIT files, so they onboard and sync identically.
+];
+
+/// Bike-computer product families. Not watches: they speak the same GFDI
+/// protocol and carry the same activity FIT files (so they onboard and sync
+/// identically), but they classify as [BleDeviceKind.bikeComputer] so the UI can
+/// present them as cycling devices and offer them the live-sensor role. The
+/// single `^edge\b` pattern already covers "Edge Explore", "Edge MTB",
+/// "Edge 1040" — the `\b` sits right after "edge".
+final List<RegExp> _garminBikeComputerFamilies = [
   RegExp(r'^edge\b', caseSensitive: false),
 ];
 
@@ -55,24 +56,34 @@ final List<RegExp> _garminFamilies = [
 /// matching rather than doubling every pattern above.
 final RegExp _garminPrefix = RegExp(r'^garmin\s+', caseSensitive: false);
 
-/// True when [name] is a Garmin device this app can sync FIT files from.
+/// True when [name] is a Garmin smartwatch — onboard as a [BleDeviceKind.watch].
+/// Disjoint from the bike-computer families, so a device is never both.
 ///
 /// A null or blank name is not a match: an unnamed advertisement carries no
-/// evidence either way, and the caller falls back to the GFDI service UUID.
-bool isGarminSyncDeviceName(String? name) {
-  if (name == null) return false;
-  final trimmed = name.trim().replaceFirst(_garminPrefix, '');
-  if (trimmed.isEmpty) return false;
-  return _garminFamilies.any((pattern) => pattern.hasMatch(trimmed));
+/// evidence, so it is left to fall through to a plain sensor.
+bool isGarminWatchName(String? name) {
+  final trimmed = _strippedGarminName(name);
+  if (trimmed == null) return false;
+  return _garminWatchFamilies.any((pattern) => pattern.hasMatch(trimmed));
 }
 
-/// True when [device] is a Garmin device to onboard as a [BleDeviceKind.watch]
-/// (pull FIT files) rather than as a live-streaming sensor.
-///
-/// The advertised member service ([BleDiscoveredDevice.advertisesSyncService])
-/// is the authoritative signal; [isGarminSyncDeviceName] is the fallback for a
-/// watch found via "Show all devices", whose advertisement the scan filter never
-/// had to match. Lives here, not on the shared [BleDiscoveredDevice], so the
-/// generic discovery model carries no Garmin classification knowledge.
-bool isGarminSyncDevice(BleDiscoveredDevice device) =>
-    device.advertisesSyncService || isGarminSyncDeviceName(device.name);
+/// True when [name] is a Garmin Edge bike computer — onboard as a
+/// [BleDeviceKind.bikeComputer]. Disjoint from the watch families.
+bool isGarminBikeComputerName(String? name) {
+  final trimmed = _strippedGarminName(name);
+  if (trimmed == null) return false;
+  return _garminBikeComputerFamilies.any((pattern) => pattern.hasMatch(trimmed));
+}
+
+/// True when [name] is any Garmin GFDI file-sync device — a watch OR a bike
+/// computer. The union of the two family checks.
+bool isGarminSyncDeviceName(String? name) =>
+    isGarminWatchName(name) || isGarminBikeComputerName(name);
+
+/// The device name with a leading `Garmin ` prefix stripped, or null when it is
+/// null/blank (an unnamed advertisement carries no evidence either way).
+String? _strippedGarminName(String? name) {
+  if (name == null) return null;
+  final trimmed = name.trim().replaceFirst(_garminPrefix, '');
+  return trimmed.isEmpty ? null : trimmed;
+}

@@ -23,16 +23,38 @@ void main() {
   DeviceClassification classify(BleDiscoveredDevice d) =>
       classifyDevice(d, classifiers);
 
-  test('a Garmin member-service advertisement → (garmin, watch)', () {
-    final c = classify(device(name: 'anything', advertisesSyncService: true));
+  test('a Garmin watch product name → (garmin, watch)', () {
+    final c = classify(device(name: 'vívoactive 5'));
     expect(c.integration, DeviceIntegration.garmin);
     expect(c.kind, BleDeviceKind.watch);
   });
 
-  test('a Garmin product name → (garmin, watch)', () {
-    final c = classify(device(name: 'vívoactive 5'));
+  test('the member service alone does NOT make an unknown name a watch', () {
+    // 0xFE1F surfaces a device in the scan, but the NAME decides the kind — an
+    // unrecognised name stays a plain sensor rather than being swept up.
+    final c = classify(device(name: 'anything', advertisesSyncService: true));
+    expect(c.integration, isNull);
+    expect(c.kind, BleDeviceKind.sensor);
+  });
+
+  test('a Garmin Edge name → (garmin, bikeComputer)', () {
+    final c = classify(device(name: 'Edge 840'));
     expect(c.integration, DeviceIntegration.garmin);
-    expect(c.kind, BleDeviceKind.watch);
+    expect(c.kind, BleDeviceKind.bikeComputer);
+  });
+
+  test('a prefixed Edge name → (garmin, bikeComputer)', () {
+    final c = classify(device(name: 'Garmin Edge 1040'));
+    expect(c.integration, DeviceIntegration.garmin);
+    expect(c.kind, BleDeviceKind.bikeComputer);
+  });
+
+  test('a member-service-only advert (no distinguishing name) → sensor', () {
+    // Without a recognised name there is nothing to classify, so it falls
+    // through to a plain live sensor rather than being assumed a watch.
+    final c = classify(device(advertisesSyncService: true));
+    expect(c.integration, isNull);
+    expect(c.kind, BleDeviceKind.sensor);
   });
 
   test('a WearOS smartwatch name → (wearos, watch)', () {
@@ -48,11 +70,13 @@ void main() {
     expect(c, same(DeviceClassification.sensor));
   });
 
-  test('Garmin wins when a device matches both (member service beats a name)', () {
-    // Contrived: a device advertising the member service AND named like a watch.
+  test('the NAME decides, so a WearOS name is WearOS even with 0xFE1F', () {
+    // Contrived: a device advertising the Garmin member service but named like a
+    // WearOS watch. Classification is name-based now, so it is WearOS — the
+    // member service does not override a recognised name.
     final c =
         classify(device(name: 'Galaxy Watch', advertisesSyncService: true));
-    expect(c.integration, DeviceIntegration.garmin);
+    expect(c.integration, DeviceIntegration.wearos);
   });
 
   test('an unnamed, unremarkable device → sensor', () {

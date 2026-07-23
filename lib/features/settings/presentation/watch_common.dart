@@ -6,11 +6,14 @@ import '../../../l10n/app_localizations.dart';
 /// The pieces the device view and the watch-data screen both use, so the two
 /// cannot drift into looking like different features.
 
-/// The round watch glyph used wherever a watch is identified.
+/// The round glyph used wherever a watch is identified. [icon] overrides the
+/// watch face for a non-watch GFDI device — a cycling glyph for an Edge bike
+/// computer.
 class WatchAvatar extends StatelessWidget {
-  const WatchAvatar({this.size = 40, super.key});
+  const WatchAvatar({this.size = 40, this.icon, super.key});
 
   final double size;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +26,7 @@ class WatchAvatar extends StatelessWidget {
         color: theme.colorScheme.secondaryContainer,
       ),
       child: Icon(
-        Icons.watch_outlined,
+        icon ?? Icons.watch_outlined,
         size: size * 0.55,
         color: theme.colorScheme.onSecondaryContainer,
       ),

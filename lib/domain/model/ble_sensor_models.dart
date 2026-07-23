@@ -7,11 +7,17 @@ part 'ble_sensor_models.freezed.dart';
 /// A [sensor] streams live values over standard GATT services while a recording
 /// runs (heart-rate strap, power meter) and owns [BleSensorCapability]s. A
 /// [watch] streams nothing: it holds recorded FIT files that are pulled over
-/// GFDI on demand, so it carries no capabilities and must never take part in
-/// capability assignment.
+/// GFDI on demand, so it carries no capabilities. A [bikeComputer] (Garmin Edge)
+/// does BOTH: it pulls recorded ride FIT files over GFDI like a watch AND can
+/// broadcast live standard-GATT sensor values (heart rate, speed/cadence, power)
+/// into a recording like a sensor. The two roles are independent — file-sync
+/// keys off [BleSensorDevice.isGarminGfdi] (kind + integration), the live role
+/// off a non-empty [BleSensorDevice.capabilities] — so a device can hold either
+/// or both.
 enum BleDeviceKind {
   sensor('SENSOR'),
-  watch('WATCH');
+  watch('WATCH'),
+  bikeComputer('BIKE_COMPUTER');
 
   const BleDeviceKind(this.storageName);
 
@@ -109,11 +115,26 @@ abstract class BleSensorDevice with _$BleSensorDevice {
     DateTime? lastSyncedAt,
   }) = _BleSensorDevice;
 
+  /// Literally a watch — deliberately NOT a bike computer, so an Edge never
+  /// renders with watch-only UI (the avatar, the wellness "Data" view).
   bool get isWatch => kind == BleDeviceKind.watch;
 
-  /// A watch the app drives over Garmin's GFDI protocol (FIT sync, settings,
-  /// find). The Garmin sync port claims only these. A null-integration watch is
-  /// legacy Garmin — the sole watch integration before WearOS.
+  /// A Garmin Edge bike computer: a GFDI file-sync device (like a watch) that is
+  /// also a candidate live BLE sensor (unlike a watch).
+  bool get isBikeComputer => kind == BleDeviceKind.bikeComputer;
+
+  /// A device the app drives over Garmin's GFDI protocol (FIT sync, settings,
+  /// find) — a watch OR a bike computer, but never a WearOS watch. This is the
+  /// file-sync eligibility concept; it depends on [kind] + [integration] and is
+  /// independent of [capabilities]. A null-integration watch is legacy Garmin —
+  /// the sole GFDI integration before WearOS.
+  bool get isGarminGfdi =>
+      (kind == BleDeviceKind.watch || kind == BleDeviceKind.bikeComputer) &&
+      integration != DeviceIntegration.wearos;
+
+  /// A watch the app drives over Garmin's GFDI protocol. Use where the UI
+  /// genuinely means "a watch"; for file-sync eligibility use [isGarminGfdi],
+  /// which also admits an Edge bike computer.
   bool get isGarminWatch =>
       isWatch && integration != DeviceIntegration.wearos;
 
@@ -121,6 +142,12 @@ abstract class BleSensorDevice with _$BleSensorDevice {
   /// live heart rate over BLE, recorded data via Health Connect.
   bool get isWearosWatch =>
       isWatch && integration == DeviceIntegration.wearos;
+
+  /// Can hold live [BleSensorCapability]s and take part in a recording: a plain
+  /// [sensor], or a [bikeComputer] broadcasting standard GATT. A watch cannot
+  /// (scoped out for now). Gates the Sensors-screen listing and capability UI.
+  bool get isLiveSensorCapable =>
+      kind == BleDeviceKind.sensor || kind == BleDeviceKind.bikeComputer;
 
   BleSensorDevice normalized() {
     final trimmedDisplayName = displayName.trim();

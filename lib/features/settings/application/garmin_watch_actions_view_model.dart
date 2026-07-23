@@ -59,7 +59,7 @@ class GarminWatchActionsViewModel extends Notifier<GarminWatchActionsState> {
 
     final devices = ref.read(readPairedBleDevicesUseCaseProvider)();
     final device = devices.where((d) => d.id == deviceId).firstOrNull;
-    if (device == null || !device.isWatch) return;
+    if (device == null || !device.isGarminGfdi) return;
 
     final cancel = Completer<void>();
     _findCancel = cancel;
@@ -107,7 +107,7 @@ class GarminWatchActionsViewModel extends Notifier<GarminWatchActionsState> {
         .read(readPairedBleDevicesUseCaseProvider)()
         .where((d) => d.id == deviceId)
         .firstOrNull;
-    if (device == null || !device.isWatch) return 0;
+    if (device == null || !device.isGarminGfdi) return 0;
 
     final phone = ref.read(phoneIdentityProvider);
     final locale = PlatformDispatcher.instance.locale;

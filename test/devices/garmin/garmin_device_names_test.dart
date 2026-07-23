@@ -1,19 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/devices/garmin/garmin_device_names.dart';
-
-BleDiscoveredDevice _discovered({
-  String? name,
-  bool advertisesSyncService = false,
-}) =>
-    BleDiscoveredDevice(
-      address: 'E0:48:24:D5:F7:10',
-      name: name,
-      rssi: -60,
-      suggestedCapabilities: const {},
-      advertisesSyncService: advertisesSyncService,
-    );
 
 void main() {
   group('isGarminSyncDeviceName', () {
@@ -55,21 +42,48 @@ void main() {
       expect(isGarminSyncDeviceName('   '), isFalse);
       expect(isGarminSyncDeviceName(null), isFalse);
     });
+
+    test('also matches Edge bike computers (they sync FIT files too)', () {
+      expect(isGarminSyncDeviceName('Edge 840'), isTrue);
+      expect(isGarminSyncDeviceName('Garmin Edge 1040'), isTrue);
+    });
   });
 
-  group('isGarminSyncDevice', () {
-    test('the advertised Garmin member service settles it even with no name',
-        () {
-      expect(isGarminSyncDevice(_discovered(advertisesSyncService: true)),
-          isTrue);
+  group('isGarminWatchName', () {
+    test('matches the watch families, not the Edge', () {
+      expect(isGarminWatchName('vívoactive 5'), isTrue);
+      expect(isGarminWatchName('fēnix 7X Pro'), isTrue);
+      expect(isGarminWatchName('Garmin Forerunner 265S'), isTrue);
+      expect(isGarminWatchName('Edge 840'), isFalse);
     });
 
-    test('falls back to the name when the service was not advertised', () {
-      expect(isGarminSyncDevice(_discovered(name: 'vívoactive 5')), isTrue);
+    test('does not match straps, other vendors, blanks or null', () {
+      expect(isGarminWatchName('HRM 200'), isFalse);
+      expect(isGarminWatchName('Wahoo TICKR'), isFalse);
+      expect(isGarminWatchName('   '), isFalse);
+      expect(isGarminWatchName(null), isFalse);
+    });
+  });
+
+  group('isGarminBikeComputerName', () {
+    test('matches the Edge family, including sub-models and the prefix', () {
+      expect(isGarminBikeComputerName('Edge 840'), isTrue);
+      expect(isGarminBikeComputerName('Edge Explore 2'), isTrue);
+      expect(isGarminBikeComputerName('Edge MTB'), isTrue);
+      expect(isGarminBikeComputerName('Garmin Edge 1040'), isTrue);
     });
 
-    test('a nameless, serviceless advertisement is not a watch', () {
-      expect(isGarminSyncDevice(_discovered()), isFalse);
+    test('is disjoint from the watch families', () {
+      expect(isGarminBikeComputerName('vívoactive 5'), isFalse);
+      expect(isGarminBikeComputerName('fēnix 7X Pro'), isFalse);
+      expect(isGarminBikeComputerName('Forerunner 265S'), isFalse);
+    });
+
+    test('does not match straps, other vendors, blanks or null', () {
+      expect(isGarminBikeComputerName('HRM 200'), isFalse);
+      expect(isGarminBikeComputerName('Wahoo TICKR'), isFalse);
+      expect(isGarminBikeComputerName('   '), isFalse);
+      expect(isGarminBikeComputerName(null), isFalse);
     });
   });
 }

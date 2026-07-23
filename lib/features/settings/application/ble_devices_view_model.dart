@@ -80,10 +80,12 @@ abstract class BleDevicesUiState with _$BleDevicesUiState {
 
   int get enabledDeviceCount => devices.where((d) => d.enabled).length;
 
-  /// True while the add sheet is showing a watch rather than a sensor — the two
-  /// share the sheet but ask completely different questions.
-  bool get isAddingWatch =>
-      selectedClassification?.kind == BleDeviceKind.watch;
+  /// True while the add sheet is showing a GFDI device (watch or Edge bike
+  /// computer) rather than a sensor — the two share the sheet but ask completely
+  /// different questions: a GFDI device is bonded, a sensor is capability-probed.
+  bool get isAddingGfdiDevice =>
+      selectedClassification != null &&
+      selectedClassification!.kind != BleDeviceKind.sensor;
 
   /// Which integration will own [selectedDevice] once added, or null for a plain
   /// sensor — routes the add sheet and onboarding.
@@ -197,10 +199,12 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
   Future<void> selectDiscoveredDevice(BleDiscoveredDevice device) async {
     final classification =
         classifyDevice(device, ref.read(deviceClassifiersProvider));
-    // A watch answers a different question. It streams nothing live, so probing
-    // it for capabilities would connect, find no standard service and report
-    // nothing — the sheet asks the user to pair it instead.
-    if (classification.kind == BleDeviceKind.watch) {
+    // A GFDI device (watch or Edge bike computer) answers a different question:
+    // the sheet asks the user to bond it. A watch streams nothing live; an Edge
+    // CAN, but its broadcast mode is usually off at pairing time, so probing now
+    // would connect, find no standard service and report nothing. Its live
+    // capabilities are detected later from its device card instead.
+    if (classification.kind != BleDeviceKind.sensor) {
       _setLocal(_local.copyWith(
         selectedDevice: device,
         selectedClassification: classification,
@@ -324,6 +328,8 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
     final outcome = await ref.read(onboardGarminWatchUseCaseProvider)(
       selected,
       displayName: displayName,
+      // Register as the classified GFDI kind — watch, or bikeComputer for an Edge.
+      kind: state.selectedClassification?.kind ?? BleDeviceKind.watch,
       onStep: (step) {
         // The sheet may be gone by the time a step fires — the OS dialogs run
         // over it and the user can dismiss everything.
@@ -445,11 +451,11 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
         .where((d) => d.id == deviceId)
         .firstOrNull;
     _edit(ForgetBleDevice(deviceId));
-    if (device != null && device.isGarminWatch) {
-      // The watch's Garmin-specific state used to be cleared inside
-      // removeDevice; now that it lives in its own store, this watch-forget
-      // branch — the single path every Garmin removal funnels through — is what
-      // clears it, so a re-pairing starts clean.
+    if (device != null && device.isGarminGfdi) {
+      // The Garmin-specific state used to be cleared inside removeDevice; now
+      // that it lives in its own store, this GFDI-forget branch — the single
+      // path every Garmin removal funnels through, watch or Edge bike computer —
+      // is what clears it, so a re-pairing starts clean.
       ref.read(garminDeviceStateStoreProvider).clear(deviceId);
       // Fire-and-forget, like every other registry mutation here: dropping the
       // bond and association is housekeeping the user does not wait on, and a

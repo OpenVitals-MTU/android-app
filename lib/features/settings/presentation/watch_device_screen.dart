@@ -48,10 +48,15 @@ class WatchDeviceScreen extends ConsumerWidget {
 
     final sync = ref.watch(deviceSyncViewModelProvider);
     final actions = ref.watch(garminWatchActionsViewModelProvider);
-    // Only a Garmin watch has GFDI sync/settings/find. A WearOS watch speaks none
-    // of it — its heart rate streams over BLE and its recorded data arrives via
-    // Health Connect — so those controls are hidden rather than shown dead.
-    final isGarmin = device.isGarminWatch;
+    // Only a Garmin GFDI device (watch or Edge bike computer) has GFDI
+    // sync/settings/find. A WearOS watch speaks none of it — its heart rate
+    // streams over BLE and its recorded data arrives via Health Connect — so
+    // those controls are hidden rather than shown dead.
+    final isGarmin = device.isGarminGfdi;
+    // A bike computer records rides, not wrist wellness — its "Data" (sleep,
+    // Body Battery, …) view would always be empty, so it is hidden. Its rides
+    // import into the normal activity history.
+    final isBikeComputer = device.isBikeComputer;
     final capabilities =
         ref.watch(garminDeviceStateStoreProvider).capabilities(deviceId);
     // Unknown means SHOW, not hide: capabilities arrive in a handshake, so a
@@ -75,7 +80,12 @@ class WatchDeviceScreen extends ConsumerWidget {
       body: ListView(
         padding: screenScrollPadding(context),
         children: [
-          _StatusCard(device: device, sync: sync, isGarmin: isGarmin),
+          _StatusCard(
+            device: device,
+            sync: sync,
+            isGarmin: isGarmin,
+            isBikeComputer: isBikeComputer,
+          ),
           const SizedBox(height: 12),
           if (isGarmin) ...[
             _Actions(
@@ -83,6 +93,7 @@ class WatchDeviceScreen extends ConsumerWidget {
               sync: sync,
               actions: actions,
               supports: supports,
+              isBikeComputer: isBikeComputer,
             ),
             if (actions.isFindingDevice(device.id) || actions.findFailed)
               Padding(
@@ -139,6 +150,7 @@ class _StatusCard extends StatelessWidget {
     required this.device,
     required this.sync,
     required this.isGarmin,
+    required this.isBikeComputer,
   });
 
   final BleSensorDevice device;
@@ -147,6 +159,9 @@ class _StatusCard extends StatelessWidget {
   /// A WearOS watch has no sync concept, so its status line names the device
   /// rather than a last-sync time it will never have.
   final bool isGarmin;
+
+  /// An Edge bike computer shows a cycling avatar instead of the watch face.
+  final bool isBikeComputer;
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +194,10 @@ class _StatusCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              const WatchAvatar(size: 44),
+              WatchAvatar(
+                size: 44,
+                icon: isBikeComputer ? Icons.directions_bike_outlined : null,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -224,6 +242,7 @@ class _Actions extends ConsumerWidget {
     required this.sync,
     required this.actions,
     required this.supports,
+    required this.isBikeComputer,
   });
 
   final BleSensorDevice device;
@@ -233,6 +252,9 @@ class _Actions extends ConsumerWidget {
   /// Whether the watch declared a capability — shared with the screen so the
   /// action row and the settings band cannot disagree about the same watch.
   final bool Function(GarminCapability) supports;
+
+  /// A bike computer has no wrist-wellness "Data" view, so that action is hidden.
+  final bool isBikeComputer;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -246,12 +268,13 @@ class _Actions extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          WatchAction(
-            icon: Icons.insights_outlined,
-            label: l10n.settingsWatchActionData,
-            onPressed: () =>
-                context.push(AppRoutes.watchDataLocation(device.id)),
-          ),
+          if (!isBikeComputer)
+            WatchAction(
+              icon: Icons.insights_outlined,
+              label: l10n.settingsWatchActionData,
+              onPressed: () =>
+                  context.push(AppRoutes.watchDataLocation(device.id)),
+            ),
           WatchAction(
             icon: Icons.sync,
             label: l10n.settingsWatchActionSync,

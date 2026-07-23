@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/devices/core/ble/ble_uuids.dart';
 import 'package:openvitals/devices/garmin/garmin_uuids.dart';
-import 'package:openvitals/domain/model/ble_sensor_models.dart';
 import 'package:openvitals/devices/garmin/garmin_device_names.dart';
 
 void main() {
@@ -47,29 +46,17 @@ void main() {
   });
 
   group('classifying the scan result', () {
-    test('the member service alone marks a nameless advert as a watch', () {
-      const device = BleDiscoveredDevice(
-        address: 'E0:48:24:D5:F7:10',
-        name: null,
-        rssi: -80,
-        suggestedCapabilities: {},
-        advertisesSyncService: true,
-      );
-
-      expect(isGarminSyncDevice(device), isTrue);
+    test('the member service surfaces a device but does not name its kind', () {
+      // 0xFE1F gets the device into the scan list; the NAME classifies it. A
+      // nameless advert has no family to match, so it is not a Garmin watch.
+      expect(isGarminSyncDeviceName(null), isFalse);
     });
 
     test('a watch found via "Show all devices" is caught by its name', () {
-      // That path applies no service filter, so advertisesSyncService is
-      // never set — the name is the only evidence available.
-      const device = BleDiscoveredDevice(
-        address: 'E0:48:24:D5:F7:10',
-        name: 'vívoactive 5',
-        rssi: -80,
-        suggestedCapabilities: {},
-      );
-
-      expect(isGarminSyncDevice(device), isTrue);
+      // That path applies no service filter, so the name is the only evidence —
+      // and it is what classifies the kind.
+      expect(isGarminWatchName('vívoactive 5'), isTrue);
+      expect(isGarminSyncDeviceName('vívoactive 5'), isTrue);
     });
   });
 }

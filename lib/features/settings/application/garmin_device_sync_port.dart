@@ -39,7 +39,8 @@ class GarminDeviceSyncPort implements DeviceSyncPort {
   final Ref _ref;
 
   @override
-  bool canSync(BleSensorDevice device) => device.isGarminWatch;
+  // A watch OR an Edge bike computer — both pull recorded FIT files over GFDI.
+  bool canSync(BleSensorDevice device) => device.isGarminGfdi;
 
   @override
   Future<DeviceSyncResult> sync(

@@ -114,7 +114,10 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
     final watches = widget.isWatches;
     final devices = ref
         .watch(bleDevicesViewModelProvider.select((s) => s.devices))
-        .where((d) => d.kind == widget.kind)
+        // The Watches screen lists only watches; the Sensors & devices screen
+        // lists live-sensor-capable devices — plain sensors AND Edge bike
+        // computers (which also live-broadcast), never watches.
+        .where((d) => watches ? d.isWatch : d.isLiveSensorCapable)
         .toList();
 
     return Scaffold(
@@ -183,11 +186,16 @@ class _BleDevicesScreenState extends ConsumerState<BleDevicesScreen> {
                   final confirmed = await confirmRemoveDevice(
                     context,
                     deviceName: device.displayName,
-                    isWatch: device.isWatch,
+                    // A bike computer unpairs like a watch (bond + synced files),
+                    // not like a plain sensor.
+                    isWatch: device.kind != BleDeviceKind.sensor,
                   );
                   if (confirmed) _notifier.removeDevice(device.id);
                 },
-                onOpen: device.isWatch
+                // Everything that isn't a plain sensor (watch or Edge bike
+                // computer) opens its own device card rather than the capability
+                // sheet a sensor needs.
+                onOpen: device.kind != BleDeviceKind.sensor
                     ? () => context.push(AppRoutes.watchDeviceLocation(device.id))
                     : null,
               ),
@@ -231,6 +239,11 @@ class _BleDeviceRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final battery = device.batteryPercent;
+    // A watch or Edge bike computer identifies + opens its card and reports over
+    // GFDI; only a plain sensor shows a switch, capability chips and battery
+    // from the standard service. A bike computer's live capabilities live in its
+    // card, so the row treats it like a watch.
+    final opensCard = device.kind != BleDeviceKind.sensor;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Card(
@@ -252,7 +265,7 @@ class _BleDeviceRow extends StatelessWidget {
                           // A watch is usually named after its Bluetooth name,
                           // so repeating it says nothing — its state does.
                           Text(
-                            device.isWatch
+                            opensCard
                                 ? (device.enabled
                                     ? l10n.settingsWatchConnected
                                     : l10n.settingsWatchNotConnected)
@@ -267,7 +280,7 @@ class _BleDeviceRow extends StatelessWidget {
                             // sensor path polls — so until it has synced once
                             // there is genuinely nothing to show, and its sync
                             // time is the more useful line anyway.
-                            device.isWatch
+                            opensCard
                                 ? _lastSyncedLabel(context, l10n, device)
                                 : battery != null
                                     ? l10n.settingsSensorsBatteryPercent(battery)
@@ -282,13 +295,13 @@ class _BleDeviceRow extends StatelessWidget {
                     // A watch row identifies and opens; every action it has
                     // lives in the device view, so that a control never exists
                     // in two places needing to be kept in step.
-                    if (device.isWatch)
+                    if (opensCard)
                       const Icon(Icons.chevron_right)
                     else
                       Switch(value: device.enabled, onChanged: onToggleEnabled),
                   ],
                 ),
-                if (!device.isWatch) ...[
+                if (!opensCard) ...[
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -454,10 +467,11 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
                 ),
               ),
               const SizedBox(height: 12),
-              // A watch has no capabilities to pick and no conflicts to resolve
-              // — it is a file source, not a live sensor. What it needs instead
-              // is the two OS dialogs, named before they appear.
-              if (state.isAddingWatch)
+              // A GFDI device (watch or Edge bike computer) picks no capabilities
+              // at add time — a watch is a file source, and a bike computer's
+              // live capabilities are detected later from its card. What it needs
+              // now is the two OS dialogs, named before they appear.
+              if (state.isAddingGfdiDevice)
                 // A WearOS watch has no bond/probe steps — just pair + add — so
                 // the Garmin step list would be misleading.
                 (state.addingIntegration == DeviceIntegration.wearos
@@ -506,7 +520,7 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
               : () => Navigator.of(context).pop(),
           child: Text(l10n.actionCancel),
         ),
-        if (state.isAddingWatch)
+        if (state.isAddingGfdiDevice)
           TextButton(
             onPressed: state.isOnboardingWatch
                 ? null

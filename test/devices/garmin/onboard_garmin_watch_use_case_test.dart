@@ -89,6 +89,26 @@ void main() {
     expect(outcome.associated, isTrue);
   });
 
+  test('registers an Edge as a bike computer with no capabilities', () async {
+    await setUp0();
+
+    final outcome = await useCase(
+      _watch,
+      displayName: 'Edge 840',
+      kind: BleDeviceKind.bikeComputer,
+    );
+
+    expect(outcome, isA<GarminOnboardSucceeded>());
+    final registered = (outcome as GarminOnboardSucceeded).device;
+    expect(registered.kind, BleDeviceKind.bikeComputer);
+    expect(registered.isBikeComputer, isTrue);
+    expect(registered.isWatch, isFalse);
+    expect(registered.isGarminGfdi, isTrue);
+    // Live capabilities are opted in later from the device card, so it starts
+    // capability-less and out of the recording coordinator's assignment.
+    expect(registered.capabilities, isEmpty);
+  });
+
   test('a registered watch never takes part in capability assignment', () async {
     await setUp0();
     // A real sensor owning heart rate, so the assignment map is not empty for

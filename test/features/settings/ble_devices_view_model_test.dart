@@ -93,6 +93,15 @@ BleDiscoveredDevice _watch() => const BleDiscoveredDevice(
       advertisesSyncService: true,
     );
 
+/// A Garmin Edge bike computer — GFDI like a watch, but its own kind.
+BleDiscoveredDevice _bikeComputer() => const BleDiscoveredDevice(
+      address: 'E0:48:24:D5:F7:20',
+      name: 'Edge 840',
+      rssi: -55,
+      suggestedCapabilities: {},
+      advertisesSyncService: true,
+    );
+
 void main() {
   late BleDeviceRepositoryImpl repo;
   late _FakeCoordinator coordinator;
@@ -357,7 +366,7 @@ void main() {
 
       await notifier().selectDiscoveredDevice(_watch());
 
-      expect(state().isAddingWatch, isTrue);
+      expect(state().isAddingGfdiDevice, isTrue);
       expect(state().isDiscoveringCapabilities, isFalse);
       expect(state().addCapabilities, isEmpty);
       expect(state().capabilityConflicts, isEmpty);
@@ -370,8 +379,20 @@ void main() {
 
       await notifier().selectDiscoveredDevice(_discovered());
 
-      expect(state().isAddingWatch, isFalse);
+      expect(state().isAddingGfdiDevice, isFalse);
       expect(state().addCapabilities, {BleSensorCapability.heartRate});
+    });
+
+    test('selecting an Edge skips the probe like a watch', () async {
+      await setUp0();
+      coordinator.discoverResult = {BleSensorCapability.heartRate};
+
+      await notifier().selectDiscoveredDevice(_bikeComputer());
+
+      expect(state().isAddingGfdiDevice, isTrue);
+      expect(state().isDiscoveringCapabilities, isFalse);
+      expect(state().addCapabilities, isEmpty);
+      expect(state().addDisplayName, 'Edge 840');
     });
 
     test('onboarding registers the watch and closes the sheet', () async {
@@ -385,6 +406,19 @@ void main() {
       expect(state().isOnboardingWatch, isFalse);
       expect(state().onboardStep, isNull);
       expect(state().showAddFlow, isFalse);
+    });
+
+    test('onboarding an Edge registers it as a bike computer', () async {
+      await setUp0();
+      await notifier().selectDiscoveredDevice(_bikeComputer());
+
+      expect(await notifier().onboardSelectedWatch(), isTrue);
+
+      expect(repo.devices, hasLength(1));
+      expect(repo.devices.single.kind, BleDeviceKind.bikeComputer);
+      expect(repo.devices.single.isBikeComputer, isTrue);
+      expect(repo.devices.single.isGarminGfdi, isTrue);
+      expect(repo.devices.single.capabilities, isEmpty);
     });
 
     test('a refused pairing keeps the sheet open and explains why', () async {

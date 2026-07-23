@@ -50,7 +50,56 @@ void main() {
       );
       expect(sensor.isGarminWatch, isFalse);
       expect(sensor.isWearosWatch, isFalse);
+      expect(sensor.isBikeComputer, isFalse);
+      expect(sensor.isGarminGfdi, isFalse);
+      expect(sensor.isLiveSensorCapable, isTrue);
     });
+
+    test('an Edge bike computer: GFDI + live-sensor, but never a watch', () {
+      final edge = BleSensorDevice(
+        id: 'e',
+        displayName: 'Edge 840',
+        address: 'CC',
+        bluetoothName: 'Edge 840',
+        capabilities: const {},
+        enabled: true,
+        wheelCircumferenceMm: null,
+        addedAt: DateTime.utc(2026),
+        kind: BleDeviceKind.bikeComputer,
+        integration: DeviceIntegration.garmin,
+      );
+      expect(edge.isBikeComputer, isTrue);
+      expect(edge.isGarminGfdi, isTrue, reason: 'pulls FIT files over GFDI');
+      expect(edge.isLiveSensorCapable, isTrue, reason: 'can broadcast live');
+      expect(edge.isWatch, isFalse);
+      expect(edge.isGarminWatch, isFalse);
+      expect(edge.isWearosWatch, isFalse);
+    });
+
+    test('a watch is GFDI but never live-sensor-capable', () {
+      final w = watch(integration: DeviceIntegration.garmin);
+      expect(w.isGarminGfdi, isTrue);
+      expect(w.isLiveSensorCapable, isFalse);
+    });
+  });
+
+  test('a bike computer survives a persistence round-trip', () async {
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = BleDeviceRepositoryImpl(prefs);
+    repo.addDevice(
+      displayName: 'Edge 840',
+      address: 'E0:48:24:D5:F7:20',
+      bluetoothName: 'Edge 840',
+      capabilities: const {},
+      kind: BleDeviceKind.bikeComputer,
+      integration: DeviceIntegration.garmin,
+    );
+
+    final reloaded = BleDeviceRepositoryImpl(prefs).devices.single;
+    expect(reloaded.kind, BleDeviceKind.bikeComputer);
+    expect(reloaded.isBikeComputer, isTrue);
+    expect(reloaded.isGarminGfdi, isTrue);
   });
 
   test('the integration survives a persistence round-trip', () async {

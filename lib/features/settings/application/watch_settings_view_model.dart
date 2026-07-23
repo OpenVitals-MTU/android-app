@@ -83,8 +83,8 @@ final watchSettingsLinkProvider =
         .read(readPairedBleDevicesUseCaseProvider)()
         .where((d) => d.id == deviceId)
         .firstOrNull;
-    if (device == null || !device.isWatch) {
-      throw StateError('Not a paired watch: $deviceId');
+    if (device == null || !device.isGarminGfdi) {
+      throw StateError('Not a paired Garmin device: $deviceId');
     }
     final phone = ref.read(phoneIdentityProvider);
     final link = await GarminSettingsLink.open(
