@@ -2,7 +2,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../../../domain/model/garmin_transport.dart';
 import '../../../../domain/port/garmin_transport_probe.dart';
-import '../ble/ble_uuids.dart';
+import 'garmin_uuids.dart';
 import 'garmin_log.dart';
 
 /// [GarminTransportProbe] over `flutter_blue_plus`.
@@ -104,8 +104,8 @@ class GarminGattProbe implements GarminTransportProbe {
       }
     }
 
-    if (characteristics.contains(BleUuids.garminGfdiSendV1) &&
-        characteristics.contains(BleUuids.garminGfdiReceiveV1)) {
+    if (characteristics.contains(GarminUuids.gfdiSendV1) &&
+        characteristics.contains(GarminUuids.gfdiReceiveV1)) {
       return GarminTransportVariant.v1;
     }
 

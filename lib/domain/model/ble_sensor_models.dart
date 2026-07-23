@@ -1,7 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'garmin_device_names.dart';
-
 part 'ble_sensor_models.freezed.dart';
 
 /// What a registered Bluetooth device IS, which decides how the app talks to it.
@@ -314,17 +312,14 @@ abstract class BleDiscoveredDevice with _$BleDiscoveredDevice {
     required int? rssi,
     required Set<BleSensorCapability> suggestedCapabilities,
 
-    /// The advertisement carried Garmin's member service UUID (`0xFE1F`). This
-    /// is the authoritative signal — [isGarminSyncDeviceName] is the fallback
-    /// for a watch that advertises a name but not the service.
+    /// The advertisement carried Garmin's member service UUID (`0xFE1F`) — the
+    /// scanner's signal that this is a sync-watch to onboard rather than a live
+    /// sensor. Garmin is the only such device today; the verdict itself lives in
+    /// `isGarminSyncDevice` (garmin_device_names.dart), so this generic model
+    /// holds the evidence, not the classification.
     ///
     /// Deliberately NOT the GFDI UUID: that is a GATT service, invisible until
     /// the device is connected, so no advertisement ever carries it.
     @Default(false) bool advertisesGarminService,
   }) = _BleDiscoveredDevice;
-
-  /// True when this is a Garmin device to onboard as a [BleDeviceKind.watch]
-  /// (pull FIT files) rather than as a live-streaming sensor.
-  bool get isGarminSyncDevice =>
-      advertisesGarminService || isGarminSyncDeviceName(name);
 }

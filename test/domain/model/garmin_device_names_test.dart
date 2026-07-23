@@ -57,19 +57,19 @@ void main() {
     });
   });
 
-  group('BleDiscoveredDevice.isGarminSyncDevice', () {
+  group('isGarminSyncDevice', () {
     test('the advertised Garmin member service settles it even with no name',
         () {
-      expect(_discovered(advertisesGarminService: true).isGarminSyncDevice,
+      expect(isGarminSyncDevice(_discovered(advertisesGarminService: true)),
           isTrue);
     });
 
     test('falls back to the name when the service was not advertised', () {
-      expect(_discovered(name: 'vívoactive 5').isGarminSyncDevice, isTrue);
+      expect(isGarminSyncDevice(_discovered(name: 'vívoactive 5')), isTrue);
     });
 
     test('a nameless, serviceless advertisement is not a watch', () {
-      expect(_discovered().isGarminSyncDevice, isFalse);
+      expect(isGarminSyncDevice(_discovered()), isFalse);
     });
   });
 }

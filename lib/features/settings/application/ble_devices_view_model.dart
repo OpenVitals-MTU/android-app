@@ -6,6 +6,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../data/repository/contract/ble_sensor_repository.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
+import '../../../domain/model/garmin_device_names.dart';
 import '../../../domain/model/garmin_transport.dart';
 import '../../../domain/port/watch_pairing_port.dart';
 import '../../../domain/usecase/edit_ble_device_registry_use_case.dart';
@@ -76,7 +77,10 @@ abstract class BleDevicesUiState with _$BleDevicesUiState {
 
   /// True while the add sheet is showing a watch rather than a sensor — the two
   /// share the sheet but ask completely different questions.
-  bool get isAddingWatch => selectedDevice?.isGarminSyncDevice ?? false;
+  bool get isAddingWatch {
+    final device = selectedDevice;
+    return device != null && isGarminSyncDevice(device);
+  }
 }
 
 /// Riverpod port of the Kotlin `BleDevicesViewModel`.
@@ -185,7 +189,7 @@ class BleDevicesViewModel extends Notifier<BleDevicesUiState> {
     // A watch answers a different question. It streams nothing live, so probing
     // it for capabilities would connect, find no standard service and report
     // nothing — the sheet asks the user to bond it instead.
-    if (device.isGarminSyncDevice) {
+    if (isGarminSyncDevice(device)) {
       _setLocal(_local.copyWith(
         selectedDevice: device,
         addDisplayName: device.name ?? device.address,

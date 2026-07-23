@@ -17,6 +17,8 @@
 /// devices", whose advertisement the scan filter never had to match.
 library;
 
+import 'ble_sensor_models.dart';
+
 /// Product families whose devices speak GFDI and hold FIT files.
 ///
 /// Deliberately absent: `HRM*` (HRM 200, HRMPro+, HRM600). Those are chest
@@ -63,3 +65,14 @@ bool isGarminSyncDeviceName(String? name) {
   if (trimmed.isEmpty) return false;
   return _garminFamilies.any((pattern) => pattern.hasMatch(trimmed));
 }
+
+/// True when [device] is a Garmin device to onboard as a [BleDeviceKind.watch]
+/// (pull FIT files) rather than as a live-streaming sensor.
+///
+/// The advertised member service ([BleDiscoveredDevice.advertisesGarminService])
+/// is the authoritative signal; [isGarminSyncDeviceName] is the fallback for a
+/// watch found via "Show all devices", whose advertisement the scan filter never
+/// had to match. Lives here, not on the shared [BleDiscoveredDevice], so the
+/// generic discovery model carries no Garmin classification knowledge.
+bool isGarminSyncDevice(BleDiscoveredDevice device) =>
+    device.advertisesGarminService || isGarminSyncDeviceName(device.name);

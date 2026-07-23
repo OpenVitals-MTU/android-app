@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-import '../ble/ble_uuids.dart';
+import 'garmin_uuids.dart';
 import 'garmin_gfdi_frame.dart';
 import 'garmin_log.dart';
 import 'garmin_ml_transport.dart';
@@ -165,12 +165,12 @@ class GarminBleTransport {
         for (final characteristic in service.characteristics)
           characteristic.uuid.str128: characteristic,
     };
-    for (var handle = BleUuids.garminMlFirstReceiveHandle;
-        handle <= BleUuids.garminMlLastReceiveHandle;
+    for (var handle = GarminUuids.mlFirstReceiveHandle;
+        handle <= GarminUuids.mlLastReceiveHandle;
         handle++) {
-      final receive = byUuid[BleUuids.garminUuidForHandle(handle)];
-      final send = byUuid[BleUuids.garminUuidForHandle(
-        handle + BleUuids.garminMlSendHandleOffset,
+      final receive = byUuid[GarminUuids.uuidForHandle(handle)];
+      final send = byUuid[GarminUuids.uuidForHandle(
+        handle + GarminUuids.mlSendHandleOffset,
       )];
       if (receive != null && send != null) return (receive, send);
     }

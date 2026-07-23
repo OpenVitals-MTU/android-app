@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/data/source/sensors/ble/ble_uuids.dart';
+import 'package:openvitals/data/source/sensors/garmin/garmin_uuids.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
+import 'package:openvitals/domain/model/garmin_device_names.dart';
 
 void main() {
   group('the Garmin scan filter', () {
@@ -17,7 +19,7 @@ void main() {
       expect(BleUuids.scanServiceUuids, contains(BleUuids.garminMemberService));
       expect(
         BleUuids.scanServiceUuids,
-        isNot(contains(BleUuids.garminGfdiServiceV1)),
+        isNot(contains(GarminUuids.gfdiServiceV1)),
         reason: 'a scan filter on a connect-only GATT service hides every '
             'Garmin watch from discovery',
       );
@@ -54,7 +56,7 @@ void main() {
         advertisesGarminService: true,
       );
 
-      expect(device.isGarminSyncDevice, isTrue);
+      expect(isGarminSyncDevice(device), isTrue);
     });
 
     test('a watch found via "Show all devices" is caught by its name', () {
@@ -67,7 +69,7 @@ void main() {
         suggestedCapabilities: {},
       );
 
-      expect(device.isGarminSyncDevice, isTrue);
+      expect(isGarminSyncDevice(device), isTrue);
     });
   });
 }
