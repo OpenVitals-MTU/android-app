@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/source/sensors/garmin/garmin_settings_screen.dart';
+import '../../../data/source/sensors/garmin/garmin_settings_model.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/components/screen_scroll_padding.dart';

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/data/source/sensors/garmin/garmin_protobuf.dart';
-import 'package:openvitals/data/source/sensors/garmin/garmin_settings_screen.dart';
+import 'package:openvitals/data/source/sensors/garmin/garmin_settings_model.dart';
 import 'package:openvitals/data/source/sensors/garmin/garmin_settings_service.dart';
 
 /// Rebuilds the reply the watch sends, so the parser is exercised against the

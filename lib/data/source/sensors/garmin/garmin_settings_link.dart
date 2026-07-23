@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'garmin_ble_transport.dart';
 import 'garmin_log.dart';
 import 'garmin_session.dart';
-import 'garmin_settings_screen.dart';
+import 'garmin_settings_model.dart';
 import 'garmin_settings_service.dart';
 
 /// An OPEN conversation with the watch's settings service.
