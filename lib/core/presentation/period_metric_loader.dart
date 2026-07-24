@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/providers.dart';
@@ -26,7 +28,8 @@ import 'screen_error.dart';
 /// no shared `copyWith`, so [onLoadStart]/[onLoadSuccess]/[onLoadError] are the
 /// hooks that build the next `S`.
 mixin PeriodMetricLoader<S, V> on Notifier<S> {
-  int _generation = 0;
+  (PeriodSelection, RefreshMode)? _pending;
+  Completer<void>? _drain;
 
   /// The selection currently reflected in [state] (its `selectedRange` /
   /// `selectedDate`). Used to tell a navigation from a same-window refresh.
@@ -55,33 +58,65 @@ mixin PeriodMetricLoader<S, V> on Notifier<S> {
   String get loadErrorFallback => 'Unable to load data.';
 
   /// The single load path; each view-model's public `load(...)` delegates here.
+  ///
+  /// Loads are single-flight with latest-wins coalescing. A Health Connect
+  /// read cannot be cancelled once issued, and the slow ones (a year's
+  /// calories aggregate) run 20-50s on-device — so a fast back-navigation that
+  /// fired a fetch per intermediate page queued minutes of dead reads behind
+  /// the native concurrency cap, pinning the screen on its sync banner. While
+  /// a fetch is on the wire only the newest parked selection survives; a
+  /// superseded fetch's result is dropped when it lands. The returned future
+  /// completes when the queue drains, so a pull-to-refresh spinner still
+  /// tracks real work.
   Future<void> runLoad(
     PeriodSelection selection, {
     RefreshMode refreshMode = RefreshMode.normal,
-  }) async {
-    final generation = ++_generation;
+  }) {
     final current = selectionOf(state);
     final navigated = selection.selectedRange != current.selectedRange ||
         selection.selectedDate != current.selectedDate;
 
+    // The UI tracks every request immediately (title, skeleton) even when the
+    // fetch itself is parked behind an in-flight one.
     state = onLoadStart(state, selection, navigated: navigated);
 
-    final query = PeriodLoadQuery(
-      range: selection.selectedRange,
-      anchorDate: selection.selectedDate,
-      weekPeriodMode: ref.read(preferencesRepositoryProvider).weekPeriodMode,
-    );
+    _pending = (selection, refreshMode);
+    final drain = _drain;
+    if (drain != null) return drain.future;
 
-    final result = await fetch(query, refreshMode);
-    if (!ref.mounted || generation != _generation) return;
-    switch (result) {
-      case Ok(:final value):
-        state = onLoadSuccess(state, value, query);
-      case Err(:final failure):
-        state = onLoadError(
-          state,
-          failure.toScreenError(fallback: loadErrorFallback),
-        );
+    final started = _drain = Completer<void>();
+    _drainQueue().then((_) {
+      _drain = null;
+      started.complete();
+    }, onError: (Object error, StackTrace stack) {
+      _drain = null;
+      started.completeError(error, stack);
+    });
+    return started.future;
+  }
+
+  Future<void> _drainQueue() async {
+    while (_pending != null && ref.mounted) {
+      final (selection, refreshMode) = _pending!;
+      _pending = null;
+      final query = PeriodLoadQuery(
+        range: selection.selectedRange,
+        anchorDate: selection.selectedDate,
+        weekPeriodMode: ref.read(preferencesRepositoryProvider).weekPeriodMode,
+      );
+      final result = await fetch(query, refreshMode);
+      if (!ref.mounted) return;
+      // Superseded while on the wire: drop this result, loop to the newest.
+      if (_pending != null) continue;
+      switch (result) {
+        case Ok(:final value):
+          state = onLoadSuccess(state, value, query);
+        case Err(:final failure):
+          state = onLoadError(
+            state,
+            failure.toScreenError(fallback: loadErrorFallback),
+          );
+      }
     }
   }
 }

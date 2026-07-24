@@ -73,17 +73,33 @@ void main() {
     expect(state().isLoading, isTrue);
   });
 
-  test('the staleness guard drops a superseded load', () async {
+  test('rapid navigations coalesce: one fetch in flight, latest wins',
+      () async {
     final vm = await boot();
 
     final first = vm.load(PeriodSelection(TimeRange.week, jan1));
+    // Fired while the first fetch is on the wire: parked, never fetched. A
+    // Health Connect read cannot be cancelled, so every skipped fetch here is
+    // a slow read that never hits the native queue.
     final second = vm.load(PeriodSelection(TimeRange.month, jan1));
-    // Newest completes first, then the stale one — which must be ignored.
-    vm.gates[1].complete(const Ok(2));
-    vm.gates[0].complete(const Ok(1));
-    await Future.wait([first, second]);
+    final third = vm.load(PeriodSelection(TimeRange.year, jan1));
+    expect(vm.gates, hasLength(1));
+    // The UI still tracks the newest request immediately.
+    expect(state().range, TimeRange.year);
+    expect(state().isLoading, isTrue);
 
-    expect(state().display, 2);
+    // The superseded first result is dropped; completing it dispatches ONE
+    // fetch for the newest selection (month never ran).
+    vm.gates.removeLast().complete(const Ok(1));
+    await Future<void>.delayed(Duration.zero);
+    expect(state().display, isNull);
+    expect(vm.gates, hasLength(1));
+
+    vm.gates.removeLast().complete(const Ok(3));
+    await Future.wait([first, second, third]);
+    expect(state().display, 3);
+    expect(state().range, TimeRange.year);
+    expect(state().isLoading, isFalse);
   });
 
   test('an error sets the error and clears loading', () async {
