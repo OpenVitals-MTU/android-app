@@ -71,6 +71,11 @@ class CaloriesHistorySyncService {
   }
 
   Future<void> _fullSync() async {
+    // A full sync is the once-per-version-bump moment: rows written under a
+    // previous cache format key would otherwise sit orphaned forever.
+    for (final legacy in legacyCaloriesBurnedCacheMetrics) {
+      await _cacheDao.purgeMetric(legacy);
+    }
     final today = LocalDate.fromDateTime(_clock());
     final earliest = today.plusDays(-_historyLookbackDays);
     // Register the changes token BEFORE the (slow) history read, so writes that

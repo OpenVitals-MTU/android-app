@@ -344,6 +344,17 @@ class VitalsDailyCacheDao extends DatabaseAccessor<OpenVitalsDatabase>
     });
   }
 
+  /// Drop a metric's cached days and its sync cursor — retiring a legacy key
+  /// after a cache-format version bump.
+  Future<void> purgeMetric(String metric) async {
+    await transaction(() async {
+      await (delete(vitalsDailyAggregates)..where((a) => a.metric.equals(metric)))
+          .go();
+      await (delete(vitalsSyncCursors)..where((c) => c.metric.equals(metric)))
+          .go();
+    });
+  }
+
   Future<VitalsSyncCursor?> cursor(String metric) {
     return (select(vitalsSyncCursors)
           ..where((c) => c.metric.equals(metric))
@@ -389,7 +400,17 @@ class VitalsDailyCacheDao extends DatabaseAccessor<OpenVitalsDatabase>
 /// day value is a kcal SUM, stored as [VitalsDailyAggregates.valueSum] with a
 /// [VitalsDailyAggregates.sampleCount] of 1 (so valueSum/sampleCount is the day
 /// total). See CaloriesHistorySyncService.
-const String caloriesBurnedCacheMetric = 'totalCaloriesBurned';
+///
+/// The `.v2` suffix is the cache format version: bumping it makes the cursor
+/// lookup miss, which forces a full rebuild on the next sync. v2 = buckets
+/// dated by midpoint (DST) and Health Connect's synthesized basal baseline
+/// filtered out — rows written under v1 contain both artifacts.
+const String caloriesBurnedCacheMetric = 'totalCaloriesBurned.v2';
+
+/// Keys the calories cache wrote under before [caloriesBurnedCacheMetric]'s
+/// current version. A full sync purges them so a version bump does not leave
+/// orphaned rows (and a stale cursor) behind.
+const List<String> legacyCaloriesBurnedCacheMetrics = ['totalCaloriesBurned'];
 
 /// How many days back the calories-burned cache is kept fresh. A requested range
 /// that starts before this window is not covered by the cache, so it falls back

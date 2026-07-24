@@ -72,12 +72,22 @@ internal class NutritionHealthReader(
           timeRangeSlicer = Duration.ofDays(1),
         ),
       ).map { bucket ->
-        val totalCaloriesKcal = if (includeCalories) {
+        // Health Connect synthesizes a basal baseline for TotalCaloriesBurned
+        // even over ranges without a single record — a never-tracked year still
+        // aggregates to ~BMR kcal on every day. A bucket no record contributed
+        // to reports empty dataOrigins; treat it as no data, not as a burn.
+        // Origins cover the whole request, so the check is only sound while the
+        // request carries calorie metrics alone (every current caller passes
+        // includeHydration = false); with hydration in the same request a
+        // hydration-only day would defeat it, so it is skipped there.
+        val hasCalorieRecords =
+          includeHydration || bucket.result.dataOrigins.isNotEmpty()
+        val totalCaloriesKcal = if (includeCalories && hasCalorieRecords) {
           bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
         } else {
           null
         }
-        val activeCaloriesKcal = if (includeCalories && includeEstimatedCalories) {
+        val activeCaloriesKcal = if (includeCalories && includeEstimatedCalories && hasCalorieRecords) {
           bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
         } else {
           null
