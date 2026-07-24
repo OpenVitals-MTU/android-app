@@ -2470,5 +2470,9 @@
                 "type": "String"
             }
         }
-    }
+    },
+    "homeWidgetExactAlarmTitle": "Mantén los widgets actualizados",
+    "homeWidgetExactAlarmBody": "Los widgets se actualizan en segundo plano. Permite que las \"Alarmas y recordatorios\" se mantengan programadas incluso cuando el teléfono esté en reposo.",
+    "homeWidgetExactAlarmAllow": "Permitir",
+    "homeWidgetExactAlarmNotNow": "Ahora no"
 }
