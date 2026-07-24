@@ -1,0 +1,1 @@
+Der Routen-Export ist zurueck: oeffne die Route eines Trainings in einer Karten-App oder speichere sie als GPX oder KMZ. Offline-Karten frieren den Aktivitaetsbildschirm nicht mehr ein - Mapsforge-Kacheln werden im Hintergrund gezeichnet, statt die App bis zum Abbruch zu blockieren - und PMTiles-Pakete zeichnen ihre Basiskarte wieder statt eines leeren Hintergrunds.

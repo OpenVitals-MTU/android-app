@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.3.2 - 2026-07-25
+
+### English
+
+- **The route export is back.** An activity's route card can open the route in a map app, save it as GPX, or save it as KMZ - as the pre-Flutter app could. The save goes through the system dialog, so you pick where the file lands.
+- **Offline maps stop freezing the activity screen.** Mapsforge tiles are read and prepared in the background, so a big pack no longer holds the screen for seconds - or gets the app killed as unresponsive, which is what the crashes on the activity screen were.
+- **PMTiles packs draw their base map again** instead of leaving the plain background behind the route.
+
+### Espanol
+
+- **La exportacion de rutas ha vuelto.** La tarjeta de ruta de una actividad puede abrir la ruta en una app de mapas, guardarla como GPX o guardarla como KMZ - como podia la app anterior a Flutter. El guardado pasa por el dialogo del sistema, asi que eliges donde queda el archivo.
+- **Los mapas sin conexion dejan de congelar la pantalla de actividad.** Las teselas de Mapsforge se leen y preparan en segundo plano, asi que un paquete grande ya no retiene la pantalla varios segundos - ni hace que Android cierre la app por no responder, que era lo que causaba los cierres en esa pantalla.
+- **Los paquetes PMTiles vuelven a dibujar su mapa base** en lugar de dejar el fondo liso detras de la ruta.
+
+### Deutsch
+
+- **Der Routen-Export ist zurueck.** Die Routen-Karte einer Aktivitaet kann die Route in einer Karten-App oeffnen, als GPX speichern oder als KMZ speichern - wie es die App vor Flutter konnte. Das Speichern laeuft ueber den System-Dialog, du waehlst also selbst, wo die Datei landet.
+- **Offline-Karten frieren den Aktivitaetsbildschirm nicht mehr ein.** Mapsforge-Kacheln werden im Hintergrund gelesen und aufbereitet, sodass ein grosses Paket den Bildschirm nicht mehr sekundenlang festhaelt - und die App nicht mehr als "reagiert nicht" beendet wird, was hinter den Abstuerzen auf diesem Bildschirm steckte.
+- **PMTiles-Pakete zeichnen ihre Basiskarte wieder,** statt nur den leeren Hintergrund hinter der Route zu lassen.
+
+### Italiano
+
+- **L'esportazione del percorso e tornata.** La scheda del percorso di un'attivita puo aprire il percorso in un'app di mappe, salvarlo come GPX o salvarlo come KMZ - come poteva l'app prima di Flutter. Il salvataggio passa dal dialogo di sistema, quindi scegli tu dove finisce il file.
+- **Le mappe offline smettono di congelare la schermata dell'attivita.** Le tessere Mapsforge vengono lette e preparate in background, cosi un pacchetto grande non blocca piu lo schermo per secondi - e Android non chiude piu l'app perche non risponde, che era la causa dei crash su quella schermata.
+- **I pacchetti PMTiles disegnano di nuovo la loro mappa di base** invece di lasciare lo sfondo liscio dietro il percorso.
+
+### Eesti
+
+- **Raja eksport on tagasi.** Tegevuse rajakaart saab raja avada kaardirakenduses, salvestada GPX-ina voi KMZ-ina - nagu suutis Flutteri-eelne rakendus. Salvestamine kaib susteemi dialoogi kaudu, nii et valid ise, kuhu fail laheb.
+- **Vallasrezhiimi kaardid ei kulmuta enam tegevuse ekraani.** Mapsforge'i paanid loetakse ja valmistatakse ette taustal, nii et suur pakett ei hoia ekraani enam sekundeid kinni - ega lase Androidil rakendust "ei vasta" parast sulgeda, mis oligi selle ekraani krahhide pohjus.
+- **PMTiles-paketid joonistavad oma pohikaardi taas** selle asemel, et jatta raja taha vaid tuhi taust.
+
 ## 2.3.1 - 2026-07-24
 
 ### English

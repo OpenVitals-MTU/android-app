@@ -1,0 +1,1 @@
+The activity route export is back: open a workout's route in a map app, save it as GPX, or save it as KMZ. Offline maps stop freezing the activity screen - Mapsforge tiles now render in the background instead of stalling the app until Android kills it - and PMTiles packs draw their base map again instead of a blank background.

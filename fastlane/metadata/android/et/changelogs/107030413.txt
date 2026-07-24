@@ -1,0 +1,1 @@
+Raja eksport on tagasi: ava treeningu rada kaardirakenduses voi salvesta see GPX- voi KMZ-failina. Vallasrezhiimi kaardid ei kulmuta enam tegevuse ekraani - Mapsforge'i paanid joonistuvad taustal, mitte ei blokeeri rakendust, kuni Android selle sulgeb - ja PMTiles-paketid joonistavad taas oma pohikaardi, mitte tuhja tausta.

@@ -1,0 +1,1 @@
+La exportacion de rutas ha vuelto: abre la ruta de un entrenamiento en una app de mapas, o guardala como GPX o KMZ. Los mapas sin conexion dejan de congelar la pantalla de actividad - las teselas de Mapsforge se dibujan en segundo plano en vez de bloquear la app hasta que Android la cierra - y los paquetes PMTiles vuelven a dibujar su mapa base en lugar de un fondo vacio.

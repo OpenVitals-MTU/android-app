@@ -1,0 +1,1 @@
+L'esportazione del percorso e tornata: apri il percorso di un allenamento in un'app di mappe, o salvalo come GPX o KMZ. Le mappe offline smettono di congelare la schermata dell'attivita - le tessere Mapsforge si disegnano in background invece di bloccare l'app finche Android non la chiude - e i pacchetti PMTiles disegnano di nuovo la mappa di base invece di uno sfondo vuoto.
