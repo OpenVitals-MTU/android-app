@@ -37,6 +37,7 @@ internal class HydrationHealthReader(
 
   suspend fun readDailyHydration(start: Instant, end: Instant): List<DailyHydrationMsg> =
     support.withLogging("readDailyHydration[$start..$end]", emptyList()) {
+      val zone = ZoneId.systemDefault()
       support.client().aggregateGroupByDuration(
         AggregateGroupByDurationRequest(
           metrics = setOf(HydrationRecord.VOLUME_TOTAL),
@@ -45,7 +46,7 @@ internal class HydrationHealthReader(
         ),
       ).map { bucket ->
         DailyHydrationMsg(
-          dateEpochMs = bucket.startTime.toEpochMilli(),
+          dateEpochMs = dayBucketDateEpochMs(bucket.startTime, bucket.endTime, zone),
           liters = bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0,
         )
       }

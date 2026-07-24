@@ -83,6 +83,30 @@ void main() {
     expect((await dao.cursor(metric))!.changesToken, 'token-1');
   });
 
+  test('a full sync purges rows and cursor left under the legacy cache key',
+      () async {
+    // Rows written before the cache-format bump (start-dated DST buckets,
+    // unfiltered basal baseline) sit under the old key; the v2 cursor lookup
+    // misses, so the first sync full-rebuilds — and must take the orphans and
+    // their stale cursor with it.
+    const legacy = 'totalCaloriesBurned';
+    await dao.upsertDay(
+        metric: legacy, epochDay: today.epochDay, valueSum: 1564, sampleCount: 1);
+    await dao.writeFullSync(legacy, 'legacy-token', 0);
+    source.kcalByDay[today.epochDay] = 2400;
+
+    await service().syncAll();
+
+    expect(
+      await dao.aggregatesBetween(legacy, today.epochDay - 1, today.epochDay + 1),
+      isEmpty,
+    );
+    expect(await dao.cursor(legacy), isNull);
+    final rows =
+        await dao.aggregatesBetween(metric, today.epochDay - 1, today.epochDay + 1);
+    expect(rows.single.valueSum, 2400);
+  });
+
   test('a zero-burn day is not stored', () async {
     source.kcalByDay[today.epochDay] = 0;
 

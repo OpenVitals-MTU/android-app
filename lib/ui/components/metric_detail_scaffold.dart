@@ -114,6 +114,19 @@ class _MetricDetailScaffoldState extends ConsumerState<MetricDetailScaffold> {
     });
   }
 
+  @override
+  void didUpdateWidget(MetricDetailScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.weekPeriodMode != widget.weekPeriodMode) {
+      // The mode reshapes the period around the unchanged anchor (calendar year
+      // vs rolling 365 days), so the driver must page with the new mode and the
+      // host must reload: keeping the old data under a re-derived period showed
+      // a rolling window's days scattered over a calendar-year grid.
+      _driver.weekPeriodMode = widget.weekPeriodMode;
+      widget.onSelectionChanged?.call(_selection);
+    }
+  }
+
   void _apply(PeriodSelection? next) {
     if (next == null) return; // forward-capped no-op
     setState(() => _selection = next);

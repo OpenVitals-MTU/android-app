@@ -332,16 +332,22 @@ Duration? _zoneOffset(int? seconds) =>
       for (final bucket in buckets) {
         final map = jsonDecode(bucket) as Map<String, dynamic>;
         final startMs = (map['startEpochMs'] as num).toInt();
+        final endMs = (map['endEpochMs'] as num).toInt();
+        // Date each bucket by its midpoint, not its start: 24h slicing stays
+        // instant-aligned across DST transitions, so bucket boundaries drift
+        // off local midnight — dating by start put two buckets on the
+        // fall-back date and none on the spring-forward date. The midpoint
+        // always lands inside the one local day the bucket covers (mirrors
+        // the native readers' dayBucketDateEpochMs).
         final date = LocalDate.fromDateTime(
-          DateTime.fromMillisecondsSinceEpoch(startMs),
+          DateTime.fromMillisecondsSinceEpoch((startMs + endMs) ~/ 2),
         );
         final values = (map['values'] as Map).cast<String, dynamic>();
-        // The DST fall-back day is 25 local hours, so two absolute 24h buckets
-        // can map to the same LocalDate. Sum them per metric instead of letting
-        // the second overwrite the first (which silently dropped a near-full day
-        // of steps and shifted the rest of the chunk). Matches how
-        // CaloriesHistorySyncService._readDays and the heatmap already fold
-        // same-date values.
+        // Still sum same-date buckets instead of letting the second overwrite
+        // the first (which silently dropped a near-full day of steps): a
+        // drifted chunk can end in a clipped tail bucket sharing the last
+        // date. Matches how CaloriesHistorySyncService._readDays and the
+        // heatmap already fold same-date values.
         final dayValues = byDate.putIfAbsent(date, () => <String, double?>{});
         for (final entry in values.entries) {
           final incoming = (entry.value as num?)?.toDouble();
@@ -1086,9 +1092,9 @@ Duration? _zoneOffset(int? seconds) =>
     );
     // Native returns raw per-day aggregate buckets; fill the full range here so
     // days without hydration data still appear as 0 L (matches the reference).
-    // Sum same-date buckets: the DST fall-back day can yield two absolute 24h
-    // buckets on one LocalDate; a map literal would keep only the last and drop a
-    // day. Matches readDailySteps and the calories cache.
+    // Sum same-date buckets: native dates buckets by midpoint (no more DST
+    // duplicate pair), but a drifted chunk can still end in a clipped tail
+    // bucket on the last date. Matches readDailySteps and the calories cache.
     final byDay = <int, double>{};
     for (final m in msgs) {
       final epochDay = LocalDate.fromDateTime(_fromMs(m.dateEpochMs)).epochDay;

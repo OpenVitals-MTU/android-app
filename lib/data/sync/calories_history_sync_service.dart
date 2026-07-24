@@ -71,6 +71,11 @@ class CaloriesHistorySyncService {
   }
 
   Future<void> _fullSync() async {
+    // A full sync is the once-per-version-bump moment: rows written under a
+    // previous cache format key would otherwise sit orphaned forever.
+    for (final legacy in legacyCaloriesBurnedCacheMetrics) {
+      await _cacheDao.purgeMetric(legacy);
+    }
     final today = LocalDate.fromDateTime(_clock());
     final earliest = today.plusDays(-_historyLookbackDays);
     // Register the changes token BEFORE the (slow) history read, so writes that
@@ -157,11 +162,12 @@ class CaloriesHistorySyncService {
   /// screen's own read (`includeHydration: false`, recorded totals only), and
   /// keeps the cache lean by storing only days with a positive burn.
   ///
-  /// Values are summed per calendar day: Health Connect's `Duration.ofDays(1)`
-  /// slicing drifts across DST transitions, so it can hand back two 24h buckets
-  /// that map to the same local date. Summing them (a) avoids a duplicate
-  /// primary key that would abort the whole sync, and (b) matches how the live
-  /// heatmap already folds same-date values (`_valuesByDate`).
+  /// Values are summed per calendar day: the native read dates each 24h bucket
+  /// by its midpoint (so DST drift no longer doubles the fall-back date), but a
+  /// drifted window can still end in a clipped tail bucket on the same date.
+  /// Summing (a) avoids a duplicate primary key that would abort the whole
+  /// sync, and (b) matches how the live heatmap already folds same-date values
+  /// (`_valuesByDate`).
   Future<List<_CalorieDay>> _readDays(LocalDate start, LocalDate end) async {
     final nutrition = await _dataSource.readDailyNutrition(
       start,
