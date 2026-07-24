@@ -150,6 +150,11 @@ dependencies:
   # Gradle plugin and breaks this AGP 9 build (see package_info_plus above).
   # 12.0.2 is the newest release that still resolves against win32 ^5.5.3.
   share_plus: ^12.0.2
+  # "Open route in map app" on the activity detail: fires ACTION_VIEW for the
+  # exported GPX through the plugin's own FileProvider, the Kotlin
+  # `createActivityRouteViewIntent` port. share_plus cannot do this — it is
+  # ACTION_SEND only, which offers messengers instead of map apps.
+  open_filex: ^4.7.0
   # Picks INPUT files (offline map packs, Apple Health exports, FIT/GPX routes).
   #
   # NOT file_selector, which cannot do this job on Android at all: its

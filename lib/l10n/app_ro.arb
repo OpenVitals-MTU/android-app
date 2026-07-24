@@ -242,6 +242,13 @@
         "description": "Explains why peak < dose, which otherwise looks like a bug."
     },
     "activityEntrySubtitle": "Creează o sesiune de activitate Health Connect. Detaliile de traseu sau activitate importate sunt scrise numai atunci când salvezi.",
+    "activityRouteOpenInMap": "Deschide traseul în aplicația de hărți",
+    "activityRouteExportGpx": "Salvează GPX",
+    "activityRouteExportKmz": "Salvează KMZ",
+    "activityRouteExportSaved": "Traseu salvat.",
+    "activityRouteExportFailed": "Fișierul traseului nu a putut fi salvat.",
+    "activityRouteOpenChooserTitle": "Deschide traseul cu",
+    "activityRouteOpenFailed": "Nicio aplicație de hărți nu a putut deschide acest traseu.",
     "activityEntryPermissionNeeded": "Pentru rezumat, OpenVitals cere doar permisiuni de vizualizare. Pentru a adăuga activități, avem nevoie de permisiuni de scriere Health Connect pentru sesiuni, trasee, distanță, altitudine, calorii și valori înregistrate de senzori, cum ar fi ritmul cardiac; intrările pe banda de alergare solicită pași atunci când este necesar. OpenVitals nu va stoca aceste intrări; sunt salvate în Health Connect.",
     "activityEntrySourceBody": "Creează o activitate manual, utilizează un plan existent sau înregistrează o rută GPS.",
     "activityEntryCreateManual": "Creează manual",

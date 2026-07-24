@@ -1,7 +1,12 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
@@ -17,6 +22,7 @@ import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/activity_detail_display.dart';
 import '../application/activity_detail_view_model.dart';
+import '../export/activity_route_export.dart';
 import 'activity_heart_rate_chart_card.dart';
 import 'activity_heart_rate_recovery_card.dart';
 import 'activity_metric_relevance.dart';
@@ -183,7 +189,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
           if (workout.route.status == ExerciseRouteStatus.data &&
               workout.route.points.isNotEmpty)
             sectionPadded(_RouteMapCard(
-              route: workout.route,
+              workout: workout,
               distanceMeters: display.routeDistanceMeters,
             )),
           // Only a workout this app wrote can be edited or deleted; Health
@@ -503,12 +509,14 @@ class _SessionDetailsCard extends StatelessWidget {
 }
 
 /// The workout GPS route rendered on a [RouteMapView] (Kotlin `RouteCard` /
-/// `OfflineRouteMapOrPreview`). The online raster base map is the default;
-/// offline vector packs plug in inside [RouteMapView] (see its TODO).
+/// `OfflineRouteMapOrPreview`), with the route-export actions below the map:
+/// "Open route in map app" hands a GPX to whatever handles ACTION_VIEW, and
+/// "Save GPX" / "Save KMZ" write the route to a user-chosen destination —
+/// Kotlin's `openActivityRouteInMap` / `saveActivityRouteExport`.
 class _RouteMapCard extends StatelessWidget {
-  const _RouteMapCard({required this.route, required this.distanceMeters});
+  const _RouteMapCard({required this.workout, required this.distanceMeters});
 
-  final ExerciseRouteData route;
+  final ExerciseData workout;
 
   /// Summed at load time; this card only prints it.
   final double distanceMeters;
@@ -516,6 +524,7 @@ class _RouteMapCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return OpenVitalsCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -539,11 +548,123 @@ class _RouteMapCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            RouteMapView(points: route.points),
+            RouteMapView(points: workout.route.points),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _openRouteInMap(context),
+                icon: const Icon(Icons.map_outlined),
+                label: Text(l10n.activityRouteOpenInMap),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _saveRoute(context, ActivityRouteExportFormat.gpx),
+                    icon: const Icon(Icons.file_download_outlined),
+                    label: Text(l10n.activityRouteExportGpx),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _saveRoute(context, ActivityRouteExportFormat.kmz),
+                    icon: const Icon(Icons.file_download_outlined),
+                    label: Text(l10n.activityRouteExportKmz),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// Kotlin `saveActivityRouteExport` + the `CreateDocument` launcher: pick a
+  /// destination (pre-filled with the generated file name), write the bytes,
+  /// confirm with a snackbar. Cancelling the picker does nothing.
+  ///
+  /// file_picker, NOT file_selector: on Android only file_picker's `saveFile`
+  /// raises SAF's CREATE_DOCUMENT and writes the bytes through the returned
+  /// content URI — file_selector has no Android save picker at all
+  /// (`getSaveLocation` throws, see the diagnostics-log save fallback).
+  Future<void> _saveRoute(
+    BuildContext context,
+    ActivityRouteExportFormat format,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final points = sortedRoutePointsForExport(workout);
+      final savedPath = await FilePicker.platform.saveFile(
+        fileName: activityRouteExportFileName(workout, format),
+        bytes: buildActivityRouteExport(workout, points, format),
+      );
+      if (savedPath == null) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.activityRouteExportSaved)),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.activityRouteExportFailed)),
+      );
+    }
+  }
+
+  /// Kotlin `openActivityRouteInMap`: write a GPX into the app cache and fire
+  /// ACTION_VIEW at it (open_filex grants the URI through its FileProvider).
+  Future<void> _openRouteInMap(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final points = sortedRoutePointsForExport(workout);
+      final exportDir = Directory(
+        '${(await getTemporaryDirectory()).path}/route_exports',
+      );
+      await exportDir.create(recursive: true);
+      _deleteOldRouteExports(exportDir);
+      final file = File(
+        '${exportDir.path}/'
+        '${activityRouteExportFileName(workout, ActivityRouteExportFormat.gpx)}',
+      );
+      await file.writeAsBytes(
+        buildActivityRouteExport(workout, points, ActivityRouteExportFormat.gpx),
+        flush: true,
+      );
+      final result = await OpenFilex.open(
+        file.path,
+        type: ActivityRouteExportFormat.gpx.mimeType,
+      );
+      if (result.type != ResultType.done) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.activityRouteOpenFailed)),
+        );
+      }
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.activityRouteOpenFailed)),
+      );
+    }
+  }
+
+  /// Kotlin `File.deleteOldRouteExports`: the cache copies only exist for the
+  /// viewing app, so anything older than a day is dead weight.
+  void _deleteOldRouteExports(Directory exportDir) {
+    final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+    for (final entry in exportDir.listSync()) {
+      if (entry is! File) continue;
+      try {
+        if (entry.lastModifiedSync().isBefore(cutoff)) entry.deleteSync();
+      } on FileSystemException {
+        // A file vanishing mid-cleanup is fine.
+      }
+    }
   }
 }
 
