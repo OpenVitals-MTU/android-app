@@ -11,6 +11,10 @@ import 'package:openvitals/domain/insights/body_energy_timeline.dart';
 import 'package:openvitals/domain/model/dashboard_data.dart';
 import 'package:openvitals/domain/model/dashboard_query.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
+import 'package:openvitals/domain/model/heart_models.dart';
+import 'package:openvitals/domain/model/sleep_daily_summary.dart';
+import 'package:openvitals/domain/model/vitals_models.dart';
+import 'package:openvitals/domain/preferences/sleep_window.dart';
 import 'package:openvitals/domain/preferences/body_energy_calibration.dart';
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/data/repository/contract/caffeine_repository.dart';
@@ -80,6 +84,57 @@ Future<PreferencesRepository> _prefsWithCalibration(
     BodyEnergyCalibration(setupCompleted: setupCompleted),
   );
   return prefs;
+}
+
+/// A source serving overnight vitals stamped LAST NIGHT (23:00 the previous
+/// day), recording each requested window so tests can pin the night-window
+/// widening.
+class _OvernightVitalsSource extends HealthDataSource {
+  _OvernightVitalsSource(this._granted) {
+    cachedAvailability = HealthConnectAvailability.available;
+  }
+
+  final Set<String> _granted;
+  DateTime? hrvStart;
+  DateTime? restingHrStart;
+  DateTime? spO2Start;
+
+  DateTime get _lastNight {
+    final yesterday = LocalDate.now().minusDays(1);
+    return DateTime(yesterday.year, yesterday.month, yesterday.day, 23);
+  }
+
+  @override
+  Future<Set<String>> grantedPermissions() async => _granted;
+
+  @override
+  Future<List<HrvSample>> readHrvSamples(DateTime start, DateTime end) async {
+    hrvStart = start;
+    final time = _lastNight;
+    if (time.isBefore(start) || time.isAfter(end)) return const [];
+    return [HrvSample(time: time, rmssdMs: 42.0, source: 'watch')];
+  }
+
+  @override
+  Future<List<RestingHeartRateSample>> readRestingHeartRateSamples(
+    DateTime start,
+    DateTime end,
+  ) async {
+    restingHrStart = start;
+    final time = _lastNight;
+    if (time.isBefore(start) || time.isAfter(end)) return const [];
+    return [
+      RestingHeartRateSample(time: time, beatsPerMinute: 52, source: 'watch'),
+    ];
+  }
+
+  @override
+  Future<List<SpO2Entry>> readSpO2Entries(DateTime start, DateTime end) async {
+    spO2Start = start;
+    final time = _lastNight;
+    if (time.isBefore(start) || time.isAfter(end)) return const [];
+    return [SpO2Entry(time: time, percent: 96.0, source: 'watch')];
+  }
 }
 
 /// A [CaffeineRepository] returning canned entries; records whether it was
@@ -167,7 +222,11 @@ class _GatedSource extends HealthDataSource {
   @override
   Future<int?> readAvgHeartRate(LocalDate date) => _gated(1);
   @override
-  Future<int?> readRestingHeartRate(LocalDate date) => _gated(1);
+  Future<List<RestingHeartRateSample>> readRestingHeartRateSamples(
+    DateTime start,
+    DateTime end,
+  ) =>
+      _gated(const <RestingHeartRateSample>[]);
   @override
   Future<int> readMindfulnessMinutes(LocalDate date) => _gated(1);
 }
@@ -205,6 +264,43 @@ void main() {
       data.loadedMetrics,
       {DashboardMetric.steps, DashboardMetric.distance, DashboardMetric.hydration},
     );
+  });
+
+  test('overnight vitals are read from the night window, not the day', () async {
+    // Samples stamped 23:00 LAST NIGHT: a [00:00, 24:00) read misses them and
+    // the morning tiles sat empty until a fresh same-day sample landed. The
+    // reads widen back to the night-window start ((D-1) 18:00 by default), the
+    // same attribution the sleep tile uses.
+    final source = _OvernightVitalsSource({
+      HcPermissions.readHrv,
+      HcPermissions.readRestingHeartRate,
+      HcPermissions.readSpO2,
+    });
+    final loader = DashboardDataLoader(source);
+
+    final data = (await loader.loadDashboard(
+      DashboardQuery(
+        date: LocalDate.now(),
+        visibleMetrics: {
+          DashboardMetric.hrv,
+          DashboardMetric.restingHeartRate,
+          DashboardMetric.spo2,
+        },
+        includeHistoricalBaselines: false,
+        includeWeeklyTrainingSignals: false,
+      ),
+    ))
+        .orThrow();
+
+    final nightStart =
+        sleepRangeStartFor(LocalDate.now(), SleepWindow.defaultWindow);
+    expect(source.hrvStart, nightStart);
+    expect(source.restingHrStart, nightStart);
+    expect(source.spO2Start, nightStart);
+
+    expect(data.hrvRmssdMs, 42.0);
+    expect(data.restingHeartRateBpm, 52);
+    expect(data.latestSpO2Percent, 96.0);
   });
 
   group('active caffeine (point-in-time decaying quantity)', () {

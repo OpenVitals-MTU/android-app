@@ -102,6 +102,17 @@ class DashboardDataLoader {
     final now = DateTime.now();
     final effectiveDayEnd =
         date == LocalDate.now() && dayEnd.isAfter(now) ? now : dayEnd;
+    // Convention: NIGHT-WINDOW ATTRIBUTION (the sleep tile's rule). The
+    // overnight vitals — HRV, resting HR, respiratory rate, SpO2, skin
+    // temperature — are measured while asleep, so "day D's value" is the night
+    // that ended on D's morning. A [00:00, 24:00) read left those tiles empty
+    // (or showing a post-midnight fraction of last night) until a fresh
+    // same-day sample landed. Their reads therefore WIDEN back to the night
+    // start; each keeps its day end, so a later daytime measurement still wins
+    // where "latest" semantics apply. History charts keep calendar-day
+    // bucketing — overnight samples land after midnight, so both agree in
+    // practice.
+    final nightStart = sleepRangeStartFor(date, sleepWindow);
 
     // These ~35 metric reads are mutually independent — every cross-metric
     // derivation (BMI, the HRV mean, per-metric sources) is computed further
@@ -233,7 +244,10 @@ class DashboardDataLoader {
     final heartRateF = metric(wants(DashboardMetric.avgHeartRate),
         HcPermissions.readHeartRate, () => _hc.readAvgHeartRate(date));
     final restingHRF = metric(wants(DashboardMetric.restingHeartRate),
-        HcPermissions.readRestingHeartRate, () => _hc.readRestingHeartRate(date));
+        HcPermissions.readRestingHeartRate, () async {
+      final samples = await _hc.readRestingHeartRateSamples(nightStart, dayEnd);
+      return _latestByTime(samples, (s) => s.time)?.beatsPerMinute;
+    });
     final restingHRBaselineF = metric(
         query.includeHistoricalBaselines && wants(DashboardMetric.restingHeartRate),
         HcPermissions.readRestingHeartRate,
@@ -244,7 +258,7 @@ class DashboardDataLoader {
                   .toList(),
             ));
     final hrvSamplesF = metric(wants(DashboardMetric.hrv), HcPermissions.readHrv,
-        () => _hc.readHrvSamples(dayStart, effectiveDayEnd));
+        () => _hc.readHrvSamples(nightStart, effectiveDayEnd));
     final hrvBaselineF = metric(
         query.includeHistoricalBaselines && wants(DashboardMetric.hrv),
         HcPermissions.readHrv,
@@ -257,12 +271,15 @@ class DashboardDataLoader {
     final bloodPressureF = metric(wants(DashboardMetric.bloodPressure),
         HcPermissions.readBloodPressure, () => _hc.readLatestBloodPressure(date));
     final spO2F = metric(wants(DashboardMetric.spo2), HcPermissions.readSpO2,
-        () => _hc.readLatestSpO2(date));
+        () async {
+      final entries = await _hc.readSpO2Entries(nightStart, dayEnd);
+      return _latestByTime(entries, (e) => e.time);
+    });
     final vo2MaxF = metric(wants(DashboardMetric.vo2Max),
         HcPermissions.readVo2Max, () => _hc.readLatestVo2Max(date));
     final respiratoryRateF = metric(wants(DashboardMetric.respiratoryRate),
         HcPermissions.readRespiratoryRate, () async {
-      final entries = await _hc.readRespiratoryRateEntries(dayStart, dayEnd);
+      final entries = await _hc.readRespiratoryRateEntries(nightStart, dayEnd);
       if (entries.isEmpty) return null;
       return entries.map((e) => e.breathsPerMinute).reduce((a, b) => a + b) /
           entries.length;
@@ -280,7 +297,7 @@ class DashboardDataLoader {
     final skinTemperatureF = metric(
         wants(DashboardMetric.skinTemperature) && _hc.isSkinTemperatureAvailable(),
         HcPermissions.readSkinTemperature, () async {
-      final entries = await _hc.readSkinTemperatureEntries(dayStart, dayEnd);
+      final entries = await _hc.readSkinTemperatureEntries(nightStart, dayEnd);
       return _latestByTime(entries, (e) => e.time)?.averageDeltaCelsius;
     });
     final trainingSignalsF = (query.includeWeeklyTrainingSignals &&
