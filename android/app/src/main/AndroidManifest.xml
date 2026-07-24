@@ -278,6 +278,14 @@
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- vector_map_tiles 10.x draws PMTiles packs through the Flutter GPU
+             API (flutter_scene), which is off by default: without this flag
+             TilesRenderer throws on every frame and the offline base map
+             renders blank. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableFlutterGPU"
+            android:value="true" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
