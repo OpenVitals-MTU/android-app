@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/presentation/unit_formatter.dart';
 import '../di/providers.dart';
+import '../domain/preferences/activity_week_mode.dart';
 import '../domain/preferences/app_language.dart';
 import '../domain/preferences/app_theme_mode.dart';
 import '../domain/preferences/chart_aggregation_mode.dart';
@@ -87,5 +88,12 @@ final onboardingCompleteProvider = Provider<bool>((ref) {
 /// same window, on the same screen. We thread the mode everywhere instead, so the
 /// titles agree. A parity audit will flag this; it is intended.
 final weekPeriodModeProvider = Provider<WeekPeriodMode>((ref) {
-  return ref.watch(preferencesRepositoryProvider).weekPeriodMode;
+  final repo = ref.watch(preferencesRepositoryProvider);
+  // Through the listenable bridge like every other reactive pref: reading the
+  // plain getter froze this provider at its first value, so toggling the
+  // setting retitled nothing until an app restart — and screens that had
+  // already loaded showed a period computed under one mode with data loaded
+  // under the other.
+  return _watchListenable(ref, repo.activityWeekModeListenable)
+      .toWeekPeriodMode();
 });

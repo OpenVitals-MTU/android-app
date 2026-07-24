@@ -189,6 +189,44 @@ void main() {
     expect(find.text('Last 365 days'), findsNothing);
   });
 
+  testWidgets('changing the week mode reloads the selection and retitles',
+      (tester) async {
+    final selections = <PeriodSelection>[];
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final prefs = await SharedPreferences.getInstance();
+    Widget build(WeekPeriodMode mode) => ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MetricDetailScaffold(
+                rangePreferenceKey: PeriodRangePreferenceKey.heart,
+                onRefresh: () async {},
+                onSelectionChanged: selections.add,
+                weekPeriodMode: mode,
+                content: (period) => const [Text('CONTENT')],
+              ),
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(build(WeekPeriodMode.mondayToSunday));
+    await tester.pumpAndSettle();
+    expect(find.text('This week'), findsOneWidget);
+    final loadsBefore = selections.length;
+
+    await tester.pumpWidget(build(WeekPeriodMode.last7Days));
+    await tester.pumpAndSettle();
+
+    // The unchanged anchor now derives a differently-shaped period, so the
+    // host must be asked to reload — without it the old data stayed on screen
+    // under the re-derived period (a rolling window scattered over a
+    // calendar-year grid) — and the title follows the new mode.
+    expect(selections.length, loadsBefore + 1);
+    expect(find.text('Last 7 days'), findsOneWidget);
+  });
+
   testWidgets('renders the error block from a ScreenError', (tester) async {
     await tester.pumpWidget(
       await _bootstrap(
