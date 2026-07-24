@@ -228,15 +228,18 @@ void main() {
     final viewModel = container.read(heartVitalsOverviewProvider.notifier);
     heartRepository.gated = true;
 
-    // Two loads in flight; the FIRST one answers last.
+    // Loads are single-flight: the second parks while the first is on the wire.
     final first = viewModel.load(selection);
     final second = viewModel.load(
       PeriodSelection(TimeRange.month, const LocalDate(2026, 3, 2)),
     );
-    heartRepository.gates[1].complete(_heart(avgBpm: 61));
-    await second;
+    expect(heartRepository.gates, hasLength(1));
+    // The first's answer lands after it was superseded: dropped, and the
+    // parked month load dispatches.
     heartRepository.gates[0].complete(_heart(avgBpm: 99));
-    await first;
+    await Future<void>.delayed(Duration.zero);
+    heartRepository.gates[1].complete(_heart(avgBpm: 61));
+    await Future.wait([first, second]);
 
     // The month load won: the week's late answer is dropped, not painted.
     final state = container.read(heartVitalsOverviewProvider);

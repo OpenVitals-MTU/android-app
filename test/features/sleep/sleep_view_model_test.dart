@@ -224,17 +224,20 @@ void main() {
     final viewModel = container.read(sleepProvider.notifier);
     repository.gated = true;
 
-    // Two loads in flight; the FIRST one answers last.
+    // Loads are single-flight: the second parks while the first is on the wire.
     final first = viewModel.load(selection);
     final second = viewModel.load(PeriodSelection(TimeRange.day, wednesday));
-    repository.gates[1].complete(SleepPeriodData(sessions: [
-      _night(wednesday, hours: 6),
-    ]));
-    await second;
+    expect(repository.gates, hasLength(1));
+    // The first's answer lands after it was superseded: dropped, and the
+    // parked day load dispatches.
     repository.gates[0].complete(SleepPeriodData(sessions: [
       _night(wednesday, hours: 11),
     ]));
-    await first;
+    await Future<void>.delayed(Duration.zero);
+    repository.gates[1].complete(SleepPeriodData(sessions: [
+      _night(wednesday, hours: 6),
+    ]));
+    await Future.wait([first, second]);
 
     // The day load won: the week's late answer is dropped, not painted.
     final state = container.read(sleepProvider);

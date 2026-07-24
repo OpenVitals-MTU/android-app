@@ -152,20 +152,23 @@ void main() {
     final viewModel = container.read(cycleProvider.notifier);
     repository.gated = true;
 
-    // Two loads in flight; the FIRST one answers last.
+    // Loads are single-flight: the second parks while the first is on the wire.
     final first = viewModel.load(selection);
     final second = viewModel.load(
       PeriodSelection(TimeRange.week, const LocalDate(2026, 3, 2)),
     );
-    repository.gates[1].complete(_period(oneTest(1)));
-    await second;
+    expect(repository.gates, hasLength(1));
+    // The first's answer lands after it was superseded: dropped, and the
+    // parked week load dispatches.
     repository.gates[0].complete(_period(CycleData(
       ovulationTests: [
         OvulationTestEntry(time: march, result: 3, source: 'test'),
         OvulationTestEntry(time: march, result: 2, source: 'test'),
       ],
     )));
-    await first;
+    await Future<void>.delayed(Duration.zero);
+    repository.gates[1].complete(_period(oneTest(1)));
+    await Future.wait([first, second]);
 
     // The week load won: the month's late answer is dropped, not painted.
     final state = container.read(cycleProvider);

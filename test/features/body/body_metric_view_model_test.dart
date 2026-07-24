@@ -231,17 +231,20 @@ void main() {
     final viewModel = container.read(bodyMetricProvider.notifier);
     repository.gated = true;
 
-    // Two loads in flight; the FIRST one answers last.
+    // Loads are single-flight: the second parks while the first is on the wire.
     final first = viewModel.load(selection);
     final second = viewModel.load(
       PeriodSelection(TimeRange.week, const LocalDate(2026, 3, 2)),
     );
-    repository.gates[1]
-        .complete(BodyPeriodData(weightEntries: [_weight(monday, 60.0)]));
-    await second;
+    expect(repository.gates, hasLength(1));
+    // The first's answer lands after it was superseded: dropped, and the
+    // parked week load dispatches.
     repository.gates[0]
         .complete(BodyPeriodData(weightEntries: [_weight(monday, 99.0)]));
-    await first;
+    await Future<void>.delayed(Duration.zero);
+    repository.gates[1]
+        .complete(BodyPeriodData(weightEntries: [_weight(monday, 60.0)]));
+    await Future.wait([first, second]);
 
     // The week load won: the month's late answer is dropped, not painted.
     final state = container.read(bodyMetricProvider);

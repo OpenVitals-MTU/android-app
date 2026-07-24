@@ -158,19 +158,22 @@ void main() {
     final viewModel = container.read(mindfulnessProvider.notifier);
     repository.gated = true;
 
-    // Two loads in flight; the FIRST one answers last.
+    // Loads are single-flight: the second parks while the first is on the wire.
     final first = viewModel.load(selection);
     final second = viewModel.load(
       PeriodSelection(TimeRange.month, const LocalDate(2026, 3, 2)),
     );
-    repository.gates[1].complete(MindfulnessPeriodData(sessions: [
-      _session(monday, const Duration(minutes: 10)),
-    ]));
-    await second;
+    expect(repository.gates, hasLength(1));
+    // The first's answer lands after it was superseded: dropped, and the
+    // parked month load dispatches.
     repository.gates[0].complete(MindfulnessPeriodData(sessions: [
       _session(monday, const Duration(minutes: 99)),
     ]));
-    await first;
+    await Future<void>.delayed(Duration.zero);
+    repository.gates[1].complete(MindfulnessPeriodData(sessions: [
+      _session(monday, const Duration(minutes: 10)),
+    ]));
+    await Future.wait([first, second]);
 
     // The month load won: the week's late answer is dropped, not painted.
     final state = container.read(mindfulnessProvider);
