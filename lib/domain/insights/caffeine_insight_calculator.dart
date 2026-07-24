@@ -44,7 +44,16 @@ class CaffeineInsightCalculator {
       preferences: normalizedPreferences,
       bodyProfile: bodyProfile,
     );
-    final bedtime = _bedtimeInstant(today, normalizedPreferences.bedtime);
+    // The next occurrence of the configured bedtime. _bedtimeInstant already
+    // rolls an after-midnight bedtime onto the following date; an evening
+    // bedtime the clock has passed still needs one more day. The actionable
+    // projection is always the night AHEAD — anchoring it to today's date read
+    // "0 mg at bedtime" four minutes before a 61 mg midnight, and reported the
+    // small hours' leftover as tonight's forecast all the next morning.
+    var bedtime = _bedtimeInstant(today, normalizedPreferences.bedtime);
+    if (bedtime.isBefore(resolvedNow)) {
+      bedtime = _bedtimeInstant(today.plusDays(1), normalizedPreferences.bedtime);
+    }
     final bedtimeMg = activeCaffeineMg(
       entries: entries,
       at: bedtime,
@@ -393,8 +402,18 @@ class CaffeineInsightCalculator {
     return math.max(fraction, 0.0);
   }
 
-  static DateTime _bedtimeInstant(LocalDate date, LocalTime bedtime) =>
-      date.atTimeInstant(bedtime.hour, bedtime.minute, bedtime.second);
+  /// The instant of [date]'s night-time bedtime.
+  ///
+  /// A bedtime before noon is an after-midnight one — day D's night runs into
+  /// the small hours of D+1 — so its instant falls on the NEXT date: a 00:00
+  /// bedtime for July 1 is the midnight that ends July 1, not the one that
+  /// started it. Anchoring it to the same date made every day's "safe for
+  /// sleep" measure the caffeine from before that day's drinks. (Deliberate
+  /// fix over the Kotlin reference, which shared this bug.)
+  static DateTime _bedtimeInstant(LocalDate date, LocalTime bedtime) {
+    final onDate = bedtime.hour < 12 ? date.plusDays(1) : date;
+    return onDate.atTimeInstant(bedtime.hour, bedtime.minute, bedtime.second);
+  }
 
   static int _modelingDurationMinutes(CaffeineEntry entry) {
     final minutes = entry.endTime.difference(entry.startTime).inMinutes;

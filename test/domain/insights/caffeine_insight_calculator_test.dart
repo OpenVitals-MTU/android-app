@@ -79,6 +79,103 @@ void main() {
     );
   });
 
+  test('a midnight bedtime minutes away projects tonight, not last night',
+      () {
+    // 23:56 with 61-ish mg active and bedtime 00:00: the upcoming midnight is
+    // four minutes away, so the projection must be ~the current level. The old
+    // anchor ("today at 00:00") was 24h in the past and read 0 mg.
+    const prefs = CaffeinePreferences(bedtime: LocalTime(0, 0));
+    final drink = CaffeineEntry(
+      id: 'evening-tea',
+      startTime: LocalDate(2026, 7, 23).atTimeInstant(20),
+      endTime: LocalDate(2026, 7, 23).atTimeInstant(20, 10),
+      caffeineMg: 100.0,
+      name: 'Tea',
+      source: 'test.source',
+      mealType: 0,
+    );
+    final now = LocalDate(2026, 7, 23).atTimeInstant(23, 56);
+
+    final insights = CaffeineInsightCalculator.build(
+      entries: [drink],
+      period: DatePeriod(LocalDate(2026, 7, 23), LocalDate(2026, 7, 23)),
+      preferences: prefs,
+      now: now,
+    );
+
+    expect(insights.currentMg, greaterThan(0.0));
+    expect(
+      insights.bedtimeMg,
+      closeTo(
+        CaffeineInsightCalculator.activeCaffeineMg(
+          entries: [drink],
+          at: LocalDate(2026, 7, 24).atTimeInstant(0),
+          preferences: prefs.normalized(),
+        ),
+        0.001,
+      ),
+    );
+    expect(insights.bedtimeMg, greaterThan(insights.currentMg * 0.9));
+  });
+
+  test('the morning after, a midnight bedtime projects the coming night',
+      () {
+    // 09:00 the next day with no drinks today: the projection is tonight's
+    // midnight (~28h after the drink), near zero. The old anchor was THIS
+    // morning's 00:00 — nine hours in the past — and resurfaced last night's
+    // leftover (~60 mg) as the forecast.
+    const prefs = CaffeinePreferences(bedtime: LocalTime(0, 0));
+    final drink = CaffeineEntry(
+      id: 'evening-tea',
+      startTime: LocalDate(2026, 7, 23).atTimeInstant(20),
+      endTime: LocalDate(2026, 7, 23).atTimeInstant(20, 10),
+      caffeineMg: 200.0,
+      name: 'Tea',
+      source: 'test.source',
+      mealType: 0,
+    );
+    final now = LocalDate(2026, 7, 24).atTimeInstant(9);
+
+    final insights = CaffeineInsightCalculator.build(
+      entries: [drink],
+      period: DatePeriod(LocalDate(2026, 7, 23), LocalDate(2026, 7, 24)),
+      preferences: prefs,
+      now: now,
+    );
+
+    expect(insights.currentMg, greaterThan(0.0));
+    expect(insights.bedtimeMg, lessThan(insights.currentMg));
+    expect(insights.bedtimeMg, lessThan(10.0));
+  });
+
+  test("a day's safe-for-sleep stat uses the midnight that ENDS the day", () {
+    // Drink at 20:00 with bedtime 00:00: that day's night starts at the NEXT
+    // midnight, four hours after the drink — decidedly not safe. The old
+    // anchor (the midnight that started the day) predated the drink and
+    // counted every such night as safe.
+    const prefs = CaffeinePreferences(bedtime: LocalTime(0, 0));
+    final drink = CaffeineEntry(
+      id: 'evening-espresso',
+      startTime: LocalDate(2026, 7, 1).atTimeInstant(20),
+      endTime: LocalDate(2026, 7, 1).atTimeInstant(20, 10),
+      caffeineMg: 200.0,
+      name: 'Espresso',
+      source: 'test.source',
+      mealType: 0,
+    );
+
+    final insights = CaffeineInsightCalculator.build(
+      entries: [drink],
+      period: DatePeriod(LocalDate(2026, 7, 1), LocalDate(2026, 7, 1)),
+      preferences: prefs,
+      now: LocalDate(2026, 7, 2).atTimeInstant(12),
+    );
+
+    final stat = insights.dailyStats.single;
+    expect(stat.bedtimeMg, greaterThan(prefs.sleepThresholdMg.toDouble()));
+    expect(stat.safeForSleep, isFalse);
+  });
+
   test('caffeine health catalog matches health connect names without local entries',
       () {
     expect(CaffeineHealthDrinkCatalog.items.length, 224);
