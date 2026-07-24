@@ -20,7 +20,7 @@ void main() {
     expect(progress.trackedDays, 4);
     expect(progress.goalMetDays, 2);
     expect(progress.successRatePercent, 50);
-    expect(progress.currentStreakDays, 2);
+    expect(progress.currentStreakDays(), 2);
     expect(progress.longestStreakDays, 2);
     expect(progress.averageGapToGoal, closeTo(1.5, 0.01));
   });
@@ -44,9 +44,43 @@ void main() {
     expect(progress.trackedDays, 3);
     expect(progress.goalMetDays, 2);
     expect(progress.successRatePercent, 67);
-    expect(progress.currentStreakDays, 1);
+    expect(progress.currentStreakDays(), 1);
     expect(progress.longestStreakDays, 1);
     expect(progress.averageGapToGoal, closeTo(166.67, 0.01));
+  });
+
+  test('an unmet today is skipped by the current streak, not a break', () {
+    final today = LocalDate(2026, 1, 3);
+    final progress = dailyGoalProgress(
+      [
+        DailyGoalValue(date: LocalDate(2026, 1, 1), value: 12.0),
+        DailyGoalValue(date: LocalDate(2026, 1, 2), value: 11.0),
+        // Nothing logged for Jan 3 (today) yet.
+      ],
+      DatePeriod(LocalDate(2026, 1, 1), today),
+      10.0,
+      DailyGoalDirection.atLeast,
+    );
+
+    // The day is still in progress: only a PAST unmet day ends the streak.
+    expect(progress.currentStreakDays(today: today), 2);
+    // Once the same day lies in the past, it genuinely broke the streak.
+    expect(progress.currentStreakDays(today: LocalDate(2026, 1, 5)), 0);
+  });
+
+  test('a met today still counts toward the current streak', () {
+    final today = LocalDate(2026, 1, 3);
+    final progress = dailyGoalProgress(
+      [
+        DailyGoalValue(date: LocalDate(2026, 1, 2), value: 11.0),
+        DailyGoalValue(date: today, value: 14.0),
+      ],
+      DatePeriod(LocalDate(2026, 1, 1), today),
+      10.0,
+      DailyGoalDirection.atLeast,
+    );
+
+    expect(progress.currentStreakDays(today: today), 2);
   });
 
   test('values on the same day are summed before goal evaluation', () {

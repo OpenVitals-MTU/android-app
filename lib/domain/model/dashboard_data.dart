@@ -54,6 +54,12 @@ abstract class DashboardData with _$DashboardData {
     double? carbsGrams,
     double? fatGrams,
     double? caffeineGrams,
+
+    /// Pharmacologically active caffeine at load time, in mg. Populated only
+    /// when the query date is today — for a past day (or a hidden metric,
+    /// missing permission, or failed read) it stays null and the tile falls
+    /// back to [caffeineGrams], the day's consumed intake.
+    double? activeCaffeineMg,
     int? latestSystolicMmHg,
     int? latestDiastolicMmHg,
     double? latestSpO2Percent,
@@ -172,6 +178,9 @@ extension DashboardDataMergeLoaded on DashboardData {
       fatGrams: has(DashboardMetric.fat) ? other.fatGrams : fatGrams,
       caffeineGrams:
           has(DashboardMetric.caffeine) ? other.caffeineGrams : caffeineGrams,
+      activeCaffeineMg: has(DashboardMetric.caffeine)
+          ? other.activeCaffeineMg
+          : activeCaffeineMg,
       latestSystolicMmHg: has(DashboardMetric.bloodPressure)
           ? other.latestSystolicMmHg
           : latestSystolicMmHg,

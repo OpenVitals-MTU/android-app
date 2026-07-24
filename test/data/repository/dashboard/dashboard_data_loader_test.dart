@@ -12,8 +12,14 @@ import 'package:openvitals/domain/model/dashboard_data.dart';
 import 'package:openvitals/domain/model/dashboard_query.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/preferences/body_energy_calibration.dart';
+import 'package:openvitals/core/period/time_range.dart';
+import 'package:openvitals/data/repository/contract/caffeine_repository.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/domain/health/health_permissions.dart';
+import 'package:openvitals/domain/insights/caffeine_insight_calculator.dart';
+import 'package:openvitals/domain/model/caffeine_models.dart';
+import 'package:openvitals/domain/model/refresh_mode.dart';
+import 'package:openvitals/domain/preferences/caffeine_preferences.dart';
 
 /// A device-free [HealthDataSource] that returns canned values for a few metrics
 /// and reports a fixed granted-permission set. All other reads fall through to
@@ -75,6 +81,47 @@ Future<PreferencesRepository> _prefsWithCalibration(
   );
   return prefs;
 }
+
+/// A [CaffeineRepository] returning canned entries; records whether it was
+/// asked to load at all.
+class _FakeCaffeineRepository
+    with CaffeineRepositoryDefaults
+    implements CaffeineRepository {
+  _FakeCaffeineRepository(this._entries);
+
+  final List<CaffeineEntry> _entries;
+  bool loaded = false;
+
+  @override
+  Future<Result<CaffeinePeriodData>> loadCaffeineData(
+    DatePeriod period, {
+    RefreshMode refreshMode = RefreshMode.normal,
+  }) async {
+    loaded = true;
+    return Ok(CaffeinePeriodData(entries: _entries));
+  }
+}
+
+class _ThrowingCaffeineRepository
+    with CaffeineRepositoryDefaults
+    implements CaffeineRepository {
+  @override
+  Future<Result<CaffeinePeriodData>> loadCaffeineData(
+    DatePeriod period, {
+    RefreshMode refreshMode = RefreshMode.normal,
+  }) async =>
+      throw StateError('caffeine read blew up');
+}
+
+CaffeineEntry _caffeineEntry(DateTime start, double mg) => CaffeineEntry(
+      id: 'drink-${start.millisecondsSinceEpoch}',
+      startTime: start,
+      endTime: start.add(const Duration(minutes: 10)),
+      caffeineMg: mg,
+      name: 'Coffee',
+      source: 'test.source',
+      mealType: 0,
+    );
 
 /// A source whose reads all park on one gate, so a test can observe how many
 /// run concurrently. Used to assert the loader bounds its metric-read fan-out.
@@ -158,6 +205,133 @@ void main() {
       data.loadedMetrics,
       {DashboardMetric.steps, DashboardMetric.distance, DashboardMetric.hydration},
     );
+  });
+
+  group('active caffeine (point-in-time decaying quantity)', () {
+    DashboardQuery query(LocalDate date) => DashboardQuery(
+          date: date,
+          visibleMetrics: {DashboardMetric.caffeine},
+          includeHistoricalBaselines: false,
+          includeWeeklyTrainingSignals: false,
+        );
+
+    test('morning carryover from last night is reported for today', () async {
+      final repo = _FakeCaffeineRepository([
+        _caffeineEntry(DateTime.now().subtract(const Duration(hours: 8)), 150),
+      ]);
+      final loader = DashboardDataLoader(
+        _FakeSource({HcPermissions.readNutrition}),
+        caffeineRepository: repo,
+      );
+
+      final data =
+          (await loader.loadDashboard(query(LocalDate.now()))).orThrow();
+
+      expect(repo.loaded, isTrue);
+      expect(data.activeCaffeineMg, isNotNull);
+      expect(data.activeCaffeineMg, greaterThan(0.0));
+    });
+
+    test('matches the caffeine screen\'s currentMg for the same inputs',
+        () async {
+      final entries = [
+        _caffeineEntry(DateTime.now().subtract(const Duration(hours: 8)), 150),
+        _caffeineEntry(DateTime.now().subtract(const Duration(hours: 2)), 80),
+      ];
+      final loader = DashboardDataLoader(
+        _FakeSource({HcPermissions.readNutrition}),
+        caffeineRepository: _FakeCaffeineRepository(entries),
+      );
+
+      final data =
+          (await loader.loadDashboard(query(LocalDate.now()))).orThrow();
+      final today = LocalDate.now();
+      final screenCurrentMg = CaffeineInsightCalculator.build(
+        entries: entries,
+        period: DatePeriod(today, today),
+        preferences: const CaffeinePreferences(),
+        now: DateTime.now().toUtc(),
+      ).currentMg;
+
+      // Active caffeine decays by well under 0.1 mg between the two "now"
+      // samples, so the tile and the detail screen agree.
+      expect(data.activeCaffeineMg, closeTo(screenCurrentMg, 0.1));
+    });
+
+    test('a past day keeps intake semantics: no PK read at all', () async {
+      final repo = _FakeCaffeineRepository([
+        _caffeineEntry(DateTime.now().subtract(const Duration(hours: 8)), 150),
+      ]);
+      final loader = DashboardDataLoader(
+        _FakeSource({HcPermissions.readNutrition}),
+        caffeineRepository: repo,
+      );
+
+      final data = (await loader
+              .loadDashboard(query(LocalDate.now().minusDays(1))))
+          .orThrow();
+
+      expect(repo.loaded, isFalse);
+      expect(data.activeCaffeineMg, isNull);
+    });
+
+    test('hidden metric or missing permission skips the read', () async {
+      final repo = _FakeCaffeineRepository([
+        _caffeineEntry(DateTime.now().subtract(const Duration(hours: 8)), 150),
+      ]);
+
+      final hidden = DashboardDataLoader(
+        _FakeSource({HcPermissions.readNutrition}),
+        caffeineRepository: repo,
+      );
+      await hidden.loadDashboard(DashboardQuery(
+        date: LocalDate.now(),
+        visibleMetrics: {DashboardMetric.steps},
+        includeHistoricalBaselines: false,
+        includeWeeklyTrainingSignals: false,
+      ));
+      expect(repo.loaded, isFalse);
+
+      final ungranted = DashboardDataLoader(
+        _FakeSource(const {}),
+        caffeineRepository: repo,
+      );
+      final data =
+          (await ungranted.loadDashboard(query(LocalDate.now()))).orThrow();
+      expect(repo.loaded, isFalse);
+      expect(data.activeCaffeineMg, isNull);
+    });
+
+    test('a throwing caffeine read nulls the field, not the dashboard',
+        () async {
+      final loader = DashboardDataLoader(
+        _FakeSource({HcPermissions.readNutrition, HcPermissions.readSteps}),
+        caffeineRepository: _ThrowingCaffeineRepository(),
+      );
+
+      final data = (await loader.loadDashboard(DashboardQuery(
+        date: LocalDate.now(),
+        visibleMetrics: {DashboardMetric.caffeine, DashboardMetric.steps},
+        includeHistoricalBaselines: false,
+        includeWeeklyTrainingSignals: false,
+      )))
+          .orThrow();
+
+      expect(data.activeCaffeineMg, isNull);
+      expect(data.steps, 4321);
+    });
+
+    test('mergeLoaded carries activeCaffeineMg across the two-pass load', () {
+      final date = LocalDate(2026, 7, 24);
+      final first =
+          DashboardData(date: date, loadedMetrics: const {DashboardMetric.steps});
+      final second = DashboardData(
+        date: date,
+        activeCaffeineMg: 21.0,
+        loadedMetrics: const {DashboardMetric.caffeine},
+      );
+      expect(first.mergeLoaded(second).activeCaffeineMg, 21.0);
+    });
   });
 
   test('omits permissions the installed provider cannot grant', () async {

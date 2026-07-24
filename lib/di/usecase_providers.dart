@@ -80,6 +80,7 @@ final dashboardDataLoaderProvider = Provider<DashboardDataLoader>(
     ref.watch(healthDataSourceProvider),
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
     bodyEnergyRepository: ref.watch(bodyEnergyRepositoryProvider),
+    caffeineRepository: ref.watch(caffeineRepositoryProvider),
   ),
 );
 

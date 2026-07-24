@@ -612,12 +612,25 @@ DashboardSummary buildDashboardSummary(
   addGrams(DashboardMetric.carbs, 'Carbs', data.carbsGrams, goals.carbsGrams);
   addGrams(DashboardMetric.fat, 'Fat', data.fatGrams, goals.fatGrams);
 
-  final caffeine = _positive(data.caffeineGrams);
+  final caffeineConsumed = _positive(data.caffeineGrams);
+  final caffeineActive = _positive(data.activeCaffeineMg);
+  final consumedMgLabel =
+      caffeineConsumed == null ? null : f.decimal(caffeineConsumed * 1000, 0);
   add(
     DashboardMetric.caffeine,
     title: 'Caffeine',
-    value: caffeine == null ? null : f.decimal(caffeine * 1000, 0),
+    // Today (activeCaffeineMg computed): the headline is the ACTIVE amount —
+    // a decaying stock that carries across midnight — with consumed-today as
+    // the subtitle. A past day (or PK unavailable) keeps the consumed intake.
+    // The old intake-only value read "No data" every morning while last
+    // night's dose still decayed.
+    value: caffeineActive != null
+        ? f.decimal(caffeineActive, 0)
+        : consumedMgLabel,
     unit: 'mg',
+    subtitle: (caffeineActive != null && consumedMgLabel != null)
+        ? l10n.dashboardCaffeineTodaySubtitle(consumedMgLabel)
+        : null,
     icon: Icons.restaurant,
     accent: AppColors.nutrition,
     // Kotlin routes the caffeine tile to its own analytics screen, not the

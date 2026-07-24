@@ -64,7 +64,11 @@ void main() {
     expect(insights.periodTotalMg, closeTo(100.0, 0.001));
     expect(insights.periodAverageMg, closeTo(100.0 / 3.0, 0.001));
     expect(insights.loggedDays, 1);
-    expect(insights.totalNights, 3);
+    // `now` is noon on the period's first day: all three nights are still
+    // ahead, so none count as lived — but every day still has its stat row
+    // for the charts.
+    expect(insights.totalNights, 0);
+    expect(insights.dailyStats, hasLength(3));
     expect(insights.sourceTotals.single.label, 'test.source');
     expect(insights.categoryTotals.single.label, 'Coffee');
     expect(insights.timeToThresholdMinutes, isNotNull);
@@ -174,6 +178,52 @@ void main() {
     final stat = insights.dailyStats.single;
     expect(stat.bedtimeMg, greaterThan(prefs.sleepThresholdMg.toDouble()));
     expect(stat.safeForSleep, isFalse);
+  });
+
+  test('an un-lived night is neither safe nor unsafe until it happens', () {
+    // A big espresso at 20:00 today projects over the threshold at tonight's
+    // (future) midnight bedtime. That projection must not count as a lived
+    // night: it neither joins totalNights/safeNights nor zeroes the streak
+    // that yesterday's real, safe night established.
+    const prefs = CaffeinePreferences(bedtime: LocalTime(0, 0));
+    final yesterdayDrink = CaffeineEntry(
+      id: 'yesterday-tea',
+      startTime: LocalDate(2026, 7, 22).atTimeInstant(9),
+      endTime: LocalDate(2026, 7, 22).atTimeInstant(9, 10),
+      caffeineMg: 50.0,
+      name: 'Tea',
+      source: 'test.source',
+      mealType: 0,
+    );
+    final tonightEspresso = CaffeineEntry(
+      id: 'tonight-espresso',
+      startTime: LocalDate(2026, 7, 23).atTimeInstant(20),
+      endTime: LocalDate(2026, 7, 23).atTimeInstant(20, 10),
+      caffeineMg: 200.0,
+      name: 'Espresso',
+      source: 'test.source',
+      mealType: 0,
+    );
+
+    final insights = CaffeineInsightCalculator.build(
+      entries: [yesterdayDrink, tonightEspresso],
+      period: DatePeriod(LocalDate(2026, 7, 22), LocalDate(2026, 7, 23)),
+      preferences: prefs,
+      now: LocalDate(2026, 7, 23).atTimeInstant(21),
+    );
+
+    // July 22's night (bedtime 00:00 on the 23rd) has passed and was safe;
+    // July 23's night is still ahead.
+    final lived = insights.dailyStats
+        .singleWhere((stat) => stat.date == LocalDate(2026, 7, 22));
+    final pending = insights.dailyStats
+        .singleWhere((stat) => stat.date == LocalDate(2026, 7, 23));
+    expect(lived.nightCompleted, isTrue);
+    expect(pending.nightCompleted, isFalse);
+    expect(pending.safeForSleep, isFalse); // the projection itself is unsafe
+    expect(insights.totalNights, 1);
+    expect(insights.safeNights, 1);
+    expect(insights.safeSleepStreak, 1);
   });
 
   test('caffeine health catalog matches health connect names without local entries',

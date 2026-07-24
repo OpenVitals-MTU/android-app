@@ -138,7 +138,7 @@ class DailyGoalStatistics extends StatelessWidget {
         ),
         InsightStat(
           title: l10n.statGoalStreak,
-          value: unitFormatter.count(progress.currentStreakDays),
+          value: unitFormatter.count(progress.currentStreakDays()),
           unit: l10n.unitDays,
           icon: Icons.local_fire_department_outlined,
           accentColor: accentColor,

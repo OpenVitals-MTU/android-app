@@ -23,6 +23,11 @@ class _FakeHydrationRepository implements HydrationRepository {
   final bool throwsOnLoad;
   final List<HydrationEntry> entries;
 
+  /// The range the anchor read asked for, so tests can pin that it spans back
+  /// into yesterday (a 23:50 drink must survive midnight).
+  LocalDate? entriesRangeStart;
+  LocalDate? entriesRangeEnd;
+
   @override
   Future<Result<List<DailyHydration>>> loadDailyHydration(
     LocalDate start,
@@ -37,6 +42,8 @@ class _FakeHydrationRepository implements HydrationRepository {
     LocalDate start,
     LocalDate end,
   ) async {
+    entriesRangeStart = start;
+    entriesRangeEnd = end;
     if (throwsOnLoad) throw StateError('health connect unavailable');
     return Ok(entries);
   }
@@ -83,23 +90,27 @@ void main() {
     scheduler = _RecordingScheduler();
   });
 
+  late _FakeHydrationRepository repository;
+
   HydrationReminderController controller(
     PreferencesRepository prefs, {
     double litersToday = 0.0,
     bool repositoryThrows = false,
     List<HydrationEntry> entries = const [],
     DateTime Function()? now,
-  }) =>
-      HydrationReminderController(
-        preferences: prefs,
-        hydrationRepository: _FakeHydrationRepository(
-          litersToday,
-          throwsOnLoad: repositoryThrows,
-          entries: entries,
-        ),
-        scheduler: scheduler,
-        now: now ?? DateTime.now,
-      );
+  }) {
+    repository = _FakeHydrationRepository(
+      litersToday,
+      throwsOnLoad: repositoryThrows,
+      entries: entries,
+    );
+    return HydrationReminderController(
+      preferences: prefs,
+      hydrationRepository: repository,
+      scheduler: scheduler,
+      now: now ?? DateTime.now,
+    );
+  }
 
   test('disabled config clears and schedules nothing', () async {
     final prefs = await newPrefs();
@@ -138,6 +149,25 @@ void main() {
     ).applyConfig(const HydrationReminderConfig(enabled: true));
 
     expect(scheduler.lastBatch.first, DateTime.utc(2026, 6, 1, 11));
+  });
+
+  test('the anchor read spans back into yesterday, not just today', () async {
+    final prefs = await newPrefs();
+    prefs.hydrationDailyGoalLiters = 2.0;
+
+    // A drink at 23:50 must still anchor the schedule after midnight — a
+    // today-only read made the pre-midnight intake vanish at 00:10 and let an
+    // early reminder fire from the window start.
+    await controller(
+      prefs,
+      litersToday: 0.0,
+      entries: [
+        _entryAt(DateTime.now().subtract(const Duration(minutes: 30))),
+      ],
+    ).applyConfig(const HydrationReminderConfig(enabled: true));
+
+    expect(repository.entriesRangeStart, LocalDate.now().minusDays(1));
+    expect(repository.entriesRangeEnd, LocalDate.now());
   });
 
   test('a met goal schedules only tomorrow onward', () async {

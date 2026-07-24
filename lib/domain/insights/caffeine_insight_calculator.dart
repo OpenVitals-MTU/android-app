@@ -60,8 +60,8 @@ class CaffeineInsightCalculator {
       preferences: normalizedPreferences,
       bodyProfile: bodyProfile,
     );
-    final dailyStats =
-        _dailyStats(entries, period, normalizedPreferences, bodyProfile);
+    final dailyStats = _dailyStats(
+        entries, period, normalizedPreferences, bodyProfile, resolvedNow);
     final periodTotal =
         periodEntries.fold<double>(0.0, (sum, entry) => sum + entry.caffeineMg);
     final periodDays = math.max(dailyStats.length, 1);
@@ -105,8 +105,12 @@ class CaffeineInsightCalculator {
       periodAverageMg: periodTotal / periodDays,
       loggedDays: loggedDays,
       peakDay: _peakDay(dailyStats),
-      safeNights: dailyStats.where((stat) => stat.safeForSleep).length,
-      totalNights: dailyStats.length,
+      // Only lived nights count: a bedtime still ahead of `now` is a
+      // projection, and an un-lived night can neither be safe nor unsafe.
+      safeNights: dailyStats
+          .where((stat) => stat.nightCompleted && stat.safeForSleep)
+          .length,
+      totalNights: dailyStats.where((stat) => stat.nightCompleted).length,
       safeSleepStreak: _safeSleepStreak(dailyStats, today),
       bedtimeMg: bedtimeMg,
       sleepThresholdMg: normalizedPreferences.sleepThresholdMg,
@@ -269,6 +273,7 @@ class CaffeineInsightCalculator {
     DatePeriod period,
     CaffeinePreferences preferences,
     BodyProfile bodyProfile,
+    DateTime resolvedNow,
   ) {
     final stats = <CaffeineDailyStat>[];
     var date = period.start;
@@ -293,6 +298,7 @@ class CaffeineInsightCalculator {
           totalMg: total,
           bedtimeMg: bedtimeMg,
           safeForSleep: bedtimeMg <= preferences.sleepThresholdMg,
+          nightCompleted: !bedtime.isAfter(resolvedNow),
         ),
       );
       date = date.plusDays(1);
@@ -339,6 +345,9 @@ class CaffeineInsightCalculator {
     final ordered = stats.where((stat) => !stat.date.isAfter(today)).toList()
       ..sort((a, b) => b.date.compareTo(a.date));
     for (final stat in ordered) {
+      // An un-lived night (tonight's projection) can neither extend nor break
+      // the streak — skip it and keep counting from the last real night.
+      if (!stat.nightCompleted) continue;
       if (!stat.safeForSleep) return streak;
       streak += 1;
     }

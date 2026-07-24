@@ -82,11 +82,20 @@ abstract class DailyGoalProgress with _$DailyGoalProgress {
   int get successRatePercent =>
       trackedDays > 0 ? (goalMetDays * 100.0 / trackedDays).round() : 0;
 
-  int get currentStreakDays {
+  /// The trailing run of met days. An unmet day that has not finished yet
+  /// ([today] or later) is skipped rather than treated as a break — the day is
+  /// still in progress, so only a PAST unmet day can end the streak. Without
+  /// the skip, every streak read 0 right after midnight until something was
+  /// logged for the new day.
+  int currentStreakDays({LocalDate? today}) {
+    final resolvedToday = today ?? LocalDate.now();
     final sorted = [...days]..sort((a, b) => a.date.compareTo(b.date));
     var count = 0;
     for (final day in sorted.reversed) {
-      if (!day.isMet) break;
+      if (!day.isMet) {
+        if (day.date.isBefore(resolvedToday)) break;
+        continue;
+      }
       count += 1;
     }
     return count;

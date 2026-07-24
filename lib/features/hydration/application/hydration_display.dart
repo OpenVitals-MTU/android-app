@@ -84,6 +84,7 @@ HydrationDisplay buildHydrationDisplay(
   required LocalDate today,
 }) {
   final summary = _summarize(
+    today: today,
     dailyHydration,
     dailyGoalLiters,
     elapsedDays: _elapsedDays(period, today),
@@ -132,6 +133,7 @@ HydrationSummary _summarize(
   List<DailyHydration> days,
   double goalLiters, {
   required int elapsedDays,
+  required LocalDate today,
 }) {
   final sorted = [...days]..sort((a, b) => a.date.compareTo(b.date));
   final totalLiters = sorted.fold<double>(0.0, (sum, day) => sum + day.liters);
@@ -155,7 +157,13 @@ HydrationSummary _summarize(
   final reversed = sorted.reversed.toList();
   var trailingGoalStreak = 0;
   for (final day in reversed) {
-    if (!meetsGoal(day)) break;
+    if (!meetsGoal(day)) {
+      // A day that has not finished yet cannot break the streak — the same
+      // protection _elapsedDays gives goalProgress. Without it the current
+      // streak collapsed to 0 at midnight until today's goal was met.
+      if (day.date.isBefore(today)) break;
+      continue;
+    }
     trailingGoalStreak += 1;
   }
 

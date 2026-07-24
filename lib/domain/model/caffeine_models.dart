@@ -54,6 +54,13 @@ abstract class CaffeineDailyStat with _$CaffeineDailyStat {
     required double totalMg,
     required double bedtimeMg,
     required bool safeForSleep,
+
+    /// Whether this day's bedtime has already passed. For today (and, right
+    /// after midnight with an after-midnight bedtime, even yesterday) the
+    /// [bedtimeMg]/[safeForSleep] figures are a PROJECTION of a night that
+    /// has not happened — such rows must not count as lived nights in
+    /// safe-night totals or streaks.
+    @Default(true) bool nightCompleted,
   }) = _CaffeineDailyStat;
 }
 

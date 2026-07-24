@@ -24,7 +24,11 @@ import '../../../domain/preferences/sleep_window.dart';
 import '../impl/run_catching.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/insights/caffeine_insight_calculator.dart';
+import '../../../domain/preferences/body_profile.dart';
+import '../../../domain/preferences/caffeine_preferences.dart';
 import '../contract/body_energy_repository.dart';
+import '../contract/caffeine_repository.dart';
 import '../impl/health_connect_gating.dart';
 import '../impl/repository_time.dart';
 
@@ -41,12 +45,15 @@ class DashboardDataLoader {
     this._hc, {
     PreferencesRepository? preferencesRepository,
     BodyEnergyRepository? bodyEnergyRepository,
+    CaffeineRepository? caffeineRepository,
   })  : _preferences = preferencesRepository,
-        _bodyEnergy = bodyEnergyRepository;
+        _bodyEnergy = bodyEnergyRepository,
+        _caffeine = caffeineRepository;
 
   final HealthDataSource _hc;
   final PreferencesRepository? _preferences;
   final BodyEnergyRepository? _bodyEnergy;
+  final CaffeineRepository? _caffeine;
 
   static const int _cardioLoadHistoryPeriods = 4;
   static const int _weeklyCardioHeartRateSampleWeeks = 2;
@@ -170,6 +177,37 @@ class DashboardDataLoader {
         ]),
         HcPermissions.readNutrition,
         () async => (await _hc.readDailyMacros(date, date)).firstOrNull);
+    // Convention: POINT-IN-TIME DECAYING QUANTITY. Unlike sleep (night-window
+    // attribution) and Body Energy (sequential per-day seeding), active
+    // caffeine is a decaying stock: read an entry lookback ending at the
+    // evaluation instant and evaluate the shared PK model there — never a
+    // day-scoped sum, which reads "No data" every morning while last night's
+    // dose still decays. The repository's 7-day lookback covers >9 half-lives
+    // even at the max effective half-life (18h), so this matches the caffeine
+    // screen's "Active caffeine now" exactly. Only meaningful for TODAY; a
+    // past day keeps consumed-intake semantics (activeCaffeineMg stays null).
+    final activeCaffeineF = metric(
+      wants(DashboardMetric.caffeine) &&
+          _caffeine != null &&
+          date == LocalDate.now(),
+      HcPermissions.readNutrition,
+      () async {
+        final entries = (await _caffeine!
+                .loadCaffeineData(DatePeriod(date, date)))
+            .orThrow()
+            .entries;
+        // The static evaluator does not normalize; build() does. Normalize
+        // here so the tile and the caffeine screen agree exactly.
+        return CaffeineInsightCalculator.activeCaffeineMg(
+          entries: entries,
+          at: now.toUtc(),
+          preferences:
+              (_preferences?.caffeinePreferences() ?? const CaffeinePreferences())
+                  .normalized(),
+          bodyProfile: _preferences?.bodyProfile() ?? const BodyProfile(),
+        );
+      },
+    );
     final hydrationF = metric(wants(DashboardMetric.hydration),
         HcPermissions.readHydration, () => _hc.readHydrationLiters(date));
     final weightF = metric(
@@ -300,6 +338,7 @@ class DashboardDataLoader {
     final activeCalories = await activeCaloriesF;
     final caloriesIn = await caloriesInF;
     final macros = await macrosF;
+    final activeCaffeine = await activeCaffeineF;
     final hydration = await hydrationF;
     final weight = await weightF;
     final height = await heightF;
@@ -385,6 +424,9 @@ class DashboardDataLoader {
       fatGrams: (dailyMacros?.fatGrams ?? 0) > 0 ? dailyMacros?.fatGrams : null,
       caffeineGrams: _positiveOrNull(
           dailyMacros?.nutrientValues[NutritionNutrient.caffeine]),
+      // The calculator zero-floors below 0.01 mg, so "genuinely nothing
+      // active" collapses to null here — which is what drives "No data".
+      activeCaffeineMg: _positiveOrNull(activeCaffeine),
       hydrationLiters: hydration ?? 0.0,
       workout: workouts.firstOrNull,
       workouts: workouts,

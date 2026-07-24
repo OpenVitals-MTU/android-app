@@ -101,6 +101,9 @@ Future<HomeWidgetRefresher> buildBackgroundHomeWidgetRefresher() async {
 
   final loader = DashboardDataLoader(
     dataSource,
+    // caffeineRepository stays unwired: the metric widget catalog excludes
+    // caffeine, so activeCaffeineMg is never rendered on a widget and the
+    // extra Health Connect read would be pure background cost.
     preferencesRepository: preferences,
     bodyEnergyRepository: BodyEnergyRepositoryImpl(
       heartRepository: HeartRepositoryImpl(dataSource),

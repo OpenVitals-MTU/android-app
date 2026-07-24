@@ -162,6 +162,38 @@ void main() {
     expect(trayTitles(placed), isNot(contains('Blood oxygen')));
   });
 
+  test('caffeine tile: active-now headlines today, consumed rides subtitle',
+      () {
+    StatTileData caffeineTile(DashboardData data) => build(data)
+        .visibleTiles
+        .firstWhere((tile) => tile.id == DashboardMetric.caffeine.name);
+
+    // Morning carryover, nothing consumed yet: the active amount IS the tile —
+    // the old intake-only value read "No data" here.
+    final morning = caffeineTile(_data().copyWith(activeCaffeineMg: 21.0));
+    expect(morning.value, '21');
+    expect(morning.unit, 'mg');
+    expect(morning.subtitle, isNull);
+    expect(morning.message, isNull);
+
+    // Both numbers: active headlines, consumed-today is the subtitle.
+    final both = caffeineTile(
+      _data().copyWith(activeCaffeineMg: 95.0, caffeineGrams: 0.18),
+    );
+    expect(both.value, '95');
+    expect(both.subtitle, '180 mg today');
+
+    // A past day (no PK computed): the consumed intake, as before.
+    final pastDay = caffeineTile(_data().copyWith(caffeineGrams: 0.2));
+    expect(pastDay.value, '200');
+    expect(pastDay.subtitle, isNull);
+
+    // Genuinely nothing: the generic empty message.
+    final nothing = caffeineTile(_data());
+    expect(nothing.value, isEmpty);
+    expect(nothing.message, 'No data');
+  });
+
   test('the goals reach the ring, not the defaults', () {
     final display = buildDashboardDisplay(
       _data(steps: 3000),

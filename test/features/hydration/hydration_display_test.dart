@@ -102,6 +102,42 @@ void main() {
     expect(display.summary.longestGoalStreakDays, 2);
   });
 
+  test('an unmet TODAY does not break the trailing streak', () {
+    // Yesterday met the goal; today (0.3 L so far) has not — yet. The day is
+    // still in progress, so the streak must survive until today genuinely
+    // fails: without the skip it collapsed to 0 at midnight every night.
+    final display = _display(
+      [
+        DailyHydration(date: monday, liters: 2.2),
+        DailyHydration(date: monday.plusDays(1), liters: 2.4),
+        DailyHydration(date: monday.plusDays(2), liters: 0.3),
+      ],
+      const [],
+      dailyGoalLiters: 2.0,
+      period: DatePeriod(monday, monday.plusDays(2)),
+      today: monday.plusDays(2),
+    );
+
+    expect(display.summary.currentGoalStreakDays, 2);
+    // The longest streak is history, not a live countdown — unchanged.
+    expect(display.summary.longestGoalStreakDays, 2);
+  });
+
+  test('an unmet PAST day still breaks the trailing streak', () {
+    final display = _display(
+      [
+        DailyHydration(date: monday, liters: 2.2),
+        DailyHydration(date: monday.plusDays(1), liters: 0.3),
+      ],
+      const [],
+      dailyGoalLiters: 2.0,
+      period: DatePeriod(monday, monday.plusDays(1)),
+      today: monday.plusDays(5),
+    );
+
+    expect(display.summary.currentGoalStreakDays, 0);
+  });
+
   test('the drink breakdown sums by name, biggest first, and scales itself', () {
     final display = _display(
       [DailyHydration(date: monday, liters: 1.3)],

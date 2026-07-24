@@ -86,17 +86,20 @@ class HydrationReminderController {
     }
   }
 
-  /// The instant of the most recent hydration entry today — the anchor the
-  /// reminder countdown is measured from. Null when there is no entry today or
-  /// the read fails, in which case the schedule falls back to the window start.
-  /// Must not throw (a throw would leave nothing scheduled).
+  /// The instant of the most recent hydration entry — the anchor the reminder
+  /// countdown is measured from. Reads yesterday too: a drink at 23:50 must
+  /// still anchor the schedule at 00:10, or the pre-midnight intake vanishes
+  /// and an early reminder fires from the window start. Null when there is no
+  /// recent entry or the read fails, in which case the schedule falls back to
+  /// the window start. Must not throw (a throw would leave nothing scheduled).
   static Future<DateTime?> _readLastIntake(
     HydrationRepository repository,
   ) async {
     final today = LocalDate.now();
     try {
       final entries =
-          (await repository.loadHydrationEntries(today, today)).orThrow();
+          (await repository.loadHydrationEntries(today.minusDays(1), today))
+              .orThrow();
       if (entries.isEmpty) return null;
       return entries
           .map((entry) => entry.startTime)
