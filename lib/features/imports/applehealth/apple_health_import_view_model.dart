@@ -282,6 +282,10 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
     if (result != null) {
       _lastReportText = result.shareableReportText;
       if (!ref.mounted) return;
+      // The import just landed months of data the widgets have never seen —
+      // refresh them now instead of waiting out the 30-minute alarm.
+      // Fire-and-forget: the import outcome must not ride on a widget push.
+      unawaited(ref.read(homeWidgetRefresherProvider).refreshIfPlaced());
       state = AppleHealthImportUiState(
         analysis: analysis,
         selectedCategories: selected,

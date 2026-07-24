@@ -85,6 +85,23 @@ class HomeWidgetRefresher {
     }
   }
 
+  /// [refresh], but only when a widget is actually placed.
+  ///
+  /// The hook for data landing OUTSIDE the dashboard's own load path — a watch
+  /// sync, an archive import — so the widgets pick the new data up immediately
+  /// instead of waiting out the 30-minute alarm (the gap that left a morning
+  /// widget on its pre-sync snapshot). Without a placed widget the full
+  /// dashboard load would be pure cost, so it no-ops first.
+  Future<void> refreshIfPlaced() async {
+    try {
+      if (!await service.anyWidgetsPlaced()) return;
+    } catch (error) {
+      debugPrint('Home widget placement check failed, skipping refresh: $error');
+      return;
+    }
+    await refresh();
+  }
+
   /// Pushes [data] to every widget, without loading anything.
   ///
   /// The dashboard already holds a fully-merged [DashboardData] for today, so it

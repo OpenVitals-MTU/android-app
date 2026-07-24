@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -104,6 +106,13 @@ class DeviceSyncViewModel extends Notifier<DeviceSyncState> {
           phase: DeviceSyncPhase.complete,
           lastFileCount: fileCount,
         );
+        // The freshly-imported files are exactly the data the home-screen
+        // widgets sit waiting on all morning: refresh them now rather than
+        // leaving them to the 30-minute alarm. Fire-and-forget — the sync
+        // outcome must not ride on a widget push.
+        if (fileCount > 0) {
+          unawaited(ref.read(homeWidgetRefresherProvider).refreshIfPlaced());
+        }
         return fileCount;
       case DeviceSyncFailed(:final message):
         state = DeviceSyncState(errorMessage: message);

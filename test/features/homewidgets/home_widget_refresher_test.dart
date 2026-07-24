@@ -183,6 +183,32 @@ void main() {
     expect(loader.queries.single.refreshMode.name, 'force');
   });
 
+  test('refreshIfPlaced skips the dashboard load when no widget is placed',
+      () async {
+    // The post-sync hook fires after EVERY watch sync and archive import; a
+    // launcher without a single OpenVitals widget must not pay a full
+    // dashboard load for it.
+    final loader = _StubDashboardDataLoader(today());
+
+    await refresher(FakeHomeWidgetClient(), loader: loader).refreshIfPlaced();
+
+    expect(loader.queries, isEmpty);
+  });
+
+  test('refreshIfPlaced refreshes when a widget is placed', () async {
+    final loader = _StubDashboardDataLoader(today());
+    final client = FakeHomeWidgetClient(
+      installed: const [
+        HomeWidgetInstance(appWidgetId: 11, className: _metricReceiver),
+      ],
+    );
+
+    await refresher(client, loader: loader).refreshIfPlaced();
+
+    expect(loader.queries, hasLength(1));
+    expect(client.updated, isNotEmpty);
+  });
+
   test('a failed load never throws', () async {
     final client = FakeHomeWidgetClient();
 

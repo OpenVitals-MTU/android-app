@@ -39,6 +39,7 @@ import '../../../l10n/app_localizations.dart';
 import 'apple_health_import_background.dart';
 import 'apple_health_import_checkpoint_store.dart';
 import 'apple_health_import_error_formatter.dart';
+import '../../homewidgets/home_widget_alarm.dart';
 import 'apple_health_import_models.dart';
 import 'apple_health_import_notification.dart';
 import 'apple_health_import_report_store.dart';
@@ -142,6 +143,15 @@ class AppleHealthImportTaskHandler extends TaskHandler {
           event: kAppleHealthImportEventResult,
           workoutRoutesIncomplete: result.workoutRoutesIncomplete,
         ));
+        // Same post-import widget refresh as the in-app path: the widgets
+        // should show the imported history now, not after the next alarm.
+        // This isolate has plugins registered, so the background builder
+        // works here; a failed refresh must not turn a finished import red.
+        try {
+          await (await buildBackgroundHomeWidgetRefresher()).refreshIfPlaced();
+        } catch (error) {
+          debugPrint('Post-import widget refresh failed: $error');
+        }
       } else {
         // The staged export and the checkpoint were kept by the job, so the next
         // run resumes from the last committed batch.

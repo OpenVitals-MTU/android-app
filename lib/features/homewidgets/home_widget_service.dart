@@ -312,6 +312,16 @@ class HomeWidgetService {
       className == '.${widget.androidReceiver}';
 
   /// The placed instances of [widget], so per-instance data can be pushed to each.
+  /// Whether ANY OpenVitals widget is placed on a launcher.
+  ///
+  /// The sync-completion refresh is a full dashboard load; without a placed
+  /// widget it would be pure cost, so its callers ask this first.
+  Future<bool> anyWidgetsPlaced() async {
+    final installed = await client.installedWidgets();
+    return installed.any((instance) => HomeWidgetId.values
+        .any((widget) => matchesReceiver(widget, instance.className)));
+  }
+
   Future<List<HomeWidgetInstance>> instancesOf(HomeWidgetId widget) async {
     final installed = await client.installedWidgets();
     return installed

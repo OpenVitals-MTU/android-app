@@ -105,7 +105,9 @@ Future<void> homeWidgetRefreshAlarmCallback() async {
 /// opening a second connection to the database from a background isolate would
 /// be a real risk for no benefit. That is also why the beverage widgets, whose
 /// drink catalog *is* in drift, are not refreshed from here.
-@visibleForTesting
+///
+/// Shared with the Apple-import foreground-service isolate, which runs the
+/// same post-data widget refresh once an import lands.
 Future<HomeWidgetRefresher> buildBackgroundHomeWidgetRefresher() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   // The alarm plugin reuses one long-lived background engine, so this isolate's
