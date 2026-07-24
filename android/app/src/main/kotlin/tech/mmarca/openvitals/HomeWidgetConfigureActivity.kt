@@ -116,6 +116,12 @@ abstract class HomeWidgetConfigureActivity : FlutterFragmentActivity() {
         const val TYPE_METRIC = "metric"
         const val TYPE_QUICK_BEVERAGE = "quickBeverage"
         const val TYPE_QUICK_BEVERAGE_ONE_TAP = "quickBeverageOneTap"
+
+        /** The three zero-config status widgets, gated at add time (see
+         *  [HomeStatusWidgetConfigureActivity]). */
+        const val TYPE_DAILY_READINESS = "dailyReadiness"
+        const val TYPE_BODY_ENERGY = "bodyEnergy"
+        const val TYPE_TODAY_VITALS = "todayVitals"
     }
 }
 
@@ -135,6 +141,42 @@ class HomeMetricWidgetConfigureActivity : HomeWidgetConfigureActivity() {
  * time a configuration activity runs, the host has already bound the id, so
  * `getAppWidgetInfo` resolves.
  */
+/**
+ * `android:configure` of the three status widgets (Body Energy, Daily
+ * Readiness, Today Vitals), which need no picker at all.
+ *
+ * It exists so Dart can ask for `SCHEDULE_EXACT_ALARM` at ADD time: the
+ * widgets' 30-minute refresh chain is deferred to Doze maintenance windows —
+ * hours apart overnight — unless it may arm exact, so a widget placed without
+ * the permission froze on its pre-dawn snapshot every morning. When the
+ * permission is already granted the Dart side calls `finishConfigure`
+ * immediately and the user never sees a screen; declining keeps the widget
+ * (the gate finishes RESULT_OK either way — only backing out cancels).
+ *
+ * Shared by the three providers exactly as the beverage activity is shared by
+ * its two: the bound provider tells them apart.
+ */
+class HomeStatusWidgetConfigureActivity : HomeWidgetConfigureActivity() {
+    override fun widgetType(appWidgetId: Int): String {
+        val provider = AppWidgetManager.getInstance(this)
+            ?.getAppWidgetInfo(appWidgetId)
+            ?.provider
+            ?.className
+        return when {
+            provider != null && provider.endsWith(BODY_ENERGY_RECEIVER) ->
+                TYPE_BODY_ENERGY
+            provider != null && provider.endsWith(TODAY_VITALS_RECEIVER) ->
+                TYPE_TODAY_VITALS
+            else -> TYPE_DAILY_READINESS
+        }
+    }
+
+    private companion object {
+        const val BODY_ENERGY_RECEIVER = "HomeBodyEnergyWidgetReceiver"
+        const val TODAY_VITALS_RECEIVER = "HomeTodayVitalsWidgetReceiver"
+    }
+}
+
 class HomeQuickBeverageWidgetConfigureActivity : HomeWidgetConfigureActivity() {
     override fun widgetType(appWidgetId: Int): String {
         val provider = AppWidgetManager.getInstance(this)

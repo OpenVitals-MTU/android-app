@@ -6,6 +6,7 @@
     android:targetCellHeight="1"
     android:maxResizeWidth="360dp"
     android:maxResizeHeight="220dp"
+    android:configure="tech.mmarca.openvitals.HomeStatusWidgetConfigureActivity"
     android:updatePeriodMillis="1800000"
     android:description="@string/home_daily_readiness_widget_description"
     android:initialLayout="@layout/glance_default_loading_layout"

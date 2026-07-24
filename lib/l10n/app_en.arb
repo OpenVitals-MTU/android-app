@@ -3071,6 +3071,10 @@
   "caffeineSetupBody": "OpenVitals found caffeine data. Personalization improves the caffeine curve and bedtime forecast.",
   "caffeineCurrentTitle": "Active caffeine",
   "caffeineTodayTotal": "Today total",
+  "homeWidgetExactAlarmTitle": "Keep widgets up to date",
+  "homeWidgetExactAlarmBody": "Widgets refresh in the background. Allow \"Alarms & reminders\" so updates stay on schedule even while the phone sleeps.",
+  "homeWidgetExactAlarmAllow": "Allow",
+  "homeWidgetExactAlarmNotNow": "Not now",
   "dashboardCaffeineTodaySubtitle": "{mg} mg today",
   "@dashboardCaffeineTodaySubtitle": {
     "description": "Dashboard caffeine tile subtitle: total caffeine consumed on the selected day, shown under the currently-active amount.",

@@ -16,6 +16,7 @@ import '../manualentry/presentation/hydration_catalog_widgets.dart';
 import '../../domain/hydration/hydration_drink_usage.dart';
 import '../manualentry/application/hydration_entry_view_model.dart';
 import 'home_widget_beverage.dart';
+import 'home_widget_exact_alarm_gate.dart';
 import 'home_widget_service.dart';
 import 'home_widget_snapshots.dart';
 
@@ -90,8 +91,10 @@ class HomeWidgetConfigureRequest {
 /// ordinary launch.
 ///
 /// Rejects anything it does not fully understand — an unknown widget name, a
-/// widget that is not configurable, a missing or unparseable appWidgetId — so a
-/// malformed route boots the normal app rather than a picker wired to nothing.
+/// missing or unparseable appWidgetId — so a malformed route boots the normal
+/// app rather than a picker wired to nothing. Every widget id is accepted: the
+/// per-instance widgets get their pickers, and the status widgets get the
+/// exact-alarm gate (which auto-finishes when there is nothing to ask).
 HomeWidgetConfigureRequest? parseHomeWidgetConfigureRoute(String? route) {
   if (route == null || !route.startsWith(homeWidgetConfigureRoutePrefix)) {
     return null;
@@ -100,7 +103,7 @@ HomeWidgetConfigureRequest? parseHomeWidgetConfigureRoute(String? route) {
   if (uri == null) return null;
   final name = uri.path.substring(homeWidgetConfigureRoutePrefix.length);
   final widget = HomeWidgetId.values
-      .where((widget) => widget.isPerInstance && widget.name == name)
+      .where((widget) => widget.name == name)
       .firstOrNull;
   if (widget == null) return null;
   final id = int.tryParse(
@@ -193,9 +196,15 @@ class HomeWidgetConfigurePicker extends StatelessWidget {
             appWidgetId: request.appWidgetId,
             widgetId: request.widget,
           ),
-        _ => HomeMetricWidgetConfigureScreen(
+        HomeWidgetId.metric => HomeMetricWidgetConfigureScreen(
             appWidgetId: request.appWidgetId,
           ),
+        // Nothing to pick for the status widgets — their configure step exists
+        // only to ask for the exact-alarm permission at add time.
+        HomeWidgetId.bodyEnergy ||
+        HomeWidgetId.dailyReadiness ||
+        HomeWidgetId.todayVitals =>
+          HomeWidgetExactAlarmGateScreen(appWidgetId: request.appWidgetId),
       };
 }
 
@@ -250,6 +259,7 @@ class _HomeMetricWidgetConfigureScreenState
                   ),
                 ),
                 if (_configuring) const LinearProgressIndicator(),
+                const HomeWidgetExactAlarmCard(),
                 Expanded(
                   child: ListView.builder(
                     itemCount: metrics.length,
@@ -379,6 +389,7 @@ class _HomeQuickBeverageWidgetConfigureScreenState
                 ),
               ),
               if (_configuring) const LinearProgressIndicator(),
+              const HomeWidgetExactAlarmCard(),
               Expanded(
                 child: ListView.builder(
                   itemCount: drinks.length,

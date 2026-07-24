@@ -460,6 +460,31 @@
             </intent-filter>
         </activity>
 
+        <!-- Shared by the three zero-config status widgets (Body Energy, Daily
+             Readiness, Today Vitals). No picker: it exists so Dart can ask for
+             SCHEDULE_EXACT_ALARM at add time, and auto-finishes invisibly when
+             the permission is already granted. Same three load-bearing
+             attributes as the other configure activities above. -->
+        <activity
+            android:name=".HomeStatusWidgetConfigureActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- Health Connect permission-usage rationale (Android 14+). -->
         <activity-alias
             android:name="ViewPermissionUsageActivity"

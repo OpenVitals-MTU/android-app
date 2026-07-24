@@ -196,9 +196,8 @@ void main() {
     });
 
     test('a route it cannot fully understand is refused', () {
-      // No id, an invalid id (0 == INVALID_APPWIDGET_ID), an unknown widget, and
-      // a widget that is not configured per instance: each would leave a picker
-      // wired to nothing.
+      // No id, an invalid id (0 == INVALID_APPWIDGET_ID), and an unknown
+      // widget: each would leave a picker wired to nothing.
       expect(parseHomeWidgetConfigureRoute('/widget-configure/metric'), isNull);
       expect(
         parseHomeWidgetConfigureRoute('/widget-configure/metric?appWidgetId=0'),
@@ -214,11 +213,19 @@ void main() {
         parseHomeWidgetConfigureRoute('/widget-configure/nope?appWidgetId=13'),
         isNull,
       );
+    });
+
+    test('a status widget routes to the exact-alarm gate', () {
+      // The zero-config widgets became configurable so the exact-alarm
+      // permission can be asked at add time; their route must parse.
       expect(
         parseHomeWidgetConfigureRoute(
           '/widget-configure/todayVitals?appWidgetId=13',
         ),
-        isNull,
+        const HomeWidgetConfigureRequest(
+          widget: HomeWidgetId.todayVitals,
+          appWidgetId: 13,
+        ),
       );
     });
   });
