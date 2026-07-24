@@ -88,7 +88,7 @@ internal class NutritionHealthReader(
           bmrKcalPerDay = bmrKcalPerDay,
         )
         DailyNutritionMsg(
-          dateEpochMs = bucket.startTime.toEpochMilli(),
+          dateEpochMs = dayBucketDateEpochMs(bucket.startTime, bucket.endTime, zone),
           hydrationLiters = if (includeHydration) {
             bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0
           } else {
@@ -112,7 +112,7 @@ internal class NutritionHealthReader(
         ),
       ).map { bucket ->
         DailyMacrosMsg(
-          dateEpochMs = bucket.startTime.toEpochMilli(),
+          dateEpochMs = dayBucketDateEpochMs(bucket.startTime, bucket.endTime, zone),
           nutrientValues = bucket.result.nutrientValues(),
         )
       }

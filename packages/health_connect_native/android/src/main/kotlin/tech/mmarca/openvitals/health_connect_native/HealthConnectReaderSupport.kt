@@ -129,3 +129,24 @@ internal class HealthConnectReaderSupport(
 
 private fun String.privacySafeOperationName(): String =
   substringBefore('[')
+
+/**
+ * The local date (as its start-of-day epoch millis) that a fixed-24h aggregate
+ * bucket belongs to.
+ *
+ * `Duration.ofDays(1)` slicing stays instant-aligned across DST transitions, so
+ * bucket boundaries drift up to an hour off local midnight. Dating a bucket by
+ * its *start* then puts two buckets on the fall-back date and none on the
+ * spring-forward date — a doubled and a missing day on every year heatmap. The
+ * bucket's midpoint always falls inside the one local day it covers, so every
+ * date gets exactly one full bucket. (Period slicing would cut true local days,
+ * but it resolves records against their stored zone offset and undercounts —
+ * see the Dart `readDailySteps` note.)
+ */
+internal fun dayBucketDateEpochMs(start: Instant, end: Instant, zone: ZoneId): Long =
+  Instant.ofEpochMilli((start.toEpochMilli() + end.toEpochMilli()) / 2)
+    .atZone(zone)
+    .toLocalDate()
+    .atStartOfDay(zone)
+    .toInstant()
+    .toEpochMilli()

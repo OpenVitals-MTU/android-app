@@ -102,6 +102,7 @@ internal class HeartHealthReader(
 
   suspend fun readDailyHeartRateSummaries(start: Instant, end: Instant): List<HeartRateSummaryMsg> =
     support.withLogging("readDailyHeartRateSummaries[$start..$end]", emptyList()) {
+      val zone = ZoneId.systemDefault()
       support.client().aggregateGroupByDuration(
         AggregateGroupByDurationRequest(
           metrics = setOf(
@@ -115,7 +116,7 @@ internal class HeartHealthReader(
       ).mapNotNull { bucket ->
         val avg = bucket.result[HeartRateRecord.BPM_AVG] ?: return@mapNotNull null
         HeartRateSummaryMsg(
-          dateEpochMs = bucket.startTime.toEpochMilli(),
+          dateEpochMs = dayBucketDateEpochMs(bucket.startTime, bucket.endTime, zone),
           avgBpm = avg,
           minBpm = bucket.result[HeartRateRecord.BPM_MIN] ?: avg,
           maxBpm = bucket.result[HeartRateRecord.BPM_MAX] ?: avg,
@@ -151,6 +152,7 @@ internal class HeartHealthReader(
 
   suspend fun readDailyRestingHR(start: Instant, end: Instant): List<DailyRestingHRMsg> =
     support.withLogging("readDailyRestingHR[$start..$end]", emptyList()) {
+      val zone = ZoneId.systemDefault()
       support.client().aggregateGroupByDuration(
         AggregateGroupByDurationRequest(
           metrics = setOf(RestingHeartRateRecord.BPM_AVG),
@@ -159,7 +161,10 @@ internal class HeartHealthReader(
         ),
       ).mapNotNull { bucket ->
         val bpm = bucket.result[RestingHeartRateRecord.BPM_AVG] ?: return@mapNotNull null
-        DailyRestingHRMsg(dateEpochMs = bucket.startTime.toEpochMilli(), bpm = bpm)
+        DailyRestingHRMsg(
+          dateEpochMs = dayBucketDateEpochMs(bucket.startTime, bucket.endTime, zone),
+          bpm = bpm,
+        )
       }
     }
 

@@ -812,12 +812,14 @@ void main() {
     });
 
     test(
-        'readDailySteps sums two buckets on the same local date '
-        '(DST fall-back day) instead of overwriting', () async {
+        'readDailySteps dates a drifted bucket by its midpoint, not its start '
+        '(DST fall-back day)', () async {
       final api = FakeHostApi();
-      // A 25-hour local day makes two absolute 24h buckets resolve to the same
-      // LocalDate (midnight + 23:00). They must be summed; the old map-assign
-      // kept only the second, silently dropping a near-full day of steps.
+      // After a fall-back transition the absolute 24h buckets drift to 23:00
+      // starts. Dating by start put the second bucket on Jan 2 as well,
+      // doubling the fall-back date and leaving Jan 3 empty (the year
+      // heatmap's bright/dark blip pair). Its midpoint (11:00 Jan 3) lands
+      // inside the day the bucket actually covers.
       api.durationBuckets = [
         jsonEncode({
           'startEpochMs': DateTime(2026, 1, 2).millisecondsSinceEpoch,
@@ -832,10 +834,63 @@ void main() {
       ];
       final daily = await _source(api).readDailySteps(
         LocalDate(2026, 1, 2),
+        LocalDate(2026, 1, 3),
+      );
+      expect(daily, hasLength(2));
+      expect(daily.first.date, LocalDate(2026, 1, 2));
+      expect(daily.first.steps, 5000);
+      expect(daily.last.date, LocalDate(2026, 1, 3));
+      expect(daily.last.steps, 300);
+    });
+
+    test(
+        'readDailySteps keeps the spring-forward day a start-dated bucket '
+        'would skip', () async {
+      final api = FakeHostApi();
+      // Around spring-forward a drifted bucket runs 23:00 Jan 1 → 00:00 Jan 3
+      // in local wall time. Dating by start left no bucket on Jan 2 at all —
+      // a false empty day. The midpoint (~11:30 Jan 2) lands on Jan 2.
+      api.durationBuckets = [
+        jsonEncode({
+          'startEpochMs': DateTime(2026, 1, 1, 23).millisecondsSinceEpoch,
+          'endEpochMs': DateTime(2026, 1, 3).millisecondsSinceEpoch,
+          'values': {'Steps.count': 700.0, 'Distance.distance': 550.0},
+        }),
+      ];
+      final daily = await _source(api).readDailySteps(
+        LocalDate(2026, 1, 2),
         LocalDate(2026, 1, 2),
       );
       expect(daily, hasLength(1));
       expect(daily.single.date, LocalDate(2026, 1, 2));
+      expect(daily.single.steps, 700);
+    });
+
+    test(
+        'readDailySteps sums a clipped tail bucket onto its date instead of '
+        'overwriting', () async {
+      final api = FakeHostApi();
+      // A drifted chunk ends in a short clipped bucket whose midpoint shares
+      // the final date with the preceding full bucket. They must be summed;
+      // a map-assign would keep only the second, dropping a near-full day.
+      api.durationBuckets = [
+        jsonEncode({
+          'startEpochMs': DateTime(2026, 1, 2, 23).millisecondsSinceEpoch,
+          'endEpochMs': DateTime(2026, 1, 3, 23).millisecondsSinceEpoch,
+          'values': {'Steps.count': 5000.0, 'Distance.distance': 4000.0},
+        }),
+        jsonEncode({
+          'startEpochMs': DateTime(2026, 1, 3, 23).millisecondsSinceEpoch,
+          'endEpochMs': DateTime(2026, 1, 4).millisecondsSinceEpoch,
+          'values': {'Steps.count': 300.0, 'Distance.distance': 250.0},
+        }),
+      ];
+      final daily = await _source(api).readDailySteps(
+        LocalDate(2026, 1, 3),
+        LocalDate(2026, 1, 3),
+      );
+      expect(daily, hasLength(1));
+      expect(daily.single.date, LocalDate(2026, 1, 3));
       expect(daily.single.steps, 5300);
       expect(daily.single.distanceMeters, 4250.0);
     });
