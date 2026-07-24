@@ -2461,5 +2461,14 @@
             }
         }
     },
-    "settingsWatchSettingsConfirmActionBody": "Esto activa la función del reloj y no se puede deshacer desde aquí."
+    "settingsWatchSettingsConfirmActionBody": "Esto activa la función del reloj y no se puede deshacer desde aquí.",
+    "dashboardCaffeineTodaySubtitle": "{mg}mg hoy",
+    "@dashboardCaffeineTodaySubtitle": {
+        "description": "Dashboard caffeine tile subtitle: total caffeine consumed on the selected day, shown under the currently-active amount.",
+        "placeholders": {
+            "mg": {
+                "type": "String"
+            }
+        }
+    }
 }
