@@ -1,12 +1,14 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/result/result.dart';
 import '../../bootstrap/background_health_access.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../core/reminders/alarm_manager_reminder_scheduler.dart';
+import '../../core/reminders/reminder_notifications.dart';
 import '../../data/prefs/preferences_repository.dart';
 import '../../data/repository/body_energy_timeline_cache_store.dart';
 import '../../data/repository/impl/activity_marker_repository_impl.dart';
@@ -45,11 +47,27 @@ const AlarmManagerReminderScheduler homeWidgetRefreshAlarmScheduler =
 /// Android's alarm manager has no repeating exact alarm worth relying on, so the
 /// chain is self-perpetuating: each firing re-arms the next (the same shape as
 /// the hydration/mindfulness reminders).
+///
+/// The default scheduler carries the exact-alarm gate the reminders use. This
+/// is not cosmetic: armed INEXACT, the chain's alarms are deferred to Doze
+/// maintenance windows — hours apart overnight on-device — so the widgets froze
+/// on whatever the last pre-dawn fire computed (an empty Body Energy day from
+/// before the watch synced) until the app was next opened. Exact keeps the
+/// 30-minute cadence through Doze; when `SCHEDULE_EXACT_ALARM` is not granted
+/// it degrades to the old inexact behaviour rather than dying.
 Future<void> scheduleHomeWidgetRefresh({
-  AlarmManagerReminderScheduler scheduler = homeWidgetRefreshAlarmScheduler,
+  AlarmManagerReminderScheduler? scheduler,
   DateTime? now,
-}) =>
-    scheduler.schedule((now ?? DateTime.now()).add(homeWidgetRefreshInterval));
+}) {
+  final resolved = scheduler ??
+      AlarmManagerReminderScheduler(
+        alarmId: homeWidgetRefreshAlarmId,
+        callback: homeWidgetRefreshAlarmCallback,
+        canScheduleExact: () =>
+            canScheduleExactReminders(FlutterLocalNotificationsPlugin()),
+      );
+  return resolved.schedule((now ?? DateTime.now()).add(homeWidgetRefreshInterval));
+}
 
 /// Runs in a **background isolate** when the refresh alarm fires — the Dart
 /// stand-in for Glance's periodic `onUpdate`.
