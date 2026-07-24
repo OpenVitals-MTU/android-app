@@ -30,7 +30,7 @@ part 'body_energy_timeline.freezed.dart';
 /// basal floor is resting metabolism. The energy-balance framing is a documented
 /// product design, not a single published model.
 const int bodyEnergyTimelineBucketMinutes = 5;
-const int bodyEnergyTimelineAlgorithmVersion = 3;
+const int bodyEnergyTimelineAlgorithmVersion = 4;
 
 /// Points of Body Energy drained per minute of basal metabolism while awake.
 /// ~0.022 accrues roughly 20 points across a 16-hour waking day, so the line
@@ -44,6 +44,12 @@ const double _referenceBmrKcalPerDay = 1600.0;
 /// Points of Body Energy drained per kilocalorie of active energy expenditure.
 /// Chosen so a heavy ~700 active-kcal day contributes ~40 points of drain.
 const double _activeKcalToPoints = 0.06;
+
+/// Fallback conversion for buckets whose activity progress carries STEPS but no
+/// active-calorie figure (a phone pedometer writing bare step counts into
+/// Health Connect). ~0.04 kcal per step is the common walking approximation;
+/// it only substitutes when the calorie series is silent, never adds to it.
+const double _kcalPerStep = 0.04;
 
 enum BodyEnergyConfidence {
   high('HIGH'),
@@ -358,6 +364,11 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     bucketCount: bucketCount,
     dayStart: dayStart,
   );
+  final stepsPerBucket = _stepsPerBucket(
+    inputs.activityProgress,
+    bucketCount: bucketCount,
+    dayStart: dayStart,
+  );
   final basalScale = inputs.basalMetabolicRateKcalPerDay != null
       ? (inputs.basalMetabolicRateKcalPerDay! / _referenceBmrKcalPerDay)
           .clamp(0.5, 2.0)
@@ -373,6 +384,7 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
   var drained = 0.0;
   var continuousActivityMinutes = 0.0;
   var recoveryDebtBuckets = 0;
+  var daySignalSeen = false;
   var highConfidenceBuckets = 0;
   var mediumConfidenceBuckets = 0;
   var lowConfidenceBuckets = 0;
@@ -439,13 +451,31 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     }
     final exerciseMultiplier = workoutMinutes > 0.0 ? 1.15 : 1.0;
     final notSleeping = sleepMinutes <= 0.0;
-    final activeKcal = index < activeKcalPerBucket.length
+    final recordedKcal = index < activeKcalPerBucket.length
         ? activeKcalPerBucket[index]
         : 0.0;
-    // Awake-and-present: heart rate is being sampled, or active calories were
-    // burned. Data gaps (watch off) neither charge nor drain.
-    final awakePresent =
-        notSleeping && (avgHeartRate != null || activeKcal > 0.0);
+    final bucketSteps =
+        index < stepsPerBucket.length ? stepsPerBucket[index] : 0.0;
+    // Steps stand in for active calories only when the calorie series is
+    // silent for the bucket — a phone pedometer writing bare step counts (the
+    // 4k-step walk that used to move nothing because the watch was off).
+    final activeKcal =
+        recordedKcal > 0.0 ? recordedKcal : bucketSteps * _kcalPerStep;
+    // A day that has shown life keeps burning through its gaps: once any
+    // signal (heart rate, sleep, activity) has been seen today, an unmeasured
+    // awake bucket still pays the basal drain — a watch on the charger does
+    // not pause the wearer's metabolism. BEFORE the first signal the line
+    // stays frozen, which keeps two cases honest: a device-less day holds its
+    // seed instead of sliding to zero with nothing to ever charge it back, and
+    // an untracked night is not billed as hours of wakefulness.
+    daySignalSeen = daySignalSeen ||
+        avgHeartRate != null ||
+        sleepMinutes > 0.0 ||
+        activeKcal > 0.0;
+    // Awake-and-present: heart rate is being sampled, active energy was
+    // spent, or the day's data has started and this is a mid-day gap.
+    final awakePresent = notSleeping &&
+        (avgHeartRate != null || activeKcal > 0.0 || daySignalSeen);
 
     // Elevated heart rate while awake and not working out. Strengthened from the
     // original so ordinary sympathetic stress registers.
@@ -968,23 +998,46 @@ List<double> _activeCaloriesPerBucket(
   List<ActivityProgressPoint> progress, {
   required int bucketCount,
   required DateTime dayStart,
+}) =>
+    _cumulativePerBucket(
+      progress,
+      bucketCount: bucketCount,
+      dayStart: dayStart,
+      value: (point) => point.totalActiveCaloriesKcal,
+    );
+
+List<double> _stepsPerBucket(
+  List<ActivityProgressPoint> progress, {
+  required int bucketCount,
+  required DateTime dayStart,
+}) =>
+    _cumulativePerBucket(
+      progress,
+      bucketCount: bucketCount,
+      dayStart: dayStart,
+      value: (point) => point.totalSteps.toDouble(),
+    );
+
+List<double> _cumulativePerBucket(
+  List<ActivityProgressPoint> progress, {
+  required int bucketCount,
+  required DateTime dayStart,
+  required double? Function(ActivityProgressPoint) value,
 }) {
   final result = List<double>.filled(math.max(bucketCount, 0), 0.0);
   if (bucketCount <= 0 || progress.isEmpty) return result;
 
-  // Cumulative knots, minutes-from-start → running active kcal, starting at 0.
+  // Cumulative knots, minutes-from-start → running value, starting at 0.
   final knots = <(double, double)>[(0.0, 0.0)];
-  final sorted = progress
-      .where((point) => point.totalActiveCaloriesKcal != null)
-      .toList()
+  final sorted = progress.where((point) => value(point) != null).toList()
     ..sort((a, b) => a.time.compareTo(b.time));
   for (final point in sorted) {
     final minute = point.time.difference(dayStart).inSeconds / 60.0;
     if (minute <= 0.0) continue;
-    var value = math.max(0.0, point.totalActiveCaloriesKcal!);
+    var v = math.max(0.0, value(point)!);
     // Guard against a non-monotonic cumulative series.
-    if (value < knots.last.$2) value = knots.last.$2;
-    knots.add((minute, value));
+    if (v < knots.last.$2) v = knots.last.$2;
+    knots.add((minute, v));
   }
   if (knots.length < 2) return result;
 

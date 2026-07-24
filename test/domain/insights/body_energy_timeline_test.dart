@@ -285,6 +285,112 @@ void main() {
     );
   });
 
+  test('a data gap after the day has shown life keeps draining basal', () {
+    // Watch worn 08:00-12:00, then on the charger until 18:00. The wearer's
+    // metabolism does not pause with the watch: the gap buckets keep the
+    // basal drain, so the line keeps easing down instead of flat-lining
+    // (the "put the tracker away for a couple of hours" report).
+    final wornStart = dayStart.add(const Duration(hours: 8));
+    final wornEnd = wornStart.add(const Duration(hours: 4));
+    final now = dayStart.add(const Duration(hours: 18));
+    final timeline = calculateBodyEnergyTimeline(
+      inputs(
+        now: now,
+        previousEndScore: 80,
+        samples: heartRateSamples(wornStart, wornEnd, 58),
+        bodyProfile: restfulProfile,
+      ),
+    );
+
+    final gapPoints = timeline.points
+        .where((p) => p.time.isAfter(wornEnd.add(const Duration(minutes: 5))))
+        .toList();
+    expect(gapPoints, isNotEmpty);
+    expect(
+      gapPoints.any((p) => p.basalDrain > 0.0),
+      isTrue,
+      reason: 'an unmeasured awake bucket after the first signal still pays '
+          'the basal cost',
+    );
+    expect(gapPoints.last.score < gapPoints.first.score, isTrue);
+  });
+
+  test('a gap before the first signal of the day stays frozen', () {
+    // Nothing recorded until 14:00: the untracked night and morning hold the
+    // seed. A device-less stretch must not slide toward zero with nothing to
+    // ever charge it back, and an untracked night must not be billed as
+    // hours of wakefulness.
+    final firstData = dayStart.add(const Duration(hours: 14));
+    final now = dayStart.add(const Duration(hours: 16));
+    final timeline = calculateBodyEnergyTimeline(
+      inputs(
+        now: now,
+        previousEndScore: 80,
+        samples: heartRateSamples(
+            firstData, firstData.add(const Duration(hours: 2)), 58),
+        bodyProfile: restfulProfile,
+      ),
+    );
+
+    final beforeData = timeline.points
+        .where((p) => p.time.isBefore(firstData))
+        .toList();
+    expect(beforeData, isNotEmpty);
+    expect(beforeData.every((p) => p.basalDrain == 0.0), isTrue);
+    expect(beforeData.last.score, timeline.startScore);
+  });
+
+  test('steps without active calories still drain through a gap', () {
+    // The reported 4k-step walk: phone-recorded steps land in Health Connect
+    // with no active-calorie series and no heart rate. The steps stand in for
+    // the calories, so the walk drains instead of moving nothing.
+    final wornStart = dayStart.add(const Duration(hours: 8));
+    final wornEnd = wornStart.add(const Duration(hours: 4));
+    final now = dayStart.add(const Duration(hours: 18));
+    final walkHourEnd = dayStart.add(const Duration(hours: 15));
+    final base = calculateBodyEnergyTimeline(
+      inputs(
+        now: now,
+        previousEndScore: 80,
+        samples: heartRateSamples(wornStart, wornEnd, 58),
+        bodyProfile: restfulProfile,
+      ),
+    );
+    final withWalk = calculateBodyEnergyTimeline(
+      inputs(
+        now: now,
+        previousEndScore: 80,
+        samples: heartRateSamples(wornStart, wornEnd, 58),
+        bodyProfile: restfulProfile,
+        progress: [
+          // Cumulative steps: 0 by 14:00, 4000 by 15:00 — no kcal series.
+          ActivityProgressPoint(
+            time: dayStart.add(const Duration(hours: 14)),
+            totalSteps: 0,
+            totalDistanceMeters: null,
+            totalCaloriesBurnedKcal: null,
+          ),
+          ActivityProgressPoint(
+            time: walkHourEnd,
+            totalSteps: 4000,
+            totalDistanceMeters: null,
+            totalCaloriesBurnedKcal: null,
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      withWalk.currentScore < base.currentScore,
+      isTrue,
+      reason: 'phone-recorded steps must drain even with no kcal and no HR',
+    );
+    final walkPoints = withWalk.points.where((p) =>
+        !p.time.isBefore(dayStart.add(const Duration(hours: 14))) &&
+        p.time.isBefore(walkHourEnd));
+    expect(walkPoints.any((p) => p.activityEnergyDrain > 0.0), isTrue);
+  });
+
   test('a low-heart-rate high-step day out-drains a sedentary day', () {
     final start = dayStart.add(const Duration(hours: 8));
     final end = start.add(const Duration(hours: 8));
