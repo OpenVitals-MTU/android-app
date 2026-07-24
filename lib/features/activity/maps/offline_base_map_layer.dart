@@ -34,35 +34,13 @@ import 'pmtiles_tile_provider.dart';
 /// * no active pack, resources still loading, or a pack that fails to open →
 ///   nothing, leaving the plain route canvas exactly like Kotlin's
 ///   `RoutePreview` fallback.
-class OfflineBaseMapLayer extends ConsumerStatefulWidget {
+class OfflineBaseMapLayer extends ConsumerWidget {
   const OfflineBaseMapLayer({super.key});
 
   @override
-  ConsumerState<OfflineBaseMapLayer> createState() =>
-      _OfflineBaseMapLayerState();
-}
-
-class _OfflineBaseMapLayerState extends ConsumerState<OfflineBaseMapLayer> {
-  OfflineBaseMap? _config;
-  _OfflineBaseMapResources? _resources;
-  int _loadGeneration = 0;
-
-  @override
-  void dispose() {
-    _loadGeneration += 1;
-    _resources?.dispose();
-    _resources = null;
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final baseMap = ref.watch(offlineBaseMapProvider);
-    if (baseMap != _config) {
-      _config = baseMap;
-      _reload(baseMap);
-    }
-    return switch (_resources) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final resources = ref.watch(_offlineBaseMapResourcesProvider).value;
+    return switch (resources) {
       final _PmtilesResources resources => VectorTileLayer(
           tileProviders: resources.providers,
           theme: resources.theme,
@@ -75,30 +53,30 @@ class _OfflineBaseMapLayerState extends ConsumerState<OfflineBaseMapLayer> {
       null => const SizedBox.shrink(),
     };
   }
-
-  void _reload(OfflineBaseMap? baseMap) {
-    final generation = ++_loadGeneration;
-    _resources?.dispose();
-    _resources = null;
-    if (baseMap == null) return;
-    unawaited(() async {
-      final _OfflineBaseMapResources resources;
-      try {
-        resources = await _loadResources(baseMap);
-      } catch (error) {
-        // Kotlin's Mapsforge path falls back to the plain RoutePreview when a
-        // pack fails to open; a broken pack must not take the screen down.
-        debugPrint('Offline base map failed to load: $error');
-        return;
-      }
-      if (!mounted || generation != _loadGeneration) {
-        resources.dispose();
-        return;
-      }
-      setState(() => _resources = resources);
-    }());
-  }
 }
+
+/// The heavy resources for the active pack set, held for the app's lifetime
+/// and rebuilt (old set disposed) only when the active format or pack list
+/// changes. App-lifetime rather than per-screen on purpose: the Mapsforge
+/// renderer spawns a reader isolate whose ~600ms startup would tax every
+/// screen open — and [DatastoreRenderer.dispose] never kills that isolate, so
+/// a per-screen lifecycle would leak one isolate per visit.
+final _offlineBaseMapResourcesProvider =
+    FutureProvider<_OfflineBaseMapResources?>((ref) async {
+  final baseMap = ref.watch(offlineBaseMapProvider);
+  if (baseMap == null) return null;
+  final _OfflineBaseMapResources resources;
+  try {
+    resources = await _loadResources(baseMap);
+  } catch (error) {
+    // Kotlin's Mapsforge path falls back to the plain RoutePreview when a
+    // pack fails to open; a broken pack must not take the screen down.
+    debugPrint('Offline base map failed to load: $error');
+    return null;
+  }
+  ref.onDispose(resources.dispose);
+  return resources;
+});
 
 /// Heavyweight per-pack-set resources (open archives / datastores / themes),
 /// rebuilt whenever the active format or pack list changes.
@@ -180,16 +158,31 @@ Future<_OfflineBaseMapResources> _loadMapsforge(List<String> packPaths) async {
   );
   final datastore = MultimapDatastore(DataPolicy.DEDUPLICATE);
   try {
+    final mapfiles = <Mapfile>[];
     for (final path in packPaths) {
-      await datastore.addDatastore(await Mapfile.createFromFile(filename: path));
+      final mapfile = await Mapfile.createFromFile(filename: path);
+      mapfiles.add(mapfile);
+      await datastore.addDatastore(mapfile);
+    }
+    // addDatastore's bounding-box read opened RandomAccessFiles on this
+    // isolate. The renderer's reader isolate below gets the whole datastore
+    // SENT to it, and open file handles are unsendable — drop them here (the
+    // isolate's copy lazily reopens its own).
+    for (final mapfile in mapfiles) {
+      mapfile.readBufferSource.freeRessources();
     }
     final themeXml = await rootBundle.loadString('assets/mapsforge/default.xml');
     // Labels render onto the tiles like Kotlin's TileRendererLayer (the map
     // never rotates, so a separate label layer buys nothing).
+    //
+    // useIsolateReader keeps block parsing AND rendertheme matching off the
+    // UI thread: with them inline, a dense tile burst holds the main thread
+    // past the 5s input-dispatch deadline and Android ANR-kills the app.
     return _MapsforgeResources(DatastoreRenderer(
       datastore,
       RenderThemeBuilder.createFromString(themeXml),
       useSeparateLabelLayer: false,
+      useIsolateReader: true,
     ));
   } catch (error) {
     datastore.dispose();
