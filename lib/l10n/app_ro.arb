@@ -639,5 +639,98 @@
     "statTotal": "Total",
     "statTime": "Timp",
     "statAverage": "Medie",
-    "statLowest": "Cel mai scăzut"
+    "statLowest": "Cel mai scăzut",
+    "actionOpenNotificationSettings": "Deschide setările de notificare",
+    "actionUseExactTiming": "Utilizează sincronizarea exactă",
+    "reminderInexactTimingNotice": "Mementourile pot ajunge cu câteva minute întârziere.",
+    "activityEntryRecordingGpsWaiting": "Se așteaptă o determinare precisă GPS înainte de a începe.",
+    "activityEntryRecordingGpsWaitingAccuracy": "Se așteaptă o mai bună precizie GPS • {arg0}",
+    "@activityEntryRecordingGpsWaitingAccuracy": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityEntryRecordingEndSession": "Finalizează sesiunea",
+    "activityEntryRecordingFinishHint": "Finalizarea va deschide formularul cu detaliile activității, astfel încât să poți adăuga titlu, note, calorii sau să ajustezi valori înainte de a salva.",
+    "activityEntryRecordingRepetitionCorrectionHint": "Folosește + sau - dacă senzorul ratează sau adaugă o repetare",
+    "activityEntryRecordingAccuracy": "Ultima precizie {arg0}",
+    "@activityEntryRecordingAccuracy": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityEntryRecordingDashboardLayout": "Aspect tablou de bord",
+    "activityEntryRecordingDashboardAddField": "Adaugă widget",
+    "activityEntryErrorDistance": "Introdu o distanță mai mare de 0.",
+    "activityEntryErrorDistanceUnsupported": "Acest tip de activitate nu acceptă distanța.",
+    "activityEntryErrorElevation": "Introdu o altitudine mai mare de 0.",
+    "activityEntryErrorElevationUnsupported": "Acest tip de activitate nu acceptă creșterea în altitudine.",
+    "activityEntryErrorActiveCalories": "Introdu calorii active mai mari de 0.",
+    "activityEntryErrorTotalCalories": "Introdu calorii totale mai mari de 0.",
+    "activityEntryErrorTotalCaloriesBelowActive": "Caloriile totale nu pot fi mai mici decât caloriile active.",
+    "activityEntryLocationPermissionNeeded": "Este necesară o permisiune de locație precisă pentru a înregistra activitățile GPS.",
+    "activityEntryRouteImportFailed": "Nu s-a putut importa fișierul de activitate: {arg0}",
+    "@activityEntryRouteImportFailed": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityEntryRecordingFailed": "Nu s-a putut înregistra activitatea: {arg0}",
+    "@activityEntryRecordingFailed": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityEntryWriteFailed": "Nu s-a putut scrie înregistrarea de activitate: {arg0}",
+    "@activityEntryWriteFailed": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "activityRouteOpenInMap": "Deschide traseul în aplicația pentru hartă",
+    "activityRouteExportGpx": "Salvează GPX",
+    "activityRouteExportKmz": "Salvează KMZ",
+    "activityRouteExportSaved": "Traseu salvat.",
+    "activityRouteExportFailed": "Nu s-a putut salva fișierul traseului.",
+    "activityRouteOpenChooserTitle": "Deschide traseul cu",
+    "activityRouteOpenFailed": "Nicio aplicație de hartă nu a putut deschide acest traseu.",
+    "activityDetailAnalysisTitle": "Analiza traseului",
+    "activityRecordingErrorActivityRecognitionPermission": "Este necesară permisiunea de recunoaștere a activității pentru a număra pașii pe banda de alergare.",
+    "activityRecordingErrorWaitingForGps": "Așteaptă o determinare precisă GPS înainte de a începe.",
+    "activityRecordingErrorProvider": "Activează GPS-ul pentru a înregistra un traseu.",
+    "activityRecordingErrorUnsupportedType": "Acest tip de activitate nu poate fi înregistrat live.",
+    "activityRecordingErrorProximitySensor": "Acest dispozitiv nu expune un senzor de proximitate pentru numărarea push-up.",
+    "activityRecordingErrorAccelerometer": "Acest dispozitiv nu expune un accelerometru pentru această înregistrare.",
+    "activityRecordingErrorStepDetector": "Acest dispozitiv nu expune evenimentele detector de pași Android.",
+    "activityRecordingHowItWorks": "Cum funcționează înregistrarea",
+    "activityRecordingGuidancePushUps": "Așează ecranul telefonului sub zona pieptului sau a capului. Senzorul de proximitate numără o repetare când te apropii de telefon.",
+    "activityRecordingGuidancePullUps": "Plasează telefonul pe corp. Accelerometrul numără mișcarea de tragere și relaxare.",
+    "exerciseTypePaddling": "Vâslit",
+    "exerciseTypeSailing": "Navigare",
+    "exerciseTypeSurfing": "Surfing",
+    "exerciseTypeSwimmingOpenWater": "Înot (în apă deschisă)",
+    "mindfulnessEntryBackgroundSound": "Sunet de fundal",
+    "mindfulnessEntryStartTimer": "Pornește",
+    "mindfulnessEntryStopTimer": "Oprește",
+    "mindfulnessEntryAddMinutes": "Adaugă minute",
+    "bodyEntryAddSelected": "Adaugă {arg0}",
+    "@bodyEntryAddSelected": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "bodyEntryInvalidValue": "Introdu o valoare validă pentru această măsurătoare.",
+    "plannedWorkoutCompleted": "Finalizat"
 }
