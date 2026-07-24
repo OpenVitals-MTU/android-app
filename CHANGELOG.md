@@ -1,5 +1,52 @@
 # Changelog
 
+## 2.3.1 - 2026-07-24
+
+### English
+
+- **A Garmin Edge can be two things at once:** a bike computer now broadcasts as a live sensor during a recording - heart rate, speed, cadence, power - while still syncing its recorded rides afterwards. WearOS smartwatches are also recognised as their own device type, with a Health Connect sources card in diagnostics.
+- **Widgets stop freezing overnight.** The background refresh survives battery saving, placing a widget offers the exact-alarm permission it needs (declining keeps the widget), and widgets refresh the moment a watch sync or an import lands new data.
+- **Body Energy keeps living while the tracker is off:** baseline metabolism keeps draining through data gaps, and a walk recorded by the phone's own step counter drains too. Untracked days still hold steady rather than sliding to zero.
+- **Mornings show last night.** HRV, resting heart rate, respiratory rate, SpO2 and skin temperature read from your night window, so overnight values are there at breakfast instead of "No data".
+- **Caffeine and streak fixes:** the bedtime projection describes the night ahead, the caffeine tile shows what is active right now with today's intake beneath it, goal streaks survive midnight until the day genuinely fails, and a drink just before midnight still anchors the reminder schedule.
+- **The Calories year view tells the truth:** no more doubled and missing days around the clock changes, no phantom kilocalories in empty years, no hang when paging quickly through years. Garmin sleep stages sit where they happened, intensity minutes count the whole week, and every top-level screen fits the largest text size.
+
+### Espanol
+
+- **Un Garmin Edge puede ser dos cosas a la vez:** un ciclocomputador ahora emite como sensor en vivo durante una grabacion - frecuencia cardiaca, velocidad, cadencia, potencia - y sigue sincronizando sus salidas grabadas despues. Los relojes WearOS tambien se reconocen como su propio tipo de dispositivo, con una tarjeta de fuentes de Health Connect en diagnosticos.
+- **Los widgets dejan de congelarse por la noche.** La actualizacion en segundo plano sobrevive al ahorro de bateria, al colocar un widget se ofrece el permiso de alarmas exactas que necesita (rechazarlo conserva el widget), y los widgets se actualizan en cuanto una sincronizacion del reloj o una importacion trae datos nuevos.
+- **Body Energy sigue viviendo con el reloj fuera de la muneca:** el metabolismo basal sigue drenando durante los huecos sin datos, y una caminata registrada por el podometro del telefono tambien drena. Los dias sin registro se mantienen estables en lugar de caer a cero.
+- **Las mananas muestran la noche anterior.** La VFC, la frecuencia cardiaca en reposo, la frecuencia respiratoria, la SpO2 y la temperatura cutanea se leen de tu ventana nocturna, asi que los valores de la noche estan ahi al desayunar en lugar de "Sin datos".
+- **Correcciones de cafeina y rachas:** la proyeccion para la hora de dormir describe la noche que viene, la tarjeta de cafeina muestra lo activo ahora mismo con la ingesta de hoy debajo, las rachas de objetivos sobreviven a la medianoche hasta que el dia falla de verdad, y una bebida justo antes de medianoche sigue anclando los recordatorios.
+- **La vista anual de Calorias dice la verdad:** ya no hay dias duplicados ni ausentes en los cambios de hora, ni kilocalorias fantasma en anos vacios, ni bloqueos al pasar rapido entre anos. Las fases de sueno de Garmin quedan donde ocurrieron, los minutos de intensidad cuentan toda la semana, y cada pantalla principal cabe con el tamano de texto mas grande.
+
+### Deutsch
+
+- **Ein Garmin Edge kann jetzt beides zugleich sein:** Ein Fahrradcomputer sendet waehrend einer Aufzeichnung als Live-Sensor - Herzfrequenz, Geschwindigkeit, Trittfrequenz, Leistung - und synchronisiert danach weiterhin seine aufgezeichneten Fahrten. WearOS-Uhren werden ausserdem als eigener Geraetetyp erkannt, mit einer Health-Connect-Quellenkarte in der Diagnose.
+- **Widgets frieren nachts nicht mehr ein.** Die Hintergrund-Aktualisierung uebersteht den Energiesparmodus, beim Platzieren eines Widgets wird die noetige Wecker-Berechtigung angeboten (Ablehnen behaelt das Widget), und Widgets aktualisieren sich, sobald eine Uhr-Synchronisierung oder ein Import neue Daten liefert.
+- **Body Energy lebt weiter, wenn die Uhr nicht am Arm ist:** Der Grundumsatz zehrt auch in Datenluecken weiter, und ein Spaziergang, den der Schrittzaehler des Telefons erfasst hat, zehrt ebenfalls. Tage ganz ohne Daten bleiben stabil, statt gegen null zu rutschen.
+- **Der Morgen zeigt die letzte Nacht.** HRV, Ruheherzfrequenz, Atemfrequenz, SpO2 und Hauttemperatur werden aus deinem Nachtfenster gelesen - die Werte der Nacht stehen beim Fruehstueck da statt "Keine Daten".
+- **Koffein- und Serien-Korrekturen:** Die Schlafenszeit-Prognose beschreibt die kommende Nacht, die Koffein-Kachel zeigt das gerade Wirksame mit der heutigen Aufnahme darunter, Ziel-Serien ueberstehen Mitternacht, bis der Tag wirklich scheitert, und ein Getraenk kurz vor Mitternacht verankert weiterhin die Erinnerungen.
+- **Die Kalorien-Jahresansicht sagt die Wahrheit:** keine doppelten und fehlenden Tage mehr um die Zeitumstellung, keine Phantom-Kilokalorien in leeren Jahren, kein Haengen beim schnellen Blaettern durch Jahre. Garmin-Schlafphasen sitzen dort, wo sie stattfanden, Intensitaetsminuten zaehlen die ganze Woche, und jeder Hauptbildschirm passt zur groessten Textgroesse.
+
+### Italiano
+
+- **Un Garmin Edge puo essere due cose insieme:** un ciclocomputer ora trasmette come sensore dal vivo durante una registrazione - frequenza cardiaca, velocita, cadenza, potenza - e continua a sincronizzare le uscite registrate dopo. Anche gli orologi WearOS sono riconosciuti come tipo di dispositivo a se, con una scheda delle sorgenti di Health Connect nella diagnostica.
+- **I widget smettono di congelarsi di notte.** L'aggiornamento in background sopravvive al risparmio energetico, piazzando un widget viene offerto il permesso di sveglie esatte che serve (rifiutare conserva il widget), e i widget si aggiornano appena una sincronizzazione dell'orologio o un'importazione porta dati nuovi.
+- **Body Energy continua a vivere con l'orologio staccato:** il metabolismo basale continua a drenare nei vuoti di dati, e una camminata registrata dal contapassi del telefono drena anche lei. I giorni senza dati restano stabili invece di scivolare a zero.
+- **Il mattino mostra la notte appena passata.** HRV, frequenza cardiaca a riposo, frequenza respiratoria, SpO2 e temperatura cutanea si leggono dalla tua finestra notturna, cosi i valori della notte sono li a colazione invece di "Nessun dato".
+- **Correzioni a caffeina e serie:** la proiezione per l'ora di dormire descrive la notte in arrivo, la scheda caffeina mostra cio che e attivo adesso con l'assunzione di oggi sotto, le serie di obiettivi sopravvivono alla mezzanotte finche il giorno non fallisce davvero, e una bevanda poco prima di mezzanotte conta ancora per i promemoria.
+- **La vista annuale delle Calorie dice la verita:** niente piu giorni doppi o mancanti attorno ai cambi d'ora, niente kilocalorie fantasma negli anni vuoti, niente blocchi sfogliando in fretta gli anni. Le fasi del sonno Garmin stanno dove sono avvenute, i minuti di intensita contano tutta la settimana, e ogni schermata principale sta nel testo piu grande.
+
+### Eesti
+
+- **Garmin Edge saab olla korraga kaks asja:** rattakompuuter edastab salvestuse ajal live-andurina - pulss, kiirus, vaentesagedus, voimsus - ja sunkroonib parast endiselt oma salvestatud soidud. Ka WearOS-i kellad tuntakse nuud ara omaette seadmetuubina, diagnostikas on Health Connecti allikate kaart.
+- **Vidinad ei kulmu enam oosel.** Taustavarskendus elab ule akusaastu, vidina lisamisel pakutakse tapsete aratuste luba, mida see vajab (keeldumine jatab vidina alles), ja vidinad varskenevad kohe, kui kella sunkroonimine voi import toob uusi andmeid.
+- **Body Energy elab edasi, kui kell on kaest aara:** baasainevahetus kulutab andmelunkades edasi ja telefoni enda sammuloenduri salvestatud jalutuskaik kulutab samuti. Taiesti andmeteta paevad puesivad stabiilsena ega libise nulli.
+- **Hommik naitab moodunud ood.** HRV, puhkepulss, hingamissagedus, SpO2 ja nahatemperatuur loetakse sinu oo aknast, nii et oo vaartused on hommikusoogi ajaks olemas, mitte "Andmed puuduvad".
+- **Kofeiini ja seeriate parandused:** magamamineku prognoos kirjeldab eesolevat ood, kofeiinikaart naitab praegu aktiivset kogust ja selle all tanast tarbimist, eesmargiseeriad elavad ule kesksoo, kuni paev paris ebaonnestub, ja jook veidi enne keskood ankurdab meeldetuletused endiselt.
+- **Kalorite aastavaade raagib tott:** ei mingeid topelt- ega puuduvaid paevi kellakeeramise umber, ei fantoomkilokaloreid tuhjades aastates, ei hangumist aastate kiirel sirvimisel. Garmini unefaasid on seal, kus need toimusid, intensiivsusminutid loevad kogu nadalat, ja iga peakuva mahub suurima tekstisuurusega.
+
 ## 2.3.0 - 2026-07-22
 
 ### English
