@@ -121,6 +121,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
     // write to their own Health Connect records through the generic import path
     // the Apple Health importer uses, not the exercise-session path.
     final healthDataSource = ref.read(healthDataSourceProvider);
+    final watermarkStore = ref.read(garminCounterWatermarkStoreProvider);
     final preferences = ref.read(preferencesRepositoryProvider);
     final writePermissions =
         ref.read(readActivityWritePermissionsUseCaseProvider)();
@@ -154,6 +155,16 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
     // rest of the folder failing every remaining file for the same reason and
     // reporting them all as broken.
     var rateLimited = false;
+
+    // The day-cumulative step/distance/calorie counters from EVERY monitoring
+    // file in the run, accumulated rather than mapped file by file.
+    //
+    // These are the one thing in a monitoring file that cannot be read a file at
+    // a time: they are intraday differences, and the difference across the seam
+    // between two files is in neither of them. Only the point lists are held (a
+    // few hundred ints per file), so the importer still reads one file's bytes
+    // at a time.
+    var counters = const FitMonitoringCounters();
 
     // Parsed wellness records waiting to be written together, same per-call-quota
     // reasoning as the activity batch. Grouped by file — a monitoring file yields
@@ -287,7 +298,19 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
             if (wellness.healthSnapshot != null)
               ...fitHealthSnapshotImportRecords(wellness.healthSnapshot!),
           ];
-          if (records.isNotEmpty) {
+          // The cumulative counters are held back and mapped ONCE at the end of
+          // the run — see [counters]. A file only knows the minutes it holds, and
+          // an interval record needs the reading before its first one.
+          var carriedCounters = false;
+          if (wellness.monitoring case final monitoring?) {
+            final fileCounters = fitMonitoringCounters(monitoring);
+            carriedCounters = !fileCounters.isEmpty;
+            counters = counters.merge(fileCounters);
+          }
+          // An empty group for a file whose ONLY content was counters: it
+          // contributed, so it counts as imported, and the group carries nothing
+          // because its records are written once at the end of the run.
+          if (records.isNotEmpty || carriedCounters) {
             wellnessPending.add(records);
             debugPrint('[FIT] queued wellness file=${file.fileName ?? "?"} '
                 'records=${records.length}');
@@ -301,7 +324,7 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
           // recorded — so branching on "did this yield wellness records" sent a
           // real 6.5 KB workout down the wellness path and dropped it.
           if (!wellness.isActivityType) {
-            if (records.isEmpty) {
+            if (records.isEmpty && wellness.monitoring == null) {
               // Decoded fine, but nothing Health Connect holds — a metrics file
               // carrying only sleep pressure, say, whose numbers the app keeps
               // in its own table. A skip, not a failure.
@@ -361,6 +384,29 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
 
     await writePending();
     await writeWellnessPending();
+
+    // The counters, once, from every monitoring file the run saw — the only
+    // point at which the whole day's readings are in hand.
+    if (!counters.isEmpty) {
+      final mapped = fitMonitoringCounterRecords(
+        counters,
+        previous: watermarkStore.load(),
+      );
+      if (mapped.records.isNotEmpty) {
+        try {
+          await healthDataSource.insertImportedRecords(mapped.records);
+          // Stored only once the records are IN. A watermark for records that
+          // were never written would skip those minutes for good — the next sync
+          // would difference from a reading Health Connect never received.
+          await watermarkStore.save(mapped.watermarks);
+          debugPrint('[FIT] wrote ${mapped.records.length} intraday counter '
+              'records across ${mapped.watermarks.length} day(s)');
+        } catch (error) {
+          lastError = _describeError(error);
+          debugPrint('[FIT] intraday counter write FAILED: $lastError');
+        }
+      }
+    }
 
     // DIAGNOSTIC: the run's bottom line, matching the card's "Imported X. …".
     debugPrint('[FIT] run complete: total=$totalFiles imported=$importedFiles '

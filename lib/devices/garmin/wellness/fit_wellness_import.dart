@@ -5,6 +5,8 @@
 /// (sleep first). See docs/reference/garmin-fit-files.md.
 library;
 
+import 'dart:math' as math;
+
 import '../../../domain/model/apple_health_import_records.dart';
 import 'garmin_fit_wellness.dart';
 
@@ -199,56 +201,206 @@ List<ImportRecord> fitMonitoringImportRecords(FitMonitoringSummary m) {
     ));
   }
 
-  // Cumulative counters → one running DAILY TOTAL each, per local day.
-  //
-  // These are day-cumulative per activity type, and a file may restate the day
-  // from zero rather than continuing where the last one stopped. Turning each
-  // file into a delta over its own window therefore double-counted badly: a
-  // real day measured 540 steps on the wrist and 1403 in Health Connect across
-  // thirteen syncs, because two files restated the whole day and a third mixed
-  // a walking counter at 540 with a generic one at 0 into a 540-step "delta".
-  //
-  // Keying on the DAY instead makes a re-sync overwrite rather than add, so the
-  // count converges on the day's total however often the watch is synced.
-  for (final day in _monitoringDays(m)) {
-    final steps = _dailyTotal(m.stepPoints, day);
-    final start = day.start;
-    final end = day.end;
-    if (steps > 0) {
-      records.add(StepsImportRecord(
-        clientRecordId: 'garmin_fit_steps_${day.key}',
-        startTime: start,
-        startZoneOffset: null,
-        endTime: end,
-        endZoneOffset: null,
-        count: steps,
-      ));
-    }
-    final distanceRaw = _dailyTotal(m.distancePoints, day);
-    if (distanceRaw > 0) {
-      records.add(DistanceImportRecord(
-        clientRecordId: 'garmin_fit_distance_${day.key}',
-        startTime: start,
-        startZoneOffset: null,
-        endTime: end,
-        endZoneOffset: null,
-        meters: distanceRaw / _fitMonitoringDistanceScale,
-      ));
-    }
-    final calories = _dailyTotal(m.caloriePoints, day);
-    if (calories > 0) {
-      records.add(ActiveCaloriesBurnedImportRecord(
-        clientRecordId: 'garmin_fit_active_cal_${day.key}',
-        startTime: start,
-        startZoneOffset: null,
-        endTime: end,
-        endZoneOffset: null,
-        kilocalories: calories.toDouble(),
-      ));
-    }
-  }
+  // The cumulative counters are NOT mapped here — see
+  // [fitMonitoringCounterRecords]. They are the one part of a monitoring file
+  // that cannot be read a file at a time.
 
   return records;
+}
+
+/// The cumulative step / distance / active-calorie counters a monitoring file
+/// carried, kept apart from the rest so a caller can accumulate them across
+/// every file of a sync before mapping.
+///
+/// Everything else in a monitoring file reads a file at a time: a heart-rate
+/// bucket is complete in the file that holds it. These are not — they are
+/// day-cumulative, and what happened between the last snapshot of one file and
+/// the first of the next lives in NEITHER file's own numbers, only in the
+/// difference between them.
+class FitMonitoringCounters {
+  const FitMonitoringCounters({
+    this.steps = const [],
+    this.distance = const [],
+    this.calories = const [],
+  });
+
+  final List<FitMonitoringPoint> steps;
+  final List<FitMonitoringPoint> distance;
+  final List<FitMonitoringPoint> calories;
+
+  bool get isEmpty => steps.isEmpty && distance.isEmpty && calories.isEmpty;
+
+  FitMonitoringCounters merge(FitMonitoringCounters other) =>
+      FitMonitoringCounters(
+        steps: [...steps, ...other.steps],
+        distance: [...distance, ...other.distance],
+        calories: [...calories, ...other.calories],
+      );
+}
+
+/// The counters [m] carried, for accumulating across a sync.
+FitMonitoringCounters fitMonitoringCounters(FitMonitoringSummary m) =>
+    FitMonitoringCounters(
+      steps: m.stepPoints,
+      distance: m.distancePoints,
+      calories: m.caloriePoints,
+    );
+
+/// How far a day's counters have already been imported: the last snapshot taken
+/// from them, and what each counter read at that moment.
+///
+/// This is the piece that makes intraday records safe across syncs. The watch's
+/// counters run from midnight, and each file holds only the minutes since the
+/// last sync — so the steps between one sync's last snapshot and the next
+/// sync's first belong to neither file's internal differences. Carrying the
+/// watermark forward closes that seam exactly, and re-importing a file already
+/// behind the watermark writes nothing rather than counting it twice.
+class FitCounterWatermark {
+  const FitCounterWatermark({
+    required this.time,
+    this.steps = 0,
+    this.distance = 0,
+    this.calories = 0,
+  });
+
+  final DateTime time;
+  final int steps;
+  final int distance;
+  final int calories;
+}
+
+/// The counter records, and the watermarks the caller must persist.
+class FitCounterImport {
+  const FitCounterImport({required this.records, required this.watermarks});
+
+  final List<ImportRecord> records;
+
+  /// By `yyyy-mm-dd` local day, for the caller to store and hand back next time.
+  final Map<String, FitCounterWatermark> watermarks;
+}
+
+/// Turns the day-cumulative counters into INTRADAY Health Connect records: one
+/// per step the counter actually took, spanning the minutes between the two
+/// snapshots that bracket it.
+///
+/// A single record per day is what a cumulative counter most obviously maps to,
+/// and it is what this wrote first — but it says only how far you walked, never
+/// when, so Health Connect drew a day's steps as one straight ramp from midnight
+/// to now. The watch samples the counters about once a minute, so the shape is
+/// there to be read; it just has to be read as differences.
+///
+/// The rules that keep the total honest:
+///
+///  * The snapshots are the per-instant sums across activity types (see
+///    [_dailySnapshots]), so a total moved between buckets never shows up as a
+///    step taken.
+///  * Only forward differences are recorded. The counters reset at a wear-session
+///    boundary, and a reset is not a walk backwards.
+///  * Nothing is written for a snapshot at or before [previous]'s watermark: those
+///    minutes are already in Health Connect.
+///  * A zero difference writes no record. Standing still is not an event, and a
+///    night of them would bury the day in empty entries.
+FitCounterImport fitMonitoringCounterRecords(
+  FitMonitoringCounters counters, {
+  Map<String, FitCounterWatermark> previous = const {},
+}) {
+  final records = <ImportRecord>[];
+  final watermarks = <String, FitCounterWatermark>{};
+
+  for (final day in _counterDays(counters)) {
+    final mark = previous[day.key];
+    final steps = _dailySnapshots(counters.steps, day);
+    final distance = _dailySnapshots(counters.distance, day);
+    final calories = _dailySnapshots(counters.calories, day);
+
+    // The instants any counter reported, so the three stay on one timeline.
+    final instants = <DateTime>{
+      for (final snapshot in steps) snapshot.time,
+      for (final snapshot in distance) snapshot.time,
+      for (final snapshot in calories) snapshot.time,
+    }.toList()
+      ..sort();
+    if (instants.isEmpty) continue;
+
+    var from = mark?.time ?? day.start;
+    var lastSteps = mark?.steps ?? 0;
+    var lastDistance = mark?.distance ?? 0;
+    var lastCalories = mark?.calories ?? 0;
+
+    for (final at in instants) {
+      // Already imported. Not an error — every sync re-reads the file it was
+      // halfway through, and the watch re-offers a file whose archive flag did
+      // not stick.
+      if (!at.isAfter(from)) continue;
+
+      final stepsNow = _valueAt(steps, at, lastSteps);
+      final distanceNow = _valueAt(distance, at, lastDistance);
+      final caloriesNow = _valueAt(calories, at, lastCalories);
+      final stepsDelta = math.max(0, stepsNow - lastSteps);
+      final distanceDelta = math.max(0, distanceNow - lastDistance);
+      final caloriesDelta = math.max(0, caloriesNow - lastCalories);
+
+      // Keyed on the interval's START: unique per interval, and stable, so the
+      // same minutes re-imported land on the same records rather than beside
+      // them.
+      final key = from.millisecondsSinceEpoch;
+      if (stepsDelta > 0) {
+        records.add(StepsImportRecord(
+          clientRecordId: 'garmin_fit_steps_$key',
+          startTime: from,
+          startZoneOffset: null,
+          endTime: at,
+          endZoneOffset: null,
+          count: stepsDelta,
+        ));
+      }
+      if (distanceDelta > 0) {
+        records.add(DistanceImportRecord(
+          clientRecordId: 'garmin_fit_distance_$key',
+          startTime: from,
+          startZoneOffset: null,
+          endTime: at,
+          endZoneOffset: null,
+          meters: distanceDelta / _fitMonitoringDistanceScale,
+        ));
+      }
+      if (caloriesDelta > 0) {
+        records.add(ActiveCaloriesBurnedImportRecord(
+          clientRecordId: 'garmin_fit_active_cal_$key',
+          startTime: from,
+          startZoneOffset: null,
+          endTime: at,
+          endZoneOffset: null,
+          kilocalories: caloriesDelta.toDouble(),
+        ));
+      }
+
+      from = at;
+      lastSteps = math.max(lastSteps, stepsNow);
+      lastDistance = math.max(lastDistance, distanceNow);
+      lastCalories = math.max(lastCalories, caloriesNow);
+    }
+
+    watermarks[day.key] = FitCounterWatermark(
+      time: from,
+      steps: lastSteps,
+      distance: lastDistance,
+      calories: lastCalories,
+    );
+  }
+
+  return FitCounterImport(records: records, watermarks: watermarks);
+}
+
+/// The counter reading at [at]: the snapshot taken then, or — when this counter
+/// reported nothing at an instant another one did — the last it did report.
+int _valueAt(List<_CounterSnapshot> snapshots, DateTime at, int fallback) {
+  var value = fallback;
+  for (final snapshot in snapshots) {
+    if (snapshot.time.isAfter(at)) break;
+    value = snapshot.value;
+  }
+  return value;
 }
 
 /// One local day a monitoring file touched, and the span to record it over.
@@ -272,8 +424,11 @@ class _MonitoringDay {
   final DateTime end;
 }
 
-/// The local days a monitoring summary carried samples for.
-List<_MonitoringDay> _monitoringDays(FitMonitoringSummary m) {
+/// The local days the accumulated counters carried readings for.
+List<_MonitoringDay> _counterDays(FitMonitoringCounters counters) =>
+    _daysOf([counters.steps, counters.distance, counters.calories]);
+
+List<_MonitoringDay> _daysOf(List<List<FitMonitoringPoint>> series) {
   final lastByDay = <DateTime, DateTime>{};
   void see(DateTime t) {
     final local = t.toLocal();
@@ -282,14 +437,10 @@ List<_MonitoringDay> _monitoringDays(FitMonitoringSummary m) {
     if (seen == null || local.isAfter(seen)) lastByDay[day] = local;
   }
 
-  for (final p in m.stepPoints) {
-    see(p.time);
-  }
-  for (final p in m.distancePoints) {
-    see(p.time);
-  }
-  for (final p in m.caloriePoints) {
-    see(p.time);
+  for (final points in series) {
+    for (final p in points) {
+      see(p.time);
+    }
   }
 
   final days = <_MonitoringDay>[];
@@ -312,26 +463,31 @@ List<_MonitoringDay> _monitoringDays(FitMonitoringSummary m) {
   return days;
 }
 
-/// A day's total for a cumulative counter: the day's counters as they stood at
-/// each instant the file reports, summed ACROSS activity types at that instant,
-/// and the highest such sum kept.
+/// One instant's reading of a counter, summed across activity types.
+class _CounterSnapshot {
+  const _CounterSnapshot(this.time, this.value);
+
+  final DateTime time;
+  final int value;
+}
+
+/// The day's counter as it stood at each instant the file reported, in order.
 ///
-/// Summed per instant, and NOT as the sum of each type's own peak. The counters
-/// run independently — walking at 540 beside a generic counter at 0 is not a
+/// Summed per instant, and NOT per activity type over the day. The counters run
+/// independently — walking at 540 beside a generic counter at 0 is not a
 /// 540-step change — but they are not independent of *each other*: the watch
 /// moves a total from one bucket to another and zeroes the one it left. A real
 /// day showed the generic bucket holding 709 m of distance and 6181 s of active
 /// time with ZERO steps, its step count having been reallocated to walking.
-/// Per-bucket peaks keep the abandoned peak and add it to the bucket that
-/// inherited it, so 24,724 steps on the wrist reached Health Connect as 49,448 —
-/// exactly twice, the same total counted under two types. Adding up one instant
-/// at a time can't double-count a transfer: what leaves one bucket arrives in
-/// the other within the same snapshot.
-///
-/// The maximum over instants (rather than simply the last) is what survives a
-/// counter reset: the counters restart from zero at a wear-session boundary, and
-/// the day's total is not allowed to fall when they do.
-int _dailyTotal(List<FitMonitoringPoint> points, _MonitoringDay day) {
+/// Taking each bucket's own peak keeps the abandoned peak and adds it to the
+/// bucket that inherited it, so 24,724 steps on the wrist reached Health Connect
+/// as 49,448 — exactly twice, the same total counted under two types. Adding up
+/// one instant at a time cannot double-count a transfer: what leaves one bucket
+/// arrives in the other within the same snapshot.
+List<_CounterSnapshot> _dailySnapshots(
+  List<FitMonitoringPoint> points,
+  _MonitoringDay day,
+) {
   final ofDay = <FitMonitoringPoint>[];
   var sawDeclaredType = false;
   for (final p in points) {
@@ -351,7 +507,7 @@ int _dailyTotal(List<FitMonitoringPoint> points, _MonitoringDay day) {
   // adding it to a declared bucket counts those steps twice. Dropped — unless
   // the file declared no type at all, where the untyped counter IS the total.
   final byType = <int, int>{};
-  var best = 0;
+  final snapshots = <_CounterSnapshot>[];
   var index = 0;
   while (index < ofDay.length) {
     // A snapshot is every point sharing one instant: the file restates each
@@ -370,9 +526,9 @@ int _dailyTotal(List<FitMonitoringPoint> points, _MonitoringDay day) {
     for (final value in byType.values) {
       total += value;
     }
-    if (total > best) best = total;
+    snapshots.add(_CounterSnapshot(at, total));
   }
-  return best;
+  return snapshots;
 }
 
 /// Groups items into UTC-hour buckets keyed by the hour's epoch-ms.
