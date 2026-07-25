@@ -41,6 +41,7 @@ ExerciseData _workout({
   int? durationMs,
   List<ExerciseRoutePoint> routePoints = const <ExerciseRoutePoint>[],
   List<ExerciseLapData> laps = const <ExerciseLapData>[],
+  List<ExerciseSegmentData> segments = const <ExerciseSegmentData>[],
   DateTime? endTime,
   int exerciseType = 56, // running
 }) {
@@ -55,6 +56,7 @@ ExerciseData _workout({
     source: 'test',
     totalDistanceMeters: totalDistanceMeters,
     laps: laps,
+    segments: segments,
     route: routePoints.isEmpty
         ? const ExerciseRouteData()
         : ExerciseRouteData(
@@ -818,6 +820,104 @@ void main() {
       expect(result.source, SplitSource.deviceLaps);
       expect(result.splits[0].distanceMeters, closeTo(1200.0, 0.5));
       expect(result.splits[1].distanceMeters, closeTo(800.0, 0.5));
+    });
+  });
+
+  group('paused recordings', () {
+    test('a pause inside a split does not count as time spent covering it', () {
+      // The ride this comes from: 21 minutes wall-clock with a 10½-minute pause
+      // in it, 1421 m ridden. It reported a 4.1 km/h first kilometre and a
+      // 4.9 km/h average, because the pause sat inside that kilometre's window.
+      // The rider was doing about 12.
+      //
+      // 1000 m covered in 900 s of window, 600 s of which was paused: five
+      // minutes of riding, not fifteen.
+      final workout = _workout(
+        totalDistanceMeters: 1000,
+        endTime: _at(900),
+        routePoints: [
+          _point(0, 0),
+          _point(60, 100),
+          // The pause: the recording logs nothing across it, so the next fix is
+          // ten minutes later and barely any further on.
+          _point(660, 120),
+          _point(900, 1000),
+        ],
+        segments: [
+          ExerciseSegmentData(
+            startTime: _at(60),
+            endTime: _at(660),
+            segmentType: ExerciseSegmentType.pause,
+            repetitions: 0,
+          ),
+        ],
+      );
+
+      final split = _compute(workout).splits.single;
+
+      expect(split.distanceMeters, closeTo(1000.0, 1.0));
+      expect(split.elapsed, const Duration(seconds: 300));
+      // 1000 m in 300 s = 12 km/h, not the 4 km/h the wall clock claimed.
+      expect(split.paceSecondsPerMeter, closeTo(0.3, 0.001));
+    });
+
+    test('a pause outside a split leaves it alone', () {
+      final workout = _workout(
+        totalDistanceMeters: 1000,
+        endTime: _at(900),
+        routePoints: [
+          _point(0, 0),
+          _point(300, 1000),
+          _point(900, 1000),
+        ],
+        segments: [
+          // Paused AFTER the kilometre was done.
+          ExerciseSegmentData(
+            startTime: _at(300),
+            endTime: _at(900),
+            segmentType: ExerciseSegmentType.pause,
+            repetitions: 0,
+          ),
+        ],
+      );
+
+      final split = _compute(workout).splits.first;
+
+      expect(split.elapsed, const Duration(seconds: 300));
+    });
+
+    test('a split cannot come out negative however the pauses overlap', () {
+      // A source app that writes overlapping pause segments, or one longer than
+      // the split it sits in, must not produce a negative time and an inverted
+      // pace.
+      final workout = _workout(
+        totalDistanceMeters: 1000,
+        endTime: _at(600),
+        routePoints: [
+          _point(0, 0),
+          _point(600, 1000),
+        ],
+        segments: [
+          ExerciseSegmentData(
+            startTime: _at(0),
+            endTime: _at(600),
+            segmentType: ExerciseSegmentType.pause,
+            repetitions: 0,
+          ),
+          ExerciseSegmentData(
+            startTime: _at(0),
+            endTime: _at(600),
+            segmentType: ExerciseSegmentType.pause,
+            repetitions: 0,
+          ),
+        ],
+      );
+
+      final split = _compute(workout).splits.single;
+
+      expect(split.elapsed, Duration.zero);
+      // No time means no pace at all, rather than an infinite one.
+      expect(split.paceSecondsPerMeter, isNull);
     });
   });
 }

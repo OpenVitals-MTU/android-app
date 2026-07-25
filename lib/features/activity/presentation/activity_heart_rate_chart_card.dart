@@ -18,12 +18,18 @@ class ActivityHeartRateChartCard extends StatelessWidget {
     required this.sessionStart,
     required this.sessionEnd,
     required this.unitFormatter,
+    this.pauses = const <SessionPause>[],
   });
 
   final List<HeartRateSample> samples;
   final DateTime sessionStart;
   final DateTime sessionEnd;
   final UnitFormatter unitFormatter;
+
+  /// The stretches the recording was paused for. The axis skips them, so the
+  /// samples a strap kept taking through a pause stack at the one x rather than
+  /// stretching it open.
+  final List<SessionPause> pauses;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +41,7 @@ class ActivityHeartRateChartCard extends StatelessWidget {
 
     return MetricSessionChart(
       title: AppLocalizations.of(context).activityRecordingLiveHeartRate,
-      axis: SessionAxis(start: sessionStart, end: sessionEnd),
+      axis: SessionAxis(start: sessionStart, end: sessionEnd, pauses: pauses),
       samples: [
         for (final sample in samples)
           (time: sample.time, value: sample.beatsPerMinute.toDouble()),

@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
+import '../../../domain/model/activity_entry_types.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../l10n/app_localizations.dart';
@@ -18,6 +19,7 @@ import '../../../state/app_providers.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
+import '../../../ui/charts/session_axis.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/activity_detail_display.dart';
@@ -91,6 +93,16 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       return const ErrorMessage('Activity not found.');
     }
 
+    // Every session chart skips the stretches the recording was paused for. A
+    // pause is not part of the workout: given the width of the card it would
+    // otherwise take a share of, the traces either side of it are drawn joined
+    // across a hole nothing was recorded in. See [SessionAxis.durationMs].
+    final pauses = <SessionPause>[
+      for (final segment in workout.segments)
+        if (segment.segmentType == ExerciseSegmentType.pause)
+          SessionPause(segment.startTime, segment.endTime),
+    ];
+
     return RefreshIndicator(
       onRefresh: ref.read(_provider.notifier).refresh,
       child: ListView(
@@ -121,6 +133,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 sessionStart: workout.startTime,
                 sessionEnd: workout.endTime,
                 unitFormatter: formatter,
+                pauses: pauses,
               ),
             ),
           // Only a guided recovery test produces a reading (an ordinary workout has no
@@ -140,6 +153,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 sessionStart: workout.startTime,
                 sessionEnd: workout.endTime,
                 unitFormatter: formatter,
+                pauses: pauses,
               ),
             )
           // No SpeedRecord — which is most watches. The splits know how far each
@@ -156,6 +170,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 sessionStart: workout.startTime,
                 sessionEnd: workout.endTime,
                 unitFormatter: formatter,
+                pauses: pauses,
               ),
             ),
           // The climb. It comes from the route's altitudes rather than from a
@@ -169,6 +184,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 sessionStart: workout.startTime,
                 sessionEnd: workout.endTime,
                 unitFormatter: formatter,
+                pauses: pauses,
               ),
             ),
           // One card per cadence kind that actually recorded something: a ride
@@ -183,6 +199,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 sessionStart: workout.startTime,
                 sessionEnd: workout.endTime,
                 unitFormatter: formatter,
+                pauses: pauses,
               ),
             ),
           sectionPadded(_SessionDetailsCard(workout: workout)),

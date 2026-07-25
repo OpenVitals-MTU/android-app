@@ -20,24 +20,71 @@ import 'chart_viewport.dart';
 /// Twice is once too many — see what happened to the day charts.
 @immutable
 class SessionAxis {
-  SessionAxis({required this.start, required this.end})
-      // A zero-length session would divide by zero in the painter. Sessions of
-      // zero duration exist: a recording stopped the instant it started.
-      : durationMs = math.max(end.difference(start).inMilliseconds, 1);
+  SessionAxis({
+    required this.start,
+    required this.end,
+    List<SessionPause> pauses = const <SessionPause>[],
+  })  : pauses = _normalizePauses(pauses, start, end),
+        // A zero-length session would divide by zero in the painter. Sessions of
+        // zero duration exist: a recording stopped the instant it started.
+        durationMs = math.max(
+          end.difference(start).inMilliseconds -
+              _pausedMillis(_normalizePauses(pauses, start, end)),
+          1,
+        );
 
   final DateTime start;
   final DateTime end;
+
+  /// The stretches the recording was paused for, clipped to the session,
+  /// ordered and merged. The axis SKIPS these.
+  final List<SessionPause> pauses;
+
+  /// MOVING milliseconds — the session's span less what it was paused for, and
+  /// the full width of the axis.
+  ///
+  /// A pause is not part of the ride, so it gets none of the chart. A 21-minute
+  /// bike ride with a 10½-minute pause in it spent more than half the width of
+  /// every card on a stretch where nothing was recorded, and the elevation trace
+  /// drew a smooth spline across the hole — a climb from -29 m to -10 m that
+  /// never happened, because a line joins the fixes either side of a gap
+  /// whatever sits between them. Collapsing the pause puts those two fixes next
+  /// to each other, where they belong.
   final int durationMs;
 
   Duration get duration => Duration(milliseconds: durationMs);
 
-  /// Where [time] sits across the session, in `0..1`.
-  double fractionOf(DateTime time) =>
-      time.difference(start).inMilliseconds.clamp(0, durationMs) / durationMs;
+  /// Where [time] sits across the session, in `0..1`, counting only moving time.
+  double fractionOf(DateTime time) => _movingMillisAt(time) / durationMs;
+
+  /// Moving milliseconds from the start of the session up to [time].
+  ///
+  /// An instant INSIDE a pause resolves to the moment the pause began: nothing
+  /// moved while it ran, so everything recorded during it belongs at the one
+  /// point on the axis. (Heart rate keeps sampling through a pause — a strap
+  /// does not stop because the ride did — and those samples stack there rather
+  /// than stretching the pause back open.)
+  int _movingMillisAt(DateTime time) {
+    final at = time.millisecondsSinceEpoch;
+    final from = start.millisecondsSinceEpoch;
+    if (at <= from) return 0;
+    var moving = at - from;
+    for (final pause in pauses) {
+      final pauseStart = pause.start.millisecondsSinceEpoch;
+      if (at <= pauseStart) break;
+      final pauseEnd = pause.end.millisecondsSinceEpoch;
+      moving -= math.min(at, pauseEnd) - pauseStart;
+    }
+    return moving.clamp(0, durationMs);
+  }
 
   /// The inverse of [fractionOf]: how far into the session that x was. The
   /// scrubber needs it — a finger lands on an x, and the chart has to say when
   /// that was.
+  ///
+  /// Moving elapsed, matching the axis and the "Moving time" the detail screen
+  /// states. Reporting wall-clock here would have the scrubber disagree with the
+  /// labels directly under it.
   Duration elapsedAt(double fraction) =>
       Duration(milliseconds: (fraction.clamp(0.0, 1.0) * durationMs).round());
 
@@ -62,10 +109,84 @@ class SessionAxis {
 
   @override
   bool operator ==(Object other) =>
-      other is SessionAxis && other.start == start && other.end == end;
+      other is SessionAxis &&
+      other.start == start &&
+      other.end == end &&
+      _samePauses(other.pauses, pauses);
+
+  @override
+  int get hashCode => Object.hash(start, end, Object.hashAll(pauses));
+}
+
+/// One stretch of a session the recording was paused for.
+@immutable
+class SessionPause {
+  const SessionPause(this.start, this.end);
+
+  final DateTime start;
+  final DateTime end;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SessionPause && other.start == start && other.end == end;
 
   @override
   int get hashCode => Object.hash(start, end);
+}
+
+bool _samePauses(List<SessionPause> a, List<SessionPause> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+/// [pauses] clipped to `[start, end]`, ordered, and merged where they overlap.
+///
+/// Merged because the arithmetic below subtracts each in turn: two overlapping
+/// pause segments — which a source app is free to write — would otherwise have
+/// their shared stretch taken out twice and the axis would run past its own end.
+List<SessionPause> _normalizePauses(
+  List<SessionPause> pauses,
+  DateTime start,
+  DateTime end,
+) {
+  final from = start.millisecondsSinceEpoch;
+  final to = end.millisecondsSinceEpoch;
+  final clipped = <SessionPause>[];
+  for (final pause in pauses) {
+    final pauseStart = math.max(from, pause.start.millisecondsSinceEpoch);
+    final pauseEnd = math.min(to, pause.end.millisecondsSinceEpoch);
+    if (pauseEnd > pauseStart) {
+      clipped.add(SessionPause(
+        DateTime.fromMillisecondsSinceEpoch(pauseStart, isUtc: true),
+        DateTime.fromMillisecondsSinceEpoch(pauseEnd, isUtc: true),
+      ));
+    }
+  }
+  if (clipped.length < 2) return List.unmodifiable(clipped);
+  clipped.sort((a, b) => a.start.compareTo(b.start));
+  final merged = <SessionPause>[clipped.first];
+  for (final pause in clipped.skip(1)) {
+    final last = merged.last;
+    if (!pause.start.isAfter(last.end)) {
+      if (pause.end.isAfter(last.end)) {
+        merged[merged.length - 1] = SessionPause(last.start, pause.end);
+      }
+    } else {
+      merged.add(pause);
+    }
+  }
+  return List.unmodifiable(merged);
+}
+
+int _pausedMillis(List<SessionPause> pauses) {
+  var total = 0;
+  for (final pause in pauses) {
+    total += pause.end.difference(pause.start).inMilliseconds;
+  }
+  return total;
 }
 
 /// The elapsed-time label row under a session chart.

@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import '../../core/geo/geo_distance.dart';
 import '../model/activity_models.dart';
+import '../model/activity_entry_types.dart';
 import '../model/heart_models.dart';
 import '../model/exercise_type_traits.dart';
+import 'activity_metrics.dart';
 
 /// Per-segment splits ("laps") for a distance-based activity.
 ///
@@ -57,6 +59,16 @@ class ActivitySplit {
   /// its real (short) distance — see [isPartial].
   final double distanceMeters;
 
+  /// MOVING time: the split's window less any of it the recording was paused
+  /// for. Everything derived from a split — its pace, the speed trace rebuilt
+  /// from it, the pace delta — divides by this.
+  ///
+  /// Wall-clock would count a pause as riding. A real 21-minute bike ride with a
+  /// 10½-minute pause in it reported 4.9 km/h average and a 4.1 km/h first
+  /// kilometre, because the pause sat inside that kilometre's window and nothing
+  /// took it out again. It was 12 km/h. [startTime] and [endTime] stay
+  /// wall-clock — they say WHEN, and the heart-rate mean and the chart's x axis
+  /// need that.
   final Duration elapsed;
   final DateTime startTime;
   final DateTime endTime;
@@ -263,7 +275,21 @@ ActivitySplits computeActivitySplits({
   final splits = <ActivitySplit>[];
   for (var i = 0; i < raw.length; i++) {
     final entry = raw[i];
-    final elapsed = entry.endTime.difference(entry.startTime);
+    // Estimated splits are exempt: their windows are a fiction (total distance
+    // spread evenly over the session), already laid out over moving time, so
+    // taking a pause out of one of them again would both double-count it and
+    // hand a single split a pace the others do not share — the one property
+    // that source has.
+    final elapsed = entry.endTime.difference(entry.startTime) -
+        (source == SplitSource.estimated
+            ? Duration.zero
+            : Duration(
+                milliseconds: _pausedMillisBetween(
+                  workout,
+                  entry.startTime,
+                  entry.endTime,
+                ),
+              ));
     final elapsedSeconds =
         elapsed.inMicroseconds / Duration.microsecondsPerSecond;
     final splitPaceSecondsPerMeter =
@@ -299,6 +325,29 @@ ActivitySplits computeActivitySplits({
 
 bool _isPositive(double value) => value.isFinite && value > 0;
 
+/// How much of `[start, end)` the recording was paused for, in milliseconds.
+///
+/// Pauses reach Health Connect as `EXERCISE_SEGMENT_TYPE_PAUSE` segments (see
+/// the native writer), so a session read back knows where they were — this is
+/// the same fact [pausedDurationMs] totals for the whole workout, measured
+/// against one split's window.
+int _pausedMillisBetween(ExerciseData workout, DateTime start, DateTime end) {
+  final from = start.millisecondsSinceEpoch;
+  final to = end.millisecondsSinceEpoch;
+  if (to <= from) return 0;
+  var paused = 0;
+  for (final segment in workout.segments) {
+    if (segment.segmentType != ExerciseSegmentType.pause) continue;
+    final overlapStart =
+        math.max(from, segment.startTime.millisecondsSinceEpoch);
+    final overlapEnd = math.min(to, segment.endTime.millisecondsSinceEpoch);
+    if (overlapEnd > overlapStart) paused += overlapEnd - overlapStart;
+  }
+  // A split cannot be more than entirely paused, whatever overlapping segments
+  // a source app wrote.
+  return math.min(paused, to - from);
+}
+
 /// Laps with a sane time window, oldest first. A lap that ends before it starts
 /// is a source-app bug, not a lap.
 List<ExerciseLapData> _usableLaps(ExerciseData workout) {
@@ -319,7 +368,9 @@ double? _activityPaceSecondsPerMeter({
   required List<_RawSplit> raw,
 }) {
   final recordedDistance = workout.totalDistanceMeters ?? 0.0;
-  final recordedSeconds = workout.durationMs / 1000.0;
+  // Moving, not wall-clock, so the baseline every split is compared against is
+  // measured the same way the splits are.
+  final recordedSeconds = movingDurationMs(workout) / 1000.0;
   if (_isPositive(recordedDistance) && recordedSeconds > 0) {
     return recordedSeconds / recordedDistance;
   }
@@ -670,12 +721,15 @@ _RouteSpan? _routeSpan(List<_Node> nodes, DateTime start, DateTime end) {
 /// gets the same pace by construction — which is exactly why the UI labels this
 /// source as estimated instead of drawing a suspiciously flat bar chart and
 /// letting the user believe it.
+///
+/// Spread over MOVING duration: the one number these splits do claim is a pace,
+/// and a pace measured against a clock that ran through a pause is not one.
 List<_RawSplit> _estimatedSplits(ExerciseData workout, double unit) {
   final total = workout.totalDistanceMeters ?? 0.0;
   if (!_isPositive(total)) return const <_RawSplit>[];
-  final durationMicros = workout.durationMs <= 0
-      ? 0
-      : workout.durationMs * Duration.microsecondsPerMillisecond;
+  final moving = movingDurationMs(workout);
+  final durationMicros =
+      moving <= 0 ? 0 : moving * Duration.microsecondsPerMillisecond;
 
   final splits = <_RawSplit>[];
   const maxSplits = 500;

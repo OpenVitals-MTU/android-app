@@ -27,12 +27,16 @@ class ActivitySpeedChartCard extends StatelessWidget {
     required this.sessionStart,
     required this.sessionEnd,
     required this.unitFormatter,
+    this.pauses = const <SessionPause>[],
   });
 
   final List<SpeedSample> samples;
   final DateTime sessionStart;
   final DateTime sessionEnd;
   final UnitFormatter unitFormatter;
+
+  /// The stretches the recording was paused for. The axis skips them.
+  final List<SessionPause> pauses;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +50,7 @@ class ActivitySpeedChartCard extends StatelessWidget {
       ],
       sessionStart: sessionStart,
       sessionEnd: sessionEnd,
+      pauses: pauses,
       unitFormatter: unitFormatter,
       accentColor: AppColors.distance,
       valueFormatter: (value) => unitFormatter.speed(value).text,
@@ -76,6 +81,7 @@ class ActivitySplitSpeedChartCard extends StatelessWidget {
     required this.sessionStart,
     required this.sessionEnd,
     required this.unitFormatter,
+    this.pauses = const <SessionPause>[],
   });
 
   final ActivitySplitSpeedTrace trace;
@@ -84,6 +90,9 @@ class ActivitySplitSpeedChartCard extends StatelessWidget {
   final DateTime sessionStart;
   final DateTime sessionEnd;
   final UnitFormatter unitFormatter;
+
+  /// The stretches the recording was paused for. The axis skips them.
+  final List<SessionPause> pauses;
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +123,7 @@ class ActivitySplitSpeedChartCard extends StatelessWidget {
       ],
       sessionStart: sessionStart,
       sessionEnd: sessionEnd,
+      pauses: pauses,
       unitFormatter: unitFormatter,
       accentColor: AppColors.distance,
       valueFormatter: (value) => unitFormatter.speed(value).text,
@@ -140,6 +150,7 @@ class ActivityCadenceChartCard extends StatelessWidget {
     required this.sessionStart,
     required this.sessionEnd,
     required this.unitFormatter,
+    this.pauses = const <SessionPause>[],
   });
 
   final List<ActivityCadenceSample> samples;
@@ -147,6 +158,9 @@ class ActivityCadenceChartCard extends StatelessWidget {
   final DateTime sessionStart;
   final DateTime sessionEnd;
   final UnitFormatter unitFormatter;
+
+  /// The stretches the recording was paused for. The axis skips them.
+  final List<SessionPause> pauses;
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +189,7 @@ class ActivityCadenceChartCard extends StatelessWidget {
       samples: matching,
       sessionStart: sessionStart,
       sessionEnd: sessionEnd,
+      pauses: pauses,
       unitFormatter: unitFormatter,
       accentColor: accentColor,
       valueFormatter: (value) => format(value).text,
@@ -197,12 +212,16 @@ class ActivityElevationChartCard extends StatelessWidget {
     required this.sessionStart,
     required this.sessionEnd,
     required this.unitFormatter,
+    this.pauses = const <SessionPause>[],
   });
 
   final List<ActivityElevationSample> samples;
   final DateTime sessionStart;
   final DateTime sessionEnd;
   final UnitFormatter unitFormatter;
+
+  /// The stretches the recording was paused for. The axis skips them.
+  final List<SessionPause> pauses;
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +234,7 @@ class ActivityElevationChartCard extends StatelessWidget {
       ],
       sessionStart: sessionStart,
       sessionEnd: sessionEnd,
+      pauses: pauses,
       unitFormatter: unitFormatter,
       accentColor: AppColors.elevation,
       valueFormatter: (value) => unitFormatter.elevation(value).text,
@@ -234,6 +254,7 @@ MetricSessionChart _sessionTrace({
   required UnitFormatter unitFormatter,
   required Color accentColor,
   required String Function(double value) valueFormatter,
+  List<SessionPause> pauses = const <SessionPause>[],
   bool floorAtZero = true,
   String? countText,
   String? countLabel,
@@ -248,7 +269,7 @@ MetricSessionChart _sessionTrace({
 
   return MetricSessionChart(
     title: title,
-    axis: SessionAxis(start: sessionStart, end: sessionEnd),
+    axis: SessionAxis(start: sessionStart, end: sessionEnd, pauses: pauses),
     samples: samples,
     range: ChartRange(
       // Speed and cadence cannot be negative, and an axis that starts anywhere
