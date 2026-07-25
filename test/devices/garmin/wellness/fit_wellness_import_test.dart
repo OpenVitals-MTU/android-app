@@ -203,70 +203,134 @@ void main() {
       expect(resp, hasLength(2));
       expect(resp.first.rate, closeTo(14.0, 0.001)); // avg(13,15)
 
-      final steps = records.whereType<StepsImportRecord>().single;
-      expect(steps.count, 1200); // the day's running total, not a delta
-      // The counter is the whole day's total, so the record spans the whole
-      // local day up to the last sample — attributing it to the two hours the
-      // file happened to cover would misplace the day's steps.
-      final lastLocal = DateTime.utc(2024, 1, 18, 11).toLocal();
-      expect(
-        steps.startTime,
-        DateTime(lastLocal.year, lastLocal.month, lastLocal.day),
-      );
-      expect(steps.endTime, lastLocal);
+      // The counters are no longer part of this call — they are accumulated
+      // across a whole sync and mapped once (see the intraday group below).
+      expect(records.whereType<StepsImportRecord>(), isEmpty);
     });
 
-    test('re-syncing a day overwrites it instead of adding to it', () {
-      // The bug this pins: 540 steps on the wrist became 1403 in Health
-      // Connect over thirteen syncs of one day. Health Connect upserts on
-      // clientRecordId, so the fix is that every file touching a day produces
-      // the SAME key — a per-file key made each sync a fresh, additive record.
-      List<StepsImportRecord> stepsFor(List<(DateTime, int)> cumulative) {
-        final m = parseGarminWellness(
-          _fitMonitoringSeriesBytes(stepsCumulative: cumulative),
-        ).monitoring!;
-        return fitMonitoringImportRecords(m)
-            .whereType<StepsImportRecord>()
-            .toList();
-      }
+    test('a day of counters becomes intraday records, not one flat total', () {
+      // One record per day said how far you walked and never when, so Health
+      // Connect drew the day as a straight ramp from midnight to now. The watch
+      // samples the counters about once a minute; the shape is there to read.
+      final import = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 9), 0),
+          (DateTime(2024, 1, 18, 10), 500),
+          (DateTime(2024, 1, 18, 11), 1200),
+        ],
+      );
+      final steps = _steps(import);
 
-      // Local times, not UTC: the importer groups the counter by LOCAL day —
-      // that is the point of the test — and a UTC fixture crosses local
-      // midnight somewhere (at UTC+14 these two samples split into two records
-      // and `.single` threw).
-      final early = stepsFor([
+      // 09:00 read zero, so nothing happened before it worth recording.
+      expect(steps, hasLength(2));
+      expect(steps[0].startTime.toLocal(), DateTime(2024, 1, 18, 9));
+      expect(steps[0].endTime.toLocal(), DateTime(2024, 1, 18, 10));
+      expect(steps[0].count, 500);
+      expect(steps[1].count, 700);
+      // ...and they still add up to the day the wrist reported.
+      expect(_stepsTotal(import), 1200);
+    });
+
+    test('what came before the first reading is not lost', () {
+      // A watch synced at noon reports a counter already in the thousands. Those
+      // steps have no snapshot to be differenced against, so they are recorded
+      // against the stretch from midnight — the only claim the data supports.
+      final import = _counterImport(
+        stepsCumulative: [(DateTime(2024, 1, 18, 12), 8000)],
+      );
+      final steps = _steps(import).single;
+
+      expect(steps.startTime.toLocal(), DateTime(2024, 1, 18));
+      expect(steps.endTime.toLocal(), DateTime(2024, 1, 18, 12));
+      expect(steps.count, 8000);
+    });
+
+    test('standing still writes nothing', () {
+      final import = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 9), 500),
+          (DateTime(2024, 1, 18, 10), 500),
+          (DateTime(2024, 1, 18, 11), 500),
+        ],
+      );
+
+      // One record for the 500 before 09:00, and nothing for the two hours that
+      // followed: a night of empty entries would bury the day.
+      expect(_steps(import), hasLength(1));
+      expect(_stepsTotal(import), 500);
+    });
+
+    test('the next sync carries on from the watermark, not from midnight', () {
+      // The seam this exists for: each file holds only the minutes since the
+      // last sync, so the steps between one sync's last reading and the next
+      // sync's first are in NEITHER file's own differences.
+      final first = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 9), 500),
+          (DateTime(2024, 1, 18, 10), 900),
+        ],
+      );
+      final second = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 11), 1500),
+          (DateTime(2024, 1, 18, 12), 1700),
+        ],
+        previous: first.watermarks,
+      );
+
+      // 900 -> 1500 across the seam, then 1500 -> 1700.
+      expect(_steps(second).first.startTime.toLocal(), DateTime(2024, 1, 18, 10));
+      expect(_steps(second).first.count, 600);
+      // Every step the wrist counted, and each one only once.
+      expect(_stepsTotal(first) + _stepsTotal(second), 1700);
+    });
+
+    test('re-importing a file already behind the watermark writes nothing', () {
+      // The bug this pins: 540 steps on the wrist became 1403 in Health Connect
+      // over thirteen syncs of one day. A watch re-offers a file whose archive
+      // flag did not stick, and a sync re-reads the file it was halfway through.
+      final cumulative = [
         (DateTime(2024, 1, 18, 9), 200),
-        (DateTime(2024, 1, 18, 10), 350),
-      ]).single;
-      // A later sync whose file restates the day from zero, as a real watch does.
-      final later = stepsFor([
-        (DateTime(2024, 1, 18, 11), 0),
-        (DateTime(2024, 1, 18, 12), 540),
-      ]).single;
+        (DateTime(2024, 1, 18, 10), 540),
+      ];
+      final first = _counterImport(stepsCumulative: cumulative);
+      final again = _counterImport(
+        stepsCumulative: cumulative,
+        previous: first.watermarks,
+      );
 
-      expect(later.clientRecordId, early.clientRecordId);
-      // Last write wins, and it is the day's total — not 350 + 540.
-      expect(early.count, 350);
-      expect(later.count, 540);
+      expect(_stepsTotal(first), 540);
+      expect(again.records, isEmpty);
+    });
+
+    test('a counter reset is not a walk backwards', () {
+      // The counters restart from zero at a wear-session boundary.
+      final import = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 9), 900),
+          (DateTime(2024, 1, 18, 10), 0),
+          (DateTime(2024, 1, 18, 11), 300),
+        ],
+      );
+
+      // The 900 stands, the reset adds nothing, and the climb back to 300 is
+      // not counted again from zero.
+      expect(_stepsTotal(import), 900);
     });
 
     test('activity-type counters are summed, never subtracted', () {
       // A walking counter at 540 beside a generic one still at 0 is not a
       // 540-step change. Taking max - min across all points made it one, which
       // is how a file with no new steps still wrote a full day's worth.
-      final m = parseGarminWellness(
-        _fitMonitoringSeriesBytes(
+      expect(
+        _stepsTotal(_counterImport(
           stepsCumulative: [
-            (DateTime.utc(2024, 1, 18, 9), 540),
-            (DateTime.utc(2024, 1, 18, 10), 0),
+            (DateTime(2024, 1, 18, 9), 540),
+            (DateTime(2024, 1, 18, 10), 0),
           ],
-        ),
-      ).monitoring!;
-
-      final steps = fitMonitoringImportRecords(m)
-          .whereType<StepsImportRecord>()
-          .single;
-      expect(steps.count, 540);
+        )),
+        540,
+      );
     });
 
     test('a total moved between activity types is not counted twice', () {
@@ -274,85 +338,91 @@ void main() {
       // 49,448 — exactly twice — for 25 Jul 2026. The watch does not only
       // accumulate per bucket, it MOVES a total from one to another and zeroes
       // the one it left (that day's generic bucket ended on 709 m of distance
-      // and 6181 s of active time with no steps at all). Summing each bucket's
-      // own peak keeps the abandoned peak and adds it to the bucket that
-      // inherited it.
-      final m = parseGarminWellness(
-        _fitMonitoringSeriesBytes(
+      // and 6181 s of active time with no steps at all).
+      expect(
+        _stepsTotal(_counterImport(
           typedStepsCumulative: [
-            // 09:00 — the day's steps sit in the generic bucket.
             (DateTime(2024, 1, 18, 9), 0, 24724),
             (DateTime(2024, 1, 18, 9), 6, 0),
-            // 10:00 — they have been reallocated to walking. The gaining bucket
-            // is written FIRST on purpose: a sum taken point by point rather
-            // than instant by instant would see 24,724 in both at once.
+            // The gaining bucket is written FIRST on purpose: a sum taken point
+            // by point rather than instant by instant would see 24,724 in both.
             (DateTime(2024, 1, 18, 10), 6, 24724),
             (DateTime(2024, 1, 18, 10), 0, 0),
           ],
-        ),
-      ).monitoring!;
-
-      final steps = fitMonitoringImportRecords(m)
-          .whereType<StepsImportRecord>()
-          .single;
-      expect(steps.count, 24724);
+        )),
+        24724,
+      );
     });
 
     test('types still add up when they hold different totals', () {
       // The other half of the same rule: walking and running are genuinely
       // separate counters, and the day is their sum — the real 25 Jul file read
       // generic 0 + walking 24,724 + running 119.
-      final m = parseGarminWellness(
-        _fitMonitoringSeriesBytes(
+      expect(
+        _stepsTotal(_counterImport(
           typedStepsCumulative: [
             (DateTime(2024, 1, 18, 10), 0, 0),
             (DateTime(2024, 1, 18, 10), 6, 24724),
             (DateTime(2024, 1, 18, 10), 1, 119),
           ],
-        ),
-      ).monitoring!;
-
-      final steps = fitMonitoringImportRecords(m)
-          .whereType<StepsImportRecord>()
-          .single;
-      expect(steps.count, 24843);
+        )),
+        24843,
+      );
     });
 
     test('a counter naming no activity is not a bucket of its own', () {
       // An untyped counter beside typed ones is the same day's total under a
       // name of its own, so adding it to them counts those steps twice.
-      final m = parseGarminWellness(
-        _fitMonitoringSeriesBytes(
+      expect(
+        _stepsTotal(_counterImport(
           stepsCumulative: [(DateTime(2024, 1, 18, 9), 24724)],
           typedStepsCumulative: [(DateTime(2024, 1, 18, 9), 6, 24724)],
-        ),
-      ).monitoring!;
-
-      final steps = fitMonitoringImportRecords(m)
-          .whereType<StepsImportRecord>()
-          .single;
-      expect(steps.count, 24724);
+        )),
+        24724,
+      );
     });
 
     test('an untyped counter still counts when it is all the file has', () {
       // ...but dropping it outright would report zero steps for a file that
       // names no activity type anywhere, which is all the counter it has.
-      final m = parseGarminWellness(
-        _fitMonitoringSeriesBytes(
+      expect(
+        _stepsTotal(_counterImport(
           stepsCumulative: [
             (DateTime(2024, 1, 18, 9), 500),
             (DateTime(2024, 1, 18, 10), 1200),
           ],
-        ),
-      ).monitoring!;
-
-      final steps = fitMonitoringImportRecords(m)
-          .whereType<StepsImportRecord>()
-          .single;
-      expect(steps.count, 1200);
+        )),
+        1200,
+      );
     });
   });
 }
+
+/// The counters a monitoring file carried, mapped as one sync would map them:
+/// accumulated across the run's files, then differenced against [previous].
+FitCounterImport _counterImport({
+  List<(DateTime, int)> stepsCumulative = const [],
+  List<(DateTime, int, int)> typedStepsCumulative = const [],
+  Map<String, FitCounterWatermark> previous = const {},
+}) {
+  final monitoring = parseGarminWellness(
+    _fitMonitoringSeriesBytes(
+      stepsCumulative: stepsCumulative,
+      typedStepsCumulative: typedStepsCumulative,
+    ),
+  ).monitoring!;
+  return fitMonitoringCounterRecords(
+    fitMonitoringCounters(monitoring),
+    previous: previous,
+  );
+}
+
+List<StepsImportRecord> _steps(FitCounterImport import) =>
+    import.records.whereType<StepsImportRecord>().toList()
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+int _stepsTotal(FitCounterImport import) =>
+    _steps(import).fold(0, (sum, record) => sum + record.count);
 
 // ── Minimal FIT writer (little-endian), enough for a sleep file ──────────────
 

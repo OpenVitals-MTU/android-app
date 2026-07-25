@@ -7,6 +7,7 @@ import '../devices/core/registry/device_classification.dart';
 import '../devices/garmin/garmin_device_classifier.dart';
 import '../devices/wearos/wearos_device_classifier.dart';
 import '../devices/core/pairing/ble_watch_pairing.dart';
+import '../devices/garmin/garmin_counter_watermark_store.dart';
 import '../devices/garmin/garmin_device_state_store.dart';
 import '../devices/garmin/garmin_file_store.dart';
 import '../devices/garmin/garmin_gatt_probe.dart';
@@ -258,6 +259,14 @@ final bleDeviceRepositoryProvider = Provider<BleDeviceRepository>(
 /// so that registry carries no Garmin knowledge.
 final garminDeviceStateStoreProvider = Provider<GarminDeviceStateStore>(
   (ref) => GarminDeviceStateStore(ref.watch(sharedPreferencesProvider)),
+);
+
+/// How far each day's monitoring counters have been imported — what lets the
+/// step/distance/calorie counters be written as intraday intervals instead of
+/// one flat total per day. See [GarminCounterWatermarkStore].
+final garminCounterWatermarkStoreProvider =
+    Provider<GarminCounterWatermarkStore>(
+  (ref) => GarminCounterWatermarkStore(ref.watch(sharedPreferencesProvider)),
 );
 
 /// Bonding + companion association for Garmin watch onboarding. A provider so a

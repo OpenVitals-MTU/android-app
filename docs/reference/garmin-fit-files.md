@@ -260,6 +260,11 @@ reading = one record) so it must be aggregated.
   into **one series record per hour**.
 - **Respiration** (`respiration_rate` msg 297, sint16 ÷100 br/min; drop ≤0 /
   invalid) → **hourly average** → one `RespiratoryRateRecord` per hour.
+> **Superseded.** What the three counters actually do, read off a vívoactive 5,
+> and what the importer now does with them, is written up under
+> "Counters, as implemented" below. The paragraphs immediately following were the
+> plan before the files were read.
+
 - **Steps** — messy: `steps`/`cycles` are cumulative **per wear-session**, reset
   unpredictably (a later file the same day can show a *lower* total), and a
   session can span files. So use a **per-file cycles-delta**: sum within-file
@@ -286,3 +291,43 @@ background isolate reading SAF files needs a **persisted** tree-URI permission
 **Build order:** (1) decode the series + aggregate (hourly HR/respiration,
 per-file steps/distance/calories) + map to records — infrastructure-independent
 and unit-testable; (2) the foreground-service + checkpoint runner.
+
+## Counters, as implemented
+
+Read off a vívoactive 5 (2026-07), which corrected two guesses above: field 3 is
+**steps**, not strides needing a ×2, and the counters run from **local midnight**
+rather than per wear-session (`monitoring.duration_min`, field 29, is minutes
+since midnight and matches the wall clock exactly).
+
+**One message per active `activity_type`, per instant, about once a minute.** A
+snapshot of 25 Jul at 20:00 read:
+
+| activity_type | steps (3) | distance (2) | active_time (4) | active_cal (19) |
+|---|--:|--:|--:|--:|
+| 0 generic | 0 | 709.11 m | 6181 s | 241 |
+| 6 walking | 24724 | 19112.96 m | 22218 s | 1181 |
+| 1 running | 119 | 88.49 m | 120 s | 7 |
+
+**The day's total is the sum ACROSS types at one instant** — never the sum of
+each type's own peak over the day. The watch *moves* a total between buckets and
+zeroes the one it left (note generic above: 709 m of distance and 6181 s of
+active time with no steps at all, its step count having gone to walking). Taking
+per-bucket peaks kept the abandoned peak and added it to the bucket that
+inherited it: 24,724 steps on the wrist reached Health Connect as 49,448, exactly
+twice. A counter naming no `activity_type`, and following none that did, is not a
+bucket of its own either — unless the file names no type anywhere, where it IS
+the total.
+
+**Records are intraday differences, not one total per day.** A single record per
+day says how far you walked and never when, so Health Connect draws the day as
+one straight ramp from midnight. Consecutive snapshots are differenced instead,
+one record per interval the counter actually moved in (`garmin_fit_steps_<start
+epoch ms>`), zero-difference intervals writing nothing.
+
+**The seam between files needs a watermark.** Each file holds only the minutes
+since the last sync, so the steps between one sync's last snapshot and the next
+sync's first are in *neither* file's own differences. `GarminCounterWatermarkStore`
+keeps the last imported `(instant, steps, distance, calories)` per local day; the
+next sync differences from it. That is also what makes a re-offered file harmless
+— everything at or behind the watermark writes nothing rather than counting
+twice. Clear it if Health Connect is wiped, or every day stays short.
