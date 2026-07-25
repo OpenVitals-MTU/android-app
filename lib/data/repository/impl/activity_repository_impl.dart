@@ -414,7 +414,18 @@ class ActivityRepositoryImpl implements ActivityRepository {
   @override
   Set<String> activityWritePermissionsForRequest(ActivityWriteRequest request) {
     final ble = request.bleSamples;
-    return {
+    // Filtered by what the DEVICE's Health Connect defines, exactly as the sets
+    // the app asks for are (`HealthPermissionService._supported`).
+    //
+    // Without it a permission the provider does not define is required and can
+    // never be granted, so the write is refused forever. That is not
+    // hypothetical: a Pixel's Health Connect defines no STEPS_CADENCE
+    // permission, every Garmin walk and run carries a cadence series, and every
+    // one of them failed the check — "Activity import write permissions are
+    // missing" on a phone where every activity permission the user could grant
+    // WAS granted. The series is dropped before the write for the same reason
+    // ([_writable]), so what is required and what is written stay in step.
+    return _dataSource.permissionService.supportedOnly({
       ...activityWritePermissionsFor(
         includeRoute: request.routePoints.isNotEmpty,
         includeDistance: request.distanceMeters != null,
@@ -436,7 +447,41 @@ class ActivityRepositoryImpl implements ActivityRepository {
       if (ble.speedSamples.isNotEmpty) HcPermissions.writeSpeed,
       if (ble.cyclingCadenceSamples.isNotEmpty) HcPermissions.writeCyclingCadence,
       if (ble.stepsCadenceSamples.isNotEmpty) HcPermissions.writeStepsCadence,
-    };
+    });
+  }
+
+  /// [request] carrying only the series this device can actually store.
+  ///
+  /// A provider that does not define a permission does not hold the record
+  /// either, and the session and its series go to Health Connect in ONE atomic
+  /// insert — so sending a record it cannot hold would throw away the activity
+  /// along with it. Dropping the series keeps the activity, which is the part
+  /// the user asked for; the cadence of a walk is not worth losing the walk.
+  ActivityWriteRequest _writable(ActivityWriteRequest request) {
+    final unsupported = _dataSource.permissionService.unsupportedPermissions;
+    if (unsupported.isEmpty) return request;
+    final ble = request.bleSamples;
+    return request.copyWith(
+      bleSamples: ble.copyWith(
+        heartRateSamples: unsupported.contains(HcPermissions.writeHeartRate)
+            ? const []
+            : ble.heartRateSamples,
+        powerSamples: unsupported.contains(HcPermissions.writePower)
+            ? const []
+            : ble.powerSamples,
+        speedSamples: unsupported.contains(HcPermissions.writeSpeed)
+            ? const []
+            : ble.speedSamples,
+        cyclingCadenceSamples:
+            unsupported.contains(HcPermissions.writeCyclingCadence)
+                ? const []
+                : ble.cyclingCadenceSamples,
+        stepsCadenceSamples:
+            unsupported.contains(HcPermissions.writeStepsCadence)
+                ? const []
+                : ble.stepsCadenceSamples,
+      ),
+    );
   }
 
   @override
@@ -491,12 +536,13 @@ class ActivityRepositoryImpl implements ActivityRepository {
   @override
   Future<Result<String>> writeActivityEntry(ActivityWriteRequest request) =>
       runCatching(() async {
-        if (!await _hasWritePermissionForRequestRaw(request)) {
+        final writable = _writable(request);
+        if (!await _hasWritePermissionForRequestRaw(writable)) {
           throw const MissingHealthPermissionException(
             'Missing Health Connect activity write permission.',
           );
         }
-        return _dataSource.writeActivityEntry(request);
+        return _dataSource.writeActivityEntry(writable);
       });
 
   @override
@@ -505,12 +551,13 @@ class ActivityRepositoryImpl implements ActivityRepository {
   ) =>
       runCatching(() async {
         if (requests.isEmpty) return const <String>[];
+        final writable = [for (final request in requests) _writable(request)];
         // ONE permission read for the whole batch, not one per request: the
         // granted set cannot change midway through a single call, and the point of
         // batching is to stop talking to Health Connect more than we must.
         final granted = await _dataSource.grantedIfAvailable();
         final needed = <String>{
-          for (final request in requests)
+          for (final request in writable)
             ...activityWritePermissionsForRequest(request),
         };
         if (!granted.containsAll(needed)) {
@@ -518,7 +565,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
             'Missing Health Connect activity write permission.',
           );
         }
-        return _dataSource.writeActivityEntries(requests);
+        return _dataSource.writeActivityEntries(writable);
       });
 
   @override
@@ -527,12 +574,13 @@ class ActivityRepositoryImpl implements ActivityRepository {
     ActivityWriteRequest request,
   ) =>
       runCatching(() async {
-        if (!await _hasWritePermissionForRequestRaw(request)) {
+        final writable = _writable(request);
+        if (!await _hasWritePermissionForRequestRaw(writable)) {
           throw const MissingHealthPermissionException(
             'Missing Health Connect activity write permission.',
           );
         }
-        await _dataSource.updateActivityEntry(id, request);
+        await _dataSource.updateActivityEntry(id, writable);
       });
 
   @override

@@ -143,6 +143,15 @@ class HealthPermissionService {
   /// only ever deal with device-supported permissions.
   final Set<String> unsupportedPermissions;
 
+  /// [permissions] minus the ones this device's provider does not define.
+  ///
+  /// Public because asking for a permission is not the only thing that has to
+  /// respect the device: code that REQUIRES a permission before writing must
+  /// filter through the same rule, or it demands one that can never be granted
+  /// and refuses the write forever — see
+  /// `ActivityRepositoryImpl.activityWritePermissionsForRequest`.
+  Set<String> supportedOnly(Set<String> permissions) => _supported(permissions);
+
   Set<String> _supported(Set<String> permissions) =>
       unsupportedPermissions.isEmpty
           ? permissions

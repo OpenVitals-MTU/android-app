@@ -15,7 +15,11 @@ import 'package:openvitals/domain/model/activity_models.dart';
 
 final DateTime _start = DateTime.utc(2026, 7, 14, 18);
 
-class _StubDataSource extends HealthDataSource {}
+class _StubDataSource extends HealthDataSource {
+  _StubDataSource({Set<String> unsupported = const {}}) {
+    unsupportedPermissions = unsupported;
+  }
+}
 
 ActivityWriteRequest _request({
   BleRecordingSampleBuffer bleSamples = const BleRecordingSampleBuffer(),
@@ -73,5 +77,50 @@ void main() {
     expect(permissions, isNot(contains(HcPermissions.writeSpeed)));
     expect(permissions, isNot(contains(HcPermissions.writeCyclingCadence)));
     expect(permissions, isNot(contains(HcPermissions.writeStepsCadence)));
+  });
+
+  test('a permission the device does not define is never demanded', () {
+    // The bug this pins: every Garmin walk and run failed to import with
+    // "Activity import write permissions are missing" on a phone where every
+    // activity permission the user COULD grant was granted. A Garmin activity
+    // file carries a cadence series, and this Pixel's Health Connect defines no
+    // STEPS_CADENCE permission at all — `filterSupportedPermissions` drops it,
+    // so the app never asks for it, so it can never be granted. Requiring it
+    // refused the write forever, and the walk simply never appeared.
+    final repository = ActivityRepositoryImpl(
+      _StubDataSource(unsupported: {HcPermissions.writeStepsCadence}),
+    );
+
+    final permissions = repository.activityWritePermissionsForRequest(
+      _request(
+        bleSamples: BleRecordingSampleBuffer(
+          heartRateSamples: [
+            BleHeartRateSample(time: _start, beatsPerMinute: 110),
+          ],
+          stepsCadenceSamples: [
+            BleStepsCadenceSample(time: _start, stepsPerMinute: 112),
+          ],
+        ),
+      ),
+    );
+
+    expect(permissions, isNot(contains(HcPermissions.writeStepsCadence)));
+    // ...and the rest of the activity is still asked for and still saved.
+    expect(permissions, contains(HcPermissions.writeExercise));
+    expect(permissions, contains(HcPermissions.writeHeartRate));
+  });
+
+  test('a device that defines the permission is still asked for it', () {
+    final permissions = repository.activityWritePermissionsForRequest(
+      _request(
+        bleSamples: BleRecordingSampleBuffer(
+          stepsCadenceSamples: [
+            BleStepsCadenceSample(time: _start, stepsPerMinute: 112),
+          ],
+        ),
+      ),
+    );
+
+    expect(permissions, contains(HcPermissions.writeStepsCadence));
   });
 }
