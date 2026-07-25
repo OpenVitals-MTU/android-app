@@ -312,14 +312,28 @@ List<_MonitoringDay> _monitoringDays(FitMonitoringSummary m) {
   return days;
 }
 
-/// A day's total for a cumulative counter: the highest value reached by each
-/// activity type, summed.
+/// A day's total for a cumulative counter: the day's counters as they stood at
+/// each instant the file reports, summed ACROSS activity types at that instant,
+/// and the highest such sum kept.
 ///
-/// Per type and not overall, because the counters run independently — walking
-/// at 540 next to a generic counter still at 0 is not a 540-step change, which
-/// is exactly what a naive `max - min` across all points made of it.
+/// Summed per instant, and NOT as the sum of each type's own peak. The counters
+/// run independently — walking at 540 beside a generic counter at 0 is not a
+/// 540-step change — but they are not independent of *each other*: the watch
+/// moves a total from one bucket to another and zeroes the one it left. A real
+/// day showed the generic bucket holding 709 m of distance and 6181 s of active
+/// time with ZERO steps, its step count having been reallocated to walking.
+/// Per-bucket peaks keep the abandoned peak and add it to the bucket that
+/// inherited it, so 24,724 steps on the wrist reached Health Connect as 49,448 —
+/// exactly twice, the same total counted under two types. Adding up one instant
+/// at a time can't double-count a transfer: what leaves one bucket arrives in
+/// the other within the same snapshot.
+///
+/// The maximum over instants (rather than simply the last) is what survives a
+/// counter reset: the counters restart from zero at a wear-session boundary, and
+/// the day's total is not allowed to fall when they do.
 int _dailyTotal(List<FitMonitoringPoint> points, _MonitoringDay day) {
-  final maxByType = <int, int>{};
+  final ofDay = <FitMonitoringPoint>[];
+  var sawDeclaredType = false;
   for (final p in points) {
     final local = p.time.toLocal();
     if (local.year != day.start.year ||
@@ -327,14 +341,38 @@ int _dailyTotal(List<FitMonitoringPoint> points, _MonitoringDay day) {
         local.day != day.start.day) {
       continue;
     }
-    final seen = maxByType[p.activityType];
-    if (seen == null || p.value > seen) maxByType[p.activityType] = p.value;
+    ofDay.add(p);
+    if (p.activityType != unknownFitActivityType) sawDeclaredType = true;
   }
-  var total = 0;
-  for (final value in maxByType.values) {
-    total += value;
+  ofDay.sort((a, b) => a.time.compareTo(b.time));
+
+  // A counter that never said which activity it belongs to cannot be summed
+  // beside ones that do: it is the same day's total under a name of its own, and
+  // adding it to a declared bucket counts those steps twice. Dropped — unless
+  // the file declared no type at all, where the untyped counter IS the total.
+  final byType = <int, int>{};
+  var best = 0;
+  var index = 0;
+  while (index < ofDay.length) {
+    // A snapshot is every point sharing one instant: the file restates each
+    // active type at the same timestamp, and reading the sum mid-instant would
+    // see the bucket that gained before the bucket that lost.
+    final at = ofDay[index].time;
+    while (index < ofDay.length && ofDay[index].time == at) {
+      final point = ofDay[index];
+      index++;
+      if (sawDeclaredType && point.activityType == unknownFitActivityType) {
+        continue;
+      }
+      byType[point.activityType] = point.value;
+    }
+    var total = 0;
+    for (final value in byType.values) {
+      total += value;
+    }
+    if (total > best) best = total;
   }
-  return total;
+  return best;
 }
 
 /// Groups items into UTC-hour buckets keyed by the hour's epoch-ms.

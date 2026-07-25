@@ -57,6 +57,14 @@ class FitHrvReading {
   final double rmssdMillis;
 }
 
+/// [FitMonitoringPoint.activityType] for a counter whose message named no
+/// activity, and which followed no message that did.
+///
+/// Deliberately outside FIT's `activity_type` enum: it is not a kind of
+/// activity, it is the absence of one, and the day-total sum has to be able to
+/// tell it apart from a real bucket (see `_dailyTotal`).
+const int unknownFitActivityType = -1;
+
 /// A cumulative monitoring counter reading: a `[value]` for `[activityType]`
 /// at `[time]`. Cumulative within a wear-session and per activity type, so a
 /// per-file total is a sum of per-type within-file deltas (see the mapper).
@@ -69,8 +77,8 @@ class FitMonitoringPoint {
 
   final DateTime time;
 
-  /// FIT `activity_type` enum (walking 6, running 1, generic 0, …), or -1 when
-  /// the message did not carry one.
+  /// FIT `activity_type` enum (walking 6, running 1, generic 0, …), or
+  /// [unknownFitActivityType] when the message did not carry one.
   final int activityType;
   final int value;
 }
@@ -1137,7 +1145,7 @@ class _GarminWellnessInterpreter {
             ? intensityByte & _fitMonitoringActivityTypeMask
             : null);
     if (declaredType != null) _monCurrentActivityType = declaredType;
-    final activityType = _monCurrentActivityType ?? -1;
+    final activityType = _monCurrentActivityType ?? unknownFitActivityType;
     final steps = values[_fitMonitoringStepsFieldNumber];
     if (steps != null) {
       _monSteps.add(FitMonitoringPoint(

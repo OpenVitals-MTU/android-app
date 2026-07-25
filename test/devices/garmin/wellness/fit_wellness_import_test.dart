@@ -268,6 +268,89 @@ void main() {
           .single;
       expect(steps.count, 540);
     });
+
+    test('a total moved between activity types is not counted twice', () {
+      // The bug this pins: 24,724 steps on the wrist reached Health Connect as
+      // 49,448 — exactly twice — for 25 Jul 2026. The watch does not only
+      // accumulate per bucket, it MOVES a total from one to another and zeroes
+      // the one it left (that day's generic bucket ended on 709 m of distance
+      // and 6181 s of active time with no steps at all). Summing each bucket's
+      // own peak keeps the abandoned peak and adds it to the bucket that
+      // inherited it.
+      final m = parseGarminWellness(
+        _fitMonitoringSeriesBytes(
+          typedStepsCumulative: [
+            // 09:00 — the day's steps sit in the generic bucket.
+            (DateTime(2024, 1, 18, 9), 0, 24724),
+            (DateTime(2024, 1, 18, 9), 6, 0),
+            // 10:00 — they have been reallocated to walking. The gaining bucket
+            // is written FIRST on purpose: a sum taken point by point rather
+            // than instant by instant would see 24,724 in both at once.
+            (DateTime(2024, 1, 18, 10), 6, 24724),
+            (DateTime(2024, 1, 18, 10), 0, 0),
+          ],
+        ),
+      ).monitoring!;
+
+      final steps = fitMonitoringImportRecords(m)
+          .whereType<StepsImportRecord>()
+          .single;
+      expect(steps.count, 24724);
+    });
+
+    test('types still add up when they hold different totals', () {
+      // The other half of the same rule: walking and running are genuinely
+      // separate counters, and the day is their sum — the real 25 Jul file read
+      // generic 0 + walking 24,724 + running 119.
+      final m = parseGarminWellness(
+        _fitMonitoringSeriesBytes(
+          typedStepsCumulative: [
+            (DateTime(2024, 1, 18, 10), 0, 0),
+            (DateTime(2024, 1, 18, 10), 6, 24724),
+            (DateTime(2024, 1, 18, 10), 1, 119),
+          ],
+        ),
+      ).monitoring!;
+
+      final steps = fitMonitoringImportRecords(m)
+          .whereType<StepsImportRecord>()
+          .single;
+      expect(steps.count, 24843);
+    });
+
+    test('a counter naming no activity is not a bucket of its own', () {
+      // An untyped counter beside typed ones is the same day's total under a
+      // name of its own, so adding it to them counts those steps twice.
+      final m = parseGarminWellness(
+        _fitMonitoringSeriesBytes(
+          stepsCumulative: [(DateTime(2024, 1, 18, 9), 24724)],
+          typedStepsCumulative: [(DateTime(2024, 1, 18, 9), 6, 24724)],
+        ),
+      ).monitoring!;
+
+      final steps = fitMonitoringImportRecords(m)
+          .whereType<StepsImportRecord>()
+          .single;
+      expect(steps.count, 24724);
+    });
+
+    test('an untyped counter still counts when it is all the file has', () {
+      // ...but dropping it outright would report zero steps for a file that
+      // names no activity type anywhere, which is all the counter it has.
+      final m = parseGarminWellness(
+        _fitMonitoringSeriesBytes(
+          stepsCumulative: [
+            (DateTime(2024, 1, 18, 9), 500),
+            (DateTime(2024, 1, 18, 10), 1200),
+          ],
+        ),
+      ).monitoring!;
+
+      final steps = fitMonitoringImportRecords(m)
+          .whereType<StepsImportRecord>()
+          .single;
+      expect(steps.count, 1200);
+    });
   });
 }
 
@@ -438,6 +521,7 @@ Uint8List _fitMonitoringSeriesBytes({
   List<(DateTime, int)> hr = const [],
   List<(DateTime, double)> respiration = const [],
   List<(DateTime, int)> stepsCumulative = const [],
+  List<(DateTime, int, int)> typedStepsCumulative = const [],
 }) {
   final data = _W()..def(3, 0, [
     [0, 1, 0x00]
@@ -466,6 +550,23 @@ Uint8List _fitMonitoringSeriesBytes({
     data
       ..u8(2)
       ..u32(_fitTimestamp(t))
+      ..u32(s);
+  }
+  // monitoring steps carrying their activity_type (local 4, global 55), as a
+  // real watch writes them: one message per active type at each timestamp.
+  // Written AFTER the untyped ones above so those keep no type — the decoder
+  // carries the last declared type forward, so a message following a typed one
+  // inherits it rather than counting as unknown.
+  data.def(4, 55, [
+    [253, 4, 0x86],
+    [5, 1, 0x00],
+    [3, 4, 0x86],
+  ]);
+  for (final (t, activityType, s) in typedStepsCumulative) {
+    data
+      ..u8(4)
+      ..u32(_fitTimestamp(t))
+      ..u8(activityType)
       ..u32(s);
   }
   // respiration_rate (local 3, global 297): timestamp + rate (sint16, ×100).
