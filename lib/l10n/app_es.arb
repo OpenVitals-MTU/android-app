@@ -2474,5 +2474,13 @@
     "homeWidgetExactAlarmTitle": "Mantén los widgets actualizados",
     "homeWidgetExactAlarmBody": "Los widgets se actualizan en segundo plano. Permite que las \"Alarmas y recordatorios\" se mantengan programadas incluso cuando el teléfono esté en reposo.",
     "homeWidgetExactAlarmAllow": "Permitir",
-    "homeWidgetExactAlarmNotNow": "Ahora no"
+    "homeWidgetExactAlarmNotNow": "Ahora no",
+    "settingsBodyProfileGroupTitle": "Estudio de masa corporal",
+    "settingsBodyProfileGroupBody": "Edad, composición corporal, zonas de ritmo cardíaco y metabolismo",
+    "settingsMetabolismTitle": "Metabolismo",
+    "settingsMetabolismBody": "¿Cómo elimina tu cuerpo la cafeína?. Se trata de datos sobre ti, por lo que se incluyen aquí y no en los ajustes de cafeína.",
+    "settingsMetabolismSleepSensitivity": "Sensibilidad a la cafeína",
+    "settingsMetabolismAlcohol": "Consumo de alcohol",
+    "settingsMetabolismHabituation": "Acostumbramiento a la cafeína",
+    "settingsMetabolismCyp1a2": "Análisis del genotipo CYP1A2"
 }
