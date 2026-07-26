@@ -163,7 +163,7 @@
     "activityEntryRepetitionModeSets": "Sätze",
     "activityEntryRepetitionsLabel": "Wdh.",
     "activityEntryStepsLabel": "Schritte",
-    "activityEntrySetRepetitionsLabel": "Satz {arg0} Wdh.",
+    "activityEntrySetRepetitionsLabel": "Wiederhole {arg0} mal",
     "activityEntrySetRestLabel": "Pausenzeit",
     "activityEntryAddSet": "Satz hinzufügen",
     "activityEntryTrainingPlansTitle": "Trainingspläne",
@@ -1645,7 +1645,7 @@
     "bodyEnergyReasonElevatedHrDetail": "Herzfrequenz im Wachzustand über dem Ruhewert hat Stressverbrauch hinzugefügt.",
     "bodyEnergyReasonRecoveryDebtDetail": "Kürzliche stärkere Belastung hielt danach einen kleinen Verbrauch aktiv.",
     "bodyEnergyReasonNoDataDetail": "Health Connect lieferte für diesen Abschnitt nicht genug Signal.",
-    "bodyEnergyReasonSteadyDetail": "Die Schätzung blieb überwiegend stabil.",
+    "bodyEnergyReasonSteadyDetail": "Der Grundumsatz lag auf einem konstanten, moderaten Niveau.",
     "bodyEnergyInputsTitle": "Verwendete Eingaben",
     "bodyEnergyInputsSummary": "Algorithmus v{arg0}, {arg1}-Minuten-Abschnitte",
     "bodyEnergyInputHeartRate": "Herzfrequenzproben",
@@ -1773,5 +1773,362 @@
     "heartRateRecoverySubmaximalEffort": "Anstrengend, aber nicht nahe an deinem Maximum – daher lässt sich dieser Wert nicht mit den anderen vergleichen.",
     "heartRateRecoveryUnknownMaxHeartRate": "Leg deine maximale Herzfrequenz in deinem Profil fest, dann können wir dir sagen, ob die Belastung stark genug war, damit dieser Wert zählt.",
     "heartRateRecoveryPeakFromSingleSample": "Hinter der Spitze steht nur ein einziger Messwert.",
-    "bodyEnergyReferencesTitle": "Belegte Links"
+    "bodyEnergyReferencesTitle": "Belegte Links",
+    "settingsWatchNeverSynced": "Noch nie synchronisiert",
+    "settingsWatchLastSynced": "Zuletzt synchronisiert {arg0}",
+    "@settingsWatchLastSynced": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchSyncNow": "Jetzt synchronisieren",
+    "settingsWatchSyncDownloading": "Kopiere {arg0} von {arg1}",
+    "@settingsWatchSyncDownloading": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsWatchSyncNothingNew": "Bereits auf dem neusten Stand",
+    "settingsWatchSyncDone": "{arg0} Dateien synchronisiert",
+    "@settingsWatchSyncDone": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "healthConnectGateErrorTitle": "Health Connect nicht erreichbar",
+    "@healthConnectGateErrorTitle": {
+        "description": "Title when the availability/permission read fails."
+    },
+    "healthConnectGateErrorBody": "Beim Auslesen Ihrer Gesundheitsdaten ist ein Fehler aufgetreten. Bitte überprüfen Sie, ob Health Connect installiert und auf dem neuesten Stand ist, und versuchen Sie es dann erneut.",
+    "@healthConnectGateErrorBody": {
+        "description": "Body when the availability/permission read fails."
+    },
+    "healthConnectGateRetry": "Erneut versuchen",
+    "@healthConnectGateRetry": {
+        "description": "Retry button on the gate error state."
+    },
+    "settingsSleepNightStartTitle": "Nacht beginnt um",
+    "settingsSleepNightStartBody": "Die Abendstunde, mit der die Nacht beginnt. Der Schlaf von diesem Zeitpunkt bis zur Morgenstunde gilt als eine Nacht; alles, was davor liegt, sind Nickerchen.",
+    "settingsSleepNightEndTitle": "Nacht endet um",
+    "settingsSleepNightEndBody": "Die Morgenstunde, mit der eine Nacht endet. Jeder Schlaf danach zählt als Nickerchen.",
+    "settingsDeviceSyncGroupTitle": "Mit anderem Smartphone synchronisieren",
+    "@settingsDeviceSyncGroupTitle": {
+        "description": "Settings hub card title for phone-to-phone Bluetooth sync."
+    },
+    "settingsDeviceSyncGroupBody": "Health Connect-Daten über Bluetooth auf ein Smartphone in der Nähe kopieren",
+    "@settingsDeviceSyncGroupBody": {
+        "description": "Settings hub card summary for phone-to-phone Bluetooth sync."
+    },
+    "deviceSyncTitle": "Mit anderem Smartphone synchronisieren",
+    "@deviceSyncTitle": {
+        "description": "App-bar title of the device-sync wizard."
+    },
+    "deviceSyncRoleHeading": "Daten ohne Cloud übertragen",
+    "@deviceSyncRoleHeading": {
+        "description": "Heading on the role-choice step."
+    },
+    "deviceSyncRoleBody": "Kopieren Sie Health Connect-Daten direkt über Bluetooth auf ein anderes Smartphone. Keine Daten verlassen Ihre Geräte.",
+    "@deviceSyncRoleBody": {
+        "description": "Body on the role-choice step."
+    },
+    "deviceSyncHostOption": "Dieses Smartphone auffindbar machen",
+    "@deviceSyncHostOption": {
+        "description": "Host-role option title."
+    },
+    "deviceSyncHostOptionBody": "Einen Code anzeigen, zum Eingeben auf dem anderen Smartphone.",
+    "@deviceSyncHostOptionBody": {
+        "description": "Host-role option subtitle."
+    },
+    "deviceSyncGuestOption": "Smartphone zum Synchronisieren finden",
+    "@deviceSyncGuestOption": {
+        "description": "Guest-role option title."
+    },
+    "deviceSyncGuestOptionBody": "In der Nähe scannen und dessen Code eingeben.",
+    "@deviceSyncGuestOptionBody": {
+        "description": "Guest-role option subtitle."
+    },
+    "deviceSyncPrivacyNote": "Die Übertragung erfolgt über eine gepaarte, verschlüsselte Bluetooth-Verbindung. OpenVitals verfügt über keine Internetberechtigung, sodass dabei zu keinem Zeitpunkt eine Netzwerkverbindung hergestellt wird.",
+    "@deviceSyncPrivacyNote": {
+        "description": "Privacy reassurance on the role step."
+    },
+    "deviceSyncBluetoothOff": "Bluetooth aktivieren, um eine Synchronisierung mit einem anderen Smartphone durchzuführen.",
+    "@deviceSyncBluetoothOff": {
+        "description": "Shown when Bluetooth is disabled."
+    },
+    "deviceSyncHostHeading": "Warten auf anderes Smartphone",
+    "@deviceSyncHostHeading": {
+        "description": "Heading while the host is discoverable."
+    },
+    "deviceSyncHostBody": "Wählen Sie auf dem anderen Gerät \"Smartphone suchen\" aus, tippen Sie auf dieses Gerät und geben Sie den unten stehenden Code ein.",
+    "@deviceSyncHostBody": {
+        "description": "Body while the host is discoverable."
+    },
+    "deviceSyncCodeLabel": "Kopplungscode",
+    "@deviceSyncCodeLabel": {
+        "description": "Label above the 6-digit pairing code."
+    },
+    "deviceSyncWaiting": "Warten auf Verbindung...",
+    "@deviceSyncWaiting": {
+        "description": "Host waiting-for-connection status."
+    },
+    "deviceSyncScanHeading": "In der Nähe suchen",
+    "@deviceSyncScanHeading": {
+        "description": "Heading on the guest scan step."
+    },
+    "deviceSyncScanBody": "Wählen Sie das Smartphone aus, das einen Kopplungscode zeigt. Stellen Sie sicher, dass es auffindbar ist.",
+    "@deviceSyncScanBody": {
+        "description": "Body on the guest scan step."
+    },
+    "deviceSyncNoDevices": "Es wurden keine Smartphones gefunden. Vergewissern Sie sich, dass sich das andere Smartphone auf dem Bildschirm \"Dieses Smartphone auffindbar machen\" befindet, und führen Sie den Suchvorgang dann erneut durch.",
+    "@deviceSyncNoDevices": {
+        "description": "Empty state after a scan finds no devices."
+    },
+    "deviceSyncRescan": "Erneut scannen",
+    "@deviceSyncRescan": {
+        "description": "Button to restart discovery."
+    },
+    "deviceSyncPaired": "Gekoppelt",
+    "@deviceSyncPaired": {
+        "description": "Subtitle marking an already-bonded device."
+    },
+    "deviceSyncCodeHeading": "Code von {deviceName}",
+    "@deviceSyncCodeHeading": {
+        "description": "Heading on the code-entry step, naming the selected device.",
+        "placeholders": {
+            "deviceName": {
+                "type": "String"
+            }
+        }
+    },
+    "deviceSyncCodeBody": "Geben Sie die sechs Ziffern vom anderen Smartphone ein, um zu bestätigen, dass es sich tatsächlich um dieses Gerät handelt.",
+    "@deviceSyncCodeBody": {
+        "description": "Body on the code-entry step."
+    },
+    "deviceSyncWrongCode": "Dieser Code stimmte nicht überein. Überprüfen Sie das andere Smartphone und versuchen Sie es erneut.",
+    "@deviceSyncWrongCode": {
+        "description": "Wrong-code error on the code-entry step."
+    },
+    "deviceSyncConnect": "Verbinden",
+    "@deviceSyncConnect": {
+        "description": "Connect button on the code-entry step."
+    },
+    "deviceSyncCancel": "Abbrechen",
+    "@deviceSyncCancel": {
+        "description": "Cancel button on the waiting/scanning/syncing steps."
+    },
+    "deviceSyncErrorHeading": "Synchronisierung wurde nicht beendet",
+    "@deviceSyncErrorHeading": {
+        "description": "Heading on the report step when the sync failed or was aborted."
+    },
+    "deviceSyncErrorGeneric": "Die Synchronisierung konnte nicht fertiggestellt werden. Bitte versuchen Sie es erneut.",
+    "@deviceSyncErrorGeneric": {
+        "description": "Generic sync failure message."
+    },
+    "deviceSyncErrorConnect": "Es konnte keine Verbindung zum anderen Smartphone hergestellt werden. Stellen Sie sicher, dass es sich in der Nähe befindet, und versuchen Sie es erneut.",
+    "@deviceSyncErrorConnect": {
+        "description": "Connection failure/timeout message."
+    },
+    "deviceSyncErrorPermission": "Bluetooth-Berechtigung wird benötigt, um mit einem anderen Smartphone zu synchronisieren.",
+    "@deviceSyncErrorPermission": {
+        "description": "Bluetooth permission denied message."
+    },
+    "deviceSyncRange30": "Letzte 30 Tage",
+    "@deviceSyncRange30": {
+        "description": "30-day sync range option."
+    },
+    "deviceSyncRange6mo": "Letzte 6 Monate",
+    "@deviceSyncRange6mo": {
+        "description": "6-month sync range option."
+    },
+    "deviceSyncRange1y": "Letztes Jahr",
+    "@deviceSyncRange1y": {
+        "description": "1-year sync range option."
+    },
+    "deviceSyncRangeAll": "Alles",
+    "@deviceSyncRangeAll": {
+        "description": "All-time sync range option."
+    },
+    "deviceSyncNext": "Datentypen auswählen",
+    "@deviceSyncNext": {
+        "description": "Advance button from range to types."
+    },
+    "deviceSyncTypesHeading": "Was soll akzeptiert werden",
+    "@deviceSyncTypesHeading": {
+        "description": "Heading on the data-types step."
+    },
+    "deviceSyncTypesBody": "Beide Smartphones akzeptieren die unten aufgeführten Typen. Deaktivieren Sie Alles, was Sie nicht synchronisieren möchten.",
+    "@deviceSyncTypesBody": {
+        "description": "Body on the data-types step."
+    },
+    "deviceSyncCategoryVitals": "Vitalparameter",
+    "@deviceSyncCategoryVitals": {
+        "description": "Vitals category label."
+    },
+    "deviceSyncCategoryHydration": "Flüssigkeitszufuhr",
+    "@deviceSyncCategoryHydration": {
+        "description": "Hydration category label."
+    },
+    "deviceSyncCategoryMindfulness": "Achtsamkeit",
+    "@deviceSyncCategoryMindfulness": {
+        "description": "Mindfulness category label."
+    },
+    "deviceSyncCategoryActivity": "Aktivität",
+    "@deviceSyncCategoryActivity": {
+        "description": "Activity (steps, distance, calories) category label."
+    },
+    "deviceSyncCategoryWorkouts": "Sport",
+    "@deviceSyncCategoryWorkouts": {
+        "description": "Workouts (exercise sessions) category label."
+    },
+    "deviceSyncCategoryHeart": "Puls",
+    "@deviceSyncCategoryHeart": {
+        "description": "Heart (heart rate, HRV) category label."
+    },
+    "deviceSyncCategorySleep": "Schlaf",
+    "@deviceSyncCategorySleep": {
+        "description": "Sleep category label."
+    },
+    "deviceSyncCategoryNutrition": "Ernährung",
+    "@deviceSyncCategoryNutrition": {
+        "description": "Nutrition category label."
+    },
+    "deviceSyncCategoryCycle": "Zyklus-Tracking",
+    "@deviceSyncCategoryCycle": {
+        "description": "Menstrual cycle tracking category label."
+    },
+    "deviceSyncCategoryBody": "Körperwerte",
+    "@deviceSyncCategoryBody": {
+        "description": "Body-measurements category label."
+    },
+    "deviceSyncStartSync": "Synchronisierung starten, {count} ausgewählt",
+    "@deviceSyncStartSync": {
+        "description": "Start-sync button with the count of selected categories/types.",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "deviceSyncProgressHeading": "Synchronisieren",
+    "@deviceSyncProgressHeading": {
+        "description": "Heading on the transfer step."
+    },
+    "deviceSyncPhaseHandshake": "Verbindungsaufbau und Deduplizierung",
+    "@deviceSyncPhaseHandshake": {
+        "description": "Transfer phase: handshake."
+    },
+    "deviceSyncPhaseExchanging": "Austausch von Datensätzen",
+    "@deviceSyncPhaseExchanging": {
+        "description": "Transfer phase: exchange."
+    },
+    "deviceSyncPhaseWriting": "Schreiben nach Health Connect",
+    "@deviceSyncPhaseWriting": {
+        "description": "Transfer phase: writing."
+    },
+    "deviceSyncSent": "Gesendet",
+    "@deviceSyncSent": {
+        "description": "Transfer stat: records sent."
+    },
+    "deviceSyncReceived": "Empfangen",
+    "@deviceSyncReceived": {
+        "description": "Transfer stat: records received."
+    },
+    "deviceSyncWritten": "Geschrieben",
+    "@deviceSyncWritten": {
+        "description": "Transfer stat: records written."
+    },
+    "deviceSyncReportHeading": "{count} Datensätze zusammengeführt",
+    "@deviceSyncReportHeading": {
+        "description": "Report heading with the number of records merged.",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "deviceSyncImported": "Importiert",
+    "@deviceSyncImported": {
+        "description": "Report counter: imported records."
+    },
+    "deviceSyncDuplicates": "Bereits vorhanden (übersprungen)",
+    "@deviceSyncDuplicates": {
+        "description": "Report counter: duplicate records skipped."
+    },
+    "deviceSyncDone": "Fertig",
+    "@deviceSyncDone": {
+        "description": "Finish button on the report step."
+    },
+    "deviceSyncNotificationChannel": "Smartphone-Synchronisierung",
+    "@deviceSyncNotificationChannel": {
+        "description": "Notification channel name for the sync foreground service."
+    },
+    "deviceSyncNotificationTitle": "Wird mit anderem Smartphone synchronisiert",
+    "@deviceSyncNotificationTitle": {
+        "description": "Foreground-service notification title during a sync."
+    },
+    "deviceSyncNotificationText": "Halten Sie beide Smartphones in der Nähe, bis die Synchronisierung abgeschlossen ist.",
+    "@deviceSyncNotificationText": {
+        "description": "Foreground-service notification body during a sync."
+    },
+    "deviceSyncReportCopied": "Bericht in die Zwischenablage kopiert.",
+    "@deviceSyncReportCopied": {
+        "description": "Snackbar after copying the sync report."
+    },
+    "deviceSyncReportSaved": "Bericht gespeichert.",
+    "@deviceSyncReportSaved": {
+        "description": "Snackbar after saving the sync report."
+    },
+    "deviceSyncCopyReport": "Bericht kopieren",
+    "@deviceSyncCopyReport": {
+        "description": "Button to copy the sync report to the clipboard."
+    },
+    "deviceSyncSaveReport": "Bericht speichern",
+    "@deviceSyncSaveReport": {
+        "description": "Button to save the sync report to a file."
+    },
+    "settingsWatchActionData": "Daten",
+    "settingsWatchActionSync": "Synchronisierung",
+    "settingsWatchSectionDevice": "Gerät",
+    "settingsWatchEnabled": "Aktiviert",
+    "settingsWatchNameLabel": "Name",
+    "settingsWatchConnected": "Verbunden",
+    "settingsWatchNotConnected": "Nicht verbunden",
+    "settingsWatchOpen": "Offen",
+    "settingsWatchDataLastNight": "Letzte Nacht",
+    "settingsWatchDataTraining": "Training",
+    "settingsWatchMetricStress": "Stress",
+    "settingsWatchMetricSleepScore": "Schlafwert",
+    "settingsWatchMetricAwake": "Wach",
+    "settingsWatchMetricAwakenings": "Wachphasen",
+    "settingsWatchNowSuffix": "Jetzt",
+    "settingsWatchSyncing": "Synchronisieren",
+    "actionRemove": "Entfernen",
+    "settingsDeviceRemoveConfirmTitle": "{arg0} entfernen?",
+    "@settingsDeviceRemoveConfirmTitle": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsWatchActionAlarms": "Alarme",
+    "settingsWatchActionFind": "Finden",
+    "settingsWatchSettingsRetry": "Erneut versuchen",
+    "settingsWatchSettingsConfirmAction": "\"{arg0}\" anwenden?",
+    "@settingsWatchSettingsConfirmAction": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    }
 }
