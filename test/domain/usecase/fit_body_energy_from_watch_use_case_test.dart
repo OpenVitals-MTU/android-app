@@ -70,7 +70,15 @@ void main() {
   late FitBodyEnergyFromWatchUseCase useCase;
 
   // "Now" for the run; samples sit shortly before it.
-  final now = DateTime.now().toUtc();
+  //
+  // PINNED, and pinned deliberately in the small hours. The use case takes its
+  // `now`, so nothing here needs the wall clock — and taking it from the wall
+  // clock meant these tests ran against a different instant every time, passing
+  // all day and failing on the CI runs that happened after midnight. 01:30 UTC
+  // is the value that used to break them: any hour subtracted from it lands on
+  // the previous day, so a test that builds a past instant by pasting today's
+  // date onto a shifted hour-of-day now fails at once rather than overnight.
+  final now = DateTime.utc(2026, 7, 26, 1, 30);
 
   Future<void> setUp0({List<BodyEnergyTimelinePoint>? points}) async {
     SharedPreferences.setMockInitialValues(const {});
@@ -177,12 +185,16 @@ void main() {
     // The flaw this replaced: each sync downsampled only within its own batch,
     // so ten syncs in an hour taught the model ten times as fast as one, from
     // identical watch data. Learning must track elapsed time, not tapping.
-    final hourStart = DateTime.utc(
-      now.year,
-      now.month,
-      now.day,
-      now.subtract(const Duration(hours: 2)).hour,
-    );
+    // The top of the hour two hours back, built by SUBTRACTING from the top of
+    // the current hour — not by pasting today's date onto the hour-of-day from
+    // two hours ago. Across midnight those are different days: at 01:30 the
+    // hour-of-day two hours back is 23, and "today at 23:00" is twenty-one
+    // hours in the FUTURE, past the use case's `<= now` window, so every sample
+    // was filtered out and the count came back 0. Its sibling below already
+    // said this; this one still did it the other way, and failed whenever CI
+    // ran in the small hours.
+    final hourStart = DateTime.utc(now.year, now.month, now.day, now.hour)
+        .subtract(const Duration(hours: 2));
     await setUp0(points: [
       for (var m = 0; m < 60; m += 5)
         _point(hourStart.add(Duration(minutes: m)).toLocal(), 80),
