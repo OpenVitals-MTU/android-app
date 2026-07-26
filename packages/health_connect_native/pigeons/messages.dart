@@ -757,6 +757,55 @@ class ExerciseSessionMetricsMsg {
   );
 }
 
+/// One writing app's contribution to ONE record type on ONE local day.
+///
+/// The de-duplication blind spot, made visible. Every activity read in this
+/// plugin goes through an AGGREGATE, and Health Connect aggregates SUM every
+/// contributing app into a single figure with no per-origin split — so two apps
+/// mirroring the same watch are indistinguishable from one very active day.
+/// Reading the RAW records is the only way to keep
+/// `metadata.dataOrigin.packageName`.
+///
+/// Diagnostics only. Nothing in the product should branch on this; it exists so
+/// a human can tell a doubled feed from a genuine figure.
+class SourceDayTotalMsg {
+  final String packageName;
+
+  /// Local midnight of the day each record's midpoint falls in — the same
+  /// dating rule the daily readers use, so a DST day is neither doubled nor
+  /// missing.
+  final int dateEpochMs;
+
+  /// In the record type's canonical unit: kilocalories for the calorie types, a
+  /// count for Steps, meters for Distance.
+  final double total;
+
+  final int recordCount;
+
+  /// Records whose `recordingMethod` is manual entry — an import or a typed-in
+  /// value rather than a sensor reading.
+  final int manualEntryCount;
+
+  /// Summed duration of this app's records that day. The decisive column: two
+  /// apps each covering most of a 1440-minute day are mirroring one feed, which
+  /// no total or record count can establish on its own.
+  final double coveredMinutes;
+
+  final int firstStartEpochMs;
+  final int lastEndEpochMs;
+
+  SourceDayTotalMsg(
+    this.packageName,
+    this.dateEpochMs,
+    this.total,
+    this.recordCount,
+    this.manualEntryCount,
+    this.coveredMinutes,
+    this.firstStartEpochMs,
+    this.lastEndEpochMs,
+  );
+}
+
 class SpeedSampleMsg {
   final int timeEpochMs;
   final double metersPerSecond;
@@ -1479,6 +1528,25 @@ abstract class HealthConnectHostApi {
   /// ordered by time.
   @async
   List<ActivityCadenceSampleMsg> readActivityCadenceSamples(
+    int startEpochMs,
+    int endEpochMs,
+  );
+
+  /// Per-writing-app daily totals for one interval record type, read from the
+  /// raw records so each one's `dataOrigin` survives.
+  ///
+  /// [recordType] is a canonical record-type name — `ActiveCaloriesBurned`,
+  /// `TotalCaloriesBurned`, `Steps`, `Distance`. Any other name returns empty
+  /// rather than throwing, so a newer caller cannot break an older host.
+  ///
+  /// The records are folded on the Kotlin side: one row per (app, day) crosses
+  /// this channel, never the records themselves. The read is capped, so a
+  /// diagnostic over a long window degrades to a truncated count rather than an
+  /// ANR — a caller that sums [SourceDayTotalMsg.recordCount] to exactly the cap
+  /// must treat the proportions as truncated rather than as fact.
+  @async
+  List<SourceDayTotalMsg> readSourceDayTotals(
+    String recordType,
     int startEpochMs,
     int endEpochMs,
   );

@@ -256,6 +256,48 @@ internal class ActivityHealthReader(
       (cycling + steps).sortedBy { it.timeEpochMs }
     }
 
+  /**
+   * Per-writing-app daily totals for one interval record type.
+   *
+   * Deliberately NOT an aggregate. `aggregateGroupByPeriod` does accept a
+   * `dataOriginFilter`, but using it would mean one discovery aggregate plus one
+   * aggregate per origin, and would still yield no record count, no
+   * manual-entry count and no coverage — the three figures that tell a mirrored
+   * feed apart from a genuinely active day. Reading raw costs one paged read and
+   * marshals nothing but the summary: the records are folded here, so only one
+   * row per (app, day) ever crosses the channel.
+   *
+   * Capped at [SOURCE_TOTALS_MAX_RECORDS]. Paging is time-ordered, so a
+   * truncated read drops whole days off one end and skews the very proportions
+   * the caller is reading — hence the caller is told to check the summed record
+   * count against the cap rather than trust a truncated split.
+   */
+  suspend fun readSourceDayTotals(
+    recordType: String,
+    start: Instant,
+    end: Instant,
+  ): List<SourceDayTotalMsg> =
+    support.withLogging("readSourceDayTotals[$recordType][$start..$end]", emptyList()) {
+      val recordClass = SOURCE_TOTAL_RECORDS[recordType] ?: return@withLogging emptyList()
+      val zone = ZoneId.systemDefault()
+      val acc = LinkedHashMap<Pair<String, Long>, SourceDayAccumulator>()
+
+      support.client().readRecordsPaged(
+        recordType = recordClass,
+        timeRangeFilter = TimeRangeFilter.between(start, end),
+        ascendingOrder = true,
+        pageSize = SOURCE_TOTALS_PAGE_SIZE,
+        maxRecords = SOURCE_TOTALS_MAX_RECORDS,
+      ).forEach { record ->
+        val slice = record.intervalTotal() ?: return@forEach
+        val day = dayBucketDateEpochMs(slice.start, slice.end, zone)
+        val origin = record.metadata.dataOrigin.packageName.ifBlank { UNKNOWN_SOURCE }
+        acc.getOrPut(origin to day) { SourceDayAccumulator() }.add(record.metadata, slice)
+      }
+
+      acc.map { (key, value) -> value.toMsg(key.first, key.second) }
+    }
+
   suspend fun readPlannedExerciseSessions(
     start: Instant,
     end: Instant,
@@ -933,6 +975,82 @@ private val EMPTY_SESSION_METRICS = ExerciseSessionMetricsMsg(
   floorsClimbed = null,
   wheelchairPushes = null,
 )
+
+/** One interval record reduced to what a per-source total needs. */
+internal data class IntervalSlice(
+  val start: Instant,
+  val end: Instant,
+  val value: Double,
+)
+
+/**
+ * The interval record types whose per-source split is worth reading.
+ *
+ * Steps and TotalCalories ride along at one extra call each because the reader
+ * needs them as sanity checks on the active-calorie figure: 2200 active kcal
+ * against 8,000 steps is self-refuting, and TotalCalories minus ActiveCalories
+ * should look like a basal rate. A name missing from this map returns empty, so
+ * a newer caller cannot break an older host.
+ */
+private val SOURCE_TOTAL_RECORDS: Map<String, KClass<out Record>> = mapOf(
+  "ActiveCaloriesBurned" to ActiveCaloriesBurnedRecord::class,
+  "TotalCaloriesBurned" to TotalCaloriesBurnedRecord::class,
+  "Steps" to StepsRecord::class,
+  "Distance" to DistanceRecord::class,
+)
+
+internal fun Record.intervalTotal(): IntervalSlice? = when (this) {
+  is ActiveCaloriesBurnedRecord -> IntervalSlice(startTime, endTime, energy.inKilocalories)
+  is TotalCaloriesBurnedRecord -> IntervalSlice(startTime, endTime, energy.inKilocalories)
+  is StepsRecord -> IntervalSlice(startTime, endTime, count.toDouble())
+  is DistanceRecord -> IntervalSlice(startTime, endTime, distance.inMeters)
+  else -> null
+}
+
+/**
+ * A hard ceiling on a DIAGNOSTIC read. A minute-granularity writer produces 1440
+ * records a day per type; two of them over a fortnight across three types is
+ * tens of thousands. The report is about proportions between sources, and a
+ * truncated read keeps those honest only if the caller notices — which is why
+ * the cap is exposed through the record count rather than hidden.
+ */
+private const val SOURCE_TOTALS_MAX_RECORDS = 20_000
+private const val SOURCE_TOTALS_PAGE_SIZE = 1_000
+private const val UNKNOWN_SOURCE = "unknown"
+
+/** Folds one app's records for one local day. */
+internal class SourceDayAccumulator {
+  private var total = 0.0
+  private var recordCount = 0
+  private var manualEntryCount = 0
+  private var coveredMinutes = 0.0
+  private var firstStart: Instant? = null
+  private var lastEnd: Instant? = null
+
+  fun add(metadata: Metadata, slice: IntervalSlice) {
+    total += slice.value
+    recordCount += 1
+    if (metadata.recordingMethod == Metadata.RECORDING_METHOD_MANUAL_ENTRY) {
+      manualEntryCount += 1
+    }
+    coveredMinutes += Duration.between(slice.start, slice.end).toMillis() / 60000.0
+    val start = firstStart
+    if (start == null || slice.start.isBefore(start)) firstStart = slice.start
+    val end = lastEnd
+    if (end == null || slice.end.isAfter(end)) lastEnd = slice.end
+  }
+
+  fun toMsg(packageName: String, dateEpochMs: Long) = SourceDayTotalMsg(
+    packageName = packageName,
+    dateEpochMs = dateEpochMs,
+    total = total,
+    recordCount = recordCount.toLong(),
+    manualEntryCount = manualEntryCount.toLong(),
+    coveredMinutes = coveredMinutes,
+    firstStartEpochMs = firstStart?.toEpochMilli() ?: 0L,
+    lastEndEpochMs = lastEnd?.toEpochMilli() ?: 0L,
+  )
+}
 
 /// Wire name -> aggregate, kept in step with Dart's `ExerciseSessionMetric`. A name
 /// missing from this map is skipped, so a newer caller cannot break an older host.

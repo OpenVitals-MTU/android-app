@@ -466,10 +466,11 @@ void main() {
     final samples = heartRateSamples(start, end, 72);
     final progress = activityProgress(List<double>.filled(8, 80.0), fromHour: 8);
 
+    // Seeded full, so neither variant reaches the floor — see the assertions.
     final neutral = calculateBodyEnergyTimeline(
       inputs(
         now: end,
-        previousEndScore: 80,
+        previousEndScore: 100,
         samples: samples,
         bodyProfile: restfulProfile,
         progress: progress,
@@ -478,7 +479,7 @@ void main() {
     final amplified = calculateBodyEnergyTimeline(
       inputs(
         now: end,
-        previousEndScore: 80,
+        previousEndScore: 100,
         samples: samples,
         bodyProfile: restfulProfile,
         progress: progress,
@@ -486,6 +487,530 @@ void main() {
       ),
     );
 
+    // Both variants must stay off the floor, or this stops measuring the gain:
+    // seeded at 80 the amplified day bottoms out at 0, and its drain is capped
+    // by the fall rather than by the model, leaving a one-point margin that
+    // would vanish the moment the neutral day drained a shade harder.
+    expect(neutral.currentScore, greaterThan(0));
+    expect(amplified.currentScore, greaterThan(0));
     expect(amplified.drained > neutral.drained, isTrue);
+  });
+
+  group('the carry-over seed', () {
+    // Body Energy is a chain, so the seed is the day's most consequential
+    // input: it is what makes midnight not a reset.
+    List<HeartRateSample> quiet() =>
+        heartRateSamples(dayStart, dayStart.add(const Duration(hours: 1)), 60);
+
+    BodyEnergyTimeline seeded(int? previousEndScore) =>
+        calculateBodyEnergyTimeline(BodyEnergyTimelineInputs(
+          date: date,
+          heartRateSamples: quiet(),
+          previousEndScore: previousEndScore,
+          bodyProfile: const BodyProfile(restingHeartRateBpm: 60),
+          now: dayStart.add(const Duration(hours: 1)),
+        ));
+
+    test('a carried score below the floor is raised, and says so', () {
+      final timeline = seeded(0);
+
+      expect(timeline.startScore, bodyEnergyCarryOverFloor);
+      expect(timeline.inputSummary.carryOverFloorApplied, isTrue);
+      expect(timeline.inputSummary.previousEndScore, 0,
+          reason: 'the raw carried score is kept so the UI can show both');
+    });
+
+    test('a carried score above the floor passes through untouched', () {
+      final timeline = seeded(40);
+
+      expect(timeline.startScore, 40);
+      expect(timeline.inputSummary.carryOverFloorApplied, isFalse);
+      expect(timeline.inputSummary.seedSource,
+          BodyEnergySeedSource.carriedOver);
+    });
+
+    test('no previous day starts neutral, and the floor does not apply', () {
+      final timeline = seeded(null);
+
+      expect(timeline.startScore, bodyEnergyNeutralStartScore);
+      expect(timeline.inputSummary.carryOverFloorApplied, isFalse,
+          reason: 'the floor is for carried scores, not for a cold start');
+      expect(timeline.inputSummary.seedSource, BodyEnergySeedSource.neutral);
+    });
+
+    test('a day with no usable data carries the seed instead of resetting', () {
+      // The regression this guards: empty() used to hardcode 50, so a single
+      // data-less day silently reset the whole chain.
+      final timeline = calculateBodyEnergyTimeline(BodyEnergyTimelineInputs(
+        date: date,
+        heartRateSamples: const [],
+        previousEndScore: 30,
+        bodyProfile: const BodyProfile(restingHeartRateBpm: 60),
+        now: dayStart.add(const Duration(hours: 1)),
+      ));
+
+      expect(timeline.confidence, BodyEnergyConfidence.noData);
+      expect(timeline.startScore, 30);
+      expect(timeline.currentScore, 30);
+    });
+
+    test('a data-less day with a sub-floor seed still floors it', () {
+      final timeline = calculateBodyEnergyTimeline(BodyEnergyTimelineInputs(
+        date: date,
+        heartRateSamples: const [],
+        previousEndScore: 2,
+        bodyProfile: const BodyProfile(restingHeartRateBpm: 60),
+        now: dayStart.add(const Duration(hours: 1)),
+      ));
+
+      expect(timeline.startScore, bodyEnergyCarryOverFloor);
+      expect(timeline.currentScore, bodyEnergyCarryOverFloor);
+    });
+  });
+
+  group('the day totals reconcile', () {
+    // The contract this group pins: Start + Charged - Drained == the score the
+    // day ended on. It used to be false by design -- charged/drained were gross
+    // unclamped sums, so a day that drained twice its available energy reported
+    // the whole figure and the summary card did not add up.
+    void expectReconciles(BodyEnergyTimeline timeline) {
+      expect(
+        timeline.startScore + timeline.charged - timeline.drained,
+        timeline.currentScore,
+        reason: 'Start ${timeline.startScore} + ${timeline.charged} '
+            '- ${timeline.drained} should equal ${timeline.currentScore}',
+      );
+    }
+
+    /// What "What moved it" and the influence strip display: the per-bucket
+    /// components. They must sum to the same headline the card shows.
+    ({double charge, double drain}) componentTotals(
+      BodyEnergyTimeline timeline,
+    ) {
+      var charge = 0.0;
+      var drain = 0.0;
+      for (final point in timeline.points) {
+        charge += point.charge;
+        drain += point.basalDrain +
+            point.appliedActivityDrain +
+            point.stressDrain +
+            point.recoveryDebtDrain;
+      }
+      return (charge: charge, drain: drain);
+    }
+
+    test('an ordinary day adds up', () {
+      final start = dayStart.add(const Duration(hours: 8));
+      final end = start.add(const Duration(hours: 8));
+
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 70,
+          samples: heartRateSamples(start, end, 72),
+          bodyProfile: restfulProfile,
+        ),
+      );
+
+      expect(timeline.currentScore, greaterThan(0));
+      expect(timeline.drained, greaterThan(0));
+      expectReconciles(timeline);
+    });
+
+    test('a day that bottoms out reports the fall, not the model', () {
+      // The 25 Jul case: seeded low and drained far harder than there was
+      // energy for. Previously this reported the whole gross drain (e.g. -200
+      // against a start of 50) and the card was unreadable as a ledger.
+      final start = dayStart.add(const Duration(hours: 8));
+      final end = start.add(const Duration(hours: 8));
+
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 30,
+          samples: heartRateSamples(start, end, 72),
+          bodyProfile: restfulProfile,
+          progress: activityProgress(List<double>.filled(8, 120.0), fromHour: 8),
+          calibration: const BodyEnergyCalibration(activityDrainGain: 2.0),
+        ),
+      );
+
+      expect(timeline.currentScore, 0, reason: 'the fixture must clamp');
+      // The cap is what was AVAILABLE, not the starting score: a day can drain
+      // everything it began with plus anything it earned back along the way.
+      expect(timeline.drained, timeline.startScore + timeline.charged,
+          reason: 'a floored day drains exactly what it had');
+      expectReconciles(timeline);
+    });
+
+    test('a day that tops out reports the rise, not the model', () {
+      final start = dayStart;
+      final end = start.add(const Duration(hours: 10));
+
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 90,
+          samples: heartRateSamples(start, end, 55),
+          sleepSessions: [sleep(start, end)],
+          bodyProfile: const BodyProfile(restingHeartRateBpm: 58),
+        ),
+      );
+
+      expect(timeline.currentScore, 100, reason: 'the fixture must clamp');
+      expect(timeline.charged, 10,
+          reason: 'a day starting at 90 cannot charge more than 10');
+      expectReconciles(timeline);
+    });
+
+    test('the breakdown sums to the headline on a clamped day', () {
+      // The regression this guards: scaling only the two totals would leave
+      // "What moved it" listing the model's full drain directly beneath a
+      // header showing the clamped one, in the same +N/-N typography.
+      final start = dayStart.add(const Duration(hours: 8));
+      final end = start.add(const Duration(hours: 8));
+
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 30,
+          samples: heartRateSamples(start, end, 72),
+          bodyProfile: restfulProfile,
+          progress: activityProgress(List<double>.filled(8, 120.0), fromHour: 8),
+          calibration: const BodyEnergyCalibration(activityDrainGain: 2.0),
+        ),
+      );
+
+      final totals = componentTotals(timeline);
+      expect(timeline.currentScore, 0);
+      expect(totals.drain, closeTo(timeline.drained.toDouble(), 1.0));
+      expect(totals.charge, closeTo(timeline.charged.toDouble(), 1.0));
+    });
+
+    test('a bucket that both charges and drains still feeds both totals', () {
+      // Waking mid-bucket: sleep charge and basal drain in the same bucket.
+      // Net-only accounting would post the difference to one side and lose the
+      // other, which is why the clamp is attributed proportionally instead.
+      final wake = dayStart.add(const Duration(hours: 6, minutes: 2));
+      final end = dayStart.add(const Duration(hours: 8));
+
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 50,
+          samples: heartRateSamples(dayStart, end, 62),
+          sleepSessions: [sleep(dayStart, wake)],
+          bodyProfile: const BodyProfile(restingHeartRateBpm: 58),
+        ),
+      );
+
+      expect(timeline.charged, greaterThan(0));
+      expect(timeline.drained, greaterThan(0));
+      expectReconciles(timeline);
+    });
+
+    test('a fully clamped bucket keeps a truthful driver at zero magnitude',
+        () {
+      // primaryInfluence stays computed from the raw magnitudes: scaling it to
+      // zero alongside them would label a hard workout "steady".
+      final start = dayStart.add(const Duration(hours: 8));
+      final end = start.add(const Duration(hours: 8));
+
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 30,
+          samples: heartRateSamples(start, end, 72),
+          bodyProfile: restfulProfile,
+          progress: activityProgress(List<double>.filled(8, 120.0), fromHour: 8),
+          calibration: const BodyEnergyCalibration(activityDrainGain: 2.0),
+        ),
+      );
+
+      final flattened = timeline.points
+          .where((point) => point.score == 0 && point.delta == 0.0)
+          .toList();
+      expect(flattened, isNotEmpty,
+          reason: 'the fixture must run past the floor');
+      expect(
+        flattened.every((point) =>
+            point.basalDrain == 0.0 && point.appliedActivityDrain == 0.0),
+        isTrue,
+        reason: 'a bucket that moved nothing must contribute nothing',
+      );
+      expect(
+        flattened.any((point) =>
+            point.primaryInfluence != BodyEnergyPrimaryInfluence.steady),
+        isTrue,
+        reason: 'the driver must survive the scaling',
+      );
+    });
+  });
+
+  group('the recovery-debt drain is correctable', () {
+    // A hard workout arms recovery debt for the buckets after it. Until the
+    // wiring fix that drain was scaled by no gain at all, so an error the model
+    // attributed to it could never be corrected however hard the fit tried.
+    BodyEnergyTimeline afterHardWorkout(double activityGain) {
+      final start = dayStart.add(const Duration(hours: 8));
+      final workoutEnd = start.add(const Duration(minutes: 40));
+      final end = start.add(const Duration(hours: 3));
+      return calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 100,
+          samples: [
+            ...heartRateSamples(start, workoutEnd, 170),
+            ...heartRateSamples(workoutEnd, end, 62),
+          ],
+          workouts: [workout(start, workoutEnd)],
+          bodyProfile:
+              const BodyProfile(restingHeartRateBpm: 60, maxHeartRateBpm: 190),
+          calibration: BodyEnergyCalibration(activityDrainGain: activityGain),
+        ),
+      );
+    }
+
+    double totalRecoveryDebt(BodyEnergyTimeline timeline) =>
+        timeline.points.fold(0.0, (sum, p) => sum + p.recoveryDebtDrain);
+    double totalBasal(BodyEnergyTimeline timeline) =>
+        timeline.points.fold(0.0, (sum, p) => sum + p.basalDrain);
+
+    test('it scales with the activity gain', () {
+      final neutral = afterHardWorkout(1.0);
+      final amplified = afterHardWorkout(2.0);
+
+      expect(totalRecoveryDebt(neutral), greaterThan(0.0),
+          reason: 'the fixture must actually arm recovery debt');
+      expect(
+        totalRecoveryDebt(amplified),
+        closeTo(totalRecoveryDebt(neutral) * 2.0, 0.01),
+      );
+    });
+
+    test('and does not drag the basal drain with it', () {
+      // Basal answers for the waking floor only; the activity gain must not
+      // move it, or the two would be inseparable in the fit.
+      expect(
+        totalBasal(afterHardWorkout(2.0)),
+        closeTo(totalBasal(afterHardWorkout(1.0)), 0.01),
+      );
+    });
+  });
+
+  test('no bucket is ever labelled quiet rest', () {
+    // `_primaryInfluence` returned it when charge > 0 with no sleep, but charge
+    // has been sleep-only since v3 — so the branch was unreachable and is gone.
+    final start = dayStart;
+    final wake = dayStart.add(const Duration(hours: 7));
+    final workoutStart = dayStart.add(const Duration(hours: 9));
+    final end = dayStart.add(const Duration(hours: 14));
+
+    final timeline = calculateBodyEnergyTimeline(
+      inputs(
+        now: end,
+        previousEndScore: 80,
+        samples: [
+          ...heartRateSamples(start, wake, 52),
+          // A gap between wake and the workout leaves unmeasurable buckets.
+          ...heartRateSamples(workoutStart, end, 150),
+        ],
+        sleepSessions: [sleep(start, wake)],
+        workouts: [workout(workoutStart, end)],
+        bodyProfile:
+            const BodyProfile(restingHeartRateBpm: 55, maxHeartRateBpm: 190),
+      ),
+    );
+
+    expect(timeline.points, isNotEmpty);
+    expect(
+      timeline.points.map((p) => p.primaryInfluence),
+      isNot(contains(BodyEnergyPrimaryInfluence.quietRest)),
+    );
+    // The fixture must exercise the branches that could have reached it.
+    expect(
+      timeline.points.map((p) => p.primaryInfluence),
+      contains(BodyEnergyPrimaryInfluence.sleepRecovery),
+    );
+  });
+
+  group('the waking-rest charge', () {
+    // v3 removed the waking charge because it under-drained active days.
+    // Removing it entirely overshot: measured against a real week the model
+    // lost ~10 points EVERY day and the chain sat pinned on the floor, because
+    // with charge sleep-only a quiet day can only decline at the basal rate.
+    BodyEnergyTimeline quietDay({required int wakingBpm, int restingBpm = 58}) {
+      final wake = dayStart.add(const Duration(hours: 7));
+      final end = dayStart.add(const Duration(hours: 22));
+      return calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 50,
+          samples: heartRateSamples(dayStart, end, wakingBpm),
+          sleepSessions: [sleep(dayStart, wake)],
+          bodyProfile: BodyProfile(restingHeartRateBpm: restingBpm),
+        ),
+      );
+    }
+
+    test('a quiet waking day now recovers instead of only declining', () {
+      final timeline = quietDay(wakingBpm: 60);
+
+      expect(timeline.currentScore, greaterThan(timeline.startScore),
+          reason: 'a day spent resting should end higher than it began');
+      expect(
+        timeline.points.any((p) =>
+            p.charge > 0.0 &&
+            p.state != BodyEnergyBucketState.sleep),
+        isTrue,
+        reason: 'the charge must come from waking buckets, not only sleep',
+      );
+    });
+
+    test('the ceiling is a share of reserve, not a fixed offset', () {
+      // Measured over a real week, the old resting-plus-8 band earned ZERO rest
+      // charge on six days of seven. A reserve fraction widens it and, more
+      // importantly, moves with the person — clearing a manual resting or max
+      // override must not silently retune the charge model.
+      //
+      // resting 60, max 190 -> reserve 130. 15% is 79.5 bpm.
+      BodyEnergyTimeline at(int bpm) {
+        final wake = dayStart.add(const Duration(hours: 7));
+        final end = dayStart.add(const Duration(hours: 20));
+        return calculateBodyEnergyTimeline(
+          inputs(
+            now: end,
+            previousEndScore: 50,
+            samples: heartRateSamples(dayStart, end, bpm),
+            sleepSessions: [sleep(dayStart, wake)],
+            bodyProfile: const BodyProfile(
+              restingHeartRateBpm: 60,
+              maxHeartRateBpm: 190,
+            ),
+          ),
+        );
+      }
+
+      bool chargesAwake(BodyEnergyTimeline t) => t.points.any((p) =>
+          p.charge > 0.0 && p.state != BodyEnergyBucketState.sleep);
+
+      // 75 bpm is 15 above resting — outside the old band, inside this one.
+      expect(chargesAwake(at(75)), isTrue);
+      // 88 bpm is only 21% of reserve, so zone 1 would have allowed it — but it
+      // is 28 beats above resting and in the top stress tier.
+      expect(chargesAwake(at(88)), isFalse);
+    });
+
+    test('it does not fire once the heart rate leaves the resting band', () {
+      // The gate is what makes this safe where the v3 version was not: an
+      // active day must gain nothing from it.
+      final resting = quietDay(wakingBpm: 60);
+      final busy = quietDay(wakingBpm: 95);
+
+      expect(busy.charged, lessThan(resting.charged));
+      expect(
+        busy.points.any((p) =>
+            p.charge > 0.0 && p.state != BodyEnergyBucketState.sleep),
+        isFalse,
+      );
+    });
+
+    test('a trickle of activity drain does not block it', () {
+      // The regression this pins: requiring ZERO activity drain in the bucket
+      // made the charge almost inert. The activity series is hourly and
+      // cumulative and gets interpolated across every 5-minute bucket, so a
+      // sliver of drain lands nearly everywhere — on a real week the charge
+      // fired for ~100 minutes total and contributed under two points. The
+      // wrist, not the smeared calorie curve, decides whether you are resting.
+      final wake = dayStart.add(const Duration(hours: 7));
+      final end = dayStart.add(const Duration(hours: 22));
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 50,
+          samples: heartRateSamples(dayStart, end, 60),
+          sleepSessions: [sleep(dayStart, wake)],
+          // A sedentary day still logs a slow drip of active calories.
+          progress: activityProgress(List<double>.filled(15, 4.0), fromHour: 7),
+          bodyProfile: const BodyProfile(restingHeartRateBpm: 58),
+        ),
+      );
+
+      final charging = timeline.points
+          .where((p) => p.charge > 0.0 && p.state != BodyEnergyBucketState.sleep)
+          .toList();
+      expect(charging, isNotEmpty);
+      expect(
+        charging.any((p) => p.appliedActivityDrain > 0.0),
+        isTrue,
+        reason: 'the point of the fix: charge and a small drain coexist',
+      );
+      expect(timeline.currentScore, greaterThan(timeline.startScore));
+    });
+
+    test('it is suppressed while recovery debt is still being billed', () {
+      // Sitting quietly after a hard session is exactly the state recovery debt
+      // models. Charging through it would overstate the recovery and, since the
+      // rest rate exceeds the debt rate, hide recovery debt as an influence.
+      final start = dayStart.add(const Duration(hours: 8));
+      final workoutEnd = start.add(const Duration(minutes: 40));
+      final end = start.add(const Duration(hours: 3));
+
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 80,
+          samples: heartRateSamples(start, workoutEnd, 170) +
+              heartRateSamples(workoutEnd, end, 60),
+          workouts: [workout(start, workoutEnd)],
+          bodyProfile:
+              const BodyProfile(restingHeartRateBpm: 58, maxHeartRateBpm: 190),
+        ),
+      );
+
+      final debtBuckets =
+          timeline.points.where((p) => p.recoveryDebtDrain > 0.0).toList();
+      expect(debtBuckets, isNotEmpty,
+          reason: 'the fixture must arm recovery debt');
+      expect(
+        debtBuckets.every((p) => p.charge == 0.0),
+        isTrue,
+        reason: 'no bucket may both carry recovery debt and charge',
+      );
+    });
+
+    test('a charging waking bucket reports quiet rest', () {
+      final timeline = quietDay(wakingBpm: 60);
+
+      expect(
+        timeline.points.map((p) => p.primaryInfluence),
+        contains(BodyEnergyPrimaryInfluence.quietRest),
+      );
+    });
+
+    test('but a larger drain still outranks it', () {
+      // quietRest competes rather than short-circuiting: whichever actually
+      // moved the score more is the influence reported.
+      final start = dayStart.add(const Duration(hours: 8));
+      final workoutEnd = start.add(const Duration(minutes: 40));
+      final end = start.add(const Duration(hours: 3));
+
+      final timeline = calculateBodyEnergyTimeline(
+        inputs(
+          now: end,
+          previousEndScore: 80,
+          samples: heartRateSamples(start, workoutEnd, 170) +
+              heartRateSamples(workoutEnd, end, 60),
+          workouts: [workout(start, workoutEnd)],
+          bodyProfile:
+              const BodyProfile(restingHeartRateBpm: 58, maxHeartRateBpm: 190),
+        ),
+      );
+
+      expect(
+        timeline.points.map((p) => p.primaryInfluence),
+        contains(BodyEnergyPrimaryInfluence.recoveryDebt),
+      );
+    });
   });
 }

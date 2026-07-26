@@ -346,6 +346,50 @@ class PreferencesRepository {
   set bodyEnergyWatchFitWatermarkMillis(int value) =>
       _store.putInt(_keyBodyEnergyWatchFitWatermarkMillis, value);
 
+  /// The most recent completed day of the Body Energy chain, as
+  /// `<epochDay>|<endScore>`.
+  ///
+  /// The chain itself lives in drift, but the home-widget alarm isolate must
+  /// not open the database — without this mirror its widget would restart the
+  /// day at the neutral score while the app showed a carried one. Null until a
+  /// past day has been computed.
+  String? get bodyEnergyChainSeedMirror =>
+      _prefs.getString(_keyBodyEnergyChainSeedMirror);
+
+  set bodyEnergyChainSeedMirror(String? value) => value == null
+      ? _store.remove(_keyBodyEnergyChainSeedMirror)
+      : _store.putString(_keyBodyEnergyChainSeedMirror, value);
+
+  /// The Body Energy algorithm version the learned gains were fitted against.
+  ///
+  /// A gain is a multiplier on a specific component, so it only means anything
+  /// relative to the model that produced the errors it was fitted from. When
+  /// the model changes shape — a component gaining or losing a gain, or a new
+  /// charge term appearing — the old multipliers describe something that no
+  /// longer exists and have to go back to neutral. 0 means "never recorded",
+  /// which is treated as needing the reset.
+  int get bodyEnergyGainsAlgorithmVersion =>
+      _prefs.getInt(_keyBodyEnergyGainsAlgorithmVersion) ?? 0;
+
+  set bodyEnergyGainsAlgorithmVersion(int value) =>
+      _store.putInt(_keyBodyEnergyGainsAlgorithmVersion, value);
+
+  /// Which generation of the watch-fit MACHINERY this install has run under.
+  ///
+  /// Separate from [bodyEnergyGainsAlgorithmVersion] because it answers a
+  /// different question. That one asks whether the gains still describe the
+  /// current model; this one asks whether the evidence behind them was ever
+  /// readable. A bug in the fit itself leaves both the gains and the algorithm
+  /// version untouched and perfectly consistent — and starved. Bumping the
+  /// algorithm version to force a refit would claim a model change that did not
+  /// happen, and would throw away the stored chain to do it. 0 means "never
+  /// recorded", which is treated as needing the rewind.
+  int get bodyEnergyWatchFitEpoch =>
+      _prefs.getInt(_keyBodyEnergyWatchFitEpoch) ?? 0;
+
+  set bodyEnergyWatchFitEpoch(int value) =>
+      _store.putInt(_keyBodyEnergyWatchFitEpoch, value);
+
   void setBodyEnergyCalibration(BodyEnergyCalibration calibration) {
     final normalized = calibration.normalized();
     _store.putBool(_keyBodyEnergyUseManualZones, normalized.useManualZones);
@@ -791,6 +835,12 @@ class PreferencesRepository {
       'body_energy_watch_observation_count';
   static const String _keyBodyEnergyWatchFitWatermarkMillis =
       'body_energy_watch_fit_watermark_millis';
+  static const String _keyBodyEnergyChainSeedMirror =
+      'body_energy_chain_seed_mirror';
+  static const String _keyBodyEnergyGainsAlgorithmVersion =
+      'body_energy_gains_algorithm_version';
+  static const String _keyBodyEnergyWatchFitEpoch =
+      'body_energy_watch_fit_epoch';
   static const String _keyMindfulnessTimerDurationMinutes =
       'mindfulness_timer_duration_minutes';
   static const String _keyMindfulnessTimerIntervalMinutes =

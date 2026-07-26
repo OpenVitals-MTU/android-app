@@ -111,18 +111,37 @@ abstract class BodyEnergyCalibration with _$BodyEnergyCalibration {
       _clampedBasalDrainGain != 1.0 ||
       _clampedStressDrainGain != 1.0;
 
-  String signature() {
+  /// The half a user sets: whether zones are manual, and what they are.
+  ///
+  /// Split from [gainSignature] because the two change on completely different
+  /// timescales. This one moves when someone edits a setting; the gains move on
+  /// their own every time the watch teaches the model something. A cache keyed
+  /// on both together is invalidated by the learner doing its job, so anything
+  /// that only needs to know "is this still the same person's configuration"
+  /// wants this half alone.
+  String zoneSignature() {
     final normalizedCalibration = normalized();
     return [
       normalizedCalibration.useManualZones,
       normalizedCalibration.manualZoneThresholdsBpm?.toPreferenceString() ??
           'auto',
+    ].join('|');
+  }
+
+  /// The half the watch fit moves, in steps far smaller than three decimals.
+  String gainSignature() {
+    final normalizedCalibration = normalized();
+    return [
       normalizedCalibration._clampedSleepChargeGain.toStringAsFixed(3),
       normalizedCalibration._clampedActivityDrainGain.toStringAsFixed(3),
       normalizedCalibration._clampedBasalDrainGain.toStringAsFixed(3),
       normalizedCalibration._clampedStressDrainGain.toStringAsFixed(3),
     ].join('|');
   }
+
+  /// Both halves, unchanged: a timeline really was computed with these gains, so
+  /// serving a cached one still requires all of it to match.
+  String signature() => '${zoneSignature()}|${gainSignature()}';
 
   static const BodyEnergyCalibration automatic = BodyEnergyCalibration();
 }

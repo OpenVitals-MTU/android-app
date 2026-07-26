@@ -154,6 +154,20 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
     return out;
   }
 
+  /// Diagnostics-only, and empty here on purpose: the per-source split exists to
+  /// expose real writers in a real Health Connect, which a fixture cannot model
+  /// without inventing package names that would mean nothing. The fold that
+  /// consumes these rows is unit-tested directly instead.
+  @override
+  Future<List<SourceDayTotalMsg>> readSourceDayTotals(
+    String recordType,
+    int startEpochMs,
+    int endEpochMs,
+  ) async {
+    calls.add('readSourceDayTotals');
+    return const <SourceDayTotalMsg>[];
+  }
+
   @override
   Future<List<ActivityCadenceSampleMsg>> readActivityCadenceSamples(
     int startEpochMs,

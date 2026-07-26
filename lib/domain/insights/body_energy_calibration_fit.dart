@@ -96,22 +96,37 @@ BodyEnergyCalibration fitBodyEnergyGains(
     if (error == 0.0) continue;
     final step = rate * error;
 
+    // An observation must move the gain that scales the drain it is blaming.
+    // Anything else is either impotent — no gain scales that component — or
+    // aimed at a component that was not responsible, and both show up as a gain
+    // drifting to answer for something it does not control.
     switch (influence) {
       case BodyEnergyPrimaryInfluence.sleepRecovery:
         // Felt better → sleep recharged more than modelled → raise the gain.
         sleep += step;
       case BodyEnergyPrimaryInfluence.everydayActivity:
       case BodyEnergyPrimaryInfluence.exertion:
+      case BodyEnergyPrimaryInfluence.recoveryDebt:
         // Felt worse → activity drained more than modelled → raise the gain.
+        // Recovery debt belongs here too: it is scaled by `activityDrainGain`
+        // like the other two, being the tail of the same effort. It used to move
+        // `basalDrainGain`, which scales the waking floor and not recovery debt
+        // at all — so it could not fix the error it aimed at, and corrupted the
+        // basal figure while failing to.
         activity -= step;
       case BodyEnergyPrimaryInfluence.elevatedHeartRate:
         stress -= step;
-      case BodyEnergyPrimaryInfluence.recoveryDebt:
-      case BodyEnergyPrimaryInfluence.quietRest:
       case BodyEnergyPrimaryInfluence.steady:
-        // Steady windows are basal-dominated; a mismatch there is the baseline
-        // burn being off.
+        // The one influence basal should answer for: `_primaryInfluence` reports
+        // steady exactly when every competing drain is zero, which leaves the
+        // basal floor as the only thing that moved the score.
         basal -= step;
+      case BodyEnergyPrimaryInfluence.quietRest:
+        // A charge with no sleep in the bucket. The waking-rest charge is
+        // scaled by `sleepChargeGain` like sleep itself, so that is the gain to
+        // move. If the two ever need to diverge, that is a fifth gain rather
+        // than a different routing here.
+        sleep += step;
       case BodyEnergyPrimaryInfluence.noData:
         break;
     }
@@ -131,6 +146,19 @@ BodyEnergyCalibration fitBodyEnergyGains(
       )
       .normalized();
 }
+
+/// The generation of the watch-fit machinery, bumped when a fix means the
+/// evidence already consumed has to be read again.
+///
+/// Distinct from the algorithm version, which describes the MODEL. A bug in the
+/// fit leaves the model untouched, so an algorithm bump to force a refit would
+/// both misdescribe the change and discard the stored chain for nothing.
+///
+/// 1 — the watch fit watermark was advanced past days whose timelines had not
+/// been computed yet, and was never rewound when the gains reset. Between them,
+/// an install could sit on thousands of stored samples with a watch observation
+/// count of 2 and every gain at exactly 1.00.
+const int bodyEnergyWatchFitEpoch = 1;
 
 /// One feel-check moves a gain at most this far; small so a single mood swing
 /// can't swamp the model, and the gains converge over weeks of check-ins.

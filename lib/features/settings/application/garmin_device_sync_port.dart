@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/time/local_date.dart';
 import '../../../data/local/open_vitals_database.dart';
 import '../../../devices/core/sync/device_sync_port.dart';
 import '../../../domain/model/ble_sensor_models.dart';
@@ -27,7 +30,8 @@ final garminBulkImportProvider =
 ///
 /// The division of labour: [GarminWatchSyncService] owns the radio and the
 /// protocol, this owns the app-level sequence — sync, import, record what was
-/// taken so the next run can skip it, stamp the device, teach Body Energy.
+/// taken so the next run can skip it, stamp the device, teach Body Energy and
+/// rebuild the days it just back-filled.
 ///
 /// Holds a [Ref] rather than concrete deps: the sequence touches ~12 providers
 /// plus two `invalidate` calls, so ctor injection would be unwieldy and lose the
@@ -130,6 +134,8 @@ class GarminDeviceSyncPort implements DeviceSyncPort {
         // sync by design rather than skipped on a key that identifies nothing.
         downloaded.map((f) => f.entry.dedupKey).whereType<String>(),
       );
+
+      await _rebuildBodyEnergyChain(downloaded);
     }
 
     repository.markSynced(deviceId, DateTime.now().toUtc());
@@ -286,11 +292,70 @@ class GarminDeviceSyncPort implements DeviceSyncPort {
     }
   }
 
+  /// Drops the Body Energy days this sync just back-filled, and rebuilds them.
+  ///
+  /// Body Energy chains across midnight, so a watch handing over a week of
+  /// sleep and heart-rate data invalidates not just those days but every day
+  /// after them — their seeds came from scores computed without it. The chain's
+  /// settling window ([bodyEnergyChainSettlingDays]) is a time-based guess at
+  /// "data might still arrive"; a completed sync is the precise signal, so use
+  /// it. Without this a back-filled day older than the window would stay frozen
+  /// at whatever it scored before the watch was ever synced.
+  ///
+  /// Best-effort, exactly like the calibration fit: the watch data has already
+  /// landed in Health Connect, and failing the sync over a cache rebuild would
+  /// tell the user their sync failed when it did not.
+  Future<void> _rebuildBodyEnergyChain(
+    List<GarminDownloadedFile> downloaded,
+  ) async {
+    try {
+      final earliest = garminEarliestAffectedDay(downloaded);
+      if (earliest == null) return;
+      final today = LocalDate.now();
+      if (earliest.isAfter(today)) return;
+
+      await _ref
+          .read(bodyEnergyTimelineStoreProvider)
+          .invalidateForward(earliest, today);
+      debugPrint('[GARMIN-SYNC] body-energy chain invalidated from $earliest');
+
+      // Rebuild rather than leave holes: a foreground open only fills two
+      // missing days inline, so a week of back-fill would otherwise seed today
+      // neutrally until the background pass caught up. Forced past the throttle
+      // because a sync is precisely the event it should react to, and
+      // fire-and-forget because the walk has its own budget — the Body Energy
+      // screen joins this same run when it opens.
+      unawaited(
+        _ref.read(bodyEnergyChainSyncServiceProvider).syncAll(force: true),
+      );
+    } catch (error) {
+      debugPrint('[GARMIN-SYNC] body-energy chain rebuild skipped: $error');
+    }
+  }
+
   String _describe(Object error) {
     if (error is GarminBleTransportException) return error.message;
     final text = error.toString();
     return text.isEmpty ? 'The watch could not be synced.' : text;
   }
+}
+
+/// The earliest local day a set of downloaded watch files carries data for.
+///
+/// Null when the watch dated none of them — its "no date" sentinel is real and
+/// observed on a vívoactive 5 — in which case nothing is invalidated and the
+/// chain's settling window stays the only safety net, which is what it is for.
+///
+/// Top-level and pure so it can be tested without the sync port's provider
+/// graph, which needs a radio, Health Connect and a dozen providers to build.
+LocalDate? garminEarliestAffectedDay(List<GarminDownloadedFile> downloaded) {
+  DateTime? earliest;
+  for (final file in downloaded) {
+    final fileDate = file.entry.fileDate;
+    if (fileDate == null) continue;
+    if (earliest == null || fileDate.isBefore(earliest)) earliest = fileDate;
+  }
+  return earliest == null ? null : instantToLocalDate(earliest);
 }
 
 /// Maps a Garmin protocol phase onto the generic [DeviceSyncPhase] (1:1 today).

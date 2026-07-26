@@ -277,15 +277,40 @@ List<BodyEnergyInputRow> _inputRows(BodyEnergyInputSummary summary) {
       ),
       count: summary.respiratorySampleCount,
     ),
-    BodyEnergyInputRow(
-      kind: BodyEnergyInputKind.previousScore,
-      status: availableOrOptional(summary.previousEndScore != null),
-      value: summary.previousEndScore?.toString(),
-    ),
+    _previousScoreRow(summary),
     BodyEnergyInputRow(
       kind: BodyEnergyInputKind.calibration,
       status: BodyEnergyInputStatus.available,
       value: summary.calibrationMode.name,
     ),
   ];
+}
+
+/// The score this day carried over from the previous one.
+///
+/// Body Energy is a chain, so this row is the one place a reset is explicable:
+/// a chain gap says the predecessor is too far back to trust, and a floored
+/// carry-over shows both numbers (`3 -> 10`) rather than silently presenting
+/// the raised one as if it were measured.
+BodyEnergyInputRow _previousScoreRow(BodyEnergyInputSummary summary) {
+  final carried = summary.previousEndScore;
+  if (summary.seedSource == BodyEnergySeedSource.chainGap) {
+    return const BodyEnergyInputRow(
+      kind: BodyEnergyInputKind.previousScore,
+      status: BodyEnergyInputStatus.missing,
+    );
+  }
+  if (carried == null) {
+    return const BodyEnergyInputRow(
+      kind: BodyEnergyInputKind.previousScore,
+      status: BodyEnergyInputStatus.optional,
+    );
+  }
+  return BodyEnergyInputRow(
+    kind: BodyEnergyInputKind.previousScore,
+    status: BodyEnergyInputStatus.available,
+    value: summary.carryOverFloorApplied
+        ? '$carried -> ${bodyEnergySeedScore(carried)}'
+        : carried.toString(),
+  );
 }

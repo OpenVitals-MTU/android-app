@@ -38,6 +38,17 @@ class FitBodyEnergyFromWatchUseCase {
   /// with months of history does not try to fit all of it at once.
   static const Duration _maxLookback = Duration(days: 7);
 
+  /// How long a day with no timeline is waited for before it is retired.
+  ///
+  /// The watermark is one scalar, so holding for a day that yields nothing holds
+  /// every day after it too. Waiting is right when the reason is "the chain has
+  /// not reached it yet", which resolves within a warm pass or two; it is wrong
+  /// when the day has no heart data and never will, because then the wait never
+  /// ends. Two days separates them about as well as anything can, and bounds the
+  /// damage either way — where [_maxLookback] as the cutoff meant a single
+  /// permanently-cold day inside the window blocked the whole refit behind it.
+  static const Duration _coldDayGrace = Duration(days: 2);
+
   /// Returns how many observations were folded in.
   Future<int> call({DateTime? now}) async {
     final at = (now ?? DateTime.now()).toUtc();
@@ -73,10 +84,39 @@ class FitBodyEnergyFromWatchUseCase {
           .add(WatchBodyEnergySample(time: time, score: sample.value));
     }
 
+    // Oldest first, because the watermark is a single scalar: it can only ever
+    // say "everything before here is done", so the days have to be retired in
+    // order for that to stay true.
+    final days = byDay.keys.toList()..sort();
+    final coldDayCutoff =
+        LocalDate.fromDateTime(at.toLocal()).minusDays(_coldDayGrace.inDays);
+
     var fitted = 0;
-    for (final entry in byDay.entries) {
-      final readings = await _observationsForDay(entry.key, entry.value);
-      if (readings.isEmpty) continue;
+    int? retiredThrough;
+    for (final date in days) {
+      final daySamples = byDay[date]!;
+      final readings = await _observationsForDay(date, daySamples);
+
+      if (readings.isEmpty) {
+        // A day with no timeline yet — the chain has not reached it, or the
+        // permissions were not there when it was asked. Its readings are not
+        // unpairable, merely early, so stop and leave the whole remainder for
+        // the next run.
+        //
+        // Advancing over it is what made the watermark lossy: it used to jump
+        // to the newest bucket of every sample READ the moment any single day
+        // fitted, so one warm day silently retired a week of evidence that had
+        // never been examined. Combined with the algorithm-bump reset in
+        // BodyEnergyRepositoryImpl, that left the gains pinned at 1.0 with
+        // thousands of stored samples they were no longer allowed to see.
+        if (date.isAfter(coldDayCutoff)) break;
+        // Old enough that waiting has stopped being a bet on the chain catching
+        // up, so retire it: it is the only thing that keeps the watermark moving
+        // and lets the days behind it be read at all.
+        retiredThrough = _newestBucket(daySamples, bucketMs);
+        continue;
+      }
+
       _preferences.setBodyEnergyCalibration(
         fitBodyEnergyGains(
           _preferences.bodyEnergyCalibration(),
@@ -85,24 +125,27 @@ class FitBodyEnergyFromWatchUseCase {
         ),
       );
       fitted += readings.length;
+      // Every bucket of a day that HAS a timeline is retired, not just the ones
+      // that paired: within such a day a reading that found no point within the
+      // pairing gap never will.
+      retiredThrough = _newestBucket(daySamples, bucketMs);
     }
 
+    if (retiredThrough != null) {
+      _preferences.bodyEnergyWatchFitWatermarkMillis =
+          retiredThrough * bucketMs;
+    }
     if (fitted > 0) {
-      // Advanced past every bucket examined, not merely the ones that paired,
-      // so unpairable readings are not reconsidered forever. Only reached when
-      // something WAS fitted: a run that produced nothing (no timeline yet)
-      // leaves the watermark alone so those readings get another chance once
-      // the day's data fills in.
-      final newestBucket = samples
-          .map((s) => s.timeMillis ~/ bucketMs)
-          .reduce((a, b) => a > b ? a : b);
-      _preferences.bodyEnergyWatchFitWatermarkMillis = newestBucket * bucketMs;
       debugPrint('[BODY-ENERGY-FIT] folded $fitted watch readings into the '
           'gains (${_preferences.bodyEnergyCalibration().watchObservationCount} '
           'total)');
     }
     return fitted;
   }
+
+  int _newestBucket(List<WatchBodyEnergySample> samples, int bucketMs) => samples
+      .map((s) => s.time.millisecondsSinceEpoch ~/ bucketMs)
+      .reduce((a, b) => a > b ? a : b);
 
   Future<List<BodyEnergyWatchReading>> _observationsForDay(
     LocalDate date,

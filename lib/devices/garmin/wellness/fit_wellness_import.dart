@@ -327,69 +327,178 @@ FitCounterImport fitMonitoringCounterRecords(
     var lastDistance = mark?.distance ?? 0;
     var lastCalories = mark?.calories ?? 0;
 
+    // Deltas folded onto a fixed grid anchored at local midnight, so a record's
+    // identity is a pure function of its wall clock.
+    final buckets = <int, _CounterDeltas>{};
+    // The bucket currently filling, and the counter readings as they stood when
+    // it opened. Emitting a half-filled bucket and then overwriting it on the
+    // next sync would LOSE its first half, so the open one is left for next
+    // time and the watermark rewinds to where it began.
+    var openBucket = _counterBucketStart(from, day.start);
+    var openSteps = lastSteps;
+    var openDistance = lastDistance;
+    var openCalories = lastCalories;
+
     for (final at in instants) {
       // Already imported. Not an error — every sync re-reads the file it was
       // halfway through, and the watch re-offers a file whose archive flag did
       // not stick.
       if (!at.isAfter(from)) continue;
 
+      // The movement accrued over [from, at), so it belongs to the bucket the
+      // interval STARTED in — not the one it ended in, which would push a walk
+      // forward by up to a bucket every time.
+      final bucket = _counterBucketStart(from, day.start);
       final stepsNow = _valueAt(steps, at, lastSteps);
       final distanceNow = _valueAt(distance, at, lastDistance);
       final caloriesNow = _valueAt(calories, at, lastCalories);
-      final stepsDelta = math.max(0, stepsNow - lastSteps);
-      final distanceDelta = math.max(0, distanceNow - lastDistance);
-      final caloriesDelta = math.max(0, caloriesNow - lastCalories);
-
-      // Keyed on the interval's START: unique per interval, and stable, so the
-      // same minutes re-imported land on the same records rather than beside
-      // them.
-      final key = from.millisecondsSinceEpoch;
-      if (stepsDelta > 0) {
-        records.add(StepsImportRecord(
-          clientRecordId: 'garmin_fit_steps_$key',
-          startTime: from,
-          startZoneOffset: null,
-          endTime: at,
-          endZoneOffset: null,
-          count: stepsDelta,
-        ));
-      }
-      if (distanceDelta > 0) {
-        records.add(DistanceImportRecord(
-          clientRecordId: 'garmin_fit_distance_$key',
-          startTime: from,
-          startZoneOffset: null,
-          endTime: at,
-          endZoneOffset: null,
-          meters: distanceDelta / _fitMonitoringDistanceScale,
-        ));
-      }
-      if (caloriesDelta > 0) {
-        records.add(ActiveCaloriesBurnedImportRecord(
-          clientRecordId: 'garmin_fit_active_cal_$key',
-          startTime: from,
-          startZoneOffset: null,
-          endTime: at,
-          endZoneOffset: null,
-          kilocalories: caloriesDelta.toDouble(),
-        ));
-      }
+      (buckets[bucket] ??= _CounterDeltas(
+        DateTime.fromMillisecondsSinceEpoch(bucket),
+      )).add(
+        steps: math.max(0, stepsNow - lastSteps),
+        distance: math.max(0, distanceNow - lastDistance),
+        calories: math.max(0, caloriesNow - lastCalories),
+        until: at,
+      );
 
       from = at;
       lastSteps = math.max(lastSteps, stepsNow);
       lastDistance = math.max(lastDistance, distanceNow);
       lastCalories = math.max(lastCalories, caloriesNow);
+
+      final reached = _counterBucketStart(from, day.start);
+      if (reached != openBucket) {
+        openBucket = reached;
+        openSteps = lastSteps;
+        openDistance = lastDistance;
+        openCalories = lastCalories;
+      }
+    }
+
+    // An interval that starts in one bucket can end in the next, so a bucket's
+    // data-driven end can run past its successor's start. Clamp each to the
+    // next OCCUPIED bucket: that keeps records non-overlapping without
+    // shortening the sparse case, where the gap to the next bucket is real.
+    final ordered = buckets.keys.toList()..sort();
+    for (var i = 0; i < ordered.length - 1; i++) {
+      buckets[ordered[i]]!.clampEndTo(
+        DateTime.fromMillisecondsSinceEpoch(ordered[i + 1]),
+      );
+    }
+
+    for (final entry in buckets.entries) {
+      // The still-filling bucket waits for the sync that completes it.
+      if (entry.key == openBucket) continue;
+      // The day's FIRST bucket carries the legacy day-keyed id on purpose.
+      // Before the counters became intraday, one record per day was written as
+      // `garmin_fit_steps_<yyyy-mm-dd>`; those records are still in Health
+      // Connect, carrying a whole day's total each, and no new id could ever
+      // collide with them. Reusing the id here makes the day's first bucket
+      // overwrite the stale whole-day record instead of stacking beside it.
+      final key = entry.key == day.start.millisecondsSinceEpoch
+          ? day.key
+          : '${entry.key}';
+      records.addAll(entry.value.toRecords(key));
     }
 
     watermarks[day.key] = FitCounterWatermark(
-      time: from,
-      steps: lastSteps,
-      distance: lastDistance,
-      calories: lastCalories,
+      time: DateTime.fromMillisecondsSinceEpoch(openBucket),
+      steps: openSteps,
+      distance: openDistance,
+      calories: openCalories,
     );
   }
 
   return FitCounterImport(records: records, watermarks: watermarks);
+}
+
+/// The grid one counter record covers.
+///
+/// Records are written on a fixed grid from local midnight rather than on the
+/// intervals a particular sync happened to see. The interval boundaries depend
+/// on which files the watch offered and where the last sync stopped, so an id
+/// derived from them changes between runs: a re-sync re-partitions the day and
+/// every record after the first lands BESIDE the previous run's rather than
+/// replacing it. A grid position is a property of the clock, so the same
+/// minutes always produce the same id and Health Connect upserts.
+///
+/// Fifteen minutes: the watch reports about once a minute, so per-instant
+/// records would be ~1440 a day per counter, while an hour is coarse enough to
+/// smear a walk across a lunch break.
+const Duration _counterBucket = Duration(minutes: 15);
+
+int _counterBucketStart(DateTime at, DateTime dayStart) {
+  final elapsed = at.difference(dayStart).inMilliseconds;
+  final size = _counterBucket.inMilliseconds;
+  final aligned = (elapsed < 0 ? 0 : elapsed ~/ size) * size;
+  return dayStart.millisecondsSinceEpoch + aligned;
+}
+
+/// One grid bucket's accumulated counter movement.
+///
+/// The grid fixes the record's IDENTITY and its start; the span still follows
+/// the data, running to the end of the last interval folded in. Pinning the end
+/// to the grid too would claim a first-sync-of-the-day reading of 8,000 steps
+/// happened in the first quarter hour after midnight. Intervals are contiguous
+/// and each lands wholly in the bucket it started in, so consecutive buckets
+/// still cannot overlap.
+class _CounterDeltas {
+  _CounterDeltas(this.start) : end = start;
+
+  final DateTime start;
+  DateTime end;
+  int steps = 0;
+  int distance = 0;
+  int calories = 0;
+
+  void add({
+    required int steps,
+    required int distance,
+    required int calories,
+    required DateTime until,
+  }) {
+    this.steps += steps;
+    this.distance += distance;
+    this.calories += calories;
+    if (until.isAfter(end)) end = until;
+  }
+
+  /// Pulls the end back to [limit] when the last interval folded in ran past
+  /// the next occupied bucket. Never pushes it forward, and never before the
+  /// start.
+  void clampEndTo(DateTime limit) {
+    if (end.isAfter(limit)) end = limit.isAfter(start) ? limit : start;
+  }
+
+  List<ImportRecord> toRecords(String key) => [
+        if (steps > 0)
+          StepsImportRecord(
+            clientRecordId: 'garmin_fit_steps_$key',
+            startTime: start,
+            startZoneOffset: null,
+            endTime: end,
+            endZoneOffset: null,
+            count: steps,
+          ),
+        if (distance > 0)
+          DistanceImportRecord(
+            clientRecordId: 'garmin_fit_distance_$key',
+            startTime: start,
+            startZoneOffset: null,
+            endTime: end,
+            endZoneOffset: null,
+            meters: distance / _fitMonitoringDistanceScale,
+          ),
+        if (calories > 0)
+          ActiveCaloriesBurnedImportRecord(
+            clientRecordId: 'garmin_fit_active_cal_$key',
+            startTime: start,
+            startZoneOffset: null,
+            endTime: end,
+            endZoneOffset: null,
+            kilocalories: calories.toDouble(),
+          ),
+      ];
 }
 
 /// The counter reading at [at]: the snapshot taken then, or — when this counter

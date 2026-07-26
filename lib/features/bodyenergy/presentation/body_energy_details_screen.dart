@@ -39,6 +39,8 @@ class BodyEnergyDetailsScreen extends ConsumerStatefulWidget {
 
 class _BodyEnergyDetailsScreenState
     extends ConsumerState<BodyEnergyDetailsScreen> {
+  bool _chainWarmKicked = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,11 +50,30 @@ class _BodyEnergyDetailsScreenState
     });
   }
 
+  Future<void> _warmChain() async {
+    await ref.read(bodyEnergyChainSyncServiceProvider).syncAll();
+    if (!mounted) return;
+    // The warm pass may have filled the gap this day was seeded across, so the
+    // shown start score can now be wrong. Reload once it settles.
+    ref.read(bodyEnergyProvider.notifier).load(ref.read(bodyEnergyProvider).selectedDate);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(bodyEnergyProvider);
     final notifier = ref.read(bodyEnergyProvider.notifier);
+
+    // Warm the chain only AFTER the first foreground load finishes, never
+    // alongside it: Health Connect serializes concurrent reads, so a background
+    // walk running next to the screen's own read would stall the open (the same
+    // trap the calories screen hit). Guarded to fire once per open.
+    ref.listen(bodyEnergyProvider.select((s) => s.isLoading), (prev, next) {
+      if (prev == true && next == false && !_chainWarmKicked) {
+        _chainWarmKicked = true;
+        _warmChain();
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.screenBodyEnergy)),

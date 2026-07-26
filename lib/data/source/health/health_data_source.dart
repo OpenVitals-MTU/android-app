@@ -5,6 +5,7 @@ import '../../../domain/model/body_models.dart';
 import '../../../domain/model/cycle_models.dart';
 import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/health_connect_feature_status.dart';
+import '../../../domain/model/health_source_totals.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/mindfulness_models.dart';
 import '../../../domain/model/nutrition_models.dart';
@@ -163,6 +164,24 @@ class HealthDataSource {
     LocalDate date,
   ) async =>
       const <ActivityProgressPoint>[];
+
+  /// Per-writing-app daily totals for one raw record type. Diagnostics only.
+  ///
+  /// [readRawActivityProgress] and every other activity read here go through an
+  /// aggregate, which SUMS all contributing apps into one figure — so two apps
+  /// mirroring the same watch read as one very active user and nothing
+  /// downstream can tell them apart. This is the only read that keeps the
+  /// per-source attribution.
+  ///
+  /// Empty here and on unsupported platforms, and empty when the underlying read
+  /// permission is missing — so a caller that needs to distinguish "no data"
+  /// from "no permission" must probe the permission itself.
+  Future<List<SourceDayTotal>> readSourceDayTotals(
+    HealthRecordSourceMetric metric,
+    DateTime start,
+    DateTime end,
+  ) async =>
+      const <SourceDayTotal>[];
 
   /// The sibling-record totals for one exercise session's window (steps,
   /// distance, calories, elevation...). A session record carries none of them; see

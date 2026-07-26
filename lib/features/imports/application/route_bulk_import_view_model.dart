@@ -392,7 +392,14 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
         counters,
         previous: watermarkStore.load(),
       );
-      if (mapped.records.isNotEmpty) {
+      if (mapped.records.isEmpty) {
+        // Nothing new to write, but the cursor still moved: the run may have
+        // read past the previous watermark and found only movement inside the
+        // still-filling bucket. Persisting it keeps an idempotent re-sync from
+        // re-walking the same minutes, and it cannot lose data because there
+        // was none to lose.
+        await watermarkStore.save(mapped.watermarks);
+      } else {
         try {
           await healthDataSource.insertImportedRecords(mapped.records);
           // Stored only once the records are IN. A watermark for records that

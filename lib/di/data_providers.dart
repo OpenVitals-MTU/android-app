@@ -29,10 +29,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/local/beverage/beverage_store.dart';
 import '../data/local/open_vitals_database.dart';
+import '../data/sync/body_energy_chain_sync_service.dart';
 import '../data/sync/calories_history_sync_service.dart';
 import '../data/sync/vitals_history_sync_service.dart';
 import '../data/prefs/preferences_repository.dart';
-import '../data/repository/body_energy_timeline_cache_store.dart';
+import '../data/repository/body_energy_baseline_cache_store.dart';
+import '../data/repository/body_energy_timeline_store.dart';
 import '../data/repository/contract/activity_repository.dart';
 import '../data/repository/contract/apple_health_import_repository.dart';
 import '../devices/core/registry/ble_device_repository.dart';
@@ -161,11 +163,20 @@ final beverageStoreProvider = Provider<BeverageStore>(
   ),
 );
 
-final bodyEnergyTimelineCacheStoreProvider =
-    Provider<BodyEnergyTimelineCacheStore>(
+final bodyEnergyBaselineCacheStoreProvider =
+    Provider<BodyEnergyBaselineCacheStore>(
       (ref) =>
-          BodyEnergyTimelineCacheStore(ref.watch(sharedPreferencesProvider)),
+          BodyEnergyBaselineCacheStore(ref.watch(sharedPreferencesProvider)),
     );
+
+/// The Body Energy chain: day summaries + their 5-minute buckets.
+final bodyEnergyTimelineDaoProvider = Provider<BodyEnergyTimelineDao>(
+  (ref) => ref.watch(openVitalsDatabaseProvider).bodyEnergyTimelineDao,
+);
+
+final bodyEnergyTimelineStoreProvider = Provider<BodyEnergyTimelineStore>(
+  (ref) => BodyEnergyTimelineStore(ref.watch(bodyEnergyTimelineDaoProvider)),
+);
 
 final healthDataSourceProvider = Provider<HealthDataSource>((ref) {
   if (defaultTargetPlatform == TargetPlatform.android) {
@@ -322,7 +333,24 @@ final bodyEnergyRepositoryProvider = Provider<BodyEnergyRepository>(
     bodyRepository: ref.watch(bodyRepositoryProvider),
     healthRepository: ref.watch(healthRepositoryProvider),
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
-    cacheStore: ref.watch(bodyEnergyTimelineCacheStoreProvider),
+    baselineCacheStore: ref.watch(bodyEnergyBaselineCacheStoreProvider),
+    timelineStore: ref.watch(bodyEnergyTimelineStoreProvider),
+  ),
+);
+
+/// Warms the Body Energy chain in the background so the day the user opens
+/// almost always has a stored predecessor to carry from.
+///
+/// Depends on [bodyEnergyRepositoryProvider], never the reverse — which is why
+/// screens fire this rather than the repository kicking it from a seed miss.
+final bodyEnergyChainSyncServiceProvider =
+    Provider<BodyEnergyChainSyncService>(
+  (ref) => BodyEnergyChainSyncService(
+    ref.watch(bodyEnergyRepositoryProvider),
+    ref.watch(bodyEnergyTimelineStoreProvider),
+    ref.watch(bodyEnergyBaselineCacheStoreProvider),
+    ref.watch(healthDataSourceProvider),
+    ref.watch(preferencesRepositoryProvider),
   ),
 );
 

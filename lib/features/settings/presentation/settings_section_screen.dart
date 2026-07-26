@@ -18,6 +18,7 @@ import 'cards/body_energy_calibration_card.dart';
 import 'cards/body_profile_card.dart';
 import 'cards/caffeine_preferences_card.dart';
 import 'cards/debug_diagnostics_card.dart';
+import 'cards/body_energy_diagnostics_card.dart';
 import 'cards/health_connect_sources_card.dart';
 import 'cards/favorite_activity_card.dart';
 import 'cards/fit_import_card.dart';
@@ -247,7 +248,13 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
       // .kt:302-312). The route is only reachable in debug builds. The Health
       // Connect sources card is a Flutter-only addition for the WearOS viability
       // check (see docs/reference/device-modularization-plan.md, Phase 3).
-      return const [DebugDiagnosticsCard(), HealthConnectSourcesCard()];
+      // The Body Energy card holds the model next to the watch's own Body
+      // Battery, to tell a mis-calibration apart from a doubled input.
+      return const [
+        DebugDiagnosticsCard(),
+        HealthConnectSourcesCard(),
+        BodyEnergyDiagnosticsCard(),
+      ];
     case SettingsSection.sensors:
     case SettingsSection.watches:
     case SettingsSection.deviceSync:

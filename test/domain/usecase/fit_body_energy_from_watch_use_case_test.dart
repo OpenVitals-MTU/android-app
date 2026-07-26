@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
+import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/local/open_vitals_database.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/body_energy_repository.dart';
@@ -16,6 +17,10 @@ class _FakeBodyEnergyRepository implements BodyEnergyRepository {
   _FakeBodyEnergyRepository({this.points});
 
   List<BodyEnergyTimelinePoint>? points;
+
+  /// Per-day override, for the tests that need one day warm and another cold.
+  /// A day absent from the map falls back to [points].
+  Map<LocalDate, List<BodyEnergyTimelinePoint>> pointsByDay = {};
 
   /// Set by a test to make the timeline load fail.
   bool fail = false;
@@ -39,7 +44,7 @@ class _FakeBodyEnergyRepository implements BodyEnergyRepository {
           currentScore: 80,
           charged: 0,
           drained: 10,
-          points: points ?? const [],
+          points: pointsByDay[date] ?? points ?? const [],
           confidence: BodyEnergyConfidence.high,
           confidenceReason: 'test',
         ),
@@ -232,6 +237,79 @@ void main() {
     }
 
     expect(prefs.bodyEnergyCalibration().watchObservationCount, 3);
+  });
+
+  group('a cold day must not retire the days behind it', () {
+    // 26 hours guarantees a different LOCAL day whatever the zone and whatever
+    // DST is doing, which a bare 24 does not.
+    final coldAt = now.subtract(const Duration(hours: 26));
+    final warmAt = now.subtract(const Duration(hours: 2));
+    final coldDay = LocalDate.fromDateTime(coldAt.toLocal());
+    final warmDay = LocalDate.fromDateTime(warmAt.toLocal());
+
+    test('an unexamined older day blocks the run instead of being burned',
+        () async {
+      // The shape of the real loss: the watermark is one scalar, so the moment
+      // a later day fitted, the code jumped it past EVERY sample it had read --
+      // retiring an earlier day whose timeline simply had not been computed
+      // yet. That day's evidence was then permanently unreadable.
+      await setUp0();
+      bodyEnergy.pointsByDay = {
+        coldDay: const [],
+        warmDay: [_point(warmAt.toLocal(), 80)],
+      };
+      await seedBodyEnergy([(coldAt, 50), (warmAt, 50)]);
+
+      expect(await useCase(now: now), 0);
+      expect(prefs.bodyEnergyWatchFitWatermarkMillis, 0);
+
+      // Once the chain reaches the cold day, BOTH days are still there to learn
+      // from -- which is the whole point.
+      bodyEnergy.pointsByDay[coldDay] = [_point(coldAt.toLocal(), 80)];
+      expect(await useCase(now: now), 2);
+      expect(prefs.bodyEnergyCalibration().watchObservationCount, 2);
+      expect(prefs.bodyEnergyWatchFitWatermarkMillis, greaterThan(0));
+    });
+
+    test('a cold day mid-window does not block the days behind it', () async {
+      // The cutoff used to be the whole lookback window, so ONE day inside it
+      // with no timeline held up every later day indefinitely. That matters
+      // most right after the watch-fit epoch rewind, when the watermark goes
+      // back a week and the oldest day is the first one examined: a single cold
+      // day there and the entire refit folds nothing at all.
+      final staleAt = now.subtract(const Duration(days: 5));
+      await setUp0();
+      prefs.bodyEnergyWatchFitWatermarkMillis =
+          now.subtract(const Duration(days: 7)).millisecondsSinceEpoch;
+      bodyEnergy.pointsByDay = {
+        LocalDate.fromDateTime(staleAt.toLocal()): const [],
+        warmDay: [_point(warmAt.toLocal(), 80)],
+      };
+      await seedBodyEnergy([(staleAt, 50), (warmAt, 50)]);
+
+      expect(await useCase(now: now), 1);
+      expect(prefs.bodyEnergyCalibration().watchObservationCount, 1);
+    });
+
+    test('but a day past the lookback window is retired, not wedged', () async {
+      // Otherwise a day that will never have a timeline -- before the install,
+      // or with no heart data at all -- blocks the watermark forever and every
+      // sync re-reads an ever-growing window.
+      final staleAt = now.subtract(const Duration(days: 10));
+      await setUp0();
+      prefs.bodyEnergyWatchFitWatermarkMillis =
+          now.subtract(const Duration(days: 30)).millisecondsSinceEpoch;
+      bodyEnergy.pointsByDay = {
+        LocalDate.fromDateTime(staleAt.toLocal()): const [],
+        warmDay: [_point(warmAt.toLocal(), 80)],
+      };
+      await seedBodyEnergy([(staleAt, 50), (warmAt, 50)]);
+
+      expect(await useCase(now: now), 1);
+      expect(prefs.bodyEnergyCalibration().watchObservationCount, 1);
+      expect(prefs.bodyEnergyWatchFitWatermarkMillis,
+          greaterThan(staleAt.millisecondsSinceEpoch));
+    });
   });
 
   test('the gains stay in bounds across many runs', () async {

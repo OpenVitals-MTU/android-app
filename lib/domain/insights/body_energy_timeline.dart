@@ -30,7 +30,52 @@ part 'body_energy_timeline.freezed.dart';
 /// basal floor is resting metabolism. The energy-balance framing is a documented
 /// product design, not a single published model.
 const int bodyEnergyTimelineBucketMinutes = 5;
-const int bodyEnergyTimelineAlgorithmVersion = 4;
+const int bodyEnergyTimelineAlgorithmVersion = 10;
+
+/// The score a day starts on when there is no previous day to carry from — a
+/// brand-new install, or a chain gap too wide to close. Not a default for a
+/// day that *does* have a predecessor: the whole point of the chain is that
+/// midnight is not a reset.
+const int bodyEnergyNeutralStartScore = 50;
+
+/// Floor applied to a *carried* seed, so one over-drawn day cannot pin the
+/// chain at zero forever.
+///
+/// A product guard, not a physiological derivation (the energy-balance framing
+/// above is itself a design, not a published model). Charge is sleep-only and
+/// caps near +45 across a full night, while drain is unbounded — a heavy day
+/// can accumulate 200 points of it. Zero is therefore an absorbing state: once
+/// a day ends there, every later day would start there too. 10 sits
+/// unambiguously inside the "Low" band, so it never flatters a depleted user,
+/// and leaves ~7 hours of basal drain of headroom so the next morning is not
+/// already pinned before breakfast. Applies only to a carried seed — never to
+/// [bodyEnergyNeutralStartScore], and never to a score computed within a day.
+const int bodyEnergyCarryOverFloor = 10;
+
+/// Points of Body Energy charged per minute of sleep.
+const double _sleepPointsPerMinute = 0.10;
+
+/// Points charged per minute of genuinely quiet waking time — heart rate within
+/// 8 bpm of resting, with no activity drain in the bucket.
+///
+/// Recovering while awake is real but slower than sleep. Lowered from 0.02 when
+/// the gate widened from "within 8 bpm of resting" to "below zone 1": the
+/// diagnostic showed the charge over-shooting where it did fire (quiet-rest
+/// observations ran 13.8 points ABOVE the watch) while firing on only one day
+/// in seven. Widening the band and lowering the rate are the same correction
+/// read from both ends. Still a calibration against one person's week — re-check
+/// it against the diagnostic rather than treating it as settled.
+const double _restPointsPerMinute = 0.012;
+
+/// How much of the heart-rate reserve still counts as quiet enough to recover.
+///
+/// Fifteen percent: comfortably above the resting-plus-8 band that measured out
+/// at essentially zero over a real week, and comfortably below zone 1 (thirty
+/// percent), which would charge at a heart rate nearly thirty beats above
+/// resting. Being a fraction, it moves with the person — it does not need
+/// retuning when someone clears a manual resting or max override and the model
+/// falls back to measured data.
+const double _restChargeReserveCeiling = 0.15;
 
 /// Points of Body Energy drained per minute of basal metabolism while awake.
 /// ~0.022 accrues roughly 20 points across a 16-hour waking day, so the line
@@ -103,6 +148,32 @@ enum BodyEnergyPrimaryInfluence {
   final String storageName;
 
   static BodyEnergyPrimaryInfluence? fromStorage(String value) {
+    for (final entry in values) {
+      if (entry.storageName == value) return entry;
+    }
+    return null;
+  }
+}
+
+/// Where a day's starting score came from. Surfaced in the UI so a reset is
+/// always explicable rather than looking like lost data.
+enum BodyEnergySeedSource {
+  /// No previous day to carry from — a first run, or every stored day
+  /// invalidated by a calibration or algorithm change.
+  neutral('NEUTRAL'),
+
+  /// The previous day's end score, chained across midnight.
+  carriedOver('CARRIED_OVER'),
+
+  /// A stored day exists but too far back to chain within the read budget, so
+  /// this day starts neutral. The background chain sync closes the gap.
+  chainGap('CHAIN_GAP');
+
+  const BodyEnergySeedSource(this.storageName);
+
+  final String storageName;
+
+  static BodyEnergySeedSource? fromStorage(String value) {
     for (final entry in values) {
       if (entry.storageName == value) return entry;
     }
@@ -201,6 +272,11 @@ abstract class BodyEnergyInputSummary with _$BodyEnergyInputSummary {
     @Default(false) bool hasHrvBaseline,
     @Default(false) bool hasRespiratoryBaseline,
     int? previousEndScore,
+    /// Whether [previousEndScore] was raised to [bodyEnergyCarryOverFloor]
+    /// before seeding the day. Carried rather than recomputed by the UI so the
+    /// stored row records what actually happened.
+    @Default(false) bool carryOverFloorApplied,
+    @Default(BodyEnergySeedSource.neutral) BodyEnergySeedSource seedSource,
     @Default(BodyEnergyCalibrationMode.automatic)
     BodyEnergyCalibrationMode calibrationMode,
   }) = _BodyEnergyInputSummary;
@@ -222,23 +298,44 @@ abstract class BodyEnergyTimeline with _$BodyEnergyTimeline {
     @Default('') String signature,
   }) = _BodyEnergyTimeline;
 
+  /// A day the model could not compute. It still carries the chain: a day
+  /// without heart-rate or sleep data is a day we know nothing about, not a day
+  /// the user's energy reset — returning a flat 50 here would break every
+  /// subsequent day's seed.
   static BodyEnergyTimeline empty({
     required LocalDate date,
     required String reason,
     BodyEnergyInputSummary inputSummary = const BodyEnergyInputSummary(),
-  }) =>
-      BodyEnergyTimeline(
-        date: date,
-        startScore: 50,
-        currentScore: 50,
-        charged: 0,
-        drained: 0,
-        points: const [],
-        confidence: BodyEnergyConfidence.noData,
-        confidenceReason: reason,
-        inputSummary: inputSummary,
-      );
+  }) {
+    final seed = bodyEnergySeedScore(inputSummary.previousEndScore);
+    return BodyEnergyTimeline(
+      date: date,
+      startScore: seed,
+      currentScore: seed,
+      charged: 0,
+      drained: 0,
+      points: const [],
+      confidence: BodyEnergyConfidence.noData,
+      confidenceReason: reason,
+      inputSummary: inputSummary,
+    );
+  }
 }
+
+/// The score a day starts on, given the previous day's end score.
+///
+/// The single place the carry-over rules live: a missing predecessor means
+/// [bodyEnergyNeutralStartScore], a present one is carried but floored at
+/// [bodyEnergyCarryOverFloor]. Shared by the calculator and
+/// [BodyEnergyTimeline.empty] so a data-less day seeds identically to a
+/// computed one.
+int bodyEnergySeedScore(int? previousEndScore) => previousEndScore == null
+    ? bodyEnergyNeutralStartScore
+    : previousEndScore.clamp(bodyEnergyCarryOverFloor, 100);
+
+/// Whether [bodyEnergySeedScore] had to raise [previousEndScore] to the floor.
+bool bodyEnergyCarryOverFloorApplies(int? previousEndScore) =>
+    previousEndScore != null && previousEndScore < bodyEnergyCarryOverFloor;
 
 /// Inputs for [calculateBodyEnergyTimeline]. The Kotlin `zone` parameter is
 /// dropped in favour of device-local conversions (consistent with the rest of
@@ -259,10 +356,18 @@ class BodyEnergyTimelineInputs {
     this.hrvBaselineRmssdMs,
     this.respiratoryRateBaseline,
     this.previousEndScore,
+    BodyEnergySeedSource? seedSource,
     this.calibration = BodyEnergyCalibration.automatic,
     this.bodyProfile = const BodyProfile(),
     DateTime? now,
-  }) : now = now ?? DateTime.now().toUtc();
+  })  : now = now ?? DateTime.now().toUtc(),
+        // A caller that supplies a previous score has, by definition, chained;
+        // only the repository can tell a cold start from a chain gap, so it
+        // passes [seedSource] explicitly when it matters.
+        seedSource = seedSource ??
+            (previousEndScore != null
+                ? BodyEnergySeedSource.carriedOver
+                : BodyEnergySeedSource.neutral);
 
   final LocalDate date;
   final List<HeartRateSample> heartRateSamples;
@@ -283,6 +388,7 @@ class BodyEnergyTimelineInputs {
   final double? hrvBaselineRmssdMs;
   final double? respiratoryRateBaseline;
   final int? previousEndScore;
+  final BodyEnergySeedSource seedSource;
   final BodyEnergyCalibration calibration;
   final BodyProfile bodyProfile;
   final DateTime now;
@@ -378,7 +484,9 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
   // untouched.
   final gains = inputs.calibration.normalized();
 
-  var score = (inputs.previousEndScore ?? 50).clamp(0, 100).toDouble();
+  // The day opens where the previous one closed (floored), not at a fixed 50 —
+  // see [bodyEnergySeedScore].
+  var score = bodyEnergySeedScore(inputs.previousEndScore).toDouble();
   final startScore = score.round();
   var charged = 0.0;
   var drained = 0.0;
@@ -528,7 +636,16 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
         rawActivityEnergyDrain * drainMultiplier * gains.activityDrainGain;
     final stressDrain =
         rawStressDrain * drainMultiplier * gains.stressDrainGain;
-    final recoveryDebtDrain = rawRecoveryDebtDrain * drainMultiplier;
+    // Recovery debt is a CONSEQUENCE of hard activity — it is armed only by
+    // `zone >= 3 && workoutMinutes > 0` below, and sized by the zone reached —
+    // so it moves with the activity gain rather than a fifth one of its own.
+    // "Hard days cost me more than this says" is one claim, not two.
+    //
+    // Ungained until now, which made it the only drain no correction could
+    // reach: an error the model attributed to recovery debt stayed uncorrectable
+    // however many watch readings disagreed.
+    final recoveryDebtDrain =
+        rawRecoveryDebtDrain * drainMultiplier * gains.activityDrainGain;
     // Basal is a metabolic constant, not a stress response — no HRV/respiration
     // modifier, just the personal gain.
     final basalDrain = rawBasalDrain * gains.basalDrainGain;
@@ -551,26 +668,91 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
       final resting = intensityContext.restingHeartRateBpm;
       restEligible = resting != null && avgHeartRate <= resting + 8;
     }
-    // Only sleep charges now. Waking rest reads as a slow basal decline, not a
-    // climb — the pivotal fix over the previous model.
+    // Quiet enough to be recovering: a small fraction of heart-rate reserve.
+    //
+    // A fraction rather than an absolute offset, because the offset does not
+    // survive the profile changing — and zone 1 is far too generous a ceiling:
+    // with resting 60 and max 190, 88 bpm is 28 beats above resting and in the
+    // top stress tier, yet only 21% of reserve. Falls back to the old
+    // resting-plus-8 band when there is no max to measure reserve against,
+    // which is the conservative direction.
+    final restReserve =
+        avgHeartRate == null ? null : intensityContext.reserveFor(avgHeartRate);
+    final quietEnough = restReserve != null
+        ? restReserve <= _restChargeReserveCeiling
+        : restEligible;
+    // Sleep charges, and so — modestly — does genuinely quiet waking time.
+    //
+    // V3 removed the waking charge outright because the old one fired on any
+    // low-delta bucket and under-drained active days. Removing it entirely
+    // overshot: with charge sleep-only a quiet day can never recover, only
+    // decline at the basal rate. Measured against a real week, the model lost
+    // ~10 points EVERY day and the chain sat pinned on the floor; a 1,367-step
+    // day charged 16 against 22 of basal drain and still reached zero, while
+    // the watch charged 47-60 on comparable days.
+    //
+    // What makes this safe where the V3 version was not is the gate, not the
+    // rate: [restEligible] requires heart rate within 8 bpm of resting, and the
+    // bucket must carry no activity drain at all. A hard day's buckets fail
+    // both, so it gains nothing; a sedentary day's mostly pass.
     final double charge;
+    final chargeModifier =
+        hrvFactor.chargeMultiplier / respirationFactor.chargePenalty;
     if (sleepMinutes > 0.0) {
-      charge = 0.10 *
+      charge = _sleepPointsPerMinute *
           sleepMinutes *
-          hrvFactor.chargeMultiplier /
-          respirationFactor.chargePenalty *
+          chargeModifier *
+          gains.sleepChargeGain;
+    } else if (quietEnough && awakePresent && recoveryDebtDrain <= 0.0) {
+      // A share of heart-rate reserve rather than a fixed offset from resting.
+      //
+      // The +8 band is an absolute offset, and measured over a real week it
+      // caught essentially nothing: six of seven days earned ZERO rest charge,
+      // because ordinary waking heart rate sits above resting+8 almost all the
+      // time. A reserve fraction scales with the person instead, so it survives
+      // the resting and max values changing — which is exactly what happens
+      // when someone clears a manual override and the model falls back to
+      // measured data.
+      //
+      // Deliberately NOT gated on "no activity drain in this bucket" either:
+      // the activity series is hourly and cumulative and gets interpolated
+      // across every 5-minute bucket, so a trickle lands almost everywhere.
+      // The wrist decides whether you are resting; the drain still applies and
+      // the two net out.
+      //
+      // Recovery debt is the one exception. Sitting quietly an hour after a
+      // hard session is exactly the state that debt exists to model — the body
+      // is not yet recovering, which is the whole point — so charging through
+      // it would both overstate the recovery and, since the rest rate is
+      // larger than the debt rate, hide recovery debt as an influence entirely.
+      charge = _restPointsPerMinute *
+          bucketMinutes *
+          chargeModifier *
           gains.sleepChargeGain;
     } else {
       charge = 0.0;
     }
 
     final delta = charge - drain;
+    final scoreBefore = score;
     score = (score + delta).clamp(0.0, 100.0);
-    // Gross totals: charged is all charge, drained is all drain — the same
-    // components "What moved it" breaks down. (Clamping at 0/100 means these
-    // need not net exactly to end-minus-start.)
-    charged += charge;
-    drained += drain;
+    final applied = score - scoreBefore;
+    // A bucket only partly lands once the score reaches 0 or 100. Attribute the
+    // part that landed proportionally across charge and drain, so the day's
+    // totals — and the per-bucket components "What moved it" breaks down —
+    // describe what actually moved the score rather than what the model wanted
+    // to move it. That makes `startScore + charged - drained == currentScore`
+    // hold exactly; without it a day that drained twice its available energy
+    // reported the whole figure and never added up.
+    //
+    // Proportional rather than net-only (`applied > 0 ? charged : drained`)
+    // because a bucket can carry both — one straddling wake-up has sleep charge
+    // and basal drain — and net-only would drop the drain from every charging
+    // bucket. Scaling uniformly also preserves every magnitude comparison, so
+    // it cannot change which influence wins.
+    final landed = delta == 0.0 ? 1.0 : (applied / delta).clamp(0.0, 1.0);
+    charged += charge * landed;
+    drained += drain * landed;
 
     final BodyEnergyBucketState state;
     if (sleepMinutes > 0.0) {
@@ -621,15 +803,21 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
       BodyEnergyTimelinePoint.build(
         time: bucketStart,
         score: score.round().clamp(0, 100),
-        delta: delta,
+        // Scaled by `landed`, like the day totals, so the breakdown always sums
+        // to the headline. `primaryInfluence` deliberately stays computed from
+        // the raw magnitudes above: a fully clamped bucket scales every
+        // component to zero, and deriving the influence from those would report
+        // a hard workout as `steady`. The chart then draws a zero-height bar in
+        // the right colour, and the feel-check fitting keeps a truthful driver.
+        delta: applied,
         state: state,
         confidence: confidence,
-        charge: charge,
-        intensityDrain: intensityDrain,
-        activityEnergyDrain: activityEnergyDrain,
-        basalDrain: basalDrain,
-        stressDrain: stressDrain,
-        recoveryDebtDrain: recoveryDebtDrain,
+        charge: charge * landed,
+        intensityDrain: intensityDrain * landed,
+        activityEnergyDrain: activityEnergyDrain * landed,
+        basalDrain: basalDrain * landed,
+        stressDrain: stressDrain * landed,
+        recoveryDebtDrain: recoveryDebtDrain * landed,
         primaryInfluence: primaryInfluence,
       ),
     );
@@ -641,17 +829,50 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     low: lowConfidenceBuckets,
     total: points.length,
   );
+  final endScore = points.isEmpty ? startScore : points.last.score;
+  final (chargedTotal, drainedTotal) = _reconciledTotals(
+    charged: charged,
+    drained: drained,
+    startScore: startScore,
+    endScore: endScore,
+  );
   return BodyEnergyTimeline(
     date: inputs.date,
     startScore: startScore,
-    currentScore: points.isEmpty ? startScore : points.last.score,
-    charged: charged.round(),
-    drained: drained.round(),
+    currentScore: endScore,
+    charged: chargedTotal,
+    drained: drainedTotal,
     points: points,
     confidence: confidence,
     confidenceReason: _confidenceReason(confidence, intensityContext),
     inputSummary: inputSummary,
   );
+}
+
+/// The day's charge and drain totals as integers that still add up.
+///
+/// The running doubles satisfy `start + charged - drained == end` exactly, but
+/// the card shows three rounded integers and the score is rounded separately
+/// per bucket — so rounding each independently can leave the row a point apart
+/// (`Start 50 + 36 - 3` against an end score of 84). The residual is absorbed by
+/// the larger of the two totals, where a single point is proportionally the
+/// least misleading, so the summary always reads as one ledger.
+(int, int) _reconciledTotals({
+  required double charged,
+  required double drained,
+  required int startScore,
+  required int endScore,
+}) {
+  var chargedTotal = charged.round();
+  var drainedTotal = drained.round();
+  final residual = (startScore + chargedTotal - drainedTotal) - endScore;
+  if (residual == 0) return (chargedTotal, drainedTotal);
+  if (chargedTotal >= drainedTotal) {
+    chargedTotal -= residual;
+  } else {
+    drainedTotal += residual;
+  }
+  return (chargedTotal, drainedTotal);
 }
 
 BodyEnergyInputSummary _inputSummary(
@@ -672,6 +893,9 @@ BodyEnergyInputSummary _inputSummary(
       hasHrvBaseline: inputs.hrvBaselineRmssdMs != null,
       hasRespiratoryBaseline: inputs.respiratoryRateBaseline != null,
       previousEndScore: inputs.previousEndScore,
+      carryOverFloorApplied:
+          bodyEnergyCarryOverFloorApplies(inputs.previousEndScore),
+      seedSource: inputs.seedSource,
       calibrationMode: _calibrationMode(
         inputs.calibration,
         inputs.bodyProfile,
@@ -715,8 +939,6 @@ BodyEnergyPrimaryInfluence _primaryInfluence({
   if (charge > 0.0 && sleepMinutes > 0.0) {
     return BodyEnergyPrimaryInfluence.sleepRecovery;
   }
-  if (charge > 0.0) return BodyEnergyPrimaryInfluence.quietRest;
-
   // Basal drain is deliberately excluded from the competition: it is the
   // ever-present floor, reported as steady, never as the notable influence.
   final maxDrain = [
@@ -724,6 +946,16 @@ BodyEnergyPrimaryInfluence _primaryInfluence({
     stressDrain,
     recoveryDebtDrain,
   ].reduce(math.max);
+
+  // Waking charge is reachable again as of the v8 rest charge, and it COMPETES
+  // rather than short-circuiting. A bucket can now both charge and carry a
+  // drain — resting quietly an hour after a hard workout charges while recovery
+  // debt is still being billed — so the influence is whichever actually moved
+  // the score more. Sleep is the exception above: nothing else drains during
+  // it, so there is nothing to compete with.
+  if (charge > 0.0 && charge >= maxDrain) {
+    return BodyEnergyPrimaryInfluence.quietRest;
+  }
   if (maxDrain <= 0.0) return BodyEnergyPrimaryInfluence.steady;
   if (maxDrain == appliedActivityDrain) {
     // Low-heart-rate movement with no workout is everyday activity; anything
@@ -751,6 +983,15 @@ class _IntensityContext {
   final int? maxHeartRateBpm;
   final HeartZoneThresholds? manualZones;
   final BodyEnergyConfidence confidence;
+
+  /// Fraction of heart-rate reserve at [heartRateBpm], or null when there is no
+  /// resting/max pair to measure it against.
+  double? reserveFor(double heartRateBpm) {
+    final resting = restingHeartRateBpm;
+    final max = maxHeartRateBpm;
+    if (resting == null || max == null || max <= resting) return null;
+    return ((heartRateBpm - resting) / (max - resting)).clamp(0.0, 1.0);
+  }
 
   int zoneFor(double heartRateBpm) {
     final zones = manualZones;
@@ -813,7 +1054,12 @@ _IntensityContext _resolveIntensityContext(
       ? null
       : observedMaxCandidates.reduce(math.max);
   final ageYears = profile.ageYears(today: inputs.date);
-  final ageMax = ageYears != null ? 220 - ageYears : null;
+  // Tanaka (208 - 0.7*age), matching `heart_rate_recovery.dart`. The two used
+  // different formulas off the same birth year, so the app disagreed with
+  // itself about a person's max heart rate by several bpm — and this one feeds
+  // the zone ladder that the whole drain model rests on.
+  final ageMax =
+      ageYears != null ? math.max(1, (208 - 0.7 * ageYears).round()) : null;
   final int? maxHeartRate;
   if (profile.maxHeartRateBpm != null) {
     maxHeartRate = profile.maxHeartRateBpm;

@@ -403,12 +403,14 @@ void main() {
 FitCounterImport _counterImport({
   List<(DateTime, int)> stepsCumulative = const [],
   List<(DateTime, int, int)> typedStepsCumulative = const [],
+  List<(DateTime, int)> caloriesCumulative = const [],
   Map<String, FitCounterWatermark> previous = const {},
 }) {
   final monitoring = parseGarminWellness(
     _fitMonitoringSeriesBytes(
       stepsCumulative: stepsCumulative,
       typedStepsCumulative: typedStepsCumulative,
+      caloriesCumulative: caloriesCumulative,
     ),
   ).monitoring!;
   return fitMonitoringCounterRecords(
@@ -592,6 +594,7 @@ Uint8List _fitMonitoringSeriesBytes({
   List<(DateTime, double)> respiration = const [],
   List<(DateTime, int)> stepsCumulative = const [],
   List<(DateTime, int, int)> typedStepsCumulative = const [],
+  List<(DateTime, int)> caloriesCumulative = const [],
 }) {
   final data = _W()..def(3, 0, [
     [0, 1, 0x00]
@@ -638,6 +641,20 @@ Uint8List _fitMonitoringSeriesBytes({
       ..u32(_fitTimestamp(t))
       ..u8(activityType)
       ..u32(s);
+  }
+  // monitoring active calories (local 5, global 55): timestamp + cumulative
+  // active_calories (field 19, uint16). Untested until the counter records
+  // started being written per interval — the id derivation is shared with
+  // steps, so a bug in it reaches calories too.
+  data.def(5, 55, [
+    [253, 4, 0x86],
+    [19, 2, 0x84],
+  ]);
+  for (final (t, kcal) in caloriesCumulative) {
+    data
+      ..u8(5)
+      ..u32(_fitTimestamp(t))
+      ..u16(kcal);
   }
   // respiration_rate (local 3, global 297): timestamp + rate (sint16, ×100).
   data.def(3, 297, [
@@ -731,6 +748,121 @@ void _incrementalSyncRegression() {
       // Not the top of the hour, which every file in that hour would claim.
       expect(record.time, DateTime.utc(2026, 7, 22, 10, 5));
       expect(record.rate, 15.0);
+    });
+  });
+
+  group('counter record identity', () {
+    // The regression that made a real device report 49,695 steps for a 24,844
+    // step day, with 2,506 minutes of coverage on a 1,440 minute day: the id
+    // used to be derived from a walking CURSOR rather than from the clock, so
+    // a re-sync re-partitioned the day and every record after the first landed
+    // beside the previous run's instead of replacing it.
+
+    /// What Health Connect actually stores: a later record with the same
+    /// clientRecordId replaces the earlier one.
+    Map<String, StepsImportRecord> upserted(List<FitCounterImport> imports) {
+      final byId = <String, StepsImportRecord>{};
+      for (final import in imports) {
+        for (final record in _steps(import)) {
+          byId[record.clientRecordId] = record;
+        }
+      }
+      return byId;
+    }
+
+    test('a re-sync from a lost watermark replaces rather than accumulates',
+        () {
+      final cumulative = [
+        for (var minute = 0; minute < 180; minute += 5)
+          (DateTime(2024, 1, 18, 9).add(Duration(minutes: minute)), minute * 10),
+      ];
+      final first = _counterImport(stepsCumulative: cumulative);
+      // The watermark is gone — a reinstall, or prefs cleared — so the whole
+      // day is walked again, and this run sees a DIFFERENT set of instants.
+      final relearned = _counterImport(
+        stepsCumulative: [
+          for (var minute = 0; minute < 180; minute += 7)
+            (DateTime(2024, 1, 18, 9).add(Duration(minutes: minute)),
+                minute * 10),
+        ],
+      );
+
+      final stored = upserted([first, relearned]);
+      final total = stored.values.fold(0, (sum, r) => sum + r.count);
+      expect(total, lessThanOrEqualTo(1790),
+          reason: 'the day must not be counted twice');
+
+      // And no two stored records may cover the same minute.
+      final spans = stored.values.toList()
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+      for (var i = 1; i < spans.length; i++) {
+        expect(
+          spans[i].startTime.isBefore(spans[i - 1].endTime),
+          isFalse,
+          reason: 'records overlap: ${spans[i - 1].clientRecordId} '
+              'and ${spans[i].clientRecordId}',
+        );
+      }
+    });
+
+    test('the same minutes always produce the same id', () {
+      final cumulative = [
+        (DateTime(2024, 1, 18, 9), 0),
+        (DateTime(2024, 1, 18, 9, 20), 400),
+        (DateTime(2024, 1, 18, 10), 900),
+      ];
+
+      expect(
+        _steps(_counterImport(stepsCumulative: cumulative))
+            .map((r) => r.clientRecordId),
+        _steps(_counterImport(stepsCumulative: cumulative))
+            .map((r) => r.clientRecordId),
+      );
+    });
+
+    test("the day's first record keeps the legacy day-keyed id", () {
+      // Before the counters became intraday, one record per day was written as
+      // `garmin_fit_steps_<yyyy-mm-dd>`. Those are still in Health Connect
+      // holding a whole day's total each, and no cursor-derived id could ever
+      // collide with them — which is why the device showed the day twice.
+      // Reusing the id makes the first bucket overwrite the stale record.
+      final import = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 6), 300),
+          (DateTime(2024, 1, 18, 10), 900),
+        ],
+      );
+
+      expect(
+        _steps(import).first.clientRecordId,
+        'garmin_fit_steps_2024-01-18',
+      );
+    });
+
+    test('calories ride the same grid as steps', () {
+      // The calorie counter path had no coverage at all, and it shares the id
+      // derivation, so a bug in one reached the other unseen.
+      final import = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 9), 0),
+          (DateTime(2024, 1, 18, 9, 20), 400),
+        ],
+        caloriesCumulative: [
+          (DateTime(2024, 1, 18, 9), 0),
+          (DateTime(2024, 1, 18, 9, 20), 80),
+        ],
+      );
+
+      final calories =
+          import.records.whereType<ActiveCaloriesBurnedImportRecord>().toList();
+      expect(calories, isNotEmpty);
+      expect(
+        calories.map((r) => r.clientRecordId.replaceFirst('active_cal', 'steps')),
+        containsAll(_steps(import).map((r) => r.clientRecordId)),
+        reason: 'both counters must share one grid, or their records drift '
+            'apart across re-syncs',
+      );
+      expect(calories.fold<double>(0, (s, r) => s + r.kilocalories), 80.0);
     });
   });
 }

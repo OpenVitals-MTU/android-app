@@ -10,7 +10,7 @@ import '../../core/presentation/unit_formatter.dart';
 import '../../core/reminders/alarm_manager_reminder_scheduler.dart';
 import '../../core/reminders/reminder_notifications.dart';
 import '../../data/prefs/preferences_repository.dart';
-import '../../data/repository/body_energy_timeline_cache_store.dart';
+import '../../data/repository/body_energy_baseline_cache_store.dart';
 import '../../data/repository/impl/activity_marker_repository_impl.dart';
 import '../../data/repository/impl/activity_repository_impl.dart';
 import '../../data/repository/impl/body_energy_repository_impl.dart';
@@ -137,7 +137,11 @@ Future<HomeWidgetRefresher> buildBackgroundHomeWidgetRefresher() async {
       bodyRepository: BodyRepositoryImpl(dataSource),
       healthRepository: HealthRepositoryImpl(dataSource),
       preferencesRepository: preferences,
-      cacheStore: BodyEnergyTimelineCacheStore(sharedPreferences),
+      baselineCacheStore: BodyEnergyBaselineCacheStore(sharedPreferences),
+      // No `timelineStore`, deliberately: the Body Energy chain lives in drift
+      // and this isolate must not open the database. The repository falls back
+      // to the prefs seed mirror the foreground writes, so the widget still
+      // carries yesterday's score instead of restarting the day at neutral.
     ),
   );
 

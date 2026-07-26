@@ -985,6 +985,19 @@ class HealthConnectNativePlugin :
     requireActivityReader().readActivityCadenceSamples(instant(startEpochMs), instant(endEpochMs))
   }
 
+  override fun readSourceDayTotals(
+    recordType: String,
+    startEpochMs: Long,
+    endEpochMs: Long,
+    callback: (Result<List<SourceDayTotalMsg>>) -> Unit,
+  ) = launchCatching(callback) {
+    requireActivityReader().readSourceDayTotals(
+      recordType,
+      instant(startEpochMs),
+      instant(endEpochMs),
+    )
+  }
+
   override fun readPlannedExerciseSessions(
     startEpochMs: Long,
     endEpochMs: Long,

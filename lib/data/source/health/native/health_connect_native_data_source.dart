@@ -22,6 +22,7 @@ import '../../../../domain/model/sleep_session_merging.dart';
 import '../../../../domain/model/vitals_change_batch.dart';
 import '../../../../domain/model/vitals_models.dart';
 import '../../../../domain/model/apple_health_import_records.dart';
+import '../../../../domain/model/health_source_totals.dart';
 import '../health_data_source.dart';
 import '../../../../domain/health/health_permissions.dart';
 import 'health_record_json.dart';
@@ -529,6 +530,50 @@ Duration? _zoneOffset(int? seconds) =>
     }
     return points;
   }
+
+  /// Per-writing-app daily totals, from the raw records rather than an
+  /// aggregate. Diagnostics only — see [HealthDataSource.readSourceDayTotals]
+  /// for why the aggregate cannot answer this.
+  ///
+  /// A longer timeout than [_intradayAggregateTimeout]: this is a paged read
+  /// over potentially tens of thousands of records, not a single aggregate.
+  @override
+  Future<List<SourceDayTotal>> readSourceDayTotals(
+    HealthRecordSourceMetric metric,
+    DateTime start,
+    DateTime end,
+  ) async {
+    final rows = await _catch(
+      () => _api
+          .readSourceDayTotals(
+            metric.wireName,
+            start.millisecondsSinceEpoch,
+            end.millisecondsSinceEpoch,
+          )
+          .timeout(_sourceDayTotalsTimeout),
+      const <SourceDayTotalMsg>[],
+      read: 'readSourceDayTotals',
+    );
+    return [
+      for (final row in rows)
+        SourceDayTotal(
+          metric: metric,
+          package: row.packageName,
+          date: LocalDate.fromDateTime(
+            DateTime.fromMillisecondsSinceEpoch(row.dateEpochMs),
+          ),
+          total: row.total,
+          recordCount: row.recordCount,
+          manualEntryCount: row.manualEntryCount,
+          coveredMinutes: row.coveredMinutes,
+          firstStart:
+              DateTime.fromMillisecondsSinceEpoch(row.firstStartEpochMs),
+          lastEnd: DateTime.fromMillisecondsSinceEpoch(row.lastEndEpochMs),
+        ),
+    ];
+  }
+
+  static const Duration _sourceDayTotalsTimeout = Duration(seconds: 20);
 
   // ── Activity / Exercise (Phase 8) — typed via native ActivityHealthReader ───
 

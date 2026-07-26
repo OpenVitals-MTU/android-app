@@ -22,10 +22,10 @@ For the day-to-day rules and the invariants that have already been broken once, 
 - Feature repositories: split into `contract/` and `impl/` under [`lib/data/repository/`](../../lib/data/repository) for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, vitals, BLE devices, and Apple Health import
 - Dashboard: a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard; writes explicit user-entered records straight to Health Connect
-- Persistence: drift ([`lib/data/local/open_vitals_database.dart`](../../lib/data/local/open_vitals_database.dart)) holds **exactly one table — `beverages`**. Everything else that persists lives in `SharedPreferences` via [`lib/data/prefs/preferences_repository.dart`](../../lib/data/prefs/preferences_repository.dart). Health Connect is the source of truth for health data.
+- Persistence: drift ([`lib/data/local/open_vitals_database.dart`](../../lib/data/local/open_vitals_database.dart)) holds the beverage catalog, the Body Energy feel-check log, the daily-vitals aggregate cache and its sync cursors, the Garmin watch-only wellness samples, and the Body Energy chain (day summaries + 5-minute buckets). Everything else that persists lives in `SharedPreferences` via [`lib/data/prefs/preferences_repository.dart`](../../lib/data/prefs/preferences_repository.dart). Health Connect remains the source of truth for health data.
 - Background work: `android_alarm_manager_plus` (home-widget refresh, hydration/mindfulness reminders) and `flutter_foreground_task` (Apple Health import, activity recording). There is no WorkManager and no general background-sync layer.
 
-> **Correction to the Kotlin doc.** The Kotlin architecture doc claims "Room is present for derived metric summary caching only" and that "WorkManager is used for … lightweight metric summary warmup". Neither is true, in either repo. The Kotlin `OpenVitalsDatabase` also declares only `BeverageEntity`, and its workers are the Apple Health import and the offline-map import. There is no metric summary cache and never was. Do not build against one.
+> **Correction to the Kotlin doc.** The Kotlin architecture doc claims "Room is present for derived metric summary caching only" and that "WorkManager is used for … lightweight metric summary warmup". Neither was ever true: the Kotlin `OpenVitalsDatabase` declares only `BeverageEntity`, and its workers are the Apple Health import and the offline-map import. This repo has since added *targeted* caches (see *Keep abstractions proportional*, below) — but there is still no universal metric summary cache, and none should be built.
 
 Body and entry/session browsing live in metric-owned detail screens. There is no global Browse destination.
 
@@ -106,7 +106,13 @@ The app does not need, and does not have:
 - a multi-package split of `lib/`
 - a raw Health Connect mirror in drift
 
-Derived values that are genuinely expensive to recompute may be cached — but the *only* such cache today is [`BodyEnergyTimelineCacheStore`](../../lib/data/repository/body_energy_timeline_cache_store.dart), and it lives in `SharedPreferences`, not drift. It stores a versioned envelope keyed by date plus a signature (permission fingerprint + calibration signature + algorithm version), so a permission or config change invalidates it. That signature discipline is the pattern to copy if a second cache is ever warranted.
+Derived or expensive-to-read values may be cached, but only where the cost is *demonstrated*, never pre-emptively. A universal raw-metric cache was evaluated and rejected. What exists today:
+
+- The **daily vitals aggregates** (`vitals_daily_aggregates` + `vitals_sync_cursors`), for the seven vitals Health Connect offers no aggregate for, plus daily calories-burned. Kept current through the Changes API.
+- The **Body Energy chain** ([`body_energy_timeline_store.dart`](../../lib/data/repository/body_energy_timeline_store.dart)): a day-summary row plus its 5-minute buckets. Not purely a cache — each day's end score is an *input* to the next day, so the stored chain is what makes the score continuous across midnight, and past a settling window (`bodyEnergyChainSettlingDays`) it is the record rather than a copy. Measured at 4.2 MB for the full 120-day bucket retention, ~127 B per bucket row, and 2.7 ms to rewrite a whole 288-bucket day — negligible beside the Health Connect reads that produce it, so the write path is deliberately a full replace rather than an incremental diff.
+- The **Body Energy baselines**, still in `SharedPreferences` ([`body_energy_baseline_cache_store.dart`](../../lib/data/repository/body_energy_baseline_cache_store.dart)).
+
+Every one of them is keyed by a signature (permission fingerprint + calibration + algorithm version), so a permission or config change invalidates rather than silently serving stale derivations. That signature discipline is the pattern to copy if another cache is ever warranted.
 
 ### 7. Keep the package boundary proportional
 
@@ -207,7 +213,7 @@ Current boundary shape:
 
 ### Local persistence
 
-- [`lib/data/local/open_vitals_database.dart`](../../lib/data/local/open_vitals_database.dart) — drift, schema version 3, **one table: `beverages`**. It mirrors the Kotlin Room database exactly, including the verbatim `CREATE TABLE` used by the legacy migrations.
+- [`lib/data/local/open_vitals_database.dart`](../../lib/data/local/open_vitals_database.dart) — drift, schema version 7. Tables, in the order they were added: `beverages` (mirroring the Kotlin Room table exactly, including the verbatim `CREATE TABLE` its legacy migrations use), `feel_checks`, `vitals_daily_aggregates` + `vitals_sync_cursors`, `garmin_wellness_samples`, and `body_energy_days` + `body_energy_buckets`. Migrations are hand-written `CREATE TABLE IF NOT EXISTS` constants applied by `if (from < N)` in `onUpgrade`; there is no `drift_schemas` snapshot and no `SchemaVerifier`, so the schema-parity test in `open_vitals_database_migration_test.dart` is what keeps those constants honest.
 - [`lib/data/prefs/preferences_repository.dart`](../../lib/data/prefs/preferences_repository.dart) — everything else: widget order, section order, goals, thresholds, remembered ranges, theme, units, language.
 
 **Background isolates must never open drift.** A second connection to the same database file from the alarm/foreground isolate is a corruption risk, and the reminder and widget code paths are explicitly written to avoid it — see the file headers in [`home_widget_alarm.dart`](../../lib/features/homewidgets/home_widget_alarm.dart), [`home_widget_beverage_log.dart`](../../lib/features/homewidgets/home_widget_beverage_log.dart) and [`hydration_reminder_alarm.dart`](../../lib/features/hydration/reminders/hydration_reminder_alarm.dart). The practical cost: a background path cannot see the custom-drink catalog, and that is accepted.

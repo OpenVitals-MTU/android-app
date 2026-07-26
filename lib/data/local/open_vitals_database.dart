@@ -223,6 +223,123 @@ enum GarminWellnessMetric {
   final String storageName;
 }
 
+/// One row per local calendar day of the Body Energy chain: the day's headline
+/// numbers plus everything its input summary carries.
+///
+/// Keyed by [epochDay] ALONE, deliberately. The [signature] is a *validity
+/// stamp*, not a discriminator: there is exactly one true timeline per day at
+/// any moment. Keying by `(day, signature)` would accumulate an orphan row for
+/// every calibration edit and force each chain read to filter; keying by day
+/// means a recompute overwrites in place and the table can never exceed one row
+/// per day the user has lived. A signature mismatch on read is simply a miss.
+///
+/// [endScore] is what seeds the *next* day — the reason this table exists. It
+/// is readable without touching [BodyEnergyBuckets], which is why the buckets
+/// are a separate table rather than an encoded column here: the chain walk-back
+/// asks this question up to a fortnight's worth of times per screen open and
+/// must not decode 288 points to answer it.
+class BodyEnergyDays extends Table {
+  IntColumn get epochDay => integer().named('epoch_day')();
+
+  /// The per-day signature (`v5|<calibration+profile hash>|<permission hash>`)
+  /// this row was computed under, compared on read against the signature built
+  /// for THIS row's own date — the body profile's signature varies by date, so
+  /// one built for day D can never validate day D-1.
+  TextColumn get signature => text()();
+
+  IntColumn get startScore => integer().named('start_score')();
+  IntColumn get endScore => integer().named('end_score')();
+  IntColumn get charged => integer()();
+  IntColumn get drained => integer()();
+  TextColumn get confidence => text()();
+  TextColumn get confidenceReason => text().named('confidence_reason')();
+  IntColumn get generatedAtMillis => integer().named('generated_at_millis')();
+
+  // The input summary, one column per field.
+  IntColumn get algorithmVersion => integer().named('algorithm_version')();
+  IntColumn get bucketMinutes => integer().named('bucket_minutes')();
+  IntColumn get heartRateSampleCount =>
+      integer().named('heart_rate_sample_count')();
+  IntColumn get hrvSampleCount => integer().named('hrv_sample_count')();
+  IntColumn get sleepSessionCount => integer().named('sleep_session_count')();
+  IntColumn get workoutCount => integer().named('workout_count')();
+  IntColumn get respiratorySampleCount =>
+      integer().named('respiratory_sample_count')();
+  BoolColumn get hasRestingHeartRate =>
+      boolean().named('has_resting_heart_rate')();
+  BoolColumn get hasBaselineRestingHeartRate =>
+      boolean().named('has_baseline_resting_heart_rate')();
+  BoolColumn get hasObservedMaxHeartRate =>
+      boolean().named('has_observed_max_heart_rate')();
+  BoolColumn get hasHrvBaseline => boolean().named('has_hrv_baseline')();
+  BoolColumn get hasRespiratoryBaseline =>
+      boolean().named('has_respiratory_baseline')();
+  IntColumn get previousEndScore =>
+      integer().named('previous_end_score').nullable()();
+  BoolColumn get carryOverFloorApplied =>
+      boolean().named('carry_over_floor_applied')();
+  TextColumn get seedSource => text().named('seed_source')();
+  TextColumn get calibrationMode => text().named('calibration_mode')();
+
+  @override
+  Set<Column> get primaryKey => {epochDay};
+
+  @override
+  String get tableName => 'body_energy_days';
+}
+
+/// The 5-minute buckets behind each [BodyEnergyDays] row — ~288 for a full day.
+///
+/// [epochDay] is the LOCAL calendar day and is stored explicitly rather than
+/// derived from [timeMillis]: for most of the world a bucket's UTC instant
+/// falls on a different UTC day than its local date, so deriving it would
+/// scatter one day's buckets across two partitions.
+///
+/// Enum-valued columns hold their `storageName`, matching
+/// [GarminWellnessSamples.metric] — greppable in a `sqlite3` dump and immune to
+/// a Dart enum being reordered.
+class BodyEnergyBuckets extends Table {
+  IntColumn get epochDay => integer().named('epoch_day')();
+
+  /// Bucket start, UTC milliseconds since the epoch.
+  IntColumn get timeMillis => integer().named('time_millis')();
+
+  IntColumn get score => integer()();
+  RealColumn get delta => real()();
+  TextColumn get state => text()();
+  TextColumn get confidence => text()();
+  RealColumn get charge => real()();
+  RealColumn get intensityDrain => real().named('intensity_drain')();
+  RealColumn get activityEnergyDrain => real().named('activity_energy_drain')();
+  RealColumn get basalDrain => real().named('basal_drain')();
+  RealColumn get stressDrain => real().named('stress_drain')();
+  RealColumn get recoveryDebtDrain => real().named('recovery_debt_drain')();
+  TextColumn get primaryInfluence => text().named('primary_influence')();
+
+  @override
+  Set<Column> get primaryKey => {epochDay, timeMillis};
+
+  @override
+  String get tableName => 'body_energy_buckets';
+}
+
+/// How many days of 5-minute buckets are kept. Past this the day's summary row
+/// survives — so the chain, and any long-range daily-score chart, stay intact —
+/// but its buckets are dropped. Buckets are ~99% of the chain's bytes and
+/// nothing reads them more than a few weeks back.
+const int bodyEnergyBucketRetentionDays = 120;
+
+/// The [VitalsSyncCursors] key the Body Energy chain keeps its bookkeeping
+/// under. That table is generic per-key sync state, so the chain reuses it
+/// rather than cloning a two-column table (the same reasoning as
+/// [caloriesBurnedCacheMetric]).
+///
+/// `changes_token` holds the GLOBAL signature — algorithm version, calibration
+/// and permissions, without the per-day profile component — so a calibration
+/// edit can purge the whole chain in one comparison. `last_full_sync_millis` is
+/// the warm service's last completed pass.
+const String bodyEnergyChainCursorKey = 'bodyEnergyChain.v1';
+
 @DriftAccessor(tables: [GarminWellnessSamples])
 class GarminWellnessDao extends DatabaseAccessor<OpenVitalsDatabase>
     with _$GarminWellnessDaoMixin {
@@ -273,6 +390,199 @@ class GarminWellnessDao extends DatabaseAccessor<OpenVitalsDatabase>
           ..where(garminWellnessSamples.metric.equals(metric.storageName)))
         .get();
     return rows.first.read(garminWellnessSamples.timeMillis.count()) ?? 0;
+  }
+}
+
+/// The Body Energy chain: day summaries, their 5-minute buckets, and the shared
+/// sync cursor row keyed by [bodyEnergyChainCursorKey].
+///
+/// Deliberately no SQL "most recent stored day at or before D": whether a row
+/// is usable depends on the signature computed for *that row's own date*, which
+/// is a Dart-side calculation, so such a query would routinely hand back rows
+/// the caller must reject and loop straight back into SQL. [daysBetween]
+/// answers the whole lookback window in one query and the walk lives in the
+/// repository, where the signature knowledge is.
+@DriftAccessor(
+  tables: [BodyEnergyDays, BodyEnergyBuckets, VitalsSyncCursors],
+)
+class BodyEnergyTimelineDao extends DatabaseAccessor<OpenVitalsDatabase>
+    with _$BodyEnergyTimelineDaoMixin {
+  BodyEnergyTimelineDao(super.db);
+
+  Future<BodyEnergyDay?> day(int epochDay) {
+    return (select(bodyEnergyDays)
+          ..where((d) => d.epochDay.equals(epochDay))
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Summaries for `[startEpochDay, endEpochDay]`, oldest first. The chain
+  /// walk-back reads its whole lookback window with this in ONE query and never
+  /// touches a bucket.
+  Future<List<BodyEnergyDay>> daysBetween(int startEpochDay, int endEpochDay) {
+    return (select(bodyEnergyDays)
+          ..where((d) => d.epochDay.isBetweenValues(startEpochDay, endEpochDay))
+          ..orderBy([(d) => OrderingTerm(expression: d.epochDay)]))
+        .get();
+  }
+
+  /// Reactive variant, so a multi-day view refreshes when the warm service
+  /// writes.
+  Stream<List<BodyEnergyDay>> watchDaysBetween(
+    int startEpochDay,
+    int endEpochDay,
+  ) {
+    return (select(bodyEnergyDays)
+          ..where((d) => d.epochDay.isBetweenValues(startEpochDay, endEpochDay))
+          ..orderBy([(d) => OrderingTerm(expression: d.epochDay)]))
+        .watch();
+  }
+
+  Future<List<BodyEnergyBucket>> bucketsForDay(int epochDay) {
+    return (select(bodyEnergyBuckets)
+          ..where((b) => b.epochDay.equals(epochDay))
+          ..orderBy([(b) => OrderingTerm(expression: b.timeMillis)]))
+        .get();
+  }
+
+  /// Buckets across a day range in primary-key order — a straight index scan,
+  /// and the single query a multi-day timeline chart needs.
+  Future<List<BodyEnergyBucket>> bucketsBetweenDays(
+    int startEpochDay,
+    int endEpochDay,
+  ) {
+    return (select(bodyEnergyBuckets)
+          ..where((b) => b.epochDay.isBetweenValues(startEpochDay, endEpochDay))
+          ..orderBy([
+            (b) => OrderingTerm(expression: b.epochDay),
+            (b) => OrderingTerm(expression: b.timeMillis),
+          ]))
+        .get();
+  }
+
+  /// The newest stored day, for the warm service's anchor and for diagnostics.
+  Future<BodyEnergyDay?> latestDay() {
+    return (select(bodyEnergyDays)
+          ..orderBy([
+            (d) => OrderingTerm(
+                expression: d.epochDay, mode: OrderingMode.desc),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<int> countDays() async {
+    final rows = await (selectOnly(bodyEnergyDays)
+          ..addColumns([bodyEnergyDays.epochDay.count()]))
+        .get();
+    return rows.first.read(bodyEnergyDays.epochDay.count()) ?? 0;
+  }
+
+  /// How many buckets a day still has — a count rather than a read, because the
+  /// only caller is asking whether a stored day is worth protecting from an
+  /// empty recompute, not what is in it.
+  Future<int> countBucketsForDay(int epochDay) async {
+    final count = bodyEnergyBuckets.timeMillis.count();
+    final rows = await (selectOnly(bodyEnergyBuckets)
+          ..addColumns([count])
+          ..where(bodyEnergyBuckets.epochDay.equals(epochDay)))
+        .get();
+    return rows.first.read(count) ?? 0;
+  }
+
+  /// Replace one day atomically: its old buckets go, the new ones land, and the
+  /// summary is upserted — all in one transaction, so a crash mid-write can
+  /// never leave a summary whose `end_score` disagrees with its last bucket.
+  ///
+  /// A full rewrite even when only the tail changed, which recomputing today
+  /// mostly is. That is deliberate and measured: **2.7 ms** for a whole
+  /// 288-bucket day on a file-backed database, against the ~8 Health Connect
+  /// reads that had to happen first to produce those buckets. Writing only the
+  /// changed tail would have to diff against what is stored, and would trade a
+  /// transaction that cannot half-apply for one that can. Do not "optimise"
+  /// this without a profile showing it matters.
+  Future<void> upsertDay(
+    BodyEnergyDaysCompanion summary,
+    List<BodyEnergyBucketsCompanion> buckets,
+  ) async {
+    final epochDay = summary.epochDay.value;
+    await transaction(() async {
+      await (delete(bodyEnergyBuckets)..where((b) => b.epochDay.equals(epochDay)))
+          .go();
+      await into(bodyEnergyDays).insertOnConflictUpdate(summary);
+      if (buckets.isNotEmpty) {
+        await batch((b) => b.insertAll(bodyEnergyBuckets, buckets));
+      }
+    });
+  }
+
+  /// Forward ripple: drop `[startEpochDay, endEpochDay]` from both tables.
+  /// Recomputing a day changes the seed of every day after it, so those days'
+  /// stored scores are claims about a chain that no longer exists.
+  Future<void> deleteDays(int startEpochDay, int endEpochDay) async {
+    if (endEpochDay < startEpochDay) return;
+    await transaction(() async {
+      await (delete(bodyEnergyBuckets)
+            ..where(
+                (b) => b.epochDay.isBetweenValues(startEpochDay, endEpochDay)))
+          .go();
+      await (delete(bodyEnergyDays)
+            ..where(
+                (d) => d.epochDay.isBetweenValues(startEpochDay, endEpochDay)))
+          .go();
+    });
+  }
+
+  /// Retention: drop buckets strictly before [epochDay], keeping the summaries
+  /// so the chain and any long-range daily chart survive.
+  Future<void> purgeBucketsBefore(int epochDay) {
+    return (delete(bodyEnergyBuckets)
+          ..where((b) => b.epochDay.isSmallerThanValue(epochDay)))
+        .go();
+  }
+
+  /// Everything, plus the cursor — the algorithm/calibration-change reset.
+  Future<void> purgeAll() async {
+    await transaction(() async {
+      await delete(bodyEnergyBuckets).go();
+      await delete(bodyEnergyDays).go();
+      await (delete(vitalsSyncCursors)
+            ..where((c) => c.metric.equals(bodyEnergyChainCursorKey)))
+          .go();
+    });
+  }
+
+  Future<VitalsSyncCursor?> chainCursor() {
+    return (select(vitalsSyncCursors)
+          ..where((c) => c.metric.equals(bodyEnergyChainCursorKey))
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Upsert the chain's bookkeeping. Each field is left untouched when omitted,
+  /// so recording a completed pass cannot clear the stored signature.
+  Future<void> writeChainCursor({
+    String? globalSignature,
+    int? lastPassMillis,
+  }) async {
+    final patch = VitalsSyncCursorsCompanion(
+      changesToken:
+          globalSignature == null ? const Value.absent() : Value(globalSignature),
+      lastFullSyncMillis:
+          lastPassMillis == null ? const Value.absent() : Value(lastPassMillis),
+    );
+    final updated = await (update(vitalsSyncCursors)
+          ..where((c) => c.metric.equals(bodyEnergyChainCursorKey)))
+        .write(patch);
+    if (updated == 0) {
+      await into(vitalsSyncCursors).insert(
+        VitalsSyncCursorsCompanion.insert(
+          metric: bodyEnergyChainCursorKey,
+          changesToken: Value(globalSignature),
+          lastFullSyncMillis: Value(lastPassMillis),
+        ),
+      );
+    }
   }
 }
 
@@ -520,12 +830,15 @@ class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
     VitalsDailyAggregates,
     VitalsSyncCursors,
     GarminWellnessSamples,
+    BodyEnergyDays,
+    BodyEnergyBuckets,
   ],
   daos: [
     BeverageDao,
     FeelCheckDao,
     VitalsDailyCacheDao,
     GarminWellnessDao,
+    BodyEnergyTimelineDao,
   ],
 )
 class OpenVitalsDatabase extends _$OpenVitalsDatabase {
@@ -534,7 +847,7 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
   OpenVitalsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -559,8 +872,78 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
           if (from < 6) {
             await customStatement(createGarminWellnessSamplesTableSql);
           }
+          // v7 adds the Body Energy chain: one summary row per day (whose
+          // end_score seeds the next day) plus its 5-minute buckets. Replaces
+          // the SharedPreferences timeline cache, which could not answer "what
+          // did yesterday end on" without decoding 288 encoded points.
+          if (from < 7) {
+            await customStatement(createBodyEnergyDaysTableSql);
+            await customStatement(createBodyEnergyBucketsTableSql);
+          }
         },
       );
+
+  /// The `CREATE TABLE`s for the Body Energy chain, applied on upgrade from
+  /// < v7.
+  ///
+  /// These must stay equivalent to what drift's `createAll()` emits from
+  /// [BodyEnergyDays] / [BodyEnergyBuckets]. This project keeps no
+  /// `drift_schemas` snapshot and runs no `SchemaVerifier`, so the migration
+  /// test that diffs a migrated schema against a freshly created one is the
+  /// only guard against these drifting apart.
+  static const String createBodyEnergyDaysTableSql = '''
+CREATE TABLE IF NOT EXISTS `body_energy_days` (
+    `epoch_day` INTEGER NOT NULL,
+    `signature` TEXT NOT NULL,
+    `start_score` INTEGER NOT NULL,
+    `end_score` INTEGER NOT NULL,
+    `charged` INTEGER NOT NULL,
+    `drained` INTEGER NOT NULL,
+    `confidence` TEXT NOT NULL,
+    `confidence_reason` TEXT NOT NULL,
+    `generated_at_millis` INTEGER NOT NULL,
+    `algorithm_version` INTEGER NOT NULL,
+    `bucket_minutes` INTEGER NOT NULL,
+    `heart_rate_sample_count` INTEGER NOT NULL,
+    `hrv_sample_count` INTEGER NOT NULL,
+    `sleep_session_count` INTEGER NOT NULL,
+    `workout_count` INTEGER NOT NULL,
+    `respiratory_sample_count` INTEGER NOT NULL,
+    `has_resting_heart_rate` INTEGER NOT NULL
+        CHECK (`has_resting_heart_rate` IN (0, 1)),
+    `has_baseline_resting_heart_rate` INTEGER NOT NULL
+        CHECK (`has_baseline_resting_heart_rate` IN (0, 1)),
+    `has_observed_max_heart_rate` INTEGER NOT NULL
+        CHECK (`has_observed_max_heart_rate` IN (0, 1)),
+    `has_hrv_baseline` INTEGER NOT NULL
+        CHECK (`has_hrv_baseline` IN (0, 1)),
+    `has_respiratory_baseline` INTEGER NOT NULL
+        CHECK (`has_respiratory_baseline` IN (0, 1)),
+    `previous_end_score` INTEGER NULL,
+    `carry_over_floor_applied` INTEGER NOT NULL
+        CHECK (`carry_over_floor_applied` IN (0, 1)),
+    `seed_source` TEXT NOT NULL,
+    `calibration_mode` TEXT NOT NULL,
+    PRIMARY KEY (`epoch_day`)
+)''';
+
+  static const String createBodyEnergyBucketsTableSql = '''
+CREATE TABLE IF NOT EXISTS `body_energy_buckets` (
+    `epoch_day` INTEGER NOT NULL,
+    `time_millis` INTEGER NOT NULL,
+    `score` INTEGER NOT NULL,
+    `delta` REAL NOT NULL,
+    `state` TEXT NOT NULL,
+    `confidence` TEXT NOT NULL,
+    `charge` REAL NOT NULL,
+    `intensity_drain` REAL NOT NULL,
+    `activity_energy_drain` REAL NOT NULL,
+    `basal_drain` REAL NOT NULL,
+    `stress_drain` REAL NOT NULL,
+    `recovery_debt_drain` REAL NOT NULL,
+    `primary_influence` TEXT NOT NULL,
+    PRIMARY KEY (`epoch_day`, `time_millis`)
+)''';
 
   /// The `CREATE TABLE` for the watch wellness samples, applied on upgrade
   /// from < v6.

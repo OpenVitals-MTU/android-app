@@ -1,11 +1,14 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
+import 'package:openvitals/data/local/open_vitals_database.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
-import 'package:openvitals/data/repository/body_energy_timeline_cache_store.dart';
+import 'package:openvitals/data/repository/body_energy_baseline_cache_store.dart';
+import 'package:openvitals/data/repository/body_energy_timeline_store.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/body_repository.dart';
 import 'package:openvitals/data/repository/contract/body_energy_repository.dart';
@@ -116,7 +119,8 @@ class _FakeHealth implements HealthRepository {
 void main() {
   late _FakeHeart heart;
   late PreferencesRepository prefs;
-  late BodyEnergyTimelineCacheStore cache;
+  late BodyEnergyBaselineCacheStore baselines;
+  late BodyEnergyTimelineStore timelines;
   late DateTime clock;
 
   final today = LocalDate.fromDateTime(DateTime(2026, 6, 1, 8));
@@ -125,7 +129,10 @@ void main() {
     SharedPreferences.setMockInitialValues(const {});
     final sp = await SharedPreferences.getInstance();
     prefs = PreferencesRepository(sp);
-    cache = BodyEnergyTimelineCacheStore(sp);
+    baselines = BodyEnergyBaselineCacheStore(sp);
+    final db = OpenVitalsDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    timelines = BodyEnergyTimelineStore(db.bodyEnergyTimelineDao);
     heart = _FakeHeart();
     clock = DateTime(2026, 6, 1, 8);
   }
@@ -140,7 +147,8 @@ void main() {
       bodyRepository: empty,
       healthRepository: _FakeHealth(),
       preferencesRepository: prefs,
-      cacheStore: cache,
+      baselineCacheStore: baselines,
+      timelineStore: timelines,
       now: () => clock,
     );
   }

@@ -77,6 +77,12 @@ Syncing the same day twice does not double anything.
 
 A file is only marked as synced *after* its import succeeded, so a run that fails partway re-fetches rather than skipping data that never landed.
 
+## Back-filled Days Are Recalculated
+
+A sync usually hands over more than today — a watch worn for a week arrives with a week of sleep and heart rate. [Body Energy](body-energy.md) carries across midnight, so those days and every day after them were scored without data the watch has only now delivered.
+
+After a successful sync the affected days are recalculated automatically, starting from the oldest file the watch dated. You do not need to refresh anything, and it works however far back the sync reaches — a watch synced once a month still ends up with correct history. If the watch sends files with no date on them, those are ignored rather than guessed at.
+
 ## Supported Watches
 
 Developed against a **vívoactive 5** on firmware 17.05, which is the only model verified end to end.
