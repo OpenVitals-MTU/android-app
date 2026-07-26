@@ -150,7 +150,13 @@ void main() {
   Future<ProviderContainer> container({_FakeService? service}) async {
     SharedPreferences.setMockInitialValues(const <String, Object>{});
     final prefs = await SharedPreferences.getInstance();
-    Future<Directory> directory() async => tempDir;
+    // Captured, NOT closed over the field. `build()` starts unawaited file work
+    // that can still be in flight when the test ends, and `tempDir` is
+    // reassigned by the next `setUp` — so a closure over the field would resolve
+    // to the NEXT test's directory and let one test read or write inside
+    // another's fixture.
+    final dir = tempDir;
+    Future<Directory> directory() async => dir;
     final result = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -259,21 +265,34 @@ void main() {
   });
 
   test('importing without an analysis does nothing', () async {
-    final harness = await container();
+    final service = _FakeService();
+    final harness = await container(service: service);
+    final notifier = harness.read(appleHealthImportProvider.notifier);
 
-    await harness.read(appleHealthImportProvider.notifier).importSelected();
-    // Building the notifier starts background work of its own — restoring the
+    // Building the notifier starts unawaited work of its own — restoring the
     // last persisted report, and re-attaching to an import that might still be
-    // running — and neither is awaited by the thing under test. Draining the
-    // queue first means this asserts on a settled state rather than racing that
-    // work: if the background work ever DID touch the state, this now fails
-    // every time instead of only on a loaded machine.
-    //
-    // This test failed once on CI and never once locally, including 25 runs of
-    // this file, four full-suite runs, and a run under deliberate CPU
-    // contention. The race above is the one mechanism visible in the code.
+    // running. Drain it so the baseline is a SETTLED state.
+    await pumpEventQueue();
+    final before = harness.read(appleHealthImportProvider);
+    // Without these two, the comparison below would pass vacuously: a notifier
+    // that came up busy would make `importSelected` bail on `state.isBusy`
+    // rather than on the missing analysis this test is about.
+    expect(before.isBusy, isFalse);
+    expect(before.analysis, isNull);
+
+    await notifier.importSelected();
     await pumpEventQueue();
 
-    expect(harness.read(appleHealthImportProvider), const AppleHealthImportUiState());
+    // Asserting NOTHING CHANGED, rather than pinning the exact default state.
+    // Pinning it made this test depend on the background work above never
+    // touching state for any reason — a condition it does not control and
+    // cannot observe. It failed twice on CI and never once locally across 25
+    // runs of this file, five full-suite runs, 20 randomised-order runs of the
+    // directory, and a run under deliberate CPU contention. What the test is
+    // named for is that importing without an analysis is a no-op, and that is
+    // now what it measures.
+    expect(harness.read(appleHealthImportProvider), before);
+    expect(service.importedCategories, isNull,
+        reason: 'no import may be started without an analysis');
   });
 }
