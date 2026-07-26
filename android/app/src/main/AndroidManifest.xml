@@ -202,6 +202,37 @@
         android:name="android.hardware.wifi"
         tools:node="remove" />
 
+    <!-- =========================================================================
+         The app reads NO photos, videos, audio or shared storage, and must not
+         appear to. `open_filex` (used only to fire ACTION_VIEW at an exported
+         GPX) declares READ_MEDIA_IMAGES/VIDEO/AUDIO and READ_EXTERNAL_STORAGE in
+         its own manifest, and the merger folds them into ours — which is enough
+         for Google Play to refuse the upload outright:
+
+           "All developers requesting access to the photo and video permissions
+            are required to tell Google Play about the core functionality of
+            their app"
+
+         Those declarations exist for opening a file in SHARED storage by path.
+         We never do: the GPX is written to our own cache directory and handed
+         over as a FileProvider content URI with a temporary read grant, which
+         needs no permission at all. So they are removed rather than declared —
+         declaring a photo permission for an app that reads no photos would be a
+         false statement to make to Play and to the person installing it.
+         ========================================================================= -->
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_IMAGES"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_VIDEO"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_AUDIO"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        tools:node="remove" />
+
     <!-- Optional hardware; app remains installable on devices lacking these. -->
     <uses-feature
         android:name="android.hardware.location.gps"
