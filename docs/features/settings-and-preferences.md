@@ -18,8 +18,9 @@ Open **Settings** from the gear icon in the dashboard's top bar. It's a list of 
 | **Activities** | Calendar vs **Rolling** date windows, **Favorite activity**, split distance, recording preferences (incl. keep-screen-on), and **Offline maps** import. |
 | **Sensors & devices** | Pair and manage **Bluetooth LE** heart-rate, cadence, and power sensors — see [Bluetooth LE sensors](ble-sensors.md). |
 | **Watches** | Pair a Garmin watch, sync what it recorded, and change its alarms and on-watch settings — see [Garmin watch sync](garmin-watch-sync.md). |
-| **Nutrition** | **Total calories** mode, **Hydration goal** stepper, and the **Caffeine model** — see [Beverage logging and caffeine](beverage-logging-and-caffeine.md). |
-| **Recovery** | **Sleep range** boundary, high/low heart-rate alerts, body profile, and **Body Energy calibration** — see [Body Energy](body-energy.md). |
+| **Nutrition** | **Total calories** mode, **Hydration goal** stepper, and the **Caffeine model** — bedtime, sleep threshold and the half-life overrides. See [Beverage logging and caffeine](beverage-logging-and-caffeine.md). |
+| **Body profile** | Everything that is a fact about you: age, weight and height; resting and maximum heart rate with the **heart zones** they define; and **Metabolism**, the factors that change how fast you clear caffeine. See [Body Energy](body-energy.md). |
+| **Recovery** | **Sleep range** boundary and the high/low heart-rate alerts — schedules and alert thresholds, rather than body measurements. |
 | **Data Importers** | **Apple Health**, **route file** (GPX/KML/KMZ/TCX), and **FIT** imports. |
 | **Health Connect** | **Sync** on/off, **App lock**, and the permission categories to grant or review later. |
 | **Debug diagnostics** | Save/share sanitized logs — only present in diagnostics builds. |
@@ -66,3 +67,13 @@ Settings provide Data Importers for Apple Health export import and FIT activity/
 ## Diagnostics And App Information
 
 The settings area includes app version information, diagnostics/support surfaces, and privacy notes.
+
+## Body profile
+
+Facts about your body used to be spread across three places: age and weight under Recovery, heart-rate zones in a separate card beside them, and nine metabolic factors — including the app's only pregnancy setting — behind the **Caffeine model** card under Nutrition. They are now in one section.
+
+**Weight and height are shared with your health data.** The card shows your most recent recorded measurement and says so; editing it saves a new measurement rather than a private copy, so your BMI, your fat-free mass index and the caffeine estimate all use the same number. If you have not granted permission to save body measurements, or nothing has been recorded yet, the value you type is kept locally instead and used the same way.
+
+**Resting and maximum heart rate sit with the heart zones.** With manual zones switched off, those two values *are* the zones — the app spreads five zones across the range between them. They used to be a card away, and were unreachable from the Body Energy screen where the zone editor also appears.
+
+**Metabolism** holds the factors that change how quickly caffeine leaves you: smoking, liver impairment, medication interactions, alcohol use, habituation, hormonal status and two genotypes. All are optional; leaving them alone uses population averages.

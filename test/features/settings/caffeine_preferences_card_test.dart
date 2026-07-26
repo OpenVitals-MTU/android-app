@@ -83,34 +83,6 @@ void main() {
     expect(saved.profileCompleted, isTrue);
   });
 
-  testWidgets('editing a switch and dropdown persists on save',
-      (tester) async {
-    final (widget, prefs) = await _bootstrap(const CaffeinePreferencesCard());
-    await tester.pumpWidget(widget);
-    await tester.pumpAndSettle();
-
-    // Toggle the Smoker switch (default false -> true).
-    final smokerRow = find.ancestor(
-      of: find.text('Smoker'),
-      matching: find.byType(Row),
-    );
-    final smokerSwitch = find.descendant(
-      of: smokerRow,
-      matching: find.byType(Switch),
-    );
-    await tester.ensureVisible(smokerSwitch);
-    await tester.tap(smokerSwitch);
-    await tester.pump();
-
-    final saveButton = find.widgetWithText(FilledButton, 'Save');
-    await tester.ensureVisible(saveButton);
-    await tester.tap(saveButton);
-    await tester.pumpAndSettle();
-
-    final saved = PreferencesRepository(prefs).caffeinePreferences();
-    expect(saved.smoker, isTrue);
-  });
-
   testWidgets('an out-of-range half-life is clamped by the repository on save',
       (tester) async {
     final (widget, prefs) = await _bootstrap(const CaffeinePreferencesCard());

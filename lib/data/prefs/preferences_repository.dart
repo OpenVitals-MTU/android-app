@@ -424,6 +424,7 @@ class PreferencesRepository {
     final normalized = profile.normalized();
     _store.putOrRemoveInt(keyBodyProfileBirthYear, normalized.birthYear);
     _store.putOrRemoveDouble(keyBodyProfileWeightKg, normalized.weightKg);
+    _store.putOrRemoveDouble(keyBodyProfileHeightCm, normalized.heightCm);
     _store.putOrRemoveInt(
       keyBodyProfileRestingHrBpm,
       normalized.restingHeartRateBpm,
@@ -751,6 +752,7 @@ class PreferencesRepository {
   BodyProfile _readBodyProfile() => BodyProfile(
         birthYear: _store.intOrNull(keyBodyProfileBirthYear),
         weightKg: _store.doubleOrNull(keyBodyProfileWeightKg),
+        heightCm: _store.doubleOrNull(keyBodyProfileHeightCm),
         restingHeartRateBpm: _store.intOrNull(keyBodyProfileRestingHrBpm),
         maxHeartRateBpm: _store.intOrNull(keyBodyProfileMaxHrBpm),
       ).normalized();

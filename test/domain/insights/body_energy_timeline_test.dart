@@ -1013,4 +1013,42 @@ void main() {
       );
     });
   });
+
+  test('the age-derived max heart rate uses Tanaka, like the rest of the app',
+      () {
+    // Body Energy used 220 - age while heart-rate recovery used Tanaka
+    // (208 - 0.7*age) off the same birth year, so the app disagreed with itself
+    // by a couple of bpm — and this is the one feeding the zone ladder the
+    // whole drain model rests on.
+    //
+    // The bpm values matter. `_resolveIntensityContext` prefers an OBSERVED max
+    // once the samples reach max(150, resting + 60), so anything at or above
+    // 150 never exercises the age formula at all. Below that, with age 33 and
+    // resting 60, zone 3 starts at 60% of heart-rate reserve:
+    //   Tanaka   max 185 -> reserve 125 -> zone 3 from 135 bpm
+    //   220-age  max 187 -> reserve 127 -> zone 3 from 136.2 bpm
+    // So 136 bpm is zone 3 under Tanaka and still zone 2 under the old formula,
+    // while 140 is zone 3 under both.
+    final start = dayStart.add(const Duration(hours: 8));
+    final end = start.add(const Duration(hours: 2));
+
+    int drainAt(int bpm) => calculateBodyEnergyTimeline(
+          inputs(
+            now: end,
+            previousEndScore: 100,
+            samples: heartRateSamples(start, end, bpm),
+            // Birth year only, so the max has to be derived.
+            bodyProfile: BodyProfile(
+              birthYear: date.year - 33,
+              restingHeartRateBpm: 60,
+            ),
+          ),
+        ).drained;
+
+    expect(drainAt(136), drainAt(140),
+        reason: '136 bpm must already be zone 3, as Tanaka puts it');
+    expect(drainAt(130), lessThan(drainAt(136)),
+        reason: 'and 130 must still be zone 2, or the fixture spans one zone '
+            'and the assertion above proves nothing');
+  });
 }

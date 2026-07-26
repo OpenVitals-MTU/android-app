@@ -7,6 +7,7 @@ import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/body_period_data.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/preferences/body_profile.dart';
 import '../contract/body_repository.dart';
 import '../contract/repository_exceptions.dart';
 import 'health_connect_gating.dart';
@@ -193,6 +194,22 @@ class BodyRepositoryImpl implements BodyRepository {
   @override
   Future<Result<double?>> loadLatestHeight() => runCatching(
       () async => _latestHeightCm(await _dataSource.grantedIfAvailable()));
+
+  @override
+  Future<Result<BodyProfile>> resolveBodyProfile(BodyProfile declared) =>
+      runCatching(() async {
+        final granted = await _dataSource.grantedIfAvailable();
+        // A missing permission or a missing record leaves the declared value in
+        // place rather than blanking it — the fallback is the whole point.
+        final measuredWeight = await _latestWeightKg(granted);
+        final measuredHeight = await _latestHeightCm(granted);
+        return declared
+            .copyWith(
+              weightKg: measuredWeight ?? declared.weightKg,
+              heightCm: measuredHeight ?? declared.heightCm,
+            )
+            .normalized();
+      });
 
   @override
   Future<Result<List<HeightEntry>>> loadHeightEntries(

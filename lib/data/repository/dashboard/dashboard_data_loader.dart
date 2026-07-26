@@ -190,6 +190,23 @@ class DashboardDataLoader {
         () async => (await _hc.readDailyMacros(date, date)).firstOrNull);
     // Convention: POINT-IN-TIME DECAYING QUANTITY. Unlike sleep (night-window
     // attribution) and Body Energy (sequential per-day seeding), active
+    // Declared before the caffeine tile so it can share them: the caffeine
+    // half-life is scaled by weight, and reading it separately would mean two
+    // more Health Connect calls for a number already on its way. Caffeine is in
+    // the `wantsAny` list for the same reason.
+    final weightF = metric(
+        wantsAny([
+          DashboardMetric.weight,
+          DashboardMetric.bmi,
+          DashboardMetric.ffmi,
+          DashboardMetric.caffeine,
+        ]),
+        HcPermissions.readWeight,
+        () => _hc.readLatestWeight());
+    final heightF = metric(
+        wantsAny([DashboardMetric.height, DashboardMetric.bmi, DashboardMetric.ffmi]),
+        HcPermissions.readHeight,
+        () => _hc.readLatestHeightEntry());
     // caffeine is a decaying stock: read an entry lookback ending at the
     // evaluation instant and evaluate the shared PK model there — never a
     // day-scoped sum, which reads "No data" every morning while last night's
@@ -215,20 +232,17 @@ class DashboardDataLoader {
           preferences:
               (_preferences?.caffeinePreferences() ?? const CaffeinePreferences())
                   .normalized(),
-          bodyProfile: _preferences?.bodyProfile() ?? const BodyProfile(),
+          // The measured weight beats the declared one, so this tile and the
+          // BMI beside it describe the same person. Falls back to the typed
+          // value when nothing is recorded or the permission is missing.
+          bodyProfile: (_preferences?.bodyProfile() ?? const BodyProfile())
+              .copyWith(weightKg: (await weightF)?.weightKg ??
+                  _preferences?.bodyProfile().weightKg),
         );
       },
     );
     final hydrationF = metric(wants(DashboardMetric.hydration),
         HcPermissions.readHydration, () => _hc.readHydrationLiters(date));
-    final weightF = metric(
-        wantsAny([DashboardMetric.weight, DashboardMetric.bmi, DashboardMetric.ffmi]),
-        HcPermissions.readWeight,
-        () => _hc.readLatestWeight());
-    final heightF = metric(
-        wantsAny([DashboardMetric.height, DashboardMetric.bmi, DashboardMetric.ffmi]),
-        HcPermissions.readHeight,
-        () => _hc.readLatestHeightEntry());
     final bodyFatF = metric(
         wantsAny([DashboardMetric.bodyFat, DashboardMetric.ffmi]),
         HcPermissions.readBodyFat,

@@ -60,8 +60,37 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('1990'), findsOneWidget);
       expect(find.text('72.0'), findsOneWidget); // metric kg
+      // Resting and max heart rate moved to the zones card: they ARE the
+      // automatic zone ladder, so they belong with the zones they define.
+      expect(find.text('55'), findsNothing);
+      expect(find.text('190'), findsNothing);
+    });
+
+    testWidgets('the heart rates now seed the zones card instead',
+        (tester) async {
+      final prefs = await _prefs(
+        (repo) => repo.setBodyProfile(
+          const BodyProfile(restingHeartRateBpm: 55, maxHeartRateBpm: 190),
+        ),
+      );
+      await tester
+          .pumpWidget(_host(prefs, const BodyEnergyCalibrationCard()));
+      await tester.pumpAndSettle();
+
       expect(find.text('55'), findsOneWidget);
       expect(find.text('190'), findsOneWidget);
+    });
+
+    testWidgets('shows where weight came from', (tester) async {
+      // Without the provenance the merge is invisible and the user cannot tell
+      // why editing weight sometimes writes a Health Connect entry.
+      final prefs = await _prefs(
+        (repo) => repo.setBodyProfile(const BodyProfile(weightKg: 72.0)),
+      );
+      await tester.pumpWidget(_host(prefs, const BodyProfileCard()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Entered here'), findsWidgets);
     });
 
     testWidgets('editing a field and saving persists via bodyProfile()',

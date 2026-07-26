@@ -39,6 +39,16 @@ enum SettingsSection {
     summary: 'Calorie source and hydration goal',
     icon: Icons.restaurant_outlined,
   ),
+  // Everything that is a FACT about the person, in one place: age, body size,
+  // heart-rate zones and the metabolic factors. Deliberately separate from
+  // Recovery, which holds schedules and reporting thresholds — a night window
+  // and an alert bpm are choices, not properties of a body.
+  bodyProfile(
+    route: AppRoutes.settingsBodyProfile,
+    title: 'Body profile',
+    summary: 'Age, body size, heart-rate zones and metabolism',
+    icon: Icons.accessibility_new_outlined,
+  ),
   recovery(
     route: AppRoutes.settingsRecovery,
     title: 'Recovery',
@@ -111,6 +121,8 @@ extension SettingsSectionL10n on SettingsSection {
         return l10n.settingsWatchesGroupTitle;
       case SettingsSection.nutrition:
         return l10n.settingsNutritionGroupTitle;
+      case SettingsSection.bodyProfile:
+        return l10n.settingsBodyProfileGroupTitle;
       case SettingsSection.recovery:
         return l10n.settingsRecoveryGroupTitle;
       case SettingsSection.dataImport:
@@ -136,6 +148,8 @@ extension SettingsSectionL10n on SettingsSection {
         return l10n.settingsWatchesGroupBody;
       case SettingsSection.nutrition:
         return l10n.settingsNutritionGroupBody;
+      case SettingsSection.bodyProfile:
+        return l10n.settingsBodyProfileGroupBody;
       case SettingsSection.recovery:
         return l10n.settingsRecoveryGroupBody;
       case SettingsSection.dataImport:

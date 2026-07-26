@@ -1,5 +1,6 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/result/result.dart';
+import '../../../domain/preferences/body_profile.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/body_models.dart';
 import '../../../domain/model/refresh_mode.dart';
@@ -39,6 +40,20 @@ abstract interface class BodyRepository {
   );
 
   Future<Result<double?>> loadLatestHeight();
+
+  /// [declared] with weight and height replaced by the latest Health Connect
+  /// records when those exist.
+  ///
+  /// The app had two of each: a value typed into settings, which fed only the
+  /// caffeine half-life, and a measured record, which fed BMI and FFMI. They
+  /// never reconciled, so the same person could be 76 kg on one screen and 81 kg
+  /// on another. A measurement beats a memory, so it wins; the declared value
+  /// survives as the fallback for anyone without the record or the permission.
+  ///
+  /// Returns a plain [BodyProfile] so callers that already hold one keep their
+  /// synchronous signatures — only the reads that can await gain the measured
+  /// value.
+  Future<Result<BodyProfile>> resolveBodyProfile(BodyProfile declared);
 
   Future<Result<List<HeightEntry>>> loadHeightEntries(
     LocalDate start,

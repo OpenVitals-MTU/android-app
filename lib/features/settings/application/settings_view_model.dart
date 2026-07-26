@@ -1,4 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../heart/presentation/heart_metric_cards.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../ui/components/health_connect_gate.dart';
@@ -143,15 +147,25 @@ class SettingsViewModel extends Notifier<SettingsState> {
     );
   }
 
+  // Both thresholds keep a minimum gap, the same one the heart screen enforces
+  // (`heartRateThresholdMinimumGapBpm`). Only that screen used to check it, so
+  // stepping from Settings could push "high" below "low" and leave every sample
+  // flagged as both.
   void setHighHeartRateThresholdBpm(int bpm) {
-    _prefs.highHeartRateThresholdBpm = bpm;
+    _prefs.highHeartRateThresholdBpm = math.max(
+      bpm,
+      _prefs.lowHeartRateThresholdBpm + heartRateThresholdMinimumGapBpm,
+    );
     state = state.copyWith(
       highHeartRateThresholdBpm: _prefs.highHeartRateThresholdBpm,
     );
   }
 
   void setLowHeartRateThresholdBpm(int bpm) {
-    _prefs.lowHeartRateThresholdBpm = bpm;
+    _prefs.lowHeartRateThresholdBpm = math.min(
+      bpm,
+      _prefs.highHeartRateThresholdBpm - heartRateThresholdMinimumGapBpm,
+    );
     state = state.copyWith(
       lowHeartRateThresholdBpm: _prefs.lowHeartRateThresholdBpm,
     );

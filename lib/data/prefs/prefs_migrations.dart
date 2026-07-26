@@ -14,6 +14,7 @@ import '../../core/time/local_date.dart';
 /// rather than two copies that can drift apart.
 const String keyBodyProfileBirthYear = 'body_profile_birth_year';
 const String keyBodyProfileWeightKg = 'body_profile_weight_kg';
+const String keyBodyProfileHeightCm = 'body_profile_height_cm';
 const String keyBodyProfileRestingHrBpm = 'body_profile_resting_hr_bpm';
 const String keyBodyProfileMaxHrBpm = 'body_profile_max_hr_bpm';
 

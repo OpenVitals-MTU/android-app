@@ -59,13 +59,17 @@ class SettingsSwitchRow extends StatelessWidget {
   const SettingsSwitchRow({
     super.key,
     required this.title,
-    required this.body,
+    this.body,
     required this.value,
     required this.onChanged,
   });
 
   final String title;
-  final String body;
+
+  /// Optional: a bare label + switch when omitted, which is what a list of
+  /// self-explanatory physiological flags wants.
+  final String? body;
+
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -79,12 +83,14 @@ class SettingsSwitchRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: theme.textTheme.bodyLarge),
-              const SizedBox(height: 2),
-              Text(
-                body,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
+              if (body case final body?) ...[
+                const SizedBox(height: 2),
+                Text(
+                  body,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
             ],
           ),
         ),
@@ -144,6 +150,50 @@ class SettingsSegmentedChoice<T> extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// A labelled dropdown over an enum's values.
+///
+/// Moved here from the caffeine card when its physiological half was promoted
+/// into the Body profile section — two cards now render the same control, and a
+/// second private copy would drift.
+class SettingsEnumDropdown<T> extends StatelessWidget {
+  const SettingsEnumDropdown({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.values,
+    required this.labelFor,
+    required this.onSelect,
+  });
+
+  final String label;
+  final T selected;
+  final List<T> values;
+  final String Function(T) labelFor;
+  final ValueChanged<T> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: DropdownButtonFormField<T>(
+        initialValue: selected,
+        isExpanded: true,
+        decoration: InputDecoration(
+          border: const OutlineInputBorder(),
+          labelText: label,
+        ),
+        items: [
+          for (final value in values)
+            DropdownMenuItem(value: value, child: Text(labelFor(value))),
+        ],
+        onChanged: (value) {
+          if (value != null) onSelect(value);
+        },
+      ),
     );
   }
 }

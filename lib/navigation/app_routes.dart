@@ -100,6 +100,7 @@ class AppRoutes {
   static const String settingsNutrition = '/settings/nutrition';
   static const String settingsCalories = '/settings/calories';
   static const String settingsCaffeine = '/settings/caffeine';
+  static const String settingsBodyProfile = '/settings/body_profile';
   static const String settingsRecovery = '/settings/recovery';
   static const String settingsSleep = '/settings/sleep';
   static const String settingsBodyEnergy = '/settings/body_energy';

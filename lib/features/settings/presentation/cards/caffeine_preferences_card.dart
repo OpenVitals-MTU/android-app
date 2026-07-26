@@ -16,10 +16,15 @@ import '../../application/caffeine_preferences_view_model.dart';
 /// only its text controllers and reseeds them whenever the view-model bumps
 /// `seedRevision` (a load, or a save that clamped a field).
 ///
-/// Like the Kotlin editor, the per-field labels and enum labels are literal
-/// strings (the Kotlin editor hardcodes them); only the card title/body and the
-/// Save action use [AppLocalizations], matching the Kotlin `stringResource`
-/// calls in the card wrapper.
+/// Only the four settings that are genuinely about the FEATURE remain here:
+/// bedtime and the sleep threshold are schedule and reporting choices, and
+/// half-life and absorption are expert overrides of the base the physiology
+/// multipliers scale. The nine physiological factors moved to
+/// Settings > Body profile > Metabolism, where a genotype belongs; they are
+/// still stored as [CaffeinePreferences] under their original keys.
+///
+/// The remaining per-field labels are literal strings, as the Kotlin editor
+/// had them; only the card title/body and Save use [AppLocalizations].
 class CaffeinePreferencesCard extends ConsumerStatefulWidget {
   const CaffeinePreferencesCard({super.key});
 
@@ -123,72 +128,6 @@ class _CaffeinePreferencesCardState
                 controller: _bedtimeController,
                 onValue: (value) =>
                     updateDraft(draft.copyWith(bedtime: value)),
-              ),
-              _EnumDropdown<CaffeineSleepSensitivity>(
-                label: 'Sleep sensitivity',
-                selected: draft.sleepSensitivity,
-                values: CaffeineSleepSensitivity.values,
-                labelFor: _sleepSensitivityLabel,
-                onSelect: (value) =>
-                    updateDraft(draft.copyWith(sleepSensitivity: value)),
-              ),
-              _EnumDropdown<CaffeineAlcoholUse>(
-                label: 'Alcohol',
-                selected: draft.alcoholUse,
-                values: CaffeineAlcoholUse.values,
-                labelFor: _alcoholUseLabel,
-                onSelect: (value) =>
-                    updateDraft(draft.copyWith(alcoholUse: value)),
-              ),
-              _EnumDropdown<CaffeineHabituation>(
-                label: 'Caffeine habituation',
-                selected: draft.caffeineHabituation,
-                values: CaffeineHabituation.values,
-                labelFor: _habituationLabel,
-                onSelect: (value) =>
-                    updateDraft(draft.copyWith(caffeineHabituation: value)),
-              ),
-              _EnumDropdown<CaffeineGenotype>(
-                label: 'CYP1A2',
-                selected: draft.cyp1a2Genotype,
-                values: CaffeineGenotype.values,
-                labelFor: _genotypeLabel,
-                onSelect: (value) =>
-                    updateDraft(draft.copyWith(cyp1a2Genotype: value)),
-              ),
-              _EnumDropdown<CaffeineGenotype>(
-                label: 'AHR',
-                selected: draft.ahrGenotype,
-                values: CaffeineGenotype.values,
-                labelFor: _genotypeLabel,
-                onSelect: (value) =>
-                    updateDraft(draft.copyWith(ahrGenotype: value)),
-              ),
-              _EnumDropdown<CaffeineHormonalStatus>(
-                label: 'Hormonal status',
-                selected: draft.hormonalStatus,
-                values: CaffeineHormonalStatus.values,
-                labelFor: _hormonalStatusLabel,
-                onSelect: (value) =>
-                    updateDraft(draft.copyWith(hormonalStatus: value)),
-              ),
-              _SwitchRow(
-                label: 'Smoker',
-                value: draft.smoker,
-                onChanged: (value) =>
-                    updateDraft(draft.copyWith(smoker: value)),
-              ),
-              _SwitchRow(
-                label: 'Liver impairment',
-                value: draft.liverImpairment,
-                onChanged: (value) =>
-                    updateDraft(draft.copyWith(liverImpairment: value)),
-              ),
-              _SwitchRow(
-                label: 'Medication interaction',
-                value: draft.medicationInteraction,
-                onChanged: (value) =>
-                    updateDraft(draft.copyWith(medicationInteraction: value)),
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -302,130 +241,12 @@ LocalTime? _parseLocalTime(String text) {
 
 /// A read-only dropdown field, port of the Kotlin editor's
 /// `PreferenceEnumDropdown`.
-class _EnumDropdown<T> extends StatelessWidget {
-  const _EnumDropdown({
-    required this.label,
-    required this.selected,
-    required this.values,
-    required this.labelFor,
-    required this.onSelect,
-  });
-
-  final String label;
-  final T selected;
-  final List<T> values;
-  final String Function(T) labelFor;
-  final ValueChanged<T> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: DropdownButtonFormField<T>(
-        initialValue: selected,
-        isExpanded: true,
-        decoration: InputDecoration(
-          border: const OutlineInputBorder(),
-          labelText: label,
-        ),
-        items: [
-          for (final value in values)
-            DropdownMenuItem(value: value, child: Text(labelFor(value))),
-        ],
-        onChanged: (value) {
-          if (value != null) onSelect(value);
-        },
-      ),
-    );
-  }
-}
 
 /// A label + switch row, port of the Kotlin editor's `PreferenceSwitchRow`.
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label, style: theme.textTheme.bodyMedium),
-          ),
-          Switch(value: value, onChanged: onChanged),
-        ],
-      ),
-    );
-  }
-}
 
 // Enum display labels, mirroring the Kotlin `displayLabel()` extensions.
 
-String _sleepSensitivityLabel(CaffeineSleepSensitivity value) {
-  switch (value) {
-    case CaffeineSleepSensitivity.low:
-      return 'Low';
-    case CaffeineSleepSensitivity.normal:
-      return 'Normal';
-    case CaffeineSleepSensitivity.high:
-      return 'High';
-    case CaffeineSleepSensitivity.insomnia:
-      return 'Insomnia';
-  }
-}
 
-String _alcoholUseLabel(CaffeineAlcoholUse value) {
-  switch (value) {
-    case CaffeineAlcoholUse.none:
-      return 'None';
-    case CaffeineAlcoholUse.occasional:
-      return 'Occasional';
-    case CaffeineAlcoholUse.regular:
-      return 'Regular';
-  }
-}
 
-String _habituationLabel(CaffeineHabituation value) {
-  switch (value) {
-    case CaffeineHabituation.low:
-      return 'Low';
-    case CaffeineHabituation.moderate:
-      return 'Moderate';
-    case CaffeineHabituation.high:
-      return 'High';
-  }
-}
 
-String _genotypeLabel(CaffeineGenotype value) {
-  switch (value) {
-    case CaffeineGenotype.unknown:
-      return 'Unknown';
-    case CaffeineGenotype.fast:
-      return 'Fast';
-    case CaffeineGenotype.normal:
-      return 'Normal';
-    case CaffeineGenotype.slow:
-      return 'Slow';
-  }
-}
 
-String _hormonalStatusLabel(CaffeineHormonalStatus value) {
-  switch (value) {
-    case CaffeineHormonalStatus.none:
-      return 'None';
-    case CaffeineHormonalStatus.oralContraceptive:
-      return 'Oral contraceptive';
-    case CaffeineHormonalStatus.pregnant:
-      return 'Pregnant';
-  }
-}

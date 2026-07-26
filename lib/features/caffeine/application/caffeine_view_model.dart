@@ -100,7 +100,14 @@ class CaffeineViewModel extends Notifier<CaffeineState> {
     final loadCaffeine = ref.read(loadCaffeineUseCaseProvider);
     final prefs = ref.read(preferencesRepositoryProvider);
     final preferences = prefs.caffeinePreferences();
-    final bodyProfile = prefs.bodyProfile();
+    // Resolved, not declared: the measured weight from Health Connect beats the
+    // one typed into settings, so the half-life multiplier and the BMI on the
+    // body screen finally describe the same person.
+    final bodyProfile = (await ref
+            .read(bodyRepositoryProvider)
+            .resolveBodyProfile(prefs.bodyProfile()))
+        .getOrNull() ??
+        prefs.bodyProfile();
 
     final today = LocalDate.now();
     final homePeriod = DatePeriod(today, today);

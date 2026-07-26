@@ -27,8 +27,7 @@ class BodyProfileCard extends ConsumerStatefulWidget {
 class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
   final _birthYear = TextEditingController();
   final _weight = TextEditingController();
-  final _restingHr = TextEditingController();
-  final _maxHr = TextEditingController();
+  final _height = TextEditingController();
 
   BodyProfile? _seededProfile;
   UnitSystem? _seededUnit;
@@ -37,8 +36,7 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
   void dispose() {
     _birthYear.dispose();
     _weight.dispose();
-    _restingHr.dispose();
-    _maxHr.dispose();
+    _height.dispose();
     super.dispose();
   }
 
@@ -46,8 +44,9 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
     _birthYear.text = profile.birthYear?.toString() ?? '';
     final display = displayWeight(profile.weightKg, unit);
     _weight.text = display != null ? display.toStringAsFixed(1) : '';
-    _restingHr.text = profile.restingHeartRateBpm?.toString() ?? '';
-    _maxHr.text = profile.maxHeartRateBpm?.toString() ?? '';
+    _height.text = profile.heightCm != null
+        ? profile.heightCm!.toStringAsFixed(0)
+        : '';
     _seededProfile = profile;
     _seededUnit = unit;
   }
@@ -61,8 +60,7 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
     ref.read(bodyProfileCardProvider.notifier).save(
           birthYear: _birthYear.text,
           weight: _weight.text,
-          restingHeartRate: _restingHr.text,
-          maxHeartRate: _maxHr.text,
+          height: _height.text,
           unit: unit,
         );
   }
@@ -71,7 +69,8 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final profile = ref.watch(bodyProfileCardProvider).profile;
+    final cardState = ref.watch(bodyProfileCardProvider);
+    final profile = cardState.profile;
     final unit = ref.watch(unitSystemProvider);
     if (_seededProfile != profile || _seededUnit != unit) {
       _seed(profile, unit);
@@ -119,18 +118,14 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
                 maxLength: 5,
                 allowDecimal: true,
               ),
+              _SourceNote(source: cardState.weightSource),
               _NumberField(
-                controller: _restingHr,
-                label: l10n.bodyEnergyCalibrationRestingHr,
-                suffix: 'bpm',
-                maxLength: 4,
+                controller: _height,
+                label: l10n.settingsBodyProfileHeight,
+                suffix: 'cm',
+                maxLength: 3,
               ),
-              _NumberField(
-                controller: _maxHr,
-                label: l10n.bodyEnergyCalibrationMaxHr,
-                suffix: 'bpm',
-                maxLength: 4,
-              ),
+              _SourceNote(source: cardState.heightSource),
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Align(
@@ -184,6 +179,34 @@ class _NumberField extends StatelessWidget {
           labelText: label,
           suffixText: suffix,
         ),
+      ),
+    );
+  }
+}
+
+/// Where the value above came from.
+///
+/// Without this the merge is invisible: the user cannot tell why editing weight
+/// sometimes creates an entry on the Body screen, or why a number they never
+/// typed is showing.
+class _SourceNote extends StatelessWidget {
+  const _SourceNote({required this.source});
+
+  final BodyMetricSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        switch (source) {
+          BodyMetricSource.measured => l10n.settingsBodyProfileFromRecord,
+          BodyMetricSource.declared => l10n.settingsBodyProfileEnteredHere,
+        },
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
       ),
     );
   }

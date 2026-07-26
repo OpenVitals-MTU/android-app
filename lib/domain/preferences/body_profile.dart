@@ -11,6 +11,7 @@ abstract class BodyProfile with _$BodyProfile {
   const factory BodyProfile({
     int? birthYear,
     double? weightKg,
+    double? heightCm,
     int? restingHeartRateBpm,
     int? maxHeartRateBpm,
   }) = _BodyProfile;
@@ -20,6 +21,7 @@ abstract class BodyProfile with _$BodyProfile {
     final currentYear = resolvedToday.year;
     final year = birthYear;
     final weight = weightKg;
+    final height = heightCm;
     final resting = restingHeartRateBpm;
     final max = maxHeartRateBpm;
     return BodyProfile(
@@ -29,6 +31,9 @@ abstract class BodyProfile with _$BodyProfile {
               : null,
       weightKg: (weight != null && weight.isFinite)
           ? weight.clamp(minWeightKg, maxWeightKg).toDouble()
+          : null,
+      heightCm: (height != null && height.isFinite)
+          ? height.clamp(minHeightCm, maxHeightCm).toDouble()
           : null,
       restingHeartRateBpm: resting
           ?.clamp(minRestingHeartRateBpm, maxRestingHeartRateBpm)
@@ -51,6 +56,7 @@ abstract class BodyProfile with _$BodyProfile {
     return [
       normalizedProfile.birthYear ?? 'auto',
       normalizedProfile.weightKg ?? 'auto',
+      normalizedProfile.heightCm ?? 'auto',
       normalizedProfile.restingHeartRateBpm ?? 'auto',
       normalizedProfile.maxHeartRateBpm ?? 'auto',
     ].join('|');
@@ -59,6 +65,8 @@ abstract class BodyProfile with _$BodyProfile {
   static const int minBirthYear = 1900;
   static const int minAgeYears = 10;
   static const int maxAgeYears = 110;
+  static const double minHeightCm = 50.0;
+  static const double maxHeightCm = 260.0;
   static const double minWeightKg = 30.0;
   static const double maxWeightKg = 250.0;
   static const int minRestingHeartRateBpm = 30;

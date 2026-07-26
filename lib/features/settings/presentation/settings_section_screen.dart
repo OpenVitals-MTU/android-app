@@ -16,6 +16,7 @@ import 'cards/activity_split_distance_card.dart';
 import 'cards/apple_health_import_card.dart';
 import 'cards/body_energy_calibration_card.dart';
 import 'cards/body_profile_card.dart';
+import 'cards/metabolism_card.dart';
 import 'cards/caffeine_preferences_card.dart';
 import 'cards/debug_diagnostics_card.dart';
 import 'cards/body_energy_diagnostics_card.dart';
@@ -167,6 +168,18 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
         ),
         const CaffeinePreferencesCard(),
       ];
+    case SettingsSection.bodyProfile:
+      // Everything that is a fact about the person, in one place. The Body card
+      // holds size and age; the calibration card holds the heart-rate zones
+      // (including the resting/max pair the automatic zones derive from); the
+      // metabolism card holds the nine factors that used to sit inside the
+      // caffeine settings, where the app's only pregnancy input was three taps
+      // deep in a coffee screen.
+      return const [
+        BodyProfileCard(),
+        BodyEnergyCalibrationCard(),
+        MetabolismCard(),
+      ];
     case SettingsSection.recovery:
       return [
         _StepperCard(
@@ -210,8 +223,6 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
         // Kotlin RECOVERY order: sleep range, body profile, body energy
         // calibration (SettingsScreenContent.kt:154-181). The high/low HR
         // steppers above are a deliberate Flutter-side extra.
-        const BodyProfileCard(),
-        const BodyEnergyCalibrationCard(),
       ];
     case SettingsSection.healthConnect:
       return [
