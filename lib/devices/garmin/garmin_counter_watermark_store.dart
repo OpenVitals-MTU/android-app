@@ -41,7 +41,12 @@ class GarminCounterWatermarkStore {
       // about what Health Connect already holds; half of one would either lose a
       // day's steps or write them twice, and re-importing from the day's start
       // is the safer of the two mistakes.
-      if (parts.length != 5) continue;
+      //
+      // Five fields is the pre-[FitCounterWatermark.legacyRetired] form, kept
+      // readable rather than dropped. It reads as NOT retired, which is exactly
+      // right: a day written under it still has its whole-day record, and that
+      // is the day whose next sync has to supersede it.
+      if (parts.length != 5 && parts.length != 6) continue;
       final timeMs = int.tryParse(parts[1]);
       final steps = int.tryParse(parts[2]);
       final distance = int.tryParse(parts[3]);
@@ -57,6 +62,7 @@ class GarminCounterWatermarkStore {
         steps: steps,
         distance: distance,
         calories: calories,
+        legacyRetired: parts.length == 6 && parts[5] == '1',
       );
     }
     return marks;
@@ -76,7 +82,8 @@ class GarminCounterWatermarkStore {
       for (final day in kept)
         '$day|${merged[day]!.time.millisecondsSinceEpoch}'
             '|${merged[day]!.steps}|${merged[day]!.distance}'
-            '|${merged[day]!.calories}',
+            '|${merged[day]!.calories}'
+            '|${merged[day]!.legacyRetired ? 1 : 0}',
     ]);
   }
 

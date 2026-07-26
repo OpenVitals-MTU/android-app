@@ -544,10 +544,19 @@ class BodyEnergyDiagnosticsReport {
       out.writeln('  none');
     }
     for (final source in sources) {
+      // `coveredMinutes` SUMS each record's in-day span, and the native reader
+      // clips every record to the day. So a figure above the day's own length
+      // is arithmetic proof that this app's records overlap each other — the
+      // day is being counted more than once, and no aggregate above will say
+      // so. Naming it here is the difference between a number that looks large
+      // and a number that is wrong.
+      final overlap = source.coveredMinutes - _minutesInDay;
       out.writeln('  ${source.date} ${source.metric.wireName} '
           '${source.package}: ${_n(source.total)} ${source.metric.unit}, '
           '${source.recordCount} rec (${source.manualEntryCount} manual), '
-          '${_n(source.coveredMinutes)} min covered');
+          '${_n(source.coveredMinutes)} min covered '
+          '${_hm(source.firstStart)}->${_hm(source.lastEnd)}'
+          '${overlap > 1.0 ? '  OVERLAP +${_n(overlap)} min' : ''}');
     }
     if (hasMultipleCalorieSources) {
       out.writeln('  => MULTIPLE apps wrote active calories; '
@@ -556,6 +565,11 @@ class BodyEnergyDiagnosticsReport {
     }
     return out.toString();
   }
+
+  /// A nominal day. DST makes a real one 23 or 25 hours, which only shifts the
+  /// threshold this compares against by an hour — far below the margin that
+  /// makes an overlap worth reporting.
+  static const double _minutesInDay = 1440.0;
 
   static String _g(double value) => value.toStringAsFixed(2);
   static String _n(double value) => value.toStringAsFixed(1);

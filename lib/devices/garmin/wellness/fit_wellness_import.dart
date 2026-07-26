@@ -261,12 +261,24 @@ class FitCounterWatermark {
     this.steps = 0,
     this.distance = 0,
     this.calories = 0,
+    this.legacyRetired = false,
   });
 
   final DateTime time;
   final int steps;
   final int distance;
   final int calories;
+
+  /// Whether this day's pre-intraday whole-day record has been superseded.
+  ///
+  /// Before the counters became intraday, a day was written as ONE record keyed
+  /// `garmin_fit_steps_<yyyy-mm-dd>` carrying the whole day's total. Those
+  /// records are still in Health Connect and no grid-derived id can collide with
+  /// them, so writing buckets beside one DOUBLE COUNTS the day. Exactly one
+  /// bucket per day is therefore written under the legacy id, which overwrites
+  /// it; this records that it has happened so the next sync does not do it again
+  /// to a different bucket.
+  final bool legacyRetired;
 }
 
 /// The counter records, and the watermarks the caller must persist.
@@ -386,26 +398,43 @@ FitCounterImport fitMonitoringCounterRecords(
       );
     }
 
-    for (final entry in buckets.entries) {
-      // The still-filling bucket waits for the sync that completes it.
-      if (entry.key == openBucket) continue;
-      // The day's FIRST bucket carries the legacy day-keyed id on purpose.
-      // Before the counters became intraday, one record per day was written as
-      // `garmin_fit_steps_<yyyy-mm-dd>`; those records are still in Health
-      // Connect, carrying a whole day's total each, and no new id could ever
-      // collide with them. Reusing the id here makes the day's first bucket
-      // overwrite the stale whole-day record instead of stacking beside it.
-      final key = entry.key == day.start.millisecondsSinceEpoch
-          ? day.key
-          : '${entry.key}';
-      records.addAll(entry.value.toRecords(key));
+    // One bucket per day is written under the legacy day-keyed id, so that it
+    // OVERWRITES the pre-intraday whole-day record instead of stacking beside
+    // it. See [FitCounterWatermark.legacyRetired].
+    //
+    // Which bucket cannot be the one at midnight, which is what this used to
+    // key on. That bucket is occupied on a day's FIRST import — the first
+    // interval runs from midnight to the earliest snapshot — but not otherwise,
+    // and not when everything the first sync saw fell inside it and left it
+    // still filling. Either way the day never gets a second chance: every later
+    // sync starts at the watermark, so no midnight bucket exists to carry the
+    // id, and the whole-day record survives beside every intraday record after
+    // it. A latch fixes both, and turns a condition that has to be true at one
+    // particular moment into one that only has to become true eventually.
+    //
+    // Nor can it be "the first bucket of this import", recomputed every sync:
+    // each sync starts at the watermark, so the day's first bucket moves later
+    // every time and the id would keep migrating, each move overwriting the
+    // previous holder's minutes with a different bucket's. It is the first
+    // bucket EMITTED for the day, once, latched here.
+    final emitted = (buckets.keys.toList()..sort())
+        .where((bucket) => bucket != openBucket)
+        .toList();
+    var legacyRetired = mark?.legacyRetired ?? false;
+    final retiringWith = legacyRetired || emitted.isEmpty ? null : emitted.first;
+
+    for (final bucket in emitted) {
+      final key = bucket == retiringWith ? day.key : '$bucket';
+      records.addAll(buckets[bucket]!.toRecords(key));
     }
+    if (retiringWith != null) legacyRetired = true;
 
     watermarks[day.key] = FitCounterWatermark(
       time: DateTime.fromMillisecondsSinceEpoch(openBucket),
       steps: openSteps,
       distance: openDistance,
       calories: openCalories,
+      legacyRetired: legacyRetired,
     );
   }
 

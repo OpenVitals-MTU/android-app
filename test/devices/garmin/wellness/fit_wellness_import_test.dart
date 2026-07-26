@@ -839,6 +839,61 @@ void _incrementalSyncRegression() {
       );
     });
 
+    test('the legacy day key is handed out once, not re-handed each sync', () {
+      // It is a one-shot: the record it supersedes is superseded the first time.
+      // Recomputing "the first bucket" every sync would move the id to a later
+      // bucket each run, and each move would overwrite the previous holder's
+      // minutes with a different bucket's -- silently losing them.
+      final first = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 6), 300),
+          (DateTime(2024, 1, 18, 10), 900),
+        ],
+      );
+      expect(_steps(first).first.clientRecordId, 'garmin_fit_steps_2024-01-18');
+      expect(first.watermarks['2024-01-18']!.legacyRetired, isTrue);
+
+      final second = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 14), 1500),
+          (DateTime(2024, 1, 18, 18), 2100),
+        ],
+        previous: first.watermarks,
+      );
+
+      expect(
+        _steps(second).map((r) => r.clientRecordId),
+        isNot(contains('garmin_fit_steps_2024-01-18')),
+        reason: 'the second sync must not steal the id from the first bucket',
+      );
+      expect(second.watermarks['2024-01-18']!.legacyRetired, isTrue);
+    });
+
+    test('a day whose first sync emitted nothing still retires the legacy id',
+        () {
+      // Everything the sync saw fell inside the first grid bucket, so that
+      // bucket was still filling and nothing was emitted. Keying on "the bucket
+      // at midnight" gave such a day no second chance: the next sync starts at
+      // the watermark and has no midnight bucket either, so the whole-day
+      // record survived beside every intraday record written afterwards.
+      final first = _counterImport(
+        stepsCumulative: [(DateTime(2024, 1, 18, 0, 5), 300)],
+      );
+      expect(_steps(first), isEmpty);
+      expect(first.watermarks['2024-01-18']!.legacyRetired, isFalse);
+
+      final second = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 6), 300),
+          (DateTime(2024, 1, 18, 10), 900),
+        ],
+        previous: first.watermarks,
+      );
+
+      expect(_steps(second).first.clientRecordId, 'garmin_fit_steps_2024-01-18');
+      expect(second.watermarks['2024-01-18']!.legacyRetired, isTrue);
+    });
+
     test('calories ride the same grid as steps', () {
       // The calorie counter path had no coverage at all, and it shares the id
       // derivation, so a bug in one reached the other unseen.

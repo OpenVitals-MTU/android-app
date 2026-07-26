@@ -90,6 +90,40 @@ void main() {
     expect(marks['2026-07-23']!.steps, 100);
   });
 
+  test('a watermark written before the legacy flag reads as not retired',
+      () async {
+    // Five fields is the pre-legacyRetired form, and dropping those lines would
+    // re-import each day from midnight. Reading them as NOT retired is both
+    // lossless and correct: a day written under the old form still has its
+    // whole-day record, and is exactly the day whose next sync must supersede
+    // it.
+    SharedPreferences.setMockInitialValues(const {
+      'garmin_counter_watermarks': <String>[
+        '2026-07-25|1784000000000|100|200|300',
+        '2026-07-24|1784000000000|100|200|300|1',
+      ],
+    });
+    prefs = await SharedPreferences.getInstance();
+
+    final marks = GarminCounterWatermarkStore(prefs).load();
+    expect(marks['2026-07-25']!.legacyRetired, isFalse);
+    expect(marks['2026-07-25']!.steps, 100);
+    expect(marks['2026-07-24']!.legacyRetired, isTrue);
+  });
+
+  test('the legacy flag survives a save and reload', () async {
+    await setUpStore();
+    await store.save({
+      '2026-07-25': FitCounterWatermark(
+        time: DateTime(2026, 7, 25, 20),
+        steps: 24843,
+        legacyRetired: true,
+      ),
+    });
+
+    expect(store.load()['2026-07-25']!.legacyRetired, isTrue);
+  });
+
   test('clear forgets everything', () async {
     // For a Health Connect wipe: the records the watermarks describe are gone,
     // so trusting them would leave every day short forever.
