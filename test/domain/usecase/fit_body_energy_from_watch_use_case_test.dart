@@ -240,12 +240,24 @@ void main() {
   });
 
   group('a cold day must not retire the days behind it', () {
-    // 26 hours guarantees a different LOCAL day whatever the zone and whatever
-    // DST is doing, which a bare 24 does not.
-    final coldAt = now.subtract(const Duration(hours: 26));
-    final warmAt = now.subtract(const Duration(hours: 2));
-    final coldDay = LocalDate.fromDateTime(coldAt.toLocal());
-    final warmDay = LocalDate.fromDateTime(warmAt.toLocal());
+    // Built from LOCAL DATES, not by subtracting hours off `now`.
+    //
+    // The grace window is measured in local days, so an hour offset lands on
+    // whichever side of it the runner's timezone puts it. 26 hours before
+    // 01:30 UTC is yesterday at UTC+3 and the day BEFORE yesterday at UTC —
+    // inside the grace in one and past it in the other. That is exactly how
+    // this passed on a Tallinn laptop and failed on a UTC CI runner.
+    //
+    // `atTimeInstant` builds the instant from the local calendar date, so the
+    // day a sample belongs to is fixed by construction rather than inferred
+    // from arithmetic that the zone gets a vote in.
+    final localToday = LocalDate.fromDateTime(now.toLocal());
+    final coldDay = localToday.minusDays(1);
+    final warmDay = localToday;
+    final coldAt = coldDay.atTimeInstant(12);
+    // `now` itself: any earlier offset can fall into yesterday when the local
+    // clock is just past midnight, which is the same trap one level down.
+    final warmAt = now;
 
     test('an unexamined older day blocks the run instead of being burned',
         () async {
