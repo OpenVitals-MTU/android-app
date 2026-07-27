@@ -99,6 +99,43 @@ void main() {
     });
   });
 
+  group('the Body profile screen shows each fact once', () {
+    testWidgets('the birth year is not asked for twice', (tester) async {
+      // The calibration card carries a birth year for the Body Energy screen,
+      // where it stands alone as the setup gate. On this screen the Body card
+      // is directly above it with the same field, and shipping both put two
+      // boxes for one number on one screen -- disagreeing until you noticed
+      // they were the same number.
+      final prefs = await _prefs(
+        (repo) => repo.setBodyProfile(const BodyProfile(birthYear: 1993)),
+      );
+
+      await tester.pumpWidget(_host(
+        prefs,
+        const Column(children: [
+          BodyProfileCard(),
+          BodyEnergyCalibrationCard(showBirthYear: false),
+        ]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextField, 'Birth year'), findsOneWidget);
+      expect(find.text('1993'), findsOneWidget);
+    });
+
+    testWidgets('but standalone it still carries one', (tester) async {
+      // The Body Energy screen has no other route to the field, and setup will
+      // not complete without it.
+      final prefs = await _prefs((_) {});
+
+      await tester
+          .pumpWidget(_host(prefs, const BodyEnergyCalibrationCard()));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextField, 'Birth year'), findsOneWidget);
+    });
+  });
+
   group('BodyEnergyCalibrationCard', () {
     testWidgets('toggling manual zones reveals the five zone fields',
         (tester) async {

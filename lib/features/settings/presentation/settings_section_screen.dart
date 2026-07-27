@@ -170,14 +170,17 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
       ];
     case SettingsSection.bodyProfile:
       // Everything that is a fact about the person, in one place. The Body card
-      // holds size and age; the calibration card holds the heart-rate zones
-      // (including the resting/max pair the automatic zones derive from); the
-      // metabolism card holds the nine factors that used to sit inside the
-      // caffeine settings, where the app's only pregnancy input was three taps
-      // deep in a coffee screen.
+      // holds size and age; the calibration card holds the heart-rate zones and
+      // the learned tuning; the metabolism card holds the nine factors that used
+      // to sit inside the caffeine settings, where the app's only pregnancy
+      // input was three taps deep in a coffee screen.
+      //
+      // The calibration card hides its birth year here. It carries one for the
+      // Body Energy screen, where it stands alone as the setup gate, but the
+      // Body card is directly above it on this screen and already has the field.
       return const [
         BodyProfileCard(),
-        BodyEnergyCalibrationCard(),
+        BodyEnergyCalibrationCard(showBirthYear: false),
         MetabolismCard(),
       ];
     case SettingsSection.recovery:

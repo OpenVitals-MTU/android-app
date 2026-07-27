@@ -24,7 +24,19 @@ export '../../application/body_energy_calibration_view_model.dart'
 /// persisted until Save). The onboarding-only "skip" action is intentionally
 /// omitted in the settings context.
 class BodyEnergyCalibrationCard extends ConsumerStatefulWidget {
-  const BodyEnergyCalibrationCard({super.key});
+  const BodyEnergyCalibrationCard({super.key, this.showBirthYear = true});
+
+  /// Whether to draw the birth year field.
+  ///
+  /// True where this card stands alone — the Body Energy screen, which is the
+  /// setup gate and has no other way to reach the one profile value automatic
+  /// zones need. False in the Body profile section, where the Body card sits
+  /// directly above with the same field: two boxes for one number, disagreeing
+  /// until you notice they are the same number.
+  ///
+  /// The requirement itself does NOT depend on this. Saving still refuses
+  /// without a birth year, and the message points at the field above.
+  final bool showBirthYear;
 
   @override
   ConsumerState<BodyEnergyCalibrationCard> createState() =>
@@ -167,10 +179,11 @@ class _BodyEnergyCalibrationCardState
                 ],
               ),
               const SizedBox(height: 12),
-              _ZoneField(
-                controller: _birthYear,
-                label: l10n.bodyEnergyCalibrationBirthYear,
-              ),
+              if (widget.showBirthYear)
+                _ZoneField(
+                  controller: _birthYear,
+                  label: l10n.bodyEnergyCalibrationBirthYear,
+                ),
               if (_birthYearMissing)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
