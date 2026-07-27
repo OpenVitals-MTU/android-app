@@ -41,6 +41,23 @@ flutter gen-l10n && git diff --exit-code lib/l10n   # generated Dart matches the
 git diff --check
 ```
 
+### Dates in test fixtures
+
+**Derive a test's days from `LocalDate`, never from hour arithmetic on an
+instant.** A day window is a local calendar thing; `now.subtract(Duration(hours:
+26))` is an absolute one, and they differ by the runner's UTC offset — enough to
+put a fixture on the other side of a day boundary, so the same assertion passes
+on a developer machine and fails on CI.
+
+Use `localDayBefore()` / `instantDaysBefore()` from
+`test/support/today_fixtures.dart` for "N days ago", and `earlierToday()` for
+"still today". `test/contract/local_day_fixture_test.dart` fails the build on the
+absolute form, and takes an opt-out comment for the cases that genuinely want it.
+
+Worth knowing that CI runs in **UTC**: a suite that is green locally can still be
+zone-dependent. `TZ=UTC flutter test` reproduces what CI sees, and
+`TZ=Pacific/Kiritimati` (UTC+14) is the far end of the range.
+
 After changing a freezed model, a drift table, or a Riverpod generator annotation:
 
 ```bash

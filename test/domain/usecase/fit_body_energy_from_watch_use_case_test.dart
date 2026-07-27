@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
+
+import '../../support/today_fixtures.dart';
 import 'package:openvitals/data/local/open_vitals_database.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/data/repository/contract/body_energy_repository.dart';
@@ -248,13 +250,14 @@ void main() {
     // inside the grace in one and past it in the other. That is exactly how
     // this passed on a Tallinn laptop and failed on a UTC CI runner.
     //
-    // `atTimeInstant` builds the instant from the local calendar date, so the
-    // day a sample belongs to is fixed by construction rather than inferred
-    // from arithmetic that the zone gets a vote in.
-    final localToday = LocalDate.fromDateTime(now.toLocal());
-    final coldDay = localToday.minusDays(1);
-    final warmDay = localToday;
-    final coldAt = coldDay.atTimeInstant(12);
+    // The helpers build the instant from the local calendar date, so the day a
+    // sample belongs to is fixed by construction rather than inferred from
+    // arithmetic that the zone gets a vote in. test/contract/
+    // local_day_fixture_test.dart fails the build if this is written the other
+    // way round again.
+    final coldDay = localDayBefore(now, 1);
+    final warmDay = localDayBefore(now, 0);
+    final coldAt = instantDaysBefore(now, 1);
     // `now` itself: any earlier offset can fall into yesterday when the local
     // clock is just past midnight, which is the same trap one level down.
     final warmAt = now;
