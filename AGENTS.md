@@ -25,7 +25,8 @@ Caveat while the port completes: the docs under `docs/engineering/` still carry 
 3. Keep the frame reusable, keep the charts specific: reuse `lib/ui/components/metric_detail_scaffold.dart` and `lib/ui/components/period_navigator.dart`; keep metric-specific cards and charts inside the feature directory.
 4. Keep repository APIs query-oriented: pass a `DatePeriod` (`lib/core/period/`) or a query object from `lib/domain/query/`, not another ad hoc `loadX(start, end)` overload.
 5. Register the feature from the dashboard: dashboard card, route in `lib/navigation/app_routes.dart` + `lib/navigation/app_router.dart`, screen title.
-6. Update the docs if the pattern evolves.
+6. Declare what the screen reads: pass `refreshDomains` to `MetricDetailScaffold` (or mix in `RefreshOnSignal` if the screen does not use it). See *Refreshing* below.
+7. Update the docs if the pattern evolves.
 
 ## Layout Rules
 
@@ -72,6 +73,22 @@ When adding capability, extend the feature-oriented repository API; do not widen
 ### Health Connect screens
 
 Health Connect-backed destinations go through the shared gate, `lib/ui/components/health_connect_gate.dart`, plus `lib/ui/components/permission_callout.dart`. Do not hand-roll per-screen availability checks, sync banners, or permission prompts.
+
+### Refreshing
+
+The app re-reads its data at exactly **three** points. There is no fourth, and a feature must not invent one.
+
+1. **The app is opened.** `lib/bootstrap/data_refresh_bootstrap.dart` sits above the router — and therefore above every `HealthConnectGate` — re-resolves availability and the granted permission set, and emits an `appOpen` signal. Guarded to once per 30s, bypassed on a day rollover. It also drains the daily-aggregate caches (`HistorySyncScheduler`) once the dashboard's foreground load has settled.
+2. **Pull-to-refresh.** The screen's own `onRefresh`. It stays a direct call: a manual refresh changes no data, so no *other* screen became stale by it. Always `RefreshMode.force`. On a cache-backed screen (vitals overview, calories, body energy) it drains the Changes API first and then reads — see `RefreshMode`'s doc comment for which caches `force` does and does not bypass.
+3. **A metric is inserted, updated or deleted.** The repository announces it through `DataChangeSink` (`lib/domain/refresh/`), and `RefreshCoordinator` (`lib/state/refresh_coordinator.dart`) turns that into a debounced signal.
+
+Rules that follow:
+
+- **A write signals from the repository, never from the call site.** A view-model does not know what was actually stored — writing a drink also stores a nutrition record with the caffeine on it. Name only what you wrote; `kDerivedDomains` fans it out. Every previous attempt to remember at the call site missed a path.
+- **Screens listen, view-models do not.** Every feature provider here is non-auto-dispose and three screens build one per metric, so 25-40 view-models can be alive at once. Subscribing in a view-model's `build()` would fire that many concurrent Health Connect read waves, which Health Connect serializes.
+- **Only the visible screen re-reads.** `RefreshOnSignal` refreshes when the route is on top and otherwise marks itself dirty for `didPopNext`. A plain back-navigation with nothing changed is not a reload.
+- **Do not `ref.invalidate` a period view-model to refresh it.** Its `build()` fetches nothing (the load comes from `MetricDetailScaffold`'s post-frame callback), so invalidating resets it to loading with no load behind it.
+- A background isolate has no container and legitimately signals nothing — the app-open refresh is what covers it.
 
 ## Invariants That Have Already Been Broken
 
@@ -158,6 +175,7 @@ Every new or touched test:
 - Health Connect availability/permission UI outside `health_connect_gate.dart`
 - `Platform.isAndroid` branches inside features — platform differences belong behind `HealthDataSource`
 - hardcoded English in a screen — every user-visible string goes through `AppLocalizations`
+- a bespoke resume/route-pop listener, or one view-model reaching into another's notifier after a write — both are what the refresh signal replaces
 
 ## Before Starting
 

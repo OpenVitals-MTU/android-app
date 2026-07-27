@@ -31,6 +31,7 @@ mixin RefreshOnSignal<T extends ConsumerStatefulWidget> on ConsumerState<T>
     implements RouteAware {
   ProviderSubscription<RefreshSignal>? _subscription;
   RefreshSignal? _pending;
+  ModalRoute<void>? _route;
 
   /// The data this screen reads. A signal touching any of these refreshes it.
   /// An empty set opts out entirely.
@@ -54,13 +55,18 @@ mixin RefreshOnSignal<T extends ConsumerStatefulWidget> on ConsumerState<T>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final route = ModalRoute.of<void>(context);
+    // Resolved here and remembered: a signal arrives from a provider listener,
+    // not from a build, and looking an inherited widget up from there would
+    // register a dependency at a moment the framework does not expect one.
+    _route = ModalRoute.of<void>(context);
+    final route = _route;
     if (route != null) routeObserver.subscribe(this, route);
   }
 
   @override
   void dispose() {
     routeObserver.unsubscribe(this);
+    _route = null;
     _subscription?.close();
     _subscription = null;
     super.dispose();
@@ -82,7 +88,7 @@ mixin RefreshOnSignal<T extends ConsumerStatefulWidget> on ConsumerState<T>
   /// True when this route is the one the user is looking at. `isCurrent` is
   /// false for a route with something pushed over it; the null fallback covers
   /// a screen mounted outside a [ModalRoute] (widget tests, embedded use).
-  bool get _isVisible => ModalRoute.of<void>(context)?.isCurrent ?? true;
+  bool get _isVisible => _route?.isCurrent ?? true;
 
   /// A pushed screen (a metric detail, an entry form, settings…) was popped and
   /// this screen is on top again. Refreshes only if something actually changed
