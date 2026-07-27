@@ -54,9 +54,11 @@ class _BodyEnergyDetailsScreenState
         DataDomain.vitals,
       };
 
+  /// Same path as pull-to-refresh: warm the chain, then re-read. A body-energy
+  /// day is scored against the days before it, so re-reading without walking the
+  /// chain can show a start score the neighbouring days no longer support.
   @override
-  void onRefreshSignal(RefreshSignal signal) =>
-      unawaited(ref.read(bodyEnergyProvider.notifier).refresh());
+  void onRefreshSignal(RefreshSignal signal) => unawaited(_warmChain());
 
   bool _chainWarmKicked = false;
 
@@ -74,7 +76,7 @@ class _BodyEnergyDetailsScreenState
     if (!mounted) return;
     // The warm pass may have filled the gap this day was seeded across, so the
     // shown start score can now be wrong. Reload once it settles.
-    ref.read(bodyEnergyProvider.notifier).load(ref.read(bodyEnergyProvider).selectedDate);
+    await ref.read(bodyEnergyProvider.notifier).refresh();
   }
 
   @override
@@ -101,7 +103,7 @@ class _BodyEnergyDetailsScreenState
         showInlineSyncBanner: false,
         child: _BodyEnergyBody(
           state: state,
-          onRefresh: notifier.refresh,
+          onRefresh: _warmChain,
           onPreviousDay: notifier.previousDay,
           onNextDay: notifier.nextDay,
           onSelectDate: notifier.selectDate,

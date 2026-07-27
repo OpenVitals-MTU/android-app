@@ -31,10 +31,19 @@ class CaloriesScreen extends ConsumerStatefulWidget {
 class _CaloriesScreenState extends ConsumerState<CaloriesScreen> {
   bool _syncKicked = false;
 
+  /// Drain the Changes API into the daily cache, then re-read from it.
+  ///
+  /// This is what a refresh MEANS on a cache-backed screen. RefreshMode.force
+  /// deliberately does not bypass the daily-aggregate mirror (see [RefreshMode]),
+  /// so a pull that only forced the load would re-serve the same SQLite rows and
+  /// never see a burn another app recorded. Draining first picks those up for the
+  /// cost of one incremental poll, instead of Health Connect's 13-24s
+  /// TotalCaloriesBurned year aggregate. The service is single-flight, so this is
+  /// free when a drain is already running.
   Future<void> _syncHistory() async {
     await ref.read(caloriesHistorySyncServiceProvider).syncAll();
     if (!mounted) return;
-    ref.read(caloriesProvider.notifier).refresh();
+    await ref.read(caloriesProvider.notifier).refresh();
   }
 
   @override
@@ -67,7 +76,7 @@ class _CaloriesScreenState extends ConsumerState<CaloriesScreen> {
         showInlineSyncBanner: false,
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.calories,
-          onRefresh: notifier.refresh,
+          onRefresh: _syncHistory,
           refreshDomains: const {
             DataDomain.calories,
             DataDomain.activities,

@@ -40,10 +40,18 @@ class _HeartVitalsOverviewScreenState
     extends ConsumerState<HeartVitalsOverviewScreen> {
   bool _syncKicked = false;
 
+  /// Drain the Changes API into the daily cache, then re-read from it.
+  ///
+  /// This is what a refresh MEANS on a cache-backed screen: RefreshMode.force
+  /// deliberately does not bypass the daily-aggregate mirror (see [RefreshMode]),
+  /// and bypassing it would mean seven 730-day reads on a Year window. Draining
+  /// first picks up whatever another app wrote for the cost of one incremental
+  /// poll. The service is single-flight, so this is free when a drain is already
+  /// running.
   Future<void> _syncHistory() async {
     await ref.read(vitalsHistorySyncServiceProvider).syncAll();
     if (!mounted) return;
-    ref.read(heartVitalsOverviewProvider.notifier).refresh();
+    await ref.read(heartVitalsOverviewProvider.notifier).refresh();
   }
 
   @override
@@ -98,7 +106,7 @@ class _HeartVitalsOverviewScreenState
           // The Kotlin `HeartViewModel` keys the remembered range on
           // `PeriodRangePreferenceKey.HEART`.
           rangePreferenceKey: PeriodRangePreferenceKey.heart,
-          onRefresh: notifier.refresh,
+          onRefresh: _syncHistory,
           refreshDomains: const {DataDomain.heart, DataDomain.vitals},
           isLoading: state.isLoading,
           screenError: state.error,
