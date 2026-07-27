@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mapsforge_flutter_core/model.dart' as mapsforge;
 import 'package:mapsforge_flutter_core/task_queue.dart';
 import 'package:mapsforge_flutter_renderer/offline_renderer.dart';
+import 'package:mapsforge_flutter_rendertheme/model.dart';
 
 /// A tile's coordinate, as the cache keys it.
 ///
@@ -211,6 +212,39 @@ class MapsforgeTileRenderer {
     final future = _renderAndCache(key);
     _inFlight[key] = future;
     return _cloneWhenReady(future);
+  }
+
+  /// The labels for a rectangle of tiles, collision-resolved as one set.
+  ///
+  /// Separate from [tile] because labels are no longer drawn INTO tiles: a label
+  /// wider than the tile it is anchored in was clipped by that tile's canvas,
+  /// and mapsforge's cross-tile compensation only works when the neighbour is
+  /// rendered second — a coin flip once tiles render concurrently. Resolved over
+  /// the whole visible rectangle at once, they cannot be clipped and cannot
+  /// disagree between neighbours.
+  ///
+  /// Returns null when the packs cover nothing here, or on any failure — a
+  /// missing label must never take the map down.
+  Future<RenderInfoCollection?> labels(
+    mapsforge.Tile upperLeft,
+    mapsforge.Tile lowerRight,
+  ) async {
+    if (_disposed) return null;
+    await warmUp();
+    if (_disposed) return null;
+    try {
+      final result = await _queue.add(
+        () => renderer.retrieveLabels(JobRequest(upperLeft, lowerRight)),
+      );
+      if (result.result != JOBRESULT.NORMAL) return null;
+      return result.renderInfo;
+    } catch (error, stack) {
+      if (!_disposed) {
+        debugPrint('Mapsforge labels $upperLeft..$lowerRight failed: '
+            '$error\n$stack');
+      }
+      return null;
+    }
   }
 
   /// Awaits a render, then clones its master — re-checking liveness first,

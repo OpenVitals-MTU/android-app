@@ -167,8 +167,12 @@ class _RouteMapViewState extends State<RouteMapView> {
                     userAgentPackageName: 'tech.mmarca.openvitals',
                     tileProvider: widget.tileProvider,
                   )
-                else
+                else ...[
                   const OfflineBaseMapLayer(),
+                  // Its own layer, above the tiles: labels drawn INTO tiles are
+                  // clipped by the tile they are anchored in.
+                  const OfflineBaseMapLabelLayer(),
+                ],
                 if (geometry.segments.isNotEmpty)
                   _memoPolylines ??= PolylineLayer(
                     polylines: [

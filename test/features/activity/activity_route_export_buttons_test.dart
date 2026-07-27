@@ -16,7 +16,12 @@ import 'package:openvitals/l10n/app_localizations.dart';
 
 /// The route card's export actions (Kotlin `RouteCard` buttons): present when
 /// the workout has a GPS route, absent — with the whole card — when it does
-/// not. The writers themselves are covered by the export unit tests.
+/// not. The writers themselves are covered by the export unit tests, and the
+/// share path by `export/activity_route_sharing_test.dart`.
+///
+/// Three actions, three different intents, none a substitute for another:
+/// open-in-map is ACTION_VIEW and offers map apps, save raises the SAF picker,
+/// share is ACTION_SEND and offers messengers and mail.
 
 final DateTime _start = DateTime.utc(2026, 7, 10, 8);
 
@@ -97,17 +102,19 @@ Future<void> _pump(WidgetTester tester, {required bool withRoute}) async {
 }
 
 void main() {
-  testWidgets('route card offers open-in-map and GPX/KMZ save actions',
-      (tester) async {
+  testWidgets('route card offers open-in-map, GPX/KMZ save and GPX/KMZ share '
+      'actions', (tester) async {
     await _pump(tester, withRoute: true);
 
     // The route card sits below the fold; the lazy list only builds it once
     // scrolled into view.
-    await tester.scrollUntilVisible(find.text('Save GPX'), 300);
+    await tester.scrollUntilVisible(find.text('Share KMZ'), 300);
 
     expect(find.text('Open route in map app'), findsOneWidget);
     expect(find.text('Save GPX'), findsOneWidget);
     expect(find.text('Save KMZ'), findsOneWidget);
+    expect(find.text('Share GPX'), findsOneWidget);
+    expect(find.text('Share KMZ'), findsOneWidget);
   });
 
   testWidgets('no route means no export actions', (tester) async {
@@ -121,5 +128,7 @@ void main() {
     expect(find.text('Open route in map app'), findsNothing);
     expect(find.text('Save GPX'), findsNothing);
     expect(find.text('Save KMZ'), findsNothing);
+    expect(find.text('Share GPX'), findsNothing);
+    expect(find.text('Share KMZ'), findsNothing);
   });
 }

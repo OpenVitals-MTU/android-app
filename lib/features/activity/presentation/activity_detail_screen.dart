@@ -1,14 +1,11 @@
 import 'dart:async';
 
-import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
@@ -30,6 +27,8 @@ import '../../../ui/theme/app_colors.dart';
 import '../application/activity_detail_display.dart';
 import '../application/activity_detail_view_model.dart';
 import '../export/activity_route_export.dart';
+import '../export/activity_route_export_cache.dart';
+import '../export/activity_route_sharing.dart';
 import 'activity_heart_rate_chart_card.dart';
 import 'activity_heart_rate_recovery_card.dart';
 import 'activity_metric_relevance.dart';
@@ -619,6 +618,31 @@ class _RouteMapCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            // A second row rather than a menu on the save buttons: sending a
+            // route to someone is a first-class action here, not a variant of
+            // saving it, and the two rows read as the pair they are.
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _shareRoute(context, ActivityRouteExportFormat.gpx),
+                    icon: const Icon(Icons.share_outlined),
+                    label: Text(l10n.activityRouteShareGpx),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _shareRoute(context, ActivityRouteExportFormat.kmz),
+                    icon: const Icon(Icons.share_outlined),
+                    label: Text(l10n.activityRouteShareKmz),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -656,26 +680,14 @@ class _RouteMapCard extends StatelessWidget {
     }
   }
 
-  /// Kotlin `openActivityRouteInMap`: write a GPX into the app cache and fire
+  /// Kotlin `openActivityRouteInMap`: stage a GPX in the app cache and fire
   /// ACTION_VIEW at it (open_filex grants the URI through its FileProvider).
   Future<void> _openRouteInMap(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final points = sortedRoutePointsForExport(workout);
-      final exportDir = Directory(
-        '${(await getTemporaryDirectory()).path}/route_exports',
-      );
-      await exportDir.create(recursive: true);
-      _deleteOldRouteExports(exportDir);
-      final file = File(
-        '${exportDir.path}/'
-        '${activityRouteExportFileName(workout, ActivityRouteExportFormat.gpx)}',
-      );
-      await file.writeAsBytes(
-        buildActivityRouteExport(workout, points, ActivityRouteExportFormat.gpx),
-        flush: true,
-      );
+      final file = await const ActivityRouteExportCache()
+          .write(workout, ActivityRouteExportFormat.gpx);
       final result = await OpenFilex.open(
         file.path,
         type: ActivityRouteExportFormat.gpx.mimeType,
@@ -692,19 +704,34 @@ class _RouteMapCard extends StatelessWidget {
     }
   }
 
-  /// Kotlin `File.deleteOldRouteExports`: the cache copies only exist for the
-  /// viewing app, so anything older than a day is dead weight.
-  void _deleteOldRouteExports(Directory exportDir) {
-    final cutoff = DateTime.now().subtract(const Duration(hours: 24));
-    for (final entry in exportDir.listSync()) {
-      if (entry is! File) continue;
-      try {
-        if (entry.lastModifiedSync().isBefore(cutoff)) entry.deleteSync();
-      } on FileSystemException {
-        // A file vanishing mid-cleanup is fine.
-      }
+  /// Sends the route to another app — a Signal or WhatsApp message, an email
+  /// attachment, a cloud drive: `Intent.createChooser(ACTION_SEND)`.
+  ///
+  /// Distinct from both siblings. "Open route in map app" fires ACTION_VIEW and
+  /// offers map apps; "Save" raises the SAF picker and writes to storage the
+  /// user chose. This offers the apps that can *send* a file.
+  ///
+  /// No snackbar on success: the share sheet is its own feedback, and a user
+  /// who dismisses it without picking anything has not failed at anything.
+  Future<void> _shareRoute(
+    BuildContext context,
+    ActivityRouteExportFormat format,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await const ActivityRouteSharing().shareRoute(
+        workout: workout,
+        format: format,
+        chooserTitle: l10n.activityRouteShareChooserTitle,
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.activityRouteShareFailed)),
+      );
     }
   }
+
 }
 
 class _DetailSectionCard extends StatelessWidget {

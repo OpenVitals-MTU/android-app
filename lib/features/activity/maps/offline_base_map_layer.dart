@@ -16,6 +16,7 @@ import 'package:pmtiles/pmtiles.dart' as pmt;
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
+import 'mapsforge_label_layer.dart';
 import 'mapsforge_tile_provider.dart';
 import 'mapsforge_tile_renderer.dart';
 import 'offline_base_map.dart';
@@ -49,28 +50,50 @@ class OfflineBaseMapLayer extends ConsumerWidget {
           theme: resources.theme,
           tileOffset: TileOffset.DEFAULT,
         ),
-      final _MapsforgeResources resources => TileLayer(
-          tileProvider: resources.tileProvider,
-          userAgentPackageName: 'tech.mmarca.openvitals',
-          // The default transformer emits a tile update for EVERY map event —
-          // every frame of a pinch — and each one asks for a fresh tile set at
-          // the newly rounded zoom. With tiles this expensive that is the whole
-          // "zooming reloads everything" symptom. Throttle, not debounce:
-          // debounce loads nothing until the gesture ends, which reads as a
-          // frozen map.
-          tileUpdateTransformer:
-              TileUpdateTransformers.throttle(const Duration(milliseconds: 200)),
-          // Each fading tile is an AnimationController. Twenty of them on the
-          // first-paint frame is a cost the offline renderer cannot afford, and
-          // with keepAlive they would idle on for the screen's life.
-          tileDisplay: const TileDisplay.instantaneous(),
-          // Prefetching a ring the user may never pan to is a poor trade when a
-          // tile costs a vector render. keepBuffer stays at its default 2, so
-          // already-drawn neighbours are still not pruned.
-          panBuffer: 0,
-        ),
+      final _MapsforgeResources resources => _mapsforgeTiles(resources),
       null => const SizedBox.shrink(),
     };
+  }
+
+  TileLayer _mapsforgeTiles(_MapsforgeResources resources) => TileLayer(
+        tileProvider: resources.tileProvider,
+        userAgentPackageName: 'tech.mmarca.openvitals',
+        // The default transformer emits a tile update for EVERY map event —
+        // every frame of a pinch — and each one asks for a fresh tile set at
+        // the newly rounded zoom. With tiles this expensive that is the whole
+        // "zooming reloads everything" symptom. Throttle, not debounce:
+        // debounce loads nothing until the gesture ends, which reads as a
+        // frozen map.
+        tileUpdateTransformer:
+            TileUpdateTransformers.throttle(const Duration(milliseconds: 200)),
+        // Each fading tile is an AnimationController. Twenty of them on the
+        // first-paint frame is a cost the offline renderer cannot afford, and
+        // with keepAlive they would idle on for the screen's life.
+        tileDisplay: const TileDisplay.instantaneous(),
+        // Prefetching a ring the user may never pan to is a poor trade when a
+        // tile costs a vector render. keepBuffer stays at its default 2, so
+        // already-drawn neighbours are still not pruned.
+        panBuffer: 0,
+      );
+}
+
+/// The Mapsforge labels, drawn above [OfflineBaseMapLayer]'s tiles.
+///
+/// A SEPARATE child of [FlutterMap] rather than something the base-map layer
+/// returns alongside its tiles: flutter_map lays its children out in a loose
+/// `Stack` and expects one layer per child, and returning a nested Stack from
+/// one slot stopped the tiles drawing entirely.
+///
+/// Renders nothing for the PMTiles format, which draws its own labels, or
+/// before the packs have opened.
+class OfflineBaseMapLabelLayer extends ConsumerWidget {
+  const OfflineBaseMapLabelLayer({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final resources = ref.watch(_offlineBaseMapResourcesProvider).value;
+    if (resources is! _MapsforgeResources) return const SizedBox.shrink();
+    return MapsforgeLabelLayer(tileRenderer: resources.tileRenderer);
   }
 }
 
@@ -228,7 +251,11 @@ Future<_OfflineBaseMapResources> _loadMapsforge(List<String> packPaths) async {
       DatastoreRenderer(
         datastore,
         RenderThemeBuilder.createFromString(themeXml),
-        useSeparateLabelLayer: false,
+          // Labels are drawn by MapsforgeLabelLayer above the tiles, not burned
+        // into them. Burned in, a label wider than its own tile is clipped by
+        // that tile's canvas, and the package's cross-tile compensation only
+        // works when the neighbour happens to render second.
+        useSeparateLabelLayer: true,
         useIsolateReader: true,
       ),
       warmUpTile: await _warmUpTile(datastore),
