@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -8,14 +10,17 @@ import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/activity_entry_types.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/nutrition_models.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
@@ -55,7 +60,15 @@ class ActivityDetailScreen extends ConsumerStatefulWidget {
       _ActivityDetailScreenState();
 }
 
-class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
+class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains => const {DataDomain.activities};
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(_provider.notifier).refresh());
+
   late final NotifierProvider<ActivityDetailViewModel, ActivityDetailState>
       _provider = NotifierProvider.autoDispose<ActivityDetailViewModel,
           ActivityDetailState>(

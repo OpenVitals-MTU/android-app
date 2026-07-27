@@ -9,6 +9,7 @@ import '../../../core/presentation/display_value.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/charts/period_chart.dart';
@@ -72,6 +73,11 @@ class ActivityMetricScreen extends ConsumerWidget {
           // remembered range on `PeriodRangePreferenceKey.STEPS`.
           rangePreferenceKey: PeriodRangePreferenceKey.steps,
           onRefresh: notifier.refresh,
+          refreshDomains: const {
+            DataDomain.steps,
+            DataDomain.activities,
+            DataDomain.calories,
+          },
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

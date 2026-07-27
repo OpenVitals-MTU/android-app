@@ -43,6 +43,11 @@ class SleepDetailViewModel extends Notifier<SleepDetailState> {
     return const SleepDetailState();
   }
 
+  /// Pull-to-refresh, and the app-open/data-changed reload. The session is
+  /// keyed by id, so re-reading it is the whole of a refresh — this screen had
+  /// no refresh entry point at all.
+  Future<void> refresh() => load();
+
   Future<void> load() async {
     if (sleepId.trim().isEmpty) {
       state = const SleepDetailState(

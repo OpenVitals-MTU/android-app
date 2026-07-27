@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/reference_link.dart';
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/health_date_picker.dart';
 import '../../../ui/components/data_source_education_item.dart';
@@ -33,7 +38,20 @@ class TrainingReadinessDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _TrainingReadinessDetailsScreenState
-    extends ConsumerState<TrainingReadinessDetailsScreen> {
+    extends ConsumerState<TrainingReadinessDetailsScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains => const {
+        DataDomain.readiness,
+        DataDomain.heart,
+        DataDomain.sleep,
+        DataDomain.activities,
+      };
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(trainingReadinessDetailsProvider.notifier).refresh());
+
   @override
   void initState() {
     super.initState();

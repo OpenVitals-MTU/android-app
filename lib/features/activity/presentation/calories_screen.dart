@@ -8,6 +8,7 @@ import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../di/data_providers.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/charts/period_chart.dart';
 import '../../../ui/components/health_connect_gate.dart';
@@ -67,6 +68,11 @@ class _CaloriesScreenState extends ConsumerState<CaloriesScreen> {
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.calories,
           onRefresh: notifier.refresh,
+          refreshDomains: const {
+            DataDomain.calories,
+            DataDomain.activities,
+            DataDomain.nutrition,
+          },
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

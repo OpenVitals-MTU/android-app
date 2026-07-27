@@ -10,6 +10,7 @@ import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/daily_goal_components.dart';
@@ -70,6 +71,7 @@ class NutritionMetricScreen extends ConsumerWidget {
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.nutrition,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.nutrition},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

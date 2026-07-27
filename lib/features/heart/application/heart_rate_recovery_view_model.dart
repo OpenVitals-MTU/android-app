@@ -61,11 +61,19 @@ class HeartRateRecoveryViewModel extends Notifier<HeartRateRecoveryState> {
     return _run(query);
   }
 
-  Future<void> refresh() {
-    final query = _lastQuery;
-    if (query == null) return Future.value();
-    return _run(query);
-  }
+  /// Pull-to-refresh, and the app-open/data-changed reload.
+  ///
+  /// Falls back to the selection on the state when no load has run yet: this
+  /// used to return a completed future, which spun the refresh indicator and
+  /// did nothing.
+  Future<void> refresh() => _run(
+        _lastQuery ??
+            PeriodLoadQuery(
+              range: state.selectedRange,
+              anchorDate: state.selectedDate,
+              weekPeriodMode: ref.read(weekPeriodModeProvider),
+            ),
+      );
 
   Future<void> _run(PeriodLoadQuery query) async {
     _lastQuery = query;

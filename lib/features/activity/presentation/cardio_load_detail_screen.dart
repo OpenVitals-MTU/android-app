@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/reference_link.dart';
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/insights/cardio_load.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
@@ -18,11 +23,26 @@ import '../../../ui/components/section_padding.dart';
 /// Cardio-load detail pushed over the shell (`/activity/cardio_load`), ported
 /// from the Kotlin `CardioLoadDetailScreen`. Shows today's TRIMP-based cardio
 /// load estimate plus the day's underlying numbers.
-class CardioLoadDetailScreen extends ConsumerWidget {
+class CardioLoadDetailScreen extends ConsumerStatefulWidget {
   const CardioLoadDetailScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CardioLoadDetailScreen> createState() =>
+      _CardioLoadDetailScreenState();
+}
+
+class _CardioLoadDetailScreenState extends ConsumerState<CardioLoadDetailScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains =>
+      const {DataDomain.activities, DataDomain.heart};
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(cardioLoadProvider.notifier).refresh());
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(cardioLoadProvider);
     final notifier = ref.read(cardioLoadProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,9 +9,12 @@ import '../../core/period/period_range_preference_key.dart';
 import '../../core/period/period_selection.dart';
 import '../../core/period/period_selection_driver.dart';
 import '../../core/period/time_range.dart';
+import '../../core/presentation/refresh_on_signal.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/time/local_date.dart';
 import '../../di/providers.dart';
+import '../../domain/refresh/data_domain.dart';
+import '../../state/refresh_coordinator.dart';
 import '../charts/metric_day_opener.dart';
 import 'health_connect_gate.dart';
 import 'health_date_picker.dart';
@@ -46,6 +51,7 @@ class MetricDetailScaffold extends ConsumerStatefulWidget {
     this.showInlineSyncBanner = true,
     this.periodTitleBuilder,
     this.initialDate,
+    this.refreshDomains = const <DataDomain>{},
   });
 
   /// The persisted-range key for this screen (e.g. `PeriodRangePreferenceKey.
@@ -85,12 +91,21 @@ class MetricDetailScaffold extends ConsumerStatefulWidget {
   /// and only then to today.
   final LocalDate? initialDate;
 
+  /// The data this screen reads.
+  ///
+  /// A refresh signal touching any of these re-runs [onRefresh] — the same
+  /// callback pull-to-refresh uses, so a screen wires itself into the app-open
+  /// and data-changed triggers by naming its domains and nothing else. An empty
+  /// set opts out.
+  final Set<DataDomain> refreshDomains;
+
   @override
   ConsumerState<MetricDetailScaffold> createState() =>
       _MetricDetailScaffoldState();
 }
 
-class _MetricDetailScaffoldState extends ConsumerState<MetricDetailScaffold> {
+class _MetricDetailScaffoldState extends ConsumerState<MetricDetailScaffold>
+    with RefreshOnSignal {
   late final PeriodSelectionDriver _driver;
   late PeriodSelection _selection;
 
@@ -113,6 +128,12 @@ class _MetricDetailScaffoldState extends ConsumerState<MetricDetailScaffold> {
       if (mounted) widget.onSelectionChanged?.call(_selection);
     });
   }
+
+  @override
+  Set<DataDomain> get refreshDomains => widget.refreshDomains;
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) => unawaited(widget.onRefresh());
 
   @override
   void didUpdateWidget(MetricDetailScaffold oldWidget) {

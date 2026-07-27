@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../domain/model/recording_method.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/sleep_models.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
@@ -32,7 +37,15 @@ class SleepDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<SleepDetailScreen> createState() => _SleepDetailScreenState();
 }
 
-class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen> {
+class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains => const {DataDomain.sleep};
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(_provider.notifier).refresh());
+
   late final NotifierProvider<SleepDetailViewModel, SleepDetailState> _provider =
       NotifierProvider.autoDispose<SleepDetailViewModel, SleepDetailState>(
     () => SleepDetailViewModel(widget.sleepId),
@@ -46,7 +59,14 @@ class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.screenSleepDetail)),
-      body: _body(context, l10n, state, formatter),
+      // The only data screen in the app with no way to re-read at all: not a
+      // pull, not a button. The loading/error branches of [_body] return their
+      // own full-screen widgets, so the indicator wraps the call rather than
+      // living inside it.
+      body: RefreshIndicator(
+        onRefresh: ref.read(_provider.notifier).refresh,
+        child: _body(context, l10n, state, formatter),
+      ),
     );
   }
 

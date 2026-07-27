@@ -5,6 +5,7 @@ import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../domain/usecase/load_heart_rate_recovery_period_use_case.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
@@ -46,6 +47,7 @@ class HeartRateRecoveryScreen extends ConsumerWidget {
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.heartRateRecovery,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.heart, DataDomain.activities},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

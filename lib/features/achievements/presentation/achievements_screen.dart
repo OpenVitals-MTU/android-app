@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/components/loading_state.dart';
 
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../state/app_providers.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 import 'achievement_catalog.dart';
@@ -25,7 +30,16 @@ class AchievementsScreen extends ConsumerStatefulWidget {
   ConsumerState<AchievementsScreen> createState() => _AchievementsScreenState();
 }
 
-class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
+class _AchievementsScreenState extends ConsumerState<AchievementsScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains =>
+      const {DataDomain.steps, DataDomain.activities};
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(achievementsProvider.notifier).refresh());
+
   AchievementCategory? _selectedCategory;
 
   @override
@@ -42,50 +56,56 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
       // picks a list, it does not fold one.
       final filtered = state.display?.badgesFor(_selectedCategory) ??
           const <AchievementProgress>[];
-      body = Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
-          child: ListView(
-            padding: screenScrollPadding(context),
-            children: [
-              sectionPadded(
-                AchievementSummaryCard(
-                  state: state,
-                  formatter: formatter,
-                  onRefresh: notifier.refresh,
+      // Pull-to-refresh, like every other data screen. The summary card
+      // keeps its refresh icon: it is the affordance a user who never
+      // scrolls the list will find.
+      body = RefreshIndicator(
+        onRefresh: notifier.refresh,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 920),
+            child: ListView(
+              padding: screenScrollPadding(context),
+              children: [
+                sectionPadded(
+                  AchievementSummaryCard(
+                    state: state,
+                    formatter: formatter,
+                    onRefresh: notifier.refresh,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              _AchievementStatsRow(stats: state.stats, formatter: formatter),
-              const SizedBox(height: 8),
-              _AchievementFilters(
-                selected: _selectedCategory,
-                onSelect: (category) =>
-                    setState(() => _selectedCategory = category),
-              ),
-              if (state.error != null)
-                sectionPadded(_MessageCard(
-                  title: 'Unable to load achievements',
-                  body: _errorText(state.error!),
-                ))
-              else if (!state.hasActivityHistory)
-                sectionPadded(const _MessageCard(
-                  title: 'No activity history yet',
-                  body: 'Start recording steps to unlock achievements.',
-                )),
-              if (state.hasActivityHistory && !state.hasFloorHistory)
-                sectionPadded(const _MessageCard(
-                  title: 'No floor data',
-                  body: 'Floor-climbing badges need a device that tracks floors.',
-                )),
-              for (final progress in filtered)
-                sectionPadded(AchievementBadgeCard(
-                  progress: progress,
-                  formatter: formatter,
-                )),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 8),
+                _AchievementStatsRow(stats: state.stats, formatter: formatter),
+                const SizedBox(height: 8),
+                _AchievementFilters(
+                  selected: _selectedCategory,
+                  onSelect: (category) =>
+                      setState(() => _selectedCategory = category),
+                ),
+                if (state.error != null)
+                  sectionPadded(_MessageCard(
+                    title: 'Unable to load achievements',
+                    body: _errorText(state.error!),
+                  ))
+                else if (!state.hasActivityHistory)
+                  sectionPadded(const _MessageCard(
+                    title: 'No activity history yet',
+                    body: 'Start recording steps to unlock achievements.',
+                  )),
+                if (state.hasActivityHistory && !state.hasFloorHistory)
+                  sectionPadded(const _MessageCard(
+                    title: 'No floor data',
+                    body: 'Floor-climbing badges need a device that tracks floors.',
+                  )),
+                for (final progress in filtered)
+                  sectionPadded(AchievementBadgeCard(
+                    progress: progress,
+                    formatter: formatter,
+                  )),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       );

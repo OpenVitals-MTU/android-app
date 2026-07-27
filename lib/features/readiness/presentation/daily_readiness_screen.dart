@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/daily_readiness.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/components/data_source_education_item.dart';
 import '../../../ui/components/health_connect_gate.dart';
@@ -21,11 +26,30 @@ import '../application/daily_readiness_view_model.dart';
 /// the Kotlin `DailyReadinessScreen` + `DailyReadinessPanel`: the overall /
 /// body-energy / training-readiness scores, state, recommendation, factor list,
 /// and confidence for the selected day.
-class DailyReadinessScreen extends ConsumerWidget {
+class DailyReadinessScreen extends ConsumerStatefulWidget {
   const DailyReadinessScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DailyReadinessScreen> createState() =>
+      _DailyReadinessScreenState();
+}
+
+class _DailyReadinessScreenState extends ConsumerState<DailyReadinessScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains => const {
+        DataDomain.readiness,
+        DataDomain.heart,
+        DataDomain.sleep,
+        DataDomain.activities,
+      };
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(dailyReadinessProvider.notifier).refresh());
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(dailyReadinessProvider);
     final notifier = ref.read(dailyReadinessProvider.notifier);
 

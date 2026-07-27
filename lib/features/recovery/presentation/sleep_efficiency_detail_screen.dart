@@ -1,16 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/presentation/display_value.dart';
 import '../../../core/presentation/external_link.dart';
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/sleep_score.dart';
 import '../../../domain/model/sleep_models.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
@@ -38,7 +43,16 @@ class SleepEfficiencyDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _SleepEfficiencyDetailScreenState
-    extends ConsumerState<SleepEfficiencyDetailScreen> {
+    extends ConsumerState<SleepEfficiencyDetailScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains =>
+      const {DataDomain.sleep, DataDomain.recovery};
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(recoveryDetailProvider.notifier).refresh());
+
   bool _showCalculation = false;
 
   @override
@@ -73,7 +87,7 @@ class _SleepEfficiencyDetailScreenState
     if (display == null) return const FullScreenLoading();
 
     return RefreshIndicator(
-      onRefresh: () => ref.read(recoveryDetailProvider.notifier).load(),
+      onRefresh: ref.read(recoveryDetailProvider.notifier).refresh,
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

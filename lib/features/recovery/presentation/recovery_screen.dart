@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/stress_tracking.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/data_source_education_item.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/health_date_picker.dart';
@@ -31,7 +36,16 @@ class StressDetailsScreen extends ConsumerStatefulWidget {
       _StressDetailsScreenState();
 }
 
-class _StressDetailsScreenState extends ConsumerState<StressDetailsScreen> {
+class _StressDetailsScreenState extends ConsumerState<StressDetailsScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains =>
+      const {DataDomain.heart, DataDomain.recovery};
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(recoveryProvider.notifier).refresh());
+
   @override
   void initState() {
     super.initState();

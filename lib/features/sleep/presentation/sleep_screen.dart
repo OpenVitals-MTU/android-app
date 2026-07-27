@@ -11,6 +11,7 @@ import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
@@ -67,6 +68,7 @@ class SleepScreen extends ConsumerWidget {
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.sleep,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.sleep},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

@@ -106,7 +106,11 @@ class ActivitiesViewModel extends Notifier<ActivitiesState>
             .dailyGoalFor(activitiesGoalKey),
       );
 
-  Future<void> load(PeriodSelection selection) => runLoad(selection);
+  Future<void> load(
+    PeriodSelection selection, {
+    RefreshMode refreshMode = RefreshMode.normal,
+  }) =>
+      runLoad(selection, refreshMode: refreshMode);
 
   @override
   String get loadErrorFallback => 'Unable to load workouts.';
@@ -158,8 +162,12 @@ class ActivitiesViewModel extends Notifier<ActivitiesState>
   ActivitiesState onLoadError(ActivitiesState state, ScreenError error) =>
       state.copyWith(isLoading: false, error: error);
 
-  Future<void> refresh() =>
-      load(PeriodSelection(state.selectedRange, state.selectedDate));
+  /// Pull-to-refresh. Forced, like every sibling screen's: a refresh that could
+  /// be served from a cache is not a refresh, and this one alone was not.
+  Future<void> refresh() => load(
+        PeriodSelection(state.selectedRange, state.selectedDate),
+        refreshMode: RefreshMode.force,
+      );
 
   /// Kotlin `selectActivityType`: re-slices the cached result without reloading.
   void selectActivityType(int? type) {

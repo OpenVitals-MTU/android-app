@@ -11,6 +11,7 @@ import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/mindfulness_models.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
@@ -58,6 +59,7 @@ class MindfulnessScreen extends ConsumerWidget {
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.mindfulness,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.mindfulness},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

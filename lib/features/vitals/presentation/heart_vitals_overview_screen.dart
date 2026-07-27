@@ -8,6 +8,7 @@ import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../../../di/providers.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/data_source_education_item.dart';
@@ -98,6 +99,7 @@ class _HeartVitalsOverviewScreenState
           // `PeriodRangePreferenceKey.HEART`.
           rangePreferenceKey: PeriodRangePreferenceKey.heart,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.heart, DataDomain.vitals},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

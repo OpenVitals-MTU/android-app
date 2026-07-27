@@ -9,6 +9,7 @@ import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/nutrition_models.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
@@ -65,6 +66,7 @@ class HydrationScreen extends ConsumerWidget {
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.hydration,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.hydration},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

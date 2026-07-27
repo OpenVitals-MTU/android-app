@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../ui/theme/chart_colors.dart';
 
 import '../../../core/presentation/reference_link.dart';
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/body_energy_timeline.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/health_date_picker.dart';
 import '../../../ui/components/loading_state.dart';
@@ -37,7 +42,22 @@ class BodyEnergyDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _BodyEnergyDetailsScreenState
-    extends ConsumerState<BodyEnergyDetailsScreen> {
+    extends ConsumerState<BodyEnergyDetailsScreen>
+    with RefreshOnSignal {
+  @override
+  Set<DataDomain> get refreshDomains => const {
+        DataDomain.bodyEnergy,
+        DataDomain.heart,
+        DataDomain.sleep,
+        DataDomain.activities,
+        DataDomain.body,
+        DataDomain.vitals,
+      };
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(bodyEnergyProvider.notifier).refresh());
+
   bool _chainWarmKicked = false;
 
   @override

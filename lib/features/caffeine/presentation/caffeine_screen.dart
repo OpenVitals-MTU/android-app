@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -15,11 +17,14 @@ import '../../../ui/components/loading_state.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../core/presentation/reference_link.dart';
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/caffeine_models.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../state/app_providers.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/metric_card.dart';
 import '../../../ui/components/ov_card.dart';
@@ -38,11 +43,27 @@ import '../../../ui/components/section_padding.dart';
 /// the view-model into a [CaffeineDisplay]. The Kotlin setup card, entry detail
 /// sheet and science/reference cards are omitted (drink logging + profile
 /// editing are Phase 6).
-class CaffeineScreen extends ConsumerWidget {
+class CaffeineScreen extends ConsumerStatefulWidget {
   const CaffeineScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CaffeineScreen> createState() => _CaffeineScreenState();
+}
+
+class _CaffeineScreenState extends ConsumerState<CaffeineScreen>
+    with RefreshOnSignal {
+  /// Caffeine rides on the nutrition records a drink writes, so a logged
+  /// beverage moves this screen even though nothing "caffeine" was stored.
+  @override
+  Set<DataDomain> get refreshDomains =>
+      const {DataDomain.caffeine, DataDomain.nutrition};
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(caffeineProvider.notifier).refresh());
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(caffeineProvider);
     final notifier = ref.read(caffeineProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);

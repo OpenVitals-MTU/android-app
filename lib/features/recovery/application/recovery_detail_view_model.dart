@@ -61,6 +61,11 @@ class RecoveryDetailViewModel extends Notifier<RecoveryDetailState> {
     );
   }
 
+  /// Pull-to-refresh, and the app-open/data-changed reload: re-reads the day
+  /// already on screen. The two detail screens used to wire their refresh
+  /// indicator straight to `load()`, which reset the selection to today.
+  Future<void> refresh() => load(state.selectedDate);
+
   Future<void> load([LocalDate? date]) async {
     final today = date ?? LocalDate.now();
     final generation = ++_generation;

@@ -8,6 +8,7 @@ import '../../../core/period/period_titles.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
@@ -49,6 +50,7 @@ class CycleScreen extends ConsumerWidget {
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.cycle,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.cycle},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

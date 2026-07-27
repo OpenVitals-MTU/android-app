@@ -6,6 +6,7 @@ import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
@@ -55,6 +56,7 @@ class ActivitiesScreen extends ConsumerWidget {
         child: MetricDetailScaffold(
           rangePreferenceKey: PeriodRangePreferenceKey.activities,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.activities},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/period/period_range_preference_key.dart';
 import '../../../core/presentation/metric_detail_sections.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/section_padding.dart';
@@ -61,6 +62,7 @@ class HeartMetricScreen extends ConsumerWidget {
           // remembered range on `PeriodRangePreferenceKey.HEART`.
           rangePreferenceKey: PeriodRangePreferenceKey.heart,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.heart, DataDomain.vitals},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,

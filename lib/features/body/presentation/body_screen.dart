@@ -9,6 +9,7 @@ import '../../../core/presentation/metric_detail_sections.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/preferences/metric_detail_section_id.dart';
 import '../../../domain/health/health_permissions.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
@@ -70,6 +71,7 @@ class BodyScreen extends ConsumerWidget {
           // `PeriodRangePreferenceKey.BODY` (default MONTH).
           rangePreferenceKey: PeriodRangePreferenceKey.body,
           onRefresh: notifier.refresh,
+          refreshDomains: const {DataDomain.body},
           isLoading: state.isLoading,
           screenError: state.error,
           weekPeriodMode: weekMode,
