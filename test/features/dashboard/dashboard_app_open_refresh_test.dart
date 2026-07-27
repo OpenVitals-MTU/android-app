@@ -8,6 +8,7 @@ import 'package:openvitals/bootstrap/data_refresh_bootstrap.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/dashboard/dashboard_data_loader.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
+import 'package:openvitals/data/sync/history_sync_scheduler.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/dashboard_data.dart';
 import 'package:openvitals/domain/model/dashboard_query.dart';
@@ -63,12 +64,24 @@ class _CountingUseCase extends LoadDashboardDayUseCase {
   }
 }
 
+/// Counts drains without owning any of the three history sync services.
+class _RecordingScheduler implements HistorySyncScheduler {
+  int drains = 0;
+
+  @override
+  Future<void> drainIncremental() async => drains++;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 final Set<String> _minimumPermissions =
     HealthDataSource().permissionService.minimumOnboardingPermissions;
 
 void main() {
   late _MutableHealthDataSource source;
   late _CountingUseCase useCase;
+  late _RecordingScheduler scheduler;
   late DateTime now;
 
   /// Mounts the dashboard under [DataRefreshBootstrap], exactly as `main.dart`
@@ -88,6 +101,7 @@ void main() {
       granted ?? _minimumPermissions,
     );
     useCase = _CountingUseCase();
+    scheduler = _RecordingScheduler();
     SharedPreferences.setMockInitialValues(const <String, Object>{});
     final prefs = await SharedPreferences.getInstance();
 
@@ -102,6 +116,7 @@ void main() {
         grantedHealthPermissionsProvider
             .overrideWith((ref) async => source.granted),
         loadDashboardDayUseCaseProvider.overrideWithValue(useCase),
+        historySyncSchedulerProvider.overrideWithValue(scheduler),
       ],
       child: const DataRefreshBootstrap(
         child: MaterialApp(
@@ -187,6 +202,25 @@ void main() {
 
       expect(useCase.calls, greaterThan(before),
           reason: 'opening the app is the first of the three refresh triggers');
+    });
+  });
+
+  testWidgets('the history caches drain after the app-open read settles, not '
+      'alongside it', (tester) async {
+    await atClock(() async {
+      await pump(tester, availability: HealthConnectAvailability.available);
+      // Cold start is not an app open: the drains stay owned by their screens
+      // until something says the data may have moved.
+      expect(scheduler.drains, 0);
+
+      now = now.add(const Duration(minutes: 5));
+      await resume(tester);
+
+      // Health Connect serializes concurrent reads, so the drain waits for the
+      // dashboard's own load to finish rather than racing it.
+      expect(scheduler.drains, 1);
+      expect(useCase.calls, greaterThan(1),
+          reason: 'the foreground read must have run first');
     });
   });
 

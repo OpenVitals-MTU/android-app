@@ -4,12 +4,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/bootstrap/data_refresh_bootstrap.dart';
+import 'package:openvitals/data/sync/history_sync_scheduler.dart';
+import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/state/refresh_coordinator.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 
+/// Counts drains without owning any of the three services.
+class _RecordingScheduler implements HistorySyncScheduler {
+  int drains = 0;
+
+  @override
+  Future<void> drainIncremental() async => drains++;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   late List<RefreshSignal> signals;
+  late _RecordingScheduler scheduler;
+  late ProviderContainer container;
   late int availabilityResolves;
   late int grantedResolves;
   late DateTime now;
@@ -18,9 +33,11 @@ void main() {
   /// often each is actually recomputed.
   Future<void> pump(WidgetTester tester) async {
     signals = <RefreshSignal>[];
+    scheduler = _RecordingScheduler();
     availabilityResolves = 0;
     grantedResolves = 0;
-    final container = ProviderContainer(overrides: [
+    container = ProviderContainer(overrides: [
+      historySyncSchedulerProvider.overrideWithValue(scheduler),
       healthConnectAvailabilityProvider.overrideWith((ref) async {
         availabilityResolves++;
         return HealthConnectAvailability.available;

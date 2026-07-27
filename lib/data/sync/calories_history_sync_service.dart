@@ -50,13 +50,24 @@ class CaloriesHistorySyncService {
   Future<void> syncAll() =>
       _running ??= _sync().whenComplete(() => _running = null);
 
-  Future<void> _sync() async {
+  /// Drain the Changes API, but never start the first full sync.
+  ///
+  /// For the app-open drain, which runs whether or not the user cares about
+  /// calories: a first full sync is a multi-minute chunked history read, and it
+  /// stays owned by the screen that actually needs the cache. Once a cursor
+  /// exists, keeping it current is one cheap poll.
+  Future<void> syncIncremental() =>
+      _running ??=
+          _sync(incrementalOnly: true).whenComplete(() => _running = null);
+
+  Future<void> _sync({bool incrementalOnly = false}) async {
     final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readTotalCalories)) return;
     try {
       final cursor = await _cacheDao.cursor(caloriesBurnedCacheMetric);
       final token = cursor?.changesToken;
       if (token == null || token.isEmpty) {
+        if (incrementalOnly) return;
         await _fullSync();
       } else {
         await _incrementalSync(token);

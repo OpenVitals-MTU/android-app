@@ -43,11 +43,23 @@ class VitalsHistorySyncService {
   Future<void> syncAll() =>
       _running ??= _syncAll().whenComplete(() => _running = null);
 
-  Future<void> _syncAll() async {
+  /// Drain the Changes API for metrics that already have a cursor, and never
+  /// start a first full sync.
+  ///
+  /// For the app-open drain, which runs whether or not the user cares about
+  /// vitals: a first full sync fans out seven 730-day reads (respiratory rate
+  /// alone can take 40s), and it stays owned by the overview screen that needs
+  /// the cache. Once a cursor exists, keeping it current is one cheap poll.
+  Future<void> syncIncremental() =>
+      _running ??=
+          _syncAll(incrementalOnly: true).whenComplete(() => _running = null);
+
+  Future<void> _syncAll({bool incrementalOnly = false}) async {
     final granted = await _dataSource.grantedIfAvailable();
     await Future.wait([
       for (final metric in _metrics())
-        _syncMetric(metric, granted).catchError((Object e, StackTrace s) {
+        _syncMetric(metric, granted, incrementalOnly: incrementalOnly)
+            .catchError((Object e, StackTrace s) {
           // One metric's failure must not abort the others; it retries next run.
           // Log it, though — an unlogged swallow is the exact failure mode the
           // native _catch guard argues against (silent forever-retry).
@@ -57,7 +69,11 @@ class VitalsHistorySyncService {
     ]);
   }
 
-  Future<void> _syncMetric(_MetricSync m, Set<String> granted) async {
+  Future<void> _syncMetric(
+    _MetricSync m,
+    Set<String> granted, {
+    bool incrementalOnly = false,
+  }) async {
     if (!granted.contains(m.readPermission)) return;
     if (m.requiresSkinTempFeature &&
         !_dataSource.isSkinTemperatureAvailable()) {
@@ -67,6 +83,7 @@ class VitalsHistorySyncService {
     final cursor = await _cacheDao.cursor(m.metric.name);
     final token = cursor?.changesToken;
     if (token == null || token.isEmpty) {
+      if (incrementalOnly) return;
       await _fullSync(m);
       return;
     }

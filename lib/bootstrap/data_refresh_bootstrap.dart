@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:clock/clock.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/time/local_date.dart';
+import '../di/providers.dart';
+import '../features/dashboard/application/dashboard_view_model.dart';
 import '../state/refresh_coordinator.dart';
 import '../ui/components/health_connect_gate.dart';
 
@@ -40,8 +44,10 @@ class DataRefreshBootstrap extends ConsumerStatefulWidget {
 
 class _DataRefreshBootstrapState extends ConsumerState<DataRefreshBootstrap> {
   late final AppLifecycleListener _listener;
+  ProviderSubscription<bool>? _dashboardLoading;
   late DateTime _lastRefreshAt;
   late LocalDate _lastRefreshDay;
+  bool _drainPending = false;
 
   @override
   void initState() {
@@ -51,6 +57,17 @@ class _DataRefreshBootstrapState extends ConsumerState<DataRefreshBootstrap> {
     _lastRefreshAt = clock.now();
     _lastRefreshDay = LocalDate.now();
     _listener = AppLifecycleListener(onResume: _onResume);
+    // The dashboard is the home screen and is always the first thing to load,
+    // so its isLoading falling is the app's "the foreground read finished"
+    // signal — the only safe moment to start a background drain. Health Connect
+    // serializes concurrent reads, and a drain running next to a foreground load
+    // is the documented 30s→80s contention.
+    _dashboardLoading = ref.listenManual<bool>(
+      dashboardProvider.select((s) => s.isLoading),
+      (previous, next) {
+        if (previous == true && next == false) _drainHistoryCaches();
+      },
+    );
   }
 
   void _onResume() {
@@ -70,10 +87,27 @@ class _DataRefreshBootstrapState extends ConsumerState<DataRefreshBootstrap> {
     ref.invalidate(grantedHealthPermissionsProvider);
 
     ref.read(refreshCoordinatorProvider.notifier).appOpened();
+
+    // Armed, not run: the signal above sends the visible screen back to Health
+    // Connect, and the drain has to wait for that read to finish.
+    _drainPending = true;
+  }
+
+  /// Catch the daily-aggregate caches up on whatever moved while the app was
+  /// away — a watch sync, an import, another app writing to Health Connect.
+  ///
+  /// Each drain used to be kicked from exactly one screen, so a user who only
+  /// ever opens the dashboard never drained them at all.
+  void _drainHistoryCaches() {
+    if (!_drainPending) return;
+    _drainPending = false;
+    unawaited(ref.read(historySyncSchedulerProvider).drainIncremental());
   }
 
   @override
   void dispose() {
+    _dashboardLoading?.close();
+    _dashboardLoading = null;
     _listener.dispose();
     super.dispose();
   }

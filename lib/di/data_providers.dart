@@ -31,6 +31,7 @@ import '../data/local/beverage/beverage_store.dart';
 import '../data/local/open_vitals_database.dart';
 import '../data/sync/body_energy_chain_sync_service.dart';
 import '../data/sync/calories_history_sync_service.dart';
+import '../data/sync/history_sync_scheduler.dart';
 import '../data/sync/vitals_history_sync_service.dart';
 import '../data/prefs/preferences_repository.dart';
 import '../data/repository/body_energy_baseline_cache_store.dart';
@@ -352,6 +353,17 @@ final bodyEnergyChainSyncServiceProvider =
     ref.watch(bodyEnergyBaselineCacheStoreProvider),
     ref.watch(healthDataSourceProvider),
     ref.watch(preferencesRepositoryProvider),
+  ),
+);
+
+/// The app-open cache drain: the three history syncs, run in sequence.
+///
+/// Declared here, after all three, because it composes them.
+final historySyncSchedulerProvider = Provider<HistorySyncScheduler>(
+  (ref) => HistorySyncScheduler(
+    ref.watch(vitalsHistorySyncServiceProvider),
+    ref.watch(caloriesHistorySyncServiceProvider),
+    ref.watch(bodyEnergyChainSyncServiceProvider),
   ),
 );
 
