@@ -117,7 +117,14 @@ class HealthConnectGate extends ConsumerWidget {
     // A failed availability/permission read must be recoverable — `.value` is
     // null on AsyncError, so the old "null → FullScreenLoading" trapped the whole
     // (home) screen behind a permanent spinner with no way out.
-    if (availabilityAsync.hasError || grantedAsync.hasError) {
+    //
+    // Only when there is no value to fall back on, though. Both providers are
+    // re-resolved on every app open now, and Riverpod carries the previous error
+    // forward into the reload's AsyncLoading — so a bare `hasError` replaced a
+    // perfectly good dashboard with the error screen on the first resume after
+    // any transient read failure.
+    if ((availabilityAsync.hasError && !availabilityAsync.hasValue) ||
+        (grantedAsync.hasError && !grantedAsync.hasValue)) {
       return _GateError(onRetry: () {
         ref.invalidate(healthConnectAvailabilityProvider);
         ref.invalidate(grantedHealthPermissionsProvider);

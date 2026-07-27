@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'bootstrap/data_refresh_bootstrap.dart';
 import 'bootstrap/reminder_bootstrap.dart';
 import 'bootstrap/reminder_resume_bootstrap.dart';
 import 'bootstrap/reminder_tap_bootstrap.dart';
@@ -94,10 +95,16 @@ Future<void> main() async {
       // .gpx/.kml/.kmz/.fit) into the activity-entry form — the Kotlin
       // `ExternalRouteImportRequest` path — and routes a home-screen-widget tap
       // to the screen it points at (the Kotlin `EXTRA_OPENVITALS_ROUTE` path).
+      //
+      // [DataRefreshBootstrap] sits above the router, and therefore above every
+      // HealthConnectGate, so returning to the foreground re-reads the data no
+      // matter which state the gate is in.
       child: const RouteImportIntentBootstrap(
         child: HomeWidgetLaunchBootstrap(
-          child: ReminderResumeBootstrap(
-            child: ReminderTapBootstrap(child: OpenVitalsApp()),
+          child: DataRefreshBootstrap(
+            child: ReminderResumeBootstrap(
+              child: ReminderTapBootstrap(child: OpenVitalsApp()),
+            ),
           ),
         ),
       ),

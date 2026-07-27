@@ -5,13 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/reorder.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
 import '../../../domain/model/activity_models.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../navigation/app_router.dart' show routeObserver;
 import '../../../navigation/app_routes.dart';
+import '../../../state/refresh_coordinator.dart';
 import '../../../state/app_providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
 import '../../../ui/components/health_date_picker.dart';
@@ -41,11 +43,32 @@ import '../../../ui/components/accent_icon_chip.dart';
 /// failures that leave data on screen surface as a transient SnackBar (the
 /// Kotlin toast behaviour). The top bar (title + Mindfulness/Achievements/
 /// Settings actions) is provided by the adaptive scaffold.
-class DashboardScreen extends ConsumerWidget {
+///
+/// Stateful, and stateful *above* the gate: reloading on a refresh signal is
+/// the Kotlin `LifecycleEventEffect(ON_RESUME) { resumeCurrentDay() }`, and it
+/// used to live in [_DashboardBody] — inside the gate, which replaces its child
+/// whenever availability or permissions are unsettled. In exactly those states
+/// the listener was never constructed, so a resume did nothing at all. Living
+/// here it survives every gate state.
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with RefreshOnSignal {
+  /// The dashboard shows every metric, so every domain concerns it.
+  @override
+  Set<DataDomain> get refreshDomains => DataDomain.values.toSet();
+
+  @override
+  void onRefreshSignal(RefreshSignal signal) =>
+      unawaited(ref.read(dashboardProvider.notifier).resumeCurrentDay());
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(dashboardProvider);
     final notifier = ref.read(dashboardProvider.notifier);
     final formatter = ref.watch(unitFormatterProvider);
@@ -71,15 +94,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-/// The dashboard body.
-///
-/// Stateful because it must reload the day whenever the screen is *resumed* —
-/// the Kotlin `LifecycleEventEffect(ON_RESUME) { resumeCurrentDay() }`. That
-/// fires on two Flutter signals, both wired here: the app returning to the
-/// foreground ([AppLifecycleListener]) and a pushed detail route being popped
-/// back off ([RouteAware.didPopNext] via the router's [routeObserver]). The
-/// notifier outlives both, so without this the dashboard keeps showing data
-/// captured before the user went off to change it.
+/// The dashboard body: everything the gate lets through.
 class _DashboardBody extends ConsumerStatefulWidget {
   const _DashboardBody({
     required this.state,
@@ -95,38 +110,8 @@ class _DashboardBody extends ConsumerStatefulWidget {
   ConsumerState<_DashboardBody> createState() => _DashboardBodyState();
 }
 
-class _DashboardBodyState extends ConsumerState<_DashboardBody>
-    with RouteAware {
+class _DashboardBodyState extends ConsumerState<_DashboardBody> {
   static const double _gutter = 16;
-
-  late final AppLifecycleListener _lifecycle;
-
-  @override
-  void initState() {
-    super.initState();
-    _lifecycle = AppLifecycleListener(onResume: _resume);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final route = ModalRoute.of<void>(context);
-    if (route != null) routeObserver.subscribe(this, route);
-  }
-
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    _lifecycle.dispose();
-    super.dispose();
-  }
-
-  /// A pushed screen (a metric detail, an entry form, settings…) was popped and
-  /// the dashboard is on top again.
-  @override
-  void didPopNext() => _resume();
-
-  void _resume() => widget.notifier.resumeCurrentDay();
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +153,15 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
       child: ListView(
         padding: const EdgeInsets.only(top: 4, bottom: 24),
         children: [
+          // A refresh that keeps the old numbers on screen (an app-open reload,
+          // a reload after a metric was written) is otherwise invisible: the
+          // full-screen loader only shows when there is no data at all, so a
+          // resume was indistinguishable from doing nothing.
+          if (state.isRefreshing)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: _gutter, vertical: 4),
+              child: HealthConnectSyncStatusBanner(syncInProgress: true),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: _gutter, vertical: 4),
             child: DayNavigator(

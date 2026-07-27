@@ -232,7 +232,11 @@ class DashboardViewModel extends Notifier<DashboardState> {
   /// to today (covering a midnight rollover too) unless the user deliberately
   /// pinned a past day. [_load] re-reads the preference snapshot, so no separate
   /// refresh step is needed.
-  void resumeCurrentDay() =>
+  ///
+  /// Returns the load's future: as `void` over an async `_load`, a throw became
+  /// an unhandled async error with the state left untouched — a resume that
+  /// silently did nothing. Callers `unawaited` it deliberately; tests await it.
+  Future<void> resumeCurrentDay() =>
       _load(_userPinnedPastDay ? state.selectedDate : LocalDate.now());
 
   /// Persists the acknowledgement of the currently-surfaced missing permissions
