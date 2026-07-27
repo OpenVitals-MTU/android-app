@@ -10,8 +10,9 @@ import 'mapsforge_tile_renderer.dart';
 /// Bridges the pure-Dart Mapsforge renderer into flutter_map, replacing the
 /// Kotlin app's `TileRendererLayer`: every tile requested by the [TileLayer] is
 /// drawn on demand from the imported `.map` packs (combined in a
-/// `MultimapDatastore(DataPolicy.RETURN_FIRST)`, the Kotlin `MultiMapDataStore`
-/// with its cheapest merge policy).
+/// `MultimapDatastore(DataPolicy.RETURN_ALL)`, the Kotlin `MultiMapDataStore`
+/// with its cheapest MERGING policy — see the note there on why the cheaper
+/// RETURN_FIRST leaves a blank wedge at a pack seam).
 ///
 /// The rendering itself, its warm-up, its concurrency cap and its cache all
 /// belong to the shared [MapsforgeTileRenderer]; this class is only the adapter

@@ -31,7 +31,7 @@ import 'pmtiles_tile_provider.dart';
 ///   equivalent of the Kotlin MapLibre view with its `pmtiles://` sources;
 /// * active format MAPSFORGE → a raster [TileLayer] whose tiles the pure-Dart
 ///   Mapsforge renderer draws on demand from a
-///   `MultimapDatastore(DataPolicy.RETURN_FIRST)` over all active packs with
+///   `MultimapDatastore(DataPolicy.RETURN_ALL)` over all active packs with
 ///   the stock `default.xml` render theme — Kotlin's `TileRendererLayer` +
 ///   `MapsforgeThemes.DEFAULT`;
 /// * no active pack, resources still loading, or a pack that fails to open →
@@ -178,18 +178,31 @@ Future<_OfflineBaseMapResources> _loadMapsforge(List<String> packPaths) async {
     'jar:',
     ImageBundleLoader(bundle: rootBundle, pathPrefix: 'assets/mapsforge/'),
   );
-  // RETURN_FIRST, not DEDUPLICATE. Deduplication is O(ways² × coordinates) per
-  // tile: MultimapDatastore accumulates every pack's bundle through
-  // DatastoreBundle.addDeduplicate, which is a linear `ways.contains(way)` scan
-  // whose Way.== compares every coordinate of both ways (the package's own
-  // comment on it reads "note: listEquals() is very expensive"). It costs that
-  // even when a single pack answers, because the accumulator grows as it scans.
+  // RETURN_ALL, not DEDUPLICATE and NOT RETURN_FIRST.
   //
-  // RETURN_FIRST instead hands back the first pack whose bounding box covers the
-  // tile, with no accumulation at all. The packs cover different regions, so
-  // there is nothing to merge; where two ever did share a boundary, a tile there
-  // would render from whichever pack answers first rather than from both.
-  final datastore = MultimapDatastore(DataPolicy.RETURN_FIRST);
+  // Deduplication is O(ways² × coordinates) per tile: MultimapDatastore
+  // accumulates every pack's bundle through DatastoreBundle.addDeduplicate,
+  // which is a linear `ways.contains(way)` scan whose Way.== compares every
+  // coordinate of both ways (the package's own comment on it reads "note:
+  // listEquals() is very expensive"). It costs that even when a single pack
+  // answers, because the accumulator grows as it scans.
+  //
+  // RETURN_FIRST is not the answer either, and shipping it left a blank wedge
+  // across the seam between two packs. It returns the FIRST datastore whose
+  // bounding box intersects the tile and whose `supportsTile` is true — but
+  // `Mapfile.supportsTile` only checks the zoom range and that same bounding
+  // box, never whether the pack holds anything there. A pack's box is a
+  // RECTANGLE around a region-shaped extract, so two adjacent regions have
+  // overlapping boxes: in the overlap the first pack claims the tile, returns
+  // its empty bundle, and the pack that actually has the data is never asked.
+  //
+  // RETURN_ALL reads every intersecting pack (concurrently, via Future.wait)
+  // and merges with `addDeduplicate(result, false)` — a plain addAll. That is
+  // the merge, at O(n), and it keeps the whole win over DEDUPLICATE, because
+  // the quadratic part was the dedup flag and never the accumulation. Where two
+  // packs genuinely hold the same feature it is drawn twice, which is invisible
+  // at a seam and far cheaper than comparing every coordinate to find out.
+  final datastore = MultimapDatastore(DataPolicy.RETURN_ALL);
   try {
     final mapfiles = <Mapfile>[];
     for (final path in packPaths) {
