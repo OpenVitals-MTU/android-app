@@ -196,24 +196,31 @@ class BodyEnergyZonesSectionState
             label: l10n.bodyEnergyCalibrationZone5,
           ),
         ],
+        // The heading and its line show ALWAYS, the multipliers only once there
+        // are some. The whole block used to be gated on having learned
+        // something, which made the "sync a watch to start personalising these"
+        // case unreachable -- the one state where that sentence is the only
+        // thing worth saying, and the only state where nothing said it. Four
+        // rows of 1.00x and a Reset button are what stay hidden, since they
+        // describe a model that has not learned anything yet.
+        const SizedBox(height: 16),
+        const Divider(height: 1),
+        const SizedBox(height: 12),
+        Text(
+          l10n.bodyEnergyPersonalizationTitle,
+          style: theme.textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          l10n.bodyEnergyPersonalizationWatchBody(
+            calibration.watchObservationCount,
+          ),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
         if (calibration.hasPersonalGains ||
             calibration.hasWatchObservations) ...[
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          Text(
-            l10n.bodyEnergyPersonalizationTitle,
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            l10n.bodyEnergyPersonalizationWatchBody(
-              calibration.watchObservationCount,
-            ),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
           const SizedBox(height: 10),
           _GainRow(
             label: l10n.bodyEnergyGainActivity,

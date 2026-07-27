@@ -8,6 +8,7 @@ import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/preferences/body_energy_calibration.dart';
 import 'package:openvitals/domain/preferences/body_profile.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
+import 'package:openvitals/ui/components/ov_card.dart';
 import 'package:openvitals/features/settings/presentation/cards/body_energy_calibration_card.dart';
 import 'package:openvitals/features/settings/presentation/cards/body_profile_card.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
@@ -90,7 +91,9 @@ void main() {
       await tester.enterText(birthYear, '1995');
       await tester.pumpAndSettle();
 
-      final save = find.widgetWithText(FilledButton, 'Save');
+      // The card has TWO Saves: this one for the profile and the zones, and the
+      // metabolism half's own further down. First() is the profile's.
+      final save = find.widgetWithText(FilledButton, 'Save').first;
       await tester.ensureVisible(save);
       await tester.tap(save);
       await tester.pumpAndSettle();
@@ -127,9 +130,20 @@ void main() {
       await tester.pumpWidget(_host(prefs, const BodyProfileCard()));
       await tester.pumpAndSettle();
 
+      // One card holding three subjects, divided by rules rather than split
+      // into three cards with three headers. Two Saves, deliberately: the
+      // metabolism half writes a different store under the caffeine keys, and
+      // one button writing both would make a half-failed save invisible.
       expect(find.text('Manual heart zones'), findsOneWidget);
-      expect(find.text('Save'), findsOneWidget,
-          reason: 'one card, one Save — the section must not bring its own');
+      expect(find.text('Metabolism'), findsOneWidget);
+      // Shown with nothing learned yet, which is the state whose copy explains
+      // that syncing a watch is what personalises the model. It used to be
+      // hidden exactly then, so that sentence could never appear.
+      expect(find.text('Personal tuning'), findsOneWidget);
+      expect(find.textContaining('Sync a watch'), findsOneWidget);
+      expect(find.text('Save'), findsNWidgets(2));
+      expect(find.byType(OpenVitalsCard), findsOneWidget,
+          reason: 'one surface — a card inside a card reads as a mistake');
     });
 
     testWidgets('but standalone it still carries a birth year and a Save',

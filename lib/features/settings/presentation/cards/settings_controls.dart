@@ -16,38 +16,46 @@ class SettingsCardShell extends StatelessWidget {
     required this.title,
     required this.body,
     required this.children,
+    this.embedded = false,
   });
 
   final String title;
   final String body;
   final List<Widget> children;
 
+  /// Drop the card chrome — the padding, the surface and the corners — and
+  /// return the contents alone, for a card that is a SECTION of another one.
+  ///
+  /// A nested card reads as a mistake: two surfaces, two sets of corners, and
+  /// an inner one that looks clickable because everything else shaped like it
+  /// is. What separates sections inside one card is a rule, not a second card.
+  final bool embedded;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: theme.textTheme.titleSmall),
+        const SizedBox(height: 4),
+        Text(
+          body,
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 14),
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) const SizedBox(height: 14),
+          children[i],
+        ],
+      ],
+    );
+    if (embedded) return content;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: OpenVitalsCard(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: theme.textTheme.titleSmall),
-              const SizedBox(height: 4),
-              Text(
-                body,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 14),
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0) const SizedBox(height: 14),
-                children[i],
-              ],
-            ],
-          ),
-        ),
+        child: Padding(padding: const EdgeInsets.all(16), child: content),
       ),
     );
   }

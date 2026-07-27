@@ -9,6 +9,7 @@ import '../../../../state/app_providers.dart';
 import '../../../../ui/components/ov_card.dart';
 import '../../application/body_profile_view_model.dart';
 import 'body_energy_zones_section.dart';
+import 'metabolism_card.dart';
 
 /// A self-contained "Body profile" settings card. 1:1 port of the Kotlin
 /// `BodyProfileCard` (features/settings/BodyProfileCard.kt): four optional
@@ -137,9 +138,12 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
                 maxLength: 3,
               ),
               _SourceNote(source: cardState.heightSource),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
+              // No rule before the zones: they are the same subject as the
+              // fields above and share the Save below, so a line there would
+              // separate a thing from itself. The rules in this card mark where
+              // one Save's reach ends -- before Metabolism, and inside the
+              // section before the tuning it did not ask you for.
+              const SizedBox(height: 20),
               BodyEnergyZonesSection(key: _zones, showBirthYear: false),
               Padding(
                 padding: const EdgeInsets.only(top: 12),
@@ -151,6 +155,15 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
                   ),
                 ),
               ),
+              // Metabolism is the same kind of thing — facts about this person —
+              // so it shares the surface, separated by a rule rather than by a
+              // second card. It keeps its OWN Save: these are stored under the
+              // caffeine keys by a different view model, and one button writing
+              // two unrelated stores would make a half-failed save invisible.
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              const MetabolismCard(embedded: true),
             ],
           ),
         ),

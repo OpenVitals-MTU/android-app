@@ -15,7 +15,6 @@ import 'cards/activity_recording_preferences_card.dart';
 import 'cards/activity_split_distance_card.dart';
 import 'cards/apple_health_import_card.dart';
 import 'cards/body_profile_card.dart';
-import 'cards/metabolism_card.dart';
 import 'cards/caffeine_preferences_card.dart';
 import 'cards/debug_diagnostics_card.dart';
 import 'cards/body_energy_diagnostics_card.dart';
@@ -168,20 +167,20 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
         const CaffeinePreferencesCard(),
       ];
     case SettingsSection.bodyProfile:
-      // Everything that is a fact about the person, in one place. The Body card
-      // holds size and age; the calibration card holds the heart-rate zones and
-      // the learned tuning; the metabolism card holds the nine factors that used
-      // to sit inside the caffeine settings, where the app's only pregnancy
-      // input was three taps deep in a coffee screen.
+      // ONE card, because it is one subject: size and age, then the heart-rate
+      // zones and the tuning learned from them, then the nine metabolism
+      // factors that used to sit inside the caffeine settings — where the app's
+      // only pregnancy input was three taps deep in a coffee screen.
       //
-      // The zones and the learned tuning render INSIDE the Body card, not as a
-      // card of their own: one screen of one person's facts reads as one card
-      // with one Save. BodyEnergyCalibrationCard is the standalone framing of
-      // the same section, and belongs to the Body Energy setup gate.
-      return const [
-        BodyProfileCard(),
-        MetabolismCard(),
-      ];
+      // The Body card composes all three, divided by rules. Three cards meant
+      // three headers and three Save buttons for one screenful of one person's
+      // facts, and a birth year asked for twice. The metabolism half keeps a
+      // Save of its own because it writes a different store.
+      //
+      // BodyEnergyCalibrationCard still exists as the standalone framing of the
+      // zones section: it is the Body Energy setup gate, reached before any of
+      // this, and the only route there to the birth year automatic zones need.
+      return const [BodyProfileCard()];
     case SettingsSection.recovery:
       return [
         _StepperCard(

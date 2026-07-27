@@ -20,7 +20,12 @@ import 'settings_controls.dart';
 /// genotype and hormonal status. The on-disk name is invisible; the section a
 /// control appears in is not.
 class MetabolismCard extends ConsumerWidget {
-  const MetabolismCard({super.key});
+  const MetabolismCard({super.key, this.embedded = false});
+
+  /// Rendered as a section of the Body profile card rather than a card of its
+  /// own. Both halves are facts about the same person, so they belong under one
+  /// surface, divided by a rule and each with its own Save.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,6 +37,7 @@ class MetabolismCard extends ConsumerWidget {
     void update(CaffeinePreferences next) => notifier.updateDraft(next);
 
     return SettingsCardShell(
+      embedded: embedded,
       title: l10n.settingsMetabolismTitle,
       body: l10n.settingsMetabolismBody,
       children: [
