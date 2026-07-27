@@ -110,22 +110,32 @@ void main() {
         (repo) => repo.setBodyProfile(const BodyProfile(birthYear: 1993)),
       );
 
-      await tester.pumpWidget(_host(
-        prefs,
-        const Column(children: [
-          BodyProfileCard(),
-          BodyEnergyCalibrationCard(showBirthYear: false),
-        ]),
-      ));
+      await tester.pumpWidget(_host(prefs, const BodyProfileCard()));
       await tester.pumpAndSettle();
 
       expect(find.widgetWithText(TextField, 'Birth year'), findsOneWidget);
       expect(find.text('1993'), findsOneWidget);
     });
 
-    testWidgets('but standalone it still carries one', (tester) async {
-      // The Body Energy screen has no other route to the field, and setup will
-      // not complete without it.
+    testWidgets('the zones and tuning live inside the Body card, not beside it',
+        (tester) async {
+      // One screen of one person's facts, under one header and one Save. The
+      // section used to be a second card with its own header and its own Save
+      // button, which is what the design this replaces was pointing at.
+      final prefs = await _prefs((_) {});
+
+      await tester.pumpWidget(_host(prefs, const BodyProfileCard()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Manual heart zones'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget,
+          reason: 'one card, one Save — the section must not bring its own');
+    });
+
+    testWidgets('but standalone it still carries a birth year and a Save',
+        (tester) async {
+      // The Body Energy setup gate has no other route to the field, and setup
+      // will not complete without it.
       final prefs = await _prefs((_) {});
 
       await tester
@@ -133,6 +143,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.widgetWithText(TextField, 'Birth year'), findsOneWidget);
+      expect(find.text('Manual heart zones'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
     });
   });
 

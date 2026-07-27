@@ -8,6 +8,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../state/app_providers.dart';
 import '../../../../ui/components/ov_card.dart';
 import '../../application/body_profile_view_model.dart';
+import 'body_energy_zones_section.dart';
 
 /// A self-contained "Body profile" settings card. 1:1 port of the Kotlin
 /// `BodyProfileCard` (features/settings/BodyProfileCard.kt): four optional
@@ -25,6 +26,11 @@ class BodyProfileCard extends ConsumerStatefulWidget {
 }
 
 class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
+  /// The heart zones and learned tuning render inside this card, so the screen
+  /// carries one header and one Save for one person's facts. The key is how the
+  /// single Save reaches the section's form state, which the section owns.
+  final _zones = GlobalKey<BodyEnergyZonesSectionState>();
+
   final _birthYear = TextEditingController();
   final _weight = TextEditingController();
   final _height = TextEditingController();
@@ -56,13 +62,18 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
         UnitSystem.imperial => 'lb',
       };
 
-  void _save(UnitSystem unit) {
-    ref.read(bodyProfileCardProvider.notifier).save(
+  Future<void> _save(UnitSystem unit) async {
+    // The profile FIRST, and awaited: the zones section refuses to save when
+    // Body Energy has no birth year, and it reads that from the stored profile
+    // because the field lives here rather than in the section. Saving the other
+    // way round would reject a year the user has just typed.
+    await ref.read(bodyProfileCardProvider.notifier).save(
           birthYear: _birthYear.text,
           weight: _weight.text,
           height: _height.text,
           unit: unit,
         );
+    _zones.currentState?.save();
   }
 
   @override
@@ -126,6 +137,10 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
                 maxLength: 3,
               ),
               _SourceNote(source: cardState.heightSource),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              BodyEnergyZonesSection(key: _zones, showBirthYear: false),
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Align(

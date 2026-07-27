@@ -14,7 +14,6 @@ import '../../../ui/components/screen_scroll_padding.dart';
 import 'cards/activity_recording_preferences_card.dart';
 import 'cards/activity_split_distance_card.dart';
 import 'cards/apple_health_import_card.dart';
-import 'cards/body_energy_calibration_card.dart';
 import 'cards/body_profile_card.dart';
 import 'cards/metabolism_card.dart';
 import 'cards/caffeine_preferences_card.dart';
@@ -175,12 +174,12 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
       // to sit inside the caffeine settings, where the app's only pregnancy
       // input was three taps deep in a coffee screen.
       //
-      // The calibration card hides its birth year here. It carries one for the
-      // Body Energy screen, where it stands alone as the setup gate, but the
-      // Body card is directly above it on this screen and already has the field.
+      // The zones and the learned tuning render INSIDE the Body card, not as a
+      // card of their own: one screen of one person's facts reads as one card
+      // with one Save. BodyEnergyCalibrationCard is the standalone framing of
+      // the same section, and belongs to the Body Energy setup gate.
       return const [
         BodyProfileCard(),
-        BodyEnergyCalibrationCard(showBirthYear: false),
         MetabolismCard(),
       ];
     case SettingsSection.recovery:
