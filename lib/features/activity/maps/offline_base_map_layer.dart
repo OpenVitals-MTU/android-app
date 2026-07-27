@@ -6,6 +6,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mapsforge_flutter_core/model.dart' as mapsforge;
+import 'package:mapsforge_flutter_core/projection.dart' as mapsforge;
 import 'package:mapsforge_flutter_mapfile/mapfile.dart';
 import 'package:mapsforge_flutter_renderer/cache.dart';
 import 'package:mapsforge_flutter_renderer/offline_renderer.dart';
@@ -15,6 +17,7 @@ import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
 import 'mapsforge_tile_provider.dart';
+import 'mapsforge_tile_renderer.dart';
 import 'offline_base_map.dart';
 import 'offline_map_models.dart';
 import 'offline_map_style.dart';
@@ -28,7 +31,7 @@ import 'pmtiles_tile_provider.dart';
 ///   equivalent of the Kotlin MapLibre view with its `pmtiles://` sources;
 /// * active format MAPSFORGE → a raster [TileLayer] whose tiles the pure-Dart
 ///   Mapsforge renderer draws on demand from a
-///   `MultimapDatastore(DataPolicy.DEDUPLICATE)` over all active packs with
+///   `MultimapDatastore(DataPolicy.RETURN_FIRST)` over all active packs with
 ///   the stock `default.xml` render theme — Kotlin's `TileRendererLayer` +
 ///   `MapsforgeThemes.DEFAULT`;
 /// * no active pack, resources still loading, or a pack that fails to open →
@@ -49,6 +52,22 @@ class OfflineBaseMapLayer extends ConsumerWidget {
       final _MapsforgeResources resources => TileLayer(
           tileProvider: resources.tileProvider,
           userAgentPackageName: 'tech.mmarca.openvitals',
+          // The default transformer emits a tile update for EVERY map event —
+          // every frame of a pinch — and each one asks for a fresh tile set at
+          // the newly rounded zoom. With tiles this expensive that is the whole
+          // "zooming reloads everything" symptom. Throttle, not debounce:
+          // debounce loads nothing until the gesture ends, which reads as a
+          // frozen map.
+          tileUpdateTransformer:
+              TileUpdateTransformers.throttle(const Duration(milliseconds: 200)),
+          // Each fading tile is an AnimationController. Twenty of them on the
+          // first-paint frame is a cost the offline renderer cannot afford, and
+          // with keepAlive they would idle on for the screen's life.
+          tileDisplay: const TileDisplay.instantaneous(),
+          // Prefetching a ring the user may never pan to is a poor trade when a
+          // tile costs a vector render. keepBuffer stays at its default 2, so
+          // already-drawn neighbours are still not pruned.
+          panBuffer: 0,
         ),
       null => const SizedBox.shrink(),
     };
@@ -100,16 +119,18 @@ class _PmtilesResources implements _OfflineBaseMapResources {
 }
 
 class _MapsforgeResources implements _OfflineBaseMapResources {
-  _MapsforgeResources(this.renderer) : tileProvider = MapsforgeTileProvider(renderer);
+  _MapsforgeResources(this.tileRenderer)
+      : tileProvider = MapsforgeTileProvider(tileRenderer);
 
-  final DatastoreRenderer renderer;
+  final MapsforgeTileRenderer tileRenderer;
   final MapsforgeTileProvider tileProvider;
 
   @override
   void dispose() {
-    // DatastoreRenderer.dispose tears down the render theme and the
+    // MapsforgeTileRenderer.dispose drops its cached tiles, then disposes the
+    // DatastoreRenderer beneath — which tears down the render theme and the
     // MultimapDatastore (which disposes every Mapfile).
-    renderer.dispose();
+    tileRenderer.dispose();
   }
 }
 
@@ -145,8 +166,9 @@ Future<_OfflineBaseMapResources> _loadPmtiles(List<String> packPaths) async {
   }
 }
 
-/// Kotlin `createMapsforgeMapView`: MultiMapDataStore(DEDUPLICATE) over every
-/// active pack + the stock default render theme.
+/// Kotlin `createMapsforgeMapView`: MultiMapDataStore over every active pack +
+/// the stock default render theme, wrapped in the shared
+/// [MapsforgeTileRenderer] that warms, throttles and caches the tile path.
 Future<_OfflineBaseMapResources> _loadMapsforge(List<String> packPaths) async {
   // The theme's `jar:symbols/...` / `jar:patterns/...` resources resolve
   // against the app bundle where the mapsforge-themes jar contents are
@@ -156,7 +178,18 @@ Future<_OfflineBaseMapResources> _loadMapsforge(List<String> packPaths) async {
     'jar:',
     ImageBundleLoader(bundle: rootBundle, pathPrefix: 'assets/mapsforge/'),
   );
-  final datastore = MultimapDatastore(DataPolicy.DEDUPLICATE);
+  // RETURN_FIRST, not DEDUPLICATE. Deduplication is O(ways² × coordinates) per
+  // tile: MultimapDatastore accumulates every pack's bundle through
+  // DatastoreBundle.addDeduplicate, which is a linear `ways.contains(way)` scan
+  // whose Way.== compares every coordinate of both ways (the package's own
+  // comment on it reads "note: listEquals() is very expensive"). It costs that
+  // even when a single pack answers, because the accumulator grows as it scans.
+  //
+  // RETURN_FIRST instead hands back the first pack whose bounding box covers the
+  // tile, with no accumulation at all. The packs cover different regions, so
+  // there is nothing to merge; where two ever did share a boundary, a tile there
+  // would render from whichever pack answers first rather than from both.
+  final datastore = MultimapDatastore(DataPolicy.RETURN_FIRST);
   try {
     final mapfiles = <Mapfile>[];
     for (final path in packPaths) {
@@ -178,14 +211,44 @@ Future<_OfflineBaseMapResources> _loadMapsforge(List<String> packPaths) async {
     // useIsolateReader keeps block parsing AND rendertheme matching off the
     // UI thread: with them inline, a dense tile burst holds the main thread
     // past the 5s input-dispatch deadline and Android ANR-kills the app.
-    return _MapsforgeResources(DatastoreRenderer(
-      datastore,
-      RenderThemeBuilder.createFromString(themeXml),
-      useSeparateLabelLayer: false,
-      useIsolateReader: true,
-    ));
+    final tileRenderer = MapsforgeTileRenderer(
+      DatastoreRenderer(
+        datastore,
+        RenderThemeBuilder.createFromString(themeXml),
+        useSeparateLabelLayer: false,
+        useIsolateReader: true,
+      ),
+      warmUpTile: await _warmUpTile(datastore),
+    );
+    // Spawn the reader isolate now, while exactly one caller can ask for it.
+    // Left to the first tile burst, the renderer's own lazy `??= await` spawns
+    // one isolate per concurrent tile (~600ms each) and orphans all but one.
+    await tileRenderer.warmUp();
+    return _MapsforgeResources(tileRenderer);
   } catch (error) {
     datastore.dispose();
     rethrow;
   }
+}
+
+/// A tile at the centre of the active packs' combined coverage, used only to
+/// force the renderer's reader isolate into existence.
+///
+/// z16 rather than a low zoom on purpose: a z16 tile spans a few hundred metres
+/// and reads almost nothing, where a z5 tile would drag in a country's worth of
+/// ways just to warm a pointer. Which tile it is barely matters — `executeJob`
+/// assigns its reader before it reads — so an empty one does the job too.
+///
+/// The bounding box is the union `addDatastore` already cached, so this costs no
+/// file access and is safe after the handles were freed above.
+Future<mapsforge.Tile> _warmUpTile(MultimapDatastore datastore) async {
+  const zoomLevel = 16;
+  final box = await datastore.getBoundingBox();
+  final projection = mapsforge.MercatorProjection.fromZoomlevel(zoomLevel);
+  return mapsforge.Tile(
+    projection.longitudeToTileX((box.minLongitude + box.maxLongitude) / 2),
+    projection.latitudeToTileY((box.minLatitude + box.maxLatitude) / 2),
+    zoomLevel,
+    0,
+  );
 }

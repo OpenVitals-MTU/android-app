@@ -221,6 +221,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen>
             sectionPadded(_RouteMapCard(
               workout: workout,
               distanceMeters: display.routeDistanceMeters,
+              mapPoints: display.mapRoutePoints,
             )),
           // Only a workout this app wrote can be edited or deleted; Health
           // Connect refuses to touch another app's records (Kotlin gated the
@@ -544,12 +545,20 @@ class _SessionDetailsCard extends StatelessWidget {
 /// "Save GPX" / "Save KMZ" write the route to a user-chosen destination —
 /// Kotlin's `openActivityRouteInMap` / `saveActivityRouteExport`.
 class _RouteMapCard extends StatelessWidget {
-  const _RouteMapCard({required this.workout, required this.distanceMeters});
+  const _RouteMapCard({
+    required this.workout,
+    required this.distanceMeters,
+    required this.mapPoints,
+  });
 
   final ExerciseData workout;
 
-  /// Summed at load time; this card only prints it.
+  /// Summed at load time over the FULL route; this card only prints it.
   final double distanceMeters;
+
+  /// The route decimated for drawing — see [ActivityDetailDisplay.mapRoutePoints].
+  /// A stable list identity, so RouteMapView's memo survives a rebuild.
+  final List<ExerciseRoutePoint> mapPoints;
 
   @override
   Widget build(BuildContext context) {
@@ -578,7 +587,7 @@ class _RouteMapCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            RouteMapView(points: workout.route.points),
+            RouteMapView(points: mapPoints),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,

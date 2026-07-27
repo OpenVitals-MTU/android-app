@@ -6,6 +6,7 @@ import 'package:xml/xml.dart';
 import '../../../../core/geo/geo_distance.dart';
 import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
+import '../../../activity/maps/route_geometry.dart';
 import 'fit_route_parser.dart';
 import 'gpx_kml_route_parser.dart';
 import 'tcx_route_parser.dart';
@@ -202,7 +203,8 @@ RouteFileImport buildRouteImport({
       'Route must contain at least 2 unique location points.',
     );
   }
-  final simplified = _simplifyRoutePoints(sortedPoints);
+  // Shared with the map's own decimation: one cap, one algorithm.
+  final simplified = simplifyRoutePoints(sortedPoints);
   return RouteFileImport(
     fileName: fileName,
     points: simplified,
@@ -336,27 +338,7 @@ double routeElevationGainMeters(List<ExerciseRoutePoint> points) {
   return total;
 }
 
-List<ExerciseRoutePoint> _simplifyRoutePoints(List<ExerciseRoutePoint> points) {
-  if (points.length <= _maxImportedRoutePoints) return points;
-  final lastIndex = points.length - 1;
-  final step = lastIndex / (_maxImportedRoutePoints - 1);
-  final seen = <int>{};
-  final result = <ExerciseRoutePoint>[];
-  for (var index = 0; index < _maxImportedRoutePoints; index++) {
-    final pickRaw = (index * step).toInt();
-    final pick = pickRaw < 0
-        ? 0
-        : (pickRaw > lastIndex ? lastIndex : pickRaw);
-    final point = points[pick];
-    if (seen.add(point.time.microsecondsSinceEpoch)) {
-      result.add(point);
-    }
-  }
-  return result;
-}
-
 const int minRoutePoints = 2;
-const int _maxImportedRoutePoints = 2000;
 const int maxRouteFileBytes = 15 * 1024 * 1024;
 const int maxKmzRouteEntryBytes = 15 * 1024 * 1024;
 const double minLatitude = -90.0;

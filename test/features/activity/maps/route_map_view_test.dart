@@ -201,4 +201,85 @@ void main() {
     expect(find.byType(FlutterMap), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('rebuilding with the same points reuses the polyline layer '
+      'instead of re-projecting', (tester) async {
+    // flutter_map drops its projection AND simplification caches unconditionally
+    // in didUpdateWidget, so an equal-but-new PolylineLayer costs a full
+    // Web-Mercator projection plus a Douglas-Peucker pass over every point. The
+    // only defence is handing back the identical widget.
+    final points = [
+      point(52.5200, 13.4050, 0),
+      point(52.5205, 13.4062, 10),
+      point(52.5210, 13.4075, 20),
+    ];
+    final rebuild = ValueNotifier<int>(0);
+    addTearDown(rebuild.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 300,
+            child: ValueListenableBuilder<int>(
+              valueListenable: rebuild,
+              builder: (context, _, _) => RouteMapView(
+                points: points,
+                tileProvider: _TransparentTileProvider(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final before = find.byType(PolylineLayer).evaluate().single.widget;
+
+    rebuild.value = 1;
+    await tester.pump();
+
+    final after = find.byType(PolylineLayer).evaluate().single.widget;
+    expect(identical(before, after), isTrue,
+        reason: 'the same route must not be re-projected on every rebuild');
+  });
+
+  testWidgets('scrolling the route card out of view keeps the map alive',
+      (tester) async {
+    // The card sits near the bottom of the detail screen's ListView; without
+    // keepAlive, scrolling past the cache extent destroys the whole map subtree
+    // and every tile is rendered again on the way back.
+    final points = [
+      point(52.5200, 13.4050, 0),
+      point(52.5210, 13.4075, 20),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              SizedBox(
+                width: 300,
+                child: RouteMapView(
+                  points: points,
+                  tileProvider: _TransparentTileProvider(),
+                ),
+              ),
+              const SizedBox(height: 4000),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final before = tester.state(find.byType(FlutterMap));
+
+    await tester.drag(find.byType(ListView), const Offset(0, -3000));
+    await tester.pump();
+    await tester.drag(find.byType(ListView), const Offset(0, 3000));
+    await tester.pump();
+
+    expect(identical(tester.state(find.byType(FlutterMap)), before), isTrue,
+        reason: 'the map must survive being scrolled out of the cache extent');
+  });
 }

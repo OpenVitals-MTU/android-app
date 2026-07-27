@@ -111,4 +111,75 @@ void main() {
       expect(routeTotalDistanceMeters([point(52.0, 13.0)]), 0.0);
     });
   });
+
+  group('simplifyRoutePoints', () {
+    test('a route below the display cap is returned unchanged, and identical',
+        () {
+      // Identity is what makes RouteMapView's memo work: a rebuild must not
+      // produce a new list and re-project the whole track.
+      final points = line(100);
+
+      expect(identical(simplifyRoutePoints(points), points), isTrue);
+    });
+
+    test('a route longer than the display cap keeps its first and last point',
+        () {
+      final points = line(10000);
+
+      final simplified = simplifyRoutePoints(points);
+
+      expect(simplified.length, lessThanOrEqualTo(maxDisplayedRoutePoints));
+      expect(simplified.first, points.first);
+      expect(simplified.last, points.last);
+    });
+
+    test('decimating for the map never changes the distance the screen reports',
+        () {
+      // The sharp edge of this optimisation: routeDistanceMeters must keep
+      // measuring the FULL track, or a long ride quietly under-reports.
+      final points = line(10000);
+
+      expect(
+        routeTotalDistanceMeters(points),
+        isNot(closeTo(routeTotalDistanceMeters(simplifyRoutePoints(points)), 1)),
+        reason: 'the decimated track is measurably shorter, which is exactly '
+            'why the display must not measure it',
+      );
+    });
+  });
+
+  group('buildRouteMapGeometry', () {
+    test('segments are split at breaks and projected for drawing', () {
+      final geometry = buildRouteMapGeometry(
+        points: line(5),
+        routeBreakIndexes: const [2],
+      );
+
+      // The single-point tail segment is dropped: a polyline needs two.
+      expect(geometry.segments.length, 2);
+      expect(geometry.segments[0].length, 2);
+      expect(geometry.segments[0].first.latitude, 52.0);
+    });
+
+    test('a route with no finite points yields no bounds and no markers', () {
+      final geometry = buildRouteMapGeometry(
+        points: [point(double.nan, double.nan)],
+      );
+
+      expect(geometry.segments, isEmpty);
+      expect(geometry.bounds, isNull);
+      expect(geometry.startPoint, isNull);
+      expect(geometry.endPoint, isNull);
+    });
+
+    test('the current point widens the camera bounds beyond the route', () {
+      final geometry = buildRouteMapGeometry(
+        points: line(3),
+        currentPoint: point(60.0, 20.0),
+      );
+
+      expect(geometry.bounds!.maxLatitude, 60.0);
+      expect(geometry.currentPoint!.latitude, 60.0);
+    });
+  });
 }

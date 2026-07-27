@@ -69,6 +69,47 @@ class RouteMapView extends StatefulWidget {
 class _RouteMapViewState extends State<RouteMapView> {
   final MapController _mapController = MapController();
 
+  // ── Per-route memo ────────────────────────────────────────────────────────
+  //
+  // Keyed on the IDENTITY of the point list, which is exactly right: a live
+  // recording allocates a new list only when a fix arrives, so the 1Hz ticker
+  // that rebuilds this widget hits the memo every time.
+  //
+  // The built WIDGETS are cached, not just their inputs. `Element.updateChild`
+  // short-circuits only on `identical(child.widget, newWidget)`, and
+  // flutter_map's ProjectionSimplificationManagement drops its projection and
+  // simplification caches unconditionally in `didUpdateWidget` — so handing back
+  // an equal-but-new PolylineLayer still re-projects every point. A stable
+  // MapOptions (hence a stable CameraFit, which has no `==`) likewise stops
+  // MapOptions.== failing and re-pushing options on every build.
+  List<ExerciseRoutePoint>? _memoPoints;
+  List<int>? _memoBreaks;
+  ExerciseRoutePoint? _memoCurrent;
+  RouteMapGeometry? _memoGeometry;
+  Widget? _memoPolylines;
+  Widget? _memoMarkers;
+  MapOptions? _memoOptions;
+
+  RouteMapGeometry get _geometry {
+    if (_memoGeometry == null ||
+        !identical(_memoPoints, widget.points) ||
+        !identical(_memoBreaks, widget.routeBreakIndexes) ||
+        _memoCurrent != widget.currentPoint) {
+      _memoPoints = widget.points;
+      _memoBreaks = widget.routeBreakIndexes;
+      _memoCurrent = widget.currentPoint;
+      _memoGeometry = buildRouteMapGeometry(
+        points: widget.points,
+        routeBreakIndexes: widget.routeBreakIndexes,
+        currentPoint: widget.currentPoint,
+      );
+      _memoPolylines = null;
+      _memoMarkers = null;
+      _memoOptions = null;
+    }
+    return _memoGeometry!;
+  }
+
   @override
   void dispose() {
     _mapController.dispose();
@@ -99,16 +140,8 @@ class _RouteMapViewState extends State<RouteMapView> {
 
   @override
   Widget build(BuildContext context) {
-    final segments = routeSegments(widget.points, widget.routeBreakIndexes)
-        .where((segment) => segment.length >= 2)
-        .map((segment) => segment.map(_toLatLng).toList())
-        .toList();
-
-    final cameraPoints = <ExerciseRoutePoint>[
-      ...widget.points,
-      if (widget.currentPoint != null) widget.currentPoint!,
-    ];
-    final bounds = RouteBounds.fromPoints(cameraPoints);
+    final geometry = _geometry;
+    final bounds = geometry.bounds;
 
     // An explicitly provided tile source (tests, debugging) replaces the
     // offline base-map layer; otherwise the active imported pack renders and,
@@ -126,7 +159,7 @@ class _RouteMapViewState extends State<RouteMapView> {
           children: [
             FlutterMap(
               mapController: _mapController,
-              options: _mapOptions(bounds),
+              options: _memoOptions ??= _mapOptions(bounds),
               children: [
                 if (hasExplicitTileSource)
                   TileLayer(
@@ -136,10 +169,10 @@ class _RouteMapViewState extends State<RouteMapView> {
                   )
                 else
                   const OfflineBaseMapLayer(),
-                if (segments.isNotEmpty)
-                  PolylineLayer(
+                if (geometry.segments.isNotEmpty)
+                  _memoPolylines ??= PolylineLayer(
                     polylines: [
-                      for (final segment in segments)
+                      for (final segment in geometry.segments)
                         Polyline(
                           points: segment,
                           color: RouteMapView._routeColor,
@@ -147,7 +180,7 @@ class _RouteMapViewState extends State<RouteMapView> {
                         ),
                     ],
                   ),
-                MarkerLayer(markers: _markers()),
+                _memoMarkers ??= MarkerLayer(markers: _markers(geometry)),
               ],
             ),
             // Kotlin: a circular MyLocation FAB aligned bottom-end, 12dp in.
@@ -171,6 +204,12 @@ class _RouteMapViewState extends State<RouteMapView> {
     );
   }
 
+  /// Built once per route and cached — see the memo fields.
+  ///
+  /// `keepAlive` because the route card lives near the bottom of the detail
+  /// screen's `ListView`: without it, scrolling the card past the cache extent
+  /// destroys the whole map subtree and re-renders every tile (and re-fits the
+  /// camera) when the user scrolls back.
   MapOptions _mapOptions(RouteBounds? bounds) {
     if (bounds == null) {
       return const MapOptions(
@@ -178,6 +217,7 @@ class _RouteMapViewState extends State<RouteMapView> {
         initialZoom: 1,
         backgroundColor: RouteMapView._offlineBackground,
         interactionOptions: InteractionOptions(flags: InteractiveFlag.none),
+        keepAlive: true,
       );
     }
     if (bounds.isSinglePoint) {
@@ -185,6 +225,7 @@ class _RouteMapViewState extends State<RouteMapView> {
         initialCenter: LatLng(bounds.centerLatitude, bounds.centerLongitude),
         initialZoom: 15.5,
         backgroundColor: RouteMapView._offlineBackground,
+        keepAlive: true,
       );
     }
     return MapOptions(
@@ -196,29 +237,23 @@ class _RouteMapViewState extends State<RouteMapView> {
         ),
         padding: const EdgeInsets.all(32),
       ),
+      keepAlive: true,
     );
   }
 
-  List<Marker> _markers() {
-    final validPoints = widget.points
-        .where((point) => point.latitude.isFinite && point.longitude.isFinite)
-        .toList();
-    return [
-      if (validPoints.isNotEmpty)
-        _marker(validPoints.first, RouteMapView._startColor),
-      if (validPoints.length > 1)
-        _marker(validPoints.last, RouteMapView._endColor),
-      if (widget.currentPoint != null &&
-          widget.currentPoint!.latitude.isFinite &&
-          widget.currentPoint!.longitude.isFinite)
-        _marker(widget.currentPoint!, RouteMapView._currentColor, radius: 8),
-    ];
-  }
+  List<Marker> _markers(RouteMapGeometry geometry) => [
+        if (geometry.startPoint != null)
+          _marker(geometry.startPoint!, RouteMapView._startColor),
+        if (geometry.endPoint != null)
+          _marker(geometry.endPoint!, RouteMapView._endColor),
+        if (geometry.currentPoint != null)
+          _marker(geometry.currentPoint!, RouteMapView._currentColor, radius: 8),
+      ];
 
-  Marker _marker(ExerciseRoutePoint point, Color color, {double radius = 6}) {
+  Marker _marker(LatLng point, Color color, {double radius = 6}) {
     final diameter = radius * 2;
     return Marker(
-      point: _toLatLng(point),
+      point: point,
       width: diameter + 4,
       height: diameter + 4,
       child: Container(
@@ -231,6 +266,4 @@ class _RouteMapViewState extends State<RouteMapView> {
     );
   }
 
-  static LatLng _toLatLng(ExerciseRoutePoint point) =>
-      LatLng(point.latitude, point.longitude);
 }

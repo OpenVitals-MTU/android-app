@@ -68,7 +68,20 @@ abstract class ActivityDetailDisplay with _$ActivityDetailDisplay {
     required double? fastestSplitPaceSeconds,
 
     /// The GPS route's length, in metres. Zero when there is no route.
+    ///
+    /// Measured over the FULL point list, never [mapRoutePoints] — a decimated
+    /// track would quietly under-report the distance the screen shows.
     required double routeDistanceMeters,
+
+    /// The route as the map should draw it: decimated to at most
+    /// [maxDisplayedRoutePoints].
+    ///
+    /// A 1Hz-sampled long ride carries ten thousand points, and every one of
+    /// them is projected and simplified by flutter_map on each render. The map
+    /// is 240dp tall and cannot show the difference. Imported route files have
+    /// been capped this way since the importer was written; routes read back
+    /// from Health Connect were not.
+    required List<ExerciseRoutePoint> mapRoutePoints,
 
     /// The height profile of the session, oldest first.
     ///
@@ -119,6 +132,9 @@ ActivityDetailDisplay buildActivityDetailDisplay({
     routeDistanceMeters: workout.route.status == ExerciseRouteStatus.data
         ? routeTotalDistanceMeters(workout.route.points)
         : 0.0,
+    mapRoutePoints: workout.route.status == ExerciseRouteStatus.data
+        ? simplifyRoutePoints(workout.route.points)
+        : const <ExerciseRoutePoint>[],
     elevationSamples: _elevationProfile(workout.route),
     splitSpeedTrace: _splitSpeedTrace(
       recordedSpeed: speedSamples,

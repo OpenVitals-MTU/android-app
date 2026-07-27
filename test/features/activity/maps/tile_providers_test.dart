@@ -10,13 +10,14 @@ import 'package:pmtiles/pmtiles.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 
 import 'package:openvitals/features/activity/maps/mapsforge_tile_provider.dart';
+import 'package:openvitals/features/activity/maps/mapsforge_tile_renderer.dart';
 import 'package:openvitals/features/activity/maps/pmtiles_tile_provider.dart';
 
 /// The two offline tile providers, at their failure edges. The user-visible
 /// symptom of getting these wrong is a BLANK map mid-activity — a tile outside
 /// pack coverage must degrade to "nothing drawn there", and a broken read must
 /// stay a per-tile error, never a crash of the whole map view.
-class _FakeRenderer implements DatastoreRenderer {
+class _FakeRenderer implements Renderer {
   _FakeRenderer(this.answer);
 
   final JobResult Function() answer;
@@ -25,8 +26,22 @@ class _FakeRenderer implements DatastoreRenderer {
   Future<JobResult> executeJob(JobRequest jobRequest) async => answer();
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  Future<JobResult> retrieveLabels(JobRequest jobRequest) async =>
+      throw UnimplementedError();
+
+  @override
+  String getRenderKey() => 'fake';
+
+  @override
+  bool supportLabels() => false;
+
+  @override
+  void dispose() {}
 }
+
+/// The provider under test, over a tile renderer with the fake beneath it.
+MapsforgeTileProvider _provider(JobResult Function() answer) =>
+    MapsforgeTileProvider(MapsforgeTileRenderer(_FakeRenderer(answer)));
 
 class _FakeArchive implements PmTilesArchive {
   _FakeArchive(this.answer);
@@ -74,8 +89,7 @@ void main() {
   group('MapsforgeTileProvider', () {
     test('a tile outside pack coverage draws as transparent, not an error',
         () async {
-      final provider =
-          MapsforgeTileProvider(_FakeRenderer(JobResult.unsupported));
+      final provider = _provider(JobResult.unsupported);
 
       final info = await _resolve(provider);
 
@@ -86,9 +100,9 @@ void main() {
     });
 
     test('a rendered tile reaches flutter_map as a live image', () async {
-      final provider = MapsforgeTileProvider(_FakeRenderer(
+      final provider = _provider(
         () => JobResult.normal(TilePicture.fromPicture(_drawnPicture())),
-      ));
+      );
 
       final info = await _resolve(provider);
 
@@ -100,8 +114,7 @@ void main() {
 
     test('tiles are keyed by coordinate, so the image cache can work',
         () async {
-      final renderer = _FakeRenderer(JobResult.unsupported);
-      final provider = MapsforgeTileProvider(renderer);
+      final provider = _provider(JobResult.unsupported);
       ImageProvider at(int x, int y, int z) =>
           provider.getImage(TileCoordinates(x, y, z), TileLayer());
 
