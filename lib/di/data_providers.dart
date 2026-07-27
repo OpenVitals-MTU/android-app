@@ -69,6 +69,7 @@ import '../features/imports/applehealth/apple_health_import_service.dart';
 import '../data/source/health/health_data_source.dart';
 import '../data/source/health/native/health_connect_native_data_source.dart';
 import '../data/source/health/unsupported_health_data_source.dart';
+import '../state/refresh_coordinator.dart';
 
 /// Riverpod DI graph, replacing the Hilt `AppModule` / `RepositoryModule`.
 ///
@@ -200,18 +201,25 @@ final sleepRepositoryProvider = Provider<SleepRepository>(
 );
 
 final bodyRepositoryProvider = Provider<BodyRepository>(
-  (ref) => BodyRepositoryImpl(ref.watch(healthDataSourceProvider)),
+  (ref) => BodyRepositoryImpl(
+    ref.watch(healthDataSourceProvider),
+    changes: ref.watch(dataChangeSinkProvider),
+  ),
 );
 
 final vitalsRepositoryProvider = Provider<VitalsRepository>(
   (ref) => VitalsRepositoryImpl(
     ref.watch(healthDataSourceProvider),
     cacheDao: ref.watch(vitalsDailyCacheDaoProvider),
+    changes: ref.watch(dataChangeSinkProvider),
   ),
 );
 
 final nutritionRepositoryProvider = Provider<NutritionRepository>(
-  (ref) => NutritionRepositoryImpl(ref.watch(healthDataSourceProvider)),
+  (ref) => NutritionRepositoryImpl(
+    ref.watch(healthDataSourceProvider),
+    changes: ref.watch(dataChangeSinkProvider),
+  ),
 );
 
 final caffeineRepositoryProvider = Provider<CaffeineRepository>(
@@ -219,7 +227,10 @@ final caffeineRepositoryProvider = Provider<CaffeineRepository>(
 );
 
 final mindfulnessRepositoryProvider = Provider<MindfulnessRepository>(
-  (ref) => MindfulnessRepositoryImpl(ref.watch(healthDataSourceProvider)),
+  (ref) => MindfulnessRepositoryImpl(
+    ref.watch(healthDataSourceProvider),
+    changes: ref.watch(dataChangeSinkProvider),
+  ),
 );
 
 final cycleRepositoryProvider = Provider<CycleRepository>(
@@ -236,6 +247,7 @@ final activityRepositoryProvider = Provider<ActivityRepository>(
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
     markerRepository: ref.watch(activityMarkerRepositoryProvider),
     caloriesCacheDao: ref.watch(vitalsDailyCacheDaoProvider),
+    changes: ref.watch(dataChangeSinkProvider),
   ),
 );
 
@@ -244,6 +256,7 @@ final hydrationRepositoryProvider = Provider<HydrationRepository>(
     ref.watch(healthDataSourceProvider),
     preferencesRepository: ref.watch(preferencesRepositoryProvider),
     beverageStore: ref.watch(beverageStoreProvider),
+    changes: ref.watch(dataChangeSinkProvider),
   ),
 );
 
@@ -296,8 +309,10 @@ final phoneIdentityProvider = Provider<GarminPhoneIdentity>(
 
 final appleHealthImportRepositoryProvider =
     Provider<AppleHealthImportRepository>(
-      (ref) =>
-          AppleHealthImportRepositoryImpl(ref.watch(healthDataSourceProvider)),
+      (ref) => AppleHealthImportRepositoryImpl(
+        ref.watch(healthDataSourceProvider),
+        changes: ref.watch(dataChangeSinkProvider),
+      ),
     );
 
 final appleHealthImportServiceProvider = Provider<AppleHealthImportService>(

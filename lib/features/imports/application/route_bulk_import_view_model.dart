@@ -11,8 +11,6 @@ import '../../../di/providers.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/apple_health_import_records.dart';
 import '../../../domain/preferences/unit_system.dart';
-import '../../activity/application/activities_view_model.dart';
-import '../../dashboard/application/dashboard_view_model.dart';
 import '../../manualentry/activity/activity_entry_clock.dart';
 import '../../manualentry/activity/activity_entry_view_model.dart';
 import '../../manualentry/activity/activity_entry_providers.dart';
@@ -435,13 +433,14 @@ class RouteBulkImportViewModel extends Notifier<RouteBulkImportState> {
       error: lastError,
     );
 
-    // Newly-written activities must surface on the dashboard and activities
-    // list, which the settings screen never navigates through. Kotlin marks the
-    // dashboard dirty; the Riverpod analogue is invalidating the read models.
-    if (importedFiles > 0) {
-      ref.invalidate(dashboardProvider);
-      ref.invalidate(activitiesProvider);
-    }
+    // Newly-written activities surface on the dashboard and the activities list
+    // through the refresh signal the activity repository emits per write — no
+    // invalidation here. The two `ref.invalidate` calls that used to live here
+    // were worse than redundant: a period view-model's `build()` fetches
+    // nothing (the load is driven by MetricDetailScaffold's post-frame
+    // callback, which does not re-fire on an already-mounted screen), so
+    // invalidating `activitiesProvider` reset it to isLoading with no load
+    // behind it.
   }
 
   /// A failed write, at the presentation boundary: the use-case's [AppFailure]

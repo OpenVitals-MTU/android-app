@@ -9,7 +9,6 @@ import '../../../domain/insights/heart_rate_recovery.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../state/app_providers.dart';
-import 'activities_view_model.dart';
 import 'activity_detail_display.dart';
 
 part 'activity_detail_view_model.freezed.dart';
@@ -83,9 +82,10 @@ class ActivityDetailViewModel extends Notifier<ActivityDetailState> {
     switch (deletion) {
       case Ok():
         state = state.copyWith(isDeleting: false);
-        // The list is period-scoped and may be showing this activity; reload it
-        // so the row is gone when the user lands back on it.
-        ref.read(activitiesProvider.notifier).refresh();
+        // The list underneath is period-scoped and may be showing this
+        // activity, but it hears about the delete from the repository's own
+        // refresh signal and reloads when it is revealed. Reaching across into
+        // another feature's notifier from here is what that signal replaces.
         onDeleted();
       case Err(:final failure):
         state = state.copyWith(

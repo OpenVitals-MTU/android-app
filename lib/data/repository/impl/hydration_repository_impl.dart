@@ -4,6 +4,8 @@ import '../../../core/period/period_load_query.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
+import '../../../domain/refresh/data_change_sink.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../local/beverage/beverage_store.dart';
 import '../../prefs/preferences_repository.dart';
 import '../../../domain/model/caffeine_models.dart';
@@ -32,10 +34,18 @@ class HydrationRepositoryImpl implements HydrationRepository {
     this._dataSource, {
     PreferencesRepository? preferencesRepository,
     BeverageStore? beverageStore,
+    DataChangeSink changes = const NoopDataChangeSink(),
   })  : _preferences = preferencesRepository,
-        _beverages = beverageStore;
+        _beverages = beverageStore,
+        // ignore: prefer_initializing_formals
+        _changes = changes;
 
   final HealthDataSource _dataSource;
+
+  /// Where a successful write is announced, so the screens reading this data
+  /// re-read. A const no-op by default: a background isolate has no container to
+  /// broadcast into, and a repository unit test does not want one.
+  final DataChangeSink _changes;
   final PreferencesRepository? _preferences;
   final BeverageStore? _beverages;
 
@@ -191,7 +201,9 @@ class HydrationRepositoryImpl implements HydrationRepository {
   Future<Result<String>> writeHydrationEntry(HydrationWriteRequest request) =>
       runCatching(() async {
         await _requireWrite();
-        return _dataSource.writeHydrationEntry(request);
+        final id = await _dataSource.writeHydrationEntry(request);
+        _changes.changed(const {DataDomain.hydration});
+        return id;
       });
 
   @override
@@ -206,6 +218,7 @@ class HydrationRepositoryImpl implements HydrationRepository {
       runCatching(() async {
         await _requireWrite();
         await _dataSource.updateHydrationEntry(id, request);
+        _changes.changed(const {DataDomain.hydration});
       });
 
   @override
@@ -219,6 +232,7 @@ class HydrationRepositoryImpl implements HydrationRepository {
             await _dataSource.deleteHydrationNutritionEntry(clientRecordId);
           }
         }
+        _changes.changed(const {DataDomain.hydration});
       });
 
   @override
@@ -228,6 +242,7 @@ class HydrationRepositoryImpl implements HydrationRepository {
       runCatching(() async {
         await _requireWrite();
         await _dataSource.deleteHydrationEntryByClientRecordId(clientRecordId);
+        _changes.changed(const {DataDomain.hydration});
       });
 
   Future<void> _requireWrite() async {

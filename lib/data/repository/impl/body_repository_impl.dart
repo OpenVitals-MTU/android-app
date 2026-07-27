@@ -5,6 +5,8 @@ import '../../../core/time/local_date.dart';
 import '../../../domain/model/body_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/body_period_data.dart';
+import '../../../domain/refresh/data_change_sink.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../../../domain/preferences/body_profile.dart';
@@ -19,9 +21,18 @@ import 'run_catching.dart';
 /// boundary; the private `_raw` / `_latestX` bodies keep the original throwing
 /// flow so internal composition stays plain awaits.
 class BodyRepositoryImpl implements BodyRepository {
-  BodyRepositoryImpl(this._dataSource);
+  BodyRepositoryImpl(
+    this._dataSource, {
+    DataChangeSink changes = const NoopDataChangeSink(),
+    // ignore: prefer_initializing_formals
+  }) : _changes = changes;
 
   final HealthDataSource _dataSource;
+
+  /// Where a successful write is announced, so the screens reading this data
+  /// re-read. A const no-op by default: a background isolate has no container to
+  /// broadcast into, and a repository unit test does not want one.
+  final DataChangeSink _changes;
 
   @override
   Set<String> bodyWritePermissions(BodyMeasurementType type) => switch (type) {
@@ -319,7 +330,9 @@ class BodyRepositoryImpl implements BodyRepository {
   ) =>
       runCatching(() async {
         await _requireWrite(request.type);
-        return _dataSource.writeBodyMeasurementEntry(request);
+        final id = await _dataSource.writeBodyMeasurementEntry(request);
+        _changes.changed(const {DataDomain.body});
+        return id;
       });
 
   @override
@@ -336,7 +349,8 @@ class BodyRepositoryImpl implements BodyRepository {
   ) =>
       runCatching(() async {
         await _requireWrite(request.type);
-        return _dataSource.updateBodyMeasurementEntry(id, request);
+        await _dataSource.updateBodyMeasurementEntry(id, request);
+        _changes.changed(const {DataDomain.body});
       });
 
   @override
@@ -346,7 +360,8 @@ class BodyRepositoryImpl implements BodyRepository {
   ) =>
       runCatching(() async {
         await _requireWrite(type);
-        return _dataSource.deleteBodyMeasurementEntry(type, id);
+        await _dataSource.deleteBodyMeasurementEntry(type, id);
+        _changes.changed(const {DataDomain.body});
       });
 
   Future<void> _requireWrite(BodyMeasurementType type) async {

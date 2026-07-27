@@ -1,5 +1,7 @@
 import '../../../core/result/result.dart';
 import '../../../domain/model/apple_health_import_records.dart';
+import '../../../domain/refresh/data_change_sink.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../source/health/health_data_source.dart';
 import '../contract/apple_health_import_repository.dart';
 import 'run_catching.dart';
@@ -10,16 +12,31 @@ import 'run_catching.dart';
 /// Public methods convert exceptions to failures via [runCatching] at the
 /// boundary.
 class AppleHealthImportRepositoryImpl implements AppleHealthImportRepository {
-  AppleHealthImportRepositoryImpl(this._dataSource);
+  AppleHealthImportRepositoryImpl(
+    this._dataSource, {
+    DataChangeSink changes = const NoopDataChangeSink(),
+    // ignore: prefer_initializing_formals
+  }) : _changes = changes;
 
   final HealthDataSource _dataSource;
+
+  /// Where a successful import batch is announced.
+  ///
+  /// Every domain, not a set derived per record: a batch spans hundreds of
+  /// records of every kind, and the coordinator's debounce collapses a whole
+  /// import into one signal anyway. An Apple Health import used to invalidate
+  /// nothing at all.
+  final DataChangeSink _changes;
 
   @override
   bool isMindfulnessAvailable() => _dataSource.isMindfulnessSessionAvailable();
 
   @override
   Future<Result<void>> insertImportedRecords(List<ImportRecord> records) =>
-      runCatching(() => _dataSource.insertImportedRecords(records));
+      runCatching(() async {
+        await _dataSource.insertImportedRecords(records);
+        if (records.isNotEmpty) _changes.changed(DataDomain.values.toSet());
+      });
 
   @override
   Future<Result<Set<String>>> findMatchingImportedClientRecordIds(

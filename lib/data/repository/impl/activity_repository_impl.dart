@@ -8,6 +8,8 @@ import '../../../domain/model/exercise_session_metrics.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/activity_period_data.dart';
+import '../../../domain/refresh/data_change_sink.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../local/open_vitals_database.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
@@ -29,10 +31,18 @@ class ActivityRepositoryImpl implements ActivityRepository {
     PreferencesRepository? preferencesRepository,
     ActivityMarkerRepository? markerRepository,
     this._caloriesCacheDao,
+    DataChangeSink changes = const NoopDataChangeSink(),
   })  : _preferences = preferencesRepository,
-        _markers = markerRepository;
+        _markers = markerRepository,
+        // ignore: prefer_initializing_formals
+        _changes = changes;
 
   final HealthDataSource _dataSource;
+
+  /// Where a successful write is announced, so the screens reading activities
+  /// re-read. A const no-op by default: a background isolate has no container to
+  /// broadcast into, and a repository unit test does not want one.
+  final DataChangeSink _changes;
   // ignore: unused_field
   final PreferencesRepository? _preferences;
   final ActivityMarkerRepository? _markers;
@@ -542,7 +552,9 @@ class ActivityRepositoryImpl implements ActivityRepository {
             'Missing Health Connect activity write permission.',
           );
         }
-        return _dataSource.writeActivityEntry(writable);
+        final id = await _dataSource.writeActivityEntry(writable);
+        await _afterActivityWrite({_dayOf(writable)});
+        return id;
       });
 
   @override
@@ -565,7 +577,9 @@ class ActivityRepositoryImpl implements ActivityRepository {
             'Missing Health Connect activity write permission.',
           );
         }
-        return _dataSource.writeActivityEntries(writable);
+        final ids = await _dataSource.writeActivityEntries(writable);
+        await _afterActivityWrite({for (final r in writable) _dayOf(r)});
+        return ids;
       });
 
   @override
@@ -580,7 +594,11 @@ class ActivityRepositoryImpl implements ActivityRepository {
             'Missing Health Connect activity write permission.',
           );
         }
+        // An edit can move a workout across midnight, so the day it used to sit
+        // on needs recomputing too.
+        final oldDay = await _dayOfEntry(id);
         await _dataSource.updateActivityEntry(id, writable);
+        await _afterActivityWrite({_dayOf(writable), ?oldDay});
       });
 
   @override
@@ -591,7 +609,69 @@ class ActivityRepositoryImpl implements ActivityRepository {
             'Missing Health Connect activity write permission.',
           );
         }
+        // A delete carries no timestamp, so capture the day before removing it.
+        final day = await _dayOfEntry(id);
         await _dataSource.deleteActivityEntry(id);
         _markers?.deleteMarkersForActivity(id);
+        await _afterActivityWrite({?day});
       });
+
+  /// The local day an existing workout starts on, or null when there is no
+  /// calories cache to patch (skips the extra read) or the workout is gone.
+  Future<LocalDate?> _dayOfEntry(String id) async {
+    if (_caloriesCacheDao == null) return null;
+    final workout = (await loadWorkout(id)).getOrNull();
+    return workout == null
+        ? null
+        : LocalDate.fromDateTime(workout.startTime.toLocal());
+  }
+
+  LocalDate _dayOf(ActivityWriteRequest request) =>
+      LocalDate.fromDateTime(request.startTime.toLocal());
+
+  /// Patches the affected days in the calories cache, then announces the write.
+  ///
+  /// The app never writes `TotalCaloriesBurned` directly, but a workout changes
+  /// what Health Connect derives for its day — and the calories screen reads
+  /// that day from SQLite. Without this the cached row survives the write and
+  /// the burn only corrects itself the next time the Changes-API drain runs.
+  Future<void> _afterActivityWrite(Set<LocalDate> days) async {
+    await _patchCachedCaloriesDays(days);
+    _changes.changed(const {DataDomain.activities});
+  }
+
+  /// Best-effort: a failure here must never fail the write (a surfaced failure
+  /// could drive a retry and duplicate the workout); the drain reconciles later.
+  /// Modelled on `VitalsRepositoryImpl._patchCachedDays`.
+  Future<void> _patchCachedCaloriesDays(Set<LocalDate> days) async {
+    final dao = _caloriesCacheDao;
+    if (dao == null || days.isEmpty) return;
+    try {
+      // Only patch a cache that has already been synced once — mirrors
+      // [_cachedCaloriesBurned]; otherwise we'd seed partial rows readers trust.
+      if (await dao.cursor(caloriesBurnedCacheMetric) == null) return;
+      for (final day in days) {
+        final rows = await _dataSource.readDailyNutrition(
+          day,
+          day,
+          includeHydration: false,
+        );
+        final kcal = rows.isEmpty ? 0.0 : rows.first.caloriesBurnedKcal;
+        // Dropping the row rather than storing a zero matches the drain: only
+        // days with a positive burn are cached, and the heatmap fills the rest.
+        if (kcal <= 0.0) {
+          await dao.deleteDay(caloriesBurnedCacheMetric, day.epochDay);
+          continue;
+        }
+        await dao.upsertDay(
+          metric: caloriesBurnedCacheMetric,
+          epochDay: day.epochDay,
+          valueSum: kcal,
+          sampleCount: 1,
+        );
+      }
+    } catch (_) {
+      // Swallowed: the write already succeeded and the drain will reconcile.
+    }
+  }
 }

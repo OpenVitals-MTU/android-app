@@ -5,6 +5,8 @@ import '../../../core/time/local_date.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../domain/query/vitals_period_data.dart';
+import '../../../domain/refresh/data_change_sink.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../local/open_vitals_database.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
@@ -20,14 +22,25 @@ import 'run_catching.dart';
 /// boundary; the private permission-gated series reads keep the original
 /// throwing flow so [loadVitalsPeriod] composes them as plain awaits.
 class VitalsRepositoryImpl implements VitalsRepository {
-  VitalsRepositoryImpl(this._dataSource, {VitalsDailyCacheDao? cacheDao})
+  VitalsRepositoryImpl(
+    this._dataSource, {
+    VitalsDailyCacheDao? cacheDao,
+    DataChangeSink changes = const NoopDataChangeSink(),
+  })
       // A private field backing a public named parameter (`cacheDao:`, used by
       // data_providers and tests) cannot be an initializing formal — that would
       // rename the parameter `_cacheDao`.
       // ignore: prefer_initializing_formals
-      : _cacheDao = cacheDao;
+      : _cacheDao = cacheDao,
+        // ignore: prefer_initializing_formals
+        _changes = changes;
 
   final HealthDataSource _dataSource;
+
+  /// Where a successful write is announced, so the screens reading vitals
+  /// re-read. A const no-op by default: a background isolate has no container to
+  /// broadcast into, and a repository unit test does not want one.
+  final DataChangeSink _changes;
 
   /// The local daily-aggregate cache. When a metric has been synced (a cursor
   /// exists), the non-day overview reads its daily points from here instead of
@@ -343,6 +356,7 @@ class VitalsRepositoryImpl implements VitalsRepository {
         final id = await _dataSource.writeVitalsMeasurementEntry(request);
         await _patchCachedDays(
             request.type, {LocalDate.fromDateTime(request.time)});
+        _changes.changed(const {DataDomain.vitals});
         return id;
       });
 
@@ -368,6 +382,7 @@ class VitalsRepositoryImpl implements VitalsRepository {
           LocalDate.fromDateTime(request.time),
           ?oldDay,
         });
+        _changes.changed(const {DataDomain.vitals});
       });
 
   @override
@@ -381,6 +396,7 @@ class VitalsRepositoryImpl implements VitalsRepository {
         final day = await _dayOfEntry(type, id);
         await _dataSource.deleteVitalsMeasurementEntry(type, id);
         await _patchCachedDays(type, {?day});
+        _changes.changed(const {DataDomain.vitals});
       });
 
   Future<void> _requireWrite(VitalsMeasurementType type) async {

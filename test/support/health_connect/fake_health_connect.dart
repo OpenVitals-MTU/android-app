@@ -781,6 +781,56 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
     return null;
   }
 
+  // ── writes ──────────────────────────────────────────────────────────────────
+  //
+  // Accepted and RECORDED, not stored: the fixture is a frozen golden week and
+  // folding a write back into it would make every read in the suite depend on
+  // what an earlier test happened to write. What a write test asserts is that
+  // the request reached the host and what the layers above did about it (the
+  // returned id, the patched cache row, the refresh signal) — [written] is the
+  // record of the first half.
+
+  /// Every write request that reached the host, in order, as `(method, request)`.
+  final List<(String, Object?)> written = [];
+
+  String _accept(String method, Object? request) {
+    written.add((method, request));
+    return 'fake-${written.length}';
+  }
+
+  @override
+  Future<String> writeBodyMeasurementEntry(
+          BodyMeasurementWriteRequestMsg request) async =>
+      _accept('writeBodyMeasurementEntry', request);
+
+  @override
+  Future<void> updateBodyMeasurementEntry(
+          String id, BodyMeasurementWriteRequestMsg request) async =>
+      _accept('updateBodyMeasurementEntry', request);
+
+  @override
+  Future<void> deleteBodyMeasurementEntry(
+          BodyMeasurementTypeMsg type, String id) async =>
+      _accept('deleteBodyMeasurementEntry', id);
+
+  @override
+  Future<String> writeHydrationEntry(HydrationWriteRequestMsg request) async =>
+      _accept('writeHydrationEntry', request);
+
+  @override
+  Future<void> updateHydrationEntry(
+          String id, HydrationWriteRequestMsg request) async =>
+      _accept('updateHydrationEntry', request);
+
+  @override
+  Future<String> writeVitalsMeasurementEntry(
+          VitalsMeasurementWriteRequestMsg request) async =>
+      _accept('writeVitalsMeasurementEntry', request);
+
+  @override
+  Future<String> writeNutritionEntry(NutritionWriteRequestMsg request) async =>
+      _accept('writeNutritionEntry', request);
+
   // ── plumbing ────────────────────────────────────────────────────────────────
 
   /// Instantaneous records inside the window (HRV, resting heart rate).

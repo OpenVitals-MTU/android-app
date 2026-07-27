@@ -5,6 +5,8 @@ import '../../../core/time/local_date.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/nutrition_period_data.dart';
+import '../../../domain/refresh/data_change_sink.dart';
+import '../../../domain/refresh/data_domain.dart';
 import '../../source/health/health_data_source.dart';
 import '../../../domain/health/health_permissions.dart';
 import '../contract/nutrition_repository.dart';
@@ -19,9 +21,18 @@ import 'run_catching.dart';
 /// boundary; the private `_raw` bodies keep the original throwing flow so
 /// internal composition stays plain awaits.
 class NutritionRepositoryImpl implements NutritionRepository {
-  NutritionRepositoryImpl(this._dataSource);
+  NutritionRepositoryImpl(
+    this._dataSource, {
+    DataChangeSink changes = const NoopDataChangeSink(),
+    // ignore: prefer_initializing_formals
+  }) : _changes = changes;
 
   final HealthDataSource _dataSource;
+
+  /// Where a successful write is announced, so the screens reading this data
+  /// re-read. A const no-op by default: a background isolate has no container to
+  /// broadcast into, and a repository unit test does not want one.
+  final DataChangeSink _changes;
 
   @override
   Set<String> get nutritionWritePermissions => {HcPermissions.writeNutrition};
@@ -117,7 +128,9 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   Future<String> _writeNutritionEntryRaw(NutritionWriteRequest request) async {
     await _requireWrite();
-    return _dataSource.writeNutritionEntry(request);
+    final id = await _dataSource.writeNutritionEntry(request);
+    _changes.changed(const {DataDomain.nutrition});
+    return id;
   }
 
   @override
@@ -125,6 +138,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
       runCatching(() async {
         await _requireWrite();
         await _dataSource.deleteNutritionEntry(id);
+        _changes.changed(const {DataDomain.nutrition});
       });
 
   Future<void> _requireWrite() async {
