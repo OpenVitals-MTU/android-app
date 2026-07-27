@@ -51,15 +51,13 @@ List<HeartRateSample> _strapSamples({int everySeconds = 1}) => [
 
 HeartRateRecoveryReading _calculate(
   List<HeartRateSample> samples, {
-  int? profileMax = 190,
   int? restingHeartRate = 55,
   int? age = 40,
-  int? observedMax,
+  int? observedMax = 190,
 }) =>
     calculateHeartRateRecovery(
       recoveryStart: _stop,
       samples: samples,
-      profileMaxHeartRateBpm: profileMax,
       restingHeartRateBpm: restingHeartRate,
       ageYears: age,
       observedMaxHeartRateBpm: observedMax,
@@ -240,7 +238,7 @@ void main() {
         _hr(300, 94),
       ];
 
-      final reading = _calculate(samples, profileMax: 130);
+      final reading = _calculate(samples, observedMax: 130);
 
       expect(reading.issues, contains(HeartRateRecoveryIssue.heartRateDidNotFall));
       expect(reading.quality, HeartRateRecoveryQuality.invalid);
@@ -255,7 +253,7 @@ void main() {
         _hr(210, 92),
       ];
 
-      final reading = _calculate(samples, profileMax: 130);
+      final reading = _calculate(samples, observedMax: 130);
 
       expect(_bpmMark(reading, const Duration(seconds: 30)), 98);
       expect(_dropAt(reading, const Duration(seconds: 30)), 22);
@@ -285,7 +283,7 @@ void main() {
       // A 40-year-old's estimated max is 208 - 0.7*40 = 180. A peak of 160 is 20 below it
       // — inside the 22-bpm confidence band, so NOT flagged submaximal.
       final samples = [for (var t = -60; t <= 300; t += 5) _hr(t, t <= 0 ? 160 : 150)];
-      final reading = _calculate(samples, profileMax: null, age: 40);
+      final reading = _calculate(samples, observedMax: null, age: 40);
 
       expect(reading.maxHeartRateBpmUsed, 180);
       expect(reading.maxHeartRateEstimated, isTrue);
@@ -294,10 +292,12 @@ void main() {
     });
 
     test('the same peak against a KNOWN max is submaximal (tighter band)', () {
-      // Peak 160 against a STATED max of 180 is 20 below it — beyond the 10-bpm band that
-      // applies when the maximum is known rather than estimated.
+      // Peak 160 against a MEASURED max of 180 is 20 below it — beyond the 10-bpm band
+      // that applies when the maximum is known rather than estimated. The known max used
+      // to be one the user stated; that input was removed, so it is now an observed one,
+      // which is the only kind left that counts as known.
       final samples = [for (var t = -60; t <= 300; t += 5) _hr(t, t <= 0 ? 160 : 150)];
-      final reading = _calculate(samples, profileMax: 180, age: 40);
+      final reading = _calculate(samples, observedMax: 180, age: 40);
 
       expect(reading.maxHeartRateEstimated, isFalse);
       expect(reading.issues, contains(HeartRateRecoveryIssue.submaximalEffort));
@@ -307,9 +307,8 @@ void main() {
     test('an unknown max heart rate still reports every mark', () {
       final reading = _calculate(
         _strapSamples(),
-        profileMax: null,
-        age: null,
         observedMax: null,
+        age: null,
         restingHeartRate: null,
       );
 
@@ -321,19 +320,18 @@ void main() {
 
     test('the age formula is Tanaka (208 - 0.7*age), flagged estimated', () {
       // 20yo: 208 - 0.7*20 = 194 (the old 220-age gave 200).
-      final young = _calculate(_strapSamples(), profileMax: null, age: 20);
+      final young = _calculate(_strapSamples(), observedMax: null, age: 20);
       expect(young.maxHeartRateBpmUsed, 194);
       expect(young.maxHeartRateEstimated, isTrue);
 
       // 40yo: 208 - 28 = 180.
-      final middle = _calculate(_strapSamples(), profileMax: null, age: 40);
+      final middle = _calculate(_strapSamples(), observedMax: null, age: 40);
       expect(middle.maxHeartRateBpmUsed, 180);
     });
 
     test('an observed max below the trust bar is not used as a maximum', () {
       final reading = _calculate(
         _strapSamples(),
-        profileMax: null,
         observedMax: 140,
         restingHeartRate: 55,
         age: 40,

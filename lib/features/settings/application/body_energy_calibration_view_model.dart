@@ -62,14 +62,6 @@ class BodyEnergyCalibrationViewModel
     _persist(calibration);
   }
 
-  /// Back to automatic zones, keeping the learned personal gains.
-  void useAutomatic() => _persist(
-    state.calibration.copyWith(
-      manualZoneThresholdsBpm: null,
-      useManualZones: false,
-    ),
-  );
-
   /// Clears the learned personalization — every gain back to neutral 1.0 and the
   /// feel-check count back to zero — without touching the heart-zone setup.
   void resetPersonalization() => _persist(
@@ -78,7 +70,7 @@ class BodyEnergyCalibrationViewModel
       activityDrainGain: 1.0,
       basalDrainGain: 1.0,
       stressDrainGain: 1.0,
-      feelCheckCount: 0,
+      watchObservationCount: 0,
     ),
   );
 

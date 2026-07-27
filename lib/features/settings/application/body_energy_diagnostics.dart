@@ -483,8 +483,7 @@ class BodyEnergyDiagnosticsReport {
           'activity ${_g(calibration.activityDrainGain)} '
           'basal ${_g(calibration.basalDrainGain)} '
           'stress ${_g(calibration.stressDrainGain)}')
-      ..writeln('checks: ${calibration.feelCheckCount} feel, '
-          '${calibration.watchObservationCount} watch; '
+      ..writeln('checks: ${calibration.watchObservationCount} watch; '
           '$storedWatchSampleCount watch samples stored');
     if (missingPermissions.isNotEmpty) {
       final missing = missingPermissions.toList()..sort();

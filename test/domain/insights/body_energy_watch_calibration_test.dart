@@ -167,75 +167,52 @@ void main() {
           dominantInfluence: BodyEnergyPrimaryInfluence.exertion,
         );
 
-    test('no readings and no checks leaves the gains untouched', () {
+    test('no readings leaves the gains untouched', () {
       const start = BodyEnergyCalibration(activityDrainGain: 1.3);
-      expect(
-        fitBodyEnergyGains(start, const []).activityDrainGain,
-        1.3,
-      );
+      expect(fitBodyEnergyGains(start).activityDrainGain, 1.3);
     });
 
     test('a watch reading below prediction raises the drain gain', () {
       // Observed lower than predicted → drained harder than modelled.
       final fitted = fitBodyEnergyGains(
         const BodyEnergyCalibration(),
-        const [],
         watchReadings: [reading(50, 70)],
       );
       expect(fitted.activityDrainGain, greaterThan(1.0));
     });
 
-    test('a watch reading counts far less than a feel-check', () {
-      final byWatch = fitBodyEnergyGains(
-        const BodyEnergyCalibration(),
-        const [],
-        watchReadings: [reading(50, 70)],
-      );
-      final byCheck = fitBodyEnergyGains(
-        const BodyEnergyCalibration(),
-        [
-          BodyEnergyFeelCheck(
-            time: day,
-            rating: 5,
-            predictedScore: 70,
-            dominantInfluence: BodyEnergyPrimaryInfluence.exertion,
-          ),
-        ],
-      );
-
-      // The user's lived experience must outrank a vendor's model.
-      expect(
-        byWatch.activityDrainGain - 1.0,
-        lessThan(byCheck.activityDrainGain - 1.0),
-      );
-    });
-
-    test('watch readings are counted separately from check-ins', () {
+    test('one reading barely moves a gain', () {
+      // It replaces a case that compared a watch reading against a feel-check to
+      // prove the user's lived experience outranked a vendor's model. The
+      // check-in is gone, so the comparison has no other side -- but the reason
+      // the watch rate was set low survives, and is worth stating on its own:
+      // this is another model's opinion, and the fit is meant to converge over
+      // days of agreement rather than chase an hour of disagreement.
       final fitted = fitBodyEnergyGains(
         const BodyEnergyCalibration(),
-        [
-          BodyEnergyFeelCheck(
-            time: day,
-            rating: 5,
-            predictedScore: 70,
-            dominantInfluence: BodyEnergyPrimaryInfluence.exertion,
-          ),
-        ],
+        watchReadings: [reading(50, 70)],
+      );
+      expect(fitted.activityDrainGain - 1.0, lessThan(0.05));
+    });
+
+    test('watch readings are counted', () {
+      final fitted = fitBodyEnergyGains(
+        const BodyEnergyCalibration(),
         watchReadings: [reading(50, 70), reading(55, 70)],
       );
 
-      // "Learned from N check-ins" must keep meaning what it says.
-      expect(fitted.feelCheckCount, 1);
+      // "Learned from N watch readings" must keep meaning what it says.
       expect(fitted.watchObservationCount, 2);
       expect(fitted.hasWatchObservations, isTrue);
     });
+
+
 
     test('a realistic day of disagreement converges without saturating', () {
       // 24 hourly readings each ~10 points off — the everyday case. The gain
       // should move usefully in a day without pinning to its limit.
       final fitted = fitBodyEnergyGains(
         const BodyEnergyCalibration(),
-        const [],
         watchReadings: [for (var i = 0; i < 24; i++) reading(60, 70)],
       );
 
@@ -250,7 +227,6 @@ void main() {
       // correction is the right answer. The clamp is what stops it running away.
       final fitted = fitBodyEnergyGains(
         const BodyEnergyCalibration(),
-        const [],
         watchReadings: [for (var i = 0; i < 24; i++) reading(0, 100)],
       );
 
@@ -260,7 +236,6 @@ void main() {
     test('gains stay within their bounds however extreme the disagreement', () {
       final fitted = fitBodyEnergyGains(
         const BodyEnergyCalibration(),
-        const [],
         watchReadings: [for (var i = 0; i < 5000; i++) reading(0, 100)],
       );
       expect(fitted.activityDrainGain,

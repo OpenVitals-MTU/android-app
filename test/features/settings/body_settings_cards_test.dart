@@ -49,8 +49,6 @@ void main() {
           const BodyProfile(
             birthYear: 1990,
             weightKg: 72.0,
-            restingHeartRateBpm: 55,
-            maxHeartRateBpm: 190,
           ),
         ),
       );
@@ -60,26 +58,12 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('1990'), findsOneWidget);
       expect(find.text('72.0'), findsOneWidget); // metric kg
-      // Resting and max heart rate moved to the zones card: they ARE the
-      // automatic zone ladder, so they belong with the zones they define.
+      // Resting and max heart rate are no longer settable anywhere: both are
+      // derived from observed heart-rate data.
       expect(find.text('55'), findsNothing);
       expect(find.text('190'), findsNothing);
     });
 
-    testWidgets('the heart rates now seed the zones card instead',
-        (tester) async {
-      final prefs = await _prefs(
-        (repo) => repo.setBodyProfile(
-          const BodyProfile(restingHeartRateBpm: 55, maxHeartRateBpm: 190),
-        ),
-      );
-      await tester
-          .pumpWidget(_host(prefs, const BodyEnergyCalibrationCard()));
-      await tester.pumpAndSettle();
-
-      expect(find.text('55'), findsOneWidget);
-      expect(find.text('190'), findsOneWidget);
-    });
 
     testWidgets('shows where weight came from', (tester) async {
       // Without the provenance the merge is invisible and the user cannot tell
@@ -169,7 +153,8 @@ void main() {
       expect(saved.manualZoneThresholdsBpm?.zone5LowerBpm, 170);
     });
 
-    testWidgets('Use automatic resets calibration', (tester) async {
+    testWidgets('switching manual zones off keeps the typed ladder',
+        (tester) async {
       final prefs = await _prefs(
         (repo) => repo.setBodyEnergyCalibration(
           const BodyEnergyCalibration(
@@ -189,16 +174,30 @@ void main() {
           .pumpWidget(_host(prefs, const BodyEnergyCalibrationCard()));
       await tester.pumpAndSettle();
 
-      final useAuto =
-          find.widgetWithText(OutlinedButton, 'Use automatic estimates');
-      await tester.ensureVisible(useAuto);
-      await tester.tap(useAuto);
+      // The toggle is the only control now. "Use automatic estimates" was
+      // removed with the manual resting and max heart rate inputs, and it is
+      // the one behavioural difference that came with removing it: switching
+      // manual zones OFF stops them applying but no longer ERASES them, so a
+      // ladder typed once can be switched back on rather than retyped.
+      await tester.ensureVisible(find.byType(Switch));
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      // Switching manual zones OFF hands the ladder to the automatic path,
+      // which needs a birth year, so setup will not save without one.
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Birth year'),
+        '1990',
+      );
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
       await tester.pumpAndSettle();
 
-      final reset = PreferencesRepository(prefs).bodyEnergyCalibration();
-      expect(reset.useManualZones, isFalse);
-      expect(reset.manualZoneThresholdsBpm, isNull);
-      expect(reset.setupCompleted, isTrue);
+      final saved = PreferencesRepository(prefs).bodyEnergyCalibration();
+      expect(saved.useManualZones, isFalse);
+      expect(saved.manualZoneThresholdsBpm, isNotNull,
+          reason: 'switched off, not thrown away');
+      expect(saved.setupCompleted, isTrue);
     });
   });
 }

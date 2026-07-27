@@ -124,21 +124,15 @@ class BodyProfileViewModel extends Notifier<BodyProfileCardState> {
     }
   }
 
-  /// The heart-rate half of the profile, saved from the zones card.
+  /// The birth year alone, saved from the Body Energy calibration card.
   ///
-  /// Split from [save] because the two halves now live on different cards:
-  /// resting and max heart rate belong with the zones they define, while age
-  /// and body size belong with each other. Both write the same [BodyProfile],
-  /// so neither can clobber the other's fields.
-  void saveHeartRates({
-    required String restingHeartRate,
-    required String maxHeartRate,
-  }) {
+  /// That card is the Body Energy setup gate and is embedded standalone on the
+  /// Body Energy screen, so the one profile value its automatic zone ladder
+  /// depends on has to be reachable from it — the Body card is a section away.
+  /// Same storage as [save]; only this field is touched.
+  void saveBirthYear(String birthYear) {
     final profile = state.profile
-        .copyWith(
-          restingHeartRateBpm: int.tryParse(restingHeartRate.trim()),
-          maxHeartRateBpm: int.tryParse(maxHeartRate.trim()),
-        )
+        .copyWith(birthYear: int.tryParse(birthYear.trim()))
         .normalized();
     ref.read(preferencesRepositoryProvider).setBodyProfile(profile);
   }

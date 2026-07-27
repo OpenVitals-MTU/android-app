@@ -1600,11 +1600,8 @@
     "bodyEnergyCalibrationBody": "OpenVitals estima el desgaste a partir de la intensidad de la frecuencia cardiaca a lo largo del tiempo. La edad, la frecuencia cardiaca máxima, la frecuencia en reposo y las zonas ayudan a clasificar el esfuerzo con más precisión.",
     "bodyEnergyCalibrationOptionalBody": "Esto es opcional. Si lo omites, OpenVitals usa estimaciones automáticas de los datos de Health Connect y muestra menor confianza cuando la calibración es incierta. Estos valores permanecen en los ajustes de OpenVitals.",
     "bodyEnergyCalibrationBirthYear": "Año de nacimiento",
-    "bodyEnergyCalibrationMaxHr": "Frecuencia cardiaca máxima",
-    "bodyEnergyCalibrationRestingHr": "Frecuencia cardiaca en reposo",
     "bodyEnergyCalibrationManualZones": "Zonas cardiacas manuales",
     "bodyEnergyCalibrationManualZonesBody": "Zonas 1-5 o límite de frecuencia cardíaca (latidos por minuto).",
-    "bodyEnergyCalibrationUseAuto": "Usar estimaciones automáticas",
     "bodyEnergyCalibrationSkip": "Omitir por ahora",
     "bodyEnergyCalibrationSaved": "Calibración de energía corporal guardada",
     "bodyEnergyCalibrationReset": "Calibración de energía corporal restablecida a automático",
@@ -1877,19 +1874,7 @@
     },
     "bodyEnergyInfluenceEverydayActivity": "Actividad cotidiana",
     "bodyEnergyReasonEverydayActivityDetail": "Caminar, hacer las tareas domésticas y moverme me quitaban energía incluso con una frecuencia cardíaca baja.",
-    "bodyEnergyFeelCheckTitle": "¿Cómo estás de energía?",
-    "bodyEnergyFeelCheckPrompt": "Valóralo del 0 al 10. Tus respuestas ajustan de forma sutil Body Energy a cómo te afectan realmente la actividad, el sueño y el estrés.",
-    "bodyEnergyFeelCheckSaved": "¡Gracias!, Body Energy lo tendrá en cuenta.",
-    "bodyEnergyFeelCheckError": "No se ha podido guardar ese registro. Por favor, inténtalo de nuevo.",
     "bodyEnergyPersonalizationTitle": "Ajustes personales",
-    "bodyEnergyPersonalizationBody": "{count, plural, =0{Valora tu energía en «Energía corporal» para empezar a personalizarlos.} =1{Datos obtenidos de 1 registro. Cada uno es un multiplicador simple que puedes ver a continuación.} other{Datos obtenidos de {count} registros. Cada uno es un multiplicador simple que puedes ver a continuación.}}",
-    "@bodyEnergyPersonalizationBody": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "bodyEnergyGainActivity": "Las actividades cotidianas te cansan",
     "bodyEnergyGainSleep": "Dormir te recarga las pilas",
     "bodyEnergyGainBasal": "Quema de calorías en reposo",

@@ -1,40 +1,13 @@
 import '../preferences/body_energy_calibration.dart';
 import 'body_energy_timeline.dart';
 
-/// One "feel-check": the user's own 0–10 energy rating at a moment in time,
-/// paired with what the model predicted for that moment.
-class BodyEnergyFeelCheck {
-  const BodyEnergyFeelCheck({
-    required this.time,
-    required this.rating,
-    required this.predictedScore,
-    required this.dominantInfluence,
-  });
-
-  /// The user's rating, 0–10 (×10 gives an observed 0–100 score).
-  final int rating;
-
-  /// The model's score at [time] under the current gains.
-  final int predictedScore;
-
-  /// Which influence was drawing the score most in the window leading up to
-  /// [time] — the gain a mismatch is attributed to.
-  final BodyEnergyPrimaryInfluence dominantInfluence;
-
-  final DateTime time;
-
-  int get observedScore => (rating * 10).clamp(0, 100);
-}
-
 /// One reading from a watch that computes its own body-energy score (Garmin
 /// Body Battery), paired with what this app's model predicted for that moment.
 ///
-/// Structurally the same observation as a [BodyEnergyFeelCheck] — "the model
-/// predicted P, an independent source says O" — and fed through the same fit.
-/// It is a distinct type because it is NOT the same kind of evidence: a
-/// feel-check is the user's lived experience, while this is another vendor's
-/// MODEL. That earns it less weight per reading, not more, however many of them
-/// arrive.
+/// The only evidence the gains are fitted from. It is another vendor's MODEL
+/// rather than ground truth, which is why one reading nudges a gain so little:
+/// the fit is meant to converge over days of agreement, not to chase a watch
+/// that disagrees for an hour.
 class BodyEnergyWatchReading {
   const BodyEnergyWatchReading({
     required this.time,
@@ -54,42 +27,33 @@ class BodyEnergyWatchReading {
   final BodyEnergyPrimaryInfluence dominantInfluence;
 }
 
-/// Fits the personal gains from feel-checks — transparently.
+/// Fits the personal gains from watch readings — transparently.
 ///
-/// Each feel-check says "the model predicted P, I felt O". A gap means the model
-/// moved the score too much or too little in the direction its dominant driver
-/// was pushing. We nudge exactly that one gain by a small step, bounded to
-/// [BodyEnergyCalibration.minGain]..[maxGain], so the outcome is always one
+/// Each reading says "the model predicted P, the watch says O". A gap means the
+/// model moved the score too much or too little in the direction its dominant
+/// driver was pushing. We nudge exactly that one gain by a small step, bounded
+/// to [BodyEnergyCalibration.minGain]..[maxGain], so the outcome is always one
 /// legible number the user can read and override — not a hidden optimiser.
 ///
-/// A drain driver (activity, basal, stress): if the user felt *lower* than
-/// predicted, they were drained harder than modelled, so raise that drain gain;
-/// if they felt *higher*, lower it. A charge driver (sleep recovery) is the
-/// mirror: felt higher → raise the charge gain.
+/// A drain driver (activity, basal, stress): if the watch reads *lower* than
+/// predicted, the user was drained harder than modelled, so raise that drain
+/// gain; if it reads *higher*, lower it. A charge driver (sleep recovery) is the
+/// mirror: higher → raise the charge gain.
 BodyEnergyCalibration fitBodyEnergyGains(
-  BodyEnergyCalibration current,
-  List<BodyEnergyFeelCheck> feelChecks, {
-  double learningRate = _defaultLearningRate,
+  BodyEnergyCalibration current, {
   List<BodyEnergyWatchReading> watchReadings = const [],
   double watchLearningRate = _defaultWatchLearningRate,
 }) {
-  if (feelChecks.isEmpty && watchReadings.isEmpty) return current.normalized();
+  if (watchReadings.isEmpty) return current.normalized();
 
   var sleep = current.sleepChargeGain;
   var activity = current.activityDrainGain;
   var basal = current.basalDrainGain;
   var stress = current.stressDrainGain;
 
-  // Both sources are the same shape of evidence — predicted vs observed — so
-  // they run through one loop, differing only in how hard each nudges.
-  final observations = <(int observed, int predicted, BodyEnergyPrimaryInfluence, double rate)>[
-    for (final c in feelChecks)
-      (c.observedScore, c.predictedScore, c.dominantInfluence, learningRate),
-    for (final w in watchReadings)
-      (w.observedScore, w.predictedScore, w.dominantInfluence, watchLearningRate),
-  ];
-
-  for (final (observed, predicted, influence, rate) in observations) {
+  for (final w in watchReadings) {
+    final (observed, predicted, influence, rate) =
+        (w.observedScore, w.predictedScore, w.dominantInfluence, watchLearningRate);
     // Normalised error in [-1, 1]: positive means the observation was higher
     // than predicted, negative means lower.
     final error = (observed - predicted) / 100.0;
@@ -140,7 +104,6 @@ BodyEnergyCalibration fitBodyEnergyGains(
         activityDrainGain: activity.clamp(lo, hi),
         basalDrainGain: basal.clamp(lo, hi),
         stressDrainGain: stress.clamp(lo, hi),
-        feelCheckCount: current.feelCheckCount + feelChecks.length,
         watchObservationCount:
             current.watchObservationCount + watchReadings.length,
       )
@@ -159,10 +122,6 @@ BodyEnergyCalibration fitBodyEnergyGains(
 /// an install could sit on thousands of stored samples with a watch observation
 /// count of 2 and every gain at exactly 1.00.
 const int bodyEnergyWatchFitEpoch = 1;
-
-/// One feel-check moves a gain at most this far; small so a single mood swing
-/// can't swamp the model, and the gains converge over weeks of check-ins.
-const double _defaultLearningRate = 0.15;
 
 /// A watch reading moves a gain less than a feel-check, but not by much.
 ///

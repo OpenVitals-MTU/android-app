@@ -66,13 +66,10 @@ abstract class BodyEnergyCalibration with _$BodyEnergyCalibration {
     @Default(1.0) double activityDrainGain,
     @Default(1.0) double basalDrainGain,
     @Default(1.0) double stressDrainGain,
-    // How many feel-checks have informed the gains, for display ("learned from
-    // N check-ins").
-    @Default(0) int feelCheckCount,
-    // How many watch readings (Garmin Body Battery) have informed them.
-    // Counted SEPARATELY from feel-checks so the check-in figure keeps meaning
-    // what it says — folding hundreds of watch samples into it would claim
-    // check-ins the user never made.
+    // How many watch readings (Garmin Body Battery) have informed the gains, for
+    // display ("learned from N watch readings"). The only evidence there is:
+    // the manual "How's your energy" check-in was removed, so nothing else
+    // contributes.
     @Default(0) int watchObservationCount,
   }) = _BodyEnergyCalibration;
 
@@ -95,7 +92,6 @@ abstract class BodyEnergyCalibration with _$BodyEnergyCalibration {
       activityDrainGain: _clampedActivityDrainGain,
       basalDrainGain: _clampedBasalDrainGain,
       stressDrainGain: _clampedStressDrainGain,
-      feelCheckCount: feelCheckCount < 0 ? 0 : feelCheckCount,
       watchObservationCount:
           watchObservationCount < 0 ? 0 : watchObservationCount,
     );
@@ -145,3 +141,15 @@ abstract class BodyEnergyCalibration with _$BodyEnergyCalibration {
 
   static const BodyEnergyCalibration automatic = BodyEnergyCalibration();
 }
+
+/// The generation of the Body Energy SETUP requirements.
+///
+/// Bumped when setup starts demanding something it did not before, so installs
+/// that completed setup under the old rules are asked once for the missing
+/// piece instead of running on a value the model can no longer derive.
+///
+/// 1 — automatic zones need a birth year. The manual maximum heart rate was
+/// removed, leaving Tanaka from age as the only estimate; without it the model
+/// falls back to resting + 70, which for a resting 60 claims a maximum of 130
+/// and reads ordinary effort as zone 5.
+const int bodyEnergySetupEpoch = 1;

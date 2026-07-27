@@ -7,14 +7,10 @@ void main() {
     final normalized = const BodyProfile(
       birthYear: 2030,
       weightKg: 5.0,
-      maxHeartRateBpm: 260,
-      restingHeartRateBpm: 20,
     ).normalized(today: LocalDate(2026, 6, 30));
 
     expect(normalized.birthYear, isNull);
     expect(normalized.weightKg, BodyProfile.minWeightKg);
-    expect(normalized.maxHeartRateBpm, BodyProfile.maxMaxHeartRateBpm);
-    expect(normalized.restingHeartRateBpm, BodyProfile.minRestingHeartRateBpm);
   });
 
   test('age is derived from birth year', () {

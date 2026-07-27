@@ -15,14 +15,18 @@ import '../../core/time/local_date.dart';
 const String keyBodyProfileBirthYear = 'body_profile_birth_year';
 const String keyBodyProfileWeightKg = 'body_profile_weight_kg';
 const String keyBodyProfileHeightCm = 'body_profile_height_cm';
+// Retired: the manual resting and max heart rate inputs were removed, and both
+// values are derived from observed data now. The keys are kept because they may
+// still be ON DISK from an older build, and the guard below has to keep seeing
+// them — an install that migrated only these two would otherwise look unmigrated
+// and re-run, resurrecting legacy age and weight values it had already replaced.
+// Nothing writes or reads them any more.
 const String keyBodyProfileRestingHrBpm = 'body_profile_resting_hr_bpm';
 const String keyBodyProfileMaxHrBpm = 'body_profile_max_hr_bpm';
 
 // The keys an older build wrote the same facts under. Read-only, and read only
 // from here.
 const String _keyBodyEnergyBirthYear = 'body_energy_birth_year';
-const String _keyBodyEnergyMaxHrBpm = 'body_energy_max_hr_bpm';
-const String _keyBodyEnergyRestingHrBpm = 'body_energy_resting_hr_bpm';
 const String _keyCaffeineAgeYears = 'caffeine_age_years';
 const String _keyCaffeineWeightKg = 'caffeine_weight_kg';
 
@@ -51,14 +55,9 @@ void migrateLegacyBodyProfileValues(SharedPreferences prefs) {
   final legacyBirthYear = _intOrNull(prefs, _keyBodyEnergyBirthYear);
   final legacyAgeYears = _intOrNull(prefs, _keyCaffeineAgeYears);
   final legacyWeightKg = _doubleOrNull(prefs, _keyCaffeineWeightKg);
-  final legacyRestingHr = _intOrNull(prefs, _keyBodyEnergyRestingHrBpm);
-  final legacyMaxHr = _intOrNull(prefs, _keyBodyEnergyMaxHrBpm);
   final migratedBirthYear = legacyBirthYear ??
       (legacyAgeYears != null ? LocalDate.now().year - legacyAgeYears : null);
-  if (migratedBirthYear == null &&
-      legacyWeightKg == null &&
-      legacyRestingHr == null &&
-      legacyMaxHr == null) {
+  if (migratedBirthYear == null && legacyWeightKg == null) {
     return;
   }
   if (migratedBirthYear != null) {
@@ -66,12 +65,6 @@ void migrateLegacyBodyProfileValues(SharedPreferences prefs) {
   }
   if (legacyWeightKg != null) {
     unawaited(prefs.setDouble(keyBodyProfileWeightKg, legacyWeightKg));
-  }
-  if (legacyRestingHr != null) {
-    unawaited(prefs.setInt(keyBodyProfileRestingHrBpm, legacyRestingHr));
-  }
-  if (legacyMaxHr != null) {
-    unawaited(prefs.setInt(keyBodyProfileMaxHrBpm, legacyMaxHr));
   }
 }
 

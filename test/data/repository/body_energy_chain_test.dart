@@ -718,7 +718,6 @@ void main() {
           sleepChargeGain: 0.8,
           activityDrainGain: 1.1,
           basalDrainGain: 0.72,
-          feelCheckCount: 2,
           watchObservationCount: 39,
         ),
       );

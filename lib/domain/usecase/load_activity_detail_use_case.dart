@@ -163,25 +163,22 @@ class LoadActivityDetailUseCase {
       return HeartRateRecoveryReading.noData;
     }
 
+    final end = LocalDate.fromDateTime(workout.endTime);
     return calculateHeartRateRecovery(
       recoveryStart: window.recoveryStart,
       samples: samples,
-      profileMaxHeartRateBpm: profile.maxHeartRateBpm,
-      restingHeartRateBpm: profile.restingHeartRateBpm,
+      restingHeartRateBpm:
+          (await _heartRepository.loadRestingHeartRate(end)).getOrNull(),
       ageYears: profile.ageYears(today: today),
-      observedMaxHeartRateBpm: await _observedMaxHeartRate(workout, profile),
+      observedMaxHeartRateBpm: await _observedMaxHeartRate(workout),
     );
   }
 
-  /// The highest heart rate on record in the three months before this workout — only
-  /// worth asking for when the user has not told us their maximum, since a stated
-  /// maximum outranks an observed one.
-  Future<int?> _observedMaxHeartRate(
-    ExerciseData workout,
-    BodyProfile profile,
-  ) async {
-    if (profile.maxHeartRateBpm != null) return null;
-
+  /// The highest heart rate on record in the three months before this workout.
+  ///
+  /// Unconditional now: the manual maximum that used to outrank it was removed,
+  /// so this is the only measured maximum there is.
+  Future<int?> _observedMaxHeartRate(ExerciseData workout) async {
     final end = LocalDate.fromDateTime(workout.endTime);
     final summaries = (await _heartRepository.loadDailyHeartRateSummaries(
       end.minusDays(heartRateRecoveryObservedMaxLookbackDays),

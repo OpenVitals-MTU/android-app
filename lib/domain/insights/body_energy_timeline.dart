@@ -30,7 +30,11 @@ part 'body_energy_timeline.freezed.dart';
 /// basal floor is resting metabolism. The energy-balance framing is a documented
 /// product design, not a single published model.
 const int bodyEnergyTimelineBucketMinutes = 5;
-const int bodyEnergyTimelineAlgorithmVersion = 10;
+// v11: the manual resting and max heart rate inputs were removed, so the zone
+// ladder is derived from observed data for everyone. Anyone who had typed a
+// maximum gets a different ladder and a different score, and the confidence rule
+// changed with it, so every stored day has to be recomputed.
+const int bodyEnergyTimelineAlgorithmVersion = 11;
 
 /// The score a day starts on when there is no previous day to carry from — a
 /// brand-new install, or a chain gap too wide to close. Not a default for a
@@ -914,9 +918,7 @@ BodyEnergyCalibrationMode _calibrationMode(
       normalizedCalibration.manualZoneThresholdsBpm != null) {
     return BodyEnergyCalibrationMode.manualZones;
   }
-  if (normalizedProfile.maxHeartRateBpm != null ||
-      normalizedProfile.restingHeartRateBpm != null ||
-      normalizedProfile.birthYear != null) {
+  if (normalizedProfile.birthYear != null) {
     return BodyEnergyCalibrationMode.manualValues;
   }
   return BodyEnergyCalibrationMode.automatic;
@@ -1028,22 +1030,19 @@ _IntensityContext _resolveIntensityContext(
   if (calibration.useManualZones &&
       calibration.manualZoneThresholdsBpm != null) {
     return _IntensityContext(
-      restingHeartRateBpm: profile.restingHeartRateBpm ??
-          inputs.restingHeartRateBpm ??
+      restingHeartRateBpm: inputs.restingHeartRateBpm ??
           inputs.baselineRestingHeartRateBpm ??
           _estimatedRestingHeartRate(heartRateSamples),
-      maxHeartRateBpm: profile.maxHeartRateBpm,
+      maxHeartRateBpm: null,
       manualZones: calibration.manualZoneThresholdsBpm,
       confidence: BodyEnergyConfidence.high,
     );
   }
 
-  final resting = profile.restingHeartRateBpm ??
-      inputs.restingHeartRateBpm ??
+  final resting = inputs.restingHeartRateBpm ??
       inputs.baselineRestingHeartRateBpm ??
       _estimatedRestingHeartRate(heartRateSamples);
   final observedMaxCandidates = <int>[
-    if (profile.maxHeartRateBpm != null) profile.maxHeartRateBpm!,
     if (inputs.observedMaxHeartRateBpm != null) inputs.observedMaxHeartRateBpm!,
     if (heartRateSamples.isNotEmpty)
       heartRateSamples
@@ -1061,9 +1060,7 @@ _IntensityContext _resolveIntensityContext(
   final ageMax =
       ageYears != null ? math.max(1, (208 - 0.7 * ageYears).round()) : null;
   final int? maxHeartRate;
-  if (profile.maxHeartRateBpm != null) {
-    maxHeartRate = profile.maxHeartRateBpm;
-  } else if (resting != null &&
+  if (resting != null &&
       observedMax != null &&
       observedMax >= math.max(150, resting + 60)) {
     maxHeartRate = observedMax;
@@ -1077,12 +1074,13 @@ _IntensityContext _resolveIntensityContext(
     maxHeartRate = null;
   }
   final BodyEnergyConfidence confidence;
-  if (profile.maxHeartRateBpm != null && resting != null) {
+  // A max the user TYPED used to be the only route to high, which had it
+  // backwards: an observed max comes from their own heart rate and already has
+  // to clear `max(150, resting + 60)` before it is used at all, while the typed
+  // one cleared nothing. With the manual input gone, the measured value takes
+  // the confidence it was always the better claim to.
+  if (resting != null && observedMax != null && maxHeartRate == observedMax) {
     confidence = BodyEnergyConfidence.high;
-  } else if (resting != null &&
-      observedMax != null &&
-      maxHeartRate == observedMax) {
-    confidence = BodyEnergyConfidence.medium;
   } else if (resting != null && ageMax != null) {
     confidence = BodyEnergyConfidence.medium;
   } else if (resting != null && maxHeartRate != null) {

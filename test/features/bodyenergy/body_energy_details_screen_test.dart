@@ -62,6 +62,11 @@ Future<Widget> _bootstrap({
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{
     if (setupCompleted) 'body_energy_setup_completed': true,
+    // A completed setup now REQUIRES a birth year or manual zones: automatic
+    // zones are Tanaka against age, and an install with neither is reopened at
+    // the setup card on purpose. Without this every screen test would be
+    // testing that gate instead of what it is named for.
+    if (setupCompleted) 'body_profile_birth_year': 1990,
   });
   final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
@@ -151,8 +156,15 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     expect(find.byType(BodyEnergyCalibrationCard), findsOneWidget);
 
-    // "Use automatic estimates" completes setup (setupCompleted = true).
-    await tester.tap(find.text(l10n.bodyEnergyCalibrationUseAuto));
+    // Save completes setup (setupCompleted = true), but only once there is a
+    // birth year: automatic zones are Tanaka against age, so setup refuses to
+    // pass without one. It used to be "Use automatic estimates", which was
+    // removed along with the manual resting and max heart rate inputs.
+    await tester.enterText(
+      find.widgetWithText(TextField, l10n.bodyEnergyCalibrationBirthYear),
+      '1990',
+    );
+    await tester.tap(find.text(l10n.actionSave));
     await tester.pumpAndSettle();
 
     expect(find.byType(BodyEnergyCalibrationCard), findsNothing);
@@ -162,6 +174,31 @@ void main() {
       300,
     );
     expect(find.text(l10n.bodyEnergyCalculationTitle), findsOneWidget);
+  });
+
+  testWidgets('Body Energy setup refuses to complete without a birth year',
+      (tester) async {
+    // The whole point of requiring it. Automatic zones are derived from Tanaka
+    // against age; with no age the model falls back to resting + 70, which is
+    // not a rougher ladder but a wrong one -- a resting 60 claims a maximum of
+    // 130 and reads ordinary effort as zone 5.
+    await tester.pumpWidget(
+      await _bootstrap(
+        timeline: _timeline(today),
+        granted: {HcPermissions.readHeartRate},
+        setupCompleted: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.text(l10n.actionSave));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BodyEnergyCalibrationCard), findsOneWidget,
+        reason: 'setup must not complete');
+    expect(find.text(l10n.bodyEnergyCalibrationBirthYearRequired),
+        findsOneWidget);
   });
 
   testWidgets('Body Energy shows the access gate when permission missing',

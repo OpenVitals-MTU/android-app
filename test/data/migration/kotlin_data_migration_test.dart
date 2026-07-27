@@ -230,7 +230,6 @@ void main() {
       final body = repo.bodyProfile();
       expect(body.birthYear, 1988);
       expect(body.weightKg, 82.6);
-      expect(body.restingHeartRateBpm, 54);
 
       expect(repo.highHeartRateThresholdBpm, 135);
       expect(

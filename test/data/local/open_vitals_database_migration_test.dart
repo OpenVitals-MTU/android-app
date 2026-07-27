@@ -38,6 +38,16 @@ void main() {
     expect(await tableNames(db), contains('beverages'));
   });
 
+  /// The `feel_checks` table as it shipped in v4..v7, inlined because v8 drops
+  /// it and the production constant went with it. A migration fixture describes
+  /// history, so it has to keep saying what the old schema WAS.
+  const createFeelChecksTableSql = '''
+CREATE TABLE IF NOT EXISTS `feel_checks` (
+    `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `recorded_at_millis` INTEGER NOT NULL,
+    `rating` INTEGER NOT NULL
+)''';
+
   group('v6 -> v7 (the Body Energy chain)', () {
     /// A database standing at schema version 6: every table that shipped in v6,
     /// and `user_version` set so opening it drives `onUpgrade(from: 6)`.
@@ -45,7 +55,7 @@ void main() {
           NativeDatabase.memory(
             setup: (raw) {
               raw.execute(OpenVitalsDatabase.createBeveragesTableSql);
-              raw.execute(OpenVitalsDatabase.createFeelChecksTableSql);
+              raw.execute(createFeelChecksTableSql);
               raw.execute(
                   OpenVitalsDatabase.createVitalsDailyAggregatesTableSql);
               raw.execute(OpenVitalsDatabase.createVitalsSyncCursorsTableSql);
@@ -77,7 +87,7 @@ void main() {
           .trim();
     }
 
-    test('the migration creates both chain tables and reaches version 7',
+    test('the migration creates both chain tables and reaches the current version',
         () async {
       final db = openAtVersionSix();
       addTearDown(db.close);
@@ -85,7 +95,7 @@ void main() {
       // Any query forces the migration to run first.
       expect(await db.bodyEnergyTimelineDao.countDays(), 0);
       expect(await db.bodyEnergyTimelineDao.latestDay(), isNull);
-      expect(db.schemaVersion, 7);
+      expect(db.schemaVersion, 8);
 
       final rows = await db
           .customSelect(
@@ -96,6 +106,50 @@ void main() {
       expect(
         rows.map((row) => row.read<String>('name')).toSet(),
         {'body_energy_days', 'body_energy_buckets'},
+      );
+    });
+
+    test('the upgrade drops the retired feel-check log', () async {
+      // v8 removes it along with the manual "How's your energy" card. Left in
+      // place it would be a table no code can reach, which the next reader has
+      // to work out the status of -- and it still holds ratings nothing reads.
+      final db = openAtVersionSix();
+      addTearDown(db.close);
+
+      // Any query forces the migration to run first.
+      expect(await db.bodyEnergyTimelineDao.countDays(), 0);
+
+      final rows = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name = 'feel_checks'",
+          )
+          .get();
+      expect(rows, isEmpty);
+    });
+
+    test('dropping it does not disturb the tables beside it', () async {
+      // A DROP naming the wrong table, or a migration ordered so the drop ran
+      // before the chain tables were created, would both show up here.
+      final db = openAtVersionSix();
+      addTearDown(db.close);
+
+      expect(await db.bodyEnergyTimelineDao.countDays(), 0);
+      final rows = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name IN ('beverages', 'vitals_daily_aggregates', "
+            "'garmin_wellness_samples', 'body_energy_days')",
+          )
+          .get();
+      expect(
+        rows.map((row) => row.read<String>('name')).toSet(),
+        {
+          'beverages',
+          'vitals_daily_aggregates',
+          'garmin_wellness_samples',
+          'body_energy_days',
+        },
       );
     });
 

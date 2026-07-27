@@ -206,15 +206,11 @@ void main() {
         const BodyProfile(
           birthYear: 1990,
           weightKg: 72.5,
-          restingHeartRateBpm: 55,
-          maxHeartRateBpm: 190,
         ),
       );
       final profile = repo.bodyProfile();
       expect(profile.birthYear, 1990);
       expect(profile.weightKg, closeTo(72.5, 1e-6));
-      expect(profile.restingHeartRateBpm, 55);
-      expect(profile.maxHeartRateBpm, 190);
 
       final reloaded = PreferencesRepository(
         await SharedPreferences.getInstance(),
@@ -439,6 +435,57 @@ void main() {
     final profile = repo.bodyProfile();
     expect(profile.birthYear, LocalDate.now().year - 30);
     expect(profile.weightKg, closeTo(68.0, 1e-6));
-    expect(profile.restingHeartRateBpm, 52);
+  });
+
+  group('the Body Energy setup re-gate', () {
+    test('reopens setup for an install with no age source', () async {
+      // Automatic zones are Tanaka against age. With the manual maximum heart
+      // rate removed there is nothing else to derive them from, and the
+      // fallback of resting + 70 is wrong rather than merely rough, so the
+      // setup card is shown again instead of the model carrying on.
+      final repo = await newRepo({'body_energy_setup_completed': true});
+
+      expect(repo.bodyEnergyCalibration().setupCompleted, isFalse);
+    });
+
+    test('leaves an install with a birth year alone', () async {
+      final repo = await newRepo({
+        'body_energy_setup_completed': true,
+        'body_profile_birth_year': 1990,
+      });
+
+      expect(repo.bodyEnergyCalibration().setupCompleted, isTrue);
+    });
+
+    test('leaves an install with manual zones alone', () async {
+      // Manual zones ARE the ladder; the age is never consulted for them.
+      final repo = await newRepo({
+        'body_energy_setup_completed': true,
+        'body_energy_use_manual_zones': true,
+        'body_energy_zone_thresholds_bpm': '95,115,135,155,175',
+      });
+
+      expect(repo.bodyEnergyCalibration().manualZoneThresholdsBpm, isNotNull,
+          reason: 'fixture must actually seed the zones');
+      expect(repo.bodyEnergyCalibration().setupCompleted, isTrue);
+    });
+
+    test('runs once, so setup completed afterwards is not undone', () async {
+      // Without the epoch this would reopen setup on EVERY construction, and a
+      // user with no birth year could never get past the card they were being
+      // shown -- saving would complete setup and the next launch would undo it.
+      final repo = await newRepo({'body_energy_setup_completed': true});
+      expect(repo.bodyEnergyCalibration().setupCompleted, isFalse);
+
+      repo.setBodyEnergyCalibration(
+        repo.bodyEnergyCalibration().copyWith(setupCompleted: true),
+      );
+      final reopened = PreferencesRepository(
+        await SharedPreferences.getInstance(),
+      );
+      addTearDown(reopened.dispose);
+
+      expect(reopened.bodyEnergyCalibration().setupCompleted, isTrue);
+    });
   });
 }

@@ -60,56 +60,6 @@ class BeverageMigration {
       database.customStatement(OpenVitalsDatabase.createBeveragesTableSql);
 }
 
-/// Body Energy "feel-check" log: the user's own 0–10 energy rating at a moment
-/// in time. A local time-series (Health Connect has no equivalent record), read
-/// back in windows to fit the personal calibration gains.
-class FeelChecks extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get recordedAtMillis => integer().named('recorded_at_millis')();
-  IntColumn get rating => integer()(); // 0–10
-
-  @override
-  String get tableName => 'feel_checks';
-}
-
-@DriftAccessor(tables: [FeelChecks])
-class FeelCheckDao extends DatabaseAccessor<OpenVitalsDatabase>
-    with _$FeelCheckDaoMixin {
-  FeelCheckDao(super.db);
-
-  Future<void> insertFeelCheck({
-    required int recordedAtMillis,
-    required int rating,
-  }) async {
-    await into(feelChecks).insert(
-      FeelChecksCompanion.insert(
-        recordedAtMillis: recordedAtMillis,
-        rating: rating,
-      ),
-    );
-  }
-
-  Future<List<FeelCheck>> feelChecksBetween(
-    int startMillis,
-    int endMillis,
-  ) {
-    return (select(feelChecks)
-          ..where(
-            (f) => f.recordedAtMillis.isBetweenValues(startMillis, endMillis),
-          )
-          ..orderBy([(f) => OrderingTerm(expression: f.recordedAtMillis)]))
-        .get();
-  }
-
-  Future<int> countFeelChecks() async {
-    final row = await customSelect(
-      'SELECT COUNT(*) AS c FROM feel_checks',
-      readsFrom: {feelChecks},
-    ).getSingle();
-    return row.read<int>('c');
-  }
-}
-
 /// Cached per-day aggregate of a Health Connect vitals series, keyed by metric
 /// name + [epochDay]. Densely-sampled metrics with no HC aggregate metric
 /// (respiratory rate) take 40s+ to read a year raw; this table holds the daily
@@ -826,7 +776,6 @@ class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
 @DriftDatabase(
   tables: [
     Beverages,
-    FeelChecks,
     VitalsDailyAggregates,
     VitalsSyncCursors,
     GarminWellnessSamples,
@@ -835,7 +784,6 @@ class BeverageDao extends DatabaseAccessor<OpenVitalsDatabase>
   ],
   daos: [
     BeverageDao,
-    FeelCheckDao,
     VitalsDailyCacheDao,
     GarminWellnessDao,
     BodyEnergyTimelineDao,
@@ -847,7 +795,7 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
   OpenVitalsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -857,10 +805,6 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
           // table; anything before v3 needs it created best-effort.
           if (from < 3) {
             await customStatement(createBeveragesTableSql);
-          }
-          // v4 adds the Body Energy feel-check log.
-          if (from < 4) {
-            await customStatement(createFeelChecksTableSql);
           }
           // v5 adds the cached daily vitals aggregates + their sync cursors.
           if (from < 5) {
@@ -880,8 +824,22 @@ class OpenVitalsDatabase extends _$OpenVitalsDatabase {
             await customStatement(createBodyEnergyDaysTableSql);
             await customStatement(createBodyEnergyBucketsTableSql);
           }
+          // v8 drops the Body Energy feel-check log. The manual "How's your
+          // energy" card was removed, so nothing writes it and nothing reads
+          // it; the gains are fitted from watch readings alone. Dropped rather
+          // than left orphaned because a table no code can reach is a table the
+          // next reader has to work out the status of.
+          if (from < 8) {
+            await customStatement(dropFeelChecksTableSql);
+          }
         },
       );
+
+  /// Applied on upgrade to v8. Irreversible: any check-ins a user logged before
+  /// the card was removed go with it. They have no consumer left, and the fit
+  /// that read them no longer exists.
+  static const String dropFeelChecksTableSql =
+      'DROP TABLE IF EXISTS `feel_checks`';
 
   /// The `CREATE TABLE`s for the Body Energy chain, applied on upgrade from
   /// < v7.
@@ -973,14 +931,6 @@ CREATE TABLE IF NOT EXISTS `vitals_sync_cursors` (
     `changes_token` TEXT,
     `last_full_sync_millis` INTEGER,
     PRIMARY KEY(`metric`)
-)''';
-
-  /// The `CREATE TABLE` for the feel-check log, applied on upgrade from < v4.
-  static const String createFeelChecksTableSql = '''
-CREATE TABLE IF NOT EXISTS `feel_checks` (
-    `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    `recorded_at_millis` INTEGER NOT NULL,
-    `rating` INTEGER NOT NULL
 )''';
 
   static const BeverageMigration migration1To3 = BeverageMigration(1);

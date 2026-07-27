@@ -108,9 +108,13 @@ class LoadHeartRateRecoveryPeriodUseCase {
         return const Ok(HeartRateRecoveryPeriodData());
       }
 
-      // Only worth asking once for the whole period, and only when the user has not told
-      // us their maximum.
-      final observedMax = await _observedMaxHeartRate(profile, window.end);
+      // Both are worth asking for once for the whole period rather than per
+      // workout. The observed maximum is now the only maximum there is -- the
+      // manual override was removed -- and the resting rate is what decides
+      // whether that maximum is trustworthy enough to compare against.
+      final observedMax = await _observedMaxHeartRate(window.end);
+      final restingHeartRateBpm =
+          (await _heartRepository.loadRestingHeartRate(window.end)).getOrNull();
 
       final readings = <HeartRateRecoverySessionReading>[];
       for (var index = 0;
@@ -119,7 +123,8 @@ class LoadHeartRateRecoveryPeriodUseCase {
         final chunk = considered.skip(index).take(heartRateRecoveryReadConcurrency);
         readings.addAll(
           await Future.wait(
-            chunk.map((workout) => _readingFor(workout, profile, observedMax)),
+            chunk.map((workout) =>
+                _readingFor(workout, profile, observedMax, restingHeartRateBpm)),
           ),
         );
       }
@@ -136,6 +141,7 @@ class LoadHeartRateRecoveryPeriodUseCase {
     ExerciseData workout,
     BodyProfile profile,
     int? observedMaxHeartRateBpm,
+    int? restingHeartRateBpm,
   ) async {
     final window = heartRateRecoveryWindowFor(workout);
     // No cessation mark, no recovery: an ordinary workout without a guided-test rest
@@ -155,8 +161,7 @@ class LoadHeartRateRecoveryPeriodUseCase {
         : calculateHeartRateRecovery(
             recoveryStart: window.recoveryStart,
             samples: samples,
-            profileMaxHeartRateBpm: profile.maxHeartRateBpm,
-            restingHeartRateBpm: profile.restingHeartRateBpm,
+            restingHeartRateBpm: restingHeartRateBpm,
             ageYears: profile.ageYears(),
             observedMaxHeartRateBpm: observedMaxHeartRateBpm,
           );
@@ -170,8 +175,7 @@ class LoadHeartRateRecoveryPeriodUseCase {
     );
   }
 
-  Future<int?> _observedMaxHeartRate(BodyProfile profile, LocalDate end) async {
-    if (profile.maxHeartRateBpm != null) return null;
+  Future<int?> _observedMaxHeartRate(LocalDate end) async {
     final summaries = (await _heartRepository.loadDailyHeartRateSummaries(
       end.minusDays(90),
       end,

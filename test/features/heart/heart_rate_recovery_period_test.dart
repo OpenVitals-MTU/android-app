@@ -116,6 +116,10 @@ class _FakeHeartRepository implements HeartRepository {
   final List<HeartRateSample> Function(DateTime end) samplesFor;
   int reads = 0;
 
+  /// The resting rate the use case now reads for itself, instead of being
+  /// handed one on the body profile.
+  int? restingHeartRateBpm = 55;
+
   @override
   Future<Result<List<HeartRateSample>>> loadHeartRateSamplesInstant(
     DateTime start,
@@ -133,6 +137,10 @@ class _FakeHeartRepository implements HeartRepository {
   Future<Result<List<HeartRateSummary>>> loadDailyHeartRateSummaries(
           LocalDate start, LocalDate end) async =>
       const Ok(<HeartRateSummary>[]);
+
+  @override
+  Future<Result<int?>> loadRestingHeartRate(LocalDate date) async =>
+      Ok(restingHeartRateBpm);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -154,7 +162,7 @@ Future<HeartRateRecoveryPeriodData> _load(
       anchorDate: _today,
       today: _today,
     ),
-    profile: const BodyProfile(maxHeartRateBpm: 190, restingHeartRateBpm: 55),
+    profile: const BodyProfile(),
   );
   return result.getOrNull()!;
 }

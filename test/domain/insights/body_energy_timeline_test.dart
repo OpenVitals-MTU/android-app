@@ -69,11 +69,18 @@ void main() {
     return points;
   }
 
+  /// The resting rate and observed maximum are passed as MEASURED inputs now.
+  /// They used to be carried in on the [BodyProfile] and forwarded from there,
+  /// which stopped being possible when the manual resting/max heart rate inputs
+  /// were removed — and stopped being honest at the same moment, since the model
+  /// no longer has any way to be told either number.
   BodyEnergyTimelineInputs inputs({
     required DateTime now,
     required int previousEndScore,
     required List<HeartRateSample> samples,
-    required BodyProfile bodyProfile,
+    BodyProfile bodyProfile = const BodyProfile(),
+    int? restingHeartRateBpm,
+    int? observedMaxHeartRateBpm,
     BodyEnergyCalibration calibration = const BodyEnergyCalibration(),
     List<ExerciseData> workouts = const <ExerciseData>[],
     List<SleepData> sleepSessions = const <SleepData>[],
@@ -87,8 +94,8 @@ void main() {
         workouts: workouts,
         activityProgress: progress,
         basalMetabolicRateKcalPerDay: basalMetabolicRate,
-        restingHeartRateBpm: bodyProfile.restingHeartRateBpm,
-        observedMaxHeartRateBpm: bodyProfile.maxHeartRateBpm,
+        restingHeartRateBpm: restingHeartRateBpm,
+        observedMaxHeartRateBpm: observedMaxHeartRateBpm,
         previousEndScore: previousEndScore,
         calibration: calibration,
         bodyProfile: bodyProfile,
@@ -105,8 +112,8 @@ void main() {
         previousEndScore: 90,
         samples: heartRateSamples(start, end, 165),
         workouts: [workout(start, end)],
-        bodyProfile:
-            const BodyProfile(restingHeartRateBpm: 60, maxHeartRateBpm: 190),
+        restingHeartRateBpm: 60,
+        observedMaxHeartRateBpm: 190,
         calibration: const BodyEnergyCalibration(
           manualZoneThresholdsBpm: HeartZoneThresholds(
             zone1LowerBpm: 95,
@@ -136,8 +143,7 @@ void main() {
     final start = dayStart;
     final shortEnd = start.add(const Duration(minutes: 40));
     final longEnd = start.add(const Duration(minutes: 100));
-    const bodyProfile =
-        BodyProfile(restingHeartRateBpm: 60, maxHeartRateBpm: 190);
+    const hr = (resting: 60, max: 190);
 
     final shortTimeline = calculateBodyEnergyTimeline(
       inputs(
@@ -145,7 +151,8 @@ void main() {
         previousEndScore: 90,
         samples: heartRateSamples(start, shortEnd, 130),
         workouts: [workout(start, shortEnd)],
-        bodyProfile: bodyProfile,
+        restingHeartRateBpm: hr.resting,
+        observedMaxHeartRateBpm: hr.max,
       ),
     );
     final longTimeline = calculateBodyEnergyTimeline(
@@ -154,7 +161,8 @@ void main() {
         previousEndScore: 90,
         samples: heartRateSamples(start, longEnd, 130),
         workouts: [workout(start, longEnd)],
-        bodyProfile: bodyProfile,
+        restingHeartRateBpm: hr.resting,
+        observedMaxHeartRateBpm: hr.max,
       ),
     );
 
@@ -172,8 +180,8 @@ void main() {
         previousEndScore: 40,
         samples: heartRateSamples(start, end, 55),
         sleepSessions: [sleep(start, end)],
-        bodyProfile:
-            const BodyProfile(restingHeartRateBpm: 58, maxHeartRateBpm: 188),
+        restingHeartRateBpm: 58,
+        observedMaxHeartRateBpm: 188,
       ),
     );
 
@@ -199,8 +207,8 @@ void main() {
         now: end,
         previousEndScore: 70,
         samples: heartRateSamples(start, end, 88),
-        bodyProfile:
-            const BodyProfile(restingHeartRateBpm: 60, maxHeartRateBpm: 190),
+        restingHeartRateBpm: 60,
+        observedMaxHeartRateBpm: 190,
       ),
     );
 
@@ -229,8 +237,8 @@ void main() {
         samples: heartRateSamples(start, workoutEnd, 165) +
             heartRateSamples(workoutEnd, end, 62),
         workouts: [workout(start, workoutEnd)],
-        bodyProfile:
-            const BodyProfile(restingHeartRateBpm: 60, maxHeartRateBpm: 190),
+        restingHeartRateBpm: 60,
+        observedMaxHeartRateBpm: 190,
         calibration: const BodyEnergyCalibration(
           manualZoneThresholdsBpm: HeartZoneThresholds(
             zone1LowerBpm: 95,
@@ -256,8 +264,7 @@ void main() {
 
   // ── V3 energy-balance behaviour ─────────────────────────────────────────
 
-  const restfulProfile =
-      BodyProfile(restingHeartRateBpm: 55, maxHeartRateBpm: 190);
+  const restfulHr = (resting: 55, max: 190);
 
   test('an idle waking day declines rather than staying flat', () {
     final start = dayStart.add(const Duration(hours: 8));
@@ -268,7 +275,8 @@ void main() {
         now: end,
         previousEndScore: 80,
         samples: heartRateSamples(start, end, 58),
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
       ),
     );
 
@@ -298,7 +306,8 @@ void main() {
         now: now,
         previousEndScore: 80,
         samples: heartRateSamples(wornStart, wornEnd, 58),
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
       ),
     );
 
@@ -328,7 +337,8 @@ void main() {
         previousEndScore: 80,
         samples: heartRateSamples(
             firstData, firstData.add(const Duration(hours: 2)), 58),
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
       ),
     );
 
@@ -353,7 +363,8 @@ void main() {
         now: now,
         previousEndScore: 80,
         samples: heartRateSamples(wornStart, wornEnd, 58),
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
       ),
     );
     final withWalk = calculateBodyEnergyTimeline(
@@ -361,7 +372,8 @@ void main() {
         now: now,
         previousEndScore: 80,
         samples: heartRateSamples(wornStart, wornEnd, 58),
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
         progress: [
           // Cumulative steps: 0 by 14:00, 4000 by 15:00 — no kcal series.
           ActivityProgressPoint(
@@ -401,7 +413,8 @@ void main() {
         now: end,
         previousEndScore: 80,
         samples: heartRateSamples(start, end, 58),
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
       ),
     );
     // Eight hours of walking/chores: ~80 active kcal/hour, heart rate stays low.
@@ -410,7 +423,8 @@ void main() {
         now: end,
         previousEndScore: 80,
         samples: samples,
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
         progress: activityProgress(
           List<double>.filled(8, 80.0),
           fromHour: 8,
@@ -442,7 +456,8 @@ void main() {
         now: end,
         previousEndScore: 80,
         samples: heartRateSamples(start, end, 75),
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
         progress: activityProgress(const [120.0], fromHour: 9),
       ),
     );
@@ -451,7 +466,8 @@ void main() {
         now: end,
         previousEndScore: 80,
         samples: heartRateSamples(start, end, 165),
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
         workouts: [workout(start, end)],
         progress: activityProgress(const [600.0], fromHour: 9),
       ),
@@ -472,7 +488,8 @@ void main() {
         now: end,
         previousEndScore: 100,
         samples: samples,
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
         progress: progress,
       ),
     );
@@ -481,7 +498,8 @@ void main() {
         now: end,
         previousEndScore: 100,
         samples: samples,
-        bodyProfile: restfulProfile,
+        restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
         progress: progress,
         calibration: const BodyEnergyCalibration(activityDrainGain: 1.5),
       ),
@@ -507,7 +525,7 @@ void main() {
           date: date,
           heartRateSamples: quiet(),
           previousEndScore: previousEndScore,
-          bodyProfile: const BodyProfile(restingHeartRateBpm: 60),
+          restingHeartRateBpm: 60,
           now: dayStart.add(const Duration(hours: 1)),
         ));
 
@@ -545,7 +563,7 @@ void main() {
         date: date,
         heartRateSamples: const [],
         previousEndScore: 30,
-        bodyProfile: const BodyProfile(restingHeartRateBpm: 60),
+        restingHeartRateBpm: 60,
         now: dayStart.add(const Duration(hours: 1)),
       ));
 
@@ -559,7 +577,7 @@ void main() {
         date: date,
         heartRateSamples: const [],
         previousEndScore: 2,
-        bodyProfile: const BodyProfile(restingHeartRateBpm: 60),
+        restingHeartRateBpm: 60,
         now: dayStart.add(const Duration(hours: 1)),
       ));
 
@@ -608,7 +626,8 @@ void main() {
           now: end,
           previousEndScore: 70,
           samples: heartRateSamples(start, end, 72),
-          bodyProfile: restfulProfile,
+          restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
         ),
       );
 
@@ -629,7 +648,8 @@ void main() {
           now: end,
           previousEndScore: 30,
           samples: heartRateSamples(start, end, 72),
-          bodyProfile: restfulProfile,
+          restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
           progress: activityProgress(List<double>.filled(8, 120.0), fromHour: 8),
           calibration: const BodyEnergyCalibration(activityDrainGain: 2.0),
         ),
@@ -653,7 +673,7 @@ void main() {
           previousEndScore: 90,
           samples: heartRateSamples(start, end, 55),
           sleepSessions: [sleep(start, end)],
-          bodyProfile: const BodyProfile(restingHeartRateBpm: 58),
+          restingHeartRateBpm: 58,
         ),
       );
 
@@ -675,7 +695,8 @@ void main() {
           now: end,
           previousEndScore: 30,
           samples: heartRateSamples(start, end, 72),
-          bodyProfile: restfulProfile,
+          restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
           progress: activityProgress(List<double>.filled(8, 120.0), fromHour: 8),
           calibration: const BodyEnergyCalibration(activityDrainGain: 2.0),
         ),
@@ -700,7 +721,7 @@ void main() {
           previousEndScore: 50,
           samples: heartRateSamples(dayStart, end, 62),
           sleepSessions: [sleep(dayStart, wake)],
-          bodyProfile: const BodyProfile(restingHeartRateBpm: 58),
+          restingHeartRateBpm: 58,
         ),
       );
 
@@ -721,7 +742,8 @@ void main() {
           now: end,
           previousEndScore: 30,
           samples: heartRateSamples(start, end, 72),
-          bodyProfile: restfulProfile,
+          restingHeartRateBpm: restfulHr.resting,
+        observedMaxHeartRateBpm: restfulHr.max,
           progress: activityProgress(List<double>.filled(8, 120.0), fromHour: 8),
           calibration: const BodyEnergyCalibration(activityDrainGain: 2.0),
         ),
@@ -764,8 +786,8 @@ void main() {
             ...heartRateSamples(workoutEnd, end, 62),
           ],
           workouts: [workout(start, workoutEnd)],
-          bodyProfile:
-              const BodyProfile(restingHeartRateBpm: 60, maxHeartRateBpm: 190),
+          restingHeartRateBpm: 60,
+        observedMaxHeartRateBpm: 190,
           calibration: BodyEnergyCalibration(activityDrainGain: activityGain),
         ),
       );
@@ -817,8 +839,8 @@ void main() {
         ],
         sleepSessions: [sleep(start, wake)],
         workouts: [workout(workoutStart, end)],
-        bodyProfile:
-            const BodyProfile(restingHeartRateBpm: 55, maxHeartRateBpm: 190),
+        restingHeartRateBpm: 55,
+        observedMaxHeartRateBpm: 190,
       ),
     );
 
@@ -848,7 +870,7 @@ void main() {
           previousEndScore: 50,
           samples: heartRateSamples(dayStart, end, wakingBpm),
           sleepSessions: [sleep(dayStart, wake)],
-          bodyProfile: BodyProfile(restingHeartRateBpm: restingBpm),
+          restingHeartRateBpm: restingBpm,
         ),
       );
     }
@@ -883,10 +905,8 @@ void main() {
             previousEndScore: 50,
             samples: heartRateSamples(dayStart, end, bpm),
             sleepSessions: [sleep(dayStart, wake)],
-            bodyProfile: const BodyProfile(
-              restingHeartRateBpm: 60,
-              maxHeartRateBpm: 190,
-            ),
+            restingHeartRateBpm: 60,
+            observedMaxHeartRateBpm: 190,
           ),
         );
       }
@@ -932,7 +952,7 @@ void main() {
           sleepSessions: [sleep(dayStart, wake)],
           // A sedentary day still logs a slow drip of active calories.
           progress: activityProgress(List<double>.filled(15, 4.0), fromHour: 7),
-          bodyProfile: const BodyProfile(restingHeartRateBpm: 58),
+          restingHeartRateBpm: 58,
         ),
       );
 
@@ -963,8 +983,8 @@ void main() {
           samples: heartRateSamples(start, workoutEnd, 170) +
               heartRateSamples(workoutEnd, end, 60),
           workouts: [workout(start, workoutEnd)],
-          bodyProfile:
-              const BodyProfile(restingHeartRateBpm: 58, maxHeartRateBpm: 190),
+          restingHeartRateBpm: 58,
+        observedMaxHeartRateBpm: 190,
         ),
       );
 
@@ -1002,8 +1022,8 @@ void main() {
           samples: heartRateSamples(start, workoutEnd, 170) +
               heartRateSamples(workoutEnd, end, 60),
           workouts: [workout(start, workoutEnd)],
-          bodyProfile:
-              const BodyProfile(restingHeartRateBpm: 58, maxHeartRateBpm: 190),
+          restingHeartRateBpm: 58,
+        observedMaxHeartRateBpm: 190,
         ),
       );
 
@@ -1038,10 +1058,8 @@ void main() {
             previousEndScore: 100,
             samples: heartRateSamples(start, end, bpm),
             // Birth year only, so the max has to be derived.
-            bodyProfile: BodyProfile(
-              birthYear: date.year - 33,
-              restingHeartRateBpm: 60,
-            ),
+            bodyProfile: BodyProfile(birthYear: date.year - 33),
+            restingHeartRateBpm: 60,
           ),
         ).drained;
 

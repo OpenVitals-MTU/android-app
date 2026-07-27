@@ -278,7 +278,6 @@ HeartRateRecoveryWindow? heartRateRecoveryWindowFor(ExerciseData session) {
 HeartRateRecoveryReading calculateHeartRateRecovery({
   required DateTime recoveryStart,
   required List<HeartRateSample> samples,
-  required int? profileMaxHeartRateBpm,
   required int? restingHeartRateBpm,
   required int? ageYears,
   required int? observedMaxHeartRateBpm,
@@ -332,7 +331,6 @@ HeartRateRecoveryReading calculateHeartRateRecovery({
   ];
 
   final maxContext = _resolveMaxHeartRate(
-    profileMaxHeartRateBpm: profileMaxHeartRateBpm,
     observedMaxHeartRateBpm: observedMaxHeartRateBpm,
     restingHeartRateBpm: restingHeartRateBpm,
     ageYears: ageYears,
@@ -570,16 +568,10 @@ class _MaxHeartRate {
 /// filled in a birth year still gets every mark, and only loses the judgement of whether
 /// the effort was hard enough to compare.
 _MaxHeartRate? _resolveMaxHeartRate({
-  required int? profileMaxHeartRateBpm,
   required int? observedMaxHeartRateBpm,
   required int? restingHeartRateBpm,
   required int? ageYears,
 }) {
-  final profileMax = profileMaxHeartRateBpm;
-  if (profileMax != null && profileMax > 0) {
-    return _MaxHeartRate(profileMax, false);
-  }
-
   final observed = observedMaxHeartRateBpm;
   if (observed != null) {
     final trustworthy = restingHeartRateBpm != null

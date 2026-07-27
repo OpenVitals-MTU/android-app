@@ -38,15 +38,18 @@ class _BodyEnergyCalibrationCardState
   final _zone3 = TextEditingController();
   final _zone4 = TextEditingController();
   final _zone5 = TextEditingController();
-  // Resting and max heart rate live here rather than on the Body card because
-  // they ARE the automatic zone ladder: with no manual zones the model derives
-  // zones from heart-rate reserve between the two. They were a card away, and
-  // this card is also embedded standalone in the Body Energy screen, where the
-  // pair the automatic zones depend on used to be unreachable.
-  final _restingHr = TextEditingController();
-  final _maxHr = TextEditingController();
+
+  /// The birth year lives here as well as on the Body card because it is the
+  /// one profile value the AUTOMATIC zone ladder depends on: with no manual
+  /// zones the maximum is Tanaka from age, and without it the model falls back
+  /// to resting + 70 -- a maximum of 130 for a resting 60, which reads ordinary
+  /// effort as zone 5. This card is the Body Energy setup gate and is embedded
+  /// standalone on the Body Energy screen, so a value the gate requires cannot
+  /// live a settings section away.
+  final _birthYear = TextEditingController();
 
   bool _useManualZones = false;
+  bool _birthYearMissing = false;
   String? _seededSignature;
   BodyProfile? _seededProfile;
 
@@ -57,8 +60,7 @@ class _BodyEnergyCalibrationCardState
     _zone3.dispose();
     _zone4.dispose();
     _zone5.dispose();
-    _restingHr.dispose();
-    _maxHr.dispose();
+    _birthYear.dispose();
     super.dispose();
   }
 
@@ -74,12 +76,24 @@ class _BodyEnergyCalibrationCardState
   }
 
   void _seedProfile(BodyProfile profile) {
-    _restingHr.text = profile.restingHeartRateBpm?.toString() ?? '';
-    _maxHr.text = profile.maxHeartRateBpm?.toString() ?? '';
+    _birthYear.text = profile.birthYear?.toString() ?? '';
     _seededProfile = profile;
   }
 
   void _save() {
+    // Manual zones ARE the ladder, so they need no age. Automatic zones cannot
+    // be derived without one, and guessing produces a confidently wrong score
+    // rather than an honest gap -- so this is the one field the setup gate
+    // refuses to pass without.
+    final birthYear = int.tryParse(_birthYear.text.trim());
+    final missing = !_useManualZones &&
+        (birthYear == null ||
+            birthYear < BodyProfile.minBirthYear ||
+            birthYear > DateTime.now().year);
+    setState(() => _birthYearMissing = missing);
+    if (missing) return;
+
+    ref.read(bodyProfileCardProvider.notifier).saveBirthYear(_birthYear.text);
     ref
         .read(bodyEnergyCalibrationSettingsProvider.notifier)
         .save(
@@ -90,14 +104,7 @@ class _BodyEnergyCalibrationCardState
           zone5: _zone5.text,
           useManualZones: _useManualZones,
         );
-    ref.read(bodyProfileCardProvider.notifier).saveHeartRates(
-          restingHeartRate: _restingHr.text,
-          maxHeartRate: _maxHr.text,
-        );
   }
-
-  void _useAutomatic() =>
-      ref.read(bodyEnergyCalibrationSettingsProvider.notifier).useAutomatic();
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +120,6 @@ class _BodyEnergyCalibrationCardState
     if (_seededProfile != profile) {
       _seedProfile(profile);
     }
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: OpenVitalsCard(
@@ -161,20 +167,20 @@ class _BodyEnergyCalibrationCardState
                 ],
               ),
               const SizedBox(height: 12),
-              // Resting and max heart rate sit here, above the manual-zone
-              // toggle, because with the toggle OFF they are the zone ladder:
-              // the model derives zones from the reserve between them. They
-              // used to live a card away, and this card is embedded standalone
-              // in the Body Energy screen, where the pair the automatic zones
-              // depend on was unreachable.
               _ZoneField(
-                controller: _restingHr,
-                label: l10n.bodyEnergyCalibrationRestingHr,
+                controller: _birthYear,
+                label: l10n.bodyEnergyCalibrationBirthYear,
               ),
-              _ZoneField(
-                controller: _maxHr,
-                label: l10n.bodyEnergyCalibrationMaxHr,
-              ),
+              if (_birthYearMissing)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    l10n.bodyEnergyCalibrationBirthYearRequired,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -227,7 +233,7 @@ class _BodyEnergyCalibrationCardState
                 ),
               ],
               if (calibration.hasPersonalGains ||
-                  calibration.feelCheckCount > 0) ...[
+                  calibration.hasWatchObservations) ...[
                 const SizedBox(height: 16),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
@@ -237,8 +243,8 @@ class _BodyEnergyCalibrationCardState
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  l10n.bodyEnergyPersonalizationBody(
-                    calibration.feelCheckCount,
+                  l10n.bodyEnergyPersonalizationWatchBody(
+                    calibration.watchObservationCount,
                   ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -278,14 +284,6 @@ class _BodyEnergyCalibrationCardState
                 child: FilledButton(
                   onPressed: _save,
                   child: Text(l10n.actionSave),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: _useAutomatic,
-                  child: Text(l10n.bodyEnergyCalibrationUseAuto),
                 ),
               ),
             ],

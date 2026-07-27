@@ -120,7 +120,6 @@ class FitBodyEnergyFromWatchUseCase {
       _preferences.setBodyEnergyCalibration(
         fitBodyEnergyGains(
           _preferences.bodyEnergyCalibration(),
-          const [],
           watchReadings: readings,
         ),
       );

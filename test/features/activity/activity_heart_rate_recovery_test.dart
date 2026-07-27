@@ -131,6 +131,10 @@ class _FakeHeartRepository implements HeartRepository {
   final bool recoveryReadFails;
   final int? observedMaxBpm;
 
+  /// The resting rate the use case now reads for itself, instead of being
+  /// handed one on the body profile.
+  static const int restingHeartRateBpm = 55;
+
   /// Every window the use case asked for, in order.
   final List<({DateTime start, DateTime end})> reads = [];
 
@@ -156,6 +160,10 @@ class _FakeHeartRepository implements HeartRepository {
   }
 
   @override
+  Future<Result<int?>> loadRestingHeartRate(LocalDate date) async =>
+      Ok(restingHeartRateBpm);
+
+  @override
   Future<Result<List<HeartRateSummary>>> loadDailyHeartRateSummaries(
     LocalDate start,
     LocalDate end,
@@ -173,7 +181,7 @@ class _FakeHeartRepository implements HeartRepository {
 
 Future<ActivityDetailLoadResult?> _load(
   _FakeHeartRepository heart, {
-  BodyProfile profile = const BodyProfile(maxHeartRateBpm: 190),
+  BodyProfile profile = const BodyProfile(),
   ExerciseData? workout,
 }) async {
   final useCase = LoadActivityDetailUseCase(
@@ -242,7 +250,13 @@ void main() {
     });
 
     test('measures the fall for a strap that kept recording', () async {
-      final result = await _load(_FakeHeartRepository(samples: _strapSamples()));
+      // The maximum comes from the observed history now. It used to arrive on
+      // the body profile as a stated 190, which no longer exists -- and without
+      // any maximum the quality degrades to approximate, so the reading has to
+      // be given one the way the app now gets one.
+      final result = await _load(
+        _FakeHeartRepository(samples: _strapSamples(), observedMaxBpm: 190),
+      );
 
       final reading = result!.heartRateRecovery;
       expect(reading.peakBpm, 180);
@@ -263,21 +277,31 @@ void main() {
       expect(result.heartRateRecovery.quality, HeartRateRecoveryQuality.noData);
     });
 
-    test('the observed maximum is only fetched when the user has not set one',
-        () async {
-      final stated = await _load(
-        _FakeHeartRepository(samples: _strapSamples(), observedMaxBpm: 200),
-        profile: const BodyProfile(maxHeartRateBpm: 190),
-      );
-      expect(stated!.heartRateRecovery.maxHeartRateBpmUsed, 190,
-          reason: 'a stated maximum outranks an observed one');
-
+    test('the observed maximum is used, and is not an estimate', () async {
+      // This replaces a case asserting that a STATED maximum outranked an
+      // observed one, and that the observed lookup was skipped when one was
+      // set. The manual input is gone, so there is no other side to the
+      // comparison -- and the lookup it used to skip now always runs, which is
+      // the behaviour worth pinning in its place.
       final observed = await _load(
         _FakeHeartRepository(samples: _strapSamples(), observedMaxBpm: 200),
-        profile: const BodyProfile(restingHeartRateBpm: 55),
       );
+
       expect(observed!.heartRateRecovery.maxHeartRateBpmUsed, 200);
-      expect(observed.heartRateRecovery.maxHeartRateEstimated, isFalse);
+      expect(observed.heartRateRecovery.maxHeartRateEstimated, isFalse,
+          reason: 'a measured maximum is not the age formula');
+    });
+
+    test('with no observed maximum it falls back to the age estimate', () {
+      // The remaining ladder: observed, then Tanaka from the birth year. With
+      // the manual override removed these are the only two rungs left, so the
+      // fallback has to be exercised or a birth-year-only user is uncovered.
+      return _load(
+        _FakeHeartRepository(samples: _strapSamples()),
+        profile: BodyProfile(birthYear: _start.year - 40),
+      ).then((result) {
+        expect(result!.heartRateRecovery.maxHeartRateEstimated, isTrue);
+      });
     });
   });
 

@@ -95,6 +95,34 @@ class PreferencesRepository {
     _bodyEnergyCalibration = ValueNotifier(_readBodyEnergyCalibration());
     _caffeinePreferences = ValueNotifier(_caffeine.read());
     _bodyProfile = ValueNotifier(_readBodyProfile());
+    _regateBodyEnergySetupWithoutAnAgeSource();
+  }
+
+  /// Reopens Body Energy setup once, for installs that completed it before a
+  /// birth year was required.
+  ///
+  /// Automatic zones are derived from Tanaka against age. With the manual
+  /// maximum heart rate removed there is nothing else to derive them from, and
+  /// the fallback -- resting + 70 -- is not a worse estimate so much as a wrong
+  /// one: a resting 60 gives a maximum of 130, so a 110 bpm bucket reads as 71%
+  /// of reserve when it is really nearer 42%, and the day over-drains all the
+  /// way down. Showing the setup card again is the honest response; carrying on
+  /// would keep producing a confident number built on a maximum nobody has.
+  ///
+  /// Manual zones exempt an install entirely: they ARE the ladder, and the age
+  /// is never consulted.
+  void _regateBodyEnergySetupWithoutAnAgeSource() {
+    if (_prefs.getInt(_keyBodyEnergySetupEpoch) == bodyEnergySetupEpoch) return;
+    _store.putInt(_keyBodyEnergySetupEpoch, bodyEnergySetupEpoch);
+
+    final calibration = _bodyEnergyCalibration.value;
+    if (!calibration.setupCompleted) return;
+    if (calibration.useManualZones &&
+        calibration.manualZoneThresholdsBpm != null) {
+      return;
+    }
+    if (_bodyProfile.value.birthYear != null) return;
+    setBodyEnergyCalibration(calibration.copyWith(setupCompleted: false));
   }
 
   final SharedPreferences _prefs;
@@ -410,7 +438,6 @@ class PreferencesRepository {
     );
     _store.putDouble(_keyBodyEnergyBasalDrainGain, normalized.basalDrainGain);
     _store.putDouble(_keyBodyEnergyStressDrainGain, normalized.stressDrainGain);
-    _store.putInt(_keyBodyEnergyFeelCheckCount, normalized.feelCheckCount);
     _store.putInt(
       _keyBodyEnergyWatchObservationCount,
       normalized.watchObservationCount,
@@ -425,11 +452,6 @@ class PreferencesRepository {
     _store.putOrRemoveInt(keyBodyProfileBirthYear, normalized.birthYear);
     _store.putOrRemoveDouble(keyBodyProfileWeightKg, normalized.weightKg);
     _store.putOrRemoveDouble(keyBodyProfileHeightCm, normalized.heightCm);
-    _store.putOrRemoveInt(
-      keyBodyProfileRestingHrBpm,
-      normalized.restingHeartRateBpm,
-    );
-    _store.putOrRemoveInt(keyBodyProfileMaxHrBpm, normalized.maxHeartRateBpm);
     _bodyProfile.value = normalized;
   }
 
@@ -744,7 +766,6 @@ class PreferencesRepository {
             _prefs.getDouble(_keyBodyEnergyActivityDrainGain) ?? 1.0,
         basalDrainGain: _prefs.getDouble(_keyBodyEnergyBasalDrainGain) ?? 1.0,
         stressDrainGain: _prefs.getDouble(_keyBodyEnergyStressDrainGain) ?? 1.0,
-        feelCheckCount: _prefs.getInt(_keyBodyEnergyFeelCheckCount) ?? 0,
         watchObservationCount:
             _prefs.getInt(_keyBodyEnergyWatchObservationCount) ?? 0,
       ).normalized();
@@ -753,8 +774,6 @@ class PreferencesRepository {
         birthYear: _store.intOrNull(keyBodyProfileBirthYear),
         weightKg: _store.doubleOrNull(keyBodyProfileWeightKg),
         heightCm: _store.doubleOrNull(keyBodyProfileHeightCm),
-        restingHeartRateBpm: _store.intOrNull(keyBodyProfileRestingHrBpm),
-        maxHeartRateBpm: _store.intOrNull(keyBodyProfileMaxHrBpm),
       ).normalized();
   // endregion
 
@@ -831,8 +850,6 @@ class PreferencesRepository {
       'body_energy_basal_drain_gain';
   static const String _keyBodyEnergyStressDrainGain =
       'body_energy_stress_drain_gain';
-  static const String _keyBodyEnergyFeelCheckCount =
-      'body_energy_feel_check_count';
   static const String _keyBodyEnergyWatchObservationCount =
       'body_energy_watch_observation_count';
   static const String _keyBodyEnergyWatchFitWatermarkMillis =
@@ -843,6 +860,7 @@ class PreferencesRepository {
       'body_energy_gains_algorithm_version';
   static const String _keyBodyEnergyWatchFitEpoch =
       'body_energy_watch_fit_epoch';
+  static const String _keyBodyEnergySetupEpoch = 'body_energy_setup_epoch';
   static const String _keyMindfulnessTimerDurationMinutes =
       'mindfulness_timer_duration_minutes';
   static const String _keyMindfulnessTimerIntervalMinutes =

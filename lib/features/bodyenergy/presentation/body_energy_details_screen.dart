@@ -4,7 +4,6 @@ import '../../../ui/theme/chart_colors.dart';
 
 import '../../../core/presentation/reference_link.dart';
 import '../../../core/presentation/screen_error.dart';
-import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/body_energy_timeline.dart';
@@ -153,11 +152,6 @@ class _BodyEnergyBody extends ConsumerWidget {
         ),
       ),
       _CardPad(child: _SummaryCard(display: display)),
-      // Feel-check only makes sense for "right now" — today, once there's a score.
-      if (!state.canGoForward && !display.isEmpty)
-        _CardPad(
-          child: _FeelCheckCard(display: display, onRecorded: onRefresh),
-        ),
       _CardPad(child: _TimelineCard(display: display)),
       _CardPad(child: _ReasonsCard(display: display)),
       _CardPad(child: _InputsCard(display: display)),
@@ -464,103 +458,6 @@ class _ReasonsCard extends StatelessWidget {
                     ],
                   ),
                 ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Asks the user how their energy actually feels, 0–10, and folds the answer
-/// into the personal gains. Shown only for today, where "right now" is meaningful.
-class _FeelCheckCard extends ConsumerStatefulWidget {
-  const _FeelCheckCard({required this.display, required this.onRecorded});
-
-  final BodyEnergyDisplay display;
-  final Future<void> Function() onRecorded;
-
-  @override
-  ConsumerState<_FeelCheckCard> createState() => _FeelCheckCardState();
-}
-
-class _FeelCheckCardState extends ConsumerState<_FeelCheckCard> {
-  bool _saving = false;
-
-  BodyEnergyPrimaryInfluence get _dominantInfluence {
-    for (final reason in widget.display.topReasons) {
-      if (reason.direction == BodyEnergyReasonDirection.drain) {
-        return reason.influence;
-      }
-    }
-    return BodyEnergyPrimaryInfluence.steady;
-  }
-
-  Future<void> _record(int rating) async {
-    if (_saving) return;
-    setState(() => _saving = true);
-    final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final result = await ref
-        .read(bodyEnergyFeelCheckRepositoryProvider)
-        .recordFeelCheck(
-          rating: rating,
-          predictedScore: widget.display.timeline?.currentScore ?? 50,
-          dominantInfluence: _dominantInfluence,
-        );
-    if (!mounted) return;
-    setState(() => _saving = false);
-    switch (result) {
-      case Ok():
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.bodyEnergyFeelCheckSaved)),
-        );
-        await widget.onRecorded();
-      case Err():
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.bodyEnergyFeelCheckError)),
-        );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    return OpenVitalsCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.bodyEnergyFeelCheckTitle,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l10n.bodyEnergyFeelCheckPrompt,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (var rating = 0; rating <= 10; rating++)
-                  OutlinedButton(
-                    onPressed: _saving ? null : () => _record(rating),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(44, 44),
-                      padding: EdgeInsets.zero,
-                    ),
-                    child: Text('$rating'),
-                  ),
-              ],
-            ),
           ],
         ),
       ),

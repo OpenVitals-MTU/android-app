@@ -38,7 +38,6 @@ import '../data/repository/body_energy_timeline_store.dart';
 import '../data/repository/contract/activity_repository.dart';
 import '../data/repository/contract/apple_health_import_repository.dart';
 import '../devices/core/registry/ble_device_repository.dart';
-import '../data/repository/contract/body_energy_feel_check_repository.dart';
 import '../data/repository/contract/body_energy_repository.dart';
 import '../data/repository/contract/body_repository.dart';
 import '../data/repository/contract/caffeine_repository.dart';
@@ -54,7 +53,6 @@ import '../data/repository/impl/activity_marker_repository_impl.dart';
 import '../data/repository/impl/activity_repository_impl.dart';
 import '../data/repository/impl/apple_health_import_repository_impl.dart';
 import '../devices/core/registry/ble_device_repository_impl.dart';
-import '../data/repository/impl/body_energy_feel_check_repository_impl.dart';
 import '../data/repository/impl/body_energy_repository_impl.dart';
 import '../data/repository/impl/body_repository_impl.dart';
 import '../data/repository/impl/caffeine_repository_impl.dart';
@@ -111,10 +109,6 @@ final beverageDaoProvider = Provider<BeverageDao>(
   (ref) => ref.watch(openVitalsDatabaseProvider).beverageDao,
 );
 
-final feelCheckDaoProvider = Provider<FeelCheckDao>(
-  (ref) => ref.watch(openVitalsDatabaseProvider).feelCheckDao,
-);
-
 final vitalsDailyCacheDaoProvider = Provider<VitalsDailyCacheDao>(
   (ref) => ref.watch(openVitalsDatabaseProvider).vitalsDailyCacheDao,
 );
@@ -139,14 +133,6 @@ final caloriesHistorySyncServiceProvider =
     ref.watch(healthDataSourceProvider),
   ),
 );
-
-final bodyEnergyFeelCheckRepositoryProvider =
-    Provider<BodyEnergyFeelCheckRepository>(
-      (ref) => BodyEnergyFeelCheckRepositoryImpl(
-        feelCheckDao: ref.watch(feelCheckDaoProvider),
-        preferencesRepository: ref.watch(preferencesRepositoryProvider),
-      ),
-    );
 
 final preferencesRepositoryProvider = Provider<PreferencesRepository>(
   (ref) {

@@ -48,8 +48,6 @@ void main() {
     birthYear: 1993,
     weightKg: 76.0,
     heightCm: 178.0,
-    restingHeartRateBpm: 70,
-    maxHeartRateBpm: 160,
   );
 
   Future<BodyProfile> resolve(_FakeSource source) async =>
@@ -89,8 +87,6 @@ void main() {
     final resolved = await resolve(_FakeSource(weightKg: 81.2));
 
     expect(resolved.birthYear, 1993);
-    expect(resolved.restingHeartRateBpm, 70);
-    expect(resolved.maxHeartRateBpm, 160);
   });
 
   test('a measured value out of range is normalised, not trusted blindly',
