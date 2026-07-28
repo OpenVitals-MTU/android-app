@@ -22,6 +22,7 @@ import '../domain/usecase/grant_onboarding_permissions_use_case.dart';
 import '../domain/usecase/open_health_connect_settings_use_case.dart';
 import '../domain/usecase/read_activity_write_permissions_use_case.dart';
 import '../domain/usecase/read_hydration_daily_goal_use_case.dart';
+import '../domain/usecase/record_recent_hydration_amount_use_case.dart';
 import '../domain/usecase/read_hydration_entry_settings_use_case.dart';
 import '../domain/usecase/read_onboarding_permission_catalog_use_case.dart';
 import '../domain/usecase/fit_body_energy_from_watch_use_case.dart';
@@ -434,6 +435,13 @@ final saveHydrationContainerSizeUseCaseProvider =
 final saveLastCustomHydrationAmountUseCaseProvider =
     Provider<SaveLastCustomHydrationAmountUseCase>(
   (ref) => SaveLastCustomHydrationAmountUseCase(
+    ref.watch(hydrationRepositoryProvider),
+  ),
+);
+
+final recordRecentHydrationAmountUseCaseProvider =
+    Provider<RecordRecentHydrationAmountUseCase>(
+  (ref) => RecordRecentHydrationAmountUseCase(
     ref.watch(hydrationRepositoryProvider),
   ),
 );

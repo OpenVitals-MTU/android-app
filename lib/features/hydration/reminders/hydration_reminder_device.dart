@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../core/reminders/local_notifications_reminder_device.dart';
 import '../../../core/reminders/reminder_controller.dart';
 import '../../../navigation/app_routes.dart';
+import '../../../ui/theme/app_colors.dart';
 
 /// The hydration reminder's notification identity and copy. The scheduling
 /// behaviour lives in the shared [BatchZonedNotificationReminderScheduler].
@@ -30,6 +31,9 @@ const hydrationReminderNotificationSpec = ReminderNotificationSpec(
   body: _hydrationReminderBody,
   // Tapping the reminder opens the hydration entry screen to log a drink.
   tapRoute: AppRoutes.hydrationEntry,
+  // The hydration accent tints the icon, progress bar and (on most skins) the
+  // quick-add action buttons, matching the metric's color in the app.
+  accentColor: AppColors.hydration,
 );
 
 String _hydrationReminderBody(ReminderGoalProgress progress) =>

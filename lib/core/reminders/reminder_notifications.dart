@@ -52,11 +52,20 @@ Future<String?> reminderNotificationLaunchRoute(
 /// `zonedSchedule`, in the UI isolate *and* in the alarm callback's isolate —
 /// each has its own plugin instance.
 ///
+/// [onBackgroundAction] handles notification action buttons whose
+/// `showsUserInterface` is false (e.g. the hydration quick-add). It must be a
+/// top-level `@pragma('vm:entry-point')` function: the plugin persists its raw
+/// callback handle and invokes it in a fresh background isolate, without
+/// launching the app. Passed in by the caller — which action buttons exist is a
+/// feature decision, not this shared device layer's. When null, any previously
+/// registered handle is left as-is.
+///
 /// Never throws: on a host with no notification channel (a unit test) this is a
 /// no-op returning false, so callers can start up regardless.
 Future<bool> initializeReminderNotifications(
-  FlutterLocalNotificationsPlugin plugin,
-) async {
+  FlutterLocalNotificationsPlugin plugin, {
+  DidReceiveBackgroundNotificationResponseCallback? onBackgroundAction,
+}) async {
   try {
     final result = await plugin.initialize(
       settings: const InitializationSettings(
@@ -64,6 +73,7 @@ Future<bool> initializeReminderNotifications(
         iOS: DarwinInitializationSettings(),
       ),
       onDidReceiveNotificationResponse: handleReminderNotificationTap,
+      onDidReceiveBackgroundNotificationResponse: onBackgroundAction,
     );
     return result ?? false;
   } catch (_) {

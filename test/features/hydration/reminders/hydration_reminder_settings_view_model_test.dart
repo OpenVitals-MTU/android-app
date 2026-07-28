@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,6 +39,22 @@ class _RecordingScheduler implements ReminderScheduler {
 
   @override
   Future<void> cancel() async => cancelCount++;
+}
+
+/// Holds every scheduleAll until [gate] completes — lets a test assert what the
+/// card shows while a slow batch reschedule is still in flight, which on-device
+/// is ~a hundred platform calls long.
+class _GatedScheduler extends _RecordingScheduler {
+  final Completer<void> gate = Completer<void>();
+
+  @override
+  Future<void> scheduleAll(
+    List<DateTime> triggers,
+    ReminderGoalProgress progress,
+  ) async {
+    await gate.future;
+    await super.scheduleAll(triggers, progress);
+  }
 }
 
 /// Stands in for the Android POST_NOTIFICATIONS + SCHEDULE_EXACT_ALARM gates.
@@ -154,6 +172,25 @@ void main() {
     expect(scheduler.scheduled, hasLength(1));
   });
 
+  test('the switch reflects a toggle-off before the schedule work lands',
+      () async {
+    // Regression: the switch used to stay on until the whole batch reschedule
+    // finished, which read as "turning off Beverage reminders does nothing".
+    final gated = _GatedScheduler();
+    scheduler = gated;
+    final container = await newContainer(
+      initial: const HydrationReminderConfig(enabled: true),
+    );
+    final subject = await settled(container);
+
+    final toggled = subject.setEnabled(false);
+    expect(stateOf(container).config.enabled, isFalse);
+
+    await toggled;
+    expect(prefs.hydrationReminderConfig().enabled, isFalse);
+    expect(gated.cancelCount, greaterThanOrEqualTo(1));
+  });
+
   test('disabling persists and clears the alarm', () async {
     final container = await newContainer(
       initial: const HydrationReminderConfig(enabled: true),
@@ -263,6 +300,33 @@ void main() {
 
       await subject.decreaseInterval();
       expect(stateOf(container).config.intervalMinutes, 210);
+    });
+
+    test('rapid taps each step, even while a reschedule is in flight', () async {
+      // Regression: _update used to re-arm the whole batch BEFORE reflecting
+      // the tap in state, so a second tap landing mid-reschedule read the stale
+      // interval and computed the same step — two taps, one reduction, and a
+      // stepper that felt dead until the platform calls drained.
+      final gated = _GatedScheduler();
+      scheduler = gated;
+      final container = await newContainer(
+        initial:
+            const HydrationReminderConfig(enabled: true, intervalMinutes: 120),
+      );
+      final subject = await settled(container);
+
+      final first = subject.decreaseInterval();
+      final second = subject.decreaseInterval();
+
+      // Both taps counted instantly, with the reschedule still held open.
+      expect(stateOf(container).config.intervalMinutes, 60);
+
+      gated.gate.complete();
+      await first;
+      await second;
+
+      expect(prefs.hydrationReminderConfig().intervalMinutes, 60);
+      expect(gated.scheduled, isNotEmpty);
     });
 
     test('cannot go below the minimum', () async {

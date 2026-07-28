@@ -357,6 +357,36 @@ void main() {
       expect(repo.lastCustomHydrationAmountMilliliters(), closeTo(333.0, 1e-6));
     });
 
+    test('recent hydration amounts keep the last two, newest first', () async {
+      final repo = await newRepo();
+      expect(repo.recentHydrationAmountsMilliliters(), isEmpty);
+
+      repo.recordRecentHydrationAmountMilliliters(200.0);
+      repo.recordRecentHydrationAmountMilliliters(350.0);
+      expect(repo.recentHydrationAmountsMilliliters(), [350.0, 200.0]);
+
+      // A third size evicts the oldest.
+      repo.recordRecentHydrationAmountMilliliters(500.0);
+      expect(repo.recentHydrationAmountsMilliliters(), [500.0, 350.0]);
+
+      // Re-logging a known size moves it to the front instead of duplicating.
+      repo.recordRecentHydrationAmountMilliliters(350.0);
+      expect(repo.recentHydrationAmountsMilliliters(), [350.0, 500.0]);
+
+      // Invalid volumes are rejected on write.
+      repo.recordRecentHydrationAmountMilliliters(-1.0);
+      repo.recordRecentHydrationAmountMilliliters(double.nan);
+      expect(repo.recentHydrationAmountsMilliliters(), [350.0, 500.0]);
+    });
+
+    test('recent hydration amounts filter corrupt stored values on read',
+        () async {
+      final repo = await newRepo({
+        'recent_hydration_amounts_milliliters': ['350.0', 'garbage', '-5.0'],
+      });
+      expect(repo.recentHydrationAmountsMilliliters(), [350.0]);
+    });
+
     test('custom drinks save, reorder, and delete preserving order', () async {
       final repo = await newRepo();
       const a = CustomHydrationDrink(

@@ -23,6 +23,7 @@ import '../../domain/model/nutrition_models.dart';
 import '../../l10n/app_localizations.dart';
 import '../hydration/reminders/hydration_reminder_controller.dart';
 import '../hydration/reminders/hydration_reminder_device.dart';
+import '../hydration/reminders/hydration_reminder_quick_add.dart';
 import '../manualentry/application/hydration_entry_view_model.dart';
 import 'home_widget_beverage.dart';
 import 'home_widget_refresher.dart';
@@ -133,7 +134,10 @@ Future<QuickBeverageWidgetLogger> buildBackgroundQuickBeverageLogger() async {
   // This isolate has its own notifications plugin instance (like the reminder
   // alarm's), so it must initialize it and its channel before it can reschedule.
   final plugin = FlutterLocalNotificationsPlugin();
-  await initializeReminderNotifications(plugin);
+  await initializeReminderNotifications(
+    plugin,
+    onBackgroundAction: handleHydrationReminderQuickAdd,
+  );
   await ensureHydrationReminderChannel(plugin);
 
   final hydrationRepository = HydrationRepositoryImpl(
@@ -151,6 +155,7 @@ Future<QuickBeverageWidgetLogger> buildBackgroundQuickBeverageLogger() async {
       plugin: plugin,
       spec: hydrationReminderNotificationSpec,
       canScheduleExact: () => canScheduleExactReminders(plugin),
+      buildActions: () => hydrationReminderQuickAddActions(preferences),
     ),
     hasNotificationPermission: () => areReminderNotificationsEnabled(plugin),
   );
@@ -239,9 +244,12 @@ class QuickBeverageWidgetLogger {
       // refused as "missing permission" and the tap would do nothing.
       (await health.refreshAvailability()).orThrow();
       // Kotlin remembers the tapped volume as the last custom amount, so the
-      // entry screen opens on it next time.
+      // entry screen opens on it next time — and as a recent cup size, so the
+      // reminder notification's quick-add buttons re-offer it.
       hydrationRepository
           .setLastCustomHydrationAmountMilliliters(drink.volumeMilliliters);
+      hydrationRepository
+          .recordRecentHydrationAmountMilliliters(drink.volumeMilliliters);
       final outcome = await logCustomHydrationDrinkEntry(
         hydrationRepository: hydrationRepository,
         nutritionRepository: nutritionRepository,

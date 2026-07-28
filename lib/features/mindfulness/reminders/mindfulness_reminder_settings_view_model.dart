@@ -111,10 +111,29 @@ class MindfulnessReminderSettingsViewModel
   Future<void> setReminderTime(LocalTime time) =>
       _update(state.config.copyWith(reminderTime: time));
 
+  /// See the hydration card's `_update` for why this is optimistic and
+  /// coalescing: state first so the switch responds instantly, then the persist
+  /// + batch reschedule behind it, bursts collapsing onto the latest config.
+  MindfulnessReminderConfig? _pending;
+  bool _applying = false;
+
   Future<void> _update(MindfulnessReminderConfig config) async {
-    await ref.read(mindfulnessReminderControllerProvider).updateConfig(config);
-    if (!ref.mounted) return;
-    state = state.copyWith(config: config.normalized());
+    final normalized = config.normalized();
+    state = state.copyWith(config: normalized);
+    _pending = normalized;
+    if (_applying) return; // The in-flight drain below picks it up.
+    _applying = true;
+    try {
+      while (_pending != null && ref.mounted) {
+        final next = _pending!;
+        _pending = null;
+        await ref
+            .read(mindfulnessReminderControllerProvider)
+            .updateConfig(next);
+      }
+    } finally {
+      _applying = false;
+    }
   }
 }
 

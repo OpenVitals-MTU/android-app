@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/core/reminders/local_notifications_reminder_device.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/features/hydration/reminders/hydration_reminder_device.dart';
+import 'package:openvitals/features/hydration/reminders/hydration_reminder_quick_add.dart';
 import 'package:openvitals/features/mindfulness/reminders/mindfulness_reminder_device.dart';
 
 void main() {
@@ -40,6 +41,11 @@ void main() {
             .baseNotificationId,
         hydrationReminderNotificationSpec.baseNotificationId,
       );
+      // The quick-add buttons ride the schedule: without this wiring the
+      // reminder posts with no actions at all.
+      final actions = scheduler.buildActions?.call();
+      expect(actions, isNotNull);
+      expect(actions, hasLength(hydrationQuickAddActionCount));
     });
 
     test('mindfulness reminders use the batch scheduler on $platform', () async {

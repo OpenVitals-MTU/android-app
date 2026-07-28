@@ -93,6 +93,34 @@ class HydrationStore extends PrefsStore {
     );
   }
 
+  /// The most recently logged volumes, newest first, deduplicated, at most
+  /// [_maxRecentHydrationAmounts]. These feed the reminder notification's
+  /// one-tap "Add … ml" actions. Values are re-filtered on read, like the
+  /// container volumes — see the class doc.
+  List<double> readRecentAmountsMilliliters() =>
+      (prefs.getStringList(_keyRecentHydrationAmountsMilliliters) ??
+              const <String>[])
+          .map(double.tryParse)
+          .whereType<double>()
+          .where((value) => value > 0.0 && value.isFinite)
+          .take(_maxRecentHydrationAmounts)
+          .toList();
+
+  /// Pushes [milliliters] to the front of the recent list, dropping an earlier
+  /// occurrence of the same volume (a re-log moves it to the front rather than
+  /// filling both slots with one size).
+  void writeRecentAmountMilliliters(double milliliters) {
+    if (milliliters <= 0.0 || !milliliters.isFinite) return;
+    final values = [
+      milliliters,
+      ...readRecentAmountsMilliliters().where((value) => value != milliliters),
+    ].take(_maxRecentHydrationAmounts);
+    putStringList(
+      _keyRecentHydrationAmountsMilliliters,
+      values.map((value) => value.toString()).toList(),
+    );
+  }
+
   double? readLastCustomAmountMilliliters() {
     final milliliters =
         prefs.getDouble(_keyLastCustomHydrationAmountMilliliters) ??
@@ -223,6 +251,8 @@ class HydrationStore extends PrefsStore {
       'hydration_container_volume_milliliters';
   static const String _keyLastCustomHydrationAmountMilliliters =
       'last_custom_hydration_amount_milliliters';
+  static const String _keyRecentHydrationAmountsMilliliters =
+      'recent_hydration_amounts_milliliters';
   static const String _keyCustomHydrationDrinks = 'custom_hydration_drinks';
   static const String _keyCustomHydrationDrinkOrder =
       'custom_hydration_drink_order';
@@ -241,6 +271,9 @@ class HydrationStore extends PrefsStore {
   static const double _minHydrationDailyGoalLiters = 0.25;
   static const double _maxHydrationDailyGoalLiters = 10.0;
   static const double _missingHydrationAmountMilliliters = -1.0;
+
+  /// Two: the reminder notification offers the last two used cup sizes.
+  static const int _maxRecentHydrationAmounts = 2;
   static const int _maxCustomHydrationDrinks = 25;
   // endregion
 }

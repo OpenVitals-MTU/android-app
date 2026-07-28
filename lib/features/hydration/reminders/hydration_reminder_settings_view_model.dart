@@ -143,12 +143,35 @@ class HydrationReminderSettingsViewModel
   Future<void> setActiveEndTime(LocalTime time) =>
       _update(state.config.copyWith(activeEndTime: time));
 
+  /// The config still waiting to be persisted + re-armed while an earlier
+  /// update is in flight. A burst of stepper taps coalesces onto the latest
+  /// config instead of queueing one full batch reschedule per tap.
+  HydrationReminderConfig? _pending;
+  bool _applying = false;
+
   /// Persists and re-arms. [HydrationReminderController.updateConfig] normalizes
   /// the interval, so an out-of-range step is clamped rather than stored.
+  ///
+  /// Optimistic: the state — and so the card — reflects the tap immediately,
+  /// and the persist + batch reschedule (a hundred platform calls) runs behind
+  /// it. Updating the state only *after* that await is what used to make the
+  /// stepper feel dead and eat taps: a second tap landing mid-reschedule read
+  /// the stale interval and computed the same step, so two taps moved one step.
   Future<void> _update(HydrationReminderConfig config) async {
-    await ref.read(hydrationReminderControllerProvider).updateConfig(config);
-    if (!ref.mounted) return;
-    state = state.copyWith(config: config.normalized());
+    final normalized = config.normalized();
+    state = state.copyWith(config: normalized);
+    _pending = normalized;
+    if (_applying) return; // The in-flight drain below picks it up.
+    _applying = true;
+    try {
+      while (_pending != null && ref.mounted) {
+        final next = _pending!;
+        _pending = null;
+        await ref.read(hydrationReminderControllerProvider).updateConfig(next);
+      }
+    } finally {
+      _applying = false;
+    }
   }
 }
 

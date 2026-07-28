@@ -7,6 +7,7 @@ import '../core/reminders/reminder_time_zone.dart';
 import '../di/providers.dart';
 import '../features/homewidgets/home_widget_alarm.dart';
 import '../features/hydration/reminders/hydration_reminder_device.dart';
+import '../features/hydration/reminders/hydration_reminder_quick_add.dart';
 import '../features/mindfulness/reminders/mindfulness_reminder_device.dart';
 
 /// Brings the reminder subsystem up at app start, standing in for the Kotlin
@@ -41,7 +42,13 @@ Future<ReminderBootstrapResult> bootstrapReminders(
   final notifications = await _guard(
     () async {
       final plugin = container.read(flutterLocalNotificationsProvider);
-      final ready = await initializeReminderNotifications(plugin);
+      // The background handler makes the hydration reminder's quick-add
+      // buttons work while the app is dead: the plugin persists the callback
+      // handle at initialize and runs it in a fresh isolate on tap.
+      final ready = await initializeReminderNotifications(
+        plugin,
+        onBackgroundAction: handleHydrationReminderQuickAdd,
+      );
       // Create the high-importance channels up front, so the first reminder is a
       // heads-up rather than a silent shade entry, and so existing installs get
       // the upgraded channel without waiting for the first fire.

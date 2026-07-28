@@ -49,6 +49,12 @@ class HydrationReminderController {
 
   Future<void> restoreSchedule() => reminders.restoreSchedule();
 
+  /// Today's litres against the daily goal — public for the debug-diagnostics
+  /// "test reminder" action, so the posted notification carries the same live
+  /// progress a scheduled fire would.
+  Future<ReminderGoalProgress> readProgress() =>
+      _readProgress(preferences, hydrationRepository);
+
   /// Re-anchors the reminder countdown to the just-logged drink and reschedules
   /// the batch. Because rescheduling cancels the whole reserved id range, this
   /// also dismisses the reminder that prompted the log (the old

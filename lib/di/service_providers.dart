@@ -17,6 +17,7 @@ import '../features/homewidgets/home_widget_refresher.dart';
 import '../features/homewidgets/home_widget_service.dart';
 import '../features/hydration/reminders/hydration_reminder_controller.dart';
 import '../features/hydration/reminders/hydration_reminder_device.dart';
+import '../features/hydration/reminders/hydration_reminder_quick_add.dart';
 import '../features/mindfulness/reminders/mindfulness_reminder_controller.dart';
 import '../features/mindfulness/reminders/mindfulness_reminder_device.dart';
 import 'data_providers.dart';
@@ -50,10 +51,14 @@ final reminderNotificationPermissionsProvider =
 /// which is why the reminder no longer dies after a nightly install.
 final hydrationReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
   final plugin = ref.watch(flutterLocalNotificationsProvider);
+  final preferences = ref.watch(preferencesRepositoryProvider);
   return BatchZonedNotificationReminderScheduler(
     plugin: plugin,
     spec: hydrationReminderNotificationSpec,
     canScheduleExact: () => canScheduleExactReminders(plugin),
+    // One-tap "Add … ml" buttons offering the last two used cup sizes,
+    // rebuilt on every (re)schedule so they track the latest logs.
+    buildActions: () => hydrationReminderQuickAddActions(preferences),
   );
 });
 

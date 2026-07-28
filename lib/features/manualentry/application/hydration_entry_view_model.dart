@@ -562,6 +562,15 @@ class HydrationEntryViewModel extends Notifier<HydrationEntryState> {
       entryNotice: null,
       entryError: null,
     );
+    // Remember the size for the reminder notification's one-tap actions —
+    // every non-edit log counts as a "used cup size", container taps included.
+    // Before the write and regardless of its outcome, like the last custom
+    // amount. An edit corrects history; it is not a drink being drunk now.
+    if (!current.isEditMode) {
+      ref.read(recordRecentHydrationAmountUseCaseProvider)(
+        rawLiters * kMillilitersPerLiter,
+      );
+    }
     // [SaveHydrationEntryUseCase] answers a *rejected* write with an outcome and
     // a write that failed mid-flight with a throw — so unlike the other entry
     // forms, this one still catches: the failure is not a `Result` to switch on.

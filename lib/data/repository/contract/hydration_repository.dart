@@ -25,6 +25,12 @@ abstract interface class HydrationRepository {
 
   void setLastCustomHydrationAmountMilliliters(double milliliters);
 
+  /// The most recently logged volumes, newest first — the reminder
+  /// notification's one-tap quick-add sizes.
+  List<double> recentHydrationAmountsMilliliters();
+
+  void recordRecentHydrationAmountMilliliters(double milliliters);
+
   /// The drink catalog: the seeded presets (still/gasified water plus the
   /// CaffeineHealth beverage list) merged with the user's own drinks.
   ///

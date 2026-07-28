@@ -506,6 +506,12 @@ class PreferencesRepository {
   void setLastCustomHydrationAmountMilliliters(double milliliters) =>
       _hydration.writeLastCustomAmountMilliliters(milliliters);
 
+  List<double> recentHydrationAmountsMilliliters() =>
+      _hydration.readRecentAmountsMilliliters();
+
+  void recordRecentHydrationAmountMilliliters(double milliliters) =>
+      _hydration.writeRecentAmountMilliliters(milliliters);
+
   List<CustomHydrationDrink> customHydrationDrinks() =>
       _hydration.readCustomDrinks();
 

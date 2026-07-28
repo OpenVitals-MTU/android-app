@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../../core/reminders/local_notifications_reminder_device.dart';
 import '../../../core/reminders/reminder_controller.dart';
+import '../../../ui/theme/app_colors.dart';
 
 /// The mindfulness reminder's notification identity and copy. The scheduling
 /// behaviour lives in the shared [BatchZonedNotificationReminderScheduler].
@@ -24,6 +25,9 @@ const mindfulnessReminderNotificationSpec = ReminderNotificationSpec(
   scheduledBody: 'A few mindful minutes can reset your day.',
   // Today's progress, e.g. "5 / 10 min", shown on same-day reminders.
   body: _mindfulnessReminderBody,
+  // The mindfulness accent tints the icon and progress bar, matching the
+  // metric's color in the app (and the hydration reminder's treatment).
+  accentColor: AppColors.mindfulness,
 );
 
 String _mindfulnessReminderBody(ReminderGoalProgress progress) =>

@@ -72,6 +72,14 @@ class HydrationRepositoryImpl implements HydrationRepository {
   void setLastCustomHydrationAmountMilliliters(double milliliters) =>
       _preferences?.setLastCustomHydrationAmountMilliliters(milliliters);
 
+  @override
+  List<double> recentHydrationAmountsMilliliters() =>
+      _preferences?.recentHydrationAmountsMilliliters() ?? const <double>[];
+
+  @override
+  void recordRecentHydrationAmountMilliliters(double milliliters) =>
+      _preferences?.recordRecentHydrationAmountMilliliters(milliliters);
+
   /// The beverage store is the source of truth when it is wired: it seeds the
   /// preset catalog on first read and migrates any drinks the preferences
   /// repository holds from before it existed. Preferences are the fallback for

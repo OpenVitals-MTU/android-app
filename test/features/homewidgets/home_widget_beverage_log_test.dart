@@ -35,6 +35,7 @@ class _FakeHydrationRepository implements HydrationRepository {
   final bool canWrite;
   final List<HydrationWriteRequest> writes = [];
   final List<double> lastCustomAmounts = [];
+  final List<double> recentAmounts = [];
 
   @override
   Future<Result<bool>> hasHydrationWritePermission() async => Ok(canWrite);
@@ -50,6 +51,10 @@ class _FakeHydrationRepository implements HydrationRepository {
   @override
   void setLastCustomHydrationAmountMilliliters(double milliliters) =>
       lastCustomAmounts.add(milliliters);
+
+  @override
+  void recordRecentHydrationAmountMilliliters(double milliliters) =>
+      recentAmounts.add(milliliters);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -210,8 +215,10 @@ void main() {
         nutrition.writes.single.associatedHydrationClientRecordId,
         'openvitals_hydration_1_drink_espresso_uuid',
       );
-      // Kotlin remembers the tapped volume for the entry screen.
+      // Kotlin remembers the tapped volume for the entry screen — and as a
+      // recent cup size for the reminder's quick-add actions.
       expect(hydration.lastCustomAmounts, [30.0]);
+      expect(hydration.recentAmounts, [30.0]);
     });
 
     test('re-anchors the hydration reminder once water is logged', () async {

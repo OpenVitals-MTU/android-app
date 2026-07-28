@@ -21,6 +21,7 @@ class _FakeHydrationRepository implements HydrationRepository {
   final List<HydrationWriteRequest> writes = [];
   List<String>? lastReorder;
   double? lastCustomAmount;
+  final List<double> recentAmounts = [];
 
   @override
   Set<String> get hydrationWritePermissions => {HcPermissions.writeHydration};
@@ -42,6 +43,10 @@ class _FakeHydrationRepository implements HydrationRepository {
   @override
   void setLastCustomHydrationAmountMilliliters(double milliliters) =>
       lastCustomAmount = milliliters;
+
+  @override
+  void recordRecentHydrationAmountMilliliters(double milliliters) =>
+      recentAmounts.add(milliliters);
 
   @override
   Future<Result<List<CustomHydrationDrink>>> customHydrationDrinks() async =>

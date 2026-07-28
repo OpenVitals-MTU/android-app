@@ -1,3 +1,5 @@
+import 'dart:ui' show Color;
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -18,6 +20,7 @@ class ReminderNotificationSpec {
     required this.scheduledBody,
     required this.body,
     this.tapRoute,
+    this.accentColor,
   });
 
   /// The first id of this feature's reserved, contiguous notification-id range
@@ -55,12 +58,19 @@ class ReminderNotificationSpec {
   /// The go_router location to open when the notification is tapped (carried as
   /// the notification payload), or null to just bring the app forward.
   final String? tapRoute;
+
+  /// The feature's accent, applied as the Android notification color: it tints
+  /// the small icon, the progress bar and — on most skins — the action-button
+  /// text, which is what makes the quick-add actions read as buttons rather
+  /// than plain text. Null keeps the system default.
+  final Color? accentColor;
 }
 
 NotificationDetails _detailsFor(
   ReminderNotificationSpec spec, {
   int? maxProgress,
   int? progress,
+  List<AndroidNotificationAction> actions = const [],
 }) =>
     NotificationDetails(
       android: AndroidNotificationDetails(
@@ -74,13 +84,54 @@ NotificationDetails _detailsFor(
         // raise it above the channel's level.
         importance: Importance.high,
         priority: Priority.high,
+        color: spec.accentColor,
         // A plain determinate bar showing today's progress toward the goal.
         showProgress: maxProgress != null,
         maxProgress: maxProgress ?? 0,
         progress: progress ?? 0,
+        actions: actions,
       ),
       iOS: const DarwinNotificationDetails(),
     );
+
+/// Posts [spec]'s notification right now — the debug-diagnostics "test this
+/// reminder" path. Same channel, details, body, progress bar and actions as a
+/// scheduled fire, so what it shows is exactly what a real reminder shows.
+///
+/// Uses the first id of the reserved range, so the next batch (re)schedule
+/// cancels it like any other entry rather than leaving a stray test
+/// notification behind.
+Future<void> showReminderNotificationNow(
+  FlutterLocalNotificationsPlugin plugin,
+  ReminderNotificationSpec spec, {
+  ReminderGoalProgress? progress,
+  List<AndroidNotificationAction> actions = const [],
+}) async {
+  final hasGoal = progress != null && progress.target > 0;
+  final maxProgress = hasGoal
+      ? (progress.target * BatchZonedNotificationReminderScheduler._progressScale)
+          .round()
+      : 0;
+  final currentProgress = hasGoal
+      ? (progress.current * BatchZonedNotificationReminderScheduler._progressScale)
+          .round()
+          .clamp(0, maxProgress)
+      : 0;
+  await plugin.show(
+    id: spec.baseNotificationId,
+    title: spec.title,
+    body: hasGoal ? spec.body(progress) : spec.scheduledBody,
+    notificationDetails: hasGoal
+        ? _detailsFor(
+            spec,
+            maxProgress: maxProgress,
+            progress: currentProgress,
+            actions: actions,
+          )
+        : _detailsFor(spec, actions: actions),
+    payload: spec.tapRoute,
+  );
+}
 
 /// Creates [spec]'s Android notification channel with high importance so the
 /// reminder heads-up, deleting a superseded [oldChannelId] first.
@@ -133,11 +184,19 @@ class BatchZonedNotificationReminderScheduler implements ReminderScheduler {
     required this.plugin,
     required this.spec,
     this.canScheduleExact,
+    this.buildActions,
     this.now = DateTime.now,
   });
 
   final FlutterLocalNotificationsPlugin plugin;
   final ReminderNotificationSpec spec;
+
+  /// Android action buttons stamped onto every entry of the batch, resolved
+  /// once per (re)schedule so they reflect current state (e.g. the hydration
+  /// quick-add reads the last used cup sizes). Null or a failure → no actions.
+  /// Android-only: iOS action categories are fixed at plugin initialization and
+  /// cannot carry per-schedule labels.
+  final List<AndroidNotificationAction> Function()? buildActions;
 
   /// Used to decide which triggers fire "today" (and so may show today's live
   /// progress). Injectable for tests.
@@ -167,6 +226,15 @@ class BatchZonedNotificationReminderScheduler implements ReminderScheduler {
         ? AndroidScheduleMode.exactAllowWhileIdle
         : AndroidScheduleMode.inexactAllowWhileIdle;
 
+    // Best-effort, like the exact-alarm probe: a failing actions builder must
+    // cost the buttons, not the whole reminder chain.
+    List<AndroidNotificationAction> actions;
+    try {
+      actions = buildActions?.call() ?? const [];
+    } catch (_) {
+      actions = const [];
+    }
+
     final today = now();
     final hasGoal = progress.target > 0;
     final maxProgress = hasGoal ? (progress.target * _progressScale).round() : 0;
@@ -191,8 +259,13 @@ class BatchZonedNotificationReminderScheduler implements ReminderScheduler {
         body: showProgress ? spec.body(progress) : spec.scheduledBody,
         scheduledDate: tz.TZDateTime.from(trigger, tz.local),
         notificationDetails: showProgress
-            ? _detailsFor(spec, maxProgress: maxProgress, progress: currentProgress)
-            : _detailsFor(spec),
+            ? _detailsFor(
+                spec,
+                maxProgress: maxProgress,
+                progress: currentProgress,
+                actions: actions,
+              )
+            : _detailsFor(spec, actions: actions),
         androidScheduleMode: mode,
         payload: spec.tapRoute,
       );

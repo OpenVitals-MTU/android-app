@@ -18,6 +18,7 @@ import 'cards/body_profile_card.dart';
 import 'cards/caffeine_preferences_card.dart';
 import 'cards/debug_diagnostics_card.dart';
 import 'cards/body_energy_diagnostics_card.dart';
+import 'cards/reminder_test_card.dart';
 import 'cards/health_connect_sources_card.dart';
 import 'cards/favorite_activity_card.dart';
 import 'cards/csv_import_card.dart';
@@ -265,8 +266,12 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
       // check (see docs/reference/device-modularization-plan.md, Phase 3).
       // The Body Energy card holds the model next to the watch's own Body
       // Battery, to tell a mis-calibration apart from a doubled input.
+      // The reminder test card posts the hydration reminder on demand, so the
+      // notification and its quick-add actions can be exercised without
+      // waiting out the reminder interval.
       return const [
         DebugDiagnosticsCard(),
+        ReminderTestCard(),
         HealthConnectSourcesCard(),
         BodyEnergyDiagnosticsCard(),
       ];

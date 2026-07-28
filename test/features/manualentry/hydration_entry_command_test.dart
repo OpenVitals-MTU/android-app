@@ -46,6 +46,9 @@ class _FakeHydrationRepository implements HydrationRepository {
   void setLastCustomHydrationAmountMilliliters(double milliliters) {}
 
   @override
+  void recordRecentHydrationAmountMilliliters(double milliliters) {}
+
+  @override
   Future<Result<List<CustomHydrationDrink>>> customHydrationDrinks() async =>
       const Ok(<CustomHydrationDrink>[]);
 
