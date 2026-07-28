@@ -177,6 +177,16 @@ dependencies:
   # XFile, shared by file_picker and file_selector. Direct, because the pick
   # helpers hand XFiles back to the callers.
   cross_file: ^0.3.4
+  # RFC 4180 tokenizer for the CSV importer. Pure Dart with no Android half, so
+  # it cannot hit the AGP-9 link trap that pins file_picker above.
+  #
+  # Not hand-rolled: the formats users actually export quote fields that contain
+  # the delimiter (`Date,"Weight (kg)","Fat mass (kg)"`), embed newlines inside
+  # quotes, double their quotes to escape them, and arrive CRLF-terminated with a
+  # BOM. A `split(',')` gets the very first line of a Withings export wrong. Kept
+  # behind lib/features/imports/csv/csv_table_reader.dart so the tokenizer can be
+  # swapped without touching a caller.
+  csv: ^6.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

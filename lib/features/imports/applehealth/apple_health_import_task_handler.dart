@@ -32,7 +32,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import '../../../core/result/app_failure.dart';
 import '../../../bootstrap/background_health_access.dart';
 import '../../../core/result/result.dart';
-import '../../../data/repository/impl/apple_health_import_repository_impl.dart';
+import '../../../data/repository/impl/import_write_repository_impl.dart';
 import '../../../data/repository/impl/health_repository_impl.dart';
 import '../../../data/source/health/health_data_source.dart';
 import '../../../l10n/app_localizations.dart';
@@ -111,7 +111,7 @@ class AppleHealthImportTaskHandler extends TaskHandler {
       final outcome = await runAppleHealthImportJob(
         AppleHealthImportJobInputs(
           service: AppleHealthImportService(
-            AppleHealthImportRepositoryImpl(dataSource),
+            ImportWriteRepositoryImpl(dataSource),
           ),
           stagingStore: AppleHealthImportStagingStore(),
           checkpointStore: AppleHealthImportCheckpointStore(),

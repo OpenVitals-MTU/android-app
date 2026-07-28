@@ -37,7 +37,7 @@ import '../data/prefs/preferences_repository.dart';
 import '../data/repository/body_energy_baseline_cache_store.dart';
 import '../data/repository/body_energy_timeline_store.dart';
 import '../data/repository/contract/activity_repository.dart';
-import '../data/repository/contract/apple_health_import_repository.dart';
+import '../data/repository/contract/import_write_repository.dart';
 import '../devices/core/registry/ble_device_repository.dart';
 import '../data/repository/contract/body_energy_repository.dart';
 import '../data/repository/contract/body_repository.dart';
@@ -52,7 +52,7 @@ import '../data/repository/contract/sleep_repository.dart';
 import '../data/repository/contract/vitals_repository.dart';
 import '../data/repository/impl/activity_marker_repository_impl.dart';
 import '../data/repository/impl/activity_repository_impl.dart';
-import '../data/repository/impl/apple_health_import_repository_impl.dart';
+import '../data/repository/impl/import_write_repository_impl.dart';
 import '../devices/core/registry/ble_device_repository_impl.dart';
 import '../data/repository/impl/body_energy_repository_impl.dart';
 import '../data/repository/impl/body_repository_impl.dart';
@@ -308,17 +308,15 @@ final phoneIdentityProvider = Provider<GarminPhoneIdentity>(
   (ref) => const GarminPhoneIdentity(),
 );
 
-final appleHealthImportRepositoryProvider =
-    Provider<AppleHealthImportRepository>(
-      (ref) => AppleHealthImportRepositoryImpl(
-        ref.watch(healthDataSourceProvider),
-        changes: ref.watch(dataChangeSinkProvider),
-      ),
-    );
+final importWriteRepositoryProvider = Provider<ImportWriteRepository>(
+  (ref) => ImportWriteRepositoryImpl(
+    ref.watch(healthDataSourceProvider),
+    changes: ref.watch(dataChangeSinkProvider),
+  ),
+);
 
 final appleHealthImportServiceProvider = Provider<AppleHealthImportService>(
-  (ref) =>
-      AppleHealthImportService(ref.watch(appleHealthImportRepositoryProvider)),
+  (ref) => AppleHealthImportService(ref.watch(importWriteRepositoryProvider)),
 );
 
 final appleHealthImportReportStoreProvider =
@@ -433,6 +431,14 @@ final bodyWritePermissionsProvider =
       (ref, type) =>
           ref.watch(bodyRepositoryProvider).bodyWritePermissions(type),
     );
+
+/// Every body-composition write permission the installed provider supports.
+///
+/// The CSV importer intersects this with the metrics a mapping actually uses, so
+/// importing a weight-only file asks for one permission rather than all seven.
+final instantMeasurementWritePermissionsProvider = Provider<Set<String>>(
+  (ref) => ref.watch(healthRepositoryProvider).instantMeasurementWritePermissions,
+);
 
 final vitalsWritePermissionsProvider =
     Provider.family<Set<String>, VitalsMeasurementType>(

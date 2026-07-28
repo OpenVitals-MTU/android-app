@@ -20,6 +20,7 @@ import 'cards/debug_diagnostics_card.dart';
 import 'cards/body_energy_diagnostics_card.dart';
 import 'cards/health_connect_sources_card.dart';
 import 'cards/favorite_activity_card.dart';
+import 'cards/csv_import_card.dart';
 import 'cards/fit_import_card.dart';
 import 'cards/permission_categories_card.dart';
 import 'cards/route_import_card.dart';
@@ -249,11 +250,13 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
       ];
     case SettingsSection.dataImport:
       // Kotlin DATA_IMPORT order: Apple Health, route (single + bulk), FIT
-      // (SettingsScreenContent.kt:182-231).
+      // (SettingsScreenContent.kt:182-231). CSV is Flutter-only and goes last,
+      // after the ported three.
       return const [
         AppleHealthImportCard(),
         RouteImportCard(),
         FitImportCard(),
+        CsvImportCard(),
       ];
     case SettingsSection.debugDiagnostics:
       // Kotlin DEBUG_DIAGNOSTICS: a single "Save logs" card (SettingsScreenContent

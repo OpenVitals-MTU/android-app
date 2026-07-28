@@ -51,6 +51,12 @@ abstract interface class HealthRepository {
   Set<String> get heartPermissions;
   Set<String> get bodyPermissions;
   Set<String> get bodyWritePermissions;
+
+  /// Every single-instant measurement the app can import — body composition and
+  /// the one-number-at-one-moment vitals. Wider than [bodyWritePermissions]
+  /// (which stops where manual entry does), far narrower than
+  /// [dataImportWritePermissions].
+  Set<String> get instantMeasurementWritePermissions;
   Set<String> get activityExtrasPermissions;
   Set<String> get nutritionHydrationPermissions;
   Set<String> get hydrationWritePermissions;

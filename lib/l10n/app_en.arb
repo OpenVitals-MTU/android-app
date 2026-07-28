@@ -4248,5 +4248,232 @@
       }
     }
   },
-  "settingsWatchSettingsConfirmActionBody": "This runs the action on the watch and cannot be undone from here."
+  "settingsWatchSettingsConfirmActionBody": "This runs the action on the watch and cannot be undone from here.",
+  "settingsCsvImportTitle": "CSV Importer",
+  "settingsCsvImportBody": "Import body measurements from a CSV file — for example a weight and body-composition export from a smart scale. You choose what each column means.",
+  "settingsCsvImportAction": "Import a CSV file",
+  "settingsCsvImportScreenTitle": "CSV importer",
+  "settingsCsvImportPickTitle": "Choose a CSV file",
+  "settingsCsvImportPickBody": "Pick a CSV export and match its columns to body measurements. Nothing is written until you confirm.",
+  "settingsCsvImportPickAction": "Choose CSV file",
+  "settingsCsvImportFileLabel": "{arg0} · {arg1} columns",
+  "@settingsCsvImportFileLabel": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsCsvImportContinue": "Continue",
+  "settingsCsvImportBack": "Back",
+  "settingsCsvImportDone": "Done",
+  "settingsCsvImportImportAnother": "Import another file",
+  "settingsCsvImportLoading": "Reading the file…",
+  "settingsCsvImportSeparatorLabel": "Column separator",
+  "settingsCsvImportSeparatorComma": "Comma (,)",
+  "settingsCsvImportSeparatorSemicolon": "Semicolon (;)",
+  "settingsCsvImportSeparatorTab": "Tab",
+  "settingsCsvImportSeparatorPipe": "Pipe (|)",
+  "settingsCsvImportHasHeaderLabel": "First row contains column names",
+  "settingsCsvImportPreviewTitle": "Preview",
+  "settingsCsvImportEmptyFile": "This file has no data rows.",
+  "settingsCsvImportUnreadableFile": "That file could not be read: {arg0}",
+  "@settingsCsvImportUnreadableFile": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCsvImportColumnsTitle": "Columns",
+  "settingsCsvImportRoleIgnore": "Not imported",
+  "settingsCsvImportRoleTimestamp": "Date and time",
+  "settingsCsvImportMetricWeight": "Weight",
+  "settingsCsvImportMetricBodyFat": "Body fat",
+  "settingsCsvImportMetricLeanBodyMass": "Lean body mass (muscle mass)",
+  "settingsCsvImportMetricBoneMass": "Bone mass",
+  "settingsCsvImportMetricBodyWaterMass": "Body water",
+  "settingsCsvImportMetricHeight": "Height",
+  "settingsCsvImportMetricBasalMetabolicRate": "Basal metabolic rate",
+  "settingsCsvImportValueLabel": "Values are",
+  "settingsCsvImportUnitKilograms": "Kilograms (kg)",
+  "settingsCsvImportUnitPounds": "Pounds (lb)",
+  "settingsCsvImportUnitStones": "Stones (st)",
+  "settingsCsvImportUnitGrams": "Grams (g)",
+  "settingsCsvImportUnitPercent": "Percent (%)",
+  "settingsCsvImportUnitFraction": "A fraction (0–1)",
+  "settingsCsvImportUnitCentimeters": "Centimetres (cm)",
+  "settingsCsvImportUnitMeters": "Metres (m)",
+  "settingsCsvImportUnitInches": "Inches (in)",
+  "settingsCsvImportUnitFeet": "Feet (ft)",
+  "settingsCsvImportUnitKilocaloriesPerDay": "Kilocalories per day",
+  "settingsCsvImportUnitKilojoulesPerDay": "Kilojoules per day",
+  "settingsCsvImportInterpretationMassShare": "A mass in {arg0}, as a share of the weight column",
+  "@settingsCsvImportInterpretationMassShare": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCsvImportMassShareHint": "Health Connect stores body fat as a percentage, so this is worked out from the weight measured in the same row.",
+  "settingsCsvImportDateTimeTitle": "Date and time",
+  "settingsCsvImportDateFormatLabel": "Format",
+  "settingsCsvImportDateFormatAuto": "Detect automatically",
+  "settingsCsvImportDateFormatIso": "ISO 8601 (2026-07-01T08:12:00)",
+  "settingsCsvImportDateFormatYearFirst": "Year first (2026-07-01 08:12)",
+  "settingsCsvImportDateFormatDayFirst": "Day first (01/07/2026 08:12)",
+  "settingsCsvImportDateFormatMonthFirst": "Month first (07/01/2026 08:12)",
+  "settingsCsvImportDateFormatEpochSeconds": "Seconds since 1970",
+  "settingsCsvImportDateFormatEpochMillis": "Milliseconds since 1970",
+  "settingsCsvImportDateFormatCustom": "Custom pattern",
+  "settingsCsvImportDateFormatCustomHint": "For example dd MMM yyyy HH:mm",
+  "settingsCsvImportDateFormatAmbiguous": "These dates could be day-first or month-first and both fit. Choose which one your file uses.",
+  "settingsCsvImportTimeZoneLabel": "Time zone",
+  "settingsCsvImportTimeZoneDevice": "This phone's time zone",
+  "settingsCsvImportTimeZoneUtc": "UTC",
+  "settingsCsvImportTimeZoneOffset": "A fixed offset",
+  "settingsCsvImportTimeZoneOffsetLabel": "Offset from UTC (for example +02:00)",
+  "settingsCsvImportTimeZoneFromFile": "This file states its own time zone, so it is used as written.",
+  "settingsCsvImportExampleRow": "First row reads as {arg0}",
+  "@settingsCsvImportExampleRow": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCsvImportIssueNoTimestamp": "Choose which column holds the date and time.",
+  "settingsCsvImportIssueMultipleTimestamps": "Only one column can hold the date and time.",
+  "settingsCsvImportIssueNoMetric": "Choose at least one column to import.",
+  "settingsCsvImportIssueDuplicateMetric": "Two columns are mapped to the same measurement.",
+  "settingsCsvImportIssueNeedsWeight": "Body fat given as a mass needs a weight column in the same file to work out the percentage.",
+  "settingsCsvImportIssueTimestampUnparsed": "None of the sampled rows match this date format.",
+  "settingsCsvImportConfirmTitle": "Ready to import",
+  "settingsCsvImportConfirmSummary": "{arg0} · {arg1} measurements per row",
+  "@settingsCsvImportConfirmSummary": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsCsvImportConfirmRange": "{arg0}: {arg1} to {arg2}",
+  "@settingsCsvImportConfirmRange": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCsvImportConfirmDates": "Dates run from {arg0} to {arg1}",
+  "@settingsCsvImportConfirmDates": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCsvImportPermissionTitle": "Permission needed",
+  "settingsCsvImportPermissionBody": "OpenVitals needs permission to write these measurements to Health Connect.",
+  "settingsCsvImportStart": "Import",
+  "settingsCsvImportCancel": "Cancel",
+  "settingsCsvImportProgress": "Row {arg0} · written {arg1}, already present {arg2}, rejected {arg3}",
+  "@settingsCsvImportProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsCsvImportResult": "Written {arg0}. Already present {arg1}. Rejected {arg2}.",
+  "@settingsCsvImportResult": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsCsvImportResultEmpty": "Nothing was imported from this file.",
+  "settingsCsvImportResultCancelled": "Import cancelled. What had already been written was kept.",
+  "settingsCsvImportResultRateLimited": "Health Connect stopped accepting writes for now. Run the import again later; records already written are skipped.",
+  "settingsCsvImportError": "The import failed: {arg0}",
+  "@settingsCsvImportError": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCsvImportDiagnosticsTitle": "Rejected rows",
+  "settingsCsvImportDiagnosticLine": "{arg0}: {arg1}",
+  "@settingsCsvImportDiagnosticLine": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsCsvImportReasonMissingTimestamp": "No date and time",
+  "settingsCsvImportReasonUnparsableTimestamp": "Date not understood",
+  "settingsCsvImportReasonWrongFieldCount": "Too few columns",
+  "settingsCsvImportReasonUnparsableNumber": "Value not a number",
+  "settingsCsvImportReasonOutOfRange": "Value outside a plausible range",
+  "settingsCsvImportReasonDerivationMissingWeight": "No weight to work out the percentage from",
+  "settingsCsvImportReasonWriteFailed": "Health Connect refused the record",
+  "settingsCsvImportSaveReport": "Save report",
+  "settingsCsvImportSaveReportSaved": "Report saved.",
+  "settingsCsvImportSaveReportCancelled": "Report not saved.",
+  "settingsCsvImportSaveReportFailed": "The report could not be saved.",
+  "settingsCsvImportMetricHeartRate": "Heart rate",
+  "settingsCsvImportMetricRestingHeartRate": "Resting heart rate",
+  "settingsCsvImportMetricHeartRateVariability": "Heart rate variability (RMSSD)",
+  "settingsCsvImportMetricOxygenSaturation": "Blood oxygen (SpO₂)",
+  "settingsCsvImportMetricRespiratoryRate": "Respiratory rate",
+  "settingsCsvImportMetricBodyTemperature": "Body temperature",
+  "settingsCsvImportMetricBasalBodyTemperature": "Basal body temperature",
+  "settingsCsvImportMetricBloodGlucose": "Blood glucose",
+  "settingsCsvImportMetricVo2Max": "VO₂ max",
+  "settingsCsvImportUnitCelsius": "Celsius (°C)",
+  "settingsCsvImportUnitFahrenheit": "Fahrenheit (°F)",
+  "settingsCsvImportUnitBeatsPerMinute": "Beats per minute (bpm)",
+  "settingsCsvImportUnitMilliseconds": "Milliseconds (ms)",
+  "settingsCsvImportUnitSeconds": "Seconds (s)",
+  "settingsCsvImportUnitBreathsPerMinute": "Breaths per minute",
+  "settingsCsvImportUnitMillimolesPerLiter": "Millimoles per litre (mmol/L)",
+  "settingsCsvImportUnitMilligramsPerDeciliter": "Milligrams per decilitre (mg/dL)",
+  "settingsCsvImportUnitMillilitersPerKgPerMinute": "mL/kg/min"
 }

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/core/result/result.dart';
-import 'package:openvitals/data/repository/contract/apple_health_import_repository.dart';
+import 'package:openvitals/data/repository/contract/import_write_repository.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_background.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_checkpoint_store.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_error_formatter.dart';
@@ -17,7 +17,7 @@ import 'package:openvitals/features/imports/applehealth/apple_health_import_stag
 /// whole file exists for is that `resolveHealthAccess` lands *before* `import`.
 late List<String> calls;
 
-class _FakeRepository implements AppleHealthImportRepository {
+class _FakeRepository implements ImportWriteRepository {
   @override
   Future<Result<Set<String>>> findMatchingImportedClientRecordIds(
     String recordType,

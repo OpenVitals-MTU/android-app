@@ -26,7 +26,7 @@ import 'dart:io';
 
 import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
-import '../../../data/repository/contract/apple_health_import_repository.dart';
+import '../../../data/repository/contract/import_write_repository.dart';
 import 'apple_health_import_batch_channel.dart';
 import 'apple_health_import_categories.dart';
 import 'apple_health_import_checkpoint_store.dart';
@@ -88,7 +88,7 @@ T _orThrowImport<T>(Result<T> result) {
 class AppleHealthImportService {
   AppleHealthImportService(this._repository);
 
-  final AppleHealthImportRepository _repository;
+  final ImportWriteRepository _repository;
 
   Future<AppleHealthImportAnalysisResult> analyzeAppleHealthExport(
     File file, {

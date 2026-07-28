@@ -3,16 +3,17 @@ import '../../../domain/model/apple_health_import_records.dart';
 import '../../../domain/refresh/data_change_sink.dart';
 import '../../../domain/refresh/data_domain.dart';
 import '../../source/health/health_data_source.dart';
-import '../contract/apple_health_import_repository.dart';
+import '../contract/import_write_repository.dart';
 import 'run_catching.dart';
 
-/// Port of the Kotlin `AppleHealthImportRepository`, delegating to the
-/// [HealthDataSource] imported-records write surface.
+/// Ported from the Kotlin `AppleHealthImportRepository` (see the contract for
+/// why the name lost its Apple), delegating to the [HealthDataSource]
+/// imported-records write surface.
 ///
 /// Public methods convert exceptions to failures via [runCatching] at the
 /// boundary.
-class AppleHealthImportRepositoryImpl implements AppleHealthImportRepository {
-  AppleHealthImportRepositoryImpl(
+class ImportWriteRepositoryImpl implements ImportWriteRepository {
+  ImportWriteRepositoryImpl(
     this._dataSource, {
     DataChangeSink changes = const NoopDataChangeSink(),
     // ignore: prefer_initializing_formals

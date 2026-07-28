@@ -44,6 +44,7 @@ import '../features/recovery/presentation/sleep_efficiency_detail_screen.dart';
 import '../features/devicesync/presentation/device_sync_screen.dart';
 import '../features/recovery/presentation/sleep_score_detail_screen.dart';
 import '../domain/model/ble_sensor_models.dart';
+import '../features/imports/csv/presentation/csv_import_screen.dart';
 import '../features/settings/presentation/ble_devices_screen.dart';
 import '../features/settings/presentation/watch_data_screen.dart';
 import '../features/settings/presentation/watch_device_screen.dart';
@@ -162,6 +163,20 @@ List<RouteBase> _buildRoutes(Ref ref) => [
         ],
       ),
       ..._settingsSectionRoutes(),
+      ..._dataImportRoutes(),
+    ];
+
+/// Screens reached from inside the Data Importers section.
+///
+/// A sibling list rather than `routes:` children of the section route, because
+/// [_settingsSectionRoutes] generates its routes from the [SettingsSection] enum
+/// and has nowhere to hang a per-section child. These carry their own Scaffold,
+/// so they are NOT wrapped in [_titledScreen].
+List<RouteBase> _dataImportRoutes() => [
+      GoRoute(
+        path: AppRoutes.settingsCsvImport,
+        builder: (context, state) => const CsvImportScreen(),
+      ),
     ];
 
 /// Wraps a self-less screen (no Scaffold of its own) in a titled, back-enabled

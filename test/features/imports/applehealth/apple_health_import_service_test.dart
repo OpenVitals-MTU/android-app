@@ -5,7 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
-import 'package:openvitals/data/repository/contract/apple_health_import_repository.dart';
+import 'package:openvitals/data/repository/contract/import_write_repository.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_checkpoint_store.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_models.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_parser.dart';
@@ -13,8 +13,8 @@ import 'package:openvitals/domain/model/apple_health_import_records.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_service.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_xml_support.dart';
 
-class FakeAppleHealthImportRepository implements AppleHealthImportRepository {
-  FakeAppleHealthImportRepository({
+class FakeImportWriteRepository implements ImportWriteRepository {
+  FakeImportWriteRepository({
     this.mindfulnessAvailable = true,
     this.matchAgainstInserted = false,
     this.matcher,
@@ -193,7 +193,7 @@ void main() {
             unit="count" value="100" />
         </HealthData>
       ''';
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
       final phases = <AppleHealthImportPhase>[];
 
       final result = await AppleHealthImportService(repository)
@@ -233,7 +233,7 @@ void main() {
             unit="kg" value="70" />
         </HealthData>
       ''';
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .analyzeAppleHealthExport(exportFile(utf8.encode(xml)));
@@ -261,7 +261,7 @@ void main() {
           </Workout>
         </HealthData>
       ''';
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .analyzeAppleHealthExport(exportFile(zipExport(
@@ -292,7 +292,7 @@ void main() {
             unit="kg" value="70" />
         </HealthData>
       ''';
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(
@@ -333,7 +333,7 @@ void main() {
         'endDate="2026-01-01 08:00:00 +0000" unit="kg" value="70" />'
         '</HealthData>',
       );
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(
@@ -380,7 +380,7 @@ void main() {
       final file = exportFile(utf8.encode(buffer.toString()));
 
       final progresses = <AppleHealthImportProgress>[];
-      await AppleHealthImportService(FakeAppleHealthImportRepository())
+      await AppleHealthImportService(FakeImportWriteRepository())
           .importAppleHealthExport(
         file,
         selectedCategories: {AppleHealthImportCategory.body},
@@ -431,7 +431,7 @@ void main() {
 
       final progresses = <AppleHealthImportProgress>[];
       final analysis =
-          await AppleHealthImportService(FakeAppleHealthImportRepository())
+          await AppleHealthImportService(FakeImportWriteRepository())
               .analyzeAppleHealthExport(
         exportFile(utf8.encode(buffer.toString())),
         onProgress: progresses.add,
@@ -489,7 +489,7 @@ void main() {
             unit="%" value="0.97" />
         </HealthData>
       ''';
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(
@@ -535,7 +535,7 @@ void main() {
             duration="30" durationUnit="min" totalDistance="5" totalDistanceUnit="km" />
         </HealthData>
       ''';
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(
@@ -583,7 +583,7 @@ void main() {
         'unit="count" value="1" />',
       );
       buffer.write('</HealthData>');
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(exportFile(utf8.encode(buffer.toString())));
@@ -613,7 +613,7 @@ void main() {
 
     test('pipelines multiple batches in order and imports all records',
         () async {
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
       final progress = <AppleHealthImportProgress>[];
 
       final result = await AppleHealthImportService(repository)
@@ -652,7 +652,7 @@ void main() {
     test('skips duplicates that appear in a later batch of the same export',
         () async {
       final repository =
-          FakeAppleHealthImportRepository(matchAgainstInserted: true);
+          FakeImportWriteRepository(matchAgainstInserted: true);
 
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(
@@ -683,7 +683,7 @@ void main() {
             unit="kg" value="71" />
         </HealthData>
       ''';
-      final repository = FakeAppleHealthImportRepository(
+      final repository = FakeImportWriteRepository(
         matcher: (recordType, wantedIds) =>
             recordType == 'HeartRateRecord' ? {wantedIds.first} : const {},
       );
@@ -721,7 +721,7 @@ void main() {
           </Workout>
         </HealthData>
       ''';
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .analyzeAppleHealthExport(exportFile(zipExport(
@@ -767,7 +767,7 @@ void main() {
           'apple_health_export/workout-routes/route2.gpx': routeGpx(80),
         },
       );
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(
@@ -801,7 +801,7 @@ void main() {
           'apple_health_export/workout-routes/route1.gpx': routeGpx(80),
         },
       );
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       await expectLater(
         AppleHealthImportService(repository).importAppleHealthExport(
@@ -834,7 +834,7 @@ void main() {
           'apple_health_export/workout-routes/route1.gpx': routeGpx(80),
         },
       );
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
 
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(
@@ -861,7 +861,7 @@ void main() {
       const sourceKey = 'content://downloads/1|export.xml|700';
       const selected = {AppleHealthImportCategory.heart};
 
-      final firstRepository = FakeAppleHealthImportRepository();
+      final firstRepository = FakeImportWriteRepository();
       final checkpoints = <AppleHealthImportCheckpoint>[];
       final result = await AppleHealthImportService(firstRepository)
           .importAppleHealthExport(
@@ -885,7 +885,7 @@ void main() {
 
       // The process dies after the first batch: resume from that checkpoint.
       final resumeFrom = checkpoints.first;
-      final resumedRepository = FakeAppleHealthImportRepository();
+      final resumedRepository = FakeImportWriteRepository();
       final resumed = await AppleHealthImportService(resumedRepository)
           .importAppleHealthExport(
         file,
@@ -906,7 +906,7 @@ void main() {
     });
 
     test('a checkpoint that skips everything writes nothing at all', () async {
-      final repository = FakeAppleHealthImportRepository();
+      final repository = FakeImportWriteRepository();
       final result = await AppleHealthImportService(repository)
           .importAppleHealthExport(
         exportFile(utf8.encode(heartRateExport(400))),

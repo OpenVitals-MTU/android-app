@@ -43,6 +43,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Garmin watch sync](garmin-watch-sync.md): pair a Garmin watch and copy what it recorded over Bluetooth, plus its alarms and on-watch settings.
 - [GPX/KML/KMZ route import](route-file-import.md): route file import for review before saving.
 - [FIT files import](fit-files-import.md): Settings Data Importers support for FIT activity, course, and workout files.
+- [CSV import](csv-import.md): Settings Data Importers support for body-composition CSV exports, with a per-column mapping step.
 - [Offline maps support](offline-maps-support.md): PMTiles or Mapsforge packs for local activity maps.
 - [Apple Health import](apple-health-import.md): supported Apple Health export records written into Health Connect.
 - [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md): imported caffeine beverage presets, nutrition families, common serving values, and source links.

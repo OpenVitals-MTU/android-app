@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/core/result/result.dart';
-import 'package:openvitals/data/repository/contract/apple_health_import_repository.dart';
+import 'package:openvitals/data/repository/contract/import_write_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/apple_health_import_records.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
@@ -19,7 +19,7 @@ import 'package:openvitals/features/imports/applehealth/apple_health_import_stag
 import 'package:openvitals/features/imports/applehealth/apple_health_import_view_model.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
 
-class _FakeRepository implements AppleHealthImportRepository {
+class _FakeRepository implements ImportWriteRepository {
   @override
   Future<Result<Set<String>>> findMatchingImportedClientRecordIds(
     String recordType,

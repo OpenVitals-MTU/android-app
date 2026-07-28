@@ -85,6 +85,10 @@ class HealthRepositoryImpl implements HealthRepository {
       _dataSource.permissionService.bodyWritePermissions;
 
   @override
+  Set<String> get instantMeasurementWritePermissions =>
+      _dataSource.permissionService.instantMeasurementWritePermissions;
+
+  @override
   Set<String> get activityExtrasPermissions =>
       _dataSource.permissionService.activityExtrasPermissions;
 

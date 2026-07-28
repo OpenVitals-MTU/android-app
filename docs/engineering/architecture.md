@@ -191,7 +191,7 @@ Current files:
 - [`lib/data/source/health/native/health_connect_native_data_source.dart`](../../lib/data/source/health/native/health_connect_native_data_source.dart) — the Android implementation over the Pigeon bridge
 - [`lib/data/source/health/unsupported_health_data_source.dart`](../../lib/data/source/health/unsupported_health_data_source.dart) — the non-Android fallback
 - [`lib/domain/health/health_permissions.dart`](../../lib/domain/health/health_permissions.dart) — `HcPermissions`, `HealthConnectFeatureFlags`, `HealthPermissionService`
-- [`lib/data/repository/contract/`](../../lib/data/repository/contract) — `HealthRepository`, `ActivityRepository`, `SleepRepository`, `HeartRepository`, `BodyRepository`, `BodyEnergyRepository`, `CaffeineRepository`, `HydrationRepository`, `NutritionRepository`, `MindfulnessRepository`, `CycleRepository`, `VitalsRepository`, `BleDeviceRepository`, `AppleHealthImportRepository`
+- [`lib/data/repository/contract/`](../../lib/data/repository/contract) — `HealthRepository`, `ActivityRepository`, `SleepRepository`, `HeartRepository`, `BodyRepository`, `BodyEnergyRepository`, `CaffeineRepository`, `HydrationRepository`, `NutritionRepository`, `MindfulnessRepository`, `CycleRepository`, `VitalsRepository`, `BleDeviceRepository`, `ImportWriteRepository`
 - [`lib/data/repository/impl/`](../../lib/data/repository/impl) — the implementations
 - [`lib/data/repository/dashboard/dashboard_data_loader.dart`](../../lib/data/repository/dashboard/dashboard_data_loader.dart) — the dashboard read orchestrator
 - [`lib/data/prefs/preferences_repository.dart`](../../lib/data/prefs/preferences_repository.dart)

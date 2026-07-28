@@ -3,12 +3,9 @@
 /// Ported from the Kotlin `AppleHealthImportConversionSupport.kt`.
 library;
 
-import 'dart:convert';
-
-import 'package:crypto/crypto.dart';
-
 import 'apple_health_import_models.dart';
 import '../../../domain/model/apple_health_import_records.dart';
+import '../../../domain/model/import_client_record_id.dart';
 import 'apple_health_import_types.dart';
 
 class AppleInterval {
@@ -157,18 +154,15 @@ String appleInstantToStableString(DateTime instant) {
   return iso;
 }
 
-const String _hexDigits = '0123456789abcdef';
-
-String buildStableClientRecordId(String prefix, Object parts) {
-  final bytes = sha256.convert(utf8.encode(parts.toString())).bytes;
-  final buffer = StringBuffer();
-  for (var index = 0; index < 16; index++) {
-    final byte = bytes[index] & 0xFF;
-    buffer.write(_hexDigits[byte >> 4]);
-    buffer.write(_hexDigits[byte & 0x0F]);
-  }
-  return 'apple_health_${toStableIdSegment(prefix)}_$buffer';
-}
+/// The Apple importer's namespace over the shared id scheme.
+///
+/// The hashing moved to [buildImportClientRecordId] so the CSV importer can
+/// claim its own namespace instead of writing `apple_health_`-prefixed ids for
+/// records that never came from Apple. Output here is unchanged — byte-for-byte
+/// identity across the Kotlin→Flutter migration is load-bearing, and
+/// `test/domain/model/import_client_record_id_test.dart` pins it.
+String buildStableClientRecordId(String prefix, Object parts) =>
+    buildImportClientRecordId('apple_health', prefix, parts);
 
 extension AppleRecordFingerprints on AppleRecord {
   String stableClientRecordId(String prefix, [Object? extra]) =>
@@ -441,16 +435,6 @@ bool hasOverlapping(
     final recordEnd = record.endDate?.instant ?? recordStart;
     return recordEnd.isAfter(workoutStart);
   });
-}
-
-final RegExp _stableIdSegmentRegex = RegExp('[^a-z0-9]+');
-
-String toStableIdSegment(String value) {
-  final segment = value
-      .toLowerCase()
-      .replaceAll(_stableIdSegmentRegex, '_')
-      .replaceAll(RegExp(r'^_+|_+$'), '');
-  return segment.isEmpty ? 'record' : segment;
 }
 
 /// Composite diagnostic-summary key (Kotlin `AppleHealthDiagnosticSummaryKey`).

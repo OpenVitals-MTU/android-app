@@ -1,13 +1,8 @@
-import 'dart:io';
-
-// Still used for SAVING the import report (getSaveLocation reads nothing, so the
-// byte-slurping bug that forced the pick path off file_selector does not apply).
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../core/presentation/command_state.dart';
+import '../../../core/presentation/report_saving.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
@@ -149,27 +144,16 @@ class AppleHealthImportCardViewModel
   }
 }
 
-/// The default [AppleHealthReportSaver]: the platform save picker, falling back
-/// to the app documents directory where there is none (Android).
+/// The default [AppleHealthReportSaver].
+///
+/// The implementation moved to [saveTextReport] when the CSV importer became the
+/// second caller; this stays as the name the Apple card and its tests already
+/// use. Behaviour is unchanged.
 Future<bool> defaultSaveAppleHealthReport(
   String content,
   String suggestedName,
-) async {
-  try {
-    final location = await getSaveLocation(suggestedName: suggestedName);
-    if (location == null) return false;
-    await File(location.path).writeAsString(content);
-    return true;
-  } catch (_) {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      await File('${dir.path}/$suggestedName').writeAsString(content);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-}
+) =>
+    saveTextReport(content, suggestedName);
 
 /// The state provider for the Settings Apple-Health import card.
 final appleHealthImportCardProvider = NotifierProvider<

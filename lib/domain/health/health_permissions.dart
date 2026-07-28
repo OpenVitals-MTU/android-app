@@ -78,6 +78,26 @@ abstract final class HcPermissions {
   static final String writeWeight = _write('WEIGHT');
   static final String writeHeight = _write('HEIGHT');
   static final String writeBodyFat = _write('BODY_FAT');
+
+  // The rest of body composition. Already declared in the manifest and already
+  // inside [HealthPermissionService.dataImportWritePermissions], but they had no
+  // name to be requested individually by — the typed manual-entry API only ever
+  // covered weight/height/body fat, so nothing needed one until the CSV importer
+  // wanted to ask for exactly the metrics a file actually maps.
+  static final String writeLeanBodyMass = _write('LEAN_BODY_MASS');
+  static final String writeBoneMass = _write('BONE_MASS');
+  static final String writeBodyWaterMass = _write('BODY_WATER_MASS');
+  static final String writeBasalMetabolicRate = _write('BASAL_METABOLIC_RATE');
+
+  // The vitals a CSV can carry that had no constant yet. All five are already
+  // declared in the manifest; only the manual-entry screens' narrower needs
+  // decided which ones got a name.
+  static final String writeRestingHeartRate = _write('RESTING_HEART_RATE');
+  static final String writeHrv = _write('HEART_RATE_VARIABILITY');
+  static final String writeBasalBodyTemperature =
+      _write('BASAL_BODY_TEMPERATURE');
+  static final String writeBloodGlucose = _write('BLOOD_GLUCOSE');
+  static final String writeVo2Max = _write('VO2_MAX');
   static final String writeBloodPressure = _write('BLOOD_PRESSURE');
   static final String writeSpO2 = _write('OXYGEN_SATURATION');
   static final String writeRespiratoryRate = _write('RESPIRATORY_RATE');
@@ -245,6 +265,40 @@ class HealthPermissionService {
         _write('WEIGHT'),
         _write('HEIGHT'),
         _write('BODY_FAT'),
+      });
+
+  /// Every single-instant measurement the app can import: body composition and
+  /// the vitals that are one number at one moment.
+  ///
+  /// A superset of [bodyWritePermissions], which stops at the three metrics the
+  /// manual-entry screens can write. Narrower than [dataImportWritePermissions],
+  /// which spans all 38 writes: prompting for exercise routes and menstruation
+  /// to import a weight column would be absurd.
+  ///
+  /// Callers intersect this with the metrics a mapping actually uses. Because
+  /// [_supported] has already dropped whatever the installed provider does not
+  /// define, that intersection can never request an unsupported permission —
+  /// which would throw rather than be refused (invariant #5).
+  ///
+  /// Blood pressure is deliberately absent: systolic and diastolic must be
+  /// written as one record, which the CSV mapping model cannot yet express.
+  Set<String> get instantMeasurementWritePermissions => _supported({
+        _write('WEIGHT'),
+        _write('HEIGHT'),
+        _write('BODY_FAT'),
+        _write('LEAN_BODY_MASS'),
+        _write('BONE_MASS'),
+        _write('BODY_WATER_MASS'),
+        _write('BASAL_METABOLIC_RATE'),
+        _write('HEART_RATE'),
+        _write('RESTING_HEART_RATE'),
+        _write('HEART_RATE_VARIABILITY'),
+        _write('OXYGEN_SATURATION'),
+        _write('RESPIRATORY_RATE'),
+        _write('BODY_TEMPERATURE'),
+        _write('BASAL_BODY_TEMPERATURE'),
+        _write('BLOOD_GLUCOSE'),
+        _write('VO2_MAX'),
       });
 
   /// Empty when the installed provider does not expose mindfulness sessions.
