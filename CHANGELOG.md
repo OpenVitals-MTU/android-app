@@ -1,5 +1,58 @@
 # Changelog
 
+## 2.4.0 - 2026-07-28
+
+### English
+
+- **Onboarding is now a four-step guide.** Permissions are grouped the way Health Connect itself groups them - Activity, Body measurements, Nutrition, Sleep, Vitals - one tap per category, asking to read and to save together. Only Activity and Sleep are needed to start; the rest are optional and can be added later from Settings.
+- **Mindfulness and cycle tracking are opt-in steps,** and exercise routes get a short walkthrough for the setting Android hides inside Health Connect.
+- **The dashboard stops asking for permissions.** No more prompt cards after onboarding: a metric without access simply shows no data, and screens ask only when you use them.
+- **A cleaner look:** icons are now consistently outlined, and text spacing follows Material 3.
+- **Safer on unusual devices:** OpenVitals never requests a permission your Health Connect cannot grant - the case that could crash the system Health Connect app on some de-Googled phones.
+
+Existing users pass through the new onboarding once; nothing already granted is asked for again.
+
+### Espanol
+
+- **La configuracion inicial ahora es una guia de cuatro pasos.** Los permisos se agrupan como los agrupa el propio Health Connect - Actividad, Medidas corporales, Nutricion, Sueno, Constantes vitales - un toque por categoria, pidiendo leer y guardar a la vez. Solo Actividad y Sueno hacen falta para empezar; el resto es opcional y puede anadirse despues desde Ajustes.
+- **Mindfulness y el seguimiento del ciclo son pasos opcionales,** y las rutas de ejercicio tienen una pequena guia para el ajuste que Android esconde dentro de Health Connect.
+- **El panel deja de pedir permisos.** Se acabaron las tarjetas de aviso tras la configuracion: una metrica sin acceso simplemente muestra "sin datos", y cada pantalla pide solo cuando la usas.
+- **Un aspecto mas limpio:** los iconos ahora son siempre de contorno y el espaciado del texto sigue Material 3.
+- **Mas seguro en dispositivos poco comunes:** OpenVitals nunca solicita un permiso que tu Health Connect no puede conceder - el caso que podia bloquear la app del sistema en algunos moviles sin Google.
+
+Los usuarios existentes pasan una vez por la nueva configuracion; nada ya concedido se vuelve a pedir.
+
+### Deutsch
+
+- **Die Einrichtung ist jetzt ein Vier-Schritte-Assistent.** Berechtigungen sind so gruppiert, wie Health Connect sie selbst gruppiert - Aktivitaet, Koerpermasse, Ernaehrung, Schlaf, Vitalwerte - ein Tipp pro Kategorie, Lesen und Speichern zusammen. Nur Aktivitaet und Schlaf sind zum Start noetig; der Rest ist optional und laesst sich spaeter in den Einstellungen ergaenzen.
+- **Achtsamkeit und Zyklus-Tracking sind Opt-in-Schritte,** und fuer Trainingsrouten gibt es eine kurze Anleitung zu der Einstellung, die Android tief in Health Connect versteckt.
+- **Das Dashboard fragt nicht mehr nach Berechtigungen.** Keine Hinweis-Karten mehr nach der Einrichtung: eine Metrik ohne Zugriff zeigt schlicht keine Daten, und Bildschirme fragen erst bei der Nutzung.
+- **Ein aufgeraeumteres Bild:** Icons sind jetzt durchgehend umrandet, und der Zeichenabstand folgt Material 3.
+- **Sicherer auf ungewoehnlichen Geraeten:** OpenVitals fordert nie eine Berechtigung an, die dein Health Connect nicht gewaehren kann - der Fall, der auf manchen Geraeten ohne Google die System-App zum Absturz brachte.
+
+Bestehende Nutzer durchlaufen die neue Einrichtung einmal; bereits Gewaehrtes wird nicht erneut abgefragt.
+
+### Italiano
+
+- **La configurazione iniziale ora e una guida in quattro passi.** I permessi sono raggruppati come li raggruppa Health Connect stesso - Attivita, Misure corporee, Nutrizione, Sonno, Parametri vitali - un tocco per categoria, chiedendo lettura e salvataggio insieme. Per iniziare servono solo Attivita e Sonno; il resto e opzionale e si puo aggiungere dopo dalle Impostazioni.
+- **Mindfulness e monitoraggio del ciclo sono passi facoltativi,** e i percorsi di allenamento hanno una breve guida per l'impostazione che Android nasconde dentro Health Connect.
+- **La dashboard smette di chiedere permessi.** Niente piu schede di avviso dopo la configurazione: una metrica senza accesso mostra semplicemente nessun dato, e le schermate chiedono solo quando le usi.
+- **Un aspetto piu pulito:** le icone ora sono sempre in stile contorno e la spaziatura del testo segue Material 3.
+- **Piu sicuro su dispositivi insoliti:** OpenVitals non richiede mai un permesso che il tuo Health Connect non puo concedere - il caso che poteva bloccare l'app di sistema su alcuni telefoni senza Google.
+
+Gli utenti esistenti passano una volta dalla nuova configurazione; cio che era gia concesso non viene richiesto di nuovo.
+
+### Eesti
+
+- **Seadistamine on nuud neljaastmeline juhend.** Load on ruhmitatud nii, nagu Health Connect ise neid ruhmitab - Aktiivsus, Kehamoodud, Toitumine, Uni, Elutahtsad naitajad - uks puude kategooria kohta, kusides lugemist ja salvestamist koos. Alustamiseks on vaja ainult Aktiivsust ja Und; ulejaanu on valikuline ja lisatav hiljem seadetest.
+- **Teadvelolek ja tsukli jalgimine on valikulised sammud,** ja treeninguradade jaoks on luhike juhend seade kohta, mille Android peidab Health Connecti sisse.
+- **Tooulaud ei kusi enam lube.** Parast seadistamist pole enam meeldetuletuskaarte: ilma juurdepaasuta moodik naitab lihtsalt andmete puudumist ja ekraanid kusivad alles kasutamisel.
+- **Puhtam valimus:** ikoonid on nuud labivalt kontuurstiilis ja tekstivahed jargivad Material 3.
+- **Turvalisem ebatavalistel seadmetel:** OpenVitals ei kusi kunagi luba, mida sinu Health Connect anda ei saa - juhtum, mis voibs moned Google'ita telefonid susteemirakenduse kokku jooksutada.
+
+Olemasolevad kasutajad labivad uue seadistamise uhe korra; juba antut uuesti ei kusita.
+
+
 ## 2.3.2 - 2026-07-25
 
 ### English

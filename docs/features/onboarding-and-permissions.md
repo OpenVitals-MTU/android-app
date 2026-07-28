@@ -20,22 +20,46 @@ For the exact permission reference, see [Permissions](../app/permissions.md). Fo
 
 ### Grant permissions
 
-1. Tap **Grant Health Connect access**. This asks — in a single request — for every permission the app uses that your device's Health Connect can actually grant.
-2. **All of them are required.** The button only becomes **Continue** (which finishes onboarding and opens the dashboard) once nothing is outstanding. If you leave something out of the dialog, tap the button again to be asked once more.
-3. Afterwards you are sent to the **Health Connect settings page** once, to finish the things Android's in-app dialog cannot grant: **health history, background access, and exercise routes** (the **Additional data access** row). These never block **Continue**.
-4. Two groups are **optional** and listed as their own rows: **Cycle tracking** (menstruation, ovulation, sexual activity and the rest) and **Mindfulness**. Grant them from their row if you want them.
+Onboarding is a four-step guide. **Back** walks between steps; only the first
+step gates.
 
-**Mindfulness** additionally has an opt-in switch, and it only appears on devices whose Health Connect reports the feature. It is **off by default**: some Health Connect versions report support for mindfulness but cannot draw its permission row, and asking for it crashes the system Health Connect app — after which nothing can be granted at all. Turning the switch on adds a Mindfulness row that requests it *on its own*, so if your device can't cope, nothing else is affected. If Health Connect crashes, turn the switch back off.
+1. **Choose what OpenVitals can read.** Five rows, grouped the way Health
+   Connect itself groups records — **Activity, Body measurements, Nutrition,
+   Sleep, Vitals** — so each row opens a system dialog with the same heading.
+   One tap per row asks to **read and to save**, so entries you create in
+   OpenVitals go back to Health Connect. **Only Activity and Sleep are
+   required** for **Next** to unlock; the rest show *Optional* and can be
+   granted now, later from this screen, or any time from Settings.
+2. **Mindfulness** — shown only on devices whose Health Connect supports it,
+   behind an **off-by-default switch**. Some Health Connect versions report
+   support but crash their own permission screen when asked — after which
+   nothing can be granted at all — so OpenVitals never asks on its own
+   initiative. Turning the switch on reveals a row that requests mindfulness
+   *alone*; if your device can't cope, nothing else is affected.
+3. **Cycle tracking** — its own step with a plain description of what it
+   covers (including sexual activity), and a **Not now** to skip it.
+4. **Finishing touches.** Past-data and background access go through the
+   normal dialog. **Exercise route reading** is the one thing no app can
+   request: Android keeps it under Health Connect's *Additional access* page,
+   so if it's still missing the step shows a three-tap walkthrough ending in
+   an **Open Health Connect** button that lands one tap away. (Route *writing*
+   is an ordinary toggle and rides along with Activity.) **Finish** opens the
+   dashboard.
 
-The **per-category rows** under **Health Connect permissions** show what each group covers and how much of it is granted, with a **Grant**, **Review** (partly granted), or **Open** action. You can change any permission later at **Settings › Health Connect**.
+Each row shows what it covers and how much is granted, with a **Grant**,
+**Review** (partly granted), or **Open** action. Anything skipped can be
+changed later at **Settings › Health Connect** — the same seven categories,
+described the same way.
 
-If a permission your device's Health Connect doesn't recognise, the app never asks for it — it is filtered out before the dialog opens, and the category is shown as **Not supported** rather than as something you failed to grant.
+If your device's Health Connect doesn't recognise a permission, the app never
+asks for it: it is filtered out before any dialog opens, and the category shows
+as **Not supported** rather than as something you failed to grant.
 
 ## First Run
 
-Onboarding introduces the app, checks Health Connect availability, and asks for the permission set the app needs in one request.
+Onboarding introduces the app, checks Health Connect availability, and walks four steps grouped by Health Connect's own data categories.
 
-Onboarding does not finish until that set is granted. The two optional groups (cycle tracking, mindfulness) and the settings-only ones (history, background access, exercise routes) are excluded from it — requiring something the dialog cannot grant would be an onboarding nobody could leave. Missing optional permissions are surfaced later on the dashboard, detail screens, settings, imports, and entry flows where they matter.
+Only Activity and Sleep block: the dashboard renders nothing without them, and a first run that blocks on everything is one a single stray refusal can trap a user inside. Everything else — the optional read categories, cycle tracking, mindfulness, and the settings-only permissions (history, background access, exercise routes) — is offered and skippable. The dashboard deliberately does **not** prompt for whatever was skipped; a metric without access simply shows no data, and screens ask at the point of use.
 
 Widening the required set is versioned (`HealthPermissionService.PERMISSION_SET_VERSION`, recorded per user). A user who onboarded under an older, narrower set is routed through onboarding once more rather than left behind permission gates forever.
 
@@ -44,7 +68,7 @@ Widening the required set is versioned (`HealthPermissionService.PERMISSION_SET_
 OpenVitals handles Health Connect states explicitly:
 
 - Available and ready.
-- Available but missing permissions.
+- Available but missing permissions (metrics show no data; no nagging).
 - Not installed or not reachable on supported devices.
 - Unsupported Android or device environments.
 
@@ -54,7 +78,7 @@ When Health Connect is not available, the app explains the limitation instead of
 
 Read permissions are used for dashboard widgets, metric detail screens, readiness views, statistics, achievements, and local insights.
 
-Write permissions are requested lazily for explicit write flows such as manual entry, route import, Apple Health import, activity recording, edits, and deletes.
+Write permissions are granted alongside reads — each onboarding category asks for both directions in one tap, so entries created in OpenVitals flow back to Health Connect without a second prompt. Write flows that find their permission missing anyway (a skipped category, a revocation) still ask lazily at the point of use: manual entry, route import, Apple Health import, activity recording, edits, and deletes.
 
 The dashboard remains read-only even when write permissions are granted.
 
