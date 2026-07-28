@@ -303,8 +303,10 @@ void main() {
       expect(again.records, isEmpty);
     });
 
-    test('a counter reset is not a walk backwards', () {
-      // The counters restart from zero at a wear-session boundary.
+    test('a counter rollover is not a walk backwards, and not a full stop', () {
+      // The counters restart from zero when the watch rolls its monitoring day
+      // over — which it does some time AFTER midnight, so the rollover lands
+      // inside the day it opens.
       final import = _counterImport(
         stepsCumulative: [
           (DateTime(2024, 1, 18, 9), 900),
@@ -313,9 +315,87 @@ void main() {
         ],
       );
 
-      // The 900 stands, the reset adds nothing, and the climb back to 300 is
-      // not counted again from zero.
-      expect(_stepsTotal(import), 900);
+      // The 900 stands and the rollover itself adds nothing. The 300 that
+      // followed are 300 steps actually taken: holding the old high-water mark
+      // instead would have counted them only once the fresh counter climbed
+      // past 900, silencing most of a day.
+      expect(_stepsTotal(import), 1200);
+    });
+
+    test('a morning sync does not carry yesterday onto today', () {
+      // The bug this pins: a sync taken in the morning BEFORE the watch had
+      // closed its monitoring day put 6,123 steps — the whole of 27 Jul — into
+      // the first quarter hour of 28 Jul, on top of yesterday's own (correct)
+      // total. The counters do not roll over at local midnight, so the
+      // post-midnight messages still carried yesterday's running totals, and
+      // differencing them against zero read the day as freshly walked.
+      final import = _counterImport(
+        stepsCumulative: [
+          (DateTime(2026, 7, 27, 22), 6100),
+          (DateTime(2026, 7, 27, 23, 30), 6123),
+          // Past midnight, still counting from yesterday's midnight.
+          (DateTime(2026, 7, 28, 0, 20), 6123),
+          (DateTime(2026, 7, 28, 8, 40), 6132),
+        ],
+      );
+
+      final today = _steps(import)
+          .where((r) => r.startTime.toLocal().day == 28)
+          .fold(0, (sum, r) => sum + r.count);
+      expect(today, 9, reason: 'today walked nine steps, not a whole day');
+      expect(_stepsTotal(import), 6132);
+    });
+
+    test('yesterday carries over from its watermark, not just from this run',
+        () {
+      // The same seam, when the file holding yesterday's readings was archived
+      // two syncs ago and this run sees only the minutes after midnight. The
+      // watermark is then the only record of where the counter stood.
+      final yesterday = _counterImport(
+        stepsCumulative: [
+          (DateTime(2026, 7, 27, 22), 6100),
+          (DateTime(2026, 7, 27, 23, 30), 6123),
+        ],
+      );
+      final morning = _counterImport(
+        stepsCumulative: [
+          (DateTime(2026, 7, 28, 0, 20), 6123),
+          (DateTime(2026, 7, 28, 8, 40), 6132),
+        ],
+        previous: yesterday.watermarks,
+      );
+
+      expect(_stepsTotal(morning), lessThan(100));
+    });
+
+    test('a day still starts from zero once the counter has rolled over', () {
+      // The other half of [_baselineFor]: sync in the afternoon, the watch long
+      // since rolled over, and the day's first reading is below where yesterday
+      // ended. Those steps have nothing to be differenced against, so they are
+      // the day's own — carrying yesterday's total would have swallowed them.
+      final yesterday = _counterImport(
+        stepsCumulative: [(DateTime(2026, 7, 27, 23, 30), 9000)],
+      );
+      final today = _counterImport(
+        stepsCumulative: [(DateTime(2026, 7, 28, 14), 4000)],
+        previous: yesterday.watermarks,
+      );
+
+      expect(_stepsTotal(today), 4000);
+    });
+
+    test('a carry is not spent across a gap of days', () {
+      // A watch left in a drawer: the counter has certainly rolled over in
+      // between, so 26 Jul's total says nothing about 28 Jul's first reading.
+      final earlier = _counterImport(
+        stepsCumulative: [(DateTime(2026, 7, 26, 23), 3000)],
+      );
+      final later = _counterImport(
+        stepsCumulative: [(DateTime(2026, 7, 28, 14), 9000)],
+        previous: earlier.watermarks,
+      );
+
+      expect(_stepsTotal(later), 9000);
     });
 
     test('activity-type counters are summed, never subtracted', () {

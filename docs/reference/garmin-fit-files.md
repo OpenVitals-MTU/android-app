@@ -295,9 +295,19 @@ and unit-testable; (2) the foreground-service + checkpoint runner.
 ## Counters, as implemented
 
 Read off a vívoactive 5 (2026-07), which corrected two guesses above: field 3 is
-**steps**, not strides needing a ×2, and the counters run from **local midnight**
+**steps**, not strides needing a ×2, and the counters run **per monitoring day**
 rather than per wear-session (`monitoring.duration_min`, field 29, is minutes
-since midnight and matches the wall clock exactly).
+since the day began and matches the wall clock exactly).
+
+**The monitoring day is not the calendar day.** It ends when the watch closes
+it, which is after it has finalised the night — not at local midnight. Sync in
+the morning before that and the file carries messages timestamped *today* whose
+counters are still *yesterday's* running totals. Differencing them against zero
+put the whole of 27 Jul — 6,123 steps — into the first quarter hour of 28 Jul,
+on top of yesterday's own correct total. So a day differences from where the day
+before it ended (this run's own walk, else that day's watermark), and a first
+reading *below* it is how the rollover is recognised: then, and only then, the
+reading is the new day's own accrual.
 
 **One message per active `activity_type`, per instant, about once a minute.** A
 snapshot of 25 Jul at 20:00 read:
@@ -330,4 +340,11 @@ sync's first are in *neither* file's own differences. `GarminCounterWatermarkSto
 keeps the last imported `(instant, steps, distance, calories)` per local day; the
 next sync differences from it. That is also what makes a re-offered file harmless
 — everything at or behind the watermark writes nothing rather than counting
-twice. Clear it if Health Connect is wiped, or every day stays short.
+twice, and what a day carries over from when the run holds no readings for the
+day before it. Clear it if Health Connect is wiped, or every day stays short.
+
+**A rollover is not a walk backwards, and not a full stop.** A counter that
+reads below where it stood contributes nothing for that interval — but the walk
+resumes from the new reading, not from the old high-water mark. Holding the mark
+silenced every step taken after the rollover until the fresh counter climbed
+past the old total, which on a morning sync is most of a day.

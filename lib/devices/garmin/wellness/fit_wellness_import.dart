@@ -250,11 +250,16 @@ FitMonitoringCounters fitMonitoringCounters(FitMonitoringSummary m) =>
 /// from them, and what each counter read at that moment.
 ///
 /// This is the piece that makes intraday records safe across syncs. The watch's
-/// counters run from midnight, and each file holds only the minutes since the
-/// last sync — so the steps between one sync's last snapshot and the next
-/// sync's first belong to neither file's internal differences. Carrying the
-/// watermark forward closes that seam exactly, and re-importing a file already
-/// behind the watermark writes nothing rather than counting it twice.
+/// counters run cumulatively through the day, and each file holds only the
+/// minutes since the last sync — so the steps between one sync's last snapshot
+/// and the next sync's first belong to neither file's internal differences.
+/// Carrying the watermark forward closes that seam exactly, and re-importing a
+/// file already behind the watermark writes nothing rather than counting it
+/// twice.
+///
+/// It closes a second seam too: the counters do not roll over at local midnight,
+/// so the next DAY differences from here as well when this run holds no readings
+/// of its own for the day before it (see [_carryInto]).
 class FitCounterWatermark {
   const FitCounterWatermark({
     required this.time,
@@ -306,8 +311,10 @@ class FitCounterImport {
 ///  * The snapshots are the per-instant sums across activity types (see
 ///    [_dailySnapshots]), so a total moved between buckets never shows up as a
 ///    step taken.
-///  * Only forward differences are recorded. The counters reset at a wear-session
-///    boundary, and a reset is not a walk backwards.
+///  * Only forward differences are recorded. The counters roll over, and a
+///    rollover is not a walk backwards.
+///  * A day differences from where the day before it ended, NOT from zero — see
+///    [_carryInto]. The watch does not roll its counters over at local midnight.
 ///  * Nothing is written for a snapshot at or before [previous]'s watermark: those
 ///    minutes are already in Health Connect.
 ///  * A zero difference writes no record. Standing still is not an event, and a
@@ -319,11 +326,17 @@ FitCounterImport fitMonitoringCounterRecords(
   final records = <ImportRecord>[];
   final watermarks = <String, FitCounterWatermark>{};
 
+  // Where the walk left the counters on the day just mapped, so the next one
+  // can carry across midnight. Days come out of [_counterDays] in order, which
+  // is what makes this the day before the one being mapped.
+  var carry = const _CounterCarry();
+
   for (final day in _counterDays(counters)) {
     final mark = previous[day.key];
     final steps = _dailySnapshots(counters.steps, day);
     final distance = _dailySnapshots(counters.distance, day);
     final calories = _dailySnapshots(counters.calories, day);
+    final carried = _carryInto(day, carry, previous);
 
     // The instants any counter reported, so the three stay on one timeline.
     final instants = <DateTime>{
@@ -335,9 +348,11 @@ FitCounterImport fitMonitoringCounterRecords(
     if (instants.isEmpty) continue;
 
     var from = mark?.time ?? day.start;
-    var lastSteps = mark?.steps ?? 0;
-    var lastDistance = mark?.distance ?? 0;
-    var lastCalories = mark?.calories ?? 0;
+    var lastSteps = mark?.steps ?? _baselineFor(carried.steps, steps);
+    var lastDistance =
+        mark?.distance ?? _baselineFor(carried.distance, distance);
+    var lastCalories =
+        mark?.calories ?? _baselineFor(carried.calories, calories);
 
     // Deltas folded onto a fixed grid anchored at local midnight, so a record's
     // identity is a pure function of its wall clock.
@@ -374,9 +389,13 @@ FitCounterImport fitMonitoringCounterRecords(
       );
 
       from = at;
-      lastSteps = math.max(lastSteps, stepsNow);
-      lastDistance = math.max(lastDistance, distanceNow);
-      lastCalories = math.max(lastCalories, caloriesNow);
+      // Where each counter now stands — including BELOW where it stood, which
+      // is a rollover. The difference above already declined to record it;
+      // holding the old high-water mark on top of that would silence every step
+      // after a rollover until the fresh counter climbed past the old total.
+      lastSteps = stepsNow;
+      lastDistance = distanceNow;
+      lastCalories = caloriesNow;
 
       final reached = _counterBucketStart(from, day.start);
       if (reached != openBucket) {
@@ -436,9 +455,78 @@ FitCounterImport fitMonitoringCounterRecords(
       calories: openCalories,
       legacyRetired: legacyRetired,
     );
+
+    // The TRUE end of the walk, not the rewound watermark: the minutes the
+    // watermark gives back are this day's to write again, and handing them to
+    // tomorrow as well would count them twice. A counter this day never
+    // reported keeps whatever was carried into it.
+    carry = _CounterCarry(
+      day: day.start,
+      steps: steps.isEmpty ? carried.steps : lastSteps,
+      distance: distance.isEmpty ? carried.distance : lastDistance,
+      calories: calories.isEmpty ? carried.calories : lastCalories,
+    );
   }
 
   return FitCounterImport(records: records, watermarks: watermarks);
+}
+
+/// What the counters read at the end of the day before the one being mapped.
+///
+/// Null for a counter means there is nothing to carry — the first day of a run
+/// with no history behind it, where the first reading IS the day's accrual.
+class _CounterCarry {
+  const _CounterCarry({this.day, this.steps, this.distance, this.calories});
+
+  /// Local midnight of the day these came off, so a carry can only be spent on
+  /// the day that actually follows it.
+  final DateTime? day;
+  final int? steps;
+  final int? distance;
+  final int? calories;
+}
+
+/// What [day] should difference its first reading against.
+///
+/// The counters do NOT roll over at local midnight. The watch rolls its
+/// monitoring day over when it closes it — after it has finalised the night —
+/// so a sync taken in the morning BEFORE that carries messages timestamped
+/// today whose counters are still yesterday's running totals. Differenced
+/// against zero, a whole day of walking landed on today at 00:00: 6,123 steps
+/// on 27 Jul reappeared as 6,123 steps in today's first quarter hour.
+///
+/// So a day starts from where the day before it ended: this run's own walk when
+/// it mapped that day, and otherwise the watermark that day was left at. Only
+/// the immediately preceding day counts — across a gap the counter has
+/// certainly rolled over, and a carry from further back could only understate
+/// the day.
+_CounterCarry _carryInto(
+  _MonitoringDay day,
+  _CounterCarry running,
+  Map<String, FitCounterWatermark> previous,
+) {
+  final yesterday =
+      DateTime(day.start.year, day.start.month, day.start.day - 1);
+  if (running.day == yesterday) return running;
+  final mark = previous[_dayKey(yesterday)];
+  if (mark == null) return const _CounterCarry();
+  return _CounterCarry(
+    day: yesterday,
+    steps: mark.steps,
+    distance: mark.distance,
+    calories: mark.calories,
+  );
+}
+
+/// The value a day's differencing starts from, given what [carried] over from
+/// the day before and the day's own [snapshots].
+///
+/// The counter either kept running across midnight — the first reading is at or
+/// above where yesterday left it, and only the difference is new — or it rolled
+/// over, and that reading is itself everything the day has accrued so far.
+int _baselineFor(int? carried, List<_CounterSnapshot> snapshots) {
+  if (carried == null || snapshots.isEmpty) return 0;
+  return snapshots.first.value >= carried ? carried : 0;
 }
 
 /// The grid one counter record covers.
@@ -589,16 +677,18 @@ List<_MonitoringDay> _daysOf(List<List<FitMonitoringPoint>> series) {
     final end = entry.value.isAfter(day)
         ? entry.value
         : day.add(const Duration(minutes: 1));
-    final month = day.month.toString().padLeft(2, '0');
-    final dayOfMonth = day.day.toString().padLeft(2, '0');
-    days.add(_MonitoringDay(
-      key: '${day.year}-$month-$dayOfMonth',
-      start: day,
-      end: end,
-    ));
+    days.add(_MonitoringDay(key: _dayKey(day), start: day, end: end));
   }
   days.sort((a, b) => a.key.compareTo(b.key));
   return days;
+}
+
+/// A local day as `yyyy-mm-dd` — the watermark key, and what a day's records are
+/// identified by.
+String _dayKey(DateTime day) {
+  final month = day.month.toString().padLeft(2, '0');
+  final dayOfMonth = day.day.toString().padLeft(2, '0');
+  return '${day.year}-$month-$dayOfMonth';
 }
 
 /// One instant's reading of a counter, summed across activity types.
