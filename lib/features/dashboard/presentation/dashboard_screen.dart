@@ -20,9 +20,7 @@ import '../../../ui/components/health_date_picker.dart';
 import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/metric_card.dart' show SourceChip;
 import '../../../ui/components/metric_stat_card.dart';
-import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/period_navigator.dart';
-import '../../../ui/components/permission_callout.dart';
 import '../../../ui/components/summary_ring_card.dart';
 import '../../../ui/components/widget_edit_controls.dart';
 import '../../../ui/theme/app_colors.dart';
@@ -115,7 +113,6 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final state = widget.state;
     final formatter = widget.formatter;
     final notifier = widget.notifier;
@@ -172,31 +169,16 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
               onOpenCalendar: () => _openCalendar(context),
             ),
           ),
-          // The inline Health Connect promo (Kotlin
-          // `DashboardHealthConnectPromoCard`). Flutter's full-screen
-          // HealthConnectGate already covers the unavailable / sync-paused
-          // states; the remaining gap is "available, but the minimum
-          // permissions were never granted", where the dashboard renders but
-          // stays empty.
-          if (!state.minimumPermissionsGranted)
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: _gutter, vertical: 4),
-              child: _HealthConnectPromoCard(
-                onAction: notifier.grantPermissions,
-              ),
-            ),
-          if (state.unacknowledgedPermissions.isNotEmpty)
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: _gutter, vertical: 4),
-              child: PermissionCallout(
-                title: l10n.messageMissingPermissionsTitle,
-                body: l10n.messageMissingPermissionsBody,
-                onGrant: notifier.grantPermissions,
-                onDismiss: notifier.acknowledgePermissions,
-              ),
-            ),
+          // NO permission prompts here, deliberately. The dashboard used to
+          // stack two of them — a "set up your health data" promo and a
+          // "some permissions are missing" callout — on top of each other the
+          // moment onboarding ended, which is both nagging and redundant:
+          // onboarding has just asked for everything, and whatever the user
+          // declined they declined on purpose.
+          //
+          // A metric with no permission simply reads as having no data. Asking
+          // again belongs at the point of use — open the metric, or try to write
+          // to it, and the screen that needs the permission asks for it there.
           if (orderedRings.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(_gutter, 16, _gutter, 0),
@@ -309,73 +291,6 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
   }
 }
 
-/// The inline Health Connect promo (Kotlin `DashboardHealthConnectPromoCard`,
-/// missing-permissions variant): the dashboard is live but Health Connect has
-/// never handed over the minimum read permissions, so every widget would be
-/// empty. Offers a one-tap re-request.
-class _HealthConnectPromoCard extends StatelessWidget {
-  const _HealthConnectPromoCard({required this.onAction});
-
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
-    return OpenVitalsCard(
-      color: scheme.surfaceContainerHigh,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Kotlin uses the Health Connect brand drawable, which the
-                // Flutter port does not ship.
-                Icon(
-                  Icons.favorite_outline,
-                  size: 32,
-                  color: scheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.dashboardHealthConnectPromoTitle,
-                        style: theme.textTheme.titleSmall,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          l10n.dashboardHealthConnectPromoBody,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: FilledButton(
-                onPressed: onAction,
-                child: Text(l10n.dashboardHealthConnectPromoAction),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// The Log / Start-workout quick actions row + edit-dashboard button (Kotlin
 /// `DashboardQuickActions`). Log is a tonal pill, Start a filled pill, both
 /// full-width; the trailing 44dp edit button is a placeholder for the widget
@@ -424,7 +339,7 @@ class _DashboardQuickActions extends StatelessWidget {
               minimumSize: const Size.fromHeight(48),
               shape: const StadiumBorder(),
             ),
-            icon: const Icon(Icons.directions_run),
+            icon: const Icon(Icons.directions_run_outlined),
             label: Text(
               l10n.dashboardActionStartWorkout,
               maxLines: 1,

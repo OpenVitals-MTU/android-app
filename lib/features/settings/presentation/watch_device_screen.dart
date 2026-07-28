@@ -311,7 +311,7 @@ class _Actions extends ConsumerWidget {
           // would say the watch cannot.
           if (supports(GarminCapability.realtimeSettings))
             WatchAction(
-              icon: Icons.alarm,
+              icon: Icons.alarm_outlined,
               label: l10n.settingsWatchActionAlarms,
               // Alarms are not a feature of their own: they are a screen in the
               // watch's settings tree, reached at a well-known id.
@@ -337,7 +337,7 @@ class _Actions extends ConsumerWidget {
               // A toggle, not a one-shot: the watch alerts for a minute unless
               // stopped, so the same control stops it — in place, because you
               // are rummaging through a bag one-handed.
-              icon: finding ? Icons.stop : Icons.wifi_tethering,
+              icon: finding ? Icons.stop : Icons.wifi_tethering_outlined,
               label: finding
                   ? l10n.settingsWatchFindStop
                   : l10n.settingsWatchActionFind,
@@ -506,7 +506,7 @@ class _LiveSensorSectionState extends ConsumerState<_LiveSensorSection> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.bluetooth_searching, size: 18),
+                      : const Icon(Icons.bluetooth_searching_outlined, size: 18),
                   label: Text(_detecting
                       ? l10n.settingsBikeDetecting
                       : l10n.settingsBikeDetectSensors),

@@ -70,9 +70,14 @@ class FakeHostApi extends HealthConnectHostApi {
   ) async =>
       permissions.where((p) => !unsupportedPermissions.contains(p)).toList();
 
+  /// Every permission list that actually reached the plugin.
+  final List<List<String>> requestedPermissions = <List<String>>[];
+
   @override
-  Future<bool> requestPermissions(List<String> permissions) async =>
-      requestPermissionsResult;
+  Future<bool> requestPermissions(List<String> permissions) async {
+    requestedPermissions.add(permissions);
+    return requestPermissionsResult;
+  }
 
   @override
   Future<FeatureStatusMsg> getFeatureStatus(String feature) async {
@@ -522,6 +527,36 @@ void main() {
         await source.requestPermissions({'android.permission.health.READ_STEPS'}),
         isTrue,
       );
+    });
+
+    // Asking for a permission the provider does not define does not get refused
+    // — it throws, and on some providers takes their permission screen down with
+    // it, after which the user can grant nothing at all. Onboarding asks in ONE
+    // request, so the filter cannot be left to the callers to remember.
+    test('requestPermissions never forwards an unsupported permission',
+        () async {
+      const stepsCadence = 'android.permission.health.READ_STEPS_CADENCE';
+      const steps = 'android.permission.health.READ_STEPS';
+      final api = FakeHostApi()..unsupportedPermissions = {stepsCadence};
+      final source = _source(api);
+      await source.resolveSupportedPermissions();
+
+      expect(await source.requestPermissions({steps, stepsCadence}), isTrue);
+      expect(api.requestedPermissions.last, [steps]);
+    });
+
+    test('a request of nothing BUT unsupported permissions never reaches the '
+        'plugin', () async {
+      const stepsCadence = 'android.permission.health.READ_STEPS_CADENCE';
+      final api = FakeHostApi()..unsupportedPermissions = {stepsCadence};
+      final source = _source(api);
+      await source.resolveSupportedPermissions();
+      api.requestedPermissions.clear();
+
+      // Not "asked and refused" — never asked. Launching the dialog with an
+      // empty set is exactly the crash this guards against.
+      expect(await source.requestPermissions({stepsCadence}), isFalse);
+      expect(api.requestedPermissions, isEmpty);
     });
   });
 

@@ -17,26 +17,26 @@ import '../../../ui/theme/app_colors.dart';
 /// Health Connect read permission it needs, which slices of an
 /// [ActivityPeriodData] to load, and how to extract + format its daily values.
 enum ActivityMetric {
-  steps('STEPS', 'Steps', Icons.directions_walk, AppColors.steps),
-  distance('DISTANCE', 'Distance', Icons.straighten, AppColors.distance),
+  steps('STEPS', 'Steps', Icons.directions_walk_outlined, AppColors.steps),
+  distance('DISTANCE', 'Distance', Icons.straighten_outlined, AppColors.distance),
   caloriesOut(
     'CALORIES_OUT',
     'Calories burned',
-    Icons.local_fire_department,
+    Icons.local_fire_department_outlined,
     AppColors.calories,
   ),
   activeCalories(
     'ACTIVE_CALORIES',
     'Active calories',
-    Icons.local_fire_department,
+    Icons.local_fire_department_outlined,
     AppColors.activeCalories,
   ),
-  floors('FLOORS', 'Floors climbed', Icons.stairs, AppColors.floors),
-  elevation('ELEVATION', 'Elevation gained', Icons.terrain, AppColors.elevation),
+  floors('FLOORS', 'Floors climbed', Icons.stairs_outlined, AppColors.floors),
+  elevation('ELEVATION', 'Elevation gained', Icons.terrain_outlined, AppColors.elevation),
   wheelchair(
     'WHEELCHAIR_PUSHES',
     'Wheelchair pushes',
-    Icons.accessible_forward,
+    Icons.accessible_forward_outlined,
     AppColors.wheelchairPushes,
   );
 

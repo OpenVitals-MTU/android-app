@@ -46,7 +46,7 @@ class ActivitiesScreen extends ConsumerWidget {
             tooltip: isEditingSections
                 ? l10n.cdFinishMetricSectionEditing
                 : l10n.cdEditMetricSections,
-            icon: Icon(isEditingSections ? Icons.check : Icons.tune),
+            icon: Icon(isEditingSections ? Icons.check : Icons.tune_outlined),
           ),
         ],
       ),
@@ -89,7 +89,7 @@ class _ActivitiesContent extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: MetricCardPlaceholder(
           title: l10n.sectionActivities,
-          icon: Icons.directions_run,
+          icon: Icons.directions_run_outlined,
           accentColor: AppColors.workout,
           message: l10n.messageNoActivitiesPeriod,
         ),

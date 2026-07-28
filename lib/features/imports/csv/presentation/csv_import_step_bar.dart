@@ -1,9 +1,15 @@
 /// The back/next bar every step of the CSV importer shares.
+///
+/// The bar itself now lives in `lib/ui/components/step_bar.dart` — onboarding
+/// wanted the same thing, and two copies of a footer is how they drift apart.
+/// This stays as the CSV-flavoured wrapper: it supplies the importer's own
+/// default back label so no call site had to change.
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../../ui/components/step_bar.dart';
 
 class CsvImportStepBar extends StatelessWidget {
   const CsvImportStepBar({
@@ -22,29 +28,11 @@ class CsvImportStepBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onBack,
-                child: Text(backLabel ?? l10n.settingsCsvImportBack),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed: onNext,
-                child: Text(nextLabel),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return StepBar(
+      onBack: onBack,
+      onNext: onNext,
+      nextLabel: nextLabel,
+      backLabel: backLabel ?? l10n.settingsCsvImportBack,
     );
   }
 }
-

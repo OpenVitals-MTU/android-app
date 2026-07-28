@@ -195,7 +195,7 @@ class _EntryRowState extends ConsumerState<_EntryRow> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.schedule),
+              : const Icon(Icons.schedule_outlined),
           enabled: !_busy,
           onTap: _busy ? null : _chooseTime,
         ));

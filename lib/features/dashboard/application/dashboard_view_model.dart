@@ -34,7 +34,6 @@ part 'dashboard_view_model.freezed.dart';
 
 /// The Kotlin `HealthConnectFeature.DASHBOARD.name`, used to key the
 /// per-feature acknowledged-permission set in preferences.
-const String _dashboardFeatureName = 'DASHBOARD';
 
 /// The metrics loaded in the first (fast) pass. The remaining metrics load in a
 /// background pass and are folded in with [DashboardDataMergeLoaded.mergeLoaded],
@@ -75,9 +74,7 @@ abstract class DashboardState with _$DashboardState {
     @Default(false) bool showOpenVitalsCalculatedCalories,
     @Default(HealthConnectAvailability.available)
     HealthConnectAvailability healthConnectAvailability,
-    @Default(true) bool minimumPermissionsGranted,
     @Default(<DashboardMetric>{}) Set<DashboardMetric> loadingMetrics,
-    @Default(<String>{}) Set<String> unacknowledgedPermissions,
     // Dashboard metric-grid edit mode + persisted layout (tiles keyed by title).
     @Default(false) bool editing,
     @Default(<String>[]) List<String> tileOrder,
@@ -239,42 +236,12 @@ class DashboardViewModel extends Notifier<DashboardState> {
   Future<void> resumeCurrentDay() =>
       _load(_userPinnedPastDay ? state.selectedDate : LocalDate.now());
 
-  /// Persists the acknowledgement of the currently-surfaced missing permissions
-  /// and hides the inline callout (Kotlin `acknowledgeWidgetMissingPermissions`).
-  void acknowledgePermissions() {
-    final missing = state.unacknowledgedPermissions;
-    if (missing.isEmpty) return;
-    ref
-        .read(preferencesRepositoryProvider)
-        .acknowledgePermissionsForFeature(_dashboardFeatureName, missing);
-    state = state.copyWith(unacknowledgedPermissions: const <String>{});
-  }
-
-  /// Requests the outstanding permissions, then refreshes the granted-permission
-  /// providers the [HealthConnectGate] reads and reloads the day.
-  ///
-  /// A request that fails surfaces as the screen's error (a SnackBar, since data
-  /// is on screen) and stops there — the invalidations and the reload were
-  /// skipped by the thrown failure before, and still are.
-  Future<void> grantPermissions() async {
-    final missing = state.unacknowledgedPermissions;
-    if (missing.isNotEmpty) {
-      final result =
-          await ref.read(requestHealthPermissionsUseCaseProvider)(missing);
-      if (!ref.mounted) return;
-      if (result case Err(:final failure)) {
-        state = state.copyWith(
-          error: failure.toScreenError(
-            fallback: 'Unable to request permissions.',
-          ),
-        );
-        return;
-      }
-    }
-    ref.invalidate(grantedHealthPermissionsProvider);
-    ref.invalidate(healthConnectAvailabilityProvider);
-    await refresh();
-  }
+  // acknowledgePermissions / grantPermissions used to live here, backing two
+  // inline prompts on the dashboard. Both are gone: onboarding has already
+  // asked for everything, so re-asking on the home screen nagged the user about
+  // a choice they had just made. A metric with no permission now simply reads
+  // as having no data, and the asking happens where it means something — on the
+  // screen that actually needs the permission.
 
   Future<void> _load(
     LocalDate date, {
@@ -293,26 +260,6 @@ class DashboardViewModel extends Notifier<DashboardState> {
     // to the permission check rather than re-resolved inside it.
     final availability = await ref.read(healthConnectAvailabilityProvider.future);
     if (!ref.mounted || generation != _generation) return;
-    final permissionCheck =
-        await ref.read(checkMinimumHealthPermissionsUseCaseProvider)(
-      availability,
-    );
-    if (!ref.mounted || generation != _generation) return;
-    final bool minimumPermissionsGranted;
-    switch (permissionCheck) {
-      case Ok(:final value):
-        minimumPermissionsGranted = value;
-      case Err(:final failure):
-        // This used to throw out of the load with nothing catching it: the
-        // dashboard was left on its loader, forever.
-        state = state.copyWith(
-          isLoading: false,
-          isRefreshing: false,
-          error: failure.toScreenError(fallback: 'Unknown error'),
-        );
-        return;
-    }
-
     final keepData = refreshMode == RefreshMode.force && state.data != null;
     state = state.copyWith(
       selectedDate: clamped,
@@ -324,7 +271,6 @@ class DashboardViewModel extends Notifier<DashboardState> {
       showOpenVitalsCalculatedCalories: prefs.showOpenVitalsCalculatedCalories,
       goals: DashboardGoals.fromPreferences(prefs),
       healthConnectAvailability: availability,
-      minimumPermissionsGranted: minimumPermissionsGranted,
       loadingMetrics: const <DashboardMetric>{},
     );
 
@@ -407,8 +353,6 @@ class DashboardViewModel extends Notifier<DashboardState> {
     required Set<DashboardMetric> loadingMetrics,
     required PreferencesRepository prefs,
   }) {
-    final acknowledged =
-        prefs.acknowledgedPermissionsFor(_dashboardFeatureName);
     state = state.copyWith(
       data: data,
       // Both passes publish through here, so both rebuild the display: the fast
@@ -417,8 +361,6 @@ class DashboardViewModel extends Notifier<DashboardState> {
       isLoading: false,
       isRefreshing: false,
       loadingMetrics: loadingMetrics,
-      unacknowledgedPermissions:
-          data.missingPermissions.difference(acknowledged),
     );
     _refreshHomeWidgets(data, loadingMetrics: loadingMetrics);
   }

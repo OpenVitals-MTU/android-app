@@ -86,6 +86,11 @@ class HealthDataSource {
 
   bool isMindfulnessSessionAvailable() => _featureFlags.mindfulnessAvailable;
 
+  /// Whether the installed provider has the mindfulness feature at all, ignoring
+  /// the user's opt-in. Only for deciding whether to offer that opt-in.
+  bool isMindfulnessSupportedByDevice() =>
+      _featureFlags.mindfulnessSupportedByDevice;
+
   bool isPlannedExerciseAvailable() => _featureFlags.plannedExerciseAvailable;
 
   /// Requests OS authorization for [permissions]. Returns success.

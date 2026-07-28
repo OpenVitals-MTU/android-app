@@ -26,17 +26,19 @@ class OnboardingPermissionCategory {
 class OnboardingPermissionCatalog {
   const OnboardingPermissionCatalog({
     required this.categories,
-    required this.minimumPermissions,
+    required this.requiredPermissions,
     required this.allPermissions,
   });
 
   /// The rows, in the order they are shown.
   final List<OnboardingPermissionCategory> categories;
 
-  /// The permissions onboarding will not finish without.
-  final Set<String> minimumPermissions;
+  /// The permissions onboarding will not finish without — everything the runtime
+  /// dialog can grant on this device, asked for in one request. The opt-in rows
+  /// (cycle tracking, mindfulness) and the ones the dialog cannot grant
+  /// (exercise routes, history/background access) are deliberately not in here.
+  final Set<String> requiredPermissions;
 
-  /// Every permission onboarding offers, which is how the screen works out what
-  /// is still outstanding beyond the required minimum.
+  /// Every permission onboarding offers, required and opt-in alike.
   final Set<String> allPermissions;
 }

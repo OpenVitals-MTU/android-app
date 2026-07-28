@@ -66,7 +66,21 @@ void main() {
     final state = container.read(permissionCategoriesProvider);
     expect(state.availability, HealthConnectAvailability.available);
     expect(state.granted, isEmpty);
-    expect(state.categories.map((c) => c.id), contains('activity_sleep'));
+    // Health Connect's own categories, the same seven onboarding asks by — so
+    // Settings and onboarding describe the app's access one way, not two.
+    expect(
+      state.categories.map((c) => c.id).toList(),
+      const <String>[
+        'activity',
+        'body',
+        'nutrition',
+        'sleep',
+        'vitals',
+        'mindfulness',
+        'cycle_tracking',
+        'additional_data_access',
+      ],
+    );
     expect(state.request, const CommandState<void>.idle());
   });
 

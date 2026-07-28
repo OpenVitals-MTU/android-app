@@ -15,13 +15,11 @@ import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/dashboard/dashboard_data_loader.dart';
-import 'package:openvitals/data/repository/impl/health_repository_impl.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/dashboard_data.dart';
 import 'package:openvitals/domain/model/dashboard_query.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
-import 'package:openvitals/domain/usecase/check_minimum_health_permissions_use_case.dart';
 import 'package:openvitals/domain/usecase/load_dashboard_day_use_case.dart';
 import 'package:openvitals/features/dashboard/application/dashboard_view_model.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';
@@ -72,16 +70,6 @@ class _PassUseCase extends LoadDashboardDayUseCase {
   }
 }
 
-/// A minimum-permission check that fails. The dashboard used to `.orThrow()` this
-/// one — out of an unawaited load, with nothing to catch it.
-class _FailingPermissionCheck extends CheckMinimumHealthPermissionsUseCase {
-  _FailingPermissionCheck() : super(HealthRepositoryImpl(HealthDataSource()));
-
-  @override
-  Future<Result<bool>> call(HealthConnectAvailability availability) async =>
-      const Err(PermissionFailure('denied'));
-}
-
 /// A use case that throws — [LoadDashboardDayUseCase] does not return a Result,
 /// so this is the failure path the dashboard still bridges with a try/catch.
 class _ThrowingUseCase extends LoadDashboardDayUseCase {
@@ -94,7 +82,6 @@ class _ThrowingUseCase extends LoadDashboardDayUseCase {
 
 Future<ProviderContainer> _boot({
   required LoadDashboardDayUseCase useCase,
-  CheckMinimumHealthPermissionsUseCase? permissionCheck,
 }) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   final prefs = await SharedPreferences.getInstance();
@@ -107,9 +94,6 @@ Future<ProviderContainer> _boot({
       grantedHealthPermissionsProvider
           .overrideWith((ref) async => const <String>{}),
       loadDashboardDayUseCaseProvider.overrideWithValue(useCase),
-      if (permissionCheck != null)
-        checkMinimumHealthPermissionsUseCaseProvider
-            .overrideWithValue(permissionCheck),
     ],
   );
   addTearDown(container.dispose);
@@ -195,23 +179,6 @@ void main() {
     expect(state.selectedDate, today);
     expect(state.data!.date, today);
     expect(state.display!.orderedRings.first.value, '8,000');
-  });
-
-  test('a failed permission check becomes a ScreenError, not a lost load',
-      () async {
-    final container = await _boot(
-      useCase: _PassUseCase(),
-      permissionCheck: _FailingPermissionCheck(),
-    );
-    await pumpEventQueue();
-
-    final state = container.read(dashboardProvider);
-    expect(state.error, const ScreenErrorPermissionDenied());
-    expect(state.isLoading, isFalse);
-    expect(state.isRefreshing, isFalse);
-    // Nothing was published, so the screen shows the error rather than an
-    // eternal loader.
-    expect(state.display, isNull);
   });
 
   test('a failed day load becomes a ScreenError', () async {

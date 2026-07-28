@@ -230,32 +230,30 @@ class _PermissionCategoryTile extends ConsumerWidget {
     );
   }
 
+  // Health Connect's own category ids, shared verbatim with onboarding — see
+  // `ReadOnboardingPermissionCatalogUseCase`.
   String _title(AppLocalizations l10n, String id) => switch (id) {
-        'activity_sleep' => l10n.onboardingCategoryActivitySleep,
-        'heart_recovery' => l10n.onboardingCategoryHeartRecovery,
+        'activity' => l10n.onboardingCategoryActivity,
         'body' => l10n.onboardingCategoryBody,
-        'activity_extras' => l10n.onboardingCategoryActivityExtras,
-        'nutrition_hydration' => l10n.onboardingCategoryNutritionHydration,
-        'manual_entry_write' => l10n.onboardingCategoryManualEntryWrite,
-        'mindfulness' => l10n.onboardingCategoryMindfulness,
-        'additional_data_access' => l10n.onboardingCategoryAdditionalDataAccess,
+        'nutrition' => l10n.onboardingCategoryNutrition,
+        'sleep' => l10n.onboardingCategorySleep,
         'vitals' => l10n.onboardingCategoryVitals,
+        'mindfulness' => l10n.onboardingCategoryMindfulness,
         'cycle_tracking' => l10n.onboardingCategoryCycleTracking,
+        'additional_data_access' => l10n.onboardingCategoryAdditionalDataAccess,
         _ => id,
       };
 
   String _description(AppLocalizations l10n, String id) => switch (id) {
-        'activity_sleep' => l10n.onboardingCategoryActivitySleepDesc,
-        'heart_recovery' => l10n.onboardingCategoryHeartRecoveryDesc,
+        'activity' => l10n.onboardingCategoryActivityDesc,
         'body' => l10n.onboardingCategoryBodyDesc,
-        'activity_extras' => l10n.onboardingCategoryActivityExtrasDesc,
-        'nutrition_hydration' => l10n.onboardingCategoryNutritionHydrationDesc,
-        'manual_entry_write' => l10n.onboardingCategoryManualEntryWriteDesc,
+        'nutrition' => l10n.onboardingCategoryNutritionDesc,
+        'sleep' => l10n.onboardingCategorySleepDesc,
+        'vitals' => l10n.onboardingCategoryVitalsDesc,
         'mindfulness' => l10n.onboardingCategoryMindfulnessDesc,
+        'cycle_tracking' => l10n.onboardingCategoryCycleTrackingDesc,
         'additional_data_access' =>
           l10n.onboardingCategoryAdditionalDataAccessDesc,
-        'vitals' => l10n.onboardingCategoryVitalsDesc,
-        'cycle_tracking' => l10n.onboardingCategoryCycleTrackingDesc,
         _ => '',
       };
 

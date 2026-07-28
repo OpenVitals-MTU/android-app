@@ -75,7 +75,7 @@ class HeartVitalsHeartSection extends StatelessWidget {
             value: heartRate == null
                 ? null
                 : formatter.heartRate(heartRate.averageBpm),
-            icon: Icons.favorite,
+            icon: Icons.favorite_border,
             color: AppColors.heart,
             source: heartRate?.source,
           ),
@@ -90,7 +90,7 @@ class HeartVitalsHeartSection extends StatelessWidget {
             metric: HeartMetric.hrv,
             title: l10n.metricHrv,
             value: hrv == null ? null : formatter.hrv(hrv.ms),
-            icon: Icons.speed,
+            icon: Icons.speed_outlined,
             color: AppColors.heart.withValues(alpha: 0.85),
           ),
         ]),
@@ -256,7 +256,7 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
                 : formatter.bloodPressure(
                     bloodPressure.latest.systolicMmHg,
                     bloodPressure.latest.diastolicMmHg),
-            icon: Icons.favorite,
+            icon: Icons.favorite_border,
             color: AppColors.vitals,
             source: bloodPressure?.latest.source,
             emptyMessage: tooMuch(VitalsPeriodMetric.bloodPressure),
@@ -266,7 +266,7 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
             title: l10n.metricSpo2,
             value:
                 spO2 == null ? null : formatter.percent(spO2.latest.percent),
-            icon: Icons.favorite,
+            icon: Icons.favorite_border,
             color: oxygenColor,
             source: spO2?.latest.source,
             emptyMessage: tooMuch(VitalsPeriodMetric.spo2),
@@ -277,7 +277,7 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
             value: vo2Max == null
                 ? null
                 : formatter.vo2Max(vo2Max.latest.vo2MaxMlPerKgPerMin),
-            icon: Icons.speed,
+            icon: Icons.speed_outlined,
             color: vo2Color,
             source: vo2Max?.latest.source,
             emptyMessage: tooMuch(VitalsPeriodMetric.vo2Max),
@@ -289,7 +289,7 @@ class HeartVitalsCardiovascularSection extends StatelessWidget {
                 ? null
                 : formatter
                     .bloodGlucose(bloodGlucose.latest.millimolesPerLiter),
-            icon: Icons.favorite,
+            icon: Icons.favorite_border,
             color: glucoseColor,
             source: bloodGlucose?.latest.source,
             emptyMessage: tooMuch(VitalsPeriodMetric.bloodGlucose),
@@ -422,7 +422,7 @@ class HeartVitalsRespiratorySection extends StatelessWidget {
                 ? null
                 : formatter
                     .respiratoryRate(respiratoryRate.cardBreathsPerMinute),
-            icon: Icons.air,
+            icon: Icons.air_outlined,
             color: respiratoryColor,
             source: respiratoryRate?.cardSource,
             emptyMessage: tooMuch(VitalsPeriodMetric.respiratoryRate),
@@ -434,7 +434,7 @@ class HeartVitalsRespiratorySection extends StatelessWidget {
                 ? null
                 : formatter
                     .temperature(bodyTemperature.latest.temperatureCelsius),
-            icon: Icons.device_thermostat,
+            icon: Icons.device_thermostat_outlined,
             color: temperatureColor,
             source: bodyTemperature?.latest.source,
             emptyMessage: tooMuch(VitalsPeriodMetric.bodyTemperature),
@@ -444,7 +444,7 @@ class HeartVitalsRespiratorySection extends StatelessWidget {
             title: l10n.metricSkinTemperature,
             value:
                 skinDelta == null ? null : formatter.temperatureDelta(skinDelta),
-            icon: Icons.device_thermostat,
+            icon: Icons.device_thermostat_outlined,
             color: temperatureColor,
             source: skinTemperature?.latest.source,
             emptyMessage: tooMuch(VitalsPeriodMetric.skinTemperature),

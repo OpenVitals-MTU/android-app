@@ -421,7 +421,7 @@ class _AddDeviceDialogState extends ConsumerState<_AddDeviceDialog> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.bluetooth_searching,
+                  Icon(Icons.bluetooth_searching_outlined,
                       color: theme.colorScheme.primary),
                   const SizedBox(height: 8),
                   Text(l10n.settingsSensorsScanEmpty,

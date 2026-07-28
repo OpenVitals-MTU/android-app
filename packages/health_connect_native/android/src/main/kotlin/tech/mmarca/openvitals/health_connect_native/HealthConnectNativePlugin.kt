@@ -125,6 +125,29 @@ class HealthConnectNativePlugin :
    */
   private var permissionLauncher: ActivityResultLauncher<Set<String>>? = null
 
+  /**
+   * The permissions this app declares in its own manifest, read once and kept.
+   *
+   * The manifest cannot change while the process lives, so this is resolved on
+   * first use and reused — `getPackageInfo(GET_PERMISSIONS)` is a binder call
+   * and [filterSupportedPermissions] is asked about the whole taxonomy at once.
+   */
+  @Volatile
+  private var declaredPermissionsCache: Set<String>? = null
+
+  /** Null means "could not tell" — callers must then skip the check, not filter. */
+  private fun declaredPermissions(context: Context): Set<String>? =
+    declaredPermissionsCache ?: runCatching {
+      context.packageManager
+        .getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+        .requestedPermissions
+        ?.toSet()
+        ?.takeIf { it.isNotEmpty() }
+    }.getOrElse { error ->
+      Log.w(TAG, "declaredPermissions: unreadable, skipping the declared check", error)
+      null
+    }?.also { declaredPermissionsCache = it }
+
   // ---------------------------------------------------------------------------
   // FlutterPlugin
   // ---------------------------------------------------------------------------
@@ -1102,13 +1125,23 @@ class HealthConnectNativePlugin :
         ?: throw IllegalStateException("Plugin not attached to an engine")
       val packageManager = context.packageManager
       withContext(Dispatchers.IO) {
-        // A permission the installed Health Connect provider doesn't define is
-        // not present on the device, so getPermissionInfo throws
-        // NameNotFoundException — that's our signal it can never be granted
-        // (e.g. newer record types the app's connect-client knows but the
-        // on-device provider does not).
+        val declared = declaredPermissions(context)
         permissions.filter { permission ->
-          runCatching { packageManager.getPermissionInfo(permission, 0) }.isSuccess
+          // Two independent ways a permission can be ungrantable, and both are
+          // fatal to ask for — not merely refused.
+          //
+          // 1. The installed Health Connect provider doesn't define it, so it is
+          //    not present on the device at all and getPermissionInfo throws
+          //    NameNotFoundException (e.g. newer record types the app's
+          //    connect-client knows but the on-device provider does not).
+          // 2. WE never declared it in our manifest. The check above would still
+          //    pass — it asks about the provider, not about us — but the OS will
+          //    never grant an undeclared permission, so requesting it is pure
+          //    downside. A null `declared` means we could not read our own
+          //    package info — skip that half rather than filter everything away
+          //    and leave the user unable to grant anything at all.
+          (declared == null || permission in declared) &&
+            runCatching { packageManager.getPermissionInfo(permission, 0) }.isSuccess
         }
       }
     }

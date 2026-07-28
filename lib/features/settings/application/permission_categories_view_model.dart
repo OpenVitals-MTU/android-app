@@ -83,26 +83,37 @@ class PermissionCategoriesViewModel
         availability == HealthConnectAvailability.available &&
             repo.isMindfulnessAvailable();
 
+    // The same seven Health Connect categories onboarding asks by, in the same
+    // order. Settings used to list ten feature-shaped groups instead
+    // (`activity_sleep`, `heart_recovery`, `manual_entry_write`…), which meant
+    // the two screens described the app's permissions two different ways and
+    // neither matched the system dialog.
     return <PermissionCategory>[
-      PermissionCategory(id: 'activity_sleep', permissions: repo.corePermissions),
-      PermissionCategory(id: 'heart_recovery', permissions: repo.heartPermissions),
-      PermissionCategory(id: 'body', permissions: repo.bodyPermissions),
       PermissionCategory(
-        id: 'activity_extras',
-        permissions: repo.activityExtrasPermissions,
+        id: 'activity',
+        permissions: repo.activityCategoryPermissions,
+      ),
+      PermissionCategory(id: 'body', permissions: repo.bodyCategoryPermissions),
+      PermissionCategory(
+        id: 'nutrition',
+        permissions: repo.nutritionCategoryPermissions,
       ),
       PermissionCategory(
-        id: 'nutrition_hydration',
-        permissions: repo.nutritionHydrationPermissions,
+        id: 'sleep',
+        permissions: repo.sleepCategoryPermissions,
       ),
       PermissionCategory(
-        id: 'manual_entry_write',
-        permissions: repo.requestableWritePermissions,
+        id: 'vitals',
+        permissions: repo.vitalsCategoryPermissions,
       ),
       PermissionCategory(
         id: 'mindfulness',
-        permissions: repo.mindfulnessPermissions,
+        permissions: repo.mindfulnessCategoryPermissions,
         available: mindfulnessAvailable,
+      ),
+      PermissionCategory(
+        id: 'cycle_tracking',
+        permissions: repo.cycleCategoryPermissions,
       ),
       PermissionCategory(
         id: 'additional_data_access',
@@ -111,11 +122,6 @@ class PermissionCategoriesViewModel
           ...repo.routePermissions,
         },
         manualPermissions: repo.routePermissions,
-      ),
-      PermissionCategory(id: 'vitals', permissions: repo.vitalsPermissions),
-      PermissionCategory(
-        id: 'cycle_tracking',
-        permissions: repo.cyclePermissions,
       ),
       // Drop a category with nothing to show — but KEEP one that is explicitly
       // unavailable, so Settings can still say "Not supported" with a reason

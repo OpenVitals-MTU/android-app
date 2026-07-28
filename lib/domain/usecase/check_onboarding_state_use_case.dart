@@ -9,11 +9,19 @@ class OnboardingHealthState {
     required this.availability,
     required this.grantedPermissions,
     required this.mindfulnessAvailable,
+    required this.mindfulnessSupportedByDevice,
   });
 
   final HealthConnectAvailability availability;
   final Set<String> grantedPermissions;
+
+  /// Device feature AND the user's opt-in — what decides whether mindfulness may
+  /// be asked for.
   final bool mindfulnessAvailable;
+
+  /// The device's answer on its own — what decides whether the opt-in is worth
+  /// offering.
+  final bool mindfulnessSupportedByDevice;
 }
 
 /// Resolves everything onboarding needs before it can draw a single row.
@@ -43,14 +51,18 @@ class CheckOnboardingStateUseCase {
           availability: availability,
           grantedPermissions: const <String>{},
           mindfulnessAvailable: false,
+          mindfulnessSupportedByDevice: false,
         ));
       }
       final mindfulnessAvailable = _healthRepository.isMindfulnessAvailable();
+      final mindfulnessSupportedByDevice =
+          _healthRepository.isMindfulnessSupportedByDevice();
       final granted = await _healthRepository.grantedPermissions();
       return granted.map((granted) => OnboardingHealthState(
             availability: availability,
             grantedPermissions: granted,
             mindfulnessAvailable: mindfulnessAvailable,
+            mindfulnessSupportedByDevice: mindfulnessSupportedByDevice,
           ));
     });
   }

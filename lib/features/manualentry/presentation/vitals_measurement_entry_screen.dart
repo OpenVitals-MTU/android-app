@@ -326,10 +326,10 @@ double? _canonicalValue(
         : parseDecimalInput(input);
 
 IconData _vitalsIcon(VitalsMeasurementType type) => switch (type) {
-      VitalsMeasurementType.bloodPressure => Icons.favorite,
+      VitalsMeasurementType.bloodPressure => Icons.favorite_border,
       VitalsMeasurementType.spo2 => Icons.favorite_border,
-      VitalsMeasurementType.respiratoryRate => Icons.air,
-      VitalsMeasurementType.bodyTemperature => Icons.device_thermostat,
+      VitalsMeasurementType.respiratoryRate => Icons.air_outlined,
+      VitalsMeasurementType.bodyTemperature => Icons.device_thermostat_outlined,
     };
 
 Color _vitalsAccent(VitalsMeasurementType type) => switch (type) {

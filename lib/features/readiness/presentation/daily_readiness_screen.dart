@@ -183,7 +183,7 @@ class _ReadinessPanel extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.self_improvement, color: accent, size: 24),
+                Icon(Icons.self_improvement_outlined, color: accent, size: 24),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -238,7 +238,7 @@ class _ReadinessPanel extends StatelessWidget {
                   child: _ScoreTile(
                     label: 'Training',
                     value: '${insight.trainingReadinessScore}/100',
-                    icon: Icons.fitness_center,
+                    icon: Icons.fitness_center_outlined,
                     color: AppColors.workout,
                     onTap: onOpenTrainingReadiness,
                   ),
@@ -265,7 +265,7 @@ class _ReadinessPanel extends StatelessWidget {
             _GuidanceRow(
               label: 'Recommended',
               value: insight.suggestedWorkout,
-              icon: Icons.directions_run,
+              icon: Icons.directions_run_outlined,
               color: accent,
             ),
             const SizedBox(height: 8),
@@ -279,7 +279,7 @@ class _ReadinessPanel extends StatelessWidget {
             _GuidanceRow(
               label: 'Alternative',
               value: insight.alternative,
-              icon: Icons.self_improvement,
+              icon: Icons.self_improvement_outlined,
               color: AppColors.mindfulness,
             ),
             const SizedBox(height: 14),

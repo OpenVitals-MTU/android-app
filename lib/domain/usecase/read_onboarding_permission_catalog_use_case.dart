@@ -5,19 +5,30 @@ import '../model/onboarding_permission_category.dart';
 /// they are a static description of what the app can ask for, not a question for
 /// the platform.
 ///
-/// The grouping is the point. Health Connect grants permissions one record type at
-/// a time, which is unanswerable as a list of forty toggles; onboarding instead
-/// asks for a handful of *reasons* ("heart & recovery", "nutrition & hydration"),
-/// each of which expands to the permissions that reason needs.
+/// The grouping is the point, and it is **Health Connect's own**: Activity, Body
+/// measurements, Nutrition, Sleep, Vitals, Cycle tracking, Mindfulness. Those are
+/// the exact headers the system permission dialog draws, so a row labelled
+/// "Activity" opens a dialog labelled "Activity". An earlier version grouped by
+/// app feature instead — `heart_recovery`, `activity_extras`, `manual_entry_write`,
+/// `data_import_write` — which described the app's internals to someone who was
+/// about to be shown Android's.
 ///
-/// Two of the groups are not a free choice:
+/// Each category carries **read and write together**, so granting one is a single
+/// decision rather than two.
 ///
-/// * Mindfulness is an optional Health Connect feature, so its row is offered only
-///   when the device has it — hence [mindfulnessAvailable] as the one input.
+/// Only Activity and Sleep are required. The rest are asked for and can be
+/// skipped: the dashboard renders nothing without those two, and a first run that
+/// blocks on all seven is one a single stray refusal can trap a user inside.
+///
+/// Two rows are not a free choice:
+///
+/// * Mindfulness is offered only where the provider has the feature AND the user
+///   opted in — hence [mindfulnessAvailable] as the input. Some providers crash
+///   their own permission UI when asked for it, so it is requested alone.
 /// * Exercise routes cannot be granted by the runtime dialog at all. They ride
-///   along with the "additional data access" row but are flagged as manual, so the
-///   screen can send the user to the Health Connect page instead of asking for
-///   something the dialog will silently ignore.
+///   with the "additional data access" row but are flagged manual, so the screen
+///   sends the user to Health Connect instead of firing a dialog that would
+///   silently ignore them.
 ///
 /// An empty group is dropped rather than rendered as a row that grants nothing.
 class ReadOnboardingPermissionCatalogUseCase {
@@ -28,68 +39,61 @@ class ReadOnboardingPermissionCatalogUseCase {
   OnboardingPermissionCatalog call({required bool mindfulnessAvailable}) {
     final repo = _healthRepository;
     final categories = <OnboardingPermissionCategory>[
+      // ── Step 1: the five categories every install is offered ──────────────
       OnboardingPermissionCategory(
-        id: 'activity_sleep',
-        permissions: repo.corePermissions,
-        isRequired: true,
-      ),
-      OnboardingPermissionCategory(
-        id: 'heart_recovery',
-        permissions: repo.heartPermissions,
-        isRequired: true,
-      ),
-      OnboardingPermissionCategory(
-        id: 'vitals',
-        permissions: repo.vitalsPermissions,
+        id: 'activity',
+        permissions: repo.activityCategoryPermissions,
         isRequired: true,
       ),
       OnboardingPermissionCategory(
         id: 'body',
-        permissions: repo.bodyPermissions,
+        permissions: repo.bodyCategoryPermissions,
       ),
       OnboardingPermissionCategory(
-        id: 'activity_extras',
-        permissions: repo.activityExtrasPermissions,
+        id: 'nutrition',
+        permissions: repo.nutritionCategoryPermissions,
       ),
       OnboardingPermissionCategory(
-        id: 'nutrition_hydration',
-        permissions: repo.nutritionHydrationPermissions,
+        id: 'sleep',
+        permissions: repo.sleepCategoryPermissions,
+        isRequired: true,
       ),
       OnboardingPermissionCategory(
-        id: 'manual_entry_write',
-        permissions: repo.requestableWritePermissions,
+        id: 'vitals',
+        permissions: repo.vitalsCategoryPermissions,
       ),
-      OnboardingPermissionCategory(
-        id: 'data_import_write',
-        permissions: repo.dataImportWritePermissions,
-      ),
+
+      // ── Step 2 ────────────────────────────────────────────────────────────
       OnboardingPermissionCategory(
         id: 'mindfulness',
-        permissions: repo.mindfulnessPermissions,
+        permissions: repo.mindfulnessCategoryPermissions,
         available: mindfulnessAvailable,
       ),
-      // Access past data (history) + access data in the background can be
-      // requested directly via the dialog; exercise-route access needs the
-      // "Always" toggle in Health Connect settings (opened via the fallback).
-      // Mirrors the Kotlin OnboardingViewModel's additionalDataAccess +
-      // routePermissions category, with routes flagged as manual-only.
-      OnboardingPermissionCategory(
-        id: 'additional_data_access',
-        permissions: {
-          ...repo.additionalDataAccessPermissions,
-          ...repo.routePermissions,
-        },
-        manualPermissions: repo.routePermissions,
-      ),
+
+      // ── Step 3 ────────────────────────────────────────────────────────────
       OnboardingPermissionCategory(
         id: 'cycle_tracking',
-        permissions: repo.cyclePermissions,
+        permissions: repo.cycleCategoryPermissions,
+      ),
+
+      // ── Step 4 ────────────────────────────────────────────────────────────
+      // History and background reads ONLY — both grantable by the dialog, so
+      // this row can actually reach "granted".
+      //
+      // Exercise routes are deliberately not here. They need the "Always allow"
+      // toggle inside Health Connect, which no intent can deep-link to, so the
+      // step gives them their own walkthrough. Counting them in this row made it
+      // read "2 of 3" no matter what the user did — the third could never be
+      // granted from anywhere the row's button leads.
+      OnboardingPermissionCategory(
+        id: 'additional_data_access',
+        permissions: repo.additionalDataAccessPermissions,
       ),
     ].where((category) => category.permissions.isNotEmpty).toList();
 
     return OnboardingPermissionCatalog(
       categories: categories,
-      minimumPermissions: repo.minimumOnboardingPermissions,
+      requiredPermissions: repo.requiredOnboardingPermissions,
       allPermissions: repo.onboardingPermissions,
     );
   }

@@ -109,7 +109,7 @@ class ReminderToggleTile extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(Icons.schedule,
+                Icon(Icons.schedule_outlined,
                     size: 16, color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(width: 8),
                 Expanded(
@@ -159,7 +159,7 @@ class ReminderStepperRow extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(Icons.schedule,
+        Icon(Icons.schedule_outlined,
             size: 20, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(width: 12),
         Expanded(
@@ -213,7 +213,7 @@ class ReminderTimeRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Icon(Icons.schedule,
+            Icon(Icons.schedule_outlined,
                 size: 20, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(width: 12),
             Expanded(

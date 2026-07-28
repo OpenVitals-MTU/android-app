@@ -232,7 +232,7 @@ class _SummaryCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(Icons.battery_charging_full, color: accent, size: 28),
+                Icon(Icons.battery_charging_full_outlined, color: accent, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

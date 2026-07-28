@@ -6,7 +6,6 @@ import '../domain/usecase/load_dashboard_day_use_case.dart';
 import '../domain/usecase/check_body_write_permission_use_case.dart';
 import '../domain/usecase/check_hydration_write_access_use_case.dart';
 import '../domain/usecase/check_mindfulness_write_access_use_case.dart';
-import '../domain/usecase/check_minimum_health_permissions_use_case.dart';
 import '../domain/usecase/check_nutrition_write_permission_use_case.dart';
 import '../domain/usecase/check_onboarding_state_use_case.dart';
 import '../domain/usecase/check_vitals_write_permission_use_case.dart';
@@ -325,12 +324,6 @@ final checkHydrationWriteAccessUseCaseProvider =
     ref.watch(hydrationRepositoryProvider),
     ref.watch(nutritionRepositoryProvider),
   ),
-);
-
-final checkMinimumHealthPermissionsUseCaseProvider =
-    Provider<CheckMinimumHealthPermissionsUseCase>(
-  (ref) =>
-      CheckMinimumHealthPermissionsUseCase(ref.watch(healthRepositoryProvider)),
 );
 
 final loadGrantedHealthPermissionsUseCaseProvider =

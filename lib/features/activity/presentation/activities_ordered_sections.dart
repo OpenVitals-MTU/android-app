@@ -111,7 +111,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           sectionPadded(DailyGoalCard(
             goal: formatter.minutes(state.dailyGoalMinutes.round()),
             progress: display.goalProgress,
-            icon: Icons.directions_run,
+            icon: Icons.directions_run_outlined,
             accentColor: AppColors.workout,
             onDecreaseGoal: notifier.decreaseDailyGoal,
             onIncreaseGoal: notifier.increaseDailyGoal,
@@ -223,7 +223,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
               : DisplayValue(l10n.noData, ''),
           subtitle:
               '$title / ${_cardioConfidenceLabel(l10n, totals.cardioLoadConfidence)}',
-          icon: Icons.favorite,
+          icon: Icons.favorite_border,
           accentColor: AppColors.heart,
           series: display.cardioLoadSeries,
           bucketLabels: bucketLabels,
@@ -236,7 +236,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
               : DisplayValue(l10n.noData, ''),
           subtitle:
               display.energyEstimated ? l10n.caloriesEstimatedActiveBmr : title,
-          icon: Icons.local_fire_department,
+          icon: Icons.local_fire_department_outlined,
           accentColor: AppColors.calories,
           series: display.energyBurnedSeries,
           bucketLabels: bucketLabels,
@@ -246,7 +246,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           title: l10n.metricSteps,
           value: DisplayValue(formatter.count(totals.steps), ''),
           subtitle: title,
-          icon: Icons.directions_walk,
+          icon: Icons.directions_walk_outlined,
           accentColor: AppColors.steps,
           series: display.stepsSeries,
           bucketLabels: bucketLabels,
@@ -256,7 +256,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           title: l10n.metricDistance,
           value: formatter.distance(totals.distanceMeters),
           subtitle: title,
-          icon: Icons.straighten,
+          icon: Icons.straighten_outlined,
           accentColor: AppColors.distance,
           series: display.distanceSeries,
           bucketLabels: bucketLabels,
@@ -332,7 +332,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
           progress: goalProgress,
           averageGap: formatter.minutes(goalProgress.averageGapToGoal.round()),
           unitFormatter: formatter,
-          icon: Icons.directions_run,
+          icon: Icons.directions_run_outlined,
           accentColor: AppColors.workout,
         )),
         sectionPadded(InsightStatGrid(
@@ -341,7 +341,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
               title: l10n.statTotal,
               value: formatter.duration(display.totalDurationMs),
               unit: '',
-              icon: Icons.directions_run,
+              icon: Icons.directions_run_outlined,
               accentColor: AppColors.workout,
             ),
             InsightStat(
@@ -414,7 +414,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
                   minutesText, percentText)
               : l10n.interpretationWorkoutBody(minutesText, percentText),
           source: l10n.interpretationWorkoutSource,
-          icon: Icons.directions_run,
+          icon: Icons.directions_run_outlined,
           accentColor: AppColors.workout,
           severity: progress.severity,
         )),

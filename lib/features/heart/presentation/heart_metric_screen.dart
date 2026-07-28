@@ -50,7 +50,7 @@ class HeartMetricScreen extends ConsumerWidget {
             tooltip: isEditingSections
                 ? AppLocalizations.of(context).cdFinishMetricSectionEditing
                 : AppLocalizations.of(context).cdEditMetricSections,
-            icon: Icon(isEditingSections ? Icons.check : Icons.tune),
+            icon: Icon(isEditingSections ? Icons.check : Icons.tune_outlined),
           ),
         ],
       ),

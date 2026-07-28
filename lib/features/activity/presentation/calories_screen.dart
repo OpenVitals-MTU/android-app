@@ -112,7 +112,7 @@ List<Widget> _content(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: MetricCardPlaceholder(
           title: 'Calories',
-          icon: Icons.local_fire_department,
+          icon: Icons.local_fire_department_outlined,
           accentColor: Colors.redAccent,
           message: 'No calories data for this period.',
         ),
@@ -144,7 +144,7 @@ List<Widget> _content(
           title: 'Basal metabolic rate',
           value: formatter.energy(state.latestBmrKcal!).value,
           unit: 'kcal/day',
-          icon: Icons.bolt,
+          icon: Icons.bolt_outlined,
           accentColor: Colors.orange,
           subtitle: 'Latest resting energy expenditure',
         ),

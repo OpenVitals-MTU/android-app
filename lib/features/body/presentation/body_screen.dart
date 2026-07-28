@@ -59,7 +59,7 @@ class BodyScreen extends ConsumerWidget {
             tooltip: isEditingSections
                 ? l10n.cdFinishMetricSectionEditing
                 : l10n.cdEditMetricSections,
-            icon: Icon(isEditingSections ? Icons.check : Icons.tune),
+            icon: Icon(isEditingSections ? Icons.check : Icons.tune_outlined),
           ),
         ],
       ),

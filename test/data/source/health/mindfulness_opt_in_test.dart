@@ -90,6 +90,23 @@ void main() {
       // Only mindfulness is withheld — the rest of the device's answer stands.
       expect(flags.skinTemperatureAvailable, isTrue);
       expect(source.permissionService.mindfulnessPermissions, isEmpty);
+      // The device's own answer is kept separately, so the UI can still offer
+      // the opt-in on this phone rather than pretending it has no mindfulness.
+      expect(flags.mindfulnessSupportedByDevice, isTrue);
+      expect(source.isMindfulnessSupportedByDevice(), isTrue);
+    });
+
+    test('a device that says NO is not offered the opt-in at all', () async {
+      final api = FakeHostApi()..availableFeatures = <String>{};
+      final source = HealthConnectNativeDataSource(
+        hostApi: api,
+        appPackageName: 'tech.mmarca.openvitals',
+        mindfulnessIntegrationEnabled: () => false,
+      );
+
+      final flags = await source.resolveFeatureFlags();
+      expect(flags.mindfulnessSupportedByDevice, isFalse);
+      expect(flags.mindfulnessAvailable, isFalse);
     });
 
     test('both halves say yes, and the feature comes back', () async {

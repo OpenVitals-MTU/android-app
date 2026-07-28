@@ -31,8 +31,8 @@ abstract class OnboardingCategoryRow with _$OnboardingCategoryRow {
 }
 
 /// The screen-ready derivation of the permission catalog against the currently
-/// granted set: the rows, what the "grant all" button still has to ask for, and
-/// whether the minimum is covered (which is what turns it into "Continue").
+/// granted set: the rows, what the single grant button still has to ask for, and
+/// whether the required set is covered (which is what turns it into "Continue").
 ///
 /// Built once per state change by [buildOnboardingDisplay] and stored on the
 /// state — the view-model precomputes, the widgets only render.
@@ -41,16 +41,14 @@ abstract class OnboardingDisplay with _$OnboardingDisplay {
   const factory OnboardingDisplay({
     required List<OnboardingCategoryRow> rows,
 
-    /// The required permissions that are still missing — what the primary
-    /// "Grant required Health Connect permissions" button requests.
-    required Set<String> missingMinimum,
+    /// The required permissions that are still missing — the whole of what the
+    /// single grant button requests, in one go.
+    required Set<String> missingRequired,
 
     /// Nothing required is outstanding: the primary action becomes "Continue".
-    required bool minimumGranted,
-
-    /// Everything else onboarding offers that is still missing — the optional
-    /// "Grant remaining" button's request.
-    required Set<String> missingOptional,
+    /// Until then there is no way past onboarding — the required set is not a
+    /// suggestion.
+    required bool requiredGranted,
   }) = _OnboardingDisplay;
 }
 
@@ -61,16 +59,13 @@ OnboardingDisplay buildOnboardingDisplay(
   OnboardingPermissionCatalog catalog,
   Set<String> granted,
 ) {
-  final minimum = catalog.minimumPermissions;
-  final missingMinimum = minimum.difference(granted);
+  final missingRequired = catalog.requiredPermissions.difference(granted);
   return OnboardingDisplay(
     rows: [
       for (final category in catalog.categories) _row(category, granted),
     ],
-    missingMinimum: missingMinimum,
-    minimumGranted: missingMinimum.isEmpty,
-    missingOptional:
-        catalog.allPermissions.difference(granted).difference(minimum),
+    missingRequired: missingRequired,
+    requiredGranted: missingRequired.isEmpty,
   );
 }
 

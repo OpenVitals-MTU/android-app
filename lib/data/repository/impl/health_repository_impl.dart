@@ -45,8 +45,8 @@ class HealthRepositoryImpl implements HealthRepository {
       _dataSource.permissionService.phase1Permissions;
 
   @override
-  Set<String> get minimumOnboardingPermissions =>
-      _dataSource.permissionService.minimumOnboardingPermissions;
+  Set<String> get requiredOnboardingPermissions =>
+      _dataSource.permissionService.requiredOnboardingPermissions;
 
   @override
   Set<String> get phase2Permissions =>
@@ -129,6 +129,38 @@ class HealthRepositoryImpl implements HealthRepository {
       _dataSource.permissionService.cyclePermissions;
 
   @override
+  Set<String> get cycleWritePermissions =>
+      _dataSource.permissionService.cycleWritePermissions;
+
+  @override
+  Set<String> get activityCategoryPermissions =>
+      _dataSource.permissionService.activityCategoryPermissions;
+
+  @override
+  Set<String> get bodyCategoryPermissions =>
+      _dataSource.permissionService.bodyCategoryPermissions;
+
+  @override
+  Set<String> get nutritionCategoryPermissions =>
+      _dataSource.permissionService.nutritionCategoryPermissions;
+
+  @override
+  Set<String> get sleepCategoryPermissions =>
+      _dataSource.permissionService.sleepCategoryPermissions;
+
+  @override
+  Set<String> get vitalsCategoryPermissions =>
+      _dataSource.permissionService.vitalsCategoryPermissions;
+
+  @override
+  Set<String> get cycleCategoryPermissions =>
+      _dataSource.permissionService.cycleCategoryPermissions;
+
+  @override
+  Set<String> get mindfulnessCategoryPermissions =>
+      _dataSource.permissionService.mindfulnessCategoryPermissions;
+
+  @override
   Set<String> get manualOnlyPermissions =>
       _dataSource.permissionService.manualOnlyPermissions;
 
@@ -153,6 +185,10 @@ class HealthRepositoryImpl implements HealthRepository {
 
   @override
   bool isMindfulnessAvailable() => _dataSource.isMindfulnessSessionAvailable();
+
+  @override
+  bool isMindfulnessSupportedByDevice() =>
+      _dataSource.isMindfulnessSupportedByDevice();
 
   @override
   Future<Result<Set<String>>> grantedPermissions() =>

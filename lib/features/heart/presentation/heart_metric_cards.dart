@@ -44,7 +44,7 @@ class HeartStatisticsCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.insights, color: accentColor, size: 20),
+                Icon(Icons.insights_outlined, color: accentColor, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -253,6 +253,8 @@ class HeartRateThresholdCheckCard extends StatelessWidget {
               children: [
                 Icon(
                   check.type == HeartRateThresholdCheckType.high
+                      // Deliberate state fill (iconography rule 2): filled =
+                      // the HIGH-threshold alert, border = the low.
                       ? Icons.favorite
                       : Icons.favorite_border,
                   size: 20,

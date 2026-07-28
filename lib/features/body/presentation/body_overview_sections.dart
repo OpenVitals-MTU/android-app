@@ -110,7 +110,7 @@ BodyMetricData bodyMetricDataFor(
         series: series,
         title: l10n.metricHeight,
         color: AppColors.weight,
-        icon: Icons.straighten,
+        icon: Icons.straighten_outlined,
         format: formatter.height,
       );
     case BodyMetricKind.bmi:
@@ -126,7 +126,7 @@ BodyMetricData bodyMetricDataFor(
         series: series,
         title: l10n.metricFfmi,
         color: AppColors.bodyFat,
-        icon: Icons.fitness_center,
+        icon: Icons.fitness_center_outlined,
         format: plain,
       );
     case BodyMetricKind.bodyFat:
@@ -368,7 +368,7 @@ class BmiContextCards extends StatelessWidget {
               formatter.decimal(adjustedFfmi!, 1),
             ),
             source: l10n.interpretationFfmiSource,
-            icon: Icons.fitness_center,
+            icon: Icons.fitness_center_outlined,
             accentColor: AppColors.bodyFat,
             severity: ffmiResult.severity,
           )),

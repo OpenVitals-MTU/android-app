@@ -75,6 +75,12 @@ abstract final class HcPermissions {
   static final String writeTotalCalories = _write('TOTAL_CALORIES_BURNED');
   static final String writeHydration = _write('HYDRATION');
   static final String writeNutrition = _write('NUTRITION');
+
+  /// Sleep write access. Already inside
+  /// [HealthPermissionService.dataImportWritePermissions], but it had no name to
+  /// be checked by — so nothing could ask whether a sleep write was allowed
+  /// before attempting one.
+  static final String writeSleep = _write('SLEEP');
   static final String writeWeight = _write('WEIGHT');
   static final String writeHeight = _write('HEIGHT');
   static final String writeBodyFat = _write('BODY_FAT');
@@ -124,14 +130,27 @@ abstract final class HcPermissions {
 class HealthConnectFeatureFlags {
   const HealthConnectFeatureFlags({
     this.mindfulnessAvailable = false,
+    bool? mindfulnessSupportedByDevice,
     this.skinTemperatureAvailable = false,
     this.plannedExerciseAvailable = false,
     this.healthDataHistoryAvailable = false,
     this.backgroundReadAvailable = false,
-  });
+  }) : mindfulnessSupportedByDevice =
+            mindfulnessSupportedByDevice ?? mindfulnessAvailable;
 
-  /// Resolved from the native plugin's `getFeatureStatus("MINDFULNESS_SESSION")`.
+  /// Whether the app may ask for mindfulness: the device reports the feature AND
+  /// the user has opted in. Everything that derives a permission set reads this
+  /// one, never [mindfulnessSupportedByDevice].
   final bool mindfulnessAvailable;
+
+  /// The device's own answer alone, before the user's opt-in is folded in.
+  ///
+  /// The *only* legitimate use is deciding whether to offer the opt-in at all: a
+  /// phone whose Health Connect has no mindfulness feature should not be shown a
+  /// toggle it cannot honour. Deriving permissions from this would defeat the
+  /// opt-in — see the crash it exists to avoid, documented on
+  /// `HealthConnectNativeDataSource.resolveFeatureFlags`.
+  final bool mindfulnessSupportedByDevice;
 
   /// Resolved from `getFeatureStatus("SKIN_TEMPERATURE")`.
   final bool skinTemperatureAvailable;
@@ -179,8 +198,14 @@ class HealthPermissionService {
 
   /// Bump when requestable/managed permissions change so existing users see the
   /// new-permissions prompt. Mirrors the Kotlin constant.
+  ///
+  /// Read against `PreferencesRepository.lastPromptedPermissionSetVersion` by the
+  /// router: a user whose stamp is older is routed back through onboarding once.
+  ///
+  /// 3 — onboarding stopped splitting required from optional and now asks for
+  /// everything the device can grant in one request.
   // ignore: constant_identifier_names
-  static const int PERMISSION_SET_VERSION = 2;
+  static const int PERMISSION_SET_VERSION = 3;
 
   // ── Special (non record-backed) permission strings ────────────────────────
   static final String readExerciseRoutesPermission = _read('EXERCISE_ROUTES');
@@ -372,6 +397,18 @@ class HealthPermissionService {
         _write('VO2_MAX'),
         // Gated by the getter itself (Kotlin 1f2b435), not by a guard here.
         ...mindfulnessWritePermissions,
+        ...cycleWritePermissions,
+      });
+
+  /// Write access to the cycle records, split out of
+  /// [dataImportWritePermissions] (which still spreads it, so the CSV importer's
+  /// set is unchanged) so onboarding can subtract cycle tracking wholesale from
+  /// what it requires — see [requiredOnboardingPermissions].
+  ///
+  /// `WRITE_BASAL_BODY_TEMPERATURE` deliberately appears here *and* in
+  /// [instantMeasurementWritePermissions]: it is a cycle record and a single
+  /// instant measurement a CSV can carry, and those are different consumers.
+  Set<String> get cycleWritePermissions => _supported({
         _write('MENSTRUATION'),
         _write('OVULATION_TEST'),
         _write('CERVICAL_MUCUS'),
@@ -391,13 +428,149 @@ class HealthPermissionService {
         _read('SEXUAL_ACTIVITY'),
       });
 
+  // ── Health Connect data categories ────────────────────────────────────────
+  //
+  // The seven groups Health Connect itself files records under, each carrying
+  // READ **and** WRITE for its records. Onboarding asks by these because they
+  // are the exact headers the system permission dialog draws: a screen that
+  // says "Activity" produces a dialog that says "Activity".
+  //
+  // The sets ABOVE are grouped by app feature instead — `heartPermissions`,
+  // `activityExtrasPermissions`, `dataImportWritePermissions` — and match
+  // nothing the user is about to see. They stay because repositories, the CSV
+  // importer and the dashboard all read them; these are additive, not a
+  // replacement.
+  //
+  // Do not build these by spreading the feature sets. Two of them mix
+  // directions — [plannedExercisePermissions] carries read AND write, which is
+  // how `WRITE_PLANNED_EXERCISE` ends up inside the read-only-sounding
+  // [activityExtrasPermissions] — so composing from them produces silently
+  // wrong groupings. Members are listed explicitly here for that reason.
+
+  /// Health Connect's **Activity** category.
+  ///
+  /// VO2 max lives here, not in [vitalsCategoryPermissions]: Health Connect
+  /// files it under Activity, and matching the dialog is the whole point of
+  /// this grouping — even though the app's own [vitalsPermissions] treats it as
+  /// a vital.
+  ///
+  /// **Route WRITE is here; route READ is not**, and the difference is Health
+  /// Connect's, not ours. `WRITE_EXERCISE_ROUTE` is an ordinary toggle in the
+  /// Activity group of the write list ("Allowed to write → Activity → Exercise
+  /// route"), so it belongs with the rest of Activity. `READ_EXERCISE_ROUTES`
+  /// is the awkward one: it lives under *Additional access* and cannot be
+  /// granted from the request dialog at all, which is why it stays in
+  /// [manualOnlyPermissions] and gets its own walkthrough.
+  ///
+  /// The two are not even named symmetrically — READ is plural, WRITE singular —
+  /// which is a fair warning that they are not a pair.
+  Set<String> get activityCategoryPermissions => _supported({
+        writeExerciseRoutePermission,
+        _read('STEPS'), _write('STEPS'),
+        _read('DISTANCE'), _write('DISTANCE'),
+        _read('EXERCISE'), _write('EXERCISE'),
+        _read('FLOORS_CLIMBED'), _write('FLOORS_CLIMBED'),
+        _read('ELEVATION_GAINED'), _write('ELEVATION_GAINED'),
+        _read('WHEELCHAIR_PUSHES'), _write('WHEELCHAIR_PUSHES'),
+        _read('ACTIVE_CALORIES_BURNED'), _write('ACTIVE_CALORIES_BURNED'),
+        _read('TOTAL_CALORIES_BURNED'), _write('TOTAL_CALORIES_BURNED'),
+        _read('SPEED'), _write('SPEED'),
+        _read('POWER'), _write('POWER'),
+        _read('STEPS_CADENCE'), _write('STEPS_CADENCE'),
+        _read('CYCLING_PEDALING_CADENCE'), _write('CYCLING_PEDALING_CADENCE'),
+        _read('VO2_MAX'), _write('VO2_MAX'),
+        // Both directions, and empty as a pair when the provider lacks it.
+        ...plannedExercisePermissions,
+      });
+
+  /// Health Connect's **Body measurements** category.
+  Set<String> get bodyCategoryPermissions => _supported({
+        _read('WEIGHT'), _write('WEIGHT'),
+        _read('HEIGHT'), _write('HEIGHT'),
+        _read('BODY_FAT'), _write('BODY_FAT'),
+        _read('LEAN_BODY_MASS'), _write('LEAN_BODY_MASS'),
+        _read('BONE_MASS'), _write('BONE_MASS'),
+        _read('BODY_WATER_MASS'), _write('BODY_WATER_MASS'),
+        _read('BASAL_METABOLIC_RATE'), _write('BASAL_METABOLIC_RATE'),
+      });
+
+  /// Health Connect's **Nutrition** category.
+  Set<String> get nutritionCategoryPermissions => _supported({
+        _read('HYDRATION'), _write('HYDRATION'),
+        _read('NUTRITION'), _write('NUTRITION'),
+      });
+
+  /// Health Connect's **Sleep** category.
+  Set<String> get sleepCategoryPermissions => _supported({
+        _read('SLEEP'), _write('SLEEP'),
+      });
+
+  /// Health Connect's **Vitals** category.
+  ///
+  /// Heart rate and its derivatives are vitals here, not a category of their
+  /// own — Health Connect has no "Heart" category, whatever [heartPermissions]
+  /// suggests. Basal body temperature is a vital too, and so appears in BOTH
+  /// this set and [cycleCategoryPermissions]; the overlap is deliberate and
+  /// harmless, it just means granting Vitals leaves the cycle row partly
+  /// satisfied.
+  ///
+  /// **Not symmetric.** `SKIN_TEMPERATURE` is read-only: no
+  /// `WRITE_SKIN_TEMPERATURE` exists in the manifest or anywhere in this
+  /// taxonomy, so it cannot be paired. It is also feature-gated, so on most
+  /// devices the question does not arise.
+  Set<String> get vitalsCategoryPermissions => _supported({
+        _read('HEART_RATE'), _write('HEART_RATE'),
+        _read('RESTING_HEART_RATE'), _write('RESTING_HEART_RATE'),
+        _read('HEART_RATE_VARIABILITY'), _write('HEART_RATE_VARIABILITY'),
+        _read('BLOOD_PRESSURE'), _write('BLOOD_PRESSURE'),
+        _read('OXYGEN_SATURATION'), _write('OXYGEN_SATURATION'),
+        _read('RESPIRATORY_RATE'), _write('RESPIRATORY_RATE'),
+        _read('BODY_TEMPERATURE'), _write('BODY_TEMPERATURE'),
+        _read('BASAL_BODY_TEMPERATURE'), _write('BASAL_BODY_TEMPERATURE'),
+        _read('BLOOD_GLUCOSE'), _write('BLOOD_GLUCOSE'),
+        if (flags.skinTemperatureAvailable) _read('SKIN_TEMPERATURE'),
+      });
+
+  /// Health Connect's **Cycle tracking** category.
+  ///
+  /// Shares basal body temperature with [vitalsCategoryPermissions] — see there.
+  Set<String> get cycleCategoryPermissions => {
+        ...cyclePermissions,
+        ...cycleWritePermissions,
+      };
+
+  /// Health Connect's **Mindfulness** category.
+  ///
+  /// Empty unless the provider has the feature AND the user opted in, and it is
+  /// requested on its own, never merged into another category's request — see
+  /// [mindfulnessPermissions] for the crash that buys.
+  Set<String> get mindfulnessCategoryPermissions => {
+        ...mindfulnessPermissions,
+        ...mindfulnessWritePermissions,
+      };
+
   // ── Derived / phased sets ─────────────────────────────────────────────────
 
-  Set<String> get minimumOnboardingPermissions => {
-        ...corePermissions,
-        ...heartPermissions,
-        ...vitalsPermissions,
-      };
+  /// Everything onboarding will not finish without: **Activity and Sleep**.
+  ///
+  /// Not everything the app can use — the other categories are asked for and
+  /// can be skipped. These two are the floor because the dashboard renders
+  /// nothing without them, and because a first run that blocks on all seven
+  /// categories is one a user can be trapped in by a single stray refusal.
+  ///
+  /// Both constituents have already been through [_supported], so this never
+  /// contains a permission the installed provider does not define.
+  ///
+  /// [manualOnlyPermissions] is subtracted as a structural guard. Route READ is
+  /// not in either category today, so the subtraction is a no-op — but Activity
+  /// is REQUIRED, and anything the request dialog cannot grant would make this
+  /// gate unsatisfiable and trap the user in onboarding forever. Keeping the
+  /// subtraction means that stays true even if a manual-only permission is
+  /// folded into a category later.
+  Set<String> get requiredOnboardingPermissions => <String>{
+        ...activityCategoryPermissions,
+        ...sleepCategoryPermissions,
+      }.difference(manualOnlyPermissions);
 
   Set<String> get phase1Permissions => corePermissions;
 
@@ -479,4 +652,8 @@ class HealthPermissionService {
           : PermissionGrantMode.requestable;
 
   bool isMindfulnessAvailable() => flags.mindfulnessAvailable;
+
+  /// Whether the device could do mindfulness if the user opted in — the input to
+  /// "should we offer the toggle", never to "what may we request".
+  bool isMindfulnessSupportedByDevice() => flags.mindfulnessSupportedByDevice;
 }

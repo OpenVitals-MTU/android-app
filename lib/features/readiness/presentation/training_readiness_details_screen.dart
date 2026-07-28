@@ -252,7 +252,7 @@ class _ScoreCard extends StatelessWidget {
                     color: accent.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.fitness_center, color: accent),
+                  child: const Icon(Icons.fitness_center_outlined, color: accent),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

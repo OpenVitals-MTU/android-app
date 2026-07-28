@@ -284,7 +284,7 @@ class _StressExplanationCard extends StatelessWidget {
                       color: AppColors.mindfulness.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.self_improvement,
+                    child: const Icon(Icons.self_improvement_outlined,
                         color: AppColors.mindfulness, size: 17),
                   ),
                   const SizedBox(width: 10),

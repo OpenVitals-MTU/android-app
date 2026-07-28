@@ -82,40 +82,40 @@ IconData exerciseTypeIcon(int exerciseType) {
   final name = (_exerciseTypeLabels[exerciseType] ?? '').toUpperCase();
   bool has(String token) => name.contains(token);
 
-  if (has('RUN')) return Icons.directions_run;
-  if (has('WALK') || has('HIK')) return Icons.directions_walk;
-  if (has('CYCL') || has('BIK')) return Icons.directions_bike;
-  if (has('SWIM') || has('WATER POLO')) return Icons.pool;
-  if (has('ROW') || has('PADDL') || has('KAYAK')) return Icons.rowing;
+  if (has('RUN')) return Icons.directions_run_outlined;
+  if (has('WALK') || has('HIK')) return Icons.directions_walk_outlined;
+  if (has('CYCL') || has('BIK')) return Icons.directions_bike_outlined;
+  if (has('SWIM') || has('WATER POLO')) return Icons.pool_outlined;
+  if (has('ROW') || has('PADDL') || has('KAYAK')) return Icons.rowing_outlined;
   if (has('YOGA') || has('PILATES') || has('STRETCH') || has('BREATH')) {
-    return Icons.self_improvement;
+    return Icons.self_improvement_outlined;
   }
   if (has('WEIGHT') ||
       has('STRENGTH') ||
       has('CALISTHEN') ||
       has('BOOT CAMP') ||
       has('HIIT')) {
-    return Icons.fitness_center;
+    return Icons.fitness_center_outlined;
   }
   if (has('SKI') || has('SNOWBOARD') || has('SKAT')) {
-    return Icons.downhill_skiing;
+    return Icons.downhill_skiing_outlined;
   }
-  if (has('SURF')) return Icons.surfing;
-  if (has('SAIL')) return Icons.sailing;
-  if (has('GOLF')) return Icons.sports_golf;
+  if (has('SURF')) return Icons.surfing_outlined;
+  if (has('SAIL')) return Icons.sailing_outlined;
+  if (has('GOLF')) return Icons.sports_golf_outlined;
   if (has('TENNIS') || has('BADMINTON') || has('SQUASH') || has('RACQUET')) {
-    return Icons.sports_tennis;
+    return Icons.sports_tennis_outlined;
   }
-  if (has('BASKETBALL')) return Icons.sports_basketball;
-  if (has('SOCCER')) return Icons.sports_soccer;
-  if (has('FOOTBALL')) return Icons.sports_football;
-  if (has('BASEBALL') || has('SOFTBALL')) return Icons.sports_baseball;
-  if (has('CRICKET')) return Icons.sports_cricket;
-  if (has('VOLLEYBALL')) return Icons.sports_volleyball;
-  if (has('HANDBALL')) return Icons.sports_handball;
-  if (has('HOCKEY')) return Icons.sports_hockey;
-  if (has('MARTIAL') || has('BOXING')) return Icons.sports_martial_arts;
-  if (has('GYMNASTICS')) return Icons.sports_gymnastics;
-  if (has('WHEELCHAIR')) return Icons.accessible_forward;
-  return Icons.fitness_center;
+  if (has('BASKETBALL')) return Icons.sports_basketball_outlined;
+  if (has('SOCCER')) return Icons.sports_soccer_outlined;
+  if (has('FOOTBALL')) return Icons.sports_football_outlined;
+  if (has('BASEBALL') || has('SOFTBALL')) return Icons.sports_baseball_outlined;
+  if (has('CRICKET')) return Icons.sports_cricket_outlined;
+  if (has('VOLLEYBALL')) return Icons.sports_volleyball_outlined;
+  if (has('HANDBALL')) return Icons.sports_handball_outlined;
+  if (has('HOCKEY')) return Icons.sports_hockey_outlined;
+  if (has('MARTIAL') || has('BOXING')) return Icons.sports_martial_arts_outlined;
+  if (has('GYMNASTICS')) return Icons.sports_gymnastics_outlined;
+  if (has('WHEELCHAIR')) return Icons.accessible_forward_outlined;
+  return Icons.fitness_center_outlined;
 }

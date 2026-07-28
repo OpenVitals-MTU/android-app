@@ -41,7 +41,12 @@ abstract interface class HealthRepository {
   Future<Result<bool>> openHealthConnectSettings();
 
   Set<String> get phase1Permissions;
-  Set<String> get minimumOnboardingPermissions;
+
+  /// Everything onboarding refuses to finish without — every permission the
+  /// runtime dialog can grant on this device, minus the groups that are opt-in
+  /// or cannot be granted by the dialog at all. See
+  /// `HealthPermissionService.requiredOnboardingPermissions`.
+  Set<String> get requiredOnboardingPermissions;
   Set<String> get phase2Permissions;
   Set<String> get phase3Permissions;
   Set<String> get phase4Permissions;
@@ -67,6 +72,28 @@ abstract interface class HealthRepository {
   Set<String> get vitalsWritePermissions;
   Set<String> get dataImportWritePermissions;
   Set<String> get cyclePermissions;
+
+  /// Write access to the cycle records. Split out of
+  /// [dataImportWritePermissions] (which still contains it) so onboarding can
+  /// keep cycle tracking out of what it requires.
+  Set<String> get cycleWritePermissions;
+
+  // ── Health Connect data categories ──────────────────────────────────────
+  //
+  // The seven groups Health Connect files records under, each carrying read AND
+  // write. Onboarding asks by these because they are the headers the system
+  // dialog draws; the feature-shaped sets above match nothing the user sees.
+  // See `HealthPermissionService` for the two documented irregularities
+  // (skin temperature is read-only; basal body temperature is in both vitals
+  // and cycle).
+
+  Set<String> get activityCategoryPermissions;
+  Set<String> get bodyCategoryPermissions;
+  Set<String> get nutritionCategoryPermissions;
+  Set<String> get sleepCategoryPermissions;
+  Set<String> get vitalsCategoryPermissions;
+  Set<String> get cycleCategoryPermissions;
+  Set<String> get mindfulnessCategoryPermissions;
   Set<String> get manualOnlyPermissions;
   Set<String> get requestableWritePermissions;
   Set<String> get onboardingPermissions;
@@ -76,6 +103,12 @@ abstract interface class HealthRepository {
   PermissionGrantMode grantModeFor(String permission);
 
   bool isMindfulnessAvailable();
+
+  /// Whether the installed Health Connect has the mindfulness feature at all,
+  /// before the user's opt-in is taken into account. The only thing that may
+  /// read this is the UI deciding whether to offer that opt-in — permission sets
+  /// derive from [isMindfulnessAvailable].
+  bool isMindfulnessSupportedByDevice();
 
   Future<Result<Set<String>>> grantedPermissions();
 

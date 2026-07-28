@@ -146,7 +146,7 @@ class _SummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.favorite, color: AppColors.heart),
+                const Icon(Icons.favorite_border, color: AppColors.heart),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

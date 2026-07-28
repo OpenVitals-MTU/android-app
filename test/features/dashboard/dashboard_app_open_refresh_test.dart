@@ -31,6 +31,11 @@ class _MutableHealthDataSource extends HealthDataSource {
   HealthConnectAvailability _availability;
   Set<String> granted;
 
+  /// How many times the granted set has been read. The dashboard no longer
+  /// renders anything when a permission is missing, so this counter is the only
+  /// honest way to prove the set was re-resolved on resume.
+  int grantedReads = 0;
+
   set current(HealthConnectAvailability value) {
     _availability = value;
     cachedAvailability = value;
@@ -40,7 +45,15 @@ class _MutableHealthDataSource extends HealthDataSource {
   Future<HealthConnectAvailability> availability() async => _availability;
 
   @override
-  Future<Set<String>> grantedPermissions() async => granted;
+  Future<Set<String>> grantedPermissions() async => readGranted();
+
+  /// Counted read of the granted set. `grantedHealthPermissionsProvider` is
+  /// overridden onto this rather than onto the field, so re-resolving the
+  /// provider is what the counter observes.
+  Future<Set<String>> readGranted() async {
+    grantedReads++;
+    return granted;
+  }
 }
 
 /// Counts loads, so a test can prove a refresh actually re-read rather than
@@ -75,8 +88,8 @@ class _RecordingScheduler implements HistorySyncScheduler {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-final Set<String> _minimumPermissions =
-    HealthDataSource().permissionService.minimumOnboardingPermissions;
+final Set<String> _requiredPermissions =
+    HealthDataSource().permissionService.requiredOnboardingPermissions;
 
 void main() {
   late _MutableHealthDataSource source;
@@ -98,7 +111,7 @@ void main() {
 
     source = _MutableHealthDataSource(
       availability,
-      granted ?? _minimumPermissions,
+      granted ?? _requiredPermissions,
     );
     useCase = _CountingUseCase();
     scheduler = _RecordingScheduler();
@@ -114,7 +127,7 @@ void main() {
         healthConnectAvailabilityProvider
             .overrideWith((ref) async => source.availability()),
         grantedHealthPermissionsProvider
-            .overrideWith((ref) async => source.granted),
+            .overrideWith((ref) async => source.readGranted()),
         loadDashboardDayUseCaseProvider.overrideWithValue(useCase),
         historySyncSchedulerProvider.overrideWithValue(scheduler),
       ],
@@ -177,17 +190,19 @@ void main() {
         availability: HealthConnectAvailability.available,
         granted: const <String>{},
       );
-      expect(find.text('Set up your health data'), findsOneWidget);
+      final readsBefore = source.grantedReads;
+      expect(readsBefore, greaterThan(0));
 
       // Granted in the Health Connect app while OpenVitals was backgrounded.
-      source.granted = _minimumPermissions;
+      source.granted = _requiredPermissions;
       now = now.add(const Duration(minutes: 5));
       await resume(tester);
 
-      // The promo card is the dashboard's rendering of "the minimum permissions
-      // were never granted". Its disappearance is the granted set having been
-      // re-resolved, which nothing used to do outside an explicit tap.
-      expect(find.text('Set up your health data'), findsNothing);
+      // This used to be asserted through a promo card disappearing. That card is
+      // gone — the dashboard no longer prompts for anything — so the re-resolve
+      // is asserted directly. Nothing outside an explicit tap used to do it.
+      expect(source.grantedReads, greaterThan(readsBefore));
+      expect(find.byType(SummaryRingCard), findsNWidgets(2));
     });
   });
 

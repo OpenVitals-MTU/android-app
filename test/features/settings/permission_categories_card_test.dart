@@ -59,21 +59,23 @@ Future<Widget> _bootstrap(_FakeHealthDataSource dataSource) async {
 void main() {
   testWidgets('renders a row per category with granted/optional status',
       (tester) async {
-    // Grant the full core (activity & sleep) set so it reads as Granted; leave
-    // the rest ungranted so they read as Optional / Not supported.
+    // Grant the whole Sleep category so it reads as Granted; leave the rest
+    // ungranted so they read as Optional / Not supported. Sleep is the smallest
+    // category — one record, read and write — which is why it is the one used
+    // here.
     final dataSource = _FakeHealthDataSource(granted: {
-      'android.permission.health.READ_STEPS',
-      'android.permission.health.READ_DISTANCE',
-      'android.permission.health.READ_EXERCISE',
       'android.permission.health.READ_SLEEP',
+      'android.permission.health.WRITE_SLEEP',
     });
     await tester.pumpWidget(await _bootstrap(dataSource));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    // All ten Kotlin categories render (base taxonomy leaves every set
-    // non-empty), so titles for the unambiguous ones are present.
-    expect(find.text('Activity & sleep'), findsOneWidget);
+    // Health Connect's own category names, matching the headings the system
+    // dialog draws.
+    expect(find.text('Activity'), findsOneWidget);
+    expect(find.text('Body measurements'), findsOneWidget);
+    expect(find.text('Sleep'), findsOneWidget);
     expect(find.text('Cycle tracking'), findsOneWidget);
     // The fully-granted category shows Granted; ungranted ones show Optional.
     expect(find.text('Granted'), findsWidgets);

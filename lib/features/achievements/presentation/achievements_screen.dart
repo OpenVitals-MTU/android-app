@@ -160,7 +160,7 @@ class AchievementSummaryCard extends StatelessWidget {
             Row(
               children: [
                 _IconBadge(
-                  icon: Icons.workspace_premium,
+                  icon: Icons.workspace_premium_outlined,
                   color: theme.colorScheme.primary,
                   isUnlocked: true,
                 ),
@@ -376,7 +376,7 @@ class AchievementBadgeCard extends StatelessWidget {
                           ),
                           Icon(
                             progress.isUnlocked
-                                ? Icons.check_circle
+                                ? Icons.check_circle_outline
                                 : Icons.lock_outline,
                             size: 20,
                             color: progress.isUnlocked

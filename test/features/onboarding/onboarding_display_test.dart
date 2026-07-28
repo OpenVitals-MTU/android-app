@@ -25,7 +25,7 @@ const _catalog = OnboardingPermissionCatalog(
       available: false,
     ),
   ],
-  minimumPermissions: {'steps', 'sleep'},
+  requiredPermissions: {'steps', 'sleep'},
   allPermissions: {'steps', 'sleep', 'routes', 'mindfulness'},
 );
 
@@ -36,10 +36,12 @@ void main() {
   test('a fresh install: nothing granted, everything outstanding', () {
     final display = buildOnboardingDisplay(_catalog, const <String>{});
 
-    expect(display.minimumGranted, isFalse);
-    expect(display.missingMinimum, {'steps', 'sleep'});
-    // The optional offer is everything else — the minimum is not counted twice.
-    expect(display.missingOptional, {'routes', 'mindfulness'});
+    expect(display.requiredGranted, isFalse);
+    expect(display.missingRequired, {'steps', 'sleep'});
+    // The opt-in rows are NOT folded into the required set — there is no second
+    // "grant the rest" request for them to feed.
+    expect(display.missingRequired, isNot(contains('routes')));
+    expect(display.missingRequired, isNot(contains('mindfulness')));
 
     final activity = _row(display, 'activity_sleep');
     expect(activity.total, 2);
@@ -58,17 +60,20 @@ void main() {
     expect(activity.partial, isTrue);
     expect(activity.fullyGranted, isFalse);
     expect(activity.missingRequestable, {'sleep'});
-    expect(display.missingMinimum, {'sleep'});
-    expect(display.minimumGranted, isFalse);
+    expect(display.missingRequired, {'sleep'});
+    expect(display.requiredGranted, isFalse);
   });
 
-  test('the minimum being granted is what turns the button into Continue', () {
+  test('the required set being granted turns the button into Continue, even '
+      'with the opt-in rows still outstanding', () {
     final display = buildOnboardingDisplay(_catalog, const {'steps', 'sleep'});
 
-    expect(display.minimumGranted, isTrue);
-    expect(display.missingMinimum, isEmpty);
-    expect(display.missingOptional, {'routes', 'mindfulness'});
+    expect(display.requiredGranted, isTrue);
+    expect(display.missingRequired, isEmpty);
     expect(_row(display, 'activity_sleep').fullyGranted, isTrue);
+    // Routes and mindfulness are still missing and that is fine: neither can
+    // hold onboarding shut.
+    expect(_row(display, 'additional_data_access').fullyGranted, isFalse);
   });
 
   test('a manual-only category cannot be granted by the runtime dialog', () {
@@ -101,16 +106,15 @@ void main() {
     final display = buildOnboardingDisplay(
       const OnboardingPermissionCatalog(
         categories: [],
-        minimumPermissions: {},
+        requiredPermissions: {},
         allPermissions: {},
       ),
       const <String>{},
     );
 
     expect(display.rows, isEmpty);
-    expect(display.missingMinimum, isEmpty);
-    expect(display.missingOptional, isEmpty);
+    expect(display.missingRequired, isEmpty);
     // Nothing required is missing, so onboarding can be finished.
-    expect(display.minimumGranted, isTrue);
+    expect(display.requiredGranted, isTrue);
   });
 }

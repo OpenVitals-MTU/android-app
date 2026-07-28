@@ -20,18 +20,24 @@ For the exact permission reference, see [Permissions](../app/permissions.md). Fo
 
 ### Grant permissions
 
-1. Tap **Grant required Health Connect permissions**. This asks only for the minimum to get started — **activity, sleep, and heart rate**.
-2. Once the minimum is granted, that button becomes **Continue** (which finishes onboarding and opens the dashboard), and a **Grant remaining available permissions** button appears to allow everything else optional in one step.
-3. Prefer to be selective? Use the **per-category rows** under **Health Connect permissions** — each has a **Grant**, **Review** (partly granted), or **Open** action and describes exactly what it will request.
-4. **Health history, background access, and exercise routes** live under the **Additional data access** category. Android can't grant these from the in-app dialog, so its **Open settings** action sends you to the Health Connect settings page to enable them manually.
+1. Tap **Grant Health Connect access**. This asks — in a single request — for every permission the app uses that your device's Health Connect can actually grant.
+2. **All of them are required.** The button only becomes **Continue** (which finishes onboarding and opens the dashboard) once nothing is outstanding. If you leave something out of the dialog, tap the button again to be asked once more.
+3. Afterwards you are sent to the **Health Connect settings page** once, to finish the things Android's in-app dialog cannot grant: **health history, background access, and exercise routes** (the **Additional data access** row). These never block **Continue**.
+4. Two groups are **optional** and listed as their own rows: **Cycle tracking** (menstruation, ovulation, sexual activity and the rest) and **Mindfulness**. Grant them from their row if you want them.
 
-You don't have to grant everything — the app runs with whatever you allow, and screens for ungranted categories simply stay empty. You can add or change permissions any time at **Settings › Health Connect**.
+**Mindfulness** additionally has an opt-in switch, and it only appears on devices whose Health Connect reports the feature. It is **off by default**: some Health Connect versions report support for mindfulness but cannot draw its permission row, and asking for it crashes the system Health Connect app — after which nothing can be granted at all. Turning the switch on adds a Mindfulness row that requests it *on its own*, so if your device can't cope, nothing else is affected. If Health Connect crashes, turn the switch back off.
+
+The **per-category rows** under **Health Connect permissions** show what each group covers and how much of it is granted, with a **Grant**, **Review** (partly granted), or **Open** action. You can change any permission later at **Settings › Health Connect**.
+
+If a permission your device's Health Connect doesn't recognise, the app never asks for it — it is filtered out before the dialog opens, and the category is shown as **Not supported** rather than as something you failed to grant.
 
 ## First Run
 
-Onboarding introduces the app, checks Health Connect availability, and helps the user grant useful permission groups.
+Onboarding introduces the app, checks Health Connect availability, and asks for the permission set the app needs in one request.
 
-OpenVitals can continue with limited data when some permissions are skipped. Missing permissions are surfaced later on the dashboard, detail screens, settings, imports, and entry flows where they matter.
+Onboarding does not finish until that set is granted. The two optional groups (cycle tracking, mindfulness) and the settings-only ones (history, background access, exercise routes) are excluded from it — requiring something the dialog cannot grant would be an onboarding nobody could leave. Missing optional permissions are surfaced later on the dashboard, detail screens, settings, imports, and entry flows where they matter.
+
+Widening the required set is versioned (`HealthPermissionService.PERMISSION_SET_VERSION`, recorded per user). A user who onboarded under an older, narrower set is routed through onboarding once more rather than left behind permission gates forever.
 
 ## Health Connect Availability
 

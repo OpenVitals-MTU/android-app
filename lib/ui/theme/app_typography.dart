@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 
-/// Port of the Kotlin `ui/theme/Type.kt` `AppTypography`.
+/// The app's type scale. Two deliberate relationships to Material 3:
 ///
-/// Compose `Typography` slots map onto Flutter's [TextTheme] slots one-to-one
-/// (headlineLarge, titleMedium, bodySmall, labelLarge, …). Font sizes are given
-/// in logical pixels (Compose `sp` ≈ Flutter logical px at default scaling) and
-/// `lineHeight` becomes [TextStyle.height] expressed as a multiple of fontSize.
+/// * **Weights are the brand and deviate upward** — headlines and titles are
+///   heavier than M3's defaults (headlineLarge w700 vs w400, titleLarge w600
+///   vs w400) because OpenVitals is numbers-first: the metric value is the
+///   loudest thing on every screen.
+/// * **Tracking follows M3 exactly.** The Compose port had silently dropped
+///   Material's letter-spacing on the body and title styles (design-system
+///   audit-1, F4); the values below restore `Typography.material2021`:
+///   titleMedium +0.15, titleSmall +0.1, bodyLarge +0.5, bodyMedium +0.25,
+///   bodySmall +0.4. Labels always carried theirs. Headlines track at 0 in M3,
+///   so their absence of a `letterSpacing` is correct, not an omission.
+///
+/// Sizes are logical pixels; `height` is line-height as a multiple of size.
 class AppTypography {
   const AppTypography._();
 
@@ -35,26 +43,31 @@ class AppTypography {
       fontWeight: FontWeight.w500,
       fontSize: 16,
       height: 24 / 16,
+      letterSpacing: 0.15,
     ),
     titleSmall: TextStyle(
       fontWeight: FontWeight.w500,
       fontSize: 14,
       height: 20 / 14,
+      letterSpacing: 0.1,
     ),
     bodyLarge: TextStyle(
       fontWeight: FontWeight.normal,
       fontSize: 16,
       height: 24 / 16,
+      letterSpacing: 0.5,
     ),
     bodyMedium: TextStyle(
       fontWeight: FontWeight.normal,
       fontSize: 14,
       height: 20 / 14,
+      letterSpacing: 0.25,
     ),
     bodySmall: TextStyle(
       fontWeight: FontWeight.normal,
       fontSize: 12,
       height: 16 / 12,
+      letterSpacing: 0.4,
     ),
     labelLarge: TextStyle(
       fontWeight: FontWeight.w500,

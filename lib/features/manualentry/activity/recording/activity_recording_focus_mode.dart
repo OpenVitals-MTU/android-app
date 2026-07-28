@@ -152,7 +152,7 @@ class ActivityRecordingOutdoorModeToggle extends StatelessWidget {
       onPressed: () => onEnabledChange(!enabled),
       tooltip: l10n.cdToggleRecordingOutdoorMode,
       icon: Icon(
-        enabled ? Icons.light_mode : Icons.wb_sunny_outlined,
+        enabled ? Icons.light_mode_outlined : Icons.wb_sunny_outlined,
         // Kotlin tints the enabled icon with the accent of the *app* theme:
         // it must stay legible whichever scheme the toggle switches to.
         color: enabled

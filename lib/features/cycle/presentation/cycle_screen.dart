@@ -82,7 +82,7 @@ List<Widget> _content(
       sectionPadded(
         const MetricCardPlaceholder(
           title: 'Cycle tracking',
-          icon: Icons.calendar_month,
+          icon: Icons.calendar_month_outlined,
           accentColor: AppColors.cycle,
           message: 'No cycle tracking data for this period.',
         ),
@@ -101,7 +101,7 @@ List<Widget> _content(
               title: 'Period days',
               value: formatter.count(display.periodDays),
               unit: 'days',
-              icon: Icons.calendar_month,
+              icon: Icons.calendar_month_outlined,
               accentColor: AppColors.cycle,
               subtitle: periodTitle(
                 l10n,
@@ -359,7 +359,7 @@ class _CycleStatisticsCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.insights, color: AppColors.cycle, size: 20),
+                const Icon(Icons.insights_outlined, color: AppColors.cycle, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Statistics',

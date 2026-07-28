@@ -143,7 +143,7 @@ class _RoleStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        _hero(context, Icons.devices_other, l10n.deviceSyncRoleHeading,
+        _hero(context, Icons.devices_other_outlined, l10n.deviceSyncRoleHeading,
             l10n.deviceSyncRoleBody),
         if (state.bluetoothUnavailable)
           _banner(context, l10n.deviceSyncBluetoothOff),
@@ -153,7 +153,7 @@ class _RoleStep extends StatelessWidget {
         Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: ListTile(
-            leading: const Icon(Icons.wifi_tethering),
+            leading: const Icon(Icons.wifi_tethering_outlined),
             title: Text(l10n.deviceSyncHostOption),
             subtitle: Text(l10n.deviceSyncHostOptionBody),
             trailing: const Icon(Icons.chevron_right),
@@ -163,7 +163,7 @@ class _RoleStep extends StatelessWidget {
         Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: ListTile(
-            leading: const Icon(Icons.phonelink_ring),
+            leading: const Icon(Icons.phonelink_ring_outlined),
             title: Text(l10n.deviceSyncGuestOption),
             subtitle: Text(l10n.deviceSyncGuestOptionBody),
             trailing: const Icon(Icons.chevron_right),
@@ -199,7 +199,7 @@ class _HostStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        _hero(context, Icons.wifi_tethering, l10n.deviceSyncHostHeading,
+        _hero(context, Icons.wifi_tethering_outlined, l10n.deviceSyncHostHeading,
             l10n.deviceSyncHostBody),
         Card(
           margin: const EdgeInsets.all(16),
@@ -249,7 +249,7 @@ class _ScanStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _hero(context, Icons.bluetooth_searching, l10n.deviceSyncScanHeading,
+        _hero(context, Icons.bluetooth_searching_outlined, l10n.deviceSyncScanHeading,
             l10n.deviceSyncScanBody),
         Expanded(
           child: ListView(
@@ -259,7 +259,7 @@ class _ScanStep extends StatelessWidget {
                   margin:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: ListTile(
-                    leading: const Icon(Icons.smartphone),
+                    leading: const Icon(Icons.smartphone_outlined),
                     title: Text(device.name ?? device.address),
                     subtitle: device.bonded ? Text(l10n.deviceSyncPaired) : null,
                     trailing: const Icon(Icons.chevron_right),
@@ -316,7 +316,7 @@ class _CodeStep extends StatelessWidget {
         '';
     return ListView(
       children: [
-        _hero(context, Icons.password, l10n.deviceSyncCodeHeading(name),
+        _hero(context, Icons.password_outlined, l10n.deviceSyncCodeHeading(name),
             l10n.deviceSyncCodeBody),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),

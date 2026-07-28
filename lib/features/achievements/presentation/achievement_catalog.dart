@@ -8,10 +8,10 @@ const double _metersPerMile = 1609.344;
 /// The badge family, used for filtering + accent/icon selection.
 /// Port of Kotlin `AchievementCategory`.
 enum AchievementCategory {
-  dailySteps('Daily steps', Icons.directions_walk, AppColors.steps),
-  lifetimeDistance('Lifetime distance', Icons.straighten, AppColors.distance),
-  dailyFloors('Daily floors', Icons.stairs, AppColors.floors),
-  lifetimeFloors('Lifetime floors', Icons.workspace_premium, AppColors.elevation);
+  dailySteps('Daily steps', Icons.directions_walk_outlined, AppColors.steps),
+  lifetimeDistance('Lifetime distance', Icons.straighten_outlined, AppColors.distance),
+  dailyFloors('Daily floors', Icons.stairs_outlined, AppColors.floors),
+  lifetimeFloors('Lifetime floors', Icons.workspace_premium_outlined, AppColors.elevation);
 
   const AchievementCategory(this.label, this.icon, this.color);
 

@@ -59,7 +59,7 @@ class _MindfulnessTimerCardState extends ConsumerState<MindfulnessTimerCard> {
           children: [
             Row(
               children: [
-                const Icon(Icons.self_improvement,
+                const Icon(Icons.self_improvement_outlined,
                     color: AppColors.mindfulness, size: 22),
                 const SizedBox(width: 12),
                 Expanded(

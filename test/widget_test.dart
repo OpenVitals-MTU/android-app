@@ -17,6 +17,7 @@ import 'package:openvitals/domain/preferences/app_language.dart';
 import 'package:openvitals/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:openvitals/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:openvitals/data/source/health/health_data_source.dart';
+import 'package:openvitals/domain/health/health_permissions.dart';
 
 /// Builds the app wrapped in a `ProviderScope` with platform providers
 /// overridden. Returns the widget (rather than the override list) because
@@ -24,7 +25,16 @@ import 'package:openvitals/data/source/health/health_data_source.dart';
 /// cannot be named in a signature.
 Future<Widget> _bootstrapApp({required bool onboardingComplete}) async {
   SharedPreferences.setMockInitialValues(
-    onboardingComplete ? {'onboarding_done': true} : {},
+    onboardingComplete
+        // Onboarding is complete only for the CURRENT permission set: the flag
+        // alone is what a user who onboarded under an older, narrower set has,
+        // and they are meant to be sent back through it once.
+        ? {
+            'onboarding_done': true,
+            'last_prompted_permission_set_version':
+                HealthPermissionService.PERMISSION_SET_VERSION,
+          }
+        : <String, Object>{},
   );
   final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
@@ -67,6 +77,34 @@ void main() {
     expect(find.byType(DashboardScreen), findsOneWidget);
     // The dashboard renders inside the adaptive scaffold's nav suite.
     expect(find.text('OpenVitals'), findsWidgets);
+  });
+
+  testWidgets(
+      'a user who onboarded under an older permission set is sent back through '
+      'onboarding', (WidgetTester tester) async {
+    // The whole point of widening the required set: `onboarding_done` on its own
+    // is a one-way door, and these users would otherwise never be asked for the
+    // permissions the app now needs — they would just sit behind gates.
+    SharedPreferences.setMockInitialValues(
+      const {'onboarding_done': true, 'last_prompted_permission_set_version': 2},
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        openVitalsDatabaseProvider.overrideWith((ref) {
+          final db = OpenVitalsDatabase(NativeDatabase.memory());
+          ref.onDispose(db.close);
+          return db;
+        }),
+        healthDataSourceProvider.overrideWithValue(HealthDataSource()),
+      ],
+      child: const OpenVitalsApp(),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
   });
 
   testWidgets('the shell offers the SHIPPED locales, not every ARB present',

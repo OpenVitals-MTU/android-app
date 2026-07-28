@@ -92,7 +92,7 @@ List<Widget> _content(
       sectionPadded(
         const MetricCardPlaceholder(
           title: 'Mindfulness',
-          icon: Icons.self_improvement,
+          icon: Icons.self_improvement_outlined,
           accentColor: AppColors.mindfulness,
           message: 'No mindfulness sessions for this period.',
         ),
@@ -115,7 +115,7 @@ List<Widget> _content(
               title: 'Total mindfulness',
               value: total.value,
               unit: total.unit,
-              icon: Icons.self_improvement,
+              icon: Icons.self_improvement_outlined,
               accentColor: AppColors.mindfulness,
               subtitle: periodTitle(
                 l10n,
@@ -214,7 +214,7 @@ class _MindfulnessSessionRow extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.self_improvement,
+            const Icon(Icons.self_improvement_outlined,
                 color: AppColors.mindfulness, size: 24),
             const SizedBox(width: 12),
             Expanded(
@@ -289,7 +289,7 @@ class _MindfulnessStatisticsCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.insights,
+                const Icon(Icons.insights_outlined,
                     color: AppColors.mindfulness, size: 20),
                 const SizedBox(width: 8),
                 Text(

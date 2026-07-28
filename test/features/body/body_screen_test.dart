@@ -211,7 +211,7 @@ void main() {
         ProviderScope.containerOf(tester.element(find.byType(BodyScreen)));
 
     // The app-bar toggle drives the shared edit mode.
-    await tester.tap(find.byIcon(Icons.tune));
+    await tester.tap(find.byIcon(Icons.tune_outlined));
     await tester.pump();
     expect(container.read(metricDetailSectionEditProvider), isTrue);
 

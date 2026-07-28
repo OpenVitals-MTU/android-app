@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// The inset, tinted container the Kotlin app uses inside cards to group a
-/// sub-section — ported from `OpenVitalsSurface` in `DetailCards.kt`.
+import '../theme/design_tokens.dart';
+
+/// The inset, tinted container used inside cards to group a sub-section.
 ///
 /// Only the `Neutral` and `Metric` styles are ported: those are the two the
 /// callers here use. The Kotlin composable also carries `Accent`, `Warning` and
@@ -23,7 +24,7 @@ class OpenVitalsSurface extends StatelessWidget {
     this.containerColor,
     this.contentPadding = EdgeInsets.zero,
     this.border,
-    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
+    this.borderRadius = Radii.cardBorder,
   });
 
   final Widget child;
@@ -34,7 +35,8 @@ class OpenVitalsSurface extends StatelessWidget {
   final EdgeInsetsGeometry contentPadding;
   final BoxBorder? border;
 
-  /// Material's medium shape (12dp), matching `MaterialTheme.shapes.medium`.
+  /// The card corner ([Radii.card], 12dp) — the same token [OpenVitalsCard]
+  /// draws, so a surface nested in a card cannot have a different corner.
   final BorderRadius borderRadius;
 
   @override

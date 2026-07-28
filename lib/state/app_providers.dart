@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/presentation/unit_formatter.dart';
 import '../di/providers.dart';
+import '../domain/health/health_permissions.dart';
 import '../domain/preferences/activity_week_mode.dart';
 import '../domain/preferences/app_language.dart';
 import '../domain/preferences/app_theme_mode.dart';
@@ -71,12 +72,21 @@ final unitFormatterProvider = Provider<UnitFormatter>((ref) {
   return UnitFormatter(unitSystemProvider: () => unitSystem);
 });
 
-/// Whether onboarding has been completed. Read once to pick the start
-/// destination; not backed by a listenable in the repository, so this is a
-/// plain snapshot read (the onboarding flow persists the flag and then routes
-/// on to the dashboard imperatively).
+/// Whether onboarding has been completed *for the current permission set*. Read
+/// once to pick the start destination; not backed by a listenable in the
+/// repository, so this is a plain snapshot read (the onboarding flow persists
+/// the flags and then routes on to the dashboard imperatively).
+///
+/// The version check is what makes widening the required permission set mean
+/// anything to existing users. `onboardingDone` alone is a one-way door: someone
+/// who finished onboarding when it asked for less would never be asked again,
+/// and would sit behind permission gates on every screen instead. Bumping
+/// [HealthPermissionService.PERMISSION_SET_VERSION] sends them through once more.
 final onboardingCompleteProvider = Provider<bool>((ref) {
-  return ref.watch(preferencesRepositoryProvider).onboardingDone;
+  final prefs = ref.watch(preferencesRepositoryProvider);
+  return prefs.onboardingDone &&
+      prefs.lastPromptedPermissionSetVersion >=
+          HealthPermissionService.PERMISSION_SET_VERSION;
 });
 
 /// The period mode driving *every* period title — the navigator's and the chart

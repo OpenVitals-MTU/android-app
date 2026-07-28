@@ -6,8 +6,8 @@ void main() {
   const service = HealthPermissionService();
 
   group('phased permission sets', () {
-    test('PERMISSION_SET_VERSION is 2', () {
-      expect(HealthPermissionService.PERMISSION_SET_VERSION, 2);
+    test('PERMISSION_SET_VERSION is 3', () {
+      expect(HealthPermissionService.PERMISSION_SET_VERSION, 3);
     });
 
     test('phase1 == core == steps/distance/exercise/sleep reads', () {
@@ -99,10 +99,64 @@ void main() {
         service.dataImportWritePermissions,
         service.phase2Permissions,
         service.requestableWritePermissions,
+        service.requiredOnboardingPermissions,
       }) {
         expect(set.contains(HcPermissions.readMindfulness), isFalse);
         expect(set.contains(HcPermissions.writeMindfulness), isFalse);
       }
+    });
+
+    // The opt-in exists because some providers crash their own permission screen
+    // on mindfulness, taking every other permission down with them. Onboarding
+    // asks for everything in ONE request, so if mindfulness could get into it an
+    // opted-in user on such a device could not grant anything at all.
+    test('an AVAILABLE mindfulness still stays out of the required set', () {
+      const withMindfulness = HealthPermissionService(
+        HealthConnectFeatureFlags(mindfulnessAvailable: true),
+      );
+      expect(withMindfulness.mindfulnessPermissions, isNotEmpty);
+      expect(
+        withMindfulness.requiredOnboardingPermissions
+            .where((p) => p.contains('MINDFULNESS')),
+        isEmpty,
+      );
+    });
+
+    test('the device answer and the opt-in are separate flags', () {
+      // Device says yes, user has not opted in: offer the switch, ask for
+      // nothing.
+      const deviceOnly = HealthPermissionService(
+        HealthConnectFeatureFlags(mindfulnessSupportedByDevice: true),
+      );
+      expect(deviceOnly.isMindfulnessSupportedByDevice(), isTrue);
+      expect(deviceOnly.isMindfulnessAvailable(), isFalse);
+      expect(deviceOnly.mindfulnessPermissions, isEmpty);
+
+      // Omitting the device flag defaults it to the resolved answer, so the
+      // existing single-flag construction keeps meaning what it meant.
+      const both = HealthPermissionService(
+        HealthConnectFeatureFlags(mindfulnessAvailable: true),
+      );
+      expect(both.isMindfulnessSupportedByDevice(), isTrue);
+    });
+
+    test('cycle tracking stays out of the required set, both directions', () {
+      expect(
+        service.requiredOnboardingPermissions
+            .intersection(service.cyclePermissions),
+        isEmpty,
+      );
+      expect(
+        service.requiredOnboardingPermissions
+            .intersection(service.cycleWritePermissions),
+        isEmpty,
+      );
+      // But the import set still carries the cycle writes — the split is for
+      // onboarding's benefit, not the CSV importer's.
+      expect(
+        service.dataImportWritePermissions,
+        containsAll(service.cycleWritePermissions),
+      );
     });
 
     test('skin temperature gated on the feature flag', () {

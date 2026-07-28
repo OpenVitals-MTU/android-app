@@ -22,7 +22,7 @@ enum SettingsSection {
     route: AppRoutes.settingsSensors,
     title: 'Sensors',
     summary: 'Connect Bluetooth heart-rate sensors',
-    icon: Icons.bluetooth,
+    icon: Icons.bluetooth_outlined,
   ),
   // Its own section, not a group inside Sensors: a sensor streams while you
   // record and a watch hands over files afterwards. They shared a screen only

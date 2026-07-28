@@ -21,19 +21,19 @@ const Color _glucoseColor = Color(0xFF8E5D42);
 /// requires, and the [HeartPeriodLoadRequest] its screen loads through
 /// [LoadHeartPeriodUseCase] (heart-only vs vitals-only).
 enum HeartMetric {
-  averageHeartRate('AVG_HEART_RATE', 'Heart rate', Icons.favorite),
+  averageHeartRate('AVG_HEART_RATE', 'Heart rate', Icons.favorite_border),
   restingHeartRate('RESTING_HEART_RATE', 'Resting heart rate',
       Icons.favorite_border),
   hrv('HRV', 'Heart rate variability', Icons.favorite_border),
-  bloodPressure('BLOOD_PRESSURE', 'Blood pressure', Icons.favorite),
+  bloodPressure('BLOOD_PRESSURE', 'Blood pressure', Icons.favorite_border),
   spo2('SPO2', 'Blood oxygen', Icons.favorite_border),
-  vo2Max('VO2_MAX', 'VO2 max', Icons.speed),
-  respiratoryRate('RESPIRATORY_RATE', 'Respiratory rate', Icons.air),
+  vo2Max('VO2_MAX', 'VO2 max', Icons.speed_outlined),
+  respiratoryRate('RESPIRATORY_RATE', 'Respiratory rate', Icons.air_outlined),
   bodyTemperature('BODY_TEMPERATURE', 'Body temperature',
-      Icons.device_thermostat),
-  bloodGlucose('BLOOD_GLUCOSE', 'Blood glucose', Icons.favorite),
+      Icons.device_thermostat_outlined),
+  bloodGlucose('BLOOD_GLUCOSE', 'Blood glucose', Icons.favorite_border),
   skinTemperature('SKIN_TEMPERATURE', 'Skin temperature',
-      Icons.device_thermostat);
+      Icons.device_thermostat_outlined);
 
   const HeartMetric(this.routeName, this.title, this.icon);
 

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// The canonical flat card used across the shell and charts, ported from the
-/// Kotlin `OpenVitalsCard` (in `DetailCards.kt`): zero elevation, a
-/// `surfaceContainer` background, and the Material medium (12dp) shape.
+import '../theme/design_tokens.dart';
+
+/// The canonical flat card used across the shell and charts: zero elevation, a
+/// `surfaceContainer` background, and the [Radii.card] (12dp) shape.
+///
+/// The corner comes from the token rather than a literal because this card and
+/// [OpenVitalsSurface] have to agree, and for a long time they only agreed by
+/// coincidence — the same `12` typed into two files, either of which could have
+/// been retuned alone.
 class OpenVitalsCard extends StatelessWidget {
   const OpenVitalsCard({
     super.key,
@@ -30,9 +36,7 @@ class OpenVitalsCard extends StatelessWidget {
       // non-interactive cards need no child clip at all, and interactive ones
       // only need a cheap hard-edge clip to keep the ink ripple in the corners.
       clipBehavior: onTap == null ? Clip.none : Clip.hardEdge,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: Radii.cardBorder),
       child: onTap == null ? child : InkWell(onTap: onTap, child: child),
     );
   }

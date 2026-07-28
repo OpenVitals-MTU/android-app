@@ -273,7 +273,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
   ),
   ManualEntryWidgetId.mindfulness: const _ManualEntryWidgetSpec(
     title: 'Mindfulness',
-    icon: Icons.self_improvement,
+    icon: Icons.self_improvement_outlined,
     accentColor: AppColors.mindfulness,
     location: AppRoutes.mindfulnessEntry,
   ),
@@ -303,7 +303,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
   ),
   ManualEntryWidgetId.bloodPressure: _ManualEntryWidgetSpec(
     title: 'Blood pressure',
-    icon: Icons.favorite,
+    icon: Icons.favorite_border,
     accentColor: AppColors.vitals,
     location: AppRoutes.vitalsMeasurementEntryLocation(
       VitalsMeasurementType.bloodPressure.storageName,
@@ -319,7 +319,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
   ),
   ManualEntryWidgetId.respiratoryRate: _ManualEntryWidgetSpec(
     title: 'Respiratory rate',
-    icon: Icons.air,
+    icon: Icons.air_outlined,
     accentColor: _respiratoryColor,
     location: AppRoutes.vitalsMeasurementEntryLocation(
       VitalsMeasurementType.respiratoryRate.storageName,
@@ -327,7 +327,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
   ),
   ManualEntryWidgetId.bodyTemperature: _ManualEntryWidgetSpec(
     title: 'Body temperature',
-    icon: Icons.device_thermostat,
+    icon: Icons.device_thermostat_outlined,
     accentColor: _temperatureColor,
     location: AppRoutes.vitalsMeasurementEntryLocation(
       VitalsMeasurementType.bodyTemperature.storageName,

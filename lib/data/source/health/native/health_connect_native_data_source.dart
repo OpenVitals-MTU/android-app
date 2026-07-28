@@ -233,6 +233,10 @@ Duration? _zoneOffset(int? seconds) =>
     final flags = HealthConnectFeatureFlags(
       skinTemperatureAvailable: results[0],
       mindfulnessAvailable: results[1] && mindfulnessIntegrationEnabled(),
+      // The device's answer on its own, so onboarding and settings can decide
+      // whether the opt-in is even worth offering. Nothing derives a permission
+      // set from it.
+      mindfulnessSupportedByDevice: results[1],
       plannedExerciseAvailable: results[2],
       healthDataHistoryAvailable: results[3],
       backgroundReadAvailable: results[4],
@@ -241,11 +245,24 @@ Duration? _zoneOffset(int? seconds) =>
     return flags;
   }
 
+  /// Requests [permissions], minus any the installed provider does not define.
+  ///
+  /// The filter is here, at the boundary, and not left to the callers. Every
+  /// permission set in [HealthPermissionService] already runs through
+  /// `_supported()` — but "every call site remembers" is precisely the invariant
+  /// that failed before (see the note on
+  /// `HealthPermissionService.mindfulnessPermissions`), and the cost of it
+  /// failing is not a refused permission: asking for one the provider does not
+  /// define throws, and on some providers takes their permission screen down
+  /// with it, leaving the user unable to grant anything at all. Onboarding now
+  /// asks in ONE request, so a single bad string would cost the whole grant.
   @override
   Future<bool> requestPermissions(Set<String> permissions) async {
     if (permissions.isEmpty) return false;
+    final requestable = permissionService.supportedOnly(permissions);
+    if (requestable.isEmpty) return false;
     return _catch(
-      () => _api.requestPermissions(permissions.toList()),
+      () => _api.requestPermissions(requestable.toList()),
       false,
     );
   }

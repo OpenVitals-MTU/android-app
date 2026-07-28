@@ -103,7 +103,7 @@ class _SensorChip extends StatelessWidget {
     // The Kotlin chip is a disabled AssistChip: it displays, it does not act.
     return Chip(
       avatar: Icon(
-        Icons.bluetooth,
+        Icons.bluetooth_outlined,
         size: 16,
         color: bleConnectionStatusColor(status.status, scheme),
       ),

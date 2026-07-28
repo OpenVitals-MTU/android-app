@@ -354,6 +354,13 @@ class PreferencesRepository {
         value.clamp(minLowHeartRateThresholdBpm, maxLowHeartRateThresholdBpm),
       );
 
+  /// The `HealthPermissionService.PERMISSION_SET_VERSION` onboarding last asked
+  /// for, or 0 for a user who finished onboarding before this was recorded.
+  ///
+  /// Stamped by `OnboardingViewModel.completeOnboarding` and read by the router:
+  /// widening the required set is worth nothing to the users who already have
+  /// `onboardingDone`, since they would never be asked again. Bumping the
+  /// constant sends them back through onboarding once.
   int get lastPromptedPermissionSetVersion =>
       _prefs.getInt(_keyLastPromptedPermissionSetVersion) ?? 0;
   set lastPromptedPermissionSetVersion(int value) =>

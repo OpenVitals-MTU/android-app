@@ -370,7 +370,7 @@ class _HydrationStatisticsCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.insights, color: AppColors.hydration, size: 20),
+                Icon(Icons.insights_outlined, color: AppColors.hydration, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Statistics',
