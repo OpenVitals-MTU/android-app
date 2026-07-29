@@ -8,6 +8,8 @@ import 'package:openvitals/devices/garmin/garmin_crc.dart';
 import 'package:openvitals/devices/garmin/garmin_file_types.dart';
 import 'package:openvitals/devices/garmin/garmin_gfdi_frame.dart';
 import 'package:openvitals/devices/garmin/garmin_messages.dart';
+import 'package:openvitals/devices/garmin/garmin_notification_messages.dart';
+import 'package:openvitals/devices/garmin/garmin_notifications_handler.dart';
 import 'package:openvitals/devices/garmin/garmin_session.dart';
 
 Uint8List _b(List<int> xs) => Uint8List.fromList(xs);
@@ -668,6 +670,8 @@ void main() {
       expect(await session.done, isEmpty);
     });
   });
+
+  _notificationTests();
 }
 
 /// A watch that corrupts the CRC of one file's first chunk.
@@ -745,4 +749,297 @@ class _ChattyWatch extends _FakeWatch {
     }
     super._startServing(index);
   }
+}
+
+/// A watch that only cares about notifications: it subscribes, asks for a
+/// notification's text, and acknowledges each chunk.
+///
+/// Separate from [_FakeWatch] because a notification session runs with
+/// `syncFiles: false` and never touches the directory — mixing the two would
+/// make both harder to read.
+class _NotifyWatch {
+  /// Everything the session put on the wire, decoded.
+  final List<GarminGfdiFrame> received = [];
+
+  Future<void> send(Uint8List frame) async {
+    received.add(GarminGfdiFrame.parse(frame));
+  }
+
+  Iterable<GarminGfdiFrame> ofType(int messageType) =>
+      received.where((f) => f.messageType == messageType);
+
+  /// Responses the session sent, keyed by the message they name.
+  Iterable<GarminGfdiFrame> responsesAbout(int messageType) =>
+      ofType(GarminMessageId.response).where(
+        (f) => f.payload[0] | (f.payload[1] << 8) == messageType,
+      );
+
+  /// The watch asking whether the phone will forward notifications.
+  static Uint8List subscription({required bool enable}) {
+    final w = GarminByteWriter()
+      ..writeByte(enable ? 1 : 0)
+      ..writeByte(0);
+    return GarminGfdiFrame.build(
+        GarminMessageId.notificationSubscription, w.toBytes());
+  }
+
+  /// The watch asking for a notification's text.
+  static Uint8List attributeRequest(int notificationId) {
+    final w = GarminByteWriter()
+      ..writeByte(0) // GET_NOTIFICATION_ATTRIBUTES
+      ..writeInt(notificationId)
+      ..writeByte(1) // TITLE
+      ..writeShort(0)
+      ..writeByte(3) // MESSAGE
+      ..writeShort(0);
+    return GarminGfdiFrame.build(
+        GarminMessageId.notificationControl, w.toBytes());
+  }
+
+  /// The watch acknowledging a chunk.
+  static Uint8List chunkAccepted() {
+    final w = GarminByteWriter()
+      ..writeShort(GarminMessageId.notificationData)
+      ..writeByte(GarminStatus.ack.code)
+      ..writeByte(0); // TransferStatus.OK
+    return GarminGfdiFrame.build(GarminMessageId.response, w.toBytes());
+  }
+}
+
+GarminNotification _phoneNotification({String body = 'On my way'}) =>
+    GarminNotification(
+      id: 0x11223344,
+      packageName: 'com.example.chat',
+      title: 'Ada',
+      body: body,
+      category: GarminNotificationCategory.sms,
+      postedAt: DateTime(2026, 7, 28, 9, 5, 3),
+    );
+
+/// Builds a notification session and its watch. [forwarding] false gives a
+/// session with no handler — a sync, find or settings session.
+({
+  _NotifyWatch watch,
+  GarminSession session,
+  GarminNotificationsHandler? handler,
+}) _notificationSession({bool forwarding = true}) {
+  final watch = _NotifyWatch();
+  final handler =
+      forwarding ? GarminNotificationsHandler(send: watch.send) : null;
+  final session = GarminSession(
+    send: watch.send,
+    bluetoothName: 'Pixel 6 Pro',
+    manufacturer: 'Google',
+    model: 'raven',
+    syncFiles: false,
+    notifications: handler,
+  )..start();
+  return (watch: watch, session: session, handler: handler);
+}
+
+/// The status byte a NOTIFICATION_SUBSCRIPTION response carries: 0 is ENABLED,
+/// 1 is DISABLED.
+int _subscriptionStatus(_NotifyWatch watch) => watch
+    .responsesAbout(GarminMessageId.notificationSubscription)
+    .last
+    .payload[3];
+
+void _notificationTests() {
+  group('notification subscription', () {
+    test('a session carrying a notifications handler replies ENABLED',
+        () async {
+      final s = _notificationSession();
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: true)));
+
+      expect(_subscriptionStatus(s.watch), 0);
+      expect(s.handler!.enabled, isTrue);
+    });
+
+    test('a session with NO handler still replies DISABLED, so sync, find and '
+        'settings sessions are unchanged', () async {
+      final s = _notificationSession(forwarding: false);
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: true)));
+
+      expect(_subscriptionStatus(s.watch), 1);
+    });
+
+    test('a watch that is not yet accepting notifications is STILL told the '
+        'phone is willing', () async {
+      // The reply is the phone's willingness, not the conjunction of both
+      // flags. A watch that has never been told a phone would forward sends
+      // enable=false, so answering DISABLED confirms it and the watch never
+      // flips — which is exactly what kept a real vívoactive 5 silent.
+      final s = _notificationSession();
+      await s.session.handleFrame(
+          GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: false)));
+
+      expect(_subscriptionStatus(s.watch), 0);
+    });
+
+    test("the watch's own flag drives whether anything is announced", () async {
+      final s = _notificationSession();
+      await s.session.handleFrame(
+          GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: false)));
+      expect(s.handler!.enabled, isFalse);
+      s.watch.received.clear();
+
+      await s.handler!.post(_phoneNotification());
+
+      expect(s.watch.ofType(GarminMessageId.notificationUpdate), isEmpty,
+          reason: 'a watch not accepting notifications must not be announced to');
+    });
+
+    test('the subscription gets its purpose-built status and no generic ACK',
+        () async {
+      // The watch asks about once a second until the reply is the right shape.
+      final s = _notificationSession();
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: true)));
+
+      final replies =
+          s.watch.responsesAbout(GarminMessageId.notificationSubscription);
+      expect(replies, hasLength(1));
+      expect(replies.single.payload, hasLength(6));
+    });
+  });
+
+  group('the notification conversation end to end', () {
+    test('announce, answer the request, and acknowledge the whole blob',
+        () async {
+      final s = _notificationSession();
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: true)));
+
+      await s.handler!.post(_phoneNotification());
+      // The announcement carries no text — only the id and the category.
+      final announcement =
+          s.watch.ofType(GarminMessageId.notificationUpdate).single;
+      expect(announcement.payload, hasLength(9));
+
+      // The watch asks, then acknowledges chunks until the phone stops sending.
+      await s.session.handleFrame(GarminGfdiFrame.parse(
+          _NotifyWatch.attributeRequest(0x11223344)));
+      var guard = 0;
+      while (s.watch.responsesAbout(GarminMessageId.notificationData).isEmpty) {
+        if (guard++ > 100) fail('the transfer never finished');
+        await s.session
+            .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.chunkAccepted()));
+      }
+
+      // The blob reassembles into the attributes the watch asked for.
+      final blob = <int>[
+        for (final frame in s.watch.ofType(GarminMessageId.notificationData))
+          ...Uint8List.sublistView(frame.payload, 6),
+      ];
+      expect(String.fromCharCodes(blob), contains('Ada'));
+      expect(String.fromCharCodes(blob), contains('On my way'));
+    });
+
+    test('a control request is answered with a control status BEFORE the first '
+        'chunk', () async {
+      final s = _notificationSession();
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: true)));
+      await s.handler!.post(_phoneNotification());
+      s.watch.received.clear();
+
+      await s.session.handleFrame(GarminGfdiFrame.parse(
+          _NotifyWatch.attributeRequest(0x11223344)));
+
+      expect(
+        s.watch.received.first.messageType,
+        GarminMessageId.response,
+        reason: 'the control status must be the first thing back',
+      );
+      expect(
+        s.watch.received.first.payload[0] |
+            (s.watch.received.first.payload[1] << 8),
+        GarminMessageId.notificationControl,
+      );
+      expect(
+        s.watch.received[1].messageType,
+        GarminMessageId.notificationData,
+      );
+    });
+
+    test('a multi-chunk body arrives in order and reassembles exactly',
+        () async {
+      final s = _notificationSession();
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: true)));
+      final body = List.generate(700, (i) => String.fromCharCode(97 + i % 26))
+          .join();
+      await s.handler!.post(_phoneNotification(body: body));
+
+      await s.session.handleFrame(GarminGfdiFrame.parse(
+          _NotifyWatch.attributeRequest(0x11223344)));
+      var guard = 0;
+      while (s.watch.responsesAbout(GarminMessageId.notificationData).isEmpty) {
+        if (guard++ > 100) fail('the transfer never finished');
+        await s.session
+            .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.chunkAccepted()));
+      }
+
+      final chunks = s.watch.ofType(GarminMessageId.notificationData).toList();
+      expect(chunks.length, greaterThan(1));
+      // Offsets are contiguous and start at zero.
+      var expected = 0;
+      for (final chunk in chunks) {
+        final offset = chunk.payload[4] | (chunk.payload[5] << 8);
+        expect(offset, expected);
+        expected += chunk.payload.length - 6;
+      }
+      final blob = <int>[
+        for (final chunk in chunks) ...Uint8List.sublistView(chunk.payload, 6),
+      ];
+      expect(String.fromCharCodes(blob), contains(body));
+    });
+
+    test('a held notification is announced AFTER the subscription status, '
+        'never before', () async {
+      // The ordering that decided whether the feature worked at all. Announcing
+      // inside the enable handling — before the status went out — put a
+      // NOTIFICATION_UPDATE in front of a watch that had asked to subscribe and
+      // not yet been told it was accepted. It acknowledged the frame and then
+      // never requested the text, which looks identical to a watch that has
+      // notifications switched off.
+      final s = _notificationSession();
+      await s.handler!.post(_phoneNotification()); // held: not yet subscribed
+      expect(s.watch.ofType(GarminMessageId.notificationUpdate), isEmpty);
+      s.watch.received.clear();
+
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: true)));
+
+      final statusIndex = s.watch.received.indexWhere(
+        (f) =>
+            f.messageType == GarminMessageId.response &&
+            f.payload[0] | (f.payload[1] << 8) ==
+                GarminMessageId.notificationSubscription,
+      );
+      final announcementIndex = s.watch.received.indexWhere(
+        (f) => f.messageType == GarminMessageId.notificationUpdate,
+      );
+      expect(statusIndex, isNonNegative);
+      expect(announcementIndex, isNonNegative);
+      expect(statusIndex, lessThan(announcementIndex));
+    });
+
+    test('a control request that arrives before any notification sends only '
+        'the status', () async {
+      final s = _notificationSession();
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.subscription(enable: true)));
+      s.watch.received.clear();
+
+      await s.session
+          .handleFrame(GarminGfdiFrame.parse(_NotifyWatch.attributeRequest(1)));
+
+      expect(s.watch.ofType(GarminMessageId.notificationData), isEmpty);
+      expect(s.watch.responsesAbout(GarminMessageId.notificationControl),
+          hasLength(1));
+    });
+  });
 }

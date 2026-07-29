@@ -42,4 +42,10 @@
     <string name="metric_resting_heart_rate">Resting heart rate</string>
     <string name="metric_weekly_cardio_load">Weekly cardio</string>
     <string name="metric_hydration">Beverages</string>
+    <!--
+        Shown in the system's "Notification access" settings list, next to the
+        toggle the user flips. It is rendered by the OS before any Flutter engine
+        exists, so it cannot come from the ARB catalogs like every other string.
+    -->
+    <string name="notification_listener_label">Watch notifications</string>
 </resources>

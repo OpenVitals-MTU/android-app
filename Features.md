@@ -341,6 +341,19 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Sleep stage durations derived from watch files disagree with the watch's own time-awake figure and are not yet reliable.
 - Number settings are read-only because the watch does not send their allowed range.
 
+### Garmin Watch Notifications
+
+- Show the phone's notifications on a paired Garmin watch, off by default.
+- Confirm what will be read before Android's notification-access screen is opened.
+- Silence individual apps; everything else keeps sending.
+- Dismiss a notification from the wrist, which clears it on the phone too.
+- Use the posting app's own action buttons from the wrist, up to five.
+- Reply from the wrist on apps that publish a wearable reply action.
+- Skip ongoing, group-summary, local-only, empty and minimum-importance notifications, and skip everything while the phone is in Do Not Disturb.
+- Hold the Bluetooth link open while the watch is in range, reconnecting with a backoff if it goes away.
+- Give the radio back within seconds when a sync, find or settings browse is started.
+- Do not offer actions the phone cannot perform from the background, including SMS replies.
+
 ### View-Only Or External-Only Data
 
 - Sleep sessions are view-only in the app.

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'garmin_ble_transport.dart';
 import 'garmin_log.dart';
+import 'garmin_radio_lease.dart';
 import 'garmin_session.dart';
 import 'garmin_settings_model.dart';
 import 'garmin_settings_service.dart';
@@ -22,15 +23,23 @@ import 'garmin_settings_service.dart';
 /// traffic" is not enough either — several arrive unprompted, and the first one
 /// seen answered nothing that had been asked.
 class GarminSettingsLink {
-  GarminSettingsLink._(this._transport, this._session);
+  GarminSettingsLink._(this._transport, this._session, this._lease, this._address);
 
   /// A link over a transport that never connected — for tests that need the
   /// request/teardown machinery without a watch on the other end.
   @visibleForTesting
-  GarminSettingsLink.forTest(this._transport, this._session);
+  GarminSettingsLink.forTest(this._transport, this._session)
+      : _lease = const PermissiveGarminRadioLease(),
+        _address = '';
 
   final GarminBleTransport _transport;
   final GarminSession _session;
+
+  /// Held for the whole browse, not per request — the point of this class is
+  /// that the link stays open, and the notification forwarder in the other
+  /// isolate must not open a second one to the same watch underneath it.
+  final GarminRadioLease _lease;
+  final String _address;
 
   final StreamController<Uint8List> _replies =
       StreamController<Uint8List>.broadcast();
@@ -64,7 +73,13 @@ class GarminSettingsLink {
     required String model,
     String language = 'en_US',
     String region = 'us',
+    GarminRadioLease lease = const PermissiveGarminRadioLease(),
   }) async {
+    if (!await lease.acquire(address, GarminRadioOwner.settings)) {
+      throw GarminRadioBusyException(
+        await lease.owner(address) ?? 'another task',
+      );
+    }
     final transport = GarminBleTransport(address: address);
     final ready = Completer<void>();
     final session = GarminSession(
@@ -88,10 +103,12 @@ class GarminSettingsLink {
     } catch (error) {
       // Nothing is listening yet, so the transport is the only thing to undo.
       await transport.close();
+      await lease.release(address, GarminRadioOwner.settings);
       rethrow;
     }
 
-    final link = GarminSettingsLink._(transport, session);
+    final link = GarminSettingsLink._(transport, session, lease, address);
+    link._startRenewals();
     session.protobuf.onUnsolicited = (payload) {
       if (GarminSettingsService.unwrap(payload) != null) {
         if (!link._replies.isClosed) link._replies.add(payload);
@@ -252,14 +269,29 @@ class GarminSettingsLink {
     return GarminSettingsService.changeSucceeded(reply);
   }
 
+  Timer? _renewals;
+
+  /// Keeps the lease alive for as long as the browse lasts. A person reading a
+  /// settings screen easily outlives the lease TTL, and an expired lease would
+  /// let the forwarder connect to the watch mid-browse.
+  void _startRenewals() {
+    _renewals = Timer.periodic(
+      GarminRadioLease.renewInterval,
+      (_) => _lease.renew(_address, GarminRadioOwner.settings),
+    );
+  }
+
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    _renewals?.cancel();
+    _renewals = null;
     _signalGone();
     await _dropListener?.cancel();
     await _replies.close();
     _session.protobuf.abort();
     await _transport.close();
+    await _lease.release(_address, GarminRadioOwner.settings);
     garminLog('[GARMIN-SETTINGS] link closed');
   }
 

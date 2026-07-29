@@ -92,6 +92,7 @@ final watchSettingsLinkProvider =
       phoneName: phone.bluetoothName,
       manufacturer: phone.manufacturer,
       model: phone.model,
+      lease: ref.read(garminRadioLeaseProvider),
     );
     final links = ref.read(watchSettingsLinksProvider)
       ..register(deviceId, link);

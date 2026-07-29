@@ -7,6 +7,7 @@ import 'garmin_capabilities.dart';
 import 'garmin_file_store.dart';
 import 'garmin_log.dart';
 import 'garmin_protobuf_transport.dart';
+import 'garmin_radio_lease.dart';
 import 'garmin_session.dart';
 import 'garmin_settings_service.dart';
 
@@ -23,7 +24,17 @@ import 'garmin_settings_service.dart';
 /// error tolerance included — rather than growing a second write path that
 /// would drift from it.
 class GarminWatchSyncService {
-  const GarminWatchSyncService({this.fileStore});
+  const GarminWatchSyncService({
+    this.fileStore,
+    this.radioLease = const PermissiveGarminRadioLease(),
+  });
+
+  /// Guards the radio against the notification forwarder, which runs in a
+  /// DIFFERENT isolate and cannot see this class's Dart-side guards.
+  ///
+  /// Defaults to permissive so a test host with no plugin behaves exactly as it
+  /// did before the lease existed; the app injects the real one.
+  final GarminRadioLease radioLease;
 
   /// Keeps a copy of every download before the watch is told to archive it.
   ///
@@ -48,6 +59,24 @@ class GarminWatchSyncService {
     required String manufacturer,
     required String model,
     Duration timeout = GarminFindMyWatch.defaultTimeout,
+    Future<void>? cancelled,
+  }) async =>
+      withGarminRadio(radioLease, address, GarminRadioOwner.find,
+          () => _findWatch(
+                address: address,
+                phoneName: phoneName,
+                manufacturer: manufacturer,
+                model: model,
+                timeout: timeout,
+                cancelled: cancelled,
+              ));
+
+  Future<bool> _findWatch({
+    required String address,
+    required String phoneName,
+    required String manufacturer,
+    required String model,
+    required Duration timeout,
     Future<void>? cancelled,
   }) async {
     final transport = GarminBleTransport(address: address);
@@ -146,6 +175,24 @@ class GarminWatchSyncService {
     required String model,
     String language = 'en_US',
     String region = 'us',
+  }) async =>
+      withGarminRadio(radioLease, address, GarminRadioOwner.settings,
+          () => _probeSettings(
+                address: address,
+                phoneName: phoneName,
+                manufacturer: manufacturer,
+                model: model,
+                language: language,
+                region: region,
+              ));
+
+  Future<int> _probeSettings({
+    required String address,
+    required String phoneName,
+    required String manufacturer,
+    required String model,
+    required String language,
+    required String region,
   }) async {
     final transport = GarminBleTransport(address: address);
     final ready = Completer<void>();
@@ -331,6 +378,28 @@ class GarminWatchSyncService {
     void Function(GarminSyncProgress)? onProgress,
     Duration listenAfter = Duration.zero,
     void Function(Set<GarminCapability>)? onCapabilities,
+  }) async =>
+      withGarminRadio(radioLease, address, GarminRadioOwner.sync,
+          () => _sync(
+                address: address,
+                phoneName: phoneName,
+                manufacturer: manufacturer,
+                model: model,
+                alreadySynced: alreadySynced,
+                onProgress: onProgress,
+                listenAfter: listenAfter,
+                onCapabilities: onCapabilities,
+              ));
+
+  Future<List<GarminDownloadedFile>> _sync({
+    required String address,
+    required String phoneName,
+    required String manufacturer,
+    required String model,
+    required Set<String> alreadySynced,
+    required void Function(GarminSyncProgress)? onProgress,
+    required Duration listenAfter,
+    required void Function(Set<GarminCapability>)? onCapabilities,
   }) async {
     final transport = GarminBleTransport(address: address);
     late final GarminSession session;

@@ -301,6 +301,21 @@
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>
+        <!--
+            Launcher apps, for the watch-notification blocklist picker and for
+            resolving a posting app's display name
+            (notification_listener_native).
+
+            Deliberately NOT `QUERY_ALL_PACKAGES`: that one is a Play-RESTRICTED
+            permission, and its mere presence blocks upload unless a declaration
+            is filed and accepted — the same class of mistake the READ_MEDIA_*
+            removals below exist to avoid. A MAIN/LAUNCHER query is unrestricted
+            and covers every app a user could sensibly want to silence.
+        -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -558,6 +573,37 @@
             tools:targetApi="s">
             <intent-filter>
                 <action android:name="android.companion.CompanionDeviceService" />
+            </intent-filter>
+        </service>
+
+        <!--
+            notification_listener_native: reads the phone's notifications so they
+            can be mirrored to a paired Garmin watch.
+
+            `exported="true"` and the BIND_NOTIFICATION_LISTENER_SERVICE
+            permission are both required by the platform contract — the system
+            alone may bind this, and the permission is a SIGNATURE permission
+            held by the system, so it is declared here rather than requested with
+            <uses-permission>. There is no runtime prompt: the user grants
+            notification access from a system settings screen, and the feature
+            stays dormant until they do.
+
+            Declared in the app manifest rather than merged in from the plugin
+            library on purpose. This is the most sensitive capability in the app,
+            and it should be visible in the manifest a reviewer actually opens.
+
+            What it reads never leaves the phone by any route but the watch: the
+            content is held in a bounded in-memory buffer, written to no file and
+            no database, and the shipping manifest removes INTERNET outright
+            (see the offline-only block above).
+        -->
+        <service
+            android:name="tech.mmarca.openvitals.notification_listener_native.OpenVitalsNotificationListenerService"
+            android:exported="true"
+            android:label="@string/notification_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
 

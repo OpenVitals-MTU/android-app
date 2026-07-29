@@ -8,6 +8,7 @@ import 'garmin_file_types.dart';
 import 'garmin_gfdi_frame.dart';
 import 'garmin_log.dart';
 import 'garmin_messages.dart';
+import 'garmin_notifications_handler.dart';
 import 'garmin_protobuf_transport.dart';
 
 /// One downloaded file and the directory entry it came from.
@@ -57,6 +58,7 @@ class GarminSession {
     this.keepAnsweringAfterSync = false,
     this.onHandshakeReady,
     this.syncFiles = true,
+    this.notifications,
   });
 
   /// Hands one built GFDI frame to the transport below. The session never sees
@@ -105,6 +107,18 @@ class GarminSession {
   /// full sync along behind it and then failed mid-transfer when the link closed
   /// under it, which is noise at best and a lost file at worst.
   final bool syncFiles;
+
+  /// Forwards phone notifications to the watch, or null for a session that
+  /// forwards nothing.
+  ///
+  /// Null is the default and keeps the subscription reply DISABLED, which is
+  /// exactly what every session did before this existed — so the sync, find and
+  /// settings paths are unchanged by construction rather than by inspection.
+  ///
+  /// A session that carries one should also pass `syncFiles: false`, for the
+  /// reason on that field: a notification link is held open for tens of seconds
+  /// and then closed, and a file transfer dragged along behind it dies mid-flight.
+  final GarminNotificationsHandler? notifications;
 
   /// Diagnostic only: keep decoding and acknowledging what the watch sends after
   /// the sync has finished, instead of ignoring it.
@@ -247,11 +261,48 @@ class GarminSession {
         onHandshakeReady?.call();
 
       case GarminNotificationSubscription():
-        // Answered honestly (we forward nothing) but answered — the watch asks
-        // roughly once a second until it gets a properly shaped status.
-        garminLog('[GARMIN-SYNC] notification subscription '
-            'enable=${message.enable}; replying disabled');
-        await send(buildNotificationSubscriptionStatus(message));
+        // Always answered, whatever the answer — the watch asks roughly once a
+        // second until it gets a properly shaped status.
+        //
+        // The two flags here mean different things and must NOT be conflated:
+        //
+        // * `message.enable` is the WATCH's current state — whether it is
+        //   presently accepting notifications. It drives the handler.
+        // * the reply is the PHONE's willingness — whether this session is
+        //   prepared to forward at all. It is ours alone to decide.
+        //
+        // Answering the conjunction is self-defeating, and was: a watch that has
+        // never been told a phone would forward sends `enable=false`, so
+        // replying DISABLED confirms it and the watch never flips. Announcing
+        // willingness is precisely how it is told otherwise. Gadgetbridge
+        // separates them the same way.
+        final handler = notifications;
+        handler?.setEnabled(enabled: message.enable);
+        final willing = handler != null;
+        garminLog('[GARMIN-SYNC] notification subscription: watch '
+            'enable=${message.enable}, replying '
+            '${willing ? "enabled" : "disabled"}');
+        await send(
+          buildNotificationSubscriptionStatus(message, enabled: willing),
+        );
+        // Held announcements go out AFTER the status, never before. Garmin's
+        // own ordering is status-for-the-inbound-message first, follow-up
+        // second — and a watch that has just asked to subscribe has not yet
+        // been told the subscription was accepted, so anything sent ahead of
+        // that status is addressed to a watch that is not listening for it.
+        await handler?.flushHeld();
+
+      case GarminNotificationControl():
+        // The status goes out BEFORE the answer, unlike Gadgetbridge, which
+        // computes its follow-up first so a handler can downgrade the status
+        // after inspecting the payload. Safe only because nothing here can fail
+        // a control request: an unknown notification id produces no data, not an
+        // error. That stops being true the day a validating handler is added.
+        await send(buildNotificationControlStatus());
+        await notifications?.handleControl(message);
+
+      case GarminNotificationDataStatus():
+        await notifications?.handleDataStatus(message);
 
       case GarminSupportedFileTypes():
         _supportedTypes = message.types;

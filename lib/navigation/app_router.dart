@@ -48,6 +48,7 @@ import '../features/imports/csv/presentation/csv_import_screen.dart';
 import '../features/settings/presentation/ble_devices_screen.dart';
 import '../features/settings/presentation/watch_data_screen.dart';
 import '../features/settings/presentation/watch_device_screen.dart';
+import '../features/settings/presentation/watch_notification_apps_screen.dart';
 import '../features/settings/presentation/watch_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/settings/presentation/settings_section.dart';
@@ -147,6 +148,10 @@ List<RouteBase> _buildRoutes(Ref ref) => [
             builder: (context, state) => WatchDataScreen(
               deviceId: state.pathParameters[AppRoutes.watchDeviceIdArg]!,
             ),
+          ),
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const WatchNotificationAppsScreen(),
           ),
           GoRoute(
             path: 'settings/:${AppRoutes.watchScreenIdArg}',

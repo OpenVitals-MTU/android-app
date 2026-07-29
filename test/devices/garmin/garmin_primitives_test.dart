@@ -78,6 +78,28 @@ void main() {
       writer.patchShort(0, writer.length);
       expect(GarminByteReader(writer.toBytes()).readShort(), 6);
     });
+
+    test('readNullTerminatedString consumes its terminator, so the next field '
+        'reads correctly', () {
+      // The notification control channel sends an app id this way — with no
+      // length byte — so leaving the NUL behind desynchronises everything after.
+      final reader = GarminByteReader(_b([0x61, 0x2E, 0x62, 0x00, 0x2A]));
+      expect(reader.readNullTerminatedString(), 'a.b');
+      expect(reader.readByte(), 0x2A);
+    });
+
+    test('an unterminated string returns the rest of the buffer rather than '
+        'throwing', () {
+      final reader = GarminByteReader(_b([0x61, 0x62]));
+      expect(reader.readNullTerminatedString(), 'ab');
+      expect(reader.hasRemaining, isFalse);
+    });
+
+    test('an empty null-terminated string is empty, not a skipped field', () {
+      final reader = GarminByteReader(_b([0x00, 0x2A]));
+      expect(reader.readNullTerminatedString(), isEmpty);
+      expect(reader.readByte(), 0x2A);
+    });
   });
 
   group('GarminCobs round-trip', () {

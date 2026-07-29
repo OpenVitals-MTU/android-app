@@ -14,6 +14,7 @@ import 'bootstrap/reminder_resume_bootstrap.dart';
 import 'bootstrap/reminder_tap_bootstrap.dart';
 import 'data/migration/kotlin_data_migration.dart';
 import 'data/migration/legacy_data_source.dart';
+import 'devices/garmin/garmin_notification_bridge.dart';
 import 'di/providers.dart';
 import 'features/homewidgets/home_widget_beverage_log.dart';
 import 'features/homewidgets/home_widget_configure.dart';
@@ -47,6 +48,11 @@ Future<void> main() async {
   // callback handle for the quick-beverage widgets' one-tap logging, and an app
   // update or reinstall invalidates it (see home_widget_beverage_log.dart).
   unawaited(registerHomeWidgetInteractivity());
+  // Same reasoning, same trap: the notification listener stores a raw AOT
+  // callback handle for the headless forwarder engine, and an app update
+  // invalidates it. A stale handle silently drops every notification bound for
+  // the watch until the app is next opened.
+  unawaited(registerGarminNotificationForwarder());
   final prefs = await SharedPreferences.getInstance();
   // In-place upgrade from the Kotlin app: its data survives the update but lives
   // in files Flutter does not read. This lifts it across exactly once, and never

@@ -33,6 +33,7 @@ environment:
 workspace:
   - packages/health_connect_native
   - packages/bluetooth_sync_native
+  - packages/notification_listener_native
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -119,6 +120,12 @@ dependencies:
   # Wi-Fi) keeps the app's no-INTERNET-permission stance intact.
   bluetooth_sync_native:
     path: packages/bluetooth_sync_native
+  # App-local plugin bridging Flutter to Android's NotificationListener service,
+  # so phone notifications can be mirrored to a paired Garmin watch. Captures and
+  # filters natively, then wakes a headless Dart isolate; every byte that reaches
+  # the watch is produced in pure Dart under lib/devices/garmin/.
+  notification_listener_native:
+    path: packages/notification_listener_native
   flutter_timezone: ^5.1.0
   audioplayers: ^6.8.1
   file_selector: ^1.1.0

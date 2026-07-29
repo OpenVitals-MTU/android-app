@@ -131,6 +131,18 @@ Used only for [Garmin watch sync](../features/garmin-watch-sync.md). These are i
 
 `REQUEST_COMPANION_USE_DATA_IN_BACKGROUND` is deliberately **not** declared: it governs background network use, and this app has no network permission at all.
 
+## Notification Access
+
+Used only for [Garmin watch notifications](../features/watch-notifications.md), and only after you turn the feature on.
+
+- `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE`: declared on the `OpenVitalsNotificationListenerService` component, not requested with `<uses-permission>`. It is a **signature** permission held by the system — the platform contract requires the service to declare it so that only the system may bind it. There is no runtime prompt: notification access is granted by you on Android's own **Notification access** settings screen, and OpenVitals cannot request it any other way.
+
+The feature is off by default, and the app shows you what will be read and asks you to confirm before that settings screen is opened. Everything read is processed on the device and sent only to the paired watch over Bluetooth; see [Privacy](privacy.md).
+
+`<queries>` with a `MAIN`/`LAUNCHER` intent is declared so the app can list installed apps for the "Apps to silence" picker and resolve a notification's app name. `QUERY_ALL_PACKAGES` is deliberately **not** declared — it is a Play-restricted permission, and the launcher-intent query is sufficient.
+
+`RECEIVE_SMS` and `SEND_SMS` are deliberately **not** declared. Replying to an SMS from the watch would require both (a stock SMS app exposes no reply action that can be triggered remotely), and that is out of scope — see the feature doc's Known Limitations.
+
 ## Removed Network Permissions
 
 The manifest explicitly removes inherited network permissions from dependencies:

@@ -1,0 +1,57 @@
+// Gradle build for the `notification_listener_native` Flutter plugin (Android only).
+//
+// Built-in Kotlin (Flutter 3.44+ / AGP 9): the plugin does NOT apply the Kotlin
+// Gradle Plugin itself — AGP applies KGP automatically for modules with Kotlin
+// sources. So only `com.android.library` is declared here, and Kotlin options use
+// the top-level `kotlin { compilerOptions {} }` DSL (not the deprecated
+// `android.kotlinOptions`). Repositories come from the app root's `allprojects`.
+plugins {
+    id "com.android.library"
+}
+
+group = "tech.mmarca.openvitals.notification_listener_native"
+version = "1.0"
+
+android {
+    namespace = "tech.mmarca.openvitals.notification_listener_native"
+    // compileSdk 37 matches the host app.
+    compileSdk = 37
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        // minSdk 26 matches the host app.
+        minSdk = 26
+    }
+
+    testOptions {
+        unitTests {
+            // android.util.Log is an unimplemented JVM stub that throws by
+            // default; make it a no-op so the pure-Kotlin filter can be unit
+            // tested without Robolectric.
+            returnDefaultValues = true
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+dependencies {
+    // NotificationCompat.WearableExtender. Not optional: a messaging app puts the
+    // reply action a WATCH should use in the wearable extender, and the one in
+    // `notification.actions` is the phone's — whose PendingIntent is typically
+    // immutable on Android 12+, so a reply sent through it loses its text
+    // silently and the message never goes. Version matches what the app already
+    // resolves, so nothing is upgraded by adding this.
+    implementation "androidx.core:core:1.17.0"
+
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "com.google.truth:truth:1.4.4"
+}

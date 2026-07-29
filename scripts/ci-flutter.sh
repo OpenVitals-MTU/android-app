@@ -192,7 +192,7 @@ else
     # EVERY native plugin with a pigeon bridge must be listed here: its
     # lib/src/messages.g.dart is gitignored, so a missing entry leaves the whole
     # package uncompilable on CI and every test that imports it fails to load.
-    for plugin in health_connect_native bluetooth_sync_native; do
+    for plugin in health_connect_native bluetooth_sync_native notification_listener_native; do
         (
             cd "packages/$plugin"
             dart run pigeon --input pigeons/messages.dart

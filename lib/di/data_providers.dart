@@ -13,6 +13,7 @@ import '../devices/garmin/garmin_file_store.dart';
 import '../devices/garmin/garmin_gatt_probe.dart';
 import '../devices/garmin/garmin_phone_identity.dart';
 import '../devices/garmin/garmin_scan_classifier.dart';
+import '../devices/garmin/garmin_radio_lease.dart';
 import '../devices/garmin/garmin_watch_sync_service.dart';
 import '../devices/core/ble/ble_sensor_repository.dart';
 import '../devices/garmin/garmin_transport_probe.dart';
@@ -23,6 +24,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:notification_listener_native/notification_listener_native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -292,8 +294,18 @@ final garminTransportProbeProvider = Provider<GarminTransportProbe>(
 );
 
 /// Drives one end-to-end GFDI sync (link, session, downloaded files).
+/// The process-wide lock on a watch's radio.
+///
+/// Native, because the notification forwarder runs in a headless Flutter engine
+/// with its own `flutter_blue_plus` instance and no Dart mutex can span the two.
+/// See [GarminRadioLease].
+final garminRadioLeaseProvider = Provider<GarminRadioLease>(
+  (ref) => NativeGarminRadioLease(),
+);
+
 final garminWatchSyncServiceProvider = Provider<GarminWatchSyncService>(
   (ref) => GarminWatchSyncService(
+    radioLease: ref.watch(garminRadioLeaseProvider),
     fileStore: GarminFileStore(
       resolveDirectory: () async => Directory(
         p.join((await getApplicationDocumentsDirectory()).path, 'garmin'),
@@ -306,6 +318,11 @@ final garminWatchSyncServiceProvider = Provider<GarminWatchSyncService>(
 /// these are constants rather than a device-info lookup.
 final phoneIdentityProvider = Provider<GarminPhoneIdentity>(
   (ref) => const GarminPhoneIdentity(),
+);
+
+/// The notification-listener bridge. Overridden in tests with a fake host API.
+final notificationListenerApiProvider = Provider<NotificationListenerHostApi>(
+  (ref) => NotificationListenerHostApi(),
 );
 
 final importWriteRepositoryProvider = Provider<ImportWriteRepository>(

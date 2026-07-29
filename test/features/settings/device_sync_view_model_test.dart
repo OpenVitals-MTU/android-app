@@ -15,6 +15,7 @@ import 'package:openvitals/devices/garmin/garmin_session.dart';
 import 'package:openvitals/devices/garmin/garmin_watch_sync_service.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
+import 'package:openvitals/devices/garmin/garmin_radio_lease.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_providers.dart';
 import 'package:openvitals/features/settings/application/device_sync_view_model.dart';
 import 'package:openvitals/features/settings/application/watch_settings_view_model.dart';
@@ -25,6 +26,11 @@ class _FakeSyncService implements GarminWatchSyncService {
   /// fake never touches the radio, so there is nothing to keep.
   @override
   GarminFileStore? get fileStore => null;
+
+  /// The real service takes the process-wide radio lease before connecting;
+  /// this fake never connects, so nothing needs guarding.
+  @override
+  GarminRadioLease get radioLease => const PermissiveGarminRadioLease();
 
   /// Set by a test to control what the fake radio comes back with.
   List<GarminDownloadedFile> files = const [];

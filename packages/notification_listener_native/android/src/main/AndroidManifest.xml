@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        The `namespace` is declared in android/build.gradle.
+
+        Deliberately empty. BOTH the `<service>` declaration for
+        OpenVitalsNotificationListenerService and its
+        BIND_NOTIFICATION_LISTENER_SERVICE permission live in the HOST APP
+        manifest, next to the CompanionDeviceService — a capability this
+        sensitive should be visible in the manifest a reader actually opens,
+        not merged in from a library.
+    -->
+</manifest>

@@ -4243,6 +4243,28 @@
   "settingsWatchSettingsSection": "Watch settings",
   "settingsWatchOnDeviceSettings": "Settings on the watch",
   "settingsWatchOnDeviceSettingsBody": "Backlight, sounds, watch face…",
+  "settingsWatchNotificationsSection": "Notifications",
+  "settingsWatchNotificationsTitle": "Send notifications to the watch",
+  "settingsWatchNotificationsBody": "Phone notifications appear on your wrist. Read on this device and sent only to this watch.",
+  "settingsWatchNotificationsGrant": "Allow notification access",
+  "settingsWatchNotificationsGrantBody": "Android asks for this on its own settings screen. OpenVitals cannot request it from here.",
+  "settingsWatchNotificationsApps": "Apps to silence",
+  "settingsWatchNotificationsAppsNone": "All apps send to the watch",
+  "settingsWatchNotificationsAppsBlocked": "{arg0, plural, =1{1 app silenced} other{{arg0} apps silenced}}",
+  "@settingsWatchNotificationsAppsBlocked": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsWatchNotificationsAppsTitle": "Apps",
+  "settingsWatchNotificationsAppsIntro": "Turn an app off to stop its notifications reaching the watch. Everything else keeps coming through.",
+  "settingsWatchNotificationsAppsEmpty": "No apps found.",
+  "settingsWatchNotificationsDisclosureTitle": "OpenVitals will read your notifications",
+  "settingsWatchNotificationsDisclosureBody": "To show notifications on your watch, OpenVitals reads the notifications your phone receives — including their text.\n\nThey are read on this device and sent only to the watch you paired, over Bluetooth. Nothing is saved to a file or a database, and OpenVitals has no internet permission, so notifications cannot be sent anywhere else.\n\nYou can turn this off at any time, and revoke notification access from Android settings.",
+  "settingsWatchNotificationsDisclosureAccept": "Continue",
+  "settingsWatchNotificationsDisclosureDecline": "Not now",
   "settingsWatchSyncedFiles": "{arg0, plural, =1{1 file} other{{arg0} files}}",
   "@settingsWatchSyncedFiles": {
     "placeholders": {

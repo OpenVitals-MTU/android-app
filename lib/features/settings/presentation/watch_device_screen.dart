@@ -13,6 +13,7 @@ import '../../../ui/components/screen_scroll_padding.dart';
 import '../application/ble_devices_view_model.dart';
 import '../application/device_sync_view_model.dart';
 import '../application/garmin_watch_actions_view_model.dart';
+import '../application/watch_notifications_view_model.dart';
 import 'ble_devices_screen.dart' show capabilityLabel;
 import 'watch_common.dart';
 
@@ -123,6 +124,13 @@ class WatchDeviceScreen extends ConsumerWidget {
           if (isGarmin && supports(GarminCapability.realtimeSettings)) ...[
             _SectionHeader(title: l10n.settingsWatchSettingsSection),
             _OnDeviceSettingsRow(deviceId: device.id),
+          ],
+          // Only for a watch that says it speaks GNCS. `supports` treats an
+          // unknown capability as present, so a watch that has never synced
+          // still gets the row rather than having the feature hidden from it.
+          if (isGarmin && supports(GarminCapability.gncs)) ...[
+            _SectionHeader(title: l10n.settingsWatchNotificationsSection),
+            _WatchNotificationsRow(deviceId: device.id),
           ],
           // A bike computer can broadcast standard-BLE sensors into a recording.
           // The role is opt-in from here because broadcast mode is usually only
@@ -421,6 +429,147 @@ class _OnDeviceSettingsRow extends StatelessWidget {
             ),
             extra: l10n.settingsWatchOnDeviceSettings,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Mirrors the phone's notifications to the watch.
+///
+/// Two rows rather than one, because there are two gates: what the user wants,
+/// and what Android will allow. Notification access has no runtime prompt — the
+/// only way to grant it is a system settings screen — so a switch that silently
+/// did nothing until the user found that screen would read as a bug.
+class _WatchNotificationsRow extends ConsumerStatefulWidget {
+  const _WatchNotificationsRow({required this.deviceId});
+
+  final String deviceId;
+
+  @override
+  ConsumerState<_WatchNotificationsRow> createState() =>
+      _WatchNotificationsRowState();
+}
+
+class _WatchNotificationsRowState extends ConsumerState<_WatchNotificationsRow> {
+  late final AppLifecycleListener _listener;
+
+  String get deviceId => widget.deviceId;
+
+  /// Shows what the feature reads and waits for an answer.
+  ///
+  /// Google Play requires this BEFORE notification access is requested, and it
+  /// is the order a reasonable person expects anyway: say what will be read,
+  /// then ask for it. Dismissing the dialog counts as declining.
+  Future<bool> _confirmDisclosure(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.privacy_tip_outlined),
+        title: Text(l10n.settingsWatchNotificationsDisclosureTitle),
+        content: SingleChildScrollView(
+          child: Text(l10n.settingsWatchNotificationsDisclosureBody),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.settingsWatchNotificationsDisclosureDecline),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.settingsWatchNotificationsDisclosureAccept),
+          ),
+        ],
+      ),
+    );
+    return accepted ?? false;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Notification access is granted on a SYSTEM screen, and Android gives no
+    // callback when it happens — the user simply leaves and comes back. Without
+    // re-reading on resume the card keeps showing "not granted" over a
+    // permission that is already there, and the switch reads as dead.
+    //
+    // Not the bespoke route-pop listener AGENTS warns against: that rule is
+    // about re-reading health data, and this is a permission probe. It follows
+    // `ReminderResumeBootstrap`, which uses the same listener for the same shape
+    // of problem.
+    _listener = AppLifecycleListener(
+      onResume: () =>
+          ref.read(watchNotificationsViewModelProvider.notifier).refresh(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _listener.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final state = ref.watch(watchNotificationsViewModelProvider);
+    final viewModel = ref.read(watchNotificationsViewModelProvider.notifier);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Card(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              secondary: const Icon(Icons.notifications_active_outlined),
+              title: Text(l10n.settingsWatchNotificationsTitle),
+              subtitle: Text(
+                l10n.settingsWatchNotificationsBody,
+                style: theme.textTheme.bodySmall,
+              ),
+              value: state.active,
+              onChanged: state.loading
+                  ? null
+                  : (value) => viewModel.setEnabled(
+                        enabled: value,
+                        confirmDisclosure: () => _confirmDisclosure(context),
+                      ),
+            ),
+            if (!state.accessGranted && !state.loading)
+              ListTile(
+                leading: Icon(
+                  Icons.lock_outline,
+                  color: theme.colorScheme.error,
+                ),
+                title: Text(l10n.settingsWatchNotificationsGrant),
+                subtitle: Text(
+                  l10n.settingsWatchNotificationsGrantBody,
+                  style: theme.textTheme.bodySmall,
+                ),
+                trailing: const Icon(Icons.open_in_new),
+                onTap: viewModel.openAccessSettings,
+              ),
+            if (state.active)
+              ListTile(
+                leading: const Icon(Icons.apps_outlined),
+                title: Text(l10n.settingsWatchNotificationsApps),
+                subtitle: Text(
+                  state.blockedCount == 0
+                      ? l10n.settingsWatchNotificationsAppsNone
+                      : l10n.settingsWatchNotificationsAppsBlocked(
+                          state.blockedCount,
+                        ),
+                  style: theme.textTheme.bodySmall,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(
+                  AppRoutes.watchNotificationAppsLocation(deviceId),
+                ),
+              ),
+          ],
         ),
       ),
     );

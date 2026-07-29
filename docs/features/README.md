@@ -41,6 +41,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Activity and training plans](activity-training-plans.md): planned workouts, activity setup defaults, favorite activities, repetitions, sets, and review flows.
 - [Bluetooth LE sensors](ble-sensors.md): supported heart-rate, cadence, power, and footpod sensors during activity recording.
 - [Garmin watch sync](garmin-watch-sync.md): pair a Garmin watch and copy what it recorded over Bluetooth, plus its alarms and on-watch settings.
+- [Garmin watch notifications](watch-notifications.md): show the phone's notifications on the wrist, and dismiss, reply or act on them from there.
 - [GPX/KML/KMZ route import](route-file-import.md): route file import for review before saving.
 - [FIT files import](fit-files-import.md): Settings Data Importers support for FIT activity, course, and workout files.
 - [CSV import](csv-import.md): Settings Data Importers support for body-composition CSV exports, with a per-column mapping step.

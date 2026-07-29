@@ -3,13 +3,15 @@ import 'dart:typed_data';
 import 'garmin_byte_reader.dart';
 import 'garmin_byte_writer.dart';
 import 'garmin_gfdi_frame.dart';
+import 'garmin_notification_messages.dart';
 
 /// The GFDI message vocabulary for the file-sync flow.
 ///
 /// A deliberately small slice of Gadgetbridge's ~30-message `GarminMessage`
-/// enum: only what a read-only FIT sync needs — request a download, receive its
-/// chunks and acknowledge them, archive a finished file, and send system events.
-/// Notifications, music, weather, uploads and protobuf are all out of scope.
+/// enum: what a read-only FIT sync needs — request a download, receive its
+/// chunks and acknowledge them, archive a finished file, and send system events
+/// — plus the notification service (GNCS). Music, weather and uploads remain out
+/// of scope.
 ///
 /// Not Gadgetbridge's reflection-dispatched class-per-message design: parsing is
 /// one [decode] switch on the frame's type id, and each outgoing message is a
@@ -27,6 +29,11 @@ class GarminMessageId {
   static const int deviceInformation = 5024;
   static const int systemEvent = 5030;
   static const int supportedFileTypesRequest = 5031;
+  // The notification service (GNCS). UPDATE announces, CONTROL is the watch
+  // asking, DATA carries the answer — see garmin_notification_messages.dart.
+  static const int notificationUpdate = 5033;
+  static const int notificationControl = 5034;
+  static const int notificationData = 5035;
   static const int notificationSubscription = 5036;
   static const int synchronization = 5037;
   static const int protobufRequest = 5043;
@@ -267,6 +274,63 @@ class GarminNotificationSubscription extends GarminInboundMessage {
   final int unknown;
 }
 
+/// The watch asking something about a notification (type 5034).
+///
+/// Which fields are populated depends on [command]:
+/// * `getNotificationAttributes` — [notificationId] and [attributes], the
+///   fields it wants and the maximum length it will accept for each (0 = no
+///   limit).
+/// * `getAppAttributes` — [appIdentifier] and [appAttributes].
+/// * either `perform…Action` — [notificationId], [actionCode] and, for a reply,
+///   [actionText].
+///
+/// Actions are decoded but never acted on: this app announces none, so a watch
+/// has nothing to invoke. They are still parsed rather than dropped because a
+/// watch that sends one is telling us something we got wrong.
+class GarminNotificationControl extends GarminInboundMessage {
+  const GarminNotificationControl({
+    required this.command,
+    this.notificationId = 0,
+    this.attributes = const {},
+    this.appIdentifier,
+    this.appAttributes = const [],
+    this.actionCode,
+    this.actionText,
+  });
+
+  final GarminNotificationCommand command;
+  final int notificationId;
+
+  /// Requested attribute → maximum length, in the watch's own order. A
+  /// `LinkedHashMap` by construction, because that order is reproduced in the
+  /// answer.
+  final Map<GarminNotificationAttribute, int> attributes;
+
+  final String? appIdentifier;
+  final List<int> appAttributes;
+  final int? actionCode;
+  final String? actionText;
+}
+
+/// The watch's verdict on one chunk of an attribute blob — a RESPONSE envelope
+/// naming NOTIFICATION_DATA.
+///
+/// [canProceed] is the flow control: the next chunk goes out only when the watch
+/// has said it kept the last one.
+class GarminNotificationDataStatus extends GarminInboundMessage {
+  const GarminNotificationDataStatus({
+    required this.status,
+    required this.transferStatus,
+  });
+
+  final GarminStatus status;
+  final GarminNotificationTransferStatus transferStatus;
+
+  bool get canProceed =>
+      status == GarminStatus.ack &&
+      transferStatus == GarminNotificationTransferStatus.ok;
+}
+
 /// A message outside the sync vocabulary. Carries its payload so an unexpected
 /// message can be identified from a device log rather than vanishing — the
 /// blind spot that hid whether the watch was talking to us at all.
@@ -293,6 +357,8 @@ GarminInboundMessage decodeGarminMessage(GarminGfdiFrame frame) {
       return _decodeConfiguration(frame.payload);
     case GarminMessageId.notificationSubscription:
       return _decodeNotificationSubscription(frame.payload);
+    case GarminMessageId.notificationControl:
+      return _decodeNotificationControl(frame.payload);
     default:
       return GarminUnhandledMessage(frame.messageType, frame.payload);
   }
@@ -347,6 +413,69 @@ GarminInboundMessage _decodeNotificationSubscription(Uint8List payload) {
   return GarminNotificationSubscription(enable: enable, unknown: unknown);
 }
 
+GarminInboundMessage _decodeNotificationControl(Uint8List payload) {
+  final reader = GarminByteReader(payload);
+  final command = GarminNotificationCommand.fromCode(reader.readByte());
+  if (command == null) {
+    return GarminUnhandledMessage(GarminMessageId.notificationControl, payload);
+  }
+  switch (command) {
+    case GarminNotificationCommand.getNotificationAttributes:
+      final notificationId = reader.readInt();
+      final attributes = <GarminNotificationAttribute, int>{};
+      while (reader.remaining > 0) {
+        final attribute =
+            GarminNotificationAttribute.fromCode(reader.readByte());
+        // An attribute this app does not know may or may not be followed by a
+        // length, so there is no safe way to find the next id. Stop and answer
+        // what was understood rather than mis-parsing the rest as attributes.
+        if (attribute == null) break;
+        var maxLength = 0;
+        if (attribute.hasLengthParam) {
+          if (reader.remaining < 2) break;
+          maxLength = reader.readShort();
+        } else if (attribute.hasAdditionalParams) {
+          if (reader.remaining < 3) break;
+          maxLength = reader.readShort();
+          reader.readByte(); // Unidentified; read to stay in step.
+        }
+        attributes[attribute] = maxLength;
+      }
+      return GarminNotificationControl(
+        command: command,
+        notificationId: notificationId,
+        attributes: attributes,
+      );
+
+    case GarminNotificationCommand.getAppAttributes:
+      final appIdentifier = reader.readNullTerminatedString();
+      final appAttributes = <int>[];
+      while (reader.remaining > 0) {
+        appAttributes.add(reader.readByte());
+      }
+      return GarminNotificationControl(
+        command: command,
+        appIdentifier: appIdentifier,
+        appAttributes: appAttributes,
+      );
+
+    case GarminNotificationCommand.performLegacyNotificationAction:
+    case GarminNotificationCommand.performNotificationAction:
+      final notificationId = reader.readInt();
+      final actionCode = reader.remaining > 0 ? reader.readByte() : null;
+      // A non-reply action carries no text at all on recent firmware, so its
+      // absence is normal rather than a short frame.
+      final actionText =
+          reader.remaining > 0 ? reader.readNullTerminatedString() : null;
+      return GarminNotificationControl(
+        command: command,
+        notificationId: notificationId,
+        actionCode: actionCode,
+        actionText: actionText,
+      );
+  }
+}
+
 GarminInboundMessage _decodeSupportedFileTypes(GarminByteReader reader) {
   final status = GarminStatus.fromCode(reader.readByte());
   if (status != GarminStatus.ack) {
@@ -385,6 +514,20 @@ GarminInboundMessage _decodeStatus(Uint8List payload) {
       status: status,
       downloadStatus: downloadStatus,
       maxFileSize: maxFileSize,
+    );
+  }
+  if (originalType == GarminMessageId.notificationData) {
+    final status = GarminStatus.fromCode(reader.readByte());
+    // The watch names WHY it will not take the next chunk, and the upload acts
+    // on the difference — a RESEND is recoverable, a CRC mismatch is not. A
+    // status with no transfer byte is treated as OK: the only observed sender
+    // of that shape is our own final acknowledgement bouncing back.
+    final transferStatus = reader.remaining > 0
+        ? GarminNotificationTransferStatus.fromOrdinal(reader.readByte())
+        : GarminNotificationTransferStatus.ok;
+    return GarminNotificationDataStatus(
+      status: status,
+      transferStatus: transferStatus,
     );
   }
   // Generic ACK/NAK: a single status byte follows the original type.
@@ -489,6 +632,11 @@ const Set<int> garminSelfAcknowledgedTypes = {
   // Gets a purpose-built status carrying four extra payload bytes; a generic
   // ACK is too short and the watch keeps asking.
   GarminMessageId.notificationSubscription,
+  // Likewise: a notification control request is answered by a three-byte
+  // control status. Sending a generic ACK as well would be a second reply to
+  // one question — the same double-reply that made the watch retransmit its
+  // protobuf messages below.
+  GarminMessageId.notificationControl,
   // Acknowledged by the protobuf transport itself, which is the only thing that
   // knows the request id and offset a protobuf status has to name — complete or
   // chunked, both get one. Acking here as well sent TWO for every message, and
@@ -613,19 +761,110 @@ Uint8List buildConfigurationResponse() {
 /// Answers a notification-subscription request
 /// (`NotificationSubscriptionStatusMessage`).
 ///
-/// Reports DISABLED because this app forwards no notifications — it syncs health
-/// files and nothing else. The watch's own flag and unknown byte are echoed
-/// back, as Gadgetbridge does.
+/// [enabled] is what actually turns forwarding on: until the watch has been told
+/// ENABLED it sends no control requests at all, so nothing else in the
+/// notification path can happen. A session with no notifications handler answers
+/// DISABLED, which is what every sync, find and settings session does and did
+/// before this existed.
+///
+/// The watch's own flag and unknown byte are echoed back, as Gadgetbridge does.
 Uint8List buildNotificationSubscriptionStatus(
-  GarminNotificationSubscription incoming,
-) {
+  GarminNotificationSubscription incoming, {
+  required bool enabled,
+}) {
+  // `NotificationStatus` ordinals: ENABLED is 0, DISABLED is 1.
+  const notificationStatusEnabled = 0;
   const notificationStatusDisabled = 1;
   final writer = GarminByteWriter()
     ..writeShort(GarminMessageId.notificationSubscription)
     ..writeByte(GarminStatus.ack.code)
-    ..writeByte(notificationStatusDisabled)
+    ..writeByte(enabled ? notificationStatusEnabled : notificationStatusDisabled)
     ..writeByte(incoming.enable ? 1 : 0)
     ..writeByte(incoming.unknown);
+  return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
+}
+
+/// Announces a notification to the watch (`NotificationUpdateMessage`, 5033).
+///
+/// Carries NO text — only an id, a category and some counters. The watch decides
+/// from this whether it wants the notification at all, and asks for the words
+/// separately. See `garmin_notification_messages.dart`.
+///
+/// [count] is how many notifications of the same category are currently
+/// outstanding, which is what a watch face's per-category badge shows.
+Uint8List buildNotificationUpdate({
+  required GarminNotificationUpdateType updateType,
+  required GarminNotificationCategory category,
+  required int count,
+  required int notificationId,
+  bool hasActions = false,
+  bool hasAttachments = false,
+}) {
+  var phoneFlags = 0;
+  if (hasActions) phoneFlags |= GarminNotificationPhoneFlag.newActions.bit;
+  if (hasAttachments) {
+    phoneFlags |= GarminNotificationPhoneFlag.hasAttachments.bit;
+  }
+  final writer = GarminByteWriter()
+    ..writeByte(updateType.index)
+    ..writeByte(garminNotificationCategoryFlags())
+    ..writeByte(category.index)
+    ..writeByte(count)
+    ..writeInt(notificationId)
+    ..writeByte(phoneFlags);
+  return GarminGfdiFrame.build(
+      GarminMessageId.notificationUpdate, writer.toBytes());
+}
+
+/// One chunk of an attribute blob (`NotificationDataMessage`, 5035).
+///
+/// [runningCrc] is cumulative over everything sent so far, not over this chunk
+/// alone — the same running-CRC scheme the download path verifies on the way in
+/// (`_ActiveDownload.append`), just run in the other direction.
+Uint8List buildNotificationData({
+  required Uint8List chunk,
+  required int totalSize,
+  required int dataOffset,
+  required int runningCrc,
+}) {
+  final writer = GarminByteWriter()
+    ..writeShort(totalSize)
+    ..writeShort(runningCrc)
+    ..writeShort(dataOffset)
+    ..writeBytes(chunk);
+  return GarminGfdiFrame.build(
+      GarminMessageId.notificationData, writer.toBytes());
+}
+
+/// Acknowledges a notification control request
+/// (`NotificationControlStatusMessage`).
+///
+/// Three payload bytes after the message id, not the one a generic ACK carries —
+/// which is why 5034 is in [garminSelfAcknowledgedTypes].
+Uint8List buildNotificationControlStatus({bool ok = true}) {
+  const chunkStatusOk = 0;
+  const chunkStatusError = 1;
+  const statusCodeNoError = 0;
+  const statusCodeUnknownCommand = 160;
+  final writer = GarminByteWriter()
+    ..writeShort(GarminMessageId.notificationControl)
+    ..writeByte(GarminStatus.ack.code)
+    ..writeByte(ok ? chunkStatusOk : chunkStatusError)
+    ..writeByte(ok ? statusCodeNoError : statusCodeUnknownCommand);
+  return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
+}
+
+/// Tells the watch the attribute blob is fully sent — the phone's own
+/// `NotificationDataStatusMessage`, ACK + OK.
+///
+/// Sent once the last chunk has been acknowledged. Without it the watch keeps
+/// the transfer open waiting for more.
+Uint8List buildNotificationDataFinalAck() {
+  const transferStatusOk = 0;
+  final writer = GarminByteWriter()
+    ..writeShort(GarminMessageId.notificationData)
+    ..writeByte(GarminStatus.ack.code)
+    ..writeByte(transferStatusOk);
   return GarminGfdiFrame.build(GarminMessageId.response, writer.toBytes());
 }
 

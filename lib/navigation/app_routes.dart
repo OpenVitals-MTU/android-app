@@ -154,6 +154,12 @@ class AppRoutes {
   static String watchDataLocation(String deviceId) =>
       '/watch/${Uri.encodeComponent(deviceId)}/data';
 
+  /// Which apps may send notifications to this watch. Under the watch rather
+  /// than under Settings, because the choice only means anything for a watch
+  /// that is paired and speaks GNCS.
+  static String watchNotificationAppsLocation(String deviceId) =>
+      '/watch/${Uri.encodeComponent(deviceId)}/notifications';
+
   /// One screen of the watch's OWN settings tree. The id is the watch's, so a
   /// deep link only means anything while that watch is the one paired.
   static String watchSettingsLocation(String deviceId, int screenId) =>
