@@ -1007,7 +1007,7 @@
     "onboardingStatusOptional": "Opcional",
     "onboardingCategoryMindfulness": "Mindfulness o Atención plena",
     "onboardingCategoryMindfulnessUnavailable": "Las sesiones de mindfulness requieren una versión más reciente de Health Connect.",
-    "onboardingCategoryAdditionalDataAccess": "Acceso adicional a datos",
+    "onboardingCategoryAdditionalDataAccess": "Permisos adicionales",
     "onboardingCategoryAdditionalDataAccessManualNote": "{arg0}\n\nSi Acceso a rutas de ejercicio no aparece en el diálogo de acceso, abre los ajustes de Health Connect para OpenVitals y configúralo en Acceso adicional.",
     "onboardingCategoryVitals": "Constantes",
     "onboardingCategoryCycleTracking": "Seguimiento del ciclo",
@@ -2469,5 +2469,350 @@
     "settingsMetabolismHormonalPregnant": "Embarazada",
     "settingsBodyProfileHeight": "Altura",
     "settingsBodyProfileFromRecord": "Según su último registro",
-    "settingsBodyProfileEnteredHere": "Introducido aquí"
+    "settingsBodyProfileEnteredHere": "Introducido aquí",
+    "settingsBodyProfileBody": "Para calcular de forma exacta tu energía corporal y el efecto de la cafeína, necesitamos tu edad, peso y altura. Si no configuras manualmente tus zonas de ritmo cardíaco, es obligatorio introducir tu año de nacimiento. El resto de los datos son opcionales.",
+    "bodyEnergyCalibrationBody": "OpenVitals estima el desgaste a partir de la intensidad de la frecuencia cardíaca a lo largo del tiempo. Tu frecuencia cardíaca en reposo y máxima se miden a partir de tus propios datos, por lo que no hay nada que introducir para ellas.",
+    "bodyEnergyCalibrationOptionalBody": "No es obligatorio configurar tus zonas de ritmo cardíaco a mano. Si prefieres no hacerlo, el sistema las calculará automáticamente usando tu año de nacimiento y tu entrenamiento más exigente de las últimas cuatro semanas.",
+    "bodyEnergyCalibrationBirthYearRequired": "Energía Corporal requiere tu año de nacimiento para definir tus zonas de ritmo cardíaco. Puedes añadirlo ahora o activar el ajuste manual para configurarlas tú mismo.",
+    "bodyEnergyPersonalizationWatchBody": "{count, plural,=0 {Sincroniza un reloj que mida su propia energía corporal para empezar a personalizar estos datos.} =1 {Calculado a partir de 1 lectura de reloj. Cada una es un multiplicador simple que puedes ver abajo.} other {Calculado a partir de {count} lecturas de reloj. Cada una es un multiplicador simple que puedes ver abajo.}}",
+    "@bodyEnergyPersonalizationWatchBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "activityRouteShareGpx": "Compartir GPX",
+    "activityRouteShareKmz": "Compartir KMZ",
+    "activityRouteShareChooserTitle": "Compartir una ruta con",
+    "activityRouteShareFailed": "No se pudo compartir el archivo de la ruta.",
+    "settingsCsvImportTitle": "Importador de archivos CSV",
+    "settingsCsvImportBody": "Importa datos corporales desde un CSV (como el peso de una báscula inteligente). Define el significado de cada columna.",
+    "settingsCsvImportAction": "Importar un archivo CSV",
+    "settingsCsvImportScreenTitle": "Importador de archivos .csv",
+    "settingsCsvImportPickTitle": "Elige un archivo .csv",
+    "settingsCsvImportPickBody": "Sube tu exportación CSV y mapea las columnas con tus datos de composición corporal. El sistema no registrará nada hasta que tú lo apruebes.",
+    "settingsCsvImportPickAction": "Elige el archivo CSV",
+    "settingsCsvImportFileLabel": "{arg0} - {arg1} columnas",
+    "@settingsCsvImportFileLabel": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            },
+            "arg1": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsCsvImportContinue": "Continuar",
+    "settingsCsvImportBack": "Atrás",
+    "settingsCsvImportDone": "Hecho",
+    "settingsCsvImportImportAnother": "Importar otro archivo",
+    "settingsCsvImportLoading": "Leyendo el archivo…",
+    "settingsCsvImportSeparatorLabel": "Separador de columnas",
+    "settingsCsvImportSeparatorComma": "Coma (,)",
+    "settingsCsvImportSeparatorSemicolon": "Punto y coma (;)",
+    "settingsCsvImportSeparatorTab": "Pestaña",
+    "settingsCsvImportSeparatorPipe": "Barra vertical (|)",
+    "settingsCsvImportHasHeaderLabel": "La primera fila contiene los nombres de las columnas",
+    "settingsCsvImportPreviewTitle": "Vista previa",
+    "settingsCsvImportEmptyFile": "Este archivo está vacío o no tiene registrado.",
+    "settingsCsvImportUnreadableFile": "Hubo un problema al leer el archivo: {arg0}",
+    "@settingsCsvImportUnreadableFile": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsCsvImportColumnsTitle": "Columnas",
+    "settingsCsvImportRoleIgnore": "Sin importar",
+    "settingsCsvImportRoleTimestamp": "Fecha y hora",
+    "settingsCsvImportMetricWeight": "Peso",
+    "settingsCsvImportMetricBodyFat": "Grasa corporal",
+    "settingsCsvImportMetricLeanBodyMass": "Masa muscular",
+    "settingsCsvImportMetricBoneMass": "Masa ósea",
+    "settingsCsvImportMetricBodyWaterMass": "Agua corporal total",
+    "settingsCsvImportMetricHeight": "Altura",
+    "settingsCsvImportMetricBasalMetabolicRate": "Metabolismo basal",
+    "settingsCsvImportValueLabel": "Los valores están en",
+    "settingsCsvImportUnitKilograms": "Kilogramos (kg)",
+    "settingsCsvImportUnitPounds": "Libras (lb)",
+    "settingsCsvImportUnitStones": "Stones (st)",
+    "settingsCsvImportUnitGrams": "Gramos (g)",
+    "settingsCsvImportUnitPercent": "Porcentaje (%)",
+    "settingsCsvImportUnitFraction": "Un valor entre 0 y 1",
+    "settingsCsvImportUnitCentimeters": "Centímetros (cm)",
+    "settingsCsvImportUnitMeters": "Metros (m)",
+    "settingsCsvImportUnitInches": "Pulgadas (in)",
+    "settingsCsvImportUnitFeet": "Pies (ft)",
+    "settingsCsvImportUnitKilocaloriesPerDay": "Kilocalorías por día",
+    "settingsCsvImportUnitKilojoulesPerDay": "Kilojulios por día",
+    "settingsCsvImportInterpretationMassShare": "Masa en {arg0}, como una parte de la columna de peso",
+    "@settingsCsvImportInterpretationMassShare": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingCategoryActivity": "Actividad",
+    "onboardingCategoryActivityDesc": "Lee y guarda:\n* Pasos y distancia\n* Entrenamientos\n* Calorías quemadas\n* Pisos subidos y elevación\n* Empujar sillas de ruedas\n* Velocidad, potencia y cadencia\n* VO2 máximo",
+    "onboardingCategoryNutrition": "Nutrición",
+    "onboardingCategoryNutritionDesc": "Lee y guarda las entradas sobre alimentos y bebidas, incluida la hidratación.",
+    "onboardingCategorySleep": "Dormir",
+    "onboardingCategorySleepDesc": "Lee y guarda las sesiones de sueño y sus etapas.",
+    "onboardingStepCategoriesTitle": "Elige qué puede leer OpenVitals",
+    "onboardingStepCategoriesBody": "Cada opción abre Health Connect para que des tu confirmación. OpenVitals solicita permisos de lectura y escritura, así que los datos que registres aquí también se enviarán a Health Connect.",
+    "onboardingStepMindfulnessTitle": "Mindfulness o Atención plena",
+    "onboardingStepMindfulnessBody": "Registra tus sesiones de mindfulness y míralas junto al resto de tus datos.",
+    "onboardingStepCycleTitle": "Seguimiento del ciclo",
+    "onboardingStepCycleBody": "Registra tus periodos, pruebas de ovulación y síntomas relacionados. Esto incluye datos confidenciales, como la actividad sexual, y se almacena en tu dispositivo como todo lo demás. Omítelo si prefieres no hacerlo.",
+    "onboardingStepAdditionalTitle": "Últimos detalles",
+    "onboardingStepAdditionalBody": "Dos complementos opcionales, y uno que Android no dejará que ninguna aplicación active en tu lugar.",
+    "onboardingRoutesTitle": "Rutas de ejercicio",
+    "onboardingRoutesBody": "Mapas de ruta para tus entrenamientos. Health Connect protege esta opción bajo un ajuste al que ninguna app puede acceder, por lo que requiere tres pasos:",
+    "onboardingRoutesStep1": "Pulsa Abrir Health Connect a continuación.",
+    "onboardingRoutesStep2": "Seleccione acceso adicional.",
+    "onboardingRoutesStep3": "Configura las rutas de ejercicio para que siempre se permitan.",
+    "onboardingActionNext": "Siguiente",
+    "onboardingActionBack": "Atrás",
+    "onboardingActionSkip": "Más tarde",
+    "onboardingActionDone": "Finalizar",
+    "onboardingStepCounter": "Paso {arg0} de {arg1}",
+    "@onboardingStepCounter": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "int"
+            }
+        }
+    },
+    "onboardingCategoryBody": "Medidas corporales",
+    "onboardingCategoryBodyDesc": "Leer y guardar:\n•Peso\n•Altura\n•Grasa corporal\n•Masa corporal\n•Masa ósea\n•Masa de agua corporal\n•Tasa metabólica basal",
+    "onboardingCategoryMindfulnessDesc": "Leer y guardar sesiones de mindfulness.",
+    "onboardingCategoryAdditionalDataAccessDesc": "El acceso a datos anteriores y en segundo plano permite a OpenVitals completar tu historial y mantenerse actualizada sin necesidad de abrir la aplicación.",
+    "onboardingCategoryCycleTrackingDesc": "Leer y guardar:\n* Flujo menstrual y periodos\n* Pruebas de ovulación\n* Moco cervical\n* Sangrado intermenstrual\n* Actividad sexual",
+    "onboardingCoreRequired": "La actividad y el sueño son necesarios para poder mostrarte algo. El resto son opcionales; puedes añadirlos ahora o más tarde desde Ajustes.",
+    "onboardingCategoryVitalsDesc": "Leer y guardar:\n* Frecuencia cardíaca, frecuencia cardíaca en reposo y variabilidad\n* Presión arterial\n* Saturación de oxígeno\n* Frecuencia respiratoria\n* Temperatura corporal y temperatura corporal basal\n* Glucosa en sangre\n* Temperatura de la piel, si es compatible (solo lectura)",
+    "settingsCsvImportMassShareHint": "Health Connect almacena la grasa corporal como un porcentaje, por lo que este se calcula a partir del peso medido en la misma fila.",
+    "settingsCsvImportDateTimeTitle": "Fecha y hora",
+    "settingsCsvImportDateFormatLabel": "Formato",
+    "settingsCsvImportDateFormatAuto": "Detectar automáticamente",
+    "settingsCsvImportDateFormatIso": "ISO 8601 (2026-07-01T08:12:00)",
+    "settingsCsvImportDateFormatYearFirst": "Año primero (2026-07-01 08:12)",
+    "settingsCsvImportDateFormatDayFirst": "Día primero (01/07/2026 08:12)",
+    "settingsCsvImportDateFormatMonthFirst": "Mes primero (07/01/2026 08:12)",
+    "settingsCsvImportDateFormatEpochSeconds": "Los segundos desde 1970",
+    "settingsCsvImportDateFormatEpochMillis": "Los milisegundos desde 1970",
+    "settingsCsvImportDateFormatCustom": "Patrón personalizado",
+    "settingsCsvImportDateFormatCustomHint": "Por ejemplo, dd MMM yyyy HH:mm",
+    "settingsCsvImportDateFormatAmbiguous": "Estas fechas pueden estar en formato día-primero o mes-primero, y ambas opciones son válidas. Elija la que utilice su archivo.",
+    "settingsCsvImportTimeZoneLabel": "Zona horaria",
+    "settingsCsvImportTimeZoneDevice": "Zona horaria de este teléfono",
+    "settingsCsvImportTimeZoneUtc": "UTC",
+    "settingsCsvImportTimeZoneOffset": "Un desfase fijo",
+    "settingsCsvImportTimeZoneOffsetLabel": "Diferencia horaria respecto a UTC (por ejemplo +02:00)",
+    "settingsCsvImportTimeZoneFromFile": "Este archivo especifica su propia zona horaria, así que se usa como viene escrita.",
+    "settingsCsvImportExampleRow": "La primera fila muestra {arg0}",
+    "@settingsCsvImportExampleRow": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsCsvImportIssueNoTimestamp": "Selecciona la columna que incluye la fecha y hora.",
+    "settingsCsvImportIssueMultipleTimestamps": "Solo una columna puede contener la fecha y la hora.",
+    "settingsCsvImportIssueNoMetric": "Selecciona al menos una columna para importar.",
+    "settingsCsvImportIssueDuplicateMetric": "Hay dos columnas asignadas a la misma medida.",
+    "settingsCsvImportIssueNeedsWeight": "Para calcular el porcentaje de grasa corporal, cuando se indica como masa, es necesario que haya una columna de peso en el mismo archivo.",
+    "settingsCsvImportIssueTimestampUnparsed": "Ninguna de las filas de la muestra coincide con este formato de fecha.",
+    "settingsCsvImportConfirmTitle": "Listo para importar",
+    "settingsCsvImportConfirmSummary": "{arg0} · {arg1} mediciones por fila",
+    "@settingsCsvImportConfirmSummary": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            },
+            "arg1": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsCsvImportConfirmRange": "{arg0}: de {arg1} a {arg2}",
+    "@settingsCsvImportConfirmRange": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            },
+            "arg1": {
+                "type": "String"
+            },
+            "arg2": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsCsvImportConfirmDates": "El periodo abarca desde el {arg0} hasta el {arg1}",
+    "@settingsCsvImportConfirmDates": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            },
+            "arg1": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsCsvImportPermissionTitle": "Se requiere permiso",
+    "settingsCsvImportPermissionBody": "OpenVitals necesita permiso para guardar estas mediciones en Health Connect.",
+    "settingsCsvImportStart": "Importar",
+    "settingsCsvImportCancel": "Cancelar",
+    "settingsCsvImportProgress": "Fila {arg0} · escrito {arg1}, ya presente {arg2}, rechazado {arg3}",
+    "@settingsCsvImportProgress": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "int"
+            },
+            "arg2": {
+                "type": "int"
+            },
+            "arg3": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsCsvImportResult": "Escrito {arg0}. Ya existe {arg1}. Rechazado {arg2}.",
+    "@settingsCsvImportResult": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "int"
+            },
+            "arg2": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsCsvImportResultEmpty": "No se ha importado nada de este archivo.",
+    "settingsCsvImportResultCancelled": "Se ha cancelado la importación. Se ha conservado lo que ya se había escrito.",
+    "settingsCsvImportResultRateLimited": "Health Connect ha dejado de aceptar operaciones de escritura por el momento. Vuelve a ejecutar la importación más tarde; los registros que ya se hayan escrito se omitirán.",
+    "settingsCsvImportError": "La importación ha fallado: {arg0}",
+    "@settingsCsvImportError": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsCsvImportDiagnosticsTitle": "Filas rechazadas",
+    "settingsCsvImportDiagnosticLine": "{arg0}: {arg1}",
+    "@settingsCsvImportDiagnosticLine": {
+        "placeholders": {
+            "arg0": {
+                "type": "String"
+            },
+            "arg1": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsCsvImportReasonMissingTimestamp": "Sin fecha ni hora",
+    "settingsCsvImportReasonUnparsableTimestamp": "Formato de fecha no válido",
+    "settingsCsvImportReasonWrongFieldCount": "Faltan columnas",
+    "settingsCsvImportReasonUnparsableNumber": "Valor no numérico",
+    "settingsCsvImportReasonOutOfRange": "Valor fuera de los límites esperados",
+    "settingsCsvImportReasonDerivationMissingWeight": "No hay peso a partir del cual calcular el porcentaje",
+    "settingsCsvImportReasonWriteFailed": "Health Connect rechazó el registro",
+    "settingsCsvImportSaveReport": "Guardar registro",
+    "settingsCsvImportSaveReportSaved": "Registro guardado.",
+    "settingsCsvImportSaveReportCancelled": "Registro no guardado.",
+    "settingsCsvImportSaveReportFailed": "No se ha podido guardar el informe.",
+    "settingsCsvImportMetricHeartRate": "Pulsaciones",
+    "settingsCsvImportMetricRestingHeartRate": "Pulsaciones en reposo",
+    "settingsCsvImportMetricHeartRateVariability": "Variabilidad del ritmo cardíaco (RMSSD)",
+    "settingsCsvImportMetricOxygenSaturation": "Saturación de oxígeno en sangre (SpO₂)",
+    "settingsCsvImportMetricRespiratoryRate": "Respiraciones por minuto",
+    "settingsCsvImportMetricBodyTemperature": "Temperatura corporal",
+    "settingsCsvImportMetricBasalBodyTemperature": "La temperatura corporal basal (TCB)",
+    "settingsCsvImportMetricBloodGlucose": "Glucosa en sangre",
+    "settingsCsvImportMetricVo2Max": "Consumo máximo de oxígeno",
+    "settingsCsvImportUnitCelsius": "Celsius (°C)",
+    "settingsCsvImportUnitFahrenheit": "Fahrenheit (°F)",
+    "settingsCsvImportUnitBeatsPerMinute": "Pulsaciones por minuto (ppm)",
+    "settingsCsvImportUnitMilliseconds": "Milisegundos (ms)",
+    "settingsCsvImportUnitSeconds": "Segundos (s)",
+    "settingsCsvImportUnitBreathsPerMinute": "Respiraciones por minuto (rpm)",
+    "settingsCsvImportUnitMillimolesPerLiter": "Milimoles por litro (mmol/L)",
+    "settingsCsvImportUnitMilligramsPerDeciliter": "Miligramos por decilitro (mg/dL)",
+    "settingsCsvImportUnitMillilitersPerKgPerMinute": "mL/kg/min",
+    "settingsReminderTestTitle": "Recordatorio de prueba",
+    "settingsReminderTestBody": "Muestra el aviso de hidratación ahora mismo, tal y como saldría la alerta automática, con sus opciones rápidas.",
+    "settingsReminderTestShowHydration": "Mostrar recordatorio de hidratación",
+    "settingsReminderTestPosted": "Recordatorio publicado",
+    "settingsReminderTestNotificationsDisabled": "Las notificaciones están desactivadas para OpenVitals",
+    "settingsReminderTestFailed": "No se pudo publicar el recordatorio",
+    "settingsWatchNotificationsSection": "Notificaciones",
+    "settingsWatchNotificationsTitle": "Enviar notificaciones al reloj",
+    "settingsWatchNotificationsBody": "Las notificaciones del teléfono aparecen en tu muñeca. Léelas en este dispositivo y envíalas solo a este reloj.",
+    "settingsWatchNotificationsGrant": "Permitir el acceso a las notificaciones",
+    "settingsWatchNotificationsGrantBody": "Android solicita esta información en su propia pantalla de configuración. OpenVitals no puede solicitarla desde aquí.",
+    "settingsWatchNotificationsApps": "Aplicaciones para silenciar",
+    "settingsWatchNotificationsAppsNone": "Todas las aplicaciones envían información al reloj",
+    "settingsWatchNotificationsAppsBlocked": "{arg0, plural, =1{1 aplicación silenciada} other{{arg0} aplicaciones silenciadas}}",
+    "@settingsWatchNotificationsAppsBlocked": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsWatchNotificationsAppsTitle": "Aplicaciones",
+    "settingsWatchNotificationsAppsIntro": "Desactiva una aplicación para que sus notificaciones no lleguen al reloj. El resto de notificaciones seguirán llegando.",
+    "settingsWatchNotificationsAppsEmpty": "No se encontraron aplicaciones.",
+    "settingsWatchNotificationsDisclosureTitle": "OpenVitals leerá tus notificaciones",
+    "settingsWatchNotificationsDisclosureBody": "Para mostrar las notificaciones en tu reloj, OpenVitals lee las notificaciones que recibe tu teléfono, incluido el texto.\n\nSe leen en este dispositivo y se envían únicamente al reloj con el que lo has emparejado, a través de Bluetooth. No se guarda nada en ningún archivo ni base de datos, y OpenVitals no tiene acceso a internet, por lo que las notificaciones no se pueden enviar a ningún otro sitio.\n\nPuedes desactivar esta función en cualquier momento y revocar el acceso a las notificaciones desde la configuración de Android.",
+    "settingsWatchNotificationsDisclosureAccept": "Continuar",
+    "settingsWatchNotificationsDisclosureDecline": "Más tarde",
+    "settingsAppleHealthImportShareReport": "Compartir informe",
+    "@settingsAppleHealthImportShareReport": {
+        "description": "Button that sends the Apple Health import report to another app as a file attachment."
+    },
+    "settingsAppleHealthImportShareReportChooserTitle": "Compartir informe de importación",
+    "@settingsAppleHealthImportShareReportChooserTitle": {
+        "description": "Title of the system share sheet raised for the Apple Health import report."
+    },
+    "deviceSyncReportSaveFailed": "No se ha podido guardar el informe.",
+    "@deviceSyncReportSaveFailed": {
+        "description": "Snackbar when the sync report could not be written anywhere."
+    },
+    "deviceSyncShareReport": "Compartir el informe",
+    "@deviceSyncShareReport": {
+        "description": "Button that sends the sync report to another app as a file attachment."
+    },
+    "deviceSyncShareReportChooserTitle": "Compartir informe de sincronización",
+    "@deviceSyncShareReportChooserTitle": {
+        "description": "Title of the system share sheet raised for the sync report."
+    },
+    "deviceSyncReportShareFailed": "No se puede compartir el informe.",
+    "@deviceSyncReportShareFailed": {
+        "description": "Snackbar when the sync report could not be handed to the share sheet."
+    },
+    "settingsCsvImportShareReport": "Compartir el informe",
+    "@settingsCsvImportShareReport": {
+        "description": "Button that sends the CSV import report to another app as a file attachment."
+    },
+    "settingsCsvImportShareReportChooserTitle": "Compartir informe de importación",
+    "@settingsCsvImportShareReportChooserTitle": {
+        "description": "Title of the system share sheet raised for the CSV import report."
+    },
+    "settingsCsvImportShareReportFailed": "No se ha podido compartir el informe."
 }
