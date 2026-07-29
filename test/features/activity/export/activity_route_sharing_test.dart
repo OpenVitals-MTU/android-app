@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:openvitals/core/export/export_staging.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/features/activity/export/activity_route_export.dart';
 import 'package:openvitals/features/activity/export/activity_route_export_cache.dart';
@@ -62,7 +63,12 @@ void main() {
 
   setUp(() {
     tempRoot = Directory.systemTemp.createTempSync('route_share_test');
-    cache = ActivityRouteExportCache(temporaryDirectory: () async => tempRoot);
+    cache = ActivityRouteExportCache(
+      cache: ExportStagingCache(
+        directoryName: ActivityRouteExportCache.directoryName,
+        temporaryDirectory: () async => tempRoot,
+      ),
+    );
     sheet = _RecordingShareSheet();
   });
 
@@ -162,23 +168,13 @@ void main() {
       );
     });
 
-    test('writing prunes copies older than a day and keeps fresh ones',
-        () async {
-      // The staged copies only exist for the app being handed the file, so
-      // yesterday's are dead weight.
-      final directory =
-          Directory('${tempRoot.path}/${ActivityRouteExportCache.directoryName}')
-            ..createSync(recursive: true);
-      final stale = File('${directory.path}/stale.gpx')..writeAsStringSync('x');
-      final fresh = File('${directory.path}/fresh.gpx')..writeAsStringSync('x');
-      stale.setLastModifiedSync(
-        DateTime.now().subtract(const Duration(hours: 25)),
-      );
+    // Staging and pruning belong to ExportStagingCache and are covered by its
+    // own test; what stays here is the route-shaped half — the bytes and the
+    // name.
+    test('a staged export holds the format\'s own bytes', () async {
+      final file = await cache.write(_workout(), ActivityRouteExportFormat.gpx);
 
-      await cache.write(_workout(), ActivityRouteExportFormat.gpx);
-
-      expect(stale.existsSync(), isFalse);
-      expect(fresh.existsSync(), isTrue);
+      expect(file.readAsStringSync(), contains('<gpx'));
     });
   });
 }

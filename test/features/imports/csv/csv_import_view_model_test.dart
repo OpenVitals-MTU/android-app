@@ -528,6 +528,80 @@ void main() {
         const CommandState<bool>.idle(),
       );
     });
+
+    test('sharing hands the sheet the same report the save writes', () async {
+      // Save and share must not drift into two different documents: whatever a
+      // user emails to a maintainer has to be the file they could also save.
+      final container = await importedContainer();
+      final expected = container.read(csvImportProvider.notifier).reportText;
+      String? sharedContent;
+      String? sharedName;
+      String? sharedTitle;
+
+      await container.read(csvImportProvider.notifier).shareReport(
+            chooserTitle: 'Share import report',
+            sharer: (content, name, title) async {
+              sharedContent = content;
+              sharedName = name;
+              sharedTitle = title;
+            },
+          );
+
+      expect(sharedContent, expected);
+      expect(sharedName, 'openvitals-csv-import-report.txt');
+      expect(sharedTitle, 'Share import report');
+      expect(
+        container.read(csvImportProvider).shareReport,
+        const CommandState<void>.success(null),
+      );
+    });
+
+    test('a share with no target lands as a command failure rather than '
+        'escaping', () async {
+      final container = await importedContainer();
+
+      await container.read(csvImportProvider.notifier).shareReport(
+            chooserTitle: 'Share import report',
+            sharer: (_, _, _) async => throw StateError('no share target'),
+          );
+
+      expect(
+        container.read(csvImportProvider).shareReport,
+        isA<CommandFailure<void>>(),
+      );
+    });
+
+    test('clearing the share returns the command to idle so it cannot replay',
+        () async {
+      final container = await importedContainer();
+      await container.read(csvImportProvider.notifier).shareReport(
+            chooserTitle: 'Share import report',
+            sharer: (_, _, _) async {},
+          );
+
+      container.read(csvImportProvider.notifier).clearShareReport();
+
+      expect(
+        container.read(csvImportProvider).shareReport,
+        const CommandState<void>.idle(),
+      );
+    });
+
+    test('sharing before an import has run does nothing', () async {
+      final container = await boot();
+      var called = false;
+
+      await container.read(csvImportProvider.notifier).shareReport(
+            chooserTitle: 'Share import report',
+            sharer: (_, _, _) async => called = true,
+          );
+
+      expect(called, isFalse);
+      expect(
+        container.read(csvImportProvider).shareReport,
+        const CommandState<void>.idle(),
+      );
+    });
   });
 
   test('an empty file lands on the mapping step with no mapping to edit',

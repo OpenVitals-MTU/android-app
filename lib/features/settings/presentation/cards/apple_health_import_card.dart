@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/presentation/command_state.dart';
+import '../../../../core/presentation/report_sharing.dart';
 import '../../../../core/presentation/screen_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_card.dart';
@@ -33,6 +34,7 @@ class AppleHealthImportCard extends ConsumerWidget {
     super.key,
     this.pickExportSource,
     this.saveReportFile,
+    this.shareReportFile,
   });
 
   /// Test seam for the system file picker; defaults to `file_selector`'s
@@ -45,6 +47,10 @@ class AppleHealthImportCard extends ConsumerWidget {
   /// Test seam for the report save flow; defaults to the view-model's platform
   /// saver. Returns `true` on success.
   final AppleHealthReportSaver? saveReportFile;
+
+  /// Test seam for the report share flow; defaults to the system share sheet.
+  /// Throws on failure.
+  final TextReportSharer? shareReportFile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,6 +66,11 @@ class AppleHealthImportCard extends ConsumerWidget {
     ref.listen(
       appleHealthImportCardProvider.select((s) => s.saveReport),
       (previous, next) => _onSaveReportChanged(context, l10n, cardNotifier, next),
+    );
+    // A finished share only rests — a failed one is rendered in place below.
+    ref.listen(
+      appleHealthImportCardProvider.select((s) => s.shareReport),
+      (previous, next) => _onShareReportChanged(cardNotifier, next),
     );
 
     final importPermissions = card.importPermissions;
@@ -181,6 +192,7 @@ class AppleHealthImportCard extends ConsumerWidget {
           ],
         ),
       ));
+      children.add(_shareReportButton(l10n, cardNotifier));
     }
 
     // Analysis result + per-category checklist.
@@ -246,6 +258,7 @@ class AppleHealthImportCard extends ConsumerWidget {
               icon: const Icon(Icons.download_outlined, size: 18),
               label: Text(l10n.settingsAppleHealthImportSaveReport),
             ),
+            _shareReportButton(l10n, cardNotifier),
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: SelectionArea(
@@ -341,6 +354,9 @@ class AppleHealthImportCard extends ConsumerWidget {
     if (card.saveReport case CommandFailure<bool>(:final error)) {
       addCommandFailure(error);
     }
+    if (card.shareReport case CommandFailure<void>(:final error)) {
+      addCommandFailure(error);
+    }
 
     // Grant button (only if missing perms).
     if (missingPermissions.isNotEmpty) {
@@ -408,6 +424,29 @@ class AppleHealthImportCard extends ConsumerWidget {
     );
   }
 
+  /// Sends the report on as a file attachment — a WhatsApp/Signal/Telegram
+  /// message, an email. The third of the card's three ways out, and the only one
+  /// that reaches another person: Copy caps out at what a text field will hold,
+  /// and Download keeps the report on this phone.
+  Widget _shareReportButton(
+    AppLocalizations l10n,
+    AppleHealthImportCardViewModel notifier,
+  ) =>
+      Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => notifier.shareReport(
+              chooserTitle: l10n.settingsAppleHealthImportShareReportChooserTitle,
+              sharer: shareReportFile,
+            ),
+            icon: const Icon(Icons.share_outlined, size: 18),
+            label: Text(l10n.settingsAppleHealthImportShareReport),
+          ),
+        ),
+      );
+
   Future<void> _pickAndAnalyze(AppleHealthImportViewModel notifier) async {
     final source = await _pickSource();
     if (source == null) return;
@@ -469,6 +508,17 @@ class AppleHealthImportCard extends ConsumerWidget {
       }
       notifier.clearSaveReport();
     }
+  }
+
+  /// A share that reached the sheet says nothing — the sheet the user just saw
+  /// IS the feedback, and Android reports no target choice back. A FAILED share
+  /// is left standing so the failure block renders it, exactly as a failed save
+  /// is.
+  void _onShareReportChanged(
+    AppleHealthImportCardViewModel notifier,
+    CommandState<void> command,
+  ) {
+    if (command is CommandSuccess<void>) notifier.clearShareReport();
   }
 }
 

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/presentation/command_state.dart';
 import '../../../../core/presentation/report_saving.dart';
+import '../../../../core/presentation/report_sharing.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_card.dart';
 import '../application/csv_import_view_model.dart';
@@ -15,10 +16,17 @@ import 'csv_import_labels.dart';
 import 'csv_import_step_bar.dart';
 
 class CsvImportResultView extends ConsumerWidget {
-  const CsvImportResultView({super.key, this.saveReportFile});
+  const CsvImportResultView({
+    super.key,
+    this.saveReportFile,
+    this.shareReportFile,
+  });
 
   /// Test seam for the save picker, matching `AppleHealthImportCard`.
   final TextReportSaver? saveReportFile;
+
+  /// Test seam for the share sheet, matching `AppleHealthImportCard`.
+  final TextReportSharer? shareReportFile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,6 +38,7 @@ class CsvImportResultView extends ConsumerWidget {
     if (result == null) return const SizedBox.shrink();
 
     _consumeSaveOutcome(context, ref, l10n, state.saveReport);
+    _consumeShareOutcome(context, ref, l10n, state.shareReport);
 
     return Column(
       children: [
@@ -115,15 +124,34 @@ class CsvImportResultView extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: state.saveReport is CommandRunning<bool>
-                      ? null
-                      : () => notifier.saveReport(saver: saveReportFile),
-                  icon: const Icon(Icons.save_alt_outlined, size: 18),
-                  label: Text(l10n.settingsCsvImportSaveReport),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: state.saveReport is CommandRunning<bool>
+                          ? null
+                          : () => notifier.saveReport(saver: saveReportFile),
+                      icon: const Icon(Icons.save_alt_outlined, size: 18),
+                      label: Text(l10n.settingsCsvImportSaveReport),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    // Sends the report on as a file attachment, rather than
+                    // keeping it on this phone. Its sibling, not its substitute.
+                    child: OutlinedButton.icon(
+                      onPressed: state.shareReport is CommandRunning<void>
+                          ? null
+                          : () => notifier.shareReport(
+                                chooserTitle:
+                                    l10n.settingsCsvImportShareReportChooserTitle,
+                                sharer: shareReportFile,
+                              ),
+                      icon: const Icon(Icons.share_outlined, size: 18),
+                      label: Text(l10n.settingsCsvImportShareReport),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -160,6 +188,28 @@ class CsvImportResultView extends ConsumerWidget {
       ScaffoldMessenger.maybeOf(context)
           ?.showSnackBar(SnackBar(content: Text(message)));
       ref.read(csvImportProvider.notifier).clearSaveReport();
+    });
+  }
+
+  /// A share that reached the sheet says nothing — the sheet the user just saw
+  /// IS the feedback, and Android reports no target choice back. Only a failure
+  /// (nothing staged, no app that accepts a file) is announced.
+  void _consumeShareOutcome(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    CommandState<void> command,
+  ) {
+    if (command is CommandIdle<void> || command is CommandRunning<void>) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      if (command is CommandFailure<void>) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text(l10n.settingsCsvImportShareReportFailed)),
+        );
+      }
+      ref.read(csvImportProvider.notifier).clearShareReport();
     });
   }
 }

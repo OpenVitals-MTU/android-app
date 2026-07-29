@@ -2625,6 +2625,14 @@
   "settingsAppleHealthImportCopyReport": "Copy report",
   "settingsAppleHealthImportCopyError": "Copy error",
   "settingsAppleHealthImportSaveReport": "Download full report",
+  "settingsAppleHealthImportShareReport": "Share report",
+  "@settingsAppleHealthImportShareReport": {
+    "description": "Button that sends the Apple Health import report to another app as a file attachment."
+  },
+  "settingsAppleHealthImportShareReportChooserTitle": "Share import report",
+  "@settingsAppleHealthImportShareReportChooserTitle": {
+    "description": "Title of the system share sheet raised for the Apple Health import report."
+  },
   "settingsAppleHealthImportReportCopied": "Import report copied.",
   "settingsAppleHealthImportErrorCopied": "Import error copied.",
   "settingsAppleHealthImportReportSaved": "Import report saved.",
@@ -4119,6 +4127,22 @@
   "@deviceSyncSaveReport": {
     "description": "Button to save the sync report to a file."
   },
+  "deviceSyncReportSaveFailed": "Unable to save the report.",
+  "@deviceSyncReportSaveFailed": {
+    "description": "Snackbar when the sync report could not be written anywhere."
+  },
+  "deviceSyncShareReport": "Share report",
+  "@deviceSyncShareReport": {
+    "description": "Button that sends the sync report to another app as a file attachment."
+  },
+  "deviceSyncShareReportChooserTitle": "Share sync report",
+  "@deviceSyncShareReportChooserTitle": {
+    "description": "Title of the system share sheet raised for the sync report."
+  },
+  "deviceSyncReportShareFailed": "Unable to share the report.",
+  "@deviceSyncReportShareFailed": {
+    "description": "Snackbar when the sync report could not be handed to the share sheet."
+  },
   "settingsWatchActionData": "Data",
   "settingsWatchActionSync": "Sync",
   "settingsBikeLiveSensorSection": "Live sensor",
@@ -4503,6 +4527,15 @@
   "settingsCsvImportSaveReportSaved": "Report saved.",
   "settingsCsvImportSaveReportCancelled": "Report not saved.",
   "settingsCsvImportSaveReportFailed": "The report could not be saved.",
+  "settingsCsvImportShareReport": "Share report",
+  "@settingsCsvImportShareReport": {
+    "description": "Button that sends the CSV import report to another app as a file attachment."
+  },
+  "settingsCsvImportShareReportChooserTitle": "Share import report",
+  "@settingsCsvImportShareReportChooserTitle": {
+    "description": "Title of the system share sheet raised for the CSV import report."
+  },
+  "settingsCsvImportShareReportFailed": "The report could not be shared.",
   "settingsCsvImportMetricHeartRate": "Heart rate",
   "settingsCsvImportMetricRestingHeartRate": "Resting heart rate",
   "settingsCsvImportMetricHeartRateVariability": "Heart rate variability (RMSSD)",

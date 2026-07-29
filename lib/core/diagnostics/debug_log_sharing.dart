@@ -1,7 +1,5 @@
-import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import '../export/export_sharing.dart';
+import '../export/export_staging.dart';
 
 /// Shares the sanitized diagnostics log as a `text/plain` attachment — the port
 /// of the Kotlin `Context.shareDebugDiagnosticsLog()`
@@ -10,16 +8,24 @@ import 'package:share_plus/share_plus.dart';
 /// Kotlin writes the export into `cacheDir/diagnostics_exports/`, hands it to
 /// its own `FileProvider` (`$packageName.fileprovider`, declared in
 /// `res/xml/file_paths.xml`) and fires `Intent.createChooser(ACTION_SEND)`.
+/// Here the same file lands in the same-named directory under the cache root
+/// via [ExportStagingCache] and goes to the sheet via [shareStagedFile], the two
+/// halves it now shares with the route exports and the import reports. The
+/// FileProvider half is absorbed by share_plus, which ships its own provider
+/// (authority `${applicationId}.flutter.share_provider`) and copies the file
+/// into `cacheDir/share_plus/` before granting the URI — so the Android host
+/// needs no `file_paths.xml` entry of its own.
 ///
-/// Here the same file lands in the `path_provider` temporary directory (the
-/// `cacheDir` analogue) and `share_plus` raises the chooser. The FileProvider
-/// half of the Kotlin change is **absorbed by the plugin**: `share_plus` ships
-/// its own provider (authority `${applicationId}.flutter.share_provider`, paths
-/// in `flutter_share_file_paths.xml`) and copies any file handed to it into
-/// `cacheDir/share_plus/` before granting the URI — so the Android host needs
-/// no `file_paths.xml` entry of its own.
+/// Moving onto the shared cache also fixed a leak: this path never pruned, so
+/// every share left another copy of the log in the cache forever. The shared
+/// cache prunes on every stage.
 class DebugLogSharing {
-  const DebugLogSharing();
+  const DebugLogSharing({ExportStagingCache? cache})
+      : cache = cache ?? const ExportStagingCache(
+              directoryName: exportDirectoryName,
+            );
+
+  final ExportStagingCache cache;
 
   /// Kotlin `DiagnosticsExportCacheDirectory`.
   static const String exportDirectoryName = 'diagnostics_exports';
@@ -38,22 +44,15 @@ class DebugLogSharing {
   Future<void> shareDiagnosticsLog({
     required String content,
     required String chooserTitle,
+    ShareSheet? share,
   }) async {
-    final cacheDir = await getTemporaryDirectory();
-    final exportDirectory =
-        Directory('${cacheDir.path}/$exportDirectoryName');
-    await exportDirectory.create(recursive: true);
-
-    final exportFile = File('${exportDirectory.path}/$exportFileName');
-    await exportFile.writeAsString(content);
-
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(exportFile.path, mimeType: mimeType)],
-        // Android maps this onto Intent.createChooser's title, which is exactly
-        // what Kotlin passes settings_debug_logs_share_chooser_title to.
-        title: chooserTitle,
-      ),
+    final file = await cache.stageText(exportFileName, content);
+    await shareStagedFile(
+      file: file,
+      mimeType: mimeType,
+      chooserTitle: chooserTitle,
+      subject: exportFileName,
+      share: share,
     );
   }
 }

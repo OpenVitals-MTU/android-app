@@ -17,7 +17,7 @@ OpenVitals can import body measurements and vitals from a CSV file — a weight 
 5. For each column, choose what it is: **Not imported** (the default), **Date and time**, or one of the metrics. For a metric, also choose what its numbers are — kilograms, °F, mg/dL, and so on. If the column header names a unit, like `Weight (kg)` or `value (°C)`, that unit is pre-selected.
 6. Check the **Date and time** panel. The line underneath shows how the first row's timestamp reads — confirm it is the day you expect before continuing.
 7. On the confirm step, check the **range** shown for each metric. This is the range that will actually be written. Grant the write permissions if prompted, then tap **Import**.
-8. Read the result: **Written**, **Already present**, **Rejected**, plus a breakdown of why any rows were rejected. **Save report** writes the whole thing to a text file if you need to look at it properly or send it on.
+8. Read the result: **Written**, **Already present**, **Rejected**, plus a breakdown of why any rows were rejected. **Save report** writes the whole thing to a text file if you need to look at it properly, and **Share report** sends that same file to another app as an attachment.
 
 ## The Withings example
 
@@ -93,7 +93,9 @@ The result screen groups every rejection by reason with exact counts. The per-ro
 
 It exists because "2 rejected" on screen tells you something went wrong but not *what*, and the mapping you chose is exactly the thing you need to see to work out why. A derived body-fat column is written out as *"kilograms as a share of the weight column"* rather than just "kilograms", because the latter would misdescribe what was stored.
 
-Like the Apple Health import report, it is **not sanitised** — it is an explicit export for troubleshooting and names your file, your columns and the values that were rejected. It contains no health data your own CSV did not already contain. On Android it lands in the app's documents directory; on desktop you get a save dialog.
+Like the Apple Health import report, it is **not sanitised** — it is an explicit export for troubleshooting and names your file, your columns and the values that were rejected. It contains no health data your own CSV did not already contain. You pick where it goes: the system "create document" picker on Android, a save dialog on desktop.
+
+**Share report**, next to it, sends the same file straight to another app instead of keeping it on the phone — a WhatsApp, Signal or Telegram message, an email attachment, a notes app. It goes as an attached `.txt`, never as pasted message text, because a report of any size is unreadable in a chat bubble. Nothing is uploaded anywhere — the app has no internet permission; the file is handed to whichever app you pick from the system share sheet, and that app does the sending.
 
 ## Re-importing and duplicates
 

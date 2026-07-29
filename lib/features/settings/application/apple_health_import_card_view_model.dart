@@ -3,6 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/command_state.dart';
 import '../../../core/presentation/report_saving.dart';
+import '../../../core/presentation/report_sharing.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/result/result.dart';
 import '../../../di/providers.dart';
@@ -12,11 +13,9 @@ import '../../imports/applehealth/apple_health_import_view_model.dart';
 
 part 'apple_health_import_card_view_model.freezed.dart';
 
-/// Writes the report to a user-chosen location where `getSaveLocation` is
-/// supported (desktop), falling back to the app documents directory on
-/// platforms whose `file_selector` implementation has no save picker (Android
-/// — the analogue of Kotlin's SAF `CreateDocument`, which has no cross-plugin
-/// Flutter equivalent here). Returns `false` when the user cancels.
+/// Writes the report to a user-chosen location — the SAF `CreateDocument`
+/// picker on Android, the native save dialog on desktop. Returns `false` when
+/// the user cancels. See `core/export/export_saving.dart`.
 typedef AppleHealthReportSaver = Future<bool> Function(
   String content,
   String suggestedName,
@@ -43,6 +42,11 @@ abstract class AppleHealthImportCardState with _$AppleHealthImportCardState {
     /// The last report save: `success(true)` saved, `success(false)` cancelled
     /// or refused by the platform.
     @Default(CommandState<bool>.idle()) CommandState<bool> saveReport,
+
+    /// The last report share. Carries no value: a share that reached the sheet
+    /// is done — whether the user then picked WhatsApp, Signal or nothing is
+    /// between them and the sheet, and Android does not report it back.
+    @Default(CommandState<void>.idle()) CommandState<void> shareReport,
   }) = _AppleHealthImportCardState;
 
   int get grantedCount => importPermissions.where(granted.contains).length;
@@ -64,6 +68,7 @@ class AppleHealthImportCardViewModel
   /// Both commands survive the rebuilds the granted-set refresh triggers.
   CommandState<void> _grant = const CommandState.idle();
   CommandState<bool> _saveReport = const CommandState.idle();
+  CommandState<void> _shareReport = const CommandState.idle();
 
   @override
   AppleHealthImportCardState build() {
@@ -75,6 +80,7 @@ class AppleHealthImportCardViewModel
       availability: ref.watch(healthConnectAvailabilityProvider).value,
       grant: _grant,
       saveReport: _saveReport,
+      shareReport: _shareReport,
     );
   }
 
@@ -129,9 +135,46 @@ class AppleHealthImportCardViewModel
     }
   }
 
+  /// Stages the report as a file and hands it to the system share sheet, so it
+  /// can leave the app as a WhatsApp/Signal/Telegram message or an email
+  /// attachment.
+  ///
+  /// [chooserTitle] is localized, so it comes from the card rather than being
+  /// built here.
+  Future<void> shareReport({
+    required String chooserTitle,
+    TextReportSharer? sharer,
+  }) async {
+    _setShareReport(const CommandState.running());
+    final content = ref.read(appleHealthImportProvider.notifier).reportTextForSave;
+    try {
+      await (sharer ?? shareTextReport)(
+        content,
+        kAppleHealthReportFileName,
+        chooserTitle,
+      );
+      if (!ref.mounted) return;
+      _setShareReport(const CommandState.success(null));
+    } catch (error) {
+      if (!ref.mounted) return;
+      _setShareReport(
+        CommandState.failure(
+          throwableToScreenError(
+            error,
+            fallback: 'Unable to share the report.',
+          ),
+        ),
+      );
+    }
+  }
+
   /// The card consumes a finished save (it shows one snackbar) and returns the
   /// command to rest, so re-entering the section cannot replay it.
   void clearSaveReport() => _setSaveReport(const CommandState.idle());
+
+  /// The share's counterpart of [clearSaveReport]. A successful share says
+  /// nothing (the sheet is its own feedback); only a failure is announced.
+  void clearShareReport() => _setShareReport(const CommandState.idle());
 
   void _setGrant(CommandState<void> next) {
     _grant = next;
@@ -141,6 +184,11 @@ class AppleHealthImportCardViewModel
   void _setSaveReport(CommandState<bool> next) {
     _saveReport = next;
     state = state.copyWith(saveReport: next);
+  }
+
+  void _setShareReport(CommandState<void> next) {
+    _shareReport = next;
+    state = state.copyWith(shareReport: next);
   }
 }
 

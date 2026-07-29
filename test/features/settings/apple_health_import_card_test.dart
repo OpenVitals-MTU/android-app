@@ -276,6 +276,7 @@ Future<Widget> _bootstrap(
   bool grantAll = false,
   Future<AppleHealthExportSource?> Function()? pickExportSource,
   Future<bool> Function(String, String)? saveReportFile,
+  Future<void> Function(String, String, String)? shareReportFile,
 }) async {
   SharedPreferences.setMockInitialValues(const <String, Object>{});
   prefs = await SharedPreferences.getInstance();
@@ -310,6 +311,7 @@ Future<Widget> _bootstrap(
           child: AppleHealthImportCard(
             pickExportSource: pickExportSource,
             saveReportFile: saveReportFile,
+            shareReportFile: shareReportFile,
           ),
         ),
       ),
@@ -428,6 +430,67 @@ void main() {
 
     expect(savedContent, 'IMPORT_REPORT');
     expect(find.text('Import report saved.'), findsOneWidget);
+  });
+
+  testWidgets('share report action hands the sheet the same report the save '
+      'writes', (tester) async {
+    // Saving on Android has no picker and lands in app documents out of reach;
+    // sharing is what actually gets the report to a maintainer.
+    final service = _FakeService();
+    String? sharedContent;
+    String? sharedName;
+    String? sharedTitle;
+    await tester.pumpWidget(
+      await _bootstrap(
+        service,
+        grantAll: true,
+        pickExportSource: () async => fakePickedExport(),
+        shareReportFile: (content, name, title) async {
+          sharedContent = content;
+          sharedName = name;
+          sharedTitle = title;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Analyze Apple Health export'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import selected categories'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Share report'));
+    await tester.pumpAndSettle();
+
+    expect(sharedContent, 'IMPORT_REPORT');
+    expect(sharedName, 'openvitals-apple-health-import-report.txt');
+    expect(sharedTitle, 'Share import report');
+    // No snackbar on success — the sheet the user just saw is the feedback.
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets('a share with no target shows the failure in the card',
+      (tester) async {
+    final service = _FakeService();
+    await tester.pumpWidget(
+      await _bootstrap(
+        service,
+        grantAll: true,
+        pickExportSource: () async => fakePickedExport(),
+        shareReportFile: (_, _, _) async => throw StateError('no share target'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Analyze Apple Health export'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import selected categories'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Share report'));
+    await tester.pumpAndSettle();
+
+    // The thrown reason reaches the card in place, exactly as a failed save
+    // does; the generic fallback only stands in for a message-less throwable.
+    expect(find.textContaining('no share target'), findsOneWidget);
   });
 
   testWidgets('analysis failure shows the error text', (tester) async {

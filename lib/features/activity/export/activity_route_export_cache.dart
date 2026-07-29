@@ -1,8 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-
+import '../../../core/export/export_staging.dart';
 import '../../../domain/model/activity_models.dart';
 import 'activity_route_export.dart';
 
@@ -11,23 +9,22 @@ import 'activity_route_export.dart';
 ///
 /// Two callers need exactly this: "Open route in map app" (ACTION_VIEW, through
 /// open_filex's provider) and the share sheet (ACTION_SEND, through share_plus's
-/// own provider). Neither wants the SAF save picker; both want a real path on
-/// disk that survives long enough for the receiving app to read it.
+/// own provider). Neither wants the save picker; both want a real path on disk
+/// that survives long enough for the receiving app to read it.
 ///
-/// The copies are dead weight once the other app has read them, so every write
-/// first prunes anything older than [staleAfter]. The Kotlin original did the
-/// same in `File.deleteOldRouteExports`.
+/// What is left here after the staging mechanics moved to [ExportStagingCache]
+/// (shared with the diagnostics log and the import reports) is the route-shaped
+/// half: building the bytes for a format, and naming the file after the
+/// activity. The Kotlin original's `File.deleteOldRouteExports` is now the
+/// shared cache's pruning, which every stage runs.
 class ActivityRouteExportCache {
-  const ActivityRouteExportCache({this.temporaryDirectory});
+  const ActivityRouteExportCache({ExportStagingCache? cache})
+      : cache = cache ?? const ExportStagingCache(directoryName: directoryName);
 
-  /// Test seam for the cache root; defaults to [getTemporaryDirectory].
-  final Future<Directory> Function()? temporaryDirectory;
+  final ExportStagingCache cache;
 
   /// Kotlin `RouteExportCacheDirectory`.
   static const String directoryName = 'route_exports';
-
-  /// How long a staged copy is worth keeping.
-  static const Duration staleAfter = Duration(hours: 24);
 
   /// Stages [workout]'s route as [format] and returns the file.
   ///
@@ -39,34 +36,9 @@ class ActivityRouteExportCache {
     ActivityRouteExportFormat format,
   ) async {
     final points = sortedRoutePointsForExport(workout);
-    final root = await (temporaryDirectory ?? getTemporaryDirectory)();
-    final directory = Directory('${root.path}/$directoryName');
-    await directory.create(recursive: true);
-    pruneStale(directory);
-    final file = File(
-      '${directory.path}/${activityRouteExportFileName(workout, format)}',
-    );
-    await file.writeAsBytes(
+    return cache.stageBytes(
+      activityRouteExportFileName(workout, format),
       buildActivityRouteExport(workout, points, format),
-      flush: true,
     );
-    return file;
-  }
-
-  /// Deletes staged copies older than [staleAfter].
-  ///
-  /// Best-effort and never throws: a file the OS is still holding must not stop
-  /// the export the user just asked for.
-  @visibleForTesting
-  void pruneStale(Directory directory) {
-    final cutoff = DateTime.now().subtract(staleAfter);
-    for (final entry in directory.listSync()) {
-      if (entry is! File) continue;
-      try {
-        if (entry.statSync().modified.isBefore(cutoff)) entry.deleteSync();
-      } catch (_) {
-        // Locked, already gone, or unreadable — leave it for the next write.
-      }
-    }
   }
 }

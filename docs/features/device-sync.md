@@ -31,7 +31,8 @@ native plugin, `packages/bluetooth_sync_native/`, modelled on
 5. **Sync.** Both phones exchange records, dedupe, and write only what they were
    missing (a bidirectional merge).
 6. **Report.** Each phone shows what it imported and skipped, like the Apple
-   Health import report.
+   Health import report. It can be copied, saved as `openvitals-sync-report.txt`,
+   or shared to another app as a `.txt` attachment.
 
 ## What the 6-digit code protects
 

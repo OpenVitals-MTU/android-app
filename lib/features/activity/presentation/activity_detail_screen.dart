@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 
+import '../../../core/export/export_saving.dart';
 import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/presentation/unit_formatter.dart';
@@ -653,10 +653,10 @@ class _RouteMapCard extends StatelessWidget {
   /// destination (pre-filled with the generated file name), write the bytes,
   /// confirm with a snackbar. Cancelling the picker does nothing.
   ///
-  /// file_picker, NOT file_selector: on Android only file_picker's `saveFile`
-  /// raises SAF's CREATE_DOCUMENT and writes the bytes through the returned
-  /// content URI — file_selector has no Android save picker at all
-  /// (`getSaveLocation` throws, see the diagnostics-log save fallback).
+  /// This route was the one export that always saved correctly on Android, and
+  /// [saveExportBytes] is that mechanism lifted into `core/export/` so the text
+  /// reports and the diagnostics log share it. Cancelling returns false rather
+  /// than throwing, so it is no longer conflated with a failure.
   Future<void> _saveRoute(
     BuildContext context,
     ActivityRouteExportFormat format,
@@ -665,11 +665,11 @@ class _RouteMapCard extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final points = sortedRoutePointsForExport(workout);
-      final savedPath = await FilePicker.platform.saveFile(
-        fileName: activityRouteExportFileName(workout, format),
-        bytes: buildActivityRouteExport(workout, points, format),
+      final saved = await saveExportBytes(
+        activityRouteExportFileName(workout, format),
+        buildActivityRouteExport(workout, points, format),
       );
-      if (savedPath == null) return;
+      if (!saved) return;
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.activityRouteExportSaved)),
       );

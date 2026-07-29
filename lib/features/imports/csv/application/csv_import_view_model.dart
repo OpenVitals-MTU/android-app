@@ -5,6 +5,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../../core/presentation/command_state.dart';
 import '../../../../core/presentation/file_picking.dart';
 import '../../../../core/presentation/report_saving.dart';
+import '../../../../core/presentation/report_sharing.dart';
 import '../../../../core/presentation/screen_error.dart';
 import '../../../../core/result/result.dart';
 import '../../../../di/providers.dart';
@@ -57,6 +58,12 @@ abstract class CsvImportState with _$CsvImportState {
     /// or refused by the platform. A single failable action, so unlike the
     /// import itself it IS a command.
     @Default(CommandState<bool>.idle()) CommandState<bool> saveReport,
+
+    /// The last report share. Carries no value: unlike a save, a share that
+    /// reached the sheet is done — whether the user then picked WhatsApp,
+    /// Signal or nothing at all is between them and the sheet, and Android
+    /// does not report it back.
+    @Default(CommandState<void>.idle()) CommandState<void> shareReport,
     @Default(<String>{}) Set<String> granted,
 
     /// The write permissions the INSTALLED Health Connect provider actually
@@ -367,10 +374,50 @@ class CsvImportViewModel extends Notifier<CsvImportState> {
     }
   }
 
+  /// Stages the report as a file and hands it to the system share sheet, so it
+  /// can leave the app as a WhatsApp/Signal/Telegram message or an email
+  /// attachment.
+  ///
+  /// [chooserTitle] is localized, so it comes from the view rather than being
+  /// built here.
+  Future<void> shareReport({
+    required String chooserTitle,
+    TextReportSharer? sharer,
+  }) async {
+    final content = reportText;
+    if (content == null) return;
+    state = state.copyWith(shareReport: const CommandState.running());
+
+    try {
+      await (sharer ?? shareTextReport)(
+        content,
+        kCsvImportReportFileName,
+        chooserTitle,
+      );
+      if (!ref.mounted) return;
+      state = state.copyWith(shareReport: const CommandState.success(null));
+    } catch (error) {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        shareReport: CommandState.failure(
+          throwableToScreenError(
+            error,
+            fallback: 'Unable to share the report.',
+          ),
+        ),
+      );
+    }
+  }
+
   /// The view consumes a finished save (it shows one snackbar) and returns the
   /// command to rest, so rebuilding the step cannot replay it.
   void clearSaveReport() =>
       state = state.copyWith(saveReport: const CommandState.idle());
+
+  /// The share's counterpart of [clearSaveReport]. A successful share says
+  /// nothing (the sheet is its own feedback); only a failure is announced.
+  void clearShareReport() =>
+      state = state.copyWith(shareReport: const CommandState.idle());
 
   /// Returns to the pick step, keeping nothing from the finished run.
   void reset() => state = CsvImportState(granted: state.granted);

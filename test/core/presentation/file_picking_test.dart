@@ -28,7 +28,9 @@ void main() {
       final lines = entity.readAsLinesSync();
       for (var i = 0; i < lines.length; i++) {
         final line = lines[i];
-        // `getSaveLocation` is fine and stays: saving reads nothing.
+        // Saving has its own guard, in test/core/export/: `getSaveLocation`
+        // reads nothing, so it is not an OOM risk — it simply does not exist on
+        // Android.
         if (RegExp(r'\bopenFiles?\s*\(').hasMatch(line)) {
           offenders.add('${entity.path}:${i + 1}: ${line.trim()}');
         }

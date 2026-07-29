@@ -337,6 +337,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Save report'), findsOneWidget);
+    // Saving keeps the report on this phone; sharing is what gets it to a
+    // maintainer over WhatsApp, Signal or email.
+    expect(find.text('Share report'), findsOneWidget);
   });
 
   testWidgets('saving the report writes it and confirms once', (tester) async {
@@ -403,6 +406,137 @@ void main() {
     expect(
       container.read(csvImportProvider).saveReport,
       const CommandState<bool>.idle(),
+    );
+  });
+
+  testWidgets('sharing the report hands the sheet the report and stays quiet',
+      (tester) async {
+    // The screen is rebuilt with a share seam so no real share sheet opens.
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        healthDataSourceProvider.overrideWithValue(_FakeHealthDataSource()),
+        importWriteRepositoryProvider
+            .overrideWithValue(_FakeImportWriteRepository()),
+        unitSystemProvider.overrideWithValue(UnitSystem.metric),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    String? sharedContent;
+    String? sharedName;
+    String? sharedTitle;
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: CsvImportResultView(
+              shareReportFile: (content, name, title) async {
+                sharedContent = content;
+                sharedName = name;
+                sharedTitle = title;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final notifier = container.read(csvImportProvider.notifier);
+    await tester.runAsync(
+      () => notifier.pickFile(picker: () async => XFile(withingsFile().path)),
+    );
+    notifier.setColumnRole(
+      1,
+      role: CsvColumnRole.metric,
+      metric: CsvImportMetric.weight,
+    );
+    notifier.setDateTimeSettings(
+      const CsvDateTimeSettings(
+        format: CsvDateTimeFormat.yearFirst,
+        zone: CsvTimeZoneMode.utc,
+      ),
+    );
+    await tester.runAsync(notifier.startImport);
+    await tester.pump();
+
+    await tester.tap(find.text('Share report'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(sharedContent, contains('OpenVitals CSV import report'));
+    expect(sharedName, 'openvitals-csv-import-report.txt');
+    expect(sharedTitle, 'Share import report');
+    // No snackbar on success — the sheet the user just saw is the feedback.
+    expect(find.byType(SnackBar), findsNothing);
+    expect(
+      container.read(csvImportProvider).shareReport,
+      const CommandState<void>.idle(),
+    );
+  });
+
+  testWidgets('a share with no target tells the user instead of failing '
+      'silently', (tester) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        healthDataSourceProvider.overrideWithValue(_FakeHealthDataSource()),
+        importWriteRepositoryProvider
+            .overrideWithValue(_FakeImportWriteRepository()),
+        unitSystemProvider.overrideWithValue(UnitSystem.metric),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: CsvImportResultView(
+              shareReportFile: (_, _, _) async =>
+                  throw StateError('no share target'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final notifier = container.read(csvImportProvider.notifier);
+    await tester.runAsync(
+      () => notifier.pickFile(picker: () async => XFile(withingsFile().path)),
+    );
+    notifier.setColumnRole(
+      1,
+      role: CsvColumnRole.metric,
+      metric: CsvImportMetric.weight,
+    );
+    notifier.setDateTimeSettings(
+      const CsvDateTimeSettings(
+        format: CsvDateTimeFormat.yearFirst,
+        zone: CsvTimeZoneMode.utc,
+      ),
+    );
+    await tester.runAsync(notifier.startImport);
+    await tester.pump();
+
+    await tester.tap(find.text('Share report'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('The report could not be shared.'), findsOneWidget);
+    expect(
+      container.read(csvImportProvider).shareReport,
+      const CommandState<void>.idle(),
     );
   });
 

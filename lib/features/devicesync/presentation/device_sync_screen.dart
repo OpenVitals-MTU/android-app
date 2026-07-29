@@ -2,13 +2,12 @@
 /// [DeviceSyncViewModel]'s state machine, mirroring the design-system mockups.
 library;
 
-import 'dart:io';
-
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/report_saving.dart';
+import '../../../core/presentation/report_sharing.dart';
 import '../../../data/source/sync/sync_report.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/device_sync_view_model.dart';
@@ -633,6 +632,18 @@ class _ReportStep extends StatelessWidget {
               ],
             ),
           ),
+        if (state.reportText.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.share_outlined),
+                label: Text(l10n.deviceSyncShareReport),
+                onPressed: () => _shareReport(context),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.all(16),
           child: FilledButton(
@@ -656,16 +667,41 @@ class _ReportStep extends StatelessWidget {
     }
   }
 
+  /// Saves through the shared [saveTextReport], which raises the platform save
+  /// picker. This button used to call `getSaveLocation` directly, which has no
+  /// Android implementation and THREW out of the callback rather than saving
+  /// anything.
   Future<void> _saveReport(BuildContext context) async {
-    final location = await getSaveLocation(suggestedName: 'openvitals_sync_report.txt');
-    if (location == null) return;
-    await File(location.path).writeAsString(state.reportText, flush: true);
-    if (context.mounted) {
+    final saved = await saveTextReport(state.reportText, _reportFileName);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved ? l10n.deviceSyncReportSaved : l10n.deviceSyncReportSaveFailed,
+        ),
+      ),
+    );
+  }
+
+  /// Sends the report on as a file attachment — a WhatsApp/Signal/Telegram
+  /// message, an email. Success says nothing: the sheet the user just saw is
+  /// its own feedback, and Android reports no target choice back.
+  Future<void> _shareReport(BuildContext context) async {
+    try {
+      await shareTextReport(
+        state.reportText,
+        _reportFileName,
+        l10n.deviceSyncShareReportChooserTitle,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.deviceSyncReportSaved)),
+        SnackBar(content: Text(l10n.deviceSyncReportShareFailed)),
       );
     }
   }
+
+  static const String _reportFileName = 'openvitals-sync-report.txt';
 }
 
 /// Maps a view-model error key to a localized, user-facing message.

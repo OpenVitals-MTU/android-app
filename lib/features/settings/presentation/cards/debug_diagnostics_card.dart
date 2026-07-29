@@ -1,10 +1,7 @@
-import 'dart:io';
-
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:path_provider/path_provider.dart';
 
+import '../../../../core/presentation/report_saving.dart';
 import '../../../../core/diagnostics/debug_log_sanitizer.dart';
 import '../../../../core/diagnostics/debug_log_sharing.dart';
 import '../../../../core/diagnostics/logcat_reader.dart';
@@ -152,7 +149,7 @@ class DebugDiagnosticsCard extends StatelessWidget {
       if (context.mounted) _showSaveResult(context, l10n, ok: false);
       return;
     }
-    final saver = saveLogsFile ?? _defaultSaveLogs;
+    final saver = saveLogsFile ?? saveTextReport;
     final ok = await saver(text, _suggestedName);
     if (context.mounted) _showSaveResult(context, l10n, ok: ok);
   }
@@ -206,29 +203,4 @@ class DebugDiagnosticsCard extends StatelessWidget {
         content: content,
         chooserTitle: chooserTitle,
       );
-
-  /// Writes the export to a user-chosen location where `getSaveLocation` is
-  /// supported (desktop), falling back to the app documents directory on
-  /// platforms whose `file_selector` implementation has no save picker
-  /// (Android — the analogue of Kotlin's SAF `CreateDocument`). Mirrors the
-  /// Apple-Health report save flow.
-  static Future<bool> _defaultSaveLogs(
-    String content,
-    String suggestedName,
-  ) async {
-    try {
-      final location = await getSaveLocation(suggestedName: suggestedName);
-      if (location == null) return false;
-      await File(location.path).writeAsString(content);
-      return true;
-    } catch (_) {
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        await File('${dir.path}/$suggestedName').writeAsString(content);
-        return true;
-      } catch (_) {
-        return false;
-      }
-    }
-  }
 }

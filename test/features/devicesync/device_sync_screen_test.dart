@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/data/source/sync/sync_report.dart';
 import 'package:openvitals/features/devicesync/application/device_sync_view_model.dart';
 import 'package:openvitals/features/devicesync/presentation/device_sync_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
@@ -49,6 +50,34 @@ void main() {
     expect(find.text("Sync didn't finish"), findsOneWidget);
     expect(find.textContaining('could not be completed'), findsOneWidget);
     expect(find.byIcon(Icons.task_alt), findsNothing);
+  });
+
+  testWidgets('a finished sync offers to share the report, not only save it',
+      (tester) async {
+    // Saving on Android has no picker and lands in app documents out of reach,
+    // so sharing is what actually gets the report off the phone — to a
+    // messenger or an email.
+    await tester.pumpWidget(_bootstrap(
+      const DeviceSyncState(
+        step: DeviceSyncStep.report,
+        reportText: 'OpenVitals sync report\nImported: 4\n',
+        report: SyncReport(
+          completed: true,
+          peerDeviceName: 'Pixel',
+          negotiatedTypes: ['StepsRecord'],
+          itemsSent: 0,
+          itemsReceived: 4,
+          imported: 4,
+          duplicateSkipped: 0,
+          typeSummaries: [],
+        ),
+      ),
+    ));
+    await tester.pump();
+
+    expect(find.text('Copy report'), findsOneWidget);
+    expect(find.text('Save report'), findsOneWidget);
+    expect(find.text('Share report'), findsOneWidget);
   });
 
   testWidgets('a connect timeout surfaces a connection message', (tester) async {

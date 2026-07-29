@@ -15,7 +15,7 @@ OpenVitals can analyze supported records from Apple Health exports, let the user
 3. Tap **Analyze Apple Health export** and pick your `export.xml` or `export.zip`. The analyze pass **only scans** — nothing is written yet — and reports how many compatible records it found.
 4. Review the **per-category checklist** (Workouts, Activity, Heart, Sleep, Body, Vitals, Nutrition, Hydration, Mindfulness, Cycle), all pre-selected with counts. Untick anything you don't want.
 5. Tap **Import selected categories**. The import runs as a background service, so **you can leave the Settings screen** and it keeps going (an ongoing notification shows progress). It can't run while a GPS recording is active, since both use the one foreground service.
-6. When it finishes, read the counters (**Imported / Duplicates / Not selected / Unsupported / Skipped / Failed**) and, if you need to troubleshoot, use **Copy report** or **Download full report**.
+6. When it finishes, read the counters (**Imported / Duplicates / Not selected / Unsupported / Skipped / Failed**) and, if you need to troubleshoot, use **Copy report**, **Download full report**, or **Share report** to send it to another app as an attachment.
 
 Tips: prefer importing only the categories you actually want — on a multi-gigabyte export, a tight selection is much faster and lighter. If the import is interrupted, re-pick the **same** export with the **same** categories and it resumes from the last saved batch instead of redoing everything.
 
@@ -65,7 +65,9 @@ For additive metrics where double-counting is common, such as steps, active calo
 
 After an import finishes, Settings can download a full text report. The report starts with a short summary, then includes selected categories, importer logs, per-category counts, per-type counts, grouped diagnostics, raw diagnostics, and worker logs. If the import fails before completion, the failure report includes the summary, worker logs, and full exception stack trace.
 
-These import reports are intentionally not sanitized. They are explicit user exports for troubleshooting and may include file names, timestamps, record values, failure details, and stack traces. Grouped diagnostic counts (for example, how many records were skipped for a given reason) are always complete; the raw per-record diagnostic log underneath is capped at 1,000 entries per source so that re-importing an already-imported export cannot grow the report to an unbounded size.
+**Share report**, alongside **Copy report** and **Download full report**, sends the same text out as an attached `.txt` through the system share sheet — a WhatsApp, Signal or Telegram message, an email attachment. It is the practical way to get a report to a maintainer: Copy caps out at what a text field will hold, and Download keeps the file on the phone. Nothing is uploaded by the app itself (it holds no internet permission) — the file is handed to whichever app is picked from the sheet.
+
+These import reports are intentionally not sanitized. They are explicit user exports for troubleshooting and may include file names, timestamps, record values, failure details, and stack traces. That is worth knowing before sharing one: it is a troubleshooting export, not a redacted summary. Grouped diagnostic counts (for example, how many records were skipped for a given reason) are always complete; the raw per-record diagnostic log underneath is capped at 1,000 entries per source so that re-importing an already-imported export cannot grow the report to an unbounded size.
 
 ## Local Smoke Test
 

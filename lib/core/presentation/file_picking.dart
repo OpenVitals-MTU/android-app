@@ -24,8 +24,10 @@ import 'package:file_picker/file_picker.dart';
 ///
 /// It is pinned to 9.x on purpose -- see the note in `pubspec.yaml`.
 ///
-/// `file_selector` is still the right tool for SAVING (`getSaveLocation`), which
-/// reads nothing.
+/// `file_selector` is not the tool for SAVING either, for an unrelated reason:
+/// `getSaveLocation` has no Android implementation at all and throws there. Saving
+/// goes through `core/export/export_saving.dart`, also on `file_picker`. So this
+/// package no longer reaches `file_selector` for anything.
 ///
 /// ## Why no type filter
 ///
