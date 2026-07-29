@@ -96,16 +96,30 @@ abstract class AppleHealthImportUiState with _$AppleHealthImportUiState {
 }
 
 class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
-  AppleHealthImportService get _service =>
-      ref.read(appleHealthImportServiceProvider);
-  AppleHealthImportReportStore get _reportStore =>
-      ref.read(appleHealthImportReportStoreProvider);
-  AppleHealthImportStagingStore get _stagingStore =>
-      ref.read(appleHealthImportStagingStoreProvider);
-  AppleHealthImportCheckpointStore get _checkpointStore =>
-      ref.read(appleHealthImportCheckpointStoreProvider);
-  AppleHealthImportServiceController get _serviceController =>
-      ref.read(appleHealthImportServiceControllerProvider);
+  // Resolved ONCE in [build], never re-read afterwards.
+  //
+  // These used to be `ref.read(...)` getters, which made every use after an
+  // `await` a latent crash: reading a `Ref` whose provider has been disposed
+  // THROWS, and this view-model awaits file I/O and a multi-minute import job
+  // between uses. The card can be closed — and, in tests, the container torn
+  // down — at any point in those gaps.
+  //
+  // It was not theoretical. `_loadPersistedReports` reads two files in a row,
+  // and the second `_reportStore` landed after the first `await`; closing the
+  // Settings section in that window threw
+  // "Cannot use the Ref of NotifierProvider<AppleHealthImportViewModel> after
+  // it has been disposed" out of an unawaited future. On CI, whose disk is
+  // slower and whose test order is randomized, it surfaced as a different
+  // unrelated test failing "after it had already completed" — which is why two
+  // previous attempts fixed the wrong file.
+  //
+  // Holding the instances removes the failure mode outright, rather than
+  // needing an `if (!ref.mounted)` before all five of them forever.
+  late AppleHealthImportService _service;
+  late AppleHealthImportReportStore _reportStore;
+  late AppleHealthImportStagingStore _stagingStore;
+  late AppleHealthImportCheckpointStore _checkpointStore;
+  late AppleHealthImportServiceController _serviceController;
 
   /// The most recently analyzed export, reused by [importSelected] (the Kotlin
   /// `pendingAppleHealthImportUri`). Only the *identity* of the pick is held —
@@ -116,6 +130,15 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
 
   @override
   AppleHealthImportUiState build() {
+    // Synchronously, before the first `await` below: after one, `ref` may
+    // already be disposed. Reassigned rather than `late final` because `build`
+    // re-runs on invalidation.
+    _service = ref.read(appleHealthImportServiceProvider);
+    _reportStore = ref.read(appleHealthImportReportStoreProvider);
+    _stagingStore = ref.read(appleHealthImportStagingStoreProvider);
+    _checkpointStore = ref.read(appleHealthImportCheckpointStoreProvider);
+    _serviceController = ref.read(appleHealthImportServiceControllerProvider);
+
     // Read the last persisted report/failure back on card open so the Save
     // report action has content even before a fresh import runs this session.
     // The store is file-backed, so this is async; the card only needs it by the
@@ -172,14 +195,21 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
       final detected = analysis.categorySummaries
           .map((summary) => summary.category)
           .toSet();
+      // Analysis is minutes of work on a large export; the card can be gone by
+      // now, and assigning `state` after disposal throws exactly as reading
+      // `ref` does.
+      if (!ref.mounted) return;
       state = AppleHealthImportUiState(
         analysis: analysis,
         selectedCategories: detected,
       );
     } catch (error) {
       _pendingSource = null;
-      // Never let a retry reuse a copy we already know is bad.
+      // Never let a retry reuse a copy we already know is bad. Deliberately
+      // still run when unmounted: the bad staged copy must go regardless of
+      // whether anyone is left to see the error.
       await _stagingStore.clear();
+      if (!ref.mounted) return;
       state = AppleHealthImportUiState(
         error: AppleHealthImportErrorFormatter.details(error),
         permissionDenied:
@@ -249,6 +279,7 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
       case AppleHealthImportLaunch.serviceBusy:
         // Refused, not failed: the staged copy stays put, so importing again
         // once the recording ends reuses it.
+        if (!ref.mounted) return;
         state = AppleHealthImportUiState(
           analysis: analysis,
           selectedCategories: selected,
@@ -313,8 +344,23 @@ class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {
   /// access exactly once, before the first write — the same invariant the
   /// isolate enforces with its own `HealthRepositoryImpl.refreshAvailability()`,
   /// which it must build by hand because it has no provider graph and no gate.
-  Future<void> _resolveHealthAccessInProcess() =>
-      ref.read(healthConnectAvailabilityProvider.future);
+  ///
+  /// The one `ref.read` that cannot be hoisted into [build]: eagerly holding
+  /// the future would leave it unawaited whenever no in-process import runs,
+  /// and a failed availability check would then surface as an unhandled async
+  /// error — trading one crash for another. It is read lazily and guarded
+  /// instead, so a card closed mid-import fails the JOB (which
+  /// [runAppleHealthImportJob] reports through its outcome) rather than
+  /// throwing out of an unawaited future.
+  Future<void> _resolveHealthAccessInProcess() {
+    if (!ref.mounted) {
+      throw StateError(
+        'The Apple Health card closed before health access was resolved; '
+        'the in-process import cannot continue without it.',
+      );
+    }
+    return ref.read(healthConnectAvailabilityProvider.future);
+  }
 
   // ── Foreground-service import ───────────────────────────────────────────────
 

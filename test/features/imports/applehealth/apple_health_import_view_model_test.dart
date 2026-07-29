@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -147,7 +148,13 @@ void main() {
 
   tearDown(() => tempDir.deleteSync(recursive: true));
 
-  Future<ProviderContainer> container({_FakeService? service}) async {
+  /// [gate], when given, stalls the report store's directory lookup — so the
+  /// unawaited load `build()` starts can be held mid-flight while the container
+  /// is torn down underneath it.
+  Future<ProviderContainer> container({
+    _FakeService? service,
+    Future<void>? gate,
+  }) async {
     SharedPreferences.setMockInitialValues(const <String, Object>{});
     final prefs = await SharedPreferences.getInstance();
     // Captured, NOT closed over the field. `build()` starts unawaited file work
@@ -157,13 +164,17 @@ void main() {
     // another's fixture.
     final dir = tempDir;
     Future<Directory> directory() async => dir;
+    Future<Directory> gatedDirectory() async {
+      if (gate != null) await gate;
+      return dir;
+    }
     final result = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         appleHealthImportServiceProvider
             .overrideWithValue(service ?? _FakeService()),
         appleHealthImportReportStoreProvider.overrideWithValue(
-          AppleHealthImportReportStore(directoryResolver: directory),
+          AppleHealthImportReportStore(directoryResolver: gatedDirectory),
         ),
         appleHealthImportStagingStoreProvider.overrideWithValue(
           AppleHealthImportStagingStore(directory: directory),
@@ -262,6 +273,31 @@ void main() {
     expect(notifier.reportTextForSave, contains('write batch exploded'));
     // The staged export is kept, so a retry resumes instead of re-copying.
     expect(File('${tempDir.path}/staged_export.bin').existsSync(), isTrue);
+  });
+
+  test('closing the card mid-load does not throw out of the unawaited read',
+      () async {
+    // `build()` fires `_loadPersistedReports()` unawaited, and it reads TWO
+    // files in a row. The collaborators used to be `ref.read` getters, so the
+    // second read re-entered a `Ref` that disposal had already invalidated and
+    // threw "Cannot use the Ref ... after it has been disposed" from a future
+    // nothing was awaiting.
+    //
+    // Unhandled async errors are attributed to whichever test happens to be
+    // running when they land, so on CI — slower disk, randomized order — this
+    // surfaced as an unrelated test failing "after it had already completed".
+    // Two previous fixes therefore went to the wrong file. This reproduces the
+    // real thing deterministically: hold the load open, dispose underneath it,
+    // then let it finish.
+    final gate = Completer<void>();
+    final harness = await container(gate: gate.future);
+
+    harness.read(appleHealthImportProvider.notifier);
+    harness.dispose();
+    gate.complete();
+
+    // With the bug, the throw lands here and fails the test.
+    await pumpEventQueue();
   });
 
   test('importing without an analysis does nothing', () async {
