@@ -23,11 +23,18 @@
   causes exactly this.
 - `minSdk` is 26 (Health Connect); `targetSdk` is 36
 
-Generated code (`*.g.dart`, `*.freezed.dart`, `lib/l10n/app_localizations*.dart`) is **tracked**, and
-CI does not regenerate it. The localization output has an explicit staleness gate (`flutter gen-l10n`
-followed by `git diff --exit-code lib/l10n`); `build_runner` output does **not** — a stale
-`*.freezed.dart` is usually caught by `flutter analyze`, but only because the generated members stop
-matching. Re-run `build_runner` yourself after touching a model.
+Generated code (`*.g.dart`, `*.freezed.dart`, `*.g.kt`, `lib/l10n/app_localizations*.dart`) is **not
+tracked** — `.gitignore` excludes all of it, and every consumer reproduces it:
+
+- `scripts/ci-flutter.sh` runs `build_runner` and `pigeon` once per pipeline step, so `analyze`,
+  `test` and `build` all resolve the generated symbols.
+- The l10n output needs no step anywhere: `generate: true` in `pubspec.yaml` makes Flutter
+  regenerate it on every `pub get` and build.
+
+There is therefore **no staleness gate, and nothing to commit** — the question cannot arise, because
+what CI compiles is what it just generated. What this does mean is that *your* checkout can be stale:
+re-run `build_runner` yourself after touching a model, or `flutter analyze` reports missing members
+in code you did not change.
 
 ## Local Verification
 
@@ -36,10 +43,14 @@ Run the same checks CI runs, before pushing:
 ```bash
 flutter analyze lib test
 flutter test
-dart run tool/verify_l10n.dart
-flutter gen-l10n && git diff --exit-code lib/l10n   # generated Dart matches the ARBs
+dart run tool/verify_l10n.dart                  # ARB coverage + placeholder parity
+sh scripts/verify-geolocator-fork.sh --offline  # no Play Services in the vendored fork
 git diff --check
 ```
+
+This mirrors `.woodpecker/test.yml`: `flutter test` is its own `unit-tests` step, and the other four
+are the `app-preflight` step, in that order. `verify_l10n.dart` checks the **ARBs**, not the
+generated Dart — the ARBs are the source of truth, since Weblate edits them directly.
 
 ### Dates in test fixtures
 
@@ -61,8 +72,13 @@ zone-dependent. `TZ=UTC flutter test` reproduces what CI sees, and
 After changing a freezed model, a drift table, or a Riverpod generator annotation:
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 ```
+
+No `--delete-conflicting-outputs`: build_runner 2.15 deletes conflicting outputs by default and
+dropped the flag from its documented options (`build_runner build --help` no longer lists it).
+Passing it anyway still exits 0 — it is an undocumented no-op, not an error, so an old habit or an
+old script costs nothing. A genuinely unknown flag exits 64.
 
 `pubspec.yaml` carries `dependency_overrides` with a comment explaining each one. They are not
 cruft — `sqlparser` in particular is pinned below 0.44.6 because it made `DartPlaceholder` sealed
@@ -99,7 +115,8 @@ Two Woodpecker pipelines, both running `scripts/ci-flutter.sh` (which provisions
 and the Gradle/pub caches, then execs `flutter`).
 
 **`.woodpecker/test.yml`** — on every pull request and every push to `main`: `flutter test`, then
-`flutter analyze`, the translation gate, the `gen-l10n` staleness gate, and `git diff --check`.
+`flutter analyze`, the translation gate (`tool/verify_l10n.dart`), the F-Droid gate
+(`scripts/verify-geolocator-fork.sh --offline`), and `git diff --check`.
 
 **`.woodpecker/release.yml`** — the release DAG. `resolve-release-context` computes everything ONCE
 (`scripts/ci-release-context.sh`) and writes `.woodpecker/tmp/release-context.env`, which every later

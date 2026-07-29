@@ -440,7 +440,7 @@ Still avoid:
 
 ARB is the source of truth. `lib/l10n/app_*.arb` are the catalogs, `app_en.arb` is the template, and **Weblate writes to these files directly**. Never regenerate them from the Kotlin `strings.xml` — that destroys every translation newer than the snapshot. `tool/xml_to_arb.dart` has been deleted and must not be resurrected.
 
-Add a string to `app_en.arb`, run `flutter gen-l10n`, commit the regenerated `lib/l10n/app_localizations*.dart`. Placeholders are ICU (`{arg0}`). The gate is `dart run tool/verify_l10n.dart`. Details in [translations.md](translations.md).
+Add a string to `app_en.arb` and run `flutter gen-l10n`. The generated `lib/l10n/app_localizations*.dart` is **not** committed — `generate: true` rebuilds it on every `pub get`. Placeholders are ICU (`{arg0}`). The gate is `dart run tool/verify_l10n.dart`, over the ARBs. Details in [translations.md](translations.md).
 
 Every user-visible string goes through `AppLocalizations`. Outside the widget tree, use `lookupAppLocalizations(...)`.
 

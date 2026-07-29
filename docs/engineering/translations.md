@@ -16,8 +16,11 @@ Translate the app here:
   translation: hosted so Weblate can work on it, not offered to users. See
   [Shipping Policy](#shipping-policy).
 - `lib/l10n/app_localizations*.dart` are **generated** by `flutter gen-l10n` from
-  those ARB files (config: `l10n.yaml`). They are committed, and CI fails if they
-  are stale.
+  those ARB files (config: `l10n.yaml`). They are **not committed** — `generate:
+  true` in `pubspec.yaml` regenerates them on every `pub get` and build, so there
+  is nothing to keep in sync and no staleness gate. Tracking them was tried and
+  reverted: Weblate edits the ARBs and cannot run `gen-l10n`, which made the
+  committed output stale on every translation pull request by construction.
 
 The ARB catalogs are the source of truth. Weblate edits them directly, so a hand
 edit and a Weblate edit are the same kind of change.
@@ -33,7 +36,8 @@ edit and a Weblate edit are the same kind of change.
    takes placeholders).
 2. Do **not** hand-translate the other locales; leave that to Weblate. A missing
    key falls back to English.
-3. Regenerate and commit the generated Dart:
+3. Regenerate, so your own checkout compiles against the new key (there is
+   nothing to commit — the output is gitignored):
 
    ```bash
    flutter gen-l10n
@@ -174,14 +178,12 @@ Run the validator before merging Weblate pull requests:
 dart run tool/verify_l10n.dart
 ```
 
-The same check also runs as part of `flutter test`, and CI additionally proves the
-generated Dart is not stale:
+This is the **only** l10n gate, and it is a separate CI step — the `app-preflight`
+step of `.woodpecker/test.yml`. It does not run as part of `flutter test`, so a
+green local suite proves nothing about the catalogs; run it yourself.
 
-```bash
-flutter gen-l10n
-git diff --exit-code lib/l10n
-```
-
-That second gate exists for the "Weblate merged an ARB but nobody re-ran
-`gen-l10n`" case, which would otherwise ship stale generated strings against
-fresh translations.
+It validates the **ARBs** — coverage against the template, placeholder parity,
+`@@locale` agreement. There is no gate on the generated Dart and none is needed:
+`generate: true` means `gen-l10n` re-runs on every `pub get` and build, so what
+compiles is always derived from the ARBs in the same checkout. The "Weblate
+merged an ARB but nobody re-ran `gen-l10n`" case cannot occur.

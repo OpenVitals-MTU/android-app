@@ -176,8 +176,10 @@ else
     # generated symbols without this, and `build` compiles them in. build_runner is
     # incremental and its cache lives in the workspace, so only the first step of a
     # pipeline pays the full (~30s) build; later steps are a few seconds. build_runner
-    # 2.15 deletes conflicting outputs by default, so no flag is needed (and the old
-    # --delete-conflicting-outputs is now rejected).
+    # 2.15 deletes conflicting outputs by default, so no flag is needed; it also
+    # dropped --delete-conflicting-outputs from `build --help`, though passing it still
+    # exits 0 as an undocumented no-op. (This comment used to say the flag was
+    # "rejected" -- it is not, and four docs had copied that.)
     dart run build_runner build
 
     # --- Generated code (pigeon bridge) --------------------------------------

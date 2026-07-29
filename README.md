@@ -189,15 +189,15 @@ Checks, which mirror the ones CI runs:
 ```bash
 flutter test
 flutter analyze lib test
-dart run tool/verify_l10n.dart   # translation coverage + placeholder gate
-flutter gen-l10n                 # generated l10n must be up to date with the ARBs
+dart run tool/verify_l10n.dart                  # translation coverage + placeholder gate
+sh scripts/verify-geolocator-fork.sh --offline  # no Play Services in the vendored fork
 git diff --check
 ```
 
-Code generation (freezed, json_serializable, riverpod, drift) is not checked in as a build step — regenerate after touching an annotated model:
+Generated code (freezed, drift, pigeon, and the l10n output) is **not** checked in — CI regenerates it, so there is nothing to commit. Regenerate locally after touching an annotated model, so your own checkout compiles:
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 ```
 
 Translation work is documented in [`docs/engineering/translations.md`](docs/engineering/translations.md).

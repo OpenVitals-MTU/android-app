@@ -77,10 +77,11 @@ Riverpod replaces Hilt; there is no annotation processor and no component. **The
   )
   ```
   `unitSystemProvider` defaults to the **host locale** — leave it unpinned and the test asserts different numbers on different machines. A health-gated screen also needs `healthConnectAvailabilityProvider` and `grantedHealthPermissionsProvider`, or `HealthConnectGate` replaces your screen with a permission prompt.
-- After editing an annotated class (`freezed`, `json_serializable`, `drift`), regenerate:
+- After editing an annotated class (`freezed`, `json_serializable`, `drift`), regenerate — so your own checkout compiles. The output is gitignored and CI regenerates it per step, so there is nothing to commit:
   ```bash
-  dart run build_runner build --delete-conflicting-outputs
+  dart run build_runner build
   ```
+  No `--delete-conflicting-outputs`: build_runner 2.15 does that by default and dropped the flag from its documented options. It is still accepted as a no-op, so passing it is harmless — just pointless.
 
 ## 5. Keep UI Responsibilities Clear
 
@@ -98,7 +99,7 @@ Riverpod replaces Hilt; there is no annotation processor and no component. **The
 - Every widget-test `MaterialApp` needs `localizationsDelegates` and `supportedLocales`, or you get `Null check operator used on a null value` with a stack pointing at the screen. That is a harness bug, not a screen bug.
 - Repository tests for a new bundled query assert `Ok`/`Err`, not a throw.
 - Update [architecture.md](architecture.md) if the feature changes a shared pattern, and [docs/features/feature-map.md](../features/feature-map.md) with the new route.
-- Before pushing: `flutter test`, `flutter analyze lib test`, `dart run tool/verify_l10n.dart`, and `flutter gen-l10n && git diff --exit-code lib/l10n`. **Never `dart format`** — this repo predates Dart's "tall" style and it rewrites whole files.
+- Before pushing: `flutter test`, `flutter analyze lib test`, `dart run tool/verify_l10n.dart`, `sh scripts/verify-geolocator-fork.sh --offline`, and `git diff --check`. **Never `dart format`** — this repo predates Dart's "tall" style and it rewrites whole files.
 
 ## Sleep Reference Implementation
 

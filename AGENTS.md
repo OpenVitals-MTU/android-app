@@ -55,8 +55,10 @@ The one exception to `freezed`: when the whole state **is** a single already-imm
 Dependencies come from providers, not constructors reaching into globals. After editing an annotated class (`freezed`, `json_serializable`, `riverpod`, `drift`), regenerate:
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 ```
+
+No `--delete-conflicting-outputs`: build_runner 2.15 does that by default and dropped the flag from its documented options. Passing it still exits 0 — it is a no-op, not an error. The output is gitignored and CI regenerates it, so there is nothing to commit; regenerate so *your* checkout compiles.
 
 ### Errors
 
@@ -118,7 +120,7 @@ Test gotcha: the default unit system derives from the host locale, so a widget t
 
 `lib/l10n/app_*.arb` are the catalogs; `app_en.arb` is the template. **Weblate writes to these files directly.** Never regenerate them from the Kotlin `strings.xml`; that would destroy every translation newer than the snapshot. `tool/xml_to_arb.dart` is gone and must not be resurrected.
 
-Add a new string to `app_en.arb`, run `flutter gen-l10n`, and commit the regenerated `lib/l10n/app_localizations*.dart`. Placeholders are ICU (`{arg0}`), not `%1$s`. The gate is `dart run tool/verify_l10n.dart`. Details: [docs/engineering/translations.md](docs/engineering/translations.md).
+Add a new string to `app_en.arb` and run `flutter gen-l10n`. Do **not** commit `lib/l10n/app_localizations*.dart` — it is gitignored, and `generate: true` rebuilds it on every `pub get`. Placeholders are ICU (`{arg0}`), not `%1$s`. The gate is `dart run tool/verify_l10n.dart`, and it checks the ARBs, not the generated Dart. Details: [docs/engineering/translations.md](docs/engineering/translations.md).
 
 ### 4. Widget tests need the localization delegates
 
@@ -189,6 +191,8 @@ Before you push:
 flutter test
 flutter analyze lib test
 dart run tool/verify_l10n.dart
-flutter gen-l10n && git diff --exit-code lib/l10n
+sh scripts/verify-geolocator-fork.sh --offline
 git diff --check
 ```
+
+Never `dart format` — this repo predates Dart's "tall" style and it rewrites whole files.
