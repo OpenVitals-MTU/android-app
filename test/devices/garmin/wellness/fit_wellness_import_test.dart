@@ -462,6 +462,95 @@ void main() {
       );
     });
 
+    test('a type absent from a sync\'s first readings is not the day again',
+        () {
+      // The bug this pins: 6,323 steps on the wrist reached Health Connect as
+      // 19,906 for 30 Jul 2026. The watch counts each activity type separately
+      // and a sync's files restate only the recently active types — so the sum
+      // rebuilt from one sync alone started without the walking bucket, dipped
+      // below the watermark, read as a rollover, and when walking WAS restated
+      // the whole day re-entered as fresh movement: 3,520 steps at 15:00 and
+      // 5,943 at 17:15, each the day's running total at that sync.
+      final first = _counterImport(typedStepsCumulative: [
+        (DateTime(2026, 7, 30, 9), 0, 400),
+        (DateTime(2026, 7, 30, 9), 6, 3000),
+      ]);
+      final second = _counterImport(
+        typedStepsCumulative: [
+          (DateTime(2026, 7, 30, 15, 0), 6, 3005),
+          (DateTime(2026, 7, 30, 15, 20), 6, 3520),
+          (DateTime(2026, 7, 30, 15, 40), 0, 400),
+        ],
+        previous: first.watermarks,
+      );
+
+      expect(_stepsTotal(first), 3400);
+      expect(_stepsTotal(second), 520,
+          reason: 'walking grew 3000 to 3520; generic never moved');
+    });
+
+    test('yesterday\'s counter restated unchanged overnight writes nothing',
+        () {
+      // The same day's other symptom: 3,506 "steps" between 00:00 and 04:30,
+      // while the wearer slept. The 05:01 sync's first reading restated ONE of
+      // yesterday's types, the sum fell short of yesterday's watermark, and
+      // the shortfall was read as a rollover — turning yesterday's steps into
+      // today's. Per-type, an unchanged reading is visibly a continuation.
+      final yesterday = _counterImport(typedStepsCumulative: [
+        (DateTime(2026, 7, 29, 22), 0, 3506),
+        (DateTime(2026, 7, 29, 22), 6, 2817),
+      ]);
+      final morning = _counterImport(
+        typedStepsCumulative: [
+          (DateTime(2026, 7, 30, 4, 30), 0, 3506),
+        ],
+        previous: yesterday.watermarks,
+      );
+
+      expect(_stepsTotal(morning), 0);
+    });
+
+    test('a genuinely reset type still counts from zero across midnight', () {
+      // The flip side of the test above, per type: walking restates BELOW
+      // where yesterday left it, so the watch closed its day and the 350 are
+      // today's own steps.
+      final yesterday = _counterImport(typedStepsCumulative: [
+        (DateTime(2026, 7, 29, 22), 6, 2817),
+      ]);
+      final today = _counterImport(
+        typedStepsCumulative: [
+          (DateTime(2026, 7, 30, 14), 6, 350),
+        ],
+        previous: yesterday.watermarks,
+      );
+
+      expect(_stepsTotal(today), 350);
+    });
+
+    test('a watermark from before the per-type maps never re-counts the day',
+        () {
+      // Upgrading mid-day: the stored watermark knows the summed reading but
+      // not the types behind it, so "already counted or not" is unknowable for
+      // any type this sync restates. They are adopted silently — at most the
+      // minutes since their last restatement are lost, once — and only growth
+      // from there counts. The alternative re-wrote the whole day.
+      final legacy = {
+        '2026-07-30': FitCounterWatermark(
+          time: DateTime(2026, 7, 30, 9),
+          steps: 3400,
+        ),
+      };
+      final sync = _counterImport(
+        typedStepsCumulative: [
+          (DateTime(2026, 7, 30, 15, 0), 6, 3005),
+          (DateTime(2026, 7, 30, 15, 20), 6, 3200),
+        ],
+        previous: legacy,
+      );
+
+      expect(_stepsTotal(sync), 195);
+    });
+
     test('an untyped counter still counts when it is all the file has', () {
       // ...but dropping it outright would report zero steps for a file that
       // names no activity type anywhere, which is all the counter it has.

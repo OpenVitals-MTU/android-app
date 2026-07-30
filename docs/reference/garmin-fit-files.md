@@ -305,9 +305,11 @@ the morning before that and the file carries messages timestamped *today* whose
 counters are still *yesterday's* running totals. Differencing them against zero
 put the whole of 27 Jul — 6,123 steps — into the first quarter hour of 28 Jul,
 on top of yesterday's own correct total. So a day differences from where the day
-before it ended (this run's own walk, else that day's watermark), and a first
-reading *below* it is how the rollover is recognised: then, and only then, the
-reading is the new day's own accrual.
+before it ended (this run's own walk, else that day's watermark), and the
+rollover is recognised **per activity type**: a type whose first restatement of
+the day is below where yesterday left *that type* has been reset, and its
+reading is the new day's own accrual. Comparing summed totals could not tell a
+rollover from a partial first reading — see below.
 
 **One message per active `activity_type`, per instant, about once a minute.** A
 snapshot of 25 Jul at 20:00 read:
@@ -334,14 +336,23 @@ one straight ramp from midnight. Consecutive snapshots are differenced instead,
 one record per interval the counter actually moved in (`garmin_fit_steps_<start
 epoch ms>`), zero-difference intervals writing nothing.
 
-**The seam between files needs a watermark.** Each file holds only the minutes
-since the last sync, so the steps between one sync's last snapshot and the next
-sync's first are in *neither* file's own differences. `GarminCounterWatermarkStore`
-keeps the last imported `(instant, steps, distance, calories)` per local day; the
-next sync differences from it. That is also what makes a re-offered file harmless
-— everything at or behind the watermark writes nothing rather than counting
-twice, and what a day carries over from when the run holds no readings for the
-day before it. Clear it if Health Connect is wiped, or every day stays short.
+**The seam between files needs a watermark — a per-type one.** Each file holds
+only the minutes since the last sync, so the steps between one sync's last
+snapshot and the next sync's first are in *neither* file's own differences.
+`GarminCounterWatermarkStore` keeps the last imported instant per local day plus
+each counter's **per-`activity_type` readings**; the next sync differences from
+those. The types matter as much as the sum: a sync's files restate only the
+types recently active, so a sum rebuilt from one sync alone starts without the
+others — it dips below a summed watermark, the dip reads as a rollover, and when
+the missing type is restated the whole day re-enters as fresh movement. 6,323
+steps on the wrist reached Health Connect as 19,906 that way (30 Jul 2026): the
+day re-counted at 00:00, 15:00 and 17:15, once per sync whose first readings
+were partial. Per-type context makes an unchanged reading visibly a
+continuation, and a type the context has never seen is *adopted* — with its
+full value where nothing was counted before it, silently where a pre-type-aware
+watermark makes that unknowable. The watermark is also what makes a re-offered
+file harmless — everything at or behind it writes nothing rather than counting
+twice. Clear it if Health Connect is wiped, or every day stays short.
 
 **A rollover is not a walk backwards, and not a full stop.** A counter that
 reads below where it stood contributes nothing for that interval — but the walk

@@ -266,6 +266,9 @@ class FitCounterWatermark {
     this.steps = 0,
     this.distance = 0,
     this.calories = 0,
+    this.stepsByType,
+    this.distanceByType,
+    this.caloriesByType,
     this.legacyRetired = false,
   });
 
@@ -273,6 +276,23 @@ class FitCounterWatermark {
   final int steps;
   final int distance;
   final int calories;
+
+  /// The per-activity-type readings behind the sums, as of [time].
+  ///
+  /// This is what keeps the walk continuous across syncs. The watch counts
+  /// each activity type separately and a sync's files restate only the types
+  /// recently active — so a sum rebuilt from one sync's points starts without
+  /// the others, dips below the watermark, reads as a counter rollover, and
+  /// when the missing type is restated the whole day re-enters as fresh
+  /// movement. 6,323 steps on the wrist reached Health Connect as 19,906 that
+  /// way: the day re-counted at 00:00, 15:00 and 17:15, once per sync whose
+  /// first readings were partial.
+  ///
+  /// Null on a watermark stored before these existed — see the adopt rule in
+  /// [fitMonitoringCounterRecords].
+  final Map<int, int>? stepsByType;
+  final Map<int, int>? distanceByType;
+  final Map<int, int>? caloriesByType;
 
   /// Whether this day's pre-intraday whole-day record has been superseded.
   ///
@@ -333,38 +353,62 @@ FitCounterImport fitMonitoringCounterRecords(
 
   for (final day in _counterDays(counters)) {
     final mark = previous[day.key];
-    final steps = _dailySnapshots(counters.steps, day);
-    final distance = _dailySnapshots(counters.distance, day);
-    final calories = _dailySnapshots(counters.calories, day);
+    final steps = _dayTypedPoints(counters.steps, day);
+    final distance = _dayTypedPoints(counters.distance, day);
+    final calories = _dayTypedPoints(counters.calories, day);
     final carried = _carryInto(day, carry, previous);
 
     // The instants any counter reported, so the three stay on one timeline.
     final instants = <DateTime>{
-      for (final snapshot in steps) snapshot.time,
-      for (final snapshot in distance) snapshot.time,
-      for (final snapshot in calories) snapshot.time,
+      for (final point in steps) point.time,
+      for (final point in distance) point.time,
+      for (final point in calories) point.time,
     }.toList()
       ..sort();
     if (instants.isEmpty) continue;
 
-    var from = mark?.time ?? day.start;
-    var lastSteps = mark?.steps ?? _baselineFor(carried.steps, steps);
-    var lastDistance =
-        mark?.distance ?? _baselineFor(carried.distance, distance);
-    var lastCalories =
-        mark?.calories ?? _baselineFor(carried.calories, calories);
+    // The walk's memory of each counter, by activity type. A restated type's
+    // delta is its value against what the map holds; a type the map has never
+    // seen is ADOPTED — with its full value where nothing was ever counted
+    // before it (a fresh day, a lost watermark), and silently where a
+    // watermark from before the maps existed makes "already counted or not"
+    // unknowable. Silent adoption loses at most the minutes since that type's
+    // last restatement, once; counting it could re-write the whole day.
+    final DateTime start;
+    final bool adoptSilently;
+    final Map<int, int> stepsContext;
+    final Map<int, int> distanceContext;
+    final Map<int, int> caloriesContext;
+    if (mark != null) {
+      start = mark.time;
+      adoptSilently = mark.stepsByType == null;
+      stepsContext = {...?mark.stepsByType};
+      distanceContext = {...?mark.distanceByType};
+      caloriesContext = {...?mark.caloriesByType};
+    } else {
+      start = day.start;
+      adoptSilently = carried.isLegacy;
+      stepsContext = _dayStartContext(carried.stepsByType, steps);
+      distanceContext = _dayStartContext(carried.distanceByType, distance);
+      caloriesContext = _dayStartContext(carried.caloriesByType, calories);
+    }
+
+    final stepsAt = _byInstant(steps);
+    final distanceAt = _byInstant(distance);
+    final caloriesAt = _byInstant(calories);
 
     // Deltas folded onto a fixed grid anchored at local midnight, so a record's
     // identity is a pure function of its wall clock.
     final buckets = <int, _CounterDeltas>{};
-    // The bucket currently filling, and the counter readings as they stood when
-    // it opened. Emitting a half-filled bucket and then overwriting it on the
-    // next sync would LOSE its first half, so the open one is left for next
-    // time and the watermark rewinds to where it began.
+    // The bucket currently filling, and the counter context as it stood when it
+    // opened. Emitting a half-filled bucket and then overwriting it on the next
+    // sync would LOSE its first half, so the open one is left for next time and
+    // the watermark rewinds to where it began.
+    var from = start;
     var openBucket = _counterBucketStart(from, day.start);
-    var openSteps = lastSteps;
-    var openDistance = lastDistance;
-    var openCalories = lastCalories;
+    var openSteps = Map<int, int>.of(stepsContext);
+    var openDistance = Map<int, int>.of(distanceContext);
+    var openCalories = Map<int, int>.of(caloriesContext);
 
     for (final at in instants) {
       // Already imported. Not an error — every sync re-reads the file it was
@@ -376,33 +420,22 @@ FitCounterImport fitMonitoringCounterRecords(
       // interval STARTED in — not the one it ended in, which would push a walk
       // forward by up to a bucket every time.
       final bucket = _counterBucketStart(from, day.start);
-      final stepsNow = _valueAt(steps, at, lastSteps);
-      final distanceNow = _valueAt(distance, at, lastDistance);
-      final caloriesNow = _valueAt(calories, at, lastCalories);
       (buckets[bucket] ??= _CounterDeltas(
         DateTime.fromMillisecondsSinceEpoch(bucket),
       )).add(
-        steps: math.max(0, stepsNow - lastSteps),
-        distance: math.max(0, distanceNow - lastDistance),
-        calories: math.max(0, caloriesNow - lastCalories),
+        steps: _instantDelta(stepsAt[at], stepsContext, adoptSilently),
+        distance: _instantDelta(distanceAt[at], distanceContext, adoptSilently),
+        calories: _instantDelta(caloriesAt[at], caloriesContext, adoptSilently),
         until: at,
       );
 
       from = at;
-      // Where each counter now stands — including BELOW where it stood, which
-      // is a rollover. The difference above already declined to record it;
-      // holding the old high-water mark on top of that would silence every step
-      // after a rollover until the fresh counter climbed past the old total.
-      lastSteps = stepsNow;
-      lastDistance = distanceNow;
-      lastCalories = caloriesNow;
-
       final reached = _counterBucketStart(from, day.start);
       if (reached != openBucket) {
         openBucket = reached;
-        openSteps = lastSteps;
-        openDistance = lastDistance;
-        openCalories = lastCalories;
+        openSteps = Map.of(stepsContext);
+        openDistance = Map.of(distanceContext);
+        openCalories = Map.of(caloriesContext);
       }
     }
 
@@ -419,23 +452,8 @@ FitCounterImport fitMonitoringCounterRecords(
 
     // One bucket per day is written under the legacy day-keyed id, so that it
     // OVERWRITES the pre-intraday whole-day record instead of stacking beside
-    // it. See [FitCounterWatermark.legacyRetired].
-    //
-    // Which bucket cannot be the one at midnight, which is what this used to
-    // key on. That bucket is occupied on a day's FIRST import — the first
-    // interval runs from midnight to the earliest snapshot — but not otherwise,
-    // and not when everything the first sync saw fell inside it and left it
-    // still filling. Either way the day never gets a second chance: every later
-    // sync starts at the watermark, so no midnight bucket exists to carry the
-    // id, and the whole-day record survives beside every intraday record after
-    // it. A latch fixes both, and turns a condition that has to be true at one
-    // particular moment into one that only has to become true eventually.
-    //
-    // Nor can it be "the first bucket of this import", recomputed every sync:
-    // each sync starts at the watermark, so the day's first bucket moves later
-    // every time and the id would keep migrating, each move overwriting the
-    // previous holder's minutes with a different bucket's. It is the first
-    // bucket EMITTED for the day, once, latched here.
+    // it. The id is handed to the first bucket EMITTED for the day, once,
+    // latched — see [FitCounterWatermark.legacyRetired].
     final emitted = (buckets.keys.toList()..sort())
         .where((bucket) => bucket != openBucket)
         .toList();
@@ -450,9 +468,12 @@ FitCounterImport fitMonitoringCounterRecords(
 
     watermarks[day.key] = FitCounterWatermark(
       time: DateTime.fromMillisecondsSinceEpoch(openBucket),
-      steps: openSteps,
-      distance: openDistance,
-      calories: openCalories,
+      steps: _contextSum(openSteps),
+      distance: _contextSum(openDistance),
+      calories: _contextSum(openCalories),
+      stepsByType: openSteps,
+      distanceByType: openDistance,
+      caloriesByType: openCalories,
       legacyRetired: legacyRetired,
     );
 
@@ -462,44 +483,114 @@ FitCounterImport fitMonitoringCounterRecords(
     // reported keeps whatever was carried into it.
     carry = _CounterCarry(
       day: day.start,
-      steps: steps.isEmpty ? carried.steps : lastSteps,
-      distance: distance.isEmpty ? carried.distance : lastDistance,
-      calories: calories.isEmpty ? carried.calories : lastCalories,
+      stepsByType: steps.isEmpty ? carried.stepsByType : Map.of(stepsContext),
+      distanceByType:
+          distance.isEmpty ? carried.distanceByType : Map.of(distanceContext),
+      caloriesByType:
+          calories.isEmpty ? carried.caloriesByType : Map.of(caloriesContext),
     );
   }
 
   return FitCounterImport(records: records, watermarks: watermarks);
 }
 
+/// One counter's net movement at one instant, against [context].
+///
+/// Netted across every type restated at the instant, THEN clamped: the watch
+/// moves a total from one type to another and zeroes the one it left, and only
+/// same-instant netting keeps a transfer from counting twice. A negative net —
+/// the day-close rollover — clamps to nothing, and the context still adopts the
+/// new lows so what follows counts from there.
+int _instantDelta(
+  List<FitMonitoringPoint>? restated,
+  Map<int, int> context,
+  bool adoptSilently,
+) {
+  if (restated == null) return 0;
+  var net = 0;
+  for (final point in restated) {
+    final before = context[point.activityType];
+    if (before != null) {
+      net += point.value - before;
+    } else if (!adoptSilently) {
+      net += point.value;
+    }
+    context[point.activityType] = point.value;
+  }
+  return math.max(0, net);
+}
+
+/// What a day with no watermark of its own starts from, per type.
+///
+/// The watch resets its counters when it closes the monitoring day, some time
+/// after local midnight — not at it. So a type whose first restatement of the
+/// day is BELOW where yesterday left it has been reset, and its readings are
+/// the day's own accrual; a type merely absent from the first readings has
+/// said nothing yet, and yesterday's value stands (delta-neutral until it
+/// speaks). This per-type distinction is what tells a real rollover from a
+/// partial first reading — comparing summed totals could not, and turned
+/// yesterday's steps into today's.
+Map<int, int> _dayStartContext(
+  Map<int, int>? carried,
+  List<FitMonitoringPoint> points,
+) {
+  if (carried == null) return {};
+  final context = Map<int, int>.of(carried);
+  final seen = <int>{};
+  for (final point in points) {
+    if (!seen.add(point.activityType)) continue;
+    final before = context[point.activityType];
+    if (before != null && point.value < before) context[point.activityType] = 0;
+  }
+  return context;
+}
+
+int _contextSum(Map<int, int> context) =>
+    context.values.fold(0, (sum, value) => sum + value);
+
+Map<DateTime, List<FitMonitoringPoint>> _byInstant(
+  List<FitMonitoringPoint> points,
+) {
+  final byInstant = <DateTime, List<FitMonitoringPoint>>{};
+  for (final point in points) {
+    (byInstant[point.time] ??= []).add(point);
+  }
+  return byInstant;
+}
+
 /// What the counters read at the end of the day before the one being mapped.
 ///
-/// Null for a counter means there is nothing to carry — the first day of a run
-/// with no history behind it, where the first reading IS the day's accrual.
+/// Null maps mean there is nothing typed to carry: either no history at all
+/// (the first day of a run — the first reading IS the day's accrual), or a
+/// watermark from before the per-type maps existed (see the adopt rule).
 class _CounterCarry {
-  const _CounterCarry({this.day, this.steps, this.distance, this.calories});
+  const _CounterCarry({
+    this.day,
+    this.stepsByType,
+    this.distanceByType,
+    this.caloriesByType,
+  });
 
   /// Local midnight of the day these came off, so a carry can only be spent on
   /// the day that actually follows it.
   final DateTime? day;
-  final int? steps;
-  final int? distance;
-  final int? calories;
+  final Map<int, int>? stepsByType;
+  final Map<int, int>? distanceByType;
+  final Map<int, int>? caloriesByType;
+
+  /// A day WAS carried but its watermark predates the per-type maps.
+  bool get isLegacy => day != null && stepsByType == null;
 }
 
-/// What [day] should difference its first reading against.
+/// What [day] should difference its first readings against.
 ///
-/// The counters do NOT roll over at local midnight. The watch rolls its
-/// monitoring day over when it closes it — after it has finalised the night —
-/// so a sync taken in the morning BEFORE that carries messages timestamped
-/// today whose counters are still yesterday's running totals. Differenced
-/// against zero, a whole day of walking landed on today at 00:00: 6,123 steps
-/// on 27 Jul reappeared as 6,123 steps in today's first quarter hour.
-///
-/// So a day starts from where the day before it ended: this run's own walk when
-/// it mapped that day, and otherwise the watermark that day was left at. Only
-/// the immediately preceding day counts — across a gap the counter has
-/// certainly rolled over, and a carry from further back could only understate
-/// the day.
+/// The counters do NOT roll over at local midnight — the watch closes its
+/// monitoring day after it has finalised the night — so a morning sync carries
+/// messages timestamped today whose counters are still yesterday's running
+/// totals. A day therefore starts from where the day before it ended: this
+/// run's own walk when it mapped that day, and otherwise the watermark that
+/// day was left at. Only the immediately preceding day counts — across a gap
+/// the counter has certainly rolled over.
 _CounterCarry _carryInto(
   _MonitoringDay day,
   _CounterCarry running,
@@ -512,21 +603,10 @@ _CounterCarry _carryInto(
   if (mark == null) return const _CounterCarry();
   return _CounterCarry(
     day: yesterday,
-    steps: mark.steps,
-    distance: mark.distance,
-    calories: mark.calories,
+    stepsByType: mark.stepsByType,
+    distanceByType: mark.distanceByType,
+    caloriesByType: mark.caloriesByType,
   );
-}
-
-/// The value a day's differencing starts from, given what [carried] over from
-/// the day before and the day's own [snapshots].
-///
-/// The counter either kept running across midnight — the first reading is at or
-/// above where yesterday left it, and only the difference is new — or it rolled
-/// over, and that reading is itself everything the day has accrued so far.
-int _baselineFor(int? carried, List<_CounterSnapshot> snapshots) {
-  if (carried == null || snapshots.isEmpty) return 0;
-  return snapshots.first.value >= carried ? carried : 0;
 }
 
 /// The grid one counter record covers.
@@ -618,17 +698,6 @@ class _CounterDeltas {
       ];
 }
 
-/// The counter reading at [at]: the snapshot taken then, or — when this counter
-/// reported nothing at an instant another one did — the last it did report.
-int _valueAt(List<_CounterSnapshot> snapshots, DateTime at, int fallback) {
-  var value = fallback;
-  for (final snapshot in snapshots) {
-    if (snapshot.time.isAfter(at)) break;
-    value = snapshot.value;
-  }
-  return value;
-}
-
 /// One local day a monitoring file touched, and the span to record it over.
 class _MonitoringDay {
   const _MonitoringDay({
@@ -691,72 +760,33 @@ String _dayKey(DateTime day) {
   return '${day.year}-$month-$dayOfMonth';
 }
 
-/// One instant's reading of a counter, summed across activity types.
-class _CounterSnapshot {
-  const _CounterSnapshot(this.time, this.value);
-
-  final DateTime time;
-  final int value;
-}
-
-/// The day's counter as it stood at each instant the file reported, in order.
-///
-/// Summed per instant, and NOT per activity type over the day. The counters run
-/// independently — walking at 540 beside a generic counter at 0 is not a
-/// 540-step change — but they are not independent of *each other*: the watch
-/// moves a total from one bucket to another and zeroes the one it left. A real
-/// day showed the generic bucket holding 709 m of distance and 6181 s of active
-/// time with ZERO steps, its step count having been reallocated to walking.
-/// Taking each bucket's own peak keeps the abandoned peak and adds it to the
-/// bucket that inherited it, so 24,724 steps on the wrist reached Health Connect
-/// as 49,448 — exactly twice, the same total counted under two types. Adding up
-/// one instant at a time cannot double-count a transfer: what leaves one bucket
-/// arrives in the other within the same snapshot.
-List<_CounterSnapshot> _dailySnapshots(
+/// One counter's points of [day], in time order, with the untyped rule
+/// applied: a counter naming no activity beside typed ones is the same day's
+/// total under a name of its own — counting it beside them counts those steps
+/// twice — but when the file declared no type anywhere, the untyped counter IS
+/// the total and stays.
+List<FitMonitoringPoint> _dayTypedPoints(
   List<FitMonitoringPoint> points,
   _MonitoringDay day,
 ) {
   final ofDay = <FitMonitoringPoint>[];
   var sawDeclaredType = false;
-  for (final p in points) {
-    final local = p.time.toLocal();
+  for (final point in points) {
+    final local = point.time.toLocal();
     if (local.year != day.start.year ||
         local.month != day.start.month ||
         local.day != day.start.day) {
       continue;
     }
-    ofDay.add(p);
-    if (p.activityType != unknownFitActivityType) sawDeclaredType = true;
+    ofDay.add(point);
+    if (point.activityType != unknownFitActivityType) sawDeclaredType = true;
   }
   ofDay.sort((a, b) => a.time.compareTo(b.time));
-
-  // A counter that never said which activity it belongs to cannot be summed
-  // beside ones that do: it is the same day's total under a name of its own, and
-  // adding it to a declared bucket counts those steps twice. Dropped — unless
-  // the file declared no type at all, where the untyped counter IS the total.
-  final byType = <int, int>{};
-  final snapshots = <_CounterSnapshot>[];
-  var index = 0;
-  while (index < ofDay.length) {
-    // A snapshot is every point sharing one instant: the file restates each
-    // active type at the same timestamp, and reading the sum mid-instant would
-    // see the bucket that gained before the bucket that lost.
-    final at = ofDay[index].time;
-    while (index < ofDay.length && ofDay[index].time == at) {
-      final point = ofDay[index];
-      index++;
-      if (sawDeclaredType && point.activityType == unknownFitActivityType) {
-        continue;
-      }
-      byType[point.activityType] = point.value;
-    }
-    var total = 0;
-    for (final value in byType.values) {
-      total += value;
-    }
-    snapshots.add(_CounterSnapshot(at, total));
-  }
-  return snapshots;
+  if (!sawDeclaredType) return ofDay;
+  return [
+    for (final point in ofDay)
+      if (point.activityType != unknownFitActivityType) point,
+  ];
 }
 
 /// Groups items into UTC-hour buckets keyed by the hour's epoch-ms.

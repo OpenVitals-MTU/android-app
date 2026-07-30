@@ -124,6 +124,56 @@ void main() {
     expect(store.load()['2026-07-25']!.legacyRetired, isTrue);
   });
 
+  test('the per-type maps survive a round trip', () async {
+    await setUpStore();
+    await store.save({
+      '2026-07-30': FitCounterWatermark(
+        time: DateTime(2026, 7, 30, 15),
+        steps: 3400,
+        distance: 250000,
+        calories: 120,
+        stepsByType: const {0: 400, 6: 3000},
+        distanceByType: const {6: 250000},
+        caloriesByType: const {},
+      ),
+    });
+
+    final mark = GarminCounterWatermarkStore(prefs).load()['2026-07-30']!;
+    expect(mark.stepsByType, {0: 400, 6: 3000});
+    expect(mark.distanceByType, {6: 250000});
+    expect(mark.caloriesByType, isEmpty);
+  });
+
+  test('a line from before the maps loads with them null, and stays null',
+      () async {
+    // Null is "types unknowable", an empty map is "no types" — the mapper
+    // adopts silently on the first and counts fully on the second, so a
+    // re-save must not flatten one into the other.
+    SharedPreferences.setMockInitialValues(const {
+      'garmin_counter_watermarks': <String>['2026-07-29|1753822800000|6123|0|0|1'],
+    });
+    prefs = await SharedPreferences.getInstance();
+    store = GarminCounterWatermarkStore(prefs);
+
+    expect(store.load()['2026-07-29']!.stepsByType, isNull);
+
+    await store.save({'2026-07-30': mark(DateTime(2026, 7, 30, 9), 100)});
+    expect(store.load()['2026-07-29']!.stepsByType, isNull);
+    expect(store.load()['2026-07-29']!.steps, 6123);
+  });
+
+  test('an unreadable type map drops the line, not just the map', () async {
+    SharedPreferences.setMockInitialValues(const {
+      'garmin_counter_watermarks': <String>[
+        '2026-07-30|1753822800000|100|0|0|0|not-a-map|-|-',
+      ],
+    });
+    prefs = await SharedPreferences.getInstance();
+    store = GarminCounterWatermarkStore(prefs);
+
+    expect(store.load(), isEmpty);
+  });
+
   test('clear forgets everything', () async {
     // For a Health Connect wipe: the records the watermarks describe are gone,
     // so trusting them would leave every day short forever.
