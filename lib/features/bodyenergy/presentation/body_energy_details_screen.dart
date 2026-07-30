@@ -20,6 +20,8 @@ import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../../ui/components/period_navigator.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
+import '../../readiness/application/daily_readiness_view_model.dart';
+import '../../readiness/presentation/daily_readiness_card.dart';
 import '../../settings/presentation/cards/body_energy_calibration_card.dart';
 import '../application/body_energy_display.dart';
 import '../application/body_energy_view_model.dart';
@@ -30,6 +32,11 @@ import 'body_energy_timeline_chart.dart';
 /// `BodyEnergyDetailsScreen`: a calibration gate for first-run setup, then a
 /// selected-day timeline chart + current-level and charge/drain summary +
 /// "what moved it" reasons + input availability + method explainer.
+///
+/// Also the home of [DailyReadinessCard], which absorbed the Daily Readiness
+/// screen: the two describe the same day from adjacent angles, and readiness
+/// linked here for its detail anyway. Its provider is kept pointed at this
+/// screen's selected day.
 class BodyEnergyDetailsScreen extends ConsumerStatefulWidget {
   const BodyEnergyDetailsScreen({super.key, required this.date});
 
@@ -46,13 +53,14 @@ class _BodyEnergyDetailsScreenState
     with RefreshOnSignal {
   @override
   Set<DataDomain> get refreshDomains => const {
-        DataDomain.bodyEnergy,
-        DataDomain.heart,
-        DataDomain.sleep,
-        DataDomain.activities,
-        DataDomain.body,
-        DataDomain.vitals,
-      };
+    DataDomain.bodyEnergy,
+    DataDomain.readiness,
+    DataDomain.heart,
+    DataDomain.sleep,
+    DataDomain.activities,
+    DataDomain.body,
+    DataDomain.vitals,
+  };
 
   /// Same path as pull-to-refresh: warm the chain, then re-read. A body-energy
   /// day is scored against the days before it, so re-reading without walking the
@@ -67,11 +75,14 @@ class _BodyEnergyDetailsScreenState
     super.initState();
     final date = parseIsoLocalDate(widget.date);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(bodyEnergyProvider.notifier).load(date);
+      if (!mounted) return;
+      ref.read(bodyEnergyProvider.notifier).load(date);
+      ref.read(dailyReadinessProvider.notifier).selectDate(date);
     });
   }
 
   Future<void> _warmChain() async {
+    unawaited(ref.read(dailyReadinessProvider.notifier).refresh());
     await ref.read(bodyEnergyChainSyncServiceProvider).syncAll();
     if (!mounted) return;
     // The warm pass may have filled the gap this day was seeded across, so the
@@ -89,6 +100,13 @@ class _BodyEnergyDetailsScreenState
     // alongside it: Health Connect serializes concurrent reads, so a background
     // walk running next to the screen's own read would stall the open (the same
     // trap the calories screen hit). Guarded to fire once per open.
+    // The readiness card renders whatever day its provider holds, so day
+    // navigation here has to move both.
+    ref.listen(bodyEnergyProvider.select((s) => s.selectedDate), (prev, next) {
+      if (prev != null && prev != next) {
+        ref.read(dailyReadinessProvider.notifier).selectDate(next);
+      }
+    });
     ref.listen(bodyEnergyProvider.select((s) => s.isLoading), (prev, next) {
       if (prev == true && next == false && !_chainWarmKicked) {
         _chainWarmKicked = true;
@@ -173,9 +191,12 @@ class _BodyEnergyBody extends ConsumerWidget {
           },
         ),
       ),
-      _CardPad(child: _SummaryCard(display: display)),
-      _CardPad(child: _TimelineCard(display: display)),
+      // One card for the battery itself — the score and the day's curve are
+      // two views of the same number — then what moved it, then the readiness
+      // verdict those movements feed, then the method behind all of it.
+      _CardPad(child: _BodyEnergyCard(display: display)),
       _CardPad(child: _ReasonsCard(display: display)),
+      _CardPad(child: DailyReadinessCard(date: state.selectedDate)),
       _CardPad(child: _InputsCard(display: display)),
       const _CardPad(child: _CalculationCard()),
       const _CardPad(child: _SourcesCard()),
@@ -212,8 +233,26 @@ class _MaxWidth extends StatelessWidget {
 
 // ── Cards ────────────────────────────────────────────────────────────────────
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.display});
+class _BodyEnergyCard extends StatelessWidget {
+  const _BodyEnergyCard({required this.display});
+
+  final BodyEnergyDisplay display;
+
+  @override
+  Widget build(BuildContext context) => OpenVitalsCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SummaryContent(display: display),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        _TimelineContent(display: display),
+      ],
+    ),
+  );
+}
+
+class _SummaryContent extends StatelessWidget {
+  const _SummaryContent({required this.display});
 
   final BodyEnergyDisplay display;
 
@@ -223,89 +262,91 @@ class _SummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final timeline = display.timeline;
     final accent = _scoreColor(timeline?.currentScore, theme.colorScheme);
-    return OpenVitalsCard(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(Icons.battery_charging_full_outlined, color: accent, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.screenBodyEnergy,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+    return Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.battery_charging_full_outlined,
+                color: accent,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.screenBodyEnergy,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
-                      Text(
-                        l10n.bodyEnergyTimelineEstimated,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                    ),
+                    Text(
+                      l10n.bodyEnergyTimelineEstimated,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                Text(
-                  timeline?.currentScore.toString() ?? '--',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: accent,
-                  ),
+              ),
+              Text(
+                timeline?.currentScore.toString() ?? '--',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: accent,
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _stat(
+                theme,
+                l10n.bodyEnergyTimelineStart,
+                '${timeline?.startScore ?? '--'}',
+              ),
+              _stat(
+                theme,
+                l10n.bodyEnergyTimelineCharged,
+                '+${timeline?.charged ?? 0}',
+              ),
+              _stat(
+                theme,
+                l10n.bodyEnergyTimelineDrained,
+                '-${timeline?.drained ?? 0}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.bodyEnergyTimelineConfidence,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _stat(
-                  theme,
-                  l10n.bodyEnergyTimelineStart,
-                  '${timeline?.startScore ?? '--'}',
-                ),
-                _stat(
-                  theme,
-                  l10n.bodyEnergyTimelineCharged,
-                  '+${timeline?.charged ?? 0}',
-                ),
-                _stat(
-                  theme,
-                  l10n.bodyEnergyTimelineDrained,
-                  '-${timeline?.drained ?? 0}',
-                ),
-              ],
+          ),
+          Text(
+            _confidenceLabel(
+              timeline?.confidence ?? BodyEnergyConfidence.noData,
             ),
-            const SizedBox(height: 12),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if ((timeline?.confidenceReason ?? '').isNotEmpty)
             Text(
-              l10n.bodyEnergyTimelineConfidence,
-              style: theme.textTheme.labelSmall?.copyWith(
+              timeline!.confidenceReason,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            Text(
-              _confidenceLabel(
-                timeline?.confidence ?? BodyEnergyConfidence.noData,
-              ),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if ((timeline?.confidenceReason ?? '').isNotEmpty)
-              Text(
-                timeline!.confidenceReason,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -331,8 +372,8 @@ class _SummaryCard extends StatelessWidget {
   );
 }
 
-class _TimelineCard extends StatelessWidget {
-  const _TimelineCard({required this.display});
+class _TimelineContent extends StatelessWidget {
+  const _TimelineContent({required this.display});
 
   final BodyEnergyDisplay display;
 
@@ -340,60 +381,58 @@ class _TimelineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    return OpenVitalsCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.bodyEnergyTimelineDayTitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (display.isEmpty)
             Text(
-              l10n.bodyEnergyTimelineDayTitle,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+              l10n.bodyEnergyTimelineNoData,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
+            )
+          else ...[
+            BodyEnergyTimelineChart(
+              points: display.chartPoints,
+              influenceBars: display.influenceBars,
+              maxMagnitude: display.maxInfluenceMagnitude,
             ),
             const SizedBox(height: 12),
-            if (display.isEmpty)
-              Text(
-                l10n.bodyEnergyTimelineNoData,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              )
-            else ...[
-              BodyEnergyTimelineChart(
-                points: display.chartPoints,
-                influenceBars: display.influenceBars,
-                maxMagnitude: display.maxInfluenceMagnitude,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 6,
-                children: [
-                  for (final influence in display.legendInfluences)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          color: influenceColor(influence, theme.colorScheme),
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              children: [
+                for (final influence in display.legendInfluences)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        color: influenceColor(influence, theme.colorScheme),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _influenceLabel(l10n, influence),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _influenceLabel(l10n, influence),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ],
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -627,8 +666,9 @@ class _SourcesCard extends StatelessWidget {
           children: [
             Text(
               l10n.bodyEnergyReferencesTitle,
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             ReferenceLinkButton(

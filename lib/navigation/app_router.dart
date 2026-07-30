@@ -37,7 +37,6 @@ import '../features/nutrition/presentation/nutrition_metric.dart';
 import '../features/nutrition/presentation/nutrition_metric_screen.dart';
 import '../features/nutrition/presentation/nutrition_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
-import '../features/readiness/presentation/daily_readiness_screen.dart';
 import '../features/readiness/presentation/stress_details_screen.dart';
 import '../features/readiness/presentation/training_readiness_details_screen.dart';
 import '../features/recovery/presentation/sleep_efficiency_detail_screen.dart';
@@ -192,10 +191,6 @@ Widget _titledScreen(String title, Widget child) => Scaffold(
     );
 
 List<RouteBase> _readinessRoutes() => [
-      GoRoute(
-        path: AppRoutes.dailyReadiness,
-        builder: (context, state) => const DailyReadinessScreen(),
-      ),
       GoRoute(
         path: AppRoutes.stressDetails,
         builder: (context, state) => StressDetailsScreen(

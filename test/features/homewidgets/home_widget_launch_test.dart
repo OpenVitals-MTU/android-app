@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/features/homewidgets/home_widget_launch.dart';
 
 void main() {
@@ -46,7 +47,9 @@ void main() {
       );
       expect(
         homeWidgetRouteLocation(Uri.parse('openvitals://daily_readiness')),
-        '/daily_readiness',
+        // The readiness screen merged into the Body Energy view; the widget's
+        // stored route lands there, on today.
+        '/daily_readiness/body_energy/${LocalDate.now()}',
       );
       expect(
         homeWidgetRouteLocation(
@@ -127,6 +130,17 @@ void main() {
           '/metric/RESTING_HEART_RATE');
       expect(homeWidgetRouteLocationOf('dashboard'), '/dashboard');
       expect(homeWidgetRouteLocationOf('nonsense'), isNull);
+    });
+
+    test('a readiness widget placed before the merge lands on Body Energy',
+        () {
+      // The Daily Readiness screen merged into the Body Energy view. The
+      // stored route string on existing widgets cannot change, so the mapping
+      // retargets it — to today, which is what the widget shows.
+      expect(
+        homeWidgetRouteLocationOf('daily_readiness'),
+        '/daily_readiness/body_energy/${LocalDate.now()}',
+      );
     });
   });
 }

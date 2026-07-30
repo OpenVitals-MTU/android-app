@@ -43,7 +43,6 @@ class AppRoutes {
   static const String settings = '/settings';
 
   // ── Readiness ───────────────────────────────────────────────────────────────
-  static const String dailyReadiness = '/daily_readiness';
   static const String stressDetails = '/daily_readiness/stress/:$stressDateArg';
   static const String bodyEnergyDetails =
       '/daily_readiness/body_energy/:$bodyEnergyDateArg';

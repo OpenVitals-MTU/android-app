@@ -1,172 +1,91 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/daily_readiness.dart';
-import '../../../domain/health/health_permissions.dart';
-import '../../../domain/refresh/data_domain.dart';
-import '../../../state/refresh_coordinator.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/components/data_source_education_item.dart';
-import '../../../ui/components/health_connect_gate.dart';
-import '../../../ui/components/health_date_picker.dart';
-import '../../../ui/components/loading_state.dart';
 import '../../../ui/components/ov_card.dart';
-import '../../../ui/components/period_navigator.dart';
-import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/daily_readiness_view_model.dart';
 
-/// Daily-readiness overview pushed over the shell (`/daily_readiness`). Port of
-/// the Kotlin `DailyReadinessScreen` + `DailyReadinessPanel`: the overall /
-/// body-energy / training-readiness scores, state, recommendation, factor list,
-/// and confidence for the selected day.
-class DailyReadinessScreen extends ConsumerStatefulWidget {
-  const DailyReadinessScreen({super.key});
+/// The Daily Readiness panel as a card, hosted by the Body Energy screen.
+///
+/// This used to be a screen of its own, reached from an app-bar icon. Body
+/// energy was one of its sub-scores; the merge inverts that — the Body Energy
+/// view is the home and readiness rides along as the day's verdict — so the
+/// panel no longer links to body energy, which is the screen around it.
+///
+/// [date] is the host's selected day. The host keeps [dailyReadinessProvider]
+/// pointed at it; until the provider catches up this renders a placeholder
+/// rather than another day's verdict.
+class DailyReadinessCard extends ConsumerWidget {
+  const DailyReadinessCard({super.key, required this.date});
+
+  final LocalDate date;
 
   @override
-  ConsumerState<DailyReadinessScreen> createState() =>
-      _DailyReadinessScreenState();
-}
-
-class _DailyReadinessScreenState extends ConsumerState<DailyReadinessScreen>
-    with RefreshOnSignal {
-  @override
-  Set<DataDomain> get refreshDomains => const {
-        DataDomain.readiness,
-        DataDomain.heart,
-        DataDomain.sleep,
-        DataDomain.activities,
-      };
-
-  @override
-  void onRefreshSignal(RefreshSignal signal) =>
-      unawaited(ref.read(dailyReadinessProvider.notifier).refresh());
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dailyReadinessProvider);
-    final notifier = ref.read(dailyReadinessProvider.notifier);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Daily readiness')),
-      body: HealthConnectGate(
-        requiredPermissions: {
-          HcPermissions.readHeartRate,
-          HcPermissions.readSleep,
-        },
-        showInlineSyncBanner: false,
-        child: _ReadinessBody(
-          state: state,
-          onRefresh: notifier.refresh,
-          onPreviousDay: notifier.previousDay,
-          onNextDay: notifier.nextDay,
-          onSelectDate: notifier.selectDate,
-        ),
-      ),
-    );
-  }
-}
-
-class _ReadinessBody extends StatelessWidget {
-  const _ReadinessBody({
-    required this.state,
-    required this.onRefresh,
-    required this.onPreviousDay,
-    required this.onNextDay,
-    required this.onSelectDate,
-  });
-
-  final DailyReadinessState state;
-  final Future<void> Function() onRefresh;
-  final VoidCallback onPreviousDay;
-  final VoidCallback onNextDay;
-  final void Function(LocalDate) onSelectDate;
-
-  @override
-  Widget build(BuildContext context) {
     final insight = state.insight;
     final display = state.display;
-    if (state.isLoading && insight == null) {
-      return const FullScreenLoading();
-    }
-    if (insight == null && state.error != null) {
-      return ErrorMessage(readinessScreenErrorText(state.error!));
-    }
 
-    final date = _isoDate(state.selectedDate);
-    final items = <Widget>[
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: DayNavigator(
-          date: state.selectedDate,
-          canGoForward: state.canGoForward,
-          onPreviousDay: onPreviousDay,
-          onNextDay: onNextDay,
-          onOpenCalendar: () async {
-            final picked = await showHealthDatePicker(
-              context,
-              selectedDate: state.selectedDate,
-            );
-            if (picked != null) onSelectDate(picked);
-          },
+    if (state.selectedDate != date ||
+        (state.isLoading && insight == null)) {
+      return const _PlaceholderCard(child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
         ),
-      ),
-      if (insight != null && display != null)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: _ReadinessPanel(
-            insight: insight,
-            display: display,
-            onOpenBodyEnergy: () =>
-                context.push(AppRoutes.bodyEnergyDetailsLocation(date)),
-            onOpenStress: () =>
-                context.push(AppRoutes.stressDetailsLocation(date)),
-            onOpenTrainingReadiness: () => context
-                .push(AppRoutes.trainingReadinessDetailsLocation(date)),
-          ),
-        )
-      else
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ErrorMessage('No readiness data for this day.'),
-        ),
-      const SizedBox(height: 16),
-    ];
-
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1080),
-          child: ListView(
-            padding: screenScrollPadding(context),
-            children: items,
+      ));
+    }
+    if (insight == null || display == null) {
+      final error = state.error;
+      return _PlaceholderCard(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            error == null
+                ? 'No readiness data for this day.'
+                : readinessScreenErrorText(error),
           ),
         ),
-      ),
+      );
+    }
+
+    final isoDate = date.toString();
+    return _ReadinessPanel(
+      insight: insight,
+      display: display,
+      onOpenStress: () =>
+          context.push(AppRoutes.stressDetailsLocation(isoDate)),
+      onOpenTrainingReadiness: () =>
+          context.push(AppRoutes.trainingReadinessDetailsLocation(isoDate)),
     );
   }
+}
+
+class _PlaceholderCard extends StatelessWidget {
+  const _PlaceholderCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => OpenVitalsCard(child: child);
 }
 
 class _ReadinessPanel extends StatelessWidget {
   const _ReadinessPanel({
     required this.insight,
     required this.display,
-    required this.onOpenBodyEnergy,
     required this.onOpenStress,
     required this.onOpenTrainingReadiness,
   });
 
   final DailyReadinessInsight insight;
   final DailyReadinessDisplay display;
-  final VoidCallback onOpenBodyEnergy;
   final VoidCallback onOpenStress;
   final VoidCallback onOpenTrainingReadiness;
 
@@ -222,28 +141,12 @@ class _ReadinessPanel extends StatelessWidget {
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _ScoreTile(
-                    label: 'Body energy',
-                    value: '${insight.bodyEnergyScore}/100',
-                    icon: Icons.favorite_border,
-                    color: AppColors.heart,
-                    onTap: onOpenBodyEnergy,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _ScoreTile(
-                    label: 'Training',
-                    value: '${insight.trainingReadinessScore}/100',
-                    icon: Icons.fitness_center_outlined,
-                    color: AppColors.workout,
-                    onTap: onOpenTrainingReadiness,
-                  ),
-                ),
-              ],
+            _ScoreTile(
+              label: 'Training',
+              value: '${insight.trainingReadinessScore}/100',
+              icon: Icons.fitness_center_outlined,
+              color: AppColors.workout,
+              onTap: onOpenTrainingReadiness,
             ),
             const SizedBox(height: 14),
             _InlineInfo(
@@ -500,8 +403,6 @@ class _FactorRow extends StatelessWidget {
   }
 }
 
-// ── Labels & colours ─────────────────────────────────────────────────────────
-
 Color _stateColor(ReadinessState state, ColorScheme scheme) {
   switch (state) {
     case ReadinessState.ready:
@@ -529,8 +430,6 @@ Color _impactColor(ReadinessFactorImpact impact, ColorScheme scheme) {
       return scheme.error;
   }
 }
-
-String _isoDate(LocalDate date) => date.toString();
 
 /// Resolves a [ScreenError] into a display string.
 String readinessScreenErrorText(ScreenError error) {

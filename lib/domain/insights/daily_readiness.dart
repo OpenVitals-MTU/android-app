@@ -73,6 +73,9 @@ enum ReadinessFactorKind {
   missingStressData,
   temperatureElevated,
   hydrationLow,
+  bodyEnergyDrained,
+  bodyEnergyLow,
+  bodyEnergyCharged,
   nutritionLogged,
   missingSleepData,
   missingHrvData,
@@ -795,6 +798,52 @@ DailyReadinessInsight calculateDailyReadiness(
       detail: '${data.mindfulnessMinutes} min of mindfulness is logged today.',
       impact: ReadinessFactorImpact.positive,
     );
+  }
+
+  // The MEASURED battery, when the body-energy engine has one, replaces the
+  // estimate the deltas above assembled — it is the engine's own answer to the
+  // question they approximate. And it feeds the verdict: arriving at the day
+  // already drained is exactly what should hold training back, however decent
+  // the night looked on its own.
+  final bodyEnergy = data.bodyEnergyTimeline;
+  if (bodyEnergy != null) {
+    availableSignals += 1;
+    bodyEnergyScore = bodyEnergy.currentScore;
+    final detail =
+        'Body energy is at ${bodyEnergy.currentScore} after starting the day '
+        'at ${bodyEnergy.startScore}.';
+    if (bodyEnergy.currentScore <= 25) {
+      // Strong enough to pull an otherwise perfect day out of "ready": the
+      // measured battery is the aggregate the other signals approximate, and
+      // an empty one is not a day for hard training whatever they say.
+      score -= 20;
+      trainingReadinessScore -= 20;
+      elevatedBodySignals += 1;
+      addFactor(
+        kind: ReadinessFactorKind.bodyEnergyDrained,
+        label: 'Body energy is drained',
+        detail: detail,
+        impact: ReadinessFactorImpact.warning,
+      );
+    } else if (bodyEnergy.currentScore <= 45 || bodyEnergy.startScore <= 30) {
+      score -= 8;
+      trainingReadinessScore -= 9;
+      addFactor(
+        kind: ReadinessFactorKind.bodyEnergyLow,
+        label: 'Body energy is low',
+        detail: detail,
+        impact: ReadinessFactorImpact.negative,
+      );
+    } else if (bodyEnergy.currentScore >= 80) {
+      score += 6;
+      trainingReadinessScore += 5;
+      addFactor(
+        kind: ReadinessFactorKind.bodyEnergyCharged,
+        label: 'Body energy is charged',
+        detail: detail,
+        impact: ReadinessFactorImpact.positive,
+      );
+    }
   }
 
   if (elevatedBodySignals >= 2) {

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/insights/cardio_load.dart';
+import 'package:openvitals/domain/insights/body_energy_timeline.dart';
 import 'package:openvitals/domain/insights/daily_readiness.dart';
 import 'package:openvitals/domain/insights/intensity_minutes.dart';
 import 'package:openvitals/domain/insights/sleep_score.dart';
@@ -103,6 +104,126 @@ void main() {
     );
     expect(
       insight.factors.any((f) => f.kind == ReadinessFactorKind.restingHrNormal),
+      isTrue,
+    );
+  });
+
+  BodyEnergyTimeline energy({required int start, required int current}) =>
+      BodyEnergyTimeline(
+        date: date,
+        startScore: start,
+        currentScore: current,
+        charged: 0,
+        drained: start - current < 0 ? 0 : start - current,
+        points: const [],
+        confidence: BodyEnergyConfidence.high,
+        confidenceReason: '',
+      );
+
+  test('arrivingAtTheDayDrainedHoldsTrainingBack', () {
+    // The point of feeding the MEASURED battery in: a decent night no longer
+    // outvotes a body that arrived at the day empty.
+    DashboardData data({BodyEnergyTimeline? bodyEnergy}) => DashboardData(
+          date: date,
+          sleep: sleep(const Duration(hours: 8)),
+          sleepScore: sleepScore(score: 88, hours: 8.0),
+          restingHeartRateBpm: 55,
+          restingHeartRateBaselineBpm: 58,
+          hrvRmssdMs: 62.0,
+          hrvBaselineRmssdMs: 56.0,
+          avgHeartRateBpm: 68,
+          weeklyCardioLoad: weeklyLoad(current: 90, target: 100, today: 12),
+          weeklyIntensityMinutes: weeklyIntensity(minutes: 160, today: 34),
+          bodyEnergyTimeline: bodyEnergy,
+          loadedMetrics: const {
+            DashboardMetric.sleep,
+            DashboardMetric.avgHeartRate,
+            DashboardMetric.restingHeartRate,
+            DashboardMetric.hrv,
+            DashboardMetric.weeklyCardioLoad,
+            DashboardMetric.intensityMinutes,
+            DashboardMetric.bodyEnergy,
+          },
+        );
+
+    final without = calculateDailyReadiness(data());
+    final drained =
+        calculateDailyReadiness(data(bodyEnergy: energy(start: 18, current: 20)));
+
+    expect(without.state, ReadinessState.ready);
+    expect(drained.score, lessThan(without.score));
+    expect(drained.state, isNot(ReadinessState.ready));
+    expect(
+      drained.factors
+          .any((f) => f.kind == ReadinessFactorKind.bodyEnergyDrained),
+      isTrue,
+    );
+  });
+
+  test('theMeasuredBatteryReplacesTheEstimate', () {
+    final insight = calculateDailyReadiness(
+      DashboardData(
+        date: date,
+        sleepScore: sleepScore(score: 70, hours: 7.0),
+        sleep: sleep(const Duration(hours: 7)),
+        bodyEnergyTimeline: energy(start: 60, current: 57),
+        loadedMetrics: const {
+          DashboardMetric.sleep,
+          DashboardMetric.bodyEnergy,
+        },
+      ),
+    );
+
+    expect(insight.bodyEnergyScore, 57);
+  });
+
+  test('aLowStartStillCountsAfterAMidDayRecovery', () {
+    // "If you arrive your day destroyed" — the morning score matters even when
+    // charging since has pulled the current reading back up.
+    final insight = calculateDailyReadiness(
+      DashboardData(
+        date: date,
+        sleepScore: sleepScore(score: 88, hours: 8.0),
+        sleep: sleep(const Duration(hours: 8)),
+        bodyEnergyTimeline: energy(start: 22, current: 55),
+        loadedMetrics: const {
+          DashboardMetric.sleep,
+          DashboardMetric.bodyEnergy,
+        },
+      ),
+    );
+
+    expect(
+      insight.factors.any((f) => f.kind == ReadinessFactorKind.bodyEnergyLow),
+      isTrue,
+    );
+  });
+
+  test('aChargedBatteryLiftsTheVerdict', () {
+    final base = DashboardData(
+      date: date,
+      sleepScore: sleepScore(score: 70, hours: 7.0),
+      sleep: sleep(const Duration(hours: 7)),
+      loadedMetrics: const {DashboardMetric.sleep, DashboardMetric.bodyEnergy},
+    );
+    final without = calculateDailyReadiness(base);
+    final charged = calculateDailyReadiness(
+      DashboardData(
+        date: date,
+        sleepScore: sleepScore(score: 70, hours: 7.0),
+        sleep: sleep(const Duration(hours: 7)),
+        bodyEnergyTimeline: energy(start: 70, current: 86),
+        loadedMetrics: const {
+          DashboardMetric.sleep,
+          DashboardMetric.bodyEnergy,
+        },
+      ),
+    );
+
+    expect(charged.score, greaterThan(without.score));
+    expect(
+      charged.factors
+          .any((f) => f.kind == ReadinessFactorKind.bodyEnergyCharged),
       isTrue,
     );
   });

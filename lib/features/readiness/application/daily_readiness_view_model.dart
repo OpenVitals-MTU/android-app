@@ -21,6 +21,7 @@ part 'daily_readiness_view_model.freezed.dart';
 /// The metrics loaded for a Daily Readiness computation (Kotlin
 /// `DailyReadinessMetrics`).
 const Set<DashboardMetric> dailyReadinessMetrics = <DashboardMetric>{
+  DashboardMetric.bodyEnergy,
   DashboardMetric.sleep,
   DashboardMetric.workout,
   DashboardMetric.avgHeartRate,

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
 
 import '../../navigation/app_router.dart';
+import '../../core/time/local_date.dart';
 import '../../navigation/app_routes.dart';
 
 /// Opening the app from a home-screen widget tap.
@@ -55,7 +56,10 @@ String? homeWidgetRouteLocationOf(String route) {
       .toList();
   return switch (segments) {
     ['dashboard'] => AppRoutes.dashboard,
-    ['daily_readiness'] => AppRoutes.dailyReadiness,
+    // The Daily Readiness screen merged into the Body Energy view; a widget
+    // placed before that lands on the merged screen, today.
+    ['daily_readiness'] =>
+      AppRoutes.bodyEnergyDetailsLocation('${LocalDate.now()}'),
     ['daily_readiness', 'body_energy', final date]
         when _isIsoDate(date) =>
       AppRoutes.bodyEnergyDetailsLocation(date),

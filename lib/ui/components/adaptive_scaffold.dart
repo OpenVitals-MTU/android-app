@@ -10,8 +10,8 @@ import '../../navigation/app_routes.dart';
 ///
 /// Mirrors the Kotlin `OpenVitalsAdaptiveScaffold`: the app has **no bottom
 /// navigation**. The dashboard is the home, and every other destination is
-/// reached from the top-bar actions (Daily Readiness / sensor battery /
-/// Achievements / Settings) or from in-screen actions (the Activities section,
+/// reached from the top-bar actions (sensor battery / Achievements / Settings)
+/// or from in-screen actions (the Activities section,
 /// the Log / Start buttons, metric cards). Those destinations are pushed onto
 /// the root navigator and get their own back-enabled app bar.
 class OpenVitalsHomeScaffold extends ConsumerWidget {
@@ -28,14 +28,8 @@ class OpenVitalsHomeScaffold extends ConsumerWidget {
         title: Text(l10n.appName),
         centerTitle: false,
         actions: [
-          // Kotlin dashboard top bar: the SelfImprovement icon opens Daily
-          // Readiness (AppNavigation.kt:415-425, cd_daily_readiness), not the
-          // mindfulness entry form (which is reached from the Add-entry hub).
-          IconButton(
-            tooltip: l10n.screenDailyReadiness,
-            icon: const Icon(Icons.self_improvement_outlined),
-            onPressed: () => context.push(AppRoutes.dailyReadiness),
-          ),
+          // Daily Readiness has no icon of its own any more: the screen merged
+          // into the Body Energy view, reached through its dashboard tile.
           // Only shown once at least one BLE sensor is paired (Kotlin
           // `dashboardDeviceActionVisible`).
           if (sensorStatus.hasDevices)
