@@ -59,6 +59,7 @@ void main() {
     List<String> tileOrder = const <String>[],
     List<String> ringOrder = const <String>[],
     Set<String> hiddenTiles = const <String>{},
+    Set<String> loadingIds = const <String>{},
   }) =>
       buildDashboardDisplay(
         data,
@@ -69,6 +70,7 @@ void main() {
         tileOrder: tileOrder,
         ringOrder: ringOrder,
         hiddenTiles: hiddenTiles,
+        loadingIds: loadingIds,
       );
 
   List<String> trayTitles(DashboardDisplay d) =>
@@ -124,6 +126,87 @@ void main() {
     // title cannot be an identity.
     expect(display.migratedTileOrder, ['hydration', 'distance']);
     expect(display.migratedHiddenTiles, {'distance'});
+  });
+
+  group('tiles with no data sink below the ones with some', () {
+    // The feedback this ports: "reorder the things in Today so that ones with
+    // no data are shown last by default — they would still be there for people
+    // to see they exist, but they wouldn't require manual reordering to see
+    // the ones you actually have access to."
+    test('empty tiles come last in the carousel, in saved order', () {
+      final display = build(_data());
+
+      final visible = display.visibleTiles;
+      final firstEmpty = visible.indexWhere((t) => t.message != null);
+      expect(firstEmpty, greaterThan(0));
+      expect(
+        visible.skip(firstEmpty).every((t) => t.message != null),
+        isTrue,
+        reason: 'once the empty tiles start, no data tile follows',
+      );
+      // The partition is stable: both groups keep the saved relative order.
+      final orderedVisible = [
+        for (final t in display.orderedTiles)
+          if (!display.hiddenIds.contains(t.id)) t.id,
+      ];
+      expect(
+        [for (final t in visible.take(firstEmpty)) t.id],
+        [for (final id in orderedVisible)
+          if (visible.take(firstEmpty).any((t) => t.id == id)) id],
+      );
+    });
+
+    test('the edit grid keeps the true saved order', () {
+      // A drag lands where it visually is: edit mode must not show the
+      // partition it would immediately re-apply.
+      final plain = build(_data());
+      final editing = build(_data(), editing: true);
+
+      final plainIds = [for (final t in plain.visibleTiles) t.id];
+      final editingIds = [for (final t in editing.visibleTiles) t.id];
+      expect(editingIds, isNot(plainIds));
+      final editVisible = [
+        for (final t in editing.orderedTiles)
+          if (!editing.hiddenIds.contains(t.id)) t.id,
+      ];
+      expect(editingIds, editVisible);
+    });
+
+    test('a tile still loading holds its place instead of sinking', () {
+      // Sinking a loading tile would reorder the carousel twice on every open:
+      // down while empty, back up when its data lands.
+      final display = build(_data());
+      final sunk = display.visibleTiles.lastWhere((t) => t.message != null);
+
+      final held = build(_data(), loadingIds: {sunk.id});
+
+      final visible = held.visibleTiles;
+      final position = visible.indexWhere((t) => t.id == sunk.id);
+      final ordered = [
+        for (final t in held.orderedTiles)
+          if (!held.hiddenIds.contains(t.id) &&
+              (t.message == null || t.id == sunk.id))
+            t.id,
+      ];
+      expect(visible[position].id, ordered[position],
+          reason: 'the loading tile stays where the saved order puts it');
+    });
+
+    test('a saved order that leads with an empty tile still sinks it', () {
+      final display = build(_data());
+      final empty = display.visibleTiles.lastWhere((t) => t.message != null);
+      final withData = display.visibleTiles.first;
+
+      final reordered = build(
+        _data(),
+        tileOrder: [empty.id, withData.id],
+      );
+
+      expect(reordered.visibleTiles.first.id, withData.id);
+      expect(
+        reordered.visibleTiles.map((t) => t.id), contains(empty.id),
+      );
+    });
   });
 
   test('a hidden hero ring leaves the row and joins the tray', () {

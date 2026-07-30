@@ -357,7 +357,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
       data: data,
       // Both passes publish through here, so both rebuild the display: the fast
       // one shows the quick metrics, the background one folds the rest in.
-      display: _buildDisplay(data),
+      display: _buildDisplay(data, loadingMetrics: loadingMetrics),
       isLoading: false,
       isRefreshing: false,
       loadingMetrics: loadingMetrics,
@@ -371,7 +371,7 @@ class DashboardViewModel extends Notifier<DashboardState> {
   void _rebuildDisplay() {
     final data = state.data;
     if (data == null) return;
-    final display = _buildDisplay(data);
+    final display = _buildDisplay(data, loadingMetrics: state.loadingMetrics);
     state = state.copyWith(display: display);
     _persistMigratedLayout(display);
   }
@@ -405,7 +405,11 @@ class DashboardViewModel extends Notifier<DashboardState> {
     );
   }
 
-  DashboardDisplay _buildDisplay(DashboardData data) => buildDashboardDisplay(
+  DashboardDisplay _buildDisplay(
+    DashboardData data, {
+    required Set<DashboardMetric> loadingMetrics,
+  }) =>
+      buildDashboardDisplay(
         data,
         ref.read(unitFormatterProvider),
         _localizations(),
@@ -414,6 +418,10 @@ class DashboardViewModel extends Notifier<DashboardState> {
         tileOrder: state.tileOrder,
         ringOrder: state.ringOrder,
         hiddenTiles: state.hiddenTiles,
+        // Passed explicitly rather than read off the state: _publish builds the
+        // display in the same copyWith that sets loadingMetrics, so the state's
+        // copy is one publish stale.
+        loadingIds: {for (final m in loadingMetrics) m.name},
         // Devices are not health metrics, so they are not built by the summary
         // mapper — but they ARE carousel tiles, and being real tiles is what
         // gives them reordering and hiding for free.

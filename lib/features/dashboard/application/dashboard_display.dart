@@ -30,7 +30,12 @@ abstract class DashboardDisplay with _$DashboardDisplay {
     /// edit grid and the add-tray are computed from.
     required List<StatTileData> orderedTiles,
 
-    /// The tiles the carousel actually shows.
+    /// The tiles the carousel actually shows. Outside edit mode the tiles
+    /// with no data sink below the ones with some: they still exist — a user
+    /// can see the metric is there to be had — but the metrics actually being
+    /// measured lead, without anyone having to reorder by hand. The saved
+    /// order still decides the sequence within each group, and edit mode shows
+    /// the true saved order so a drag lands where it visually is.
     required List<StatTileData> visibleTiles,
 
     /// Both hero rings in the user's saved order, hidden ones included.
@@ -76,6 +81,7 @@ DashboardDisplay buildDashboardDisplay(
   List<String> ringOrder = const <String>[],
   Set<String> hiddenTiles = const <String>{},
   List<StatTileData> extraTiles = const <StatTileData>[],
+  Set<String> loadingIds = const <String>{},
 }) {
   // Edit mode materialises a tile for every metric, device-supported or not, so
   // one the user removed can always be added back (Kotlin expands the spec list
@@ -124,12 +130,25 @@ DashboardDisplay buildDashboardDisplay(
     order: ringOrder,
     includeHidden: true,
   );
+  final visible = [
+    for (final t in orderedTiles)
+      if (!hidden.contains(t.id)) t,
+  ];
+  // A tile still loading holds its place: sinking it now would reorder the
+  // carousel twice on every open, once down and once back up when its data
+  // lands. Truly-empty tiles sink on the load's final publish, once.
+  bool sinks(StatTileData t) =>
+      t.message != null && !loadingIds.contains(t.id);
   return DashboardDisplay(
     orderedTiles: orderedTiles,
-    visibleTiles: [
-      for (final t in orderedTiles)
-        if (!hidden.contains(t.id)) t,
-    ],
+    visibleTiles: editing
+        ? visible
+        : [
+            for (final t in visible)
+              if (!sinks(t)) t,
+            for (final t in visible)
+              if (sinks(t)) t,
+          ],
     orderedRings: orderedRings,
     visibleRings: [
       for (final r in orderedRings)
