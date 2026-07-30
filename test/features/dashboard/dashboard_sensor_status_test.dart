@@ -7,6 +7,7 @@ BleSensorDevice _device({
   String address = 'AA:BB:CC:DD:EE:FF',
   bool enabled = true,
   int? batteryPercent,
+  BleDeviceKind kind = BleDeviceKind.sensor,
 }) =>
     BleSensorDevice(
       id: id,
@@ -18,6 +19,7 @@ BleSensorDevice _device({
       wheelCircumferenceMm: null,
       batteryPercent: batteryPercent,
       addedAt: DateTime(2026, 1, 1),
+      kind: kind,
     );
 
 BleDeviceConnectionStatus _status({
@@ -90,6 +92,42 @@ void main() {
   });
 
   group('derived getters', () {
+    test('a paired watch alone puts up no icon: it is not in the screen the '
+        'icon opens', () {
+      // The bug this pins: pairing a smartwatch made the top-bar battery icon
+      // appear, and tapping it opened an empty Sensors & devices screen — the
+      // watch is listed under Settings > Watches, not there.
+      final status = toDashboardSensorStatus(
+        [_device(id: 'watch', kind: BleDeviceKind.watch, batteryPercent: 80)],
+        const [],
+      );
+
+      expect(status.hasDevices, isFalse);
+      expect(status.lowestBatteryPercent, isNull);
+    });
+
+    test('a watch beside a sensor adds neither counts nor battery', () {
+      final status = toDashboardSensorStatus(
+        [
+          _device(id: 'hrm', batteryPercent: 60),
+          _device(id: 'watch', kind: BleDeviceKind.watch, batteryPercent: 20),
+        ],
+        const [],
+      );
+
+      expect(status.devices, hasLength(1));
+      expect(status.lowestBatteryPercent, 60);
+    });
+
+    test('a bike computer still counts: the screen lists it', () {
+      final status = toDashboardSensorStatus(
+        [_device(id: 'edge', kind: BleDeviceKind.bikeComputer)],
+        const [],
+      );
+
+      expect(status.hasDevices, isTrue);
+    });
+
     test('an empty status has no devices and no battery', () {
       const status = DashboardSensorStatus();
       expect(status.hasDevices, isFalse);

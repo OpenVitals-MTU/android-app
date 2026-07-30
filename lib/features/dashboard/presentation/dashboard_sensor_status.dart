@@ -71,8 +71,13 @@ DashboardSensorStatus toDashboardSensorStatus(
     for (final status in connectionStatuses) status.address: status,
   };
   return DashboardSensorStatus(
+    // Only the devices the Sensors & devices screen lists. The top-bar battery
+    // icon opens that screen, so its visibility has to mean "there is
+    // something behind this tap" — a paired watch alone put the icon up over
+    // an empty list (watches live under Settings > Watches, with their own
+    // battery surface).
     devices: [
-      for (final device in devices)
+      for (final device in devices.where((d) => d.isLiveSensorCapable))
         () {
           final live = byId[device.id] ?? byAddress[device.address];
           return DashboardSensorDeviceStatus(
