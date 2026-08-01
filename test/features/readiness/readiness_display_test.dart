@@ -2,6 +2,8 @@
 // panel's confidence/stress/strain lines and capped factor list, and the
 // training detail's verdict band, signal list and guidance bullets.
 
+import 'dart:ui' show Locale;
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openvitals/domain/insights/daily_readiness.dart';
@@ -9,6 +11,9 @@ import 'package:openvitals/domain/insights/intensity_minutes.dart';
 import 'package:openvitals/domain/insights/stress_tracking.dart';
 import 'package:openvitals/features/readiness/application/daily_readiness_display.dart';
 import 'package:openvitals/features/readiness/application/training_readiness_display.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
+
+final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 
 DailyReadinessInsight _insight({
   ReadinessState state = ReadinessState.ready,
@@ -34,6 +39,7 @@ DailyReadinessInsight _insight({
       avoid: 'Overreaching if you feel sore.',
       strainTarget: strainTarget,
       currentStrain: currentStrain,
+      currentStrainValue: currentStrain == null ? null : 6.0,
       adaptiveGoal: 'Adaptive goal: 8800 steps + workout',
       confidence: confidence,
       confidenceReason: confidenceReason,
@@ -90,7 +96,7 @@ DailyReadinessFactor _factor(
 void main() {
   group('daily readiness panel', () {
     test('composes every line the panel used to build inline', () {
-      final display = buildDailyReadinessDisplay(_insight());
+      final display = buildDailyReadinessDisplay(_insight(), _l10n);
 
       expect(display.confidenceText, 'High confidence · complete local data');
       expect(
@@ -99,11 +105,12 @@ void main() {
       );
       expect(
         display.intensityMinutesValue,
-        'On track · 90/150 moderate-equivalent min this week.',
+        'On track · 90/150 moderate-equivalent min this week, on pace for '
+        'day 0. high confidence.',
       );
       expect(
         display.stressValue,
-        'Low · 30/100 · Physiological stress looks low.',
+        'Low · 30/100 · Signals suggest low physiological stress.',
       );
       expect(
         display.strainValue,
@@ -121,18 +128,25 @@ void main() {
           strainTarget: '',
           stressScore: null,
         ),
+        _l10n,
       );
 
       expect(display.confidenceText, 'Low confidence · sleep data missing');
       // No score means no "n/100" segment at all.
-      expect(display.stressValue, 'Low · Physiological stress looks low.');
-      expect(display.strainValue, isEmpty);
+      expect(
+        display.stressValue,
+        'Low · Signals suggest low physiological stress.',
+      );
+      // The strain target now derives from the state, so even an insight whose
+      // English composite was empty renders the unknown-state range.
+      expect(display.strainValue, "Today's strain target: 3-6");
       expect(display.topFactors, isEmpty);
     });
 
     test('an unrecognised confidence reason falls back to partial data', () {
       final display = buildDailyReadinessDisplay(
         _insight(confidenceReason: 'something_else'),
+        _l10n,
       );
       expect(display.confidenceText, 'High confidence · partial local data');
     });
@@ -145,6 +159,7 @@ void main() {
               _factor(ReadinessFactorKind.hrvNormal, label: 'Factor $i'),
           ],
         ),
+        _l10n,
       );
 
       expect(display.topFactors, hasLength(5));

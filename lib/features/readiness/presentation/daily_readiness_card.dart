@@ -133,13 +133,13 @@ class _ReadinessPanel extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            Text(insight.statusTitle,
+            Text(display.statusTitle,
                 style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600, color: accent)),
             const SizedBox(height: 6),
-            Text(insight.recommendation, style: theme.textTheme.bodyLarge),
+            Text(display.recommendation, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 4),
-            Text(insight.explanation,
+            Text(display.explanation,
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 14),
@@ -169,28 +169,28 @@ class _ReadinessPanel extends StatelessWidget {
             const Divider(height: 24),
             _GuidanceRow(
               label: l10n.dashboardReadinessRecommended,
-              value: insight.suggestedWorkout,
+              value: display.suggestedWorkout,
               icon: Icons.directions_run_outlined,
               color: accent,
             ),
             const SizedBox(height: 8),
             _GuidanceRow(
               label: l10n.dashboardReadinessAvoid,
-              value: insight.avoid,
+              value: display.avoid,
               icon: Icons.close,
               color: scheme.error,
             ),
             const SizedBox(height: 8),
             _GuidanceRow(
               label: l10n.dashboardReadinessAlternative,
-              value: insight.alternative,
+              value: display.alternative,
               icon: Icons.self_improvement_outlined,
               color: AppColors.mindfulness,
             ),
             const SizedBox(height: 14),
             _InlineInfo(label: l10n.dashboardReadinessStrain, value: display.strainValue),
             const SizedBox(height: 8),
-            _InlineInfo(label: l10n.dashboardReadinessGoal, value: insight.adaptiveGoal),
+            _InlineInfo(label: l10n.dashboardReadinessGoal, value: display.adaptiveGoal),
             if (display.topFactors.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text(l10n.dashboardReadinessWhy,
@@ -366,7 +366,7 @@ class _TappableInfo extends StatelessWidget {
 class _FactorRow extends StatelessWidget {
   const _FactorRow({required this.factor});
 
-  final DailyReadinessFactor factor;
+  final ReadinessFactorDisplay factor;
 
   @override
   Widget build(BuildContext context) {

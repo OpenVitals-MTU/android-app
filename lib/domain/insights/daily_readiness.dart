@@ -91,6 +91,57 @@ enum HrvStatus {
   needsMoreHrv,
 }
 
+/// Which sentence a [DailyReadinessFactor] renders as, one value per distinct
+/// template — the [ReadinessFactorKind]/impact pair cannot tell some apart
+/// (both intensity labels are positive on the same kind, and the two
+/// baseline-building factors share kind AND impact).
+///
+/// The factor's English [DailyReadinessFactor.label]/`detail` stay canonical
+/// for non-UI callers, like [SettingsSection]'s const titles; the UI renders
+/// the template through `AppLocalizations` with [DailyReadinessFactor.args]
+/// filling the numbers, so the verdict reads in the app's language.
+enum ReadinessFactorTemplate {
+  /// A factor built before templates existed (a test fixture, usually): the
+  /// UI falls back to the English label/detail.
+  legacy,
+
+  sleepHelpedRecovery,
+  sleepUsable,
+  sleepMayLimit,
+  sleepLow,
+  sleepDataMissing,
+
+  /// Renders from [DailyReadinessInsight.hrvStatus], no args of its own.
+  hrvStatusFactor,
+  hrvBaselineBuilding,
+  hrvDataMissing,
+
+  restingHrElevated,
+  restingHrSlightlyElevated,
+  restingHrNormal,
+  restingHrBaselineBuilding,
+
+  trainingLoadHigh,
+  trainingLoadStable,
+  trainingLoadLight,
+
+  /// Renders from [DailyReadinessInsight.intensityMinutes], no args of its own.
+  intensityFactor,
+
+  /// Renders from [DailyReadinessInsight.physiologicalStress].
+  physiologicalStressFactor,
+  physiologicalStressNeedsData,
+
+  temperatureElevated,
+  hydrationBehind,
+  nutritionLogged,
+  mindfulnessMoment,
+  bodyEnergyDrained,
+  bodyEnergyLow,
+  bodyEnergyCharged,
+  bodySignalsElevated,
+}
+
 @freezed
 abstract class HrvStatusInsight with _$HrvStatusInsight {
   const factory HrvStatusInsight({
@@ -123,6 +174,11 @@ abstract class IntensityMinutesReadinessInsight
     required int? todayModerateEquivalentMinutes,
     required int progressPercent,
     required IntensityMinutesConfidence confidence,
+
+    /// The remaining numbers the detail sentence embeds, so the UI can render
+    /// it through the catalog.
+    @Default(null) int? daysElapsed,
+    @Default(null) int? expectedByNowMinutes,
   }) = _IntensityMinutesReadinessInsight;
 }
 
@@ -142,6 +198,11 @@ abstract class DailyReadinessFactor with _$DailyReadinessFactor {
     required String label,
     required String detail,
     required ReadinessFactorImpact impact,
+    @Default(ReadinessFactorTemplate.legacy) ReadinessFactorTemplate template,
+
+    /// The numbers [template]'s sentence embeds, in the order that template
+    /// defines. NaN marks an absent optional (temperature readings).
+    @Default(<double>[]) List<double> args,
   }) = _DailyReadinessFactor;
 }
 
@@ -162,6 +223,12 @@ abstract class DailyReadinessInsight with _$DailyReadinessInsight {
     required String strainTarget,
     required String? currentStrain,
     required String adaptiveGoal,
+
+    /// The numbers behind [currentStrain] and [adaptiveGoal], so the UI can
+    /// render them through the catalog instead of the English composites.
+    @Default(null) double? currentStrainValue,
+    @Default(null) int? adaptiveStepsTarget,
+    @Default(null) int? adaptiveActiveMinutesTarget,
     required ReadinessConfidence confidence,
     required String confidenceReason,
     required HrvStatusInsight hrvStatus,
@@ -348,6 +415,8 @@ IntensityMinutesReadinessInsight calculateIntensityMinutesReadiness({
         weeklyIntensityMinutes.todayModerateEquivalentMinutes,
     progressPercent: weeklyIntensityMinutes.progressPercent,
     confidence: weeklyIntensityMinutes.confidence,
+    daysElapsed: weeklyIntensityMinutes.daysElapsed,
+    expectedByNowMinutes: weeklyIntensityMinutes.expectedByNowMinutes,
   );
 }
 
@@ -370,6 +439,8 @@ DailyReadinessInsight calculateDailyReadiness(
     required String label,
     required String detail,
     required ReadinessFactorImpact impact,
+    ReadinessFactorTemplate template = ReadinessFactorTemplate.legacy,
+    List<double> args = const <double>[],
   }) {
     factors.add(
       DailyReadinessFactor(
@@ -377,6 +448,8 @@ DailyReadinessInsight calculateDailyReadiness(
         label: label,
         detail: detail,
         impact: impact,
+        template: template,
+        args: args,
       ),
     );
   }
@@ -398,6 +471,8 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Sleep helped recovery',
         detail: sleepDetail,
         impact: ReadinessFactorImpact.positive,
+        template: ReadinessFactorTemplate.sleepHelpedRecovery,
+        args: [sleepScore.toDouble(), sleepHours * 60.0],
       );
     } else if (sleepScore >= 65) {
       score += 5;
@@ -408,6 +483,8 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Sleep was usable',
         detail: sleepDetail,
         impact: ReadinessFactorImpact.neutral,
+        template: ReadinessFactorTemplate.sleepUsable,
+        args: [sleepScore.toDouble(), sleepHours * 60.0],
       );
     } else if (sleepScore >= 45) {
       score -= 8;
@@ -418,6 +495,8 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Sleep may limit recovery',
         detail: sleepDetail,
         impact: ReadinessFactorImpact.negative,
+        template: ReadinessFactorTemplate.sleepMayLimit,
+        args: [sleepScore.toDouble(), sleepHours * 60.0],
       );
     } else {
       score -= 20;
@@ -429,6 +508,8 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Sleep was low',
         detail: sleepDetail,
         impact: ReadinessFactorImpact.warning,
+        template: ReadinessFactorTemplate.sleepLow,
+        args: [sleepScore.toDouble(), sleepHours * 60.0],
       );
     }
   } else {
@@ -440,6 +521,7 @@ DailyReadinessInsight calculateDailyReadiness(
       detail:
           "Sleep data was not available, so today's recommendation is a rough guide.",
       impact: ReadinessFactorImpact.neutral,
+      template: ReadinessFactorTemplate.sleepDataMissing,
     );
   }
 
@@ -467,6 +549,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'HRV Status: ${hrvStatus.label}',
             detail: hrvStatus.detail,
             impact: ReadinessFactorImpact.warning,
+            template: ReadinessFactorTemplate.hrvStatusFactor,
           );
         case HrvStatus.low:
           score -= 8;
@@ -477,6 +560,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'HRV Status: ${hrvStatus.label}',
             detail: hrvStatus.detail,
             impact: ReadinessFactorImpact.negative,
+            template: ReadinessFactorTemplate.hrvStatusFactor,
           );
         case HrvStatus.unusuallyHigh:
           score -= 4;
@@ -487,6 +571,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'HRV Status: ${hrvStatus.label}',
             detail: hrvStatus.detail,
             impact: ReadinessFactorImpact.negative,
+            template: ReadinessFactorTemplate.hrvStatusFactor,
           );
         case HrvStatus.high:
           score += 3;
@@ -497,6 +582,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'HRV Status: ${hrvStatus.label}',
             detail: hrvStatus.detail,
             impact: ReadinessFactorImpact.positive,
+            template: ReadinessFactorTemplate.hrvStatusFactor,
           );
         case HrvStatus.balanced:
           score += 5;
@@ -507,6 +593,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'HRV Status: ${hrvStatus.label}',
             detail: hrvStatus.detail,
             impact: ReadinessFactorImpact.positive,
+            template: ReadinessFactorTemplate.hrvStatusFactor,
           );
         case HrvStatus.needsMoreHrv:
           break;
@@ -519,6 +606,7 @@ DailyReadinessInsight calculateDailyReadiness(
         detail:
             'HRV is recorded, but there is not enough history yet for a personal baseline.',
         impact: ReadinessFactorImpact.neutral,
+        template: ReadinessFactorTemplate.hrvBaselineBuilding,
       );
     }
   } else {
@@ -528,6 +616,7 @@ DailyReadinessInsight calculateDailyReadiness(
       label: 'HRV data missing',
       detail: 'HRV was not available, which lowers recommendation confidence.',
       impact: ReadinessFactorImpact.neutral,
+      template: ReadinessFactorTemplate.hrvDataMissing,
     );
   }
 
@@ -558,6 +647,8 @@ DailyReadinessInsight calculateDailyReadiness(
           label: 'Resting HR is elevated',
           detail: detail,
           impact: ReadinessFactorImpact.warning,
+          template: ReadinessFactorTemplate.restingHrElevated,
+          args: [delta.toDouble()],
         );
       } else if (delta >= 4) {
         score -= 8;
@@ -568,6 +659,8 @@ DailyReadinessInsight calculateDailyReadiness(
           label: 'Resting HR is slightly elevated',
           detail: detail,
           impact: ReadinessFactorImpact.negative,
+          template: ReadinessFactorTemplate.restingHrSlightlyElevated,
+          args: [delta.toDouble()],
         );
       } else {
         score += 4;
@@ -578,6 +671,8 @@ DailyReadinessInsight calculateDailyReadiness(
           label: 'Resting HR looks normal',
           detail: detail,
           impact: ReadinessFactorImpact.positive,
+          template: ReadinessFactorTemplate.restingHrNormal,
+          args: [delta.toDouble()],
         );
       }
     } else {
@@ -588,6 +683,7 @@ DailyReadinessInsight calculateDailyReadiness(
         detail:
             'Resting heart rate is available, but there is not enough history yet for a personal baseline.',
         impact: ReadinessFactorImpact.neutral,
+        template: ReadinessFactorTemplate.restingHrBaselineBuilding,
       );
     }
   }
@@ -617,6 +713,8 @@ DailyReadinessInsight calculateDailyReadiness(
         detail:
             'This week is ${(ratio * 100.0).round()}% of your current load target.',
         impact: ReadinessFactorImpact.warning,
+        template: ReadinessFactorTemplate.trainingLoadHigh,
+        args: [(ratio * 100.0).roundToDouble()],
       );
     } else if (ratio >= 0.75 && ratio <= 1.20) {
       score += 4;
@@ -627,6 +725,8 @@ DailyReadinessInsight calculateDailyReadiness(
         detail:
             'This week is ${(ratio * 100.0).round()}% of your current load target.',
         impact: ReadinessFactorImpact.positive,
+        template: ReadinessFactorTemplate.trainingLoadStable,
+        args: [(ratio * 100.0).roundToDouble()],
       );
     } else {
       addFactor(
@@ -635,6 +735,8 @@ DailyReadinessInsight calculateDailyReadiness(
         detail:
             'This week is ${(ratio * 100.0).round()}% of your current load target.',
         impact: ReadinessFactorImpact.neutral,
+        template: ReadinessFactorTemplate.trainingLoadLight,
+        args: [(ratio * 100.0).roundToDouble()],
       );
     }
   }
@@ -653,6 +755,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'Intensity minutes goal met',
             detail: intensityMinutes.detail,
             impact: ReadinessFactorImpact.positive,
+            template: ReadinessFactorTemplate.intensityFactor,
           );
         case IntensityMinutesStatus.onTrack:
           score += 2;
@@ -662,6 +765,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'Intensity minutes on track',
             detail: intensityMinutes.detail,
             impact: ReadinessFactorImpact.positive,
+            template: ReadinessFactorTemplate.intensityFactor,
           );
         case IntensityMinutesStatus.behind:
           addFactor(
@@ -669,6 +773,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'Intensity minutes behind pace',
             detail: intensityMinutes.detail,
             impact: ReadinessFactorImpact.neutral,
+            template: ReadinessFactorTemplate.intensityFactor,
           );
         case IntensityMinutesStatus.low:
           trainingReadinessScore -= 2;
@@ -677,6 +782,7 @@ DailyReadinessInsight calculateDailyReadiness(
             label: 'Intensity minutes are low',
             detail: intensityMinutes.detail,
             impact: ReadinessFactorImpact.neutral,
+            template: ReadinessFactorTemplate.intensityFactor,
           );
         case IntensityMinutesStatus.needsMoreData:
           break;
@@ -687,6 +793,7 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Intensity minutes need more data',
         detail: intensityMinutes.detail,
         impact: ReadinessFactorImpact.neutral,
+        template: ReadinessFactorTemplate.intensityFactor,
       );
     }
   }
@@ -698,6 +805,7 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Physiological stress: ${physiologicalStress.label}',
         detail: physiologicalStress.summary,
         impact: ReadinessFactorImpact.warning,
+        template: ReadinessFactorTemplate.physiologicalStressFactor,
       );
     case PhysiologicalStressLevel.medium:
       addFactor(
@@ -705,6 +813,7 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Physiological stress: ${physiologicalStress.label}',
         detail: physiologicalStress.summary,
         impact: ReadinessFactorImpact.negative,
+        template: ReadinessFactorTemplate.physiologicalStressFactor,
       );
     case PhysiologicalStressLevel.resting:
     case PhysiologicalStressLevel.low:
@@ -713,6 +822,7 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Physiological stress: ${physiologicalStress.label}',
         detail: physiologicalStress.summary,
         impact: ReadinessFactorImpact.positive,
+        template: ReadinessFactorTemplate.physiologicalStressFactor,
       );
     case PhysiologicalStressLevel.needsMoreData:
       addFactor(
@@ -720,6 +830,7 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Physiological stress needs more data',
         detail: physiologicalStress.summary,
         impact: ReadinessFactorImpact.neutral,
+        template: ReadinessFactorTemplate.physiologicalStressNeedsData,
       );
   }
 
@@ -756,6 +867,8 @@ DailyReadinessInsight calculateDailyReadiness(
         impact: tempWarning
             ? ReadinessFactorImpact.warning
             : ReadinessFactorImpact.negative,
+        template: ReadinessFactorTemplate.temperatureElevated,
+        args: [bodyTemperature ?? double.nan, skinDelta ?? double.nan],
       );
     }
   }
@@ -773,6 +886,8 @@ DailyReadinessInsight calculateDailyReadiness(
         detail:
             "Hydration is ${(hydrationRatio * 100.0).round()}% of today's goal.",
         impact: ReadinessFactorImpact.negative,
+        template: ReadinessFactorTemplate.hydrationBehind,
+        args: [(hydrationRatio * 100.0).roundToDouble()],
       );
     }
   }
@@ -785,6 +900,7 @@ DailyReadinessInsight calculateDailyReadiness(
       label: 'Nutrition is logged',
       detail: "Meal data is available for today's energy context.",
       impact: ReadinessFactorImpact.positive,
+      template: ReadinessFactorTemplate.nutritionLogged,
     );
   }
 
@@ -797,6 +913,8 @@ DailyReadinessInsight calculateDailyReadiness(
       label: 'Recovery moment recorded',
       detail: '${data.mindfulnessMinutes} min of mindfulness is logged today.',
       impact: ReadinessFactorImpact.positive,
+      template: ReadinessFactorTemplate.mindfulnessMoment,
+      args: [(data.mindfulnessMinutes ?? 0).toDouble()],
     );
   }
 
@@ -824,6 +942,11 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Body energy is drained',
         detail: detail,
         impact: ReadinessFactorImpact.warning,
+        template: ReadinessFactorTemplate.bodyEnergyDrained,
+        args: [
+          bodyEnergy.currentScore.toDouble(),
+          bodyEnergy.startScore.toDouble(),
+        ],
       );
     } else if (bodyEnergy.currentScore <= 45 || bodyEnergy.startScore <= 30) {
       score -= 8;
@@ -833,6 +956,11 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Body energy is low',
         detail: detail,
         impact: ReadinessFactorImpact.negative,
+        template: ReadinessFactorTemplate.bodyEnergyLow,
+        args: [
+          bodyEnergy.currentScore.toDouble(),
+          bodyEnergy.startScore.toDouble(),
+        ],
       );
     } else if (bodyEnergy.currentScore >= 80) {
       score += 6;
@@ -842,6 +970,11 @@ DailyReadinessInsight calculateDailyReadiness(
         label: 'Body energy is charged',
         detail: detail,
         impact: ReadinessFactorImpact.positive,
+        template: ReadinessFactorTemplate.bodyEnergyCharged,
+        args: [
+          bodyEnergy.currentScore.toDouble(),
+          bodyEnergy.startScore.toDouble(),
+        ],
       );
     }
   }
@@ -855,6 +988,7 @@ DailyReadinessInsight calculateDailyReadiness(
       label: 'Body signals look elevated',
       detail: 'Several recovery signals are outside your usual range.',
       impact: ReadinessFactorImpact.warning,
+      template: ReadinessFactorTemplate.bodySignalsElevated,
     );
   }
 
@@ -924,6 +1058,16 @@ DailyReadinessInsight calculateDailyReadiness(
     strainTarget: _strainTargetFor(state),
     currentStrain: _currentStrainFor(data),
     adaptiveGoal: _adaptiveGoalFor(state, goals),
+    currentStrainValue: _currentStrainValueFor(data),
+    adaptiveStepsTarget: switch (state) {
+      ReadinessState.ready => _roundToNearestHundred(goals.stepsGoal * 1.1),
+      ReadinessState.moderate => _roundToNearestHundred(goals.stepsGoal),
+      ReadinessState.recover => _roundToNearestHundred(goals.stepsGoal * 0.5),
+      ReadinessState.rest || ReadinessState.unknown => null,
+    },
+    adaptiveActiveMinutesTarget: state == ReadinessState.moderate
+        ? goals.activeMinutesGoal.round()
+        : null,
     confidence: confidence,
     confidenceReason: confidenceReason,
     hrvStatus: hrvStatus,
@@ -1096,12 +1240,17 @@ String _strainTargetFor(ReadinessState state) {
 }
 
 String? _currentStrainFor(DashboardData data) {
+  final strain = _currentStrainValueFor(data);
+  if (strain == null) return null;
+  return 'Current strain: ${_formatOneDecimal(strain)}';
+}
+
+double? _currentStrainValueFor(DashboardData data) {
   final load = data.weeklyCardioLoad;
   if (load == null) return null;
   if (load.targetScore <= 0) return null;
   final dailyTarget = math.max(load.targetScore / 7.0, 1.0);
-  final strain = (load.todayScore / dailyTarget * 7.0).clamp(0.0, 15.0);
-  return 'Current strain: ${_formatOneDecimal(strain)}';
+  return (load.todayScore / dailyTarget * 7.0).clamp(0.0, 15.0);
 }
 
 String _adaptiveGoalFor(ReadinessState state, DailyReadinessGoalInputs goals) {

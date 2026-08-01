@@ -1871,6 +1871,374 @@
   "dashboardReadinessRecoveryMode": "Recovery Mode",
   "dashboardReadinessRecoveryModeBody": "Activity goals are reduced so you can focus on rest.",
   "dashboardReadinessWhy": "Why this recommendation",
+  "readinessStatusReady": "Ready to train",
+  "readinessStatusModerate": "Train, but keep it controlled",
+  "readinessStatusRecover": "Recovery day",
+  "readinessStatusRest": "Take it easy",
+  "readinessStatusUnknown": "Needs more data",
+  "readinessRecommendHardTraining": "Good day for hard training if you feel normal.",
+  "readinessRecommendModerateTraining": "Do moderate training today, but avoid maximal effort.",
+  "readinessRecommendLightActivity": "Keep it light today with easy movement or mobility.",
+  "readinessRecommendRest": "Avoid intense training today and focus on recovery.",
+  "readinessRecommendCheckSymptoms": "Some signals are outside your usual range. If you feel unwell, prioritize rest and hydration.",
+  "readinessRecommendConnectData": "Connect sleep, HRV, resting heart rate, and workouts for a better guide.",
+  "readinessRecommendMobility": "Choose mobility or an easy walk until more data is available.",
+  "readinessExplanationNoData": "There is not enough local data yet to explain readiness with confidence.",
+  "readinessExplanationGeneric": "Your recommendation is based on the local signals available today.",
+  "readinessExplanationMainly": "Your signals suggest this mainly because {clauses}.",
+  "@readinessExplanationMainly": {
+    "placeholders": {
+      "clauses": {
+        "type": "String"
+      }
+    }
+  },
+  "joinAnd": "and",
+  "readinessAlternativeReady": "If you feel sore, reduce the plan to 30-45 min easy cardio or mobility.",
+  "readinessAlternativeModerate": "If you feel tired, choose a 30 min easy walk or easy ride instead.",
+  "readinessAlternativeRecover": "If you still want movement, keep it conversational and stop if it feels harder than expected.",
+  "readinessAlternativeRest": "If you feel unwell, rest or seek medical advice when needed.",
+  "readinessAlternativeUnknown": "Start with a walk, mobility, or breathing session until more recovery data is available.",
+  "readinessWorkoutReady": "Strength training, intervals, a long bike ride, or your normal planned workout.",
+  "readinessWorkoutModerate": "Zone 2 cardio, moderate strength, technique work, or an easy bike ride.",
+  "readinessWorkoutRecover": "Walk, stretching, mobility, breathing, or an early night.",
+  "readinessWorkoutRest": "Rest, gentle movement only, and symptom monitoring if you feel unwell.",
+  "readinessWorkoutUnknown": "Easy walk, mobility, or light stretching.",
+  "readinessAvoidReady": "Overreaching if you feel sore.",
+  "readinessAvoidModerate": "Max effort, HIIT, and very long sessions.",
+  "readinessAvoidRecover": "Hard cardio, heavy lifting, and long intense sessions.",
+  "readinessAvoidRest": "Intense training today.",
+  "readinessAvoidUnknown": "Making a hard training decision from incomplete data.",
+  "readinessStrainTarget": "Today's strain target: {range}",
+  "@readinessStrainTarget": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "readinessCurrentStrain": "Current strain: {value}",
+  "@readinessCurrentStrain": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readinessGoalReady": "Adaptive goal: {steps} steps + workout",
+  "@readinessGoalReady": {
+    "placeholders": {
+      "steps": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessGoalModerate": "Adaptive goal: {steps} steps + {minutes} active minutes",
+  "@readinessGoalModerate": {
+    "placeholders": {
+      "steps": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessGoalRecover": "Adaptive goal: {steps} steps + 15 min mobility",
+  "@readinessGoalRecover": {
+    "placeholders": {
+      "steps": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessGoalRest": "Adaptive goal: goals are reduced; focus on rest and hydration",
+  "readinessGoalUnknown": "Adaptive goal: keep movement light until more data is available",
+  "readinessConfidenceReasonComplete": "complete local data",
+  "readinessConfidenceReasonMissingSleep": "sleep data missing",
+  "readinessConfidenceReasonMissingHrv": "HRV data missing",
+  "readinessConfidenceReasonBaseline": "baseline still building",
+  "readinessConfidenceReasonPartial": "partial local data",
+  "hrvStatusBalanced": "Balanced",
+  "hrvStatusLow": "Low",
+  "hrvStatusHigh": "High",
+  "hrvStatusUnusuallyLow": "Unusually low",
+  "hrvStatusUnusuallyHigh": "Unusually high",
+  "hrvStatusNeedsMore": "Needs more HRV",
+  "hrvComparisonNear": "near your usual baseline",
+  "hrvComparisonAbove": "{percent}% above your usual baseline",
+  "@hrvComparisonAbove": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "hrvComparisonBelow": "{percent}% below your usual baseline",
+  "@hrvComparisonBelow": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "hrvDetailBalanced": "HRV is {comparison}.",
+  "@hrvDetailBalanced": {
+    "placeholders": {
+      "comparison": {
+        "type": "String"
+      }
+    }
+  },
+  "hrvDetailLow": "HRV is {comparison}, which can point to incomplete recovery.",
+  "@hrvDetailLow": {
+    "placeholders": {
+      "comparison": {
+        "type": "String"
+      }
+    }
+  },
+  "hrvDetailHigh": "HRV is {comparison}. Higher HRV can be positive when other signals agree.",
+  "@hrvDetailHigh": {
+    "placeholders": {
+      "comparison": {
+        "type": "String"
+      }
+    }
+  },
+  "hrvDetailUnusual": "HRV is {comparison}, outside your usual range.",
+  "@hrvDetailUnusual": {
+    "placeholders": {
+      "comparison": {
+        "type": "String"
+      }
+    }
+  },
+  "hrvDetailNeedsMore": "HRV status needs more data.",
+  "intensityLabelGoalMet": "Goal met",
+  "intensityLabelOnTrack": "On track",
+  "intensityLabelBehind": "Behind pace",
+  "intensityLabelLow": "Low",
+  "intensityLabelNeedsMore": "Needs more data",
+  "intensityDetailGoalMet": "{minutes}/{target} moderate-equivalent min this week; vigorous minutes count double.",
+  "@intensityDetailGoalMet": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "intensityDetailTodayAdded": "Today added {minutes}.",
+  "@intensityDetailTodayAdded": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "intensityDetailOnTrack": "{minutes}/{target} moderate-equivalent min this week, on pace for day {day}.",
+  "@intensityDetailOnTrack": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "intensityDetailBehind": "{minutes}/{target} moderate-equivalent min this week; expected about {expected} by now.",
+  "@intensityDetailBehind": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      },
+      "expected": {
+        "type": "int"
+      }
+    }
+  },
+  "intensityDetailLow": "{minutes}/{target} moderate-equivalent min this week; add easy aerobic work if recovery allows.",
+  "@intensityDetailLow": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "intensityDetailNeedsMore": "Intensity minutes need more data.",
+  "intensityDetailNeedsSources": "Intensity minutes need workouts, heart rate, active calories, or activity load history.",
+  "intensityConfidenceHigh": "high confidence",
+  "intensityConfidenceMedium": "medium confidence",
+  "intensityConfidenceLow": "low confidence estimate",
+  "intensityConfidenceNoData": "no data",
+  "stressLabelResting": "Resting",
+  "stressLabelLow": "Low",
+  "stressLabelMedium": "Medium",
+  "stressLabelHigh": "High",
+  "stressLabelNeedsMore": "Needs more data",
+  "stressSummaryResting": "Signals look restful right now.",
+  "stressSummaryLow": "Signals suggest low physiological stress.",
+  "stressSummaryMedium": "Signals suggest elevated physiological strain.",
+  "stressSummaryHigh": "Signals suggest high physiological strain.",
+  "stressSummaryNeedsMore": "Stress estimate needs more data.",
+  "readinessFactorSleepHelpedLabel": "Sleep helped recovery",
+  "readinessFactorSleepUsableLabel": "Sleep was usable",
+  "readinessFactorSleepMayLimitLabel": "Sleep may limit recovery",
+  "readinessFactorSleepLowLabel": "Sleep was low",
+  "readinessFactorSleepDetail": "Sleep scored {score}/100 after {duration}.",
+  "@readinessFactorSleepDetail": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "readinessFactorSleepDetailNoDuration": "Sleep scored {score}/100.",
+  "@readinessFactorSleepDetailNoDuration": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessFactorSleepMissingLabel": "Sleep data missing",
+  "readinessFactorSleepMissingDetail": "Sleep data was not available, so today's recommendation is a rough guide.",
+  "readinessFactorHrvLabel": "HRV Status: {status}",
+  "@readinessFactorHrvLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "readinessFactorHrvBaselineLabel": "HRV baseline building",
+  "readinessFactorHrvBaselineDetail": "HRV is recorded, but there is not enough history yet for a personal baseline.",
+  "readinessFactorHrvMissingLabel": "HRV data missing",
+  "readinessFactorHrvMissingDetail": "HRV was not available, which lowers recommendation confidence.",
+  "readinessFactorRestingHrElevatedLabel": "Resting HR is elevated",
+  "readinessFactorRestingHrSlightlyElevatedLabel": "Resting HR is slightly elevated",
+  "readinessFactorRestingHrNormalLabel": "Resting HR looks normal",
+  "readinessFactorRestingHrDetailAbove": "Resting heart rate is +{delta} bpm compared with your usual baseline.",
+  "@readinessFactorRestingHrDetailAbove": {
+    "placeholders": {
+      "delta": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessFactorRestingHrDetailBelow": "Resting heart rate is {delta} bpm below your usual baseline.",
+  "@readinessFactorRestingHrDetailBelow": {
+    "placeholders": {
+      "delta": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessFactorRestingHrDetailNear": "Resting heart rate is near your usual baseline.",
+  "readinessFactorRestingHrBaselineLabel": "Resting HR baseline building",
+  "readinessFactorRestingHrBaselineDetail": "Resting heart rate is available, but there is not enough history yet for a personal baseline.",
+  "readinessFactorLoadHighLabel": "Training load is high",
+  "readinessFactorLoadStableLabel": "Training load is stable",
+  "readinessFactorLoadLightLabel": "Training load is light",
+  "readinessFactorLoadDetail": "This week is {percent}% of your current load target.",
+  "@readinessFactorLoadDetail": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessFactorIntensityGoalMetLabel": "Intensity minutes goal met",
+  "readinessFactorIntensityOnTrackLabel": "Intensity minutes on track",
+  "readinessFactorIntensityBehindLabel": "Intensity minutes behind pace",
+  "readinessFactorIntensityLowLabel": "Intensity minutes are low",
+  "readinessFactorIntensityNeedsMoreLabel": "Intensity minutes need more data",
+  "readinessFactorStressLabel": "Physiological stress: {label}",
+  "@readinessFactorStressLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "readinessFactorStressNeedsDataLabel": "Physiological stress needs more data",
+  "readinessFactorTempLabel": "Temperature signal elevated",
+  "readinessFactorTempDetail": "Some temperature signals look elevated ({values}). If you feel unwell, consider resting.",
+  "@readinessFactorTempDetail": {
+    "placeholders": {
+      "values": {
+        "type": "String"
+      }
+    }
+  },
+  "readinessFactorTempBody": "body temperature {value} C",
+  "@readinessFactorTempBody": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readinessFactorTempSkin": "skin temperature {value} C",
+  "@readinessFactorTempSkin": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readinessFactorHydrationLabel": "Hydration is behind",
+  "readinessFactorHydrationDetail": "Hydration is {percent}% of today's goal.",
+  "@readinessFactorHydrationDetail": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessFactorNutritionLabel": "Nutrition is logged",
+  "readinessFactorNutritionDetail": "Meal data is available for today's energy context.",
+  "readinessFactorMindfulnessLabel": "Recovery moment recorded",
+  "readinessFactorMindfulnessDetail": "{minutes} min of mindfulness is logged today.",
+  "@readinessFactorMindfulnessDetail": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessFactorBodyEnergyDrainedLabel": "Body energy is drained",
+  "readinessFactorBodyEnergyLowLabel": "Body energy is low",
+  "readinessFactorBodyEnergyChargedLabel": "Body energy is charged",
+  "readinessFactorBodyEnergyDetail": "Body energy is at {current} after starting the day at {start}.",
+  "@readinessFactorBodyEnergyDetail": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "start": {
+        "type": "int"
+      }
+    }
+  },
+  "readinessFactorSignalsElevatedLabel": "Body signals look elevated",
+  "readinessFactorSignalsElevatedDetail": "Several recovery signals are outside your usual range.",
   "stressDetailsHowTracked": "How this is tracked",
   "stressDetailsHowTrackedBody": "OpenVitals estimates physiological stress locally from HRV versus your baseline, resting heart rate versus your baseline, and average heart rate compared with resting heart rate. It is a strain estimate, not a diagnosis or a mental-stress detector.",
   "stressDetailsScale": "Scale: 0-25 resting, 26-50 low, 51-75 medium, 76-100 high.",

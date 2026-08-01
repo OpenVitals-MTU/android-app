@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -11,6 +13,8 @@ import '../../../domain/insights/daily_readiness.dart';
 import '../../../domain/model/dashboard_data.dart';
 import '../../../domain/model/dashboard_query.dart';
 import '../../../domain/model/refresh_mode.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../state/app_providers.dart';
 import 'daily_readiness_display.dart';
 
 // The panel renders the precomputed display straight out of here.
@@ -105,7 +109,7 @@ class DailyReadinessViewModel extends Notifier<DailyReadinessState> {
           isLoading: false,
           data: value,
           insight: insight,
-          display: buildDailyReadinessDisplay(insight),
+          display: buildDailyReadinessDisplay(insight, _localizations()),
           error: null,
         );
       case Err(:final failure):
@@ -113,6 +117,21 @@ class DailyReadinessViewModel extends Notifier<DailyReadinessState> {
           isLoading: false,
           error: failure.toScreenError(fallback: 'Unknown error'),
         );
+    }
+  }
+
+  /// The localizations the display builder needs, resolved without a
+  /// `BuildContext` — the same choice `app.dart` makes: the selected
+  /// AppLanguage, or the platform locale when it is `system`. Mirrors
+  /// `DashboardViewModel._localizations`.
+  AppLocalizations _localizations() {
+    final tag = ref.read(appLanguageProvider).languageTag;
+    final locale =
+        tag != null ? Locale(tag) : PlatformDispatcher.instance.locale;
+    try {
+      return lookupAppLocalizations(locale);
+    } on FlutterError {
+      return lookupAppLocalizations(const Locale('en'));
     }
   }
 
