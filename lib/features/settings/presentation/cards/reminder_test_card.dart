@@ -118,6 +118,9 @@ class ReminderTestCard extends ConsumerWidget {
     await showReminderNotificationNow(
       plugin,
       hydrationReminderNotificationSpec,
+      l10n: reminderLocalizationsFor(
+        ref.read(preferencesRepositoryProvider).appLanguage,
+      ),
       progress: progress,
       actions: hydrationReminderQuickAddActions(
         ref.read(preferencesRepositoryProvider),

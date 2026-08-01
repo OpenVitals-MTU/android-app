@@ -59,6 +59,7 @@ final hydrationReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
     // One-tap "Add … ml" buttons offering the last two used cup sizes,
     // rebuilt on every (re)schedule so they track the latest logs.
     buildActions: () => hydrationReminderQuickAddActions(preferences),
+    localizations: () => reminderLocalizationsFor(preferences.appLanguage),
   );
 });
 
@@ -75,10 +76,12 @@ final hydrationReminderControllerProvider =
 
 final mindfulnessReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
   final plugin = ref.watch(flutterLocalNotificationsProvider);
+  final preferences = ref.watch(preferencesRepositoryProvider);
   return BatchZonedNotificationReminderScheduler(
     plugin: plugin,
     spec: mindfulnessReminderNotificationSpec,
     canScheduleExact: () => canScheduleExactReminders(plugin),
+    localizations: () => reminderLocalizationsFor(preferences.appLanguage),
   );
 });
 

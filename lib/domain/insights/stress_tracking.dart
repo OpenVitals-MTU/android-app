@@ -22,6 +22,67 @@ enum PhysiologicalStressConfidence {
   noData,
 }
 
+/// Which sentence a structured stress list item renders as — the same contract
+/// as `ReadinessFactorTemplate`: the English lists on the estimate stay
+/// canonical, the UI renders the template through `AppLocalizations` with
+/// [StressListItem.args] filling the numbers.
+enum StressItemTemplate {
+  // Contributing factors.
+  hrvBelowBaseline,
+  hrvAboveBaseline,
+  hrvNearBaseline,
+  restingHrAbove,
+  restingHrBelow,
+  restingHrNear,
+  avgHrAboveResting,
+  activityInfluence,
+  sleepRaisesStrain,
+  sleepMixed,
+  sleepSupportsLower,
+  sleepPlain,
+  noHydrationLogged,
+  hydrationSoFar,
+  nutritionLarge,
+  nutritionPlain,
+  temperatureElevated,
+  temperatureSlightlyElevated,
+  temperatureNotElevated,
+  loadHighPercent,
+  loadNearTarget,
+  mindfulnessLogged,
+
+  // Data coverage. Time args are epoch milliseconds; NaN marks "no window".
+  coverageHrSamples,
+  coverageHrAverageOnly,
+  coverageHrNone,
+  coverageHrvPoints,
+  coverageHrvSinglePoint,
+  coverageHrvAverageOnly,
+  coverageHrvNone,
+
+  // Caveats.
+  caveatNotMentalStress,
+  caveatNoHealthConnectScore,
+  caveatConfounders,
+  caveatAllDayModel,
+  caveatWorkoutInfluence,
+  caveatLowConfidence,
+  caveatSparseHrv,
+}
+
+/// One structured entry of the estimate's factor/coverage/caveat lists.
+@freezed
+abstract class StressListItem with _$StressListItem {
+  const factory StressListItem({
+    required StressItemTemplate template,
+
+    /// The numbers the template's sentence embeds, in the order that template
+    /// defines. Coverage windows pass start/end as epoch milliseconds; NaN
+    /// marks an absent optional.
+    @Default(<double>[]) List<double> args,
+  }) = _StressListItem;
+}
+
 @freezed
 abstract class PhysiologicalStressEstimate with _$PhysiologicalStressEstimate {
   const factory PhysiologicalStressEstimate({
@@ -39,6 +100,13 @@ abstract class PhysiologicalStressEstimate with _$PhysiologicalStressEstimate {
     required List<String> contributingFactors,
     required List<String> dataCoverage,
     required List<String> caveats,
+
+    /// The structured mirrors of the three lists above, for the UI to render
+    /// through the catalog. Empty on a fixture built before they existed — the
+    /// screen falls back to the English lists then.
+    @Default(<StressListItem>[]) List<StressListItem> factorItems,
+    @Default(<StressListItem>[]) List<StressListItem> coverageItems,
+    @Default(<StressListItem>[]) List<StressListItem> caveatItems,
   }) = _PhysiologicalStressEstimate;
 
   static const PhysiologicalStressEstimate needsMoreData =
@@ -58,6 +126,7 @@ abstract class PhysiologicalStressEstimate with _$PhysiologicalStressEstimate {
     contributingFactors: <String>[],
     dataCoverage: <String>[],
     caveats: _defaultStressCaveats,
+    caveatItems: _defaultStressCaveatItems,
   );
 }
 
@@ -66,7 +135,8 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
   var signalCount = 0;
   var contextSignalCount = 0;
   final factors = <String>[];
-  final dataCoverage = _stressDataCoverage(data);
+  final factorItems = <StressListItem>[];
+  final (dataCoverage, coverageItems) = _stressDataCoverage(data);
 
   final hrvPercent = _hrvPercentFromBaseline(data);
   if (hrvPercent != null) {
@@ -86,10 +156,21 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
     }
     if (hrvPercent < 0) {
       factors.add('HRV is ${hrvPercent.abs()}% below your usual baseline.');
+      factorItems.add(StressListItem(
+        template: StressItemTemplate.hrvBelowBaseline,
+        args: [hrvPercent.abs().toDouble()],
+      ));
     } else if (hrvPercent > 0) {
       factors.add('HRV is $hrvPercent% above your usual baseline.');
+      factorItems.add(StressListItem(
+        template: StressItemTemplate.hrvAboveBaseline,
+        args: [hrvPercent.toDouble()],
+      ));
     } else {
       factors.add('HRV is near your usual baseline.');
+      factorItems.add(
+        const StressListItem(template: StressItemTemplate.hrvNearBaseline),
+      );
     }
   }
 
@@ -111,12 +192,23 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
       factors.add(
         'Resting heart rate is +$restingHeartRateDelta bpm versus baseline.',
       );
+      factorItems.add(StressListItem(
+        template: StressItemTemplate.restingHrAbove,
+        args: [restingHeartRateDelta.toDouble()],
+      ));
     } else if (restingHeartRateDelta < 0) {
       factors.add(
         'Resting heart rate is ${restingHeartRateDelta.abs()} bpm below baseline.',
       );
+      factorItems.add(StressListItem(
+        template: StressItemTemplate.restingHrBelow,
+        args: [restingHeartRateDelta.abs().toDouble()],
+      ));
     } else {
       factors.add('Resting heart rate is near baseline.');
+      factorItems.add(
+        const StressListItem(template: StressItemTemplate.restingHrNear),
+      );
     }
   }
 
@@ -137,12 +229,19 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
     factors.add(
       'Average heart rate today is $averageHeartRateDelta bpm above resting heart rate.',
     );
+    factorItems.add(StressListItem(
+      template: StressItemTemplate.avgHrAboveResting,
+      args: [averageHeartRateDelta.toDouble()],
+    ));
   }
 
   final hasWorkoutInfluence = data.workouts.isNotEmpty ||
       ((data.weeklyIntensityMinutes?.todayModerateEquivalentMinutes ?? 0) >= 20);
   if (hasWorkoutInfluence) {
     factors.add('Recorded activity today may raise this physiological estimate.');
+    factorItems.add(
+      const StressListItem(template: StressItemTemplate.activityInfluence),
+    );
     final todayIntensity =
         data.weeklyIntensityMinutes?.todayModerateEquivalentMinutes ?? 0;
     if (todayIntensity >= 60) {
@@ -157,7 +256,7 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
 
   if (signalCount == 0) {
     return PhysiologicalStressEstimate.needsMoreData
-        .copyWith(dataCoverage: dataCoverage);
+        .copyWith(dataCoverage: dataCoverage, coverageItems: coverageItems);
   }
 
   if (data.loadedMetrics.contains(DashboardMetric.sleep) &&
@@ -173,6 +272,17 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
     } else {
       rawScore += 0;
     }
+    final sleepTemplate = sleepScore < 45
+        ? StressItemTemplate.sleepRaisesStrain
+        : sleepScore < 65
+            ? StressItemTemplate.sleepMixed
+            : sleepScore >= 82
+                ? StressItemTemplate.sleepSupportsLower
+                : StressItemTemplate.sleepPlain;
+    factorItems.add(StressListItem(
+      template: sleepTemplate,
+      args: [sleepScore.toDouble()],
+    ));
     if (sleepScore < 45) {
       factors.add(
         'Sleep score is $sleepScore/100, which can raise physiological strain today.',
@@ -203,14 +313,17 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
       factors.add(
         'No hydration is logged for today; dehydration can raise heart-rate strain.',
       );
-    } else if (data.hydrationLiters < 1.0) {
-      factors.add(
-        'Hydration is ${_formatOneDecimal(data.hydrationLiters)} L so far today.',
+      factorItems.add(
+        const StressListItem(template: StressItemTemplate.noHydrationLogged),
       );
     } else {
       factors.add(
         'Hydration is ${_formatOneDecimal(data.hydrationLiters)} L so far today.',
       );
+      factorItems.add(StressListItem(
+        template: StressItemTemplate.hydrationSoFar,
+        args: [data.hydrationLiters],
+      ));
     }
   }
 
@@ -219,6 +332,7 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
     contextSignalCount += 1;
     rawScore += nutrition.scoreDelta;
     factors.add(nutrition.text);
+    factorItems.add(nutrition.item);
   }
 
   final temperature = _temperatureContext(data);
@@ -226,6 +340,7 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
     contextSignalCount += 1;
     rawScore += temperature.scoreDelta;
     factors.add(temperature.text);
+    factorItems.add(temperature.item);
   }
 
   final load = data.weeklyCardioLoad;
@@ -238,9 +353,16 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
         factors.add(
           'Weekly training load is ${(ratio * 100.0).round()}% of target.',
         );
+        factorItems.add(StressListItem(
+          template: StressItemTemplate.loadHighPercent,
+          args: [(ratio * 100.0).roundToDouble()],
+        ));
       } else if (ratio >= 0.75 && ratio <= 1.20) {
         contextSignalCount += 1;
         factors.add('Weekly training load is near target.');
+        factorItems.add(
+          const StressListItem(template: StressItemTemplate.loadNearTarget),
+        );
       }
     }
   }
@@ -249,6 +371,10 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
     contextSignalCount += 1;
     rawScore -= 4;
     factors.add('${data.mindfulnessMinutes} min of mindfulness is logged today.');
+    factorItems.add(StressListItem(
+      template: StressItemTemplate.mindfulnessLogged,
+      args: [(data.mindfulnessMinutes ?? 0).toDouble()],
+    ));
   }
 
   final score = rawScore.clamp(0, 100);
@@ -301,6 +427,15 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
     if (sparseHrv)
       'Only one HRV point is available for this day, so HRV context is thin.',
   ];
+  final caveatItems = <StressListItem>[
+    ..._defaultStressCaveatItems,
+    if (hasWorkoutInfluence)
+      const StressListItem(template: StressItemTemplate.caveatWorkoutInfluence),
+    if (confidence == PhysiologicalStressConfidence.low)
+      const StressListItem(template: StressItemTemplate.caveatLowConfidence),
+    if (sparseHrv)
+      const StressListItem(template: StressItemTemplate.caveatSparseHrv),
+  ];
 
   return PhysiologicalStressEstimate(
     level: level,
@@ -318,6 +453,9 @@ PhysiologicalStressEstimate calculatePhysiologicalStress(DashboardData data) {
     contributingFactors: factors,
     dataCoverage: dataCoverage,
     caveats: caveats,
+    factorItems: factorItems,
+    coverageItems: coverageItems,
+    caveatItems: caveatItems,
   );
 }
 
@@ -406,8 +544,14 @@ String _stressConfidenceReason(
   return 'single_signal';
 }
 
-List<String> _stressDataCoverage(DashboardData data) {
+(List<String>, List<StressListItem>) _stressDataCoverage(DashboardData data) {
   final coverage = <String>[];
+  final items = <StressListItem>[];
+  List<double> window(int count, DateTime? start, DateTime? end) => [
+        count.toDouble(),
+        start?.millisecondsSinceEpoch.toDouble() ?? double.nan,
+        end?.millisecondsSinceEpoch.toDouble() ?? double.nan,
+      ];
   if (data.loadedMetrics.contains(DashboardMetric.avgHeartRate)) {
     if (data.heartRateSampleCount > 0) {
       coverage.add(
@@ -415,12 +559,26 @@ List<String> _stressDataCoverage(DashboardData data) {
         '${_sampleWindowText(data.heartRateSampleStartTime, data.heartRateSampleEndTime)}'
         '.',
       );
+      items.add(StressListItem(
+        template: StressItemTemplate.coverageHrSamples,
+        args: window(
+          data.heartRateSampleCount,
+          data.heartRateSampleStartTime,
+          data.heartRateSampleEndTime,
+        ),
+      ));
     } else if (data.avgHeartRateBpm > 0) {
       coverage.add(
         'Average heart rate is available, but raw same-day sample coverage was not available.',
       );
+      items.add(
+        const StressListItem(template: StressItemTemplate.coverageHrAverageOnly),
+      );
     } else {
       coverage.add('No heart-rate samples were available for this day.');
+      items.add(
+        const StressListItem(template: StressItemTemplate.coverageHrNone),
+      );
     }
   }
   if (data.loadedMetrics.contains(DashboardMetric.hrv)) {
@@ -430,28 +588,57 @@ List<String> _stressDataCoverage(DashboardData data) {
         '${_sampleWindowText(data.hrvSampleStartTime, data.hrvSampleEndTime)}'
         '.',
       );
+      items.add(StressListItem(
+        template: StressItemTemplate.coverageHrvPoints,
+        args: window(
+          data.hrvSampleCount,
+          data.hrvSampleStartTime,
+          data.hrvSampleEndTime,
+        ),
+      ));
     } else if (data.hrvSampleCount == 1) {
       coverage.add(
         'HRV used 1 RMSSD point '
         '${_sampleWindowText(data.hrvSampleStartTime, data.hrvSampleEndTime)}'
         '; confidence is lower until more points arrive.',
       );
+      items.add(StressListItem(
+        template: StressItemTemplate.coverageHrvSinglePoint,
+        args: window(
+          1,
+          data.hrvSampleStartTime,
+          data.hrvSampleEndTime,
+        ),
+      ));
     } else if (data.hrvRmssdMs != null) {
       coverage.add(
         'HRV average is available, but raw same-day sample coverage was not available.',
       );
+      items.add(
+        const StressListItem(
+          template: StressItemTemplate.coverageHrvAverageOnly,
+        ),
+      );
     } else {
       coverage.add('No HRV points were available for this day.');
+      items.add(
+        const StressListItem(template: StressItemTemplate.coverageHrvNone),
+      );
     }
   }
-  return coverage;
+  return (coverage, items);
 }
 
 class _StressContextFactor {
-  const _StressContextFactor({required this.scoreDelta, required this.text});
+  const _StressContextFactor({
+    required this.scoreDelta,
+    required this.text,
+    required this.item,
+  });
 
   final int scoreDelta;
   final String text;
+  final StressListItem item;
 }
 
 _StressContextFactor? _nutritionContext(DashboardData data) {
@@ -467,11 +654,13 @@ _StressContextFactor? _nutritionContext(DashboardData data) {
       scoreDelta: 3,
       text:
           'Nutrition is logged; larger meals and digestion can raise heart-rate strain.',
+      item: StressListItem(template: StressItemTemplate.nutritionLarge),
     );
   } else {
     return const _StressContextFactor(
       scoreDelta: 0,
       text: "Nutrition is logged for today's context.",
+      item: StressListItem(template: StressItemTemplate.nutritionPlain),
     );
   }
 }
@@ -499,20 +688,36 @@ _StressContextFactor? _temperatureContext(DashboardData data) {
       'skin temperature ${_formatSignedOneDecimal(skinDelta)} C',
   ];
   final detail = detailParts.join(', ');
+  final tempArgs = [
+    bodyTemperature ?? double.nan,
+    skinDelta ?? double.nan,
+  ];
   if (warning) {
     return _StressContextFactor(
       scoreDelta: 18,
       text: 'Temperature context is elevated ($detail).',
+      item: StressListItem(
+        template: StressItemTemplate.temperatureElevated,
+        args: tempArgs,
+      ),
     );
   } else if (elevated) {
     return _StressContextFactor(
       scoreDelta: 9,
       text: 'Temperature context is slightly elevated ($detail).',
+      item: StressListItem(
+        template: StressItemTemplate.temperatureSlightlyElevated,
+        args: tempArgs,
+      ),
     );
   } else {
     return _StressContextFactor(
       scoreDelta: 0,
       text: 'Temperature context is available and not elevated ($detail).',
+      item: StressListItem(
+        template: StressItemTemplate.temperatureNotElevated,
+        args: tempArgs,
+      ),
     );
   }
 }
@@ -541,6 +746,13 @@ String _formatSignedOneDecimal(double value) {
   final prefix = value > 0.0 ? '+' : '';
   return prefix + _formatOneDecimal(value);
 }
+
+const List<StressListItem> _defaultStressCaveatItems = <StressListItem>[
+  StressListItem(template: StressItemTemplate.caveatNotMentalStress),
+  StressListItem(template: StressItemTemplate.caveatNoHealthConnectScore),
+  StressListItem(template: StressItemTemplate.caveatConfounders),
+  StressListItem(template: StressItemTemplate.caveatAllDayModel),
+];
 
 const List<String> _defaultStressCaveats = <String>[
   'This estimate does not diagnose mental stress.',

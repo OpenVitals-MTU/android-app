@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../../core/reminders/local_notifications_reminder_device.dart';
 import '../../../core/reminders/reminder_controller.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../ui/theme/app_colors.dart';
 
 /// The mindfulness reminder's notification identity and copy. The scheduling
@@ -25,10 +26,19 @@ const mindfulnessReminderNotificationSpec = ReminderNotificationSpec(
   scheduledBody: 'A few mindful minutes can reset your day.',
   // Today's progress, e.g. "5 / 10 min", shown on same-day reminders.
   body: _mindfulnessReminderBody,
+  localizedCopy: _mindfulnessReminderCopy,
   // The mindfulness accent tints the icon and progress bar, matching the
   // metric's color in the app (and the hydration reminder's treatment).
   accentColor: AppColors.mindfulness,
 );
+
+ReminderLocalizedCopy _mindfulnessReminderCopy(AppLocalizations l10n) =>
+    ReminderLocalizedCopy(
+      title: l10n.mindfulnessReminderTitle,
+      scheduledBody: l10n.mindfulnessReminderScheduledBody,
+      channelName: l10n.mindfulnessReminderChannelName,
+      channelDescription: l10n.mindfulnessReminderChannelDescription,
+    );
 
 String _mindfulnessReminderBody(ReminderGoalProgress progress) =>
     '${progress.current.toStringAsFixed(0)} / '
@@ -40,10 +50,12 @@ const _legacyMindfulnessChannelId = 'mindfulness_reminders';
 /// Creates the mindfulness reminder's high-importance channel and removes the
 /// legacy default-importance one. Call before the first schedule.
 Future<void> ensureMindfulnessReminderChannel(
-  FlutterLocalNotificationsPlugin plugin,
-) =>
+  FlutterLocalNotificationsPlugin plugin, {
+  AppLocalizations? l10n,
+}) =>
     ensureReminderChannel(
       plugin,
       mindfulnessReminderNotificationSpec,
+      l10n: l10n,
       oldChannelId: _legacyMindfulnessChannelId,
     );

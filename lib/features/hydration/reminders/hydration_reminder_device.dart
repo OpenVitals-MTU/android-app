@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../../core/reminders/local_notifications_reminder_device.dart';
 import '../../../core/reminders/reminder_controller.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/theme/app_colors.dart';
 
@@ -29,12 +30,21 @@ const hydrationReminderNotificationSpec = ReminderNotificationSpec(
   scheduledBody: 'Log some water to stay on track with your daily goal.',
   // Today's progress, e.g. "1.3 L / 2.0 L", shown on same-day reminders.
   body: _hydrationReminderBody,
+  localizedCopy: _hydrationReminderCopy,
   // Tapping the reminder opens the hydration entry screen to log a drink.
   tapRoute: AppRoutes.hydrationEntry,
   // The hydration accent tints the icon, progress bar and (on most skins) the
   // quick-add action buttons, matching the metric's color in the app.
   accentColor: AppColors.hydration,
 );
+
+ReminderLocalizedCopy _hydrationReminderCopy(AppLocalizations l10n) =>
+    ReminderLocalizedCopy(
+      title: l10n.hydrationReminderTitle,
+      scheduledBody: l10n.hydrationReminderScheduledBody,
+      channelName: l10n.hydrationReminderChannelName,
+      channelDescription: l10n.hydrationReminderChannelDescription,
+    );
 
 String _hydrationReminderBody(ReminderGoalProgress progress) =>
     '${progress.current.toStringAsFixed(1)} L / '
@@ -46,10 +56,12 @@ const _legacyHydrationChannelId = 'hydration_reminders';
 /// Creates the hydration reminder's high-importance channel and removes the
 /// legacy default-importance one. Call before the first schedule (startup).
 Future<void> ensureHydrationReminderChannel(
-  FlutterLocalNotificationsPlugin plugin,
-) =>
+  FlutterLocalNotificationsPlugin plugin, {
+  AppLocalizations? l10n,
+}) =>
     ensureReminderChannel(
       plugin,
       hydrationReminderNotificationSpec,
+      l10n: l10n,
       oldChannelId: _legacyHydrationChannelId,
     );

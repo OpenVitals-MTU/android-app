@@ -286,6 +286,22 @@ abstract class BodyEnergyInputSummary with _$BodyEnergyInputSummary {
   }) = _BodyEnergyInputSummary;
 }
 
+/// Which sentence [BodyEnergyTimeline.confidenceReason] is — the same contract
+/// as `ReadinessFactorTemplate`: the English string stays canonical (and is
+/// what the store persists), the UI renders the code through
+/// `AppLocalizations`. [legacy] marks a row stored before codes existed; the
+/// UI falls back to the English text then.
+enum BodyEnergyReasonCode {
+  legacy,
+  strongCalibration,
+  observedOrAgeCalibration,
+  incompleteCalibration,
+  sparseBuckets,
+  noUsableData,
+  noTimelineWindow,
+  needsHeartRateOrSleep,
+}
+
 @freezed
 abstract class BodyEnergyTimeline with _$BodyEnergyTimeline {
   const factory BodyEnergyTimeline({
@@ -297,6 +313,7 @@ abstract class BodyEnergyTimeline with _$BodyEnergyTimeline {
     required List<BodyEnergyTimelinePoint> points,
     required BodyEnergyConfidence confidence,
     required String confidenceReason,
+    @Default(BodyEnergyReasonCode.legacy) BodyEnergyReasonCode confidenceReasonCode,
     @Default(BodyEnergyInputSummary()) BodyEnergyInputSummary inputSummary,
     DateTime? generatedAt,
     @Default('') String signature,
@@ -309,6 +326,7 @@ abstract class BodyEnergyTimeline with _$BodyEnergyTimeline {
   static BodyEnergyTimeline empty({
     required LocalDate date,
     required String reason,
+    BodyEnergyReasonCode reasonCode = BodyEnergyReasonCode.legacy,
     BodyEnergyInputSummary inputSummary = const BodyEnergyInputSummary(),
   }) {
     final seed = bodyEnergySeedScore(inputSummary.previousEndScore);
@@ -321,6 +339,7 @@ abstract class BodyEnergyTimeline with _$BodyEnergyTimeline {
       points: const [],
       confidence: BodyEnergyConfidence.noData,
       confidenceReason: reason,
+      confidenceReasonCode: reasonCode,
       inputSummary: inputSummary,
     );
   }
@@ -424,6 +443,7 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     return BodyEnergyTimeline.empty(
       date: inputs.date,
       reason: 'No timeline window is available.',
+      reasonCode: BodyEnergyReasonCode.noTimelineWindow,
       inputSummary: inputSummary,
     );
   }
@@ -465,6 +485,7 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     return BodyEnergyTimeline.empty(
       date: inputs.date,
       reason: 'Heart rate or sleep data is needed for Body Energy.',
+      reasonCode: BodyEnergyReasonCode.needsHeartRateOrSleep,
       inputSummary: inputSummary,
     );
   }
@@ -849,6 +870,7 @@ BodyEnergyTimeline calculateBodyEnergyTimeline(
     points: points,
     confidence: confidence,
     confidenceReason: _confidenceReason(confidence, intensityContext),
+    confidenceReasonCode: _confidenceReasonCode(confidence, intensityContext),
     inputSummary: inputSummary,
   );
 }
@@ -1159,6 +1181,48 @@ BodyEnergyConfidence _overallConfidence({
   if (mediumOrHighRatio >= 0.55) return BodyEnergyConfidence.medium;
   return BodyEnergyConfidence.low;
 }
+
+BodyEnergyReasonCode _confidenceReasonCode(
+  BodyEnergyConfidence confidence,
+  _IntensityContext context,
+) {
+  switch (confidence) {
+    case BodyEnergyConfidence.high:
+      return BodyEnergyReasonCode.strongCalibration;
+    case BodyEnergyConfidence.medium:
+      return BodyEnergyReasonCode.observedOrAgeCalibration;
+    case BodyEnergyConfidence.low:
+      if (context.restingHeartRateBpm == null ||
+          context.maxHeartRateBpm == null) {
+        return BodyEnergyReasonCode.incompleteCalibration;
+      }
+      return BodyEnergyReasonCode.sparseBuckets;
+    case BodyEnergyConfidence.noData:
+      return BodyEnergyReasonCode.noUsableData;
+  }
+}
+
+/// The code a PERSISTED English reason corresponds to, for rows stored before
+/// codes existed — the sentences are fixed, so the mapping is exact; anything
+/// unrecognised stays [BodyEnergyReasonCode.legacy] and renders as stored.
+BodyEnergyReasonCode bodyEnergyReasonCodeForText(String reason) =>
+    switch (reason) {
+      'Heart-rate intensity has strong calibration.' =>
+        BodyEnergyReasonCode.strongCalibration,
+      'Heart-rate intensity uses observed or age-based calibration.' =>
+        BodyEnergyReasonCode.observedOrAgeCalibration,
+      'Calibration is incomplete, so automatic estimates are conservative.' =>
+        BodyEnergyReasonCode.incompleteCalibration,
+      'Some timeline buckets have sparse Health Connect data.' =>
+        BodyEnergyReasonCode.sparseBuckets,
+      'No usable Health Connect data was available.' =>
+        BodyEnergyReasonCode.noUsableData,
+      'No timeline window is available.' =>
+        BodyEnergyReasonCode.noTimelineWindow,
+      'Heart rate or sleep data is needed for Body Energy.' =>
+        BodyEnergyReasonCode.needsHeartRateOrSleep,
+      _ => BodyEnergyReasonCode.legacy,
+    };
 
 String _confidenceReason(
   BodyEnergyConfidence confidence,

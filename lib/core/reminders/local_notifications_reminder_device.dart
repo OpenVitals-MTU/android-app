@@ -1,9 +1,60 @@
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, Locale, PlatformDispatcher;
 
+import 'package:flutter/foundation.dart' show FlutterError;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../domain/preferences/app_language.dart';
+import '../../l10n/app_localizations.dart';
 import 'reminder_controller.dart';
+
+/// The notification copy in the app's language, resolved at (re)schedule time.
+///
+/// Notifications are PRE-scheduled, so their text is baked when the batch is
+/// written, not when it fires — every (re)schedule (startup, resume, settings,
+/// a log, a quick-add) re-bakes it, so a language change reaches the shade on
+/// the next re-plan. Falls back to the spec's English when no resolver is
+/// available (a test without catalogs).
+class ReminderLocalizedCopy {
+  const ReminderLocalizedCopy({
+    required this.title,
+    required this.scheduledBody,
+    required this.channelName,
+    required this.channelDescription,
+  });
+
+  final String title;
+  final String scheduledBody;
+  final String channelName;
+  final String channelDescription;
+}
+
+/// The catalog for the selected [AppLanguage] (`system` follows the OS locale),
+/// resolvable without a BuildContext — usable from the background isolates that
+/// reschedule after a quick-add.
+AppLocalizations reminderLocalizationsFor(AppLanguage language) {
+  final tag = language.languageTag;
+  final locale = tag != null ? Locale(tag) : PlatformDispatcher.instance.locale;
+  try {
+    return lookupAppLocalizations(locale);
+  } on FlutterError {
+    return lookupAppLocalizations(const Locale('en'));
+  }
+}
+
+ReminderLocalizedCopy _copyOf(
+  ReminderNotificationSpec spec,
+  AppLocalizations? l10n,
+) {
+  final localized = l10n != null ? spec.localizedCopy?.call(l10n) : null;
+  return localized ??
+      ReminderLocalizedCopy(
+        title: spec.title,
+        scheduledBody: spec.scheduledBody,
+        channelName: spec.channelName,
+        channelDescription: spec.channelDescription,
+      );
+}
 
 /// The per-feature identity and copy of a reminder notification. Everything a
 /// feature needs to customize about how its reminder looks lives here, so the
@@ -19,6 +70,7 @@ class ReminderNotificationSpec {
     required this.androidIcon,
     required this.scheduledBody,
     required this.body,
+    this.localizedCopy,
     this.tapRoute,
     this.accentColor,
   });
@@ -55,6 +107,10 @@ class ReminderNotificationSpec {
   /// is never used for a future day (whose numbers would be stale after midnight).
   final String Function(ReminderGoalProgress progress) body;
 
+  /// The copy above in the app's language. The plain String fields stay as the
+  /// English fallback — see [ReminderLocalizedCopy].
+  final ReminderLocalizedCopy Function(AppLocalizations l10n)? localizedCopy;
+
   /// The go_router location to open when the notification is tapped (carried as
   /// the notification payload), or null to just bring the app forward.
   final String? tapRoute;
@@ -67,7 +123,8 @@ class ReminderNotificationSpec {
 }
 
 NotificationDetails _detailsFor(
-  ReminderNotificationSpec spec, {
+  ReminderNotificationSpec spec,
+  ReminderLocalizedCopy copy, {
   int? maxProgress,
   int? progress,
   List<AndroidNotificationAction> actions = const [],
@@ -75,8 +132,8 @@ NotificationDetails _detailsFor(
     NotificationDetails(
       android: AndroidNotificationDetails(
         spec.channelId,
-        spec.channelName,
-        channelDescription: spec.channelDescription,
+        copy.channelName,
+        channelDescription: copy.channelDescription,
         icon: spec.androidIcon,
         // High so the reminder heads-up instead of appearing silently in the
         // shade. Must match the channel created by [ensureReminderChannel] — once
@@ -104,9 +161,11 @@ NotificationDetails _detailsFor(
 Future<void> showReminderNotificationNow(
   FlutterLocalNotificationsPlugin plugin,
   ReminderNotificationSpec spec, {
+  AppLocalizations? l10n,
   ReminderGoalProgress? progress,
   List<AndroidNotificationAction> actions = const [],
 }) async {
+  final copy = _copyOf(spec, l10n);
   final hasGoal = progress != null && progress.target > 0;
   final maxProgress = hasGoal
       ? (progress.target * BatchZonedNotificationReminderScheduler._progressScale)
@@ -119,16 +178,17 @@ Future<void> showReminderNotificationNow(
       : 0;
   await plugin.show(
     id: spec.baseNotificationId,
-    title: spec.title,
-    body: hasGoal ? spec.body(progress) : spec.scheduledBody,
+    title: copy.title,
+    body: hasGoal ? spec.body(progress) : copy.scheduledBody,
     notificationDetails: hasGoal
         ? _detailsFor(
             spec,
+            copy,
             maxProgress: maxProgress,
             progress: currentProgress,
             actions: actions,
           )
-        : _detailsFor(spec, actions: actions),
+        : _detailsFor(spec, copy, actions: actions),
     payload: spec.tapRoute,
   );
 }
@@ -143,8 +203,10 @@ Future<void> showReminderNotificationNow(
 Future<void> ensureReminderChannel(
   FlutterLocalNotificationsPlugin plugin,
   ReminderNotificationSpec spec, {
+  AppLocalizations? l10n,
   String? oldChannelId,
 }) async {
+  final copy = _copyOf(spec, l10n);
   try {
     final android = plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
@@ -155,8 +217,8 @@ Future<void> ensureReminderChannel(
     await android.createNotificationChannel(
       AndroidNotificationChannel(
         spec.channelId,
-        spec.channelName,
-        description: spec.channelDescription,
+        copy.channelName,
+        description: copy.channelDescription,
         importance: Importance.high,
       ),
     );
@@ -185,11 +247,17 @@ class BatchZonedNotificationReminderScheduler implements ReminderScheduler {
     required this.spec,
     this.canScheduleExact,
     this.buildActions,
+    this.localizations,
     this.now = DateTime.now,
   });
 
   final FlutterLocalNotificationsPlugin plugin;
   final ReminderNotificationSpec spec;
+
+  /// The catalog the batch's copy is baked from, resolved once per
+  /// (re)schedule so a language change reaches the shade on the next re-plan.
+  /// Null (or a failure) falls back to the spec's English.
+  final AppLocalizations Function()? localizations;
 
   /// Android action buttons stamped onto every entry of the batch, resolved
   /// once per (re)schedule so they reflect current state (e.g. the hydration
@@ -235,6 +303,13 @@ class BatchZonedNotificationReminderScheduler implements ReminderScheduler {
       actions = const [];
     }
 
+    ReminderLocalizedCopy copy;
+    try {
+      copy = _copyOf(spec, localizations?.call());
+    } catch (_) {
+      copy = _copyOf(spec, null);
+    }
+
     final today = now();
     final hasGoal = progress.target > 0;
     final maxProgress = hasGoal ? (progress.target * _progressScale).round() : 0;
@@ -255,17 +330,18 @@ class BatchZonedNotificationReminderScheduler implements ReminderScheduler {
       final showProgress = firesToday && hasGoal;
       await plugin.zonedSchedule(
         id: spec.baseNotificationId + i,
-        title: spec.title,
-        body: showProgress ? spec.body(progress) : spec.scheduledBody,
+        title: copy.title,
+        body: showProgress ? spec.body(progress) : copy.scheduledBody,
         scheduledDate: tz.TZDateTime.from(trigger, tz.local),
         notificationDetails: showProgress
             ? _detailsFor(
                 spec,
+                copy,
                 maxProgress: maxProgress,
                 progress: currentProgress,
                 actions: actions,
               )
-            : _detailsFor(spec, actions: actions),
+            : _detailsFor(spec, copy, actions: actions),
         androidScheduleMode: mode,
         payload: spec.tapRoute,
       );

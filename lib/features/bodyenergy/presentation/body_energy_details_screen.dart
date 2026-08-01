@@ -341,7 +341,7 @@ class _SummaryContent extends StatelessWidget {
           ),
           if ((timeline?.confidenceReason ?? '').isNotEmpty)
             Text(
-              timeline!.confidenceReason,
+              _localizedReason(AppLocalizations.of(context), timeline!),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -895,3 +895,20 @@ LocalDate parseIsoLocalDate(String value) {
   if (parsed != null) return LocalDate(parsed.year, parsed.month, parsed.day);
   return LocalDate.now();
 }
+
+String _localizedReason(AppLocalizations l10n, BodyEnergyTimeline timeline) =>
+    switch (timeline.confidenceReasonCode) {
+      BodyEnergyReasonCode.strongCalibration =>
+        l10n.bodyEnergyReasonStrongCalibration,
+      BodyEnergyReasonCode.observedOrAgeCalibration =>
+        l10n.bodyEnergyReasonObservedOrAge,
+      BodyEnergyReasonCode.incompleteCalibration =>
+        l10n.bodyEnergyReasonIncompleteCalibration,
+      BodyEnergyReasonCode.sparseBuckets => l10n.bodyEnergyReasonSparseBuckets,
+      BodyEnergyReasonCode.noUsableData => l10n.bodyEnergyReasonNoUsableData,
+      BodyEnergyReasonCode.noTimelineWindow =>
+        l10n.bodyEnergyReasonNoTimelineWindow,
+      BodyEnergyReasonCode.needsHeartRateOrSleep =>
+        l10n.bodyEnergyReasonNeedsHrOrSleep,
+      BodyEnergyReasonCode.legacy => timeline.confidenceReason,
+    };

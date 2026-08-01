@@ -181,7 +181,10 @@ Future<HydrationQuickAddLogger> buildBackgroundHydrationQuickAddLogger() async {
     plugin,
     onBackgroundAction: handleHydrationReminderQuickAdd,
   );
-  await ensureHydrationReminderChannel(plugin);
+  await ensureHydrationReminderChannel(
+    plugin,
+    l10n: reminderLocalizationsFor(preferences.appLanguage),
+  );
 
   final hydrationRepository = HydrationRepositoryImpl(
     dataSource,
@@ -196,6 +199,7 @@ Future<HydrationQuickAddLogger> buildBackgroundHydrationQuickAddLogger() async {
       spec: hydrationReminderNotificationSpec,
       canScheduleExact: () => canScheduleExactReminders(plugin),
       buildActions: () => hydrationReminderQuickAddActions(preferences),
+      localizations: () => reminderLocalizationsFor(preferences.appLanguage),
     ),
     hasNotificationPermission: () => areReminderNotificationsEnabled(plugin),
   );

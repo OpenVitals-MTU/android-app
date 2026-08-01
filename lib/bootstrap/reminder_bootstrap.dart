@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/reminders/alarm_manager_reminder_scheduler.dart';
+import '../core/reminders/local_notifications_reminder_device.dart';
 import '../core/reminders/reminder_notifications.dart';
 import '../core/reminders/reminder_time_zone.dart';
 import '../di/providers.dart';
@@ -51,9 +52,14 @@ Future<ReminderBootstrapResult> bootstrapReminders(
       );
       // Create the high-importance channels up front, so the first reminder is a
       // heads-up rather than a silent shade entry, and so existing installs get
-      // the upgraded channel without waiting for the first fire.
-      await ensureHydrationReminderChannel(plugin);
-      await ensureMindfulnessReminderChannel(plugin);
+      // the upgraded channel without waiting for the first fire. The copy is
+      // re-baked in the app's language on every start, so a language change
+      // renames the channels too.
+      final l10n = reminderLocalizationsFor(
+        container.read(preferencesRepositoryProvider).appLanguage,
+      );
+      await ensureHydrationReminderChannel(plugin, l10n: l10n);
+      await ensureMindfulnessReminderChannel(plugin, l10n: l10n);
       return ready;
     },
     'notifications',

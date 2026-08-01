@@ -155,6 +155,7 @@ BodyEnergyTimeline _toTimeline(
       confidence: BodyEnergyConfidence.fromStorage(day.confidence) ??
           BodyEnergyConfidence.noData,
       confidenceReason: day.confidenceReason,
+      confidenceReasonCode: bodyEnergyReasonCodeForText(day.confidenceReason),
       inputSummary: BodyEnergyInputSummary(
         algorithmVersion: day.algorithmVersion,
         bucketMinutes: day.bucketMinutes,

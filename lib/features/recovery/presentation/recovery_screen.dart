@@ -20,6 +20,8 @@ import '../../../ui/components/period_navigator.dart';
 import '../../../ui/components/screen_scroll_padding.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../application/recovery_view_model.dart';
+import '../application/stress_l10n.dart';
+import '../../readiness/application/readiness_l10n.dart';
 
 /// Stress-tracking (physiological stress) detail pushed over the shell
 /// (`/daily_readiness/stress/:stressDate`). The Flutter port's recovery feature:
@@ -103,7 +105,9 @@ class _StressBody extends StatelessWidget {
       return const FullScreenLoading();
     }
     if (stress == null && state.error != null) {
-      return ErrorMessage(_stressScreenErrorText(state.error!));
+      return ErrorMessage(
+        _stressScreenErrorText(AppLocalizations.of(context), state.error!),
+      );
     }
 
     final items = <Widget>[
@@ -129,26 +133,26 @@ class _StressBody extends StatelessWidget {
         _CardPad(
           child: _StressListCard(
             title: AppLocalizations.of(context).stressDetailsInputs,
-            items: stress.contributingFactors.isEmpty
-                ? const ['No stress inputs are available for this day.']
-                : stress.contributingFactors,
+            items: stressFactorLines(AppLocalizations.of(context), stress).isEmpty
+                ? [AppLocalizations.of(context).stressDetailsNoInputs]
+                : stressFactorLines(AppLocalizations.of(context), stress),
           ),
         ),
         _CardPad(
           child: _StressListCard(
             title: AppLocalizations.of(context).stressDetailsDataCoverage,
-            items: stress.dataCoverage.isEmpty
-                ? const ['No same-day sample coverage was available.']
-                : stress.dataCoverage,
+            items: stressCoverageLines(AppLocalizations.of(context), stress).isEmpty
+                ? [AppLocalizations.of(context).stressDetailsNoDataCoverage]
+                : stressCoverageLines(AppLocalizations.of(context), stress),
           ),
         ),
         _CardPad(
-          child: _StressListCard(title: AppLocalizations.of(context).stressDetailsCaveats, items: stress.caveats),
+          child: _StressListCard(title: AppLocalizations.of(context).stressDetailsCaveats, items: stressCaveatLines(AppLocalizations.of(context), stress)),
         ),
         const DataSourceEducationItem(),
       ] else
-        const _CardPad(
-          child: ErrorMessage('No stress estimate for this day.'),
+        _CardPad(
+          child: ErrorMessage(AppLocalizations.of(context).stressNoEstimateDay),
         ),
       const SizedBox(height: 16),
     ];
@@ -204,7 +208,7 @@ class _StressScoreCard extends StatelessWidget {
                       Text(AppLocalizations.of(context).screenStressTracking,
                           style: theme.textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600)),
-                      Text(_confidenceText(stress),
+                      Text(_confidenceText(AppLocalizations.of(context), stress),
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: scheme.onSurfaceVariant)),
                     ],
@@ -218,11 +222,11 @@ class _StressScoreCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Text(stress.label,
+            Text(stressLevelLabel(AppLocalizations.of(context), stress.level),
                 style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600, color: accent)),
             const SizedBox(height: 6),
-            Text(stress.detail,
+            Text(stressLevelDetail(AppLocalizations.of(context), stress.level),
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: scheme.onSurfaceVariant)),
           ],
@@ -260,16 +264,13 @@ class _StressExplanationCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Health Connect does not provide a stress score, so OpenVitals '
-              'estimates physiological strain locally from HRV, resting heart '
-              'rate, and average heart-rate context.',
+              AppLocalizations.of(context).stressDetailsHowTrackedBody,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Text(
-              'The 0-100 scale runs Resting (0-25), Low (26-50), Medium (51-75), '
-              'and High (76-100).',
+              AppLocalizations.of(context).stressDetailsScale,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: scheme.onSurfaceVariant),
             ),
@@ -291,8 +292,7 @@ class _StressExplanationCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'A short breathing or mindfulness session may help bring '
-                      'this back down.',
+                      AppLocalizations.of(context).stressRelaxationHint,
                       style: theme.textTheme.bodyMedium
                           ?.copyWith(color: scheme.onSurfaceVariant),
                     ),
@@ -387,31 +387,23 @@ Color _levelColor(PhysiologicalStressLevel level, ColorScheme scheme) {
   }
 }
 
-String _confidenceText(PhysiologicalStressEstimate stress) {
-  final String label;
-  switch (stress.confidence) {
-    case PhysiologicalStressConfidence.high:
-      label = 'High confidence';
-    case PhysiologicalStressConfidence.medium:
-      label = 'Medium confidence';
-    case PhysiologicalStressConfidence.low:
-      label = 'Low confidence';
-    case PhysiologicalStressConfidence.noData:
-      label = 'No stress estimate';
-  }
-  final String reason;
-  switch (stress.confidenceReason) {
-    case 'hrv_resting_hr_average_hr':
-      reason = 'HRV, resting HR, and average HR';
-    case 'partial_hrv_or_heart_rate_context':
-      reason = 'partial HRV or heart-rate context';
-    case 'activity_may_influence':
-      reason = 'activity may influence';
-    case 'single_signal':
-      reason = 'single local signal';
-    default:
-      reason = 'needs more local data';
-  }
+String _confidenceText(
+  AppLocalizations l10n,
+  PhysiologicalStressEstimate stress,
+) {
+  final label = switch (stress.confidence) {
+    PhysiologicalStressConfidence.high => l10n.cardioLoadConfidenceHigh,
+    PhysiologicalStressConfidence.medium => l10n.cardioLoadConfidenceMedium,
+    PhysiologicalStressConfidence.low => l10n.cardioLoadConfidenceLow,
+    PhysiologicalStressConfidence.noData => l10n.stressConfidenceNone,
+  };
+  final reason = switch (stress.confidenceReason) {
+    'hrv_resting_hr_average_hr' => l10n.stressReasonAllSignals,
+    'partial_hrv_or_heart_rate_context' => l10n.stressReasonPartial,
+    'activity_may_influence' => l10n.stressReasonActivity,
+    'single_signal' => l10n.stressReasonSingle,
+    _ => l10n.stressReasonNeedsMore,
+  };
   return '$label · $reason';
 }
 
@@ -421,17 +413,17 @@ LocalDate _parseIsoLocalDate(String value) {
   return LocalDate.now();
 }
 
-String _stressScreenErrorText(ScreenError error) {
+String _stressScreenErrorText(AppLocalizations l10n, ScreenError error) {
   switch (error) {
     case ScreenErrorMessage(:final text):
       return text;
     case ScreenErrorNotFound():
-      return 'Not found.';
+      return l10n.screenErrorNotFound;
     case ScreenErrorMissingArgument():
-      return 'Something went wrong.';
+      return l10n.screenErrorMissingArgument;
     case ScreenErrorPermissionDenied():
-      return 'Permission denied.';
+      return l10n.screenErrorPermissionDenied;
     case ScreenErrorHealthConnectUnavailable():
-      return 'Health Connect is unavailable.';
+      return l10n.screenErrorHealthConnectUnavailable;
   }
 }
