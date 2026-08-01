@@ -69,7 +69,7 @@ class _CaffeineScreenState extends ConsumerState<CaffeineScreen>
     final formatter = ref.watch(unitFormatterProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Caffeine')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).metricCaffeine)),
       body: HealthConnectGate(
         requiredPermissions: {HcPermissions.readNutrition},
         showInlineSyncBanner: false,
@@ -107,7 +107,7 @@ List<Widget> _content(
     if (error != null) ErrorMessage(error),
     if (state.isLoading && home.insights.curvePoints.isEmpty)
       const ChartSkeleton(shape: ChartSkeletonShape.bars, height: kChartHeightPeriodBar),
-    const SectionHeader('Caffeine dashboard'),
+    SectionHeader(AppLocalizations.of(context).caffeineSectionDashboard),
     sectionPadded(_CaffeineOverviewCard(home: home, formatter: formatter)),
     sectionPadded(CaffeineCurveCard(home: home, formatter: formatter)),
     // The drinks themselves, and each one openable.
@@ -130,9 +130,9 @@ List<Widget> _content(
               ? () => notifier.deleteCaffeineEntry(entry.id)
               : null,
         )),
-    const SectionHeader('Sleep impact'),
+    SectionHeader(AppLocalizations.of(context).caffeineSectionSleep),
     sectionPadded(_CaffeineSleepImpactCard(home: home, formatter: formatter)),
-    const SectionHeader('Analytics'),
+    SectionHeader(AppLocalizations.of(context).caffeineSectionAnalytics),
     sectionPadded(
       _AnalyticsRangePicker(
         selected: state.analyticsRange,
@@ -144,21 +144,21 @@ List<Widget> _content(
     ),
     sectionPadded(
       CaffeineDistributionCard(
-        title: 'Sources',
+        title: AppLocalizations.of(context).caffeineSectionSources,
         bars: analytics.sourceBars,
         formatter: formatter,
       ),
     ),
     sectionPadded(
       CaffeineDistributionCard(
-        title: 'Items',
+        title: AppLocalizations.of(context).caffeineItems,
         bars: analytics.itemBars,
         formatter: formatter,
       ),
     ),
     sectionPadded(
       CaffeineDistributionCard(
-        title: 'Inferred categories',
+        title: AppLocalizations.of(context).caffeineInferredCategories,
         bars: analytics.categoryBars,
         formatter: formatter,
       ),
@@ -285,7 +285,7 @@ class _CaffeineOverviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Active caffeine now', style: theme.textTheme.titleSmall),
+            Text(AppLocalizations.of(context).caffeineCurrentTitle, style: theme.textTheme.titleSmall),
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
@@ -309,7 +309,7 @@ class _CaffeineOverviewCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _MiniStat(
-                      title: 'Consumed today',
+                      title: AppLocalizations.of(context).caffeineTodayTotal,
                       value: _formatMg(insights.todayTotalMg, formatter),
                       icon: Icons.local_drink_outlined,
                     ),
@@ -317,7 +317,7 @@ class _CaffeineOverviewCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MiniStat(
-                      title: 'Time to safe',
+                      title: AppLocalizations.of(context).caffeineTimeToSafe,
                       value: timeToSafe != null
                           ? _formatDurationMinutes(timeToSafe)
                           : 'N/A',
@@ -585,7 +585,7 @@ class _CaffeineSleepImpactCard extends StatelessWidget {
                 Icon(Icons.bedtime_outlined,
                     color: scheme.primary, size: 20),
                 const SizedBox(width: 8),
-                Text('Bedtime forecast', style: theme.textTheme.titleSmall),
+                Text(AppLocalizations.of(context).caffeineBedtimeForecast, style: theme.textTheme.titleSmall),
               ],
             ),
             Padding(
@@ -609,7 +609,7 @@ class _CaffeineSleepImpactCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _MiniStat(
-                      title: 'Safe nights',
+                      title: AppLocalizations.of(context).caffeineSafeNights,
                       value:
                           '${insights.safeNights}/${insights.totalNights}',
                       icon: Icons.nights_stay_outlined,
@@ -618,7 +618,7 @@ class _CaffeineSleepImpactCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MiniStat(
-                      title: 'Safe streak',
+                      title: AppLocalizations.of(context).caffeineSafeStreak,
                       value: formatter.count(insights.safeSleepStreak),
                       icon: Icons.bedtime_outlined,
                     ),
@@ -697,7 +697,7 @@ class _CaffeineAnalyticsSummaryCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _MiniStat(
-                      title: 'Daily average',
+                      title: AppLocalizations.of(context).caffeineDailyAverage,
                       value: _formatMg(insights.periodAverageMg, formatter),
                       icon: Icons.query_stats_outlined,
                     ),
@@ -705,7 +705,7 @@ class _CaffeineAnalyticsSummaryCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MiniStat(
-                      title: 'Safe nights',
+                      title: AppLocalizations.of(context).caffeineSafeNights,
                       value:
                           '${insights.safeNights}/${insights.totalNights}',
                       icon: Icons.nights_stay_outlined,
@@ -720,7 +720,7 @@ class _CaffeineAnalyticsSummaryCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _MiniStat(
-                      title: 'Top source',
+                      title: AppLocalizations.of(context).caffeineTopSource,
                       value: topSource,
                       icon: Icons.local_drink_outlined,
                     ),
@@ -728,7 +728,7 @@ class _CaffeineAnalyticsSummaryCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MiniStat(
-                      title: 'Sleep threshold',
+                      title: AppLocalizations.of(context).caffeineSleepThreshold,
                       value: _formatMg(
                           insights.sleepThresholdMg.toDouble(), formatter),
                       icon: Icons.bedtime_outlined,
@@ -778,7 +778,7 @@ class CaffeineDistributionCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'No data',
+                  AppLocalizations.of(context).noData,
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: scheme.onSurfaceVariant),
                 ),
@@ -825,7 +825,7 @@ class CaffeineTimeBucketsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Time of day', style: theme.textTheme.titleSmall),
+            Text(AppLocalizations.of(context).caffeineTimeOfDay, style: theme.textTheme.titleSmall),
             for (final bar in analytics.timeBucketBars)
               _DistributionRow(
                 label: _bucketLabel(bar.bucket),

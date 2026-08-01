@@ -156,8 +156,8 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
           onChanged: notifier.setShowOpenVitalsCalculatedCalories,
         ),
         _StepperCard(
-          title: 'Hydration goal',
-          body: 'Your daily hydration target.',
+          title: l10n.settingsHydrationGoalTitle,
+          body: l10n.settingsHydrationGoalBody,
           valueLabel: formatter.hydration(state.hydrationDailyGoalLiters).text,
           onDecrement: () => notifier.setHydrationDailyGoalLiters(
             state.hydrationDailyGoalLiters - 0.25,
@@ -202,8 +202,8 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
           onIncrement: () => notifier.setNightEndHour(state.nightEndHour + 1),
         ),
         _StepperCard(
-          title: 'High heart-rate alert',
-          body: 'Threshold for a high resting heart-rate flag.',
+          title: l10n.settingsHighHeartRateAlertTitle,
+          body: l10n.settingsHighHeartRateAlertBody,
           valueLabel: '${state.highHeartRateThresholdBpm} bpm',
           onDecrement: () => notifier.setHighHeartRateThresholdBpm(
             state.highHeartRateThresholdBpm - 5,
@@ -213,8 +213,8 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
           ),
         ),
         _StepperCard(
-          title: 'Low heart-rate alert',
-          body: 'Threshold for a low resting heart-rate flag.',
+          title: l10n.settingsLowHeartRateAlertTitle,
+          body: l10n.settingsLowHeartRateAlertBody,
           valueLabel: '${state.lowHeartRateThresholdBpm} bpm',
           onDecrement: () => notifier.setLowHeartRateThresholdBpm(
             state.lowHeartRateThresholdBpm - 5,

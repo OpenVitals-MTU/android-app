@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/insights/daily_readiness.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../ui/components/data_source_education_item.dart';
 import '../../../ui/components/ov_card.dart';
@@ -93,6 +94,7 @@ class _ReadinessPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
     final accent = _stateColor(insight.state, scheme);
     return OpenVitalsCard(
       child: Padding(
@@ -108,7 +110,7 @@ class _ReadinessPanel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Daily readiness',
+                      Text(l10n.dashboardReadinessTitle,
                           style: theme.textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600)),
                       Text(display.confidenceText,
@@ -120,7 +122,7 @@ class _ReadinessPanel extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('Score',
+                    Text(l10n.dashboardReadinessScoreLabel,
                         style: theme.textTheme.labelSmall
                             ?.copyWith(color: scheme.onSurfaceVariant)),
                     Text('${insight.score}/100',
@@ -142,7 +144,7 @@ class _ReadinessPanel extends StatelessWidget {
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 14),
             _ScoreTile(
-              label: 'Training',
+              label: l10n.dashboardReadinessTraining,
               value: '${insight.trainingReadinessScore}/100',
               icon: Icons.fitness_center_outlined,
               color: AppColors.workout,
@@ -150,48 +152,48 @@ class _ReadinessPanel extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _InlineInfo(
-              label: 'HRV status',
+              label: l10n.dashboardReadinessHrvStatus,
               value: display.hrvStatusValue,
             ),
             const SizedBox(height: 8),
             _InlineInfo(
-              label: 'Intensity minutes',
+              label: l10n.dashboardReadinessIntensityMinutes,
               value: display.intensityMinutesValue,
             ),
             const SizedBox(height: 8),
             _TappableInfo(
-              label: 'Stress level',
+              label: l10n.dashboardReadinessStressLevel,
               value: display.stressValue,
               onTap: onOpenStress,
             ),
             const Divider(height: 24),
             _GuidanceRow(
-              label: 'Recommended',
+              label: l10n.dashboardReadinessRecommended,
               value: insight.suggestedWorkout,
               icon: Icons.directions_run_outlined,
               color: accent,
             ),
             const SizedBox(height: 8),
             _GuidanceRow(
-              label: 'Avoid',
+              label: l10n.dashboardReadinessAvoid,
               value: insight.avoid,
               icon: Icons.close,
               color: scheme.error,
             ),
             const SizedBox(height: 8),
             _GuidanceRow(
-              label: 'Alternative',
+              label: l10n.dashboardReadinessAlternative,
               value: insight.alternative,
               icon: Icons.self_improvement_outlined,
               color: AppColors.mindfulness,
             ),
             const SizedBox(height: 14),
-            _InlineInfo(label: 'Strain', value: display.strainValue),
+            _InlineInfo(label: l10n.dashboardReadinessStrain, value: display.strainValue),
             const SizedBox(height: 8),
-            _InlineInfo(label: 'Goal', value: insight.adaptiveGoal),
+            _InlineInfo(label: l10n.dashboardReadinessGoal, value: insight.adaptiveGoal),
             if (display.topFactors.isNotEmpty) ...[
               const SizedBox(height: 14),
-              Text('Why',
+              Text(l10n.dashboardReadinessWhy,
                   style: theme.textTheme.labelMedium
                       ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),

@@ -242,7 +242,7 @@ class SleepStageShareCard extends StatelessWidget {
 
     final trackColor = theme.colorScheme.surfaceContainerHighest;
     return SleepSectionCard(
-      title: 'Share of time in bed',
+      title: AppLocalizations.of(context).sleepStagesShareTitle,
       child: Column(
         children: [
           for (var index = 0; index < shares.length; index++) ...[
@@ -320,7 +320,7 @@ class SleepOverviewCard extends StatelessWidget {
           children: [
             Expanded(
               child: _OverviewTile(
-                title: 'Sleep score',
+                title: AppLocalizations.of(context).recoverySleepScore,
                 value: summary.sleepScore?.toString() ?? '--',
                 subtitle: periodTitle,
                 accent: AppColors.sleep,
@@ -333,7 +333,7 @@ class SleepOverviewCard extends StatelessWidget {
                 // The highlight: time actually asleep (wake excluded). Time in
                 // bed is kept too, but demoted to the row below — see the user's
                 // "focus on sleep, not time in bed".
-                title: 'Sleep',
+                title: AppLocalizations.of(context).metricSleep,
                 value: summary.sleepDurationMs > 0
                     ? formatter.duration(summary.sleepDurationMs)
                     : '--',
@@ -348,7 +348,7 @@ class SleepOverviewCard extends StatelessWidget {
           children: [
             Expanded(
               child: _OverviewTile(
-                title: 'Sleep schedule',
+                title: AppLocalizations.of(context).recoverySleepSchedule,
                 value: _scheduleLabel(summary.schedule),
                 subtitle: periodTitle,
                 accent: AppColors.sleep,
@@ -357,7 +357,7 @@ class SleepOverviewCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _OverviewTile(
-                title: 'Sleep efficiency',
+                title: AppLocalizations.of(context).recoverySleepEfficiency,
                 value: summary.sleepEfficiencyPercent != null
                     ? formatter.percent(summary.sleepEfficiencyPercent!,
                             decimals: 0).text
@@ -378,7 +378,7 @@ class SleepOverviewCard extends StatelessWidget {
                 // Still useful, but no longer the headline — the full span from
                 // bedtime to final wake, wake included (the efficiency
                 // denominator).
-                title: 'Time in bed',
+                title: AppLocalizations.of(context).sleepTimeInBed,
                 value: summary.timeInBedMs > 0
                     ? formatter.duration(summary.timeInBedMs)
                     : '--',
@@ -389,7 +389,7 @@ class SleepOverviewCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _OverviewTile(
-                title: 'Awake',
+                title: AppLocalizations.of(context).sleepStageAwake,
                 value: summary.timeInBedMs > 0
                     ? formatter.duration(summary.awakeDurationMs)
                     : '--',

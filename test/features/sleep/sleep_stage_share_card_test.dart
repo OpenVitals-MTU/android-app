@@ -9,6 +9,7 @@ import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/ov_card.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
 import 'package:openvitals/features/sleep/application/sleep_display.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
 
 /// The "Share of time in bed" bars rendered as empty grey tracks in the shipped
 /// app — correct durations and percentages beside them, and no coloured fill at
@@ -29,6 +30,7 @@ void main() {
   _timelineTests();
 
   Widget host(SleepOverviewSummary summary) => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
         home: Scaffold(
           body: Center(
             child: SizedBox(

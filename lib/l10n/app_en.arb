@@ -1022,6 +1022,32 @@
   "metricAveragePower": "Average power",
   "metricStepsCadence": "Step cadence",
   "metricCyclingCadence": "Cycling cadence",
+  "metricFloors": "Floors",
+  "metricBodyWater": "Body water",
+  "metricHeartRate": "Heart rate",
+  "metricBloodOxygen": "Blood oxygen",
+  "metricBodyTemperature": "Body temperature",
+  "metricVo2MaxShort": "VO₂ max",
+  "dashboardReadinessScoreLabel": "Score",
+  "readinessReferencesTitle": "Backed links",
+  "hydrationTitle": "Hydration",
+  "hydrationDrinkBreakdown": "Drink breakdown",
+  "messageNoHydrationLoggedPeriod": "No hydration logged for this period.",
+  "mindfulnessLogSession": "Log session",
+  "messageNoCaloriesPeriod": "No calories data for this period.",
+  "caloriesBmrSubtitle": "Latest resting energy expenditure",
+  "caffeineHalfLifeLabel": "Half-life",
+  "caffeineAbsorptionLabel": "Absorption",
+  "caffeineBedtimeLabel": "Bedtime",
+  "caffeineEffectiveHalfLife": "Effective half-life",
+  "settingsHydrationGoalTitle": "Hydration goal",
+  "settingsHydrationGoalBody": "Your daily hydration target.",
+  "settingsHighHeartRateAlertTitle": "High heart-rate alert",
+  "settingsHighHeartRateAlertBody": "Threshold for a high resting heart-rate flag.",
+  "settingsLowHeartRateAlertTitle": "Low heart-rate alert",
+  "settingsLowHeartRateAlertBody": "Threshold for a low resting heart-rate flag.",
+  "achievementsLoadFailedTitle": "Unable to load achievements",
+  "achievementsNoHistoryTitle": "No activity history yet",
   "unitSteps": "steps",
   "unitReps": "reps",
   "unitPushes": "pushes",
@@ -3143,6 +3169,21 @@
   "homeWidgetExactAlarmBody": "Widgets refresh in the background. Allow \"Alarms & reminders\" so updates stay on schedule even while the phone sleeps.",
   "homeWidgetExactAlarmAllow": "Allow",
   "homeWidgetExactAlarmNotNow": "Not now",
+  "dashboardBodyEnergySubtitle": "Start {start}  +{charged} / -{drained}",
+  "@dashboardBodyEnergySubtitle": {
+    "description": "Body Energy tile subtitle: the day's starting score, then how much was charged and drained.",
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "charged": {
+        "type": "int"
+      },
+      "drained": {
+        "type": "int"
+      }
+    }
+  },
   "dashboardCaffeineTodaySubtitle": "{mg} mg today",
   "@dashboardCaffeineTodaySubtitle": {
     "description": "Dashboard caffeine tile subtitle: total caffeine consumed on the selected day, shown under the currently-active amount.",

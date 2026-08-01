@@ -75,7 +75,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byType(DayNavigator), findsOneWidget);
-    expect(find.text('Stress tracking'), findsOneWidget);
+    expect(find.text('Stress Tracking'), findsOneWidget);
     // The data-source education link closes the loaded stress content.
     expect(find.byType(DataSourceEducationItem), findsOneWidget);
   });

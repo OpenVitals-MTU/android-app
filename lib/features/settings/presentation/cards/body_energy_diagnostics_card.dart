@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_card.dart';
 import '../../application/body_energy_diagnostics.dart';
 
@@ -41,7 +42,7 @@ class _BodyEnergyDiagnosticsCardState
     await Clipboard.setData(ClipboardData(text: report.toReportText()));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Body Energy report copied')),
+      SnackBar(content: Text(AppLocalizations.of(context).crashReportFallbackCopied)),
     );
   }
 
@@ -131,7 +132,7 @@ class _BodyEnergyDiagnosticsCardState
                     TextButton.icon(
                       onPressed: () => _copy(value),
                       icon: const Icon(Icons.copy_all_outlined, size: 18),
-                      label: const Text('Copy report'),
+                      label: Text(AppLocalizations.of(context).settingsAppleHealthImportCopyReport),
                     ),
                 ],
               ),

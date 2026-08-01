@@ -825,7 +825,7 @@ class _ActivitiesSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SectionHeaderRow(
-          title: 'Activities',
+          title: AppLocalizations.of(context).dashboardActivitiesToday,
           onTap: () => onOpen(AppRoutes.activity),
         ),
         if (workouts.isEmpty)

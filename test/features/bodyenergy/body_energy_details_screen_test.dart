@@ -144,7 +144,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(DailyReadinessCard), findsOneWidget);
-    expect(find.text('Daily readiness'), findsOneWidget);
+    expect(find.text('Daily Readiness'), findsOneWidget);
     expect(find.text('Score'), findsOneWidget);
   });
 

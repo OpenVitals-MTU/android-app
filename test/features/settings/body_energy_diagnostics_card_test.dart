@@ -7,6 +7,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/preferences/body_energy_calibration.dart';
 import 'package:openvitals/features/settings/application/body_energy_diagnostics.dart';
 import 'package:openvitals/features/settings/presentation/cards/body_energy_diagnostics_card.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
 
 void main() {
   const date = LocalDate(2026, 7, 25);
@@ -40,6 +41,7 @@ void main() {
             bodyEnergyDiagnosticsProvider.overrideWith((ref) async => value),
           ],
           child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             home: Scaffold(
               body: SingleChildScrollView(child: BodyEnergyDiagnosticsCard()),
             ),

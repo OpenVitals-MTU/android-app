@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../ui/charts/chart_bar_row.dart';
 import '../../../ui/components/loading_state.dart';
 
@@ -85,18 +86,18 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen>
                 ),
                 if (state.error != null)
                   sectionPadded(_MessageCard(
-                    title: 'Unable to load achievements',
+                    title: AppLocalizations.of(context).achievementsLoadFailedTitle,
                     body: _errorText(state.error!),
                   ))
                 else if (!state.hasActivityHistory)
-                  sectionPadded(const _MessageCard(
-                    title: 'No activity history yet',
-                    body: 'Start recording steps to unlock achievements.',
+                  sectionPadded(_MessageCard(
+                    title: AppLocalizations.of(context).achievementsNoHistoryTitle,
+                    body: AppLocalizations.of(context).achievementsNoDataBody,
                   )),
                 if (state.hasActivityHistory && !state.hasFloorHistory)
-                  sectionPadded(const _MessageCard(
-                    title: 'No floor data',
-                    body: 'Floor-climbing badges need a device that tracks floors.',
+                  sectionPadded(_MessageCard(
+                    title: AppLocalizations.of(context).achievementsNoFloorDataTitle,
+                    body: AppLocalizations.of(context).achievementsNoFloorDataBody,
                   )),
                 for (final progress in filtered)
                   sectionPadded(AchievementBadgeCard(
@@ -112,7 +113,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen>
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Achievements')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).screenAchievements)),
       body: body,
     );
   }

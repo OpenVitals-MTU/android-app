@@ -45,13 +45,13 @@ class MindfulnessScreen extends ConsumerWidget {
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mindfulness')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).screenMindfulness)),
       floatingActionButton: FloatingActionButton.extended(
         // TODO(phase6): the timer-based session logging + bell/ambient sounds
         // land in Phase 6; for now route to the manual add-entry flow.
         onPressed: () => context.push(AppRoutes.mindfulnessEntry),
         icon: const Icon(Icons.add),
-        label: const Text('Log session'),
+        label: Text(AppLocalizations.of(context).mindfulnessLogSession),
       ),
       body: HealthConnectGate(
         requiredPermissions: {HcPermissions.readMindfulness},
@@ -90,11 +90,11 @@ List<Widget> _content(
     }
     return [
       sectionPadded(
-        const MetricCardPlaceholder(
-          title: 'Mindfulness',
+        MetricCardPlaceholder(
+          title: AppLocalizations.of(context).metricMindfulness,
           icon: Icons.self_improvement_outlined,
           accentColor: AppColors.mindfulness,
-          message: 'No mindfulness sessions for this period.',
+          message: AppLocalizations.of(context).messageNoMindfulnessPeriod,
         ),
       ),
       // Reminders are configurable with no sessions logged yet — that is exactly
@@ -112,7 +112,7 @@ List<Widget> _content(
         children: [
           Expanded(
             child: MetricCard(
-              title: 'Total mindfulness',
+              title: AppLocalizations.of(context).metricTotalMindfulness,
               value: total.value,
               unit: total.unit,
               icon: Icons.self_improvement_outlined,
@@ -128,12 +128,12 @@ List<Widget> _content(
           const SizedBox(width: 12),
           Expanded(
             child: MetricCard(
-              title: 'Sessions',
+              title: AppLocalizations.of(context).sectionSessions,
               value: formatter.count(display.sessionCount),
               unit: 'total',
               icon: Icons.check_circle_outline,
               accentColor: AppColors.mindfulness,
-              subtitle: 'Selected period',
+              subtitle: AppLocalizations.of(context).periodSelected,
             ),
           ),
         ],
@@ -170,7 +170,7 @@ List<Widget> _content(
         ],
       ),
     ),
-    const SectionHeader('Sessions'),
+    SectionHeader(AppLocalizations.of(context).sectionSessions),
     for (final session in display.sortedSessions)
       sectionPadded(
         _MindfulnessSessionRow(

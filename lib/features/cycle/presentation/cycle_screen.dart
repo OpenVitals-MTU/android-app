@@ -41,7 +41,7 @@ class CycleScreen extends ConsumerWidget {
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cycle tracking')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).metricCycleTracking)),
       body: HealthConnectGate(
         // The cycle read permission; sensitive/opt-in, so the whole screen is
         // gated (Kotlin `HealthConnectFeature.CYCLE`).
@@ -80,11 +80,11 @@ List<Widget> _content(
     }
     return [
       sectionPadded(
-        const MetricCardPlaceholder(
-          title: 'Cycle tracking',
+        MetricCardPlaceholder(
+          title: AppLocalizations.of(context).metricCycleTracking,
           icon: Icons.calendar_month_outlined,
           accentColor: AppColors.cycle,
-          message: 'No cycle tracking data for this period.',
+          message: AppLocalizations.of(context).messageNoCyclePeriod,
         ),
       ),
     ];
@@ -98,9 +98,9 @@ List<Widget> _content(
         children: [
           Expanded(
             child: MetricCard(
-              title: 'Period days',
+              title: AppLocalizations.of(context).metricPeriodDays,
               value: formatter.count(display.periodDays),
-              unit: 'days',
+              unit: AppLocalizations.of(context).unitDays,
               icon: Icons.calendar_month_outlined,
               accentColor: AppColors.cycle,
               subtitle: periodTitle(
@@ -114,12 +114,12 @@ List<Widget> _content(
           const SizedBox(width: 12),
           Expanded(
             child: MetricCard(
-              title: 'Entries',
+              title: AppLocalizations.of(context).sectionEntries,
               value: formatter.count(display.totalEntryCount),
               unit: 'total',
               icon: Icons.star_outline,
               accentColor: AppColors.cycle,
-              subtitle: 'Selected period',
+              subtitle: AppLocalizations.of(context).periodSelected,
             ),
           ),
         ],
@@ -140,7 +140,7 @@ List<Widget> _content(
         ],
       ),
     ),
-    const SectionHeader('Entries'),
+    SectionHeader(AppLocalizations.of(context).sectionEntries),
     for (final observation in display.observations)
       sectionPadded(
         _CycleObservationRow(observation: observation, formatter: formatter),

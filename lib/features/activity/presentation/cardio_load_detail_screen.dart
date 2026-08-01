@@ -48,7 +48,7 @@ class _CardioLoadDetailScreenState extends ConsumerState<CardioLoadDetailScreen>
     final formatter = ref.watch(unitFormatterProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cardio load')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).metricCardioLoad)),
       body: _body(context, state, formatter, notifier),
     );
   }
@@ -63,7 +63,7 @@ class _CardioLoadDetailScreenState extends ConsumerState<CardioLoadDetailScreen>
       return const FullScreenLoading();
     }
     if (state.error != null) {
-      return ErrorMessage(_errorText(state.error!));
+      return ErrorMessage(_errorText(AppLocalizations.of(context), state.error!));
     }
 
     final estimate = state.estimate;
@@ -74,7 +74,7 @@ class _CardioLoadDetailScreenState extends ConsumerState<CardioLoadDetailScreen>
         padding: screenScrollPadding(context),
         children: [
           sectionPadded(_SummaryCard(estimate: estimate, formatter: formatter)),
-          const SectionHeader('Today\'s numbers'),
+          SectionHeader(AppLocalizations.of(context).cardioLoadDayNumbersTitle),
           sectionPadded(_NumbersCard(state: state, formatter: formatter)),
           SectionHeader(l10n.cardioLoadReferencesTitle),
           sectionPadded(const _CardioLoadReferencesCard()),
@@ -135,8 +135,9 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final scoreText = estimate.confidence == CardioLoadConfidence.noData
-        ? 'No data'
+        ? l10n.noData
         : formatter.count(estimate.score);
     return OpenVitalsCard(
       child: Padding(
@@ -150,7 +151,7 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Cardio load',
+                    l10n.metricCardioLoad,
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
@@ -164,7 +165,7 @@ class _SummaryCard extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      _confidenceLabel(estimate.confidence),
+                      _confidenceLabel(l10n, estimate.confidence),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -175,7 +176,7 @@ class _SummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              _methodLabel(estimate.method),
+              _methodLabel(l10n, estimate.method),
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -195,45 +196,55 @@ class _NumbersCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final estimate = state.estimate;
     final rows = <(String, String)>[
-      ('Method', _methodLabel(estimate.method)),
+      (l10n.cardioLoadMethod, _methodLabel(l10n, estimate.method)),
       (
-        'TRIMP score',
+        l10n.cardioLoadTrimpScore,
         estimate.trimpScore != null
             ? formatter.decimal(estimate.trimpScore!, 1)
-            : 'No data',
+            : l10n.noData,
       ),
-      ('HR coverage', '${formatter.decimal(estimate.coveredMinutes, 1)} min'),
       (
-        'Expected coverage',
+        l10n.cardioLoadHrCoverage,
+        '${formatter.decimal(estimate.coveredMinutes, 1)} min',
+      ),
+      (
+        l10n.cardioLoadExpectedCoverage,
         '${formatter.decimal(estimate.expectedMinutes, 1)} min',
       ),
       (
-        'Resting HR',
+        l10n.cardioLoadRestingHr,
         estimate.restingHeartRateBpm != null
             ? '${formatter.count(estimate.restingHeartRateBpm!)} bpm'
-            : 'No data',
+            : l10n.noData,
       ),
       (
-        'Max HR',
+        l10n.cardioLoadMaxHr,
         estimate.maxHeartRateBpm != null
             ? '${formatter.count(estimate.maxHeartRateBpm!)} bpm'
-            : 'No data',
+            : l10n.noData,
       ),
-      ('HR samples', formatter.count(estimate.heartRateSampleCount)),
-      ('Activity windows', formatter.count(estimate.activityWindowCount)),
+      (l10n.cardioLoadHrSamples, formatter.count(estimate.heartRateSampleCount)),
       (
-        'Activity minutes',
+        l10n.cardioLoadActivityWindows,
+        formatter.count(estimate.activityWindowCount),
+      ),
+      (
+        l10n.cardioLoadActivityMinutes,
         '${formatter.count(estimate.activityWindowMinutes.round())} min',
       ),
-      ('Movement fallback', formatter.count(estimate.movementFallbackScore)),
-      ('Steps', '${formatter.count(state.steps)} steps'),
       (
-        'Active calories',
+        l10n.cardioLoadMovementFallback,
+        formatter.count(estimate.movementFallbackScore),
+      ),
+      (l10n.metricSteps, '${formatter.count(state.steps)} ${l10n.unitSteps}'),
+      (
+        l10n.metricActiveCalories,
         state.activeCaloriesKcal != null
             ? formatter.energy(state.activeCaloriesKcal!).text
-            : 'No data',
+            : l10n.noData,
       ),
     ];
     return OpenVitalsCard(
@@ -260,7 +271,7 @@ class _NumbersCard extends StatelessWidget {
               ),
             const SizedBox(height: 8),
             Text(
-              _calibrationLabel(estimate),
+              _calibrationLabel(l10n, estimate),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -271,46 +282,47 @@ class _NumbersCard extends StatelessWidget {
   }
 }
 
-String _confidenceLabel(CardioLoadConfidence confidence) {
+String _confidenceLabel(AppLocalizations l10n, CardioLoadConfidence confidence) {
   switch (confidence) {
     case CardioLoadConfidence.high:
-      return 'High confidence';
+      return l10n.cardioLoadConfidenceHigh;
     case CardioLoadConfidence.medium:
-      return 'Medium confidence';
+      return l10n.cardioLoadConfidenceMedium;
     case CardioLoadConfidence.low:
-      return 'Low confidence';
+      return l10n.cardioLoadConfidenceLow;
     case CardioLoadConfidence.noData:
-      return 'No data';
+      return l10n.cardioLoadConfidenceNoData;
   }
 }
 
-String _methodLabel(CardioLoadMethod method) {
+String _methodLabel(AppLocalizations l10n, CardioLoadMethod method) {
   switch (method) {
     case CardioLoadMethod.trimpActivityWindows:
-      return 'From heart rate during workouts';
+      return l10n.cardioLoadMethodActivityWindows;
     case CardioLoadMethod.trimpElevatedHeartRate:
-      return 'From elevated heart rate';
+      return l10n.cardioLoadMethodElevatedHr;
     case CardioLoadMethod.movementFallback:
-      return 'Estimated from movement';
+      return l10n.cardioLoadMethodMovementFallback;
     case CardioLoadMethod.noData:
-      return 'Not enough data';
+      return l10n.cardioLoadMethodNoData;
   }
 }
 
-String _calibrationLabel(CardioLoadEstimate estimate) {
+String _calibrationLabel(AppLocalizations l10n, CardioLoadEstimate estimate) {
   final resting = estimate.restingHeartRateObserved
-      ? 'Observed resting HR'
-      : 'Estimated resting HR';
+      ? l10n.cardioLoadCalibrationObservedResting
+      : l10n.cardioLoadCalibrationEstimatedResting;
   final max = estimate.maxHeartRateObserved
-      ? 'observed max HR'
-      : 'estimated max HR';
+      ? l10n.cardioLoadCalibrationObservedMax
+      : l10n.cardioLoadCalibrationEstimatedMax;
   return '$resting / $max';
 }
 
-String _errorText(ScreenError error) => switch (error) {
+String _errorText(AppLocalizations l10n, ScreenError error) => switch (error) {
       ScreenErrorMessage(:final text) => text,
-      ScreenErrorNotFound() => 'Not found.',
-      ScreenErrorMissingArgument() => 'Missing information.',
-      ScreenErrorPermissionDenied() => 'Permission denied.',
-      ScreenErrorHealthConnectUnavailable() => 'Health Connect is unavailable.',
+      ScreenErrorNotFound() => l10n.screenErrorNotFound,
+      ScreenErrorMissingArgument() => l10n.screenErrorMissingArgument,
+      ScreenErrorPermissionDenied() => l10n.screenErrorPermissionDenied,
+      ScreenErrorHealthConnectUnavailable() =>
+        l10n.screenErrorHealthConnectUnavailable,
     };

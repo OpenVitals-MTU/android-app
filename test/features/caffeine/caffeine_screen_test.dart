@@ -90,11 +90,11 @@ void main() {
 
     expect(tester.takeException(), isNull);
     // Top-of-scroll cards (the rest of the long list is lazily built off-screen).
-    expect(find.text('Active caffeine now'), findsOneWidget);
+    expect(find.text('Active caffeine'), findsOneWidget);
     // The card used to hardcode this title in English, while `caffeineCurveTitle`
     // sat unused in the catalogs — translated, and never shown to anyone.
     expect(find.text('Caffeine curve'), findsOneWidget);
-    expect(find.text('Caffeine dashboard'), findsOneWidget);
+    expect(find.text('Dashboard'), findsOneWidget);
     expect(find.byType(CustomPaint), findsWidgets);
   });
 

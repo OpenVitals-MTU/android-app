@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../application/manual_entry_widgets_view_model.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/presentation/reorder.dart';
 import '../../../di/providers.dart';
 import '../../../domain/model/body_models.dart';
@@ -45,6 +46,7 @@ class ManualEntryScreen extends ConsumerWidget {
           ref.watch(mindfulnessAvailableProvider),
     );
 
+    final specs = _specsById(AppLocalizations.of(context));
     final visible = [
       for (final id in state.visible)
         if (supported.contains(id)) id,
@@ -75,10 +77,10 @@ class ManualEntryScreen extends ConsumerWidget {
           children: [
             for (var i = 0; i < visible.length; i++)
               _ManualEntryCell(
-                spec: _specsById[visible[i]]!,
+                spec: specs[visible[i]]!,
                 index: i,
                 editing: state.editing,
-                onTap: () => context.push(_specsById[visible[i]]!.location),
+                onTap: () => context.push(specs[visible[i]]!.location),
                 onRemove: () => notifier.remove(visible[i]),
                 onReorder: (from, to) =>
                     notifier.setOrder(reorderOntoDropTarget(visible, from, to)),
@@ -88,9 +90,9 @@ class ManualEntryScreen extends ConsumerWidget {
         if (state.editing)
           HiddenWidgetsSection(
             padding: const EdgeInsets.fromLTRB(4, 20, 4, 0),
-            titles: [for (final id in hidden) _specsById[id]!.title],
+            titles: [for (final id in hidden) specs[id]!.title],
             onAdd: (title) => notifier.add(
-              hidden.firstWhere((id) => _specsById[id]!.title == title),
+              hidden.firstWhere((id) => specs[id]!.title == title),
             ),
           ),
       ],
@@ -252,33 +254,34 @@ const Color _oxygenColor = Color(0xFF00897B);
 const Color _respiratoryColor = Color(0xFF5E97F6);
 const Color _temperatureColor = Color(0xFFFF7043);
 
-final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
-  ManualEntryWidgetId.hydration: const _ManualEntryWidgetSpec(
-    title: 'Hydration',
+Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById(
+    AppLocalizations l10n) => {
+  ManualEntryWidgetId.hydration: _ManualEntryWidgetSpec(
+    title: l10n.hydrationTitle,
     icon: Icons.local_drink_outlined,
     accentColor: AppColors.hydration,
     location: AppRoutes.hydrationEntry,
   ),
-  ManualEntryWidgetId.carbs: const _ManualEntryWidgetSpec(
-    title: 'Carbs',
+  ManualEntryWidgetId.carbs: _ManualEntryWidgetSpec(
+    title: l10n.metricCarbs,
     icon: Icons.restaurant_outlined,
     accentColor: AppColors.nutrition,
     location: AppRoutes.carbsEntry,
   ),
   ManualEntryWidgetId.activity: _ManualEntryWidgetSpec(
-    title: 'Activity',
+    title: l10n.manualEntryActivityTitle,
     icon: Icons.directions_run_outlined,
     accentColor: AppColors.workout,
     location: AppRoutes.activityEntryLocation(),
   ),
-  ManualEntryWidgetId.mindfulness: const _ManualEntryWidgetSpec(
-    title: 'Mindfulness',
+  ManualEntryWidgetId.mindfulness: _ManualEntryWidgetSpec(
+    title: l10n.metricMindfulness,
     icon: Icons.self_improvement_outlined,
     accentColor: AppColors.mindfulness,
     location: AppRoutes.mindfulnessEntry,
   ),
   ManualEntryWidgetId.weight: _ManualEntryWidgetSpec(
-    title: 'Weight',
+    title: l10n.metricWeight,
     icon: Icons.monitor_weight_outlined,
     accentColor: AppColors.weight,
     location: AppRoutes.bodyMeasurementEntryLocation(
@@ -286,7 +289,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
     ),
   ),
   ManualEntryWidgetId.height: _ManualEntryWidgetSpec(
-    title: 'Height',
+    title: l10n.metricHeight,
     icon: Icons.straighten_outlined,
     accentColor: AppColors.weight,
     location: AppRoutes.bodyMeasurementEntryLocation(
@@ -294,7 +297,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
     ),
   ),
   ManualEntryWidgetId.bodyFat: _ManualEntryWidgetSpec(
-    title: 'Body fat',
+    title: l10n.metricBodyFat,
     icon: Icons.monitor_weight_outlined,
     accentColor: AppColors.bodyFat,
     location: AppRoutes.bodyMeasurementEntryLocation(
@@ -302,7 +305,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
     ),
   ),
   ManualEntryWidgetId.bloodPressure: _ManualEntryWidgetSpec(
-    title: 'Blood pressure',
+    title: l10n.metricBloodPressure,
     icon: Icons.favorite_border,
     accentColor: AppColors.vitals,
     location: AppRoutes.vitalsMeasurementEntryLocation(
@@ -310,7 +313,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
     ),
   ),
   ManualEntryWidgetId.spo2: _ManualEntryWidgetSpec(
-    title: 'Blood oxygen',
+    title: l10n.metricBloodOxygen,
     icon: Icons.favorite_border,
     accentColor: _oxygenColor,
     location: AppRoutes.vitalsMeasurementEntryLocation(
@@ -318,7 +321,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
     ),
   ),
   ManualEntryWidgetId.respiratoryRate: _ManualEntryWidgetSpec(
-    title: 'Respiratory rate',
+    title: l10n.metricRespiratoryRate,
     icon: Icons.air_outlined,
     accentColor: _respiratoryColor,
     location: AppRoutes.vitalsMeasurementEntryLocation(
@@ -326,7 +329,7 @@ final Map<ManualEntryWidgetId, _ManualEntryWidgetSpec> _specsById = {
     ),
   ),
   ManualEntryWidgetId.bodyTemperature: _ManualEntryWidgetSpec(
-    title: 'Body temperature',
+    title: l10n.metricBodyTemperature,
     icon: Icons.device_thermostat_outlined,
     accentColor: _temperatureColor,
     location: AppRoutes.vitalsMeasurementEntryLocation(

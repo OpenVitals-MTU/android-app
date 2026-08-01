@@ -522,7 +522,7 @@ class _SessionDetailsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const na = 'Not available';
     return _DetailSectionCard(
-      title: 'Session details',
+      title: AppLocalizations.of(context).detailSessionDetails,
       rows: [
         ('Type', exerciseTypeLabel(workout.exerciseType)),
         ('Started', _dateTimeFormat.format(workout.startTime.toLocal())),
@@ -574,7 +574,7 @@ class _RouteMapCard extends StatelessWidget {
                 Icon(Icons.map_outlined,
                     color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(width: 12),
-                Text('Route', style: theme.textTheme.titleMedium),
+                Text(AppLocalizations.of(context).detailRoute, style: theme.textTheme.titleMedium),
                 const Spacer(),
                 if (distanceMeters > 0)
                   Text(

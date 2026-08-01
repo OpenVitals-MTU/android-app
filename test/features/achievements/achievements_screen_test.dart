@@ -9,6 +9,7 @@ import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/features/achievements/presentation/achievements_screen.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
 
 class _FakeActivityRepository implements ActivityRepository {
   _FakeActivityRepository({this.days = const <DailySteps>[]});
@@ -32,7 +33,10 @@ Future<Widget> _bootstrap({required _FakeActivityRepository repository}) async {
       sharedPreferencesProvider.overrideWithValue(prefs),
       activityRepositoryProvider.overrideWithValue(repository),
     ],
-    child: const MaterialApp(home: AchievementsScreen()),
+    child: const MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      home: AchievementsScreen(),
+    ),
   );
 }
 

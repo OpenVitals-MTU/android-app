@@ -4,6 +4,7 @@ import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/sleep/application/sleep_display.dart';
 import 'package:openvitals/features/sleep/presentation/sleep_cards.dart';
+import 'package:openvitals/l10n/app_localizations.dart';
 
 /// The overview now highlights time ASLEEP and keeps time in bed as a demoted
 /// tile, with awake beside it. Guards that the two are distinct figures and both
@@ -24,6 +25,7 @@ void main() {
 
   testWidgets('highlights Sleep (asleep) and demotes Time in bed', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: Scaffold(
         body: SleepOverviewCard(
           summary: summary,

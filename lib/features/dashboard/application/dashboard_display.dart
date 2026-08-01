@@ -99,15 +99,13 @@ DashboardDisplay buildDashboardDisplay(
   // it belongs in the add-tray until they choose it.
   // Legacy layouts stored TITLES; ids are what everything keys on now. The
   // translation happens here, on read, so a saved order survives the change —
-  // see [migrateDashboardLayoutKeys].
-  final byTitle = <String, String>{
-    for (final r in <RingCardData>[summary.steps, summary.weeklyCardio])
-      r.title: r.id,
-    for (final t in summary.tiles) t.title: t.id,
-  };
-  tileOrder = migrateDashboardLayoutKeys(tileOrder, byTitle);
-  ringOrder = migrateDashboardLayoutKeys(ringOrder, byTitle);
-  hiddenTiles = migrateDashboardLayoutKeys(hiddenTiles.toList(), byTitle).toSet();
+  // see [migrateDashboardLayoutKeys]. The map is the FROZEN English wording of
+  // the title era, not the live titles: those are localized now, and a legacy
+  // key only ever holds what the app displayed back then — English.
+  tileOrder = migrateDashboardLayoutKeys(tileOrder, _legacyTitleToId);
+  ringOrder = migrateDashboardLayoutKeys(ringOrder, _legacyTitleToId);
+  hiddenTiles =
+      migrateDashboardLayoutKeys(hiddenTiles.toList(), _legacyTitleToId).toSet();
 
   final hidden = <String>{
     ...hiddenTiles,
@@ -342,6 +340,51 @@ const DashboardGoals kDefaultDashboardGoals = DashboardGoals(
   mindfulnessMinutes: 10,
 );
 
+/// The exact tile wording of the title-keyed layout era, by the id each title
+/// became. Layouts saved back then persisted these strings — always English,
+/// because titles were hardcoded English then — so this table must never track
+/// the (now localized) display titles: it describes what old layouts HOLD, not
+/// what the screen shows.
+final Map<String, String> _legacyTitleToId = {
+  'Steps': 'steps',
+  'Weekly cardio': 'weekly_cardio',
+  'Distance': DashboardMetric.distance.name,
+  'Total calories': DashboardMetric.caloriesOut.name,
+  'Active calories': DashboardMetric.activeCalories.name,
+  'Floors': DashboardMetric.floors.name,
+  'Elevation': DashboardMetric.elevation.name,
+  'Wheelchair pushes': DashboardMetric.wheelchairPushes.name,
+  'Sleep': DashboardMetric.sleep.name,
+  'Body Energy': DashboardMetric.bodyEnergy.name,
+  'Beverages': DashboardMetric.hydration.name,
+  'Calories in': DashboardMetric.caloriesIn.name,
+  'Protein': DashboardMetric.protein.name,
+  'Carbs': DashboardMetric.carbs.name,
+  'Fat': DashboardMetric.fat.name,
+  'Caffeine': DashboardMetric.caffeine.name,
+  'Weight': DashboardMetric.weight.name,
+  'Height': DashboardMetric.height.name,
+  'BMI': DashboardMetric.bmi.name,
+  'FFMI': DashboardMetric.ffmi.name,
+  'Body fat': DashboardMetric.bodyFat.name,
+  'Lean mass': DashboardMetric.leanMass.name,
+  'BMR': DashboardMetric.bmr.name,
+  'Bone mass': DashboardMetric.boneMass.name,
+  'Body water': DashboardMetric.bodyWaterMass.name,
+  'Heart rate': DashboardMetric.avgHeartRate.name,
+  'Resting HR': DashboardMetric.restingHeartRate.name,
+  'HRV': DashboardMetric.hrv.name,
+  'Blood pressure': DashboardMetric.bloodPressure.name,
+  'Blood oxygen': DashboardMetric.spo2.name,
+  'VO₂ max': DashboardMetric.vo2Max.name,
+  'Respiratory rate': DashboardMetric.respiratoryRate.name,
+  'Body temperature': DashboardMetric.bodyTemperature.name,
+  'Blood glucose': DashboardMetric.bloodGlucose.name,
+  'Skin temperature': DashboardMetric.skinTemperature.name,
+  'Mindfulness': DashboardMetric.mindfulness.name,
+  'Cycle': DashboardMetric.cycle.name,
+};
+
 double _fraction(double current, double target) =>
     target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
 
@@ -376,9 +419,10 @@ DashboardSummary buildDashboardSummary(
   final unsupportedIds = <String>{};
   final steps = RingCardData(
     id: 'steps',
-    title: 'Steps',
+    title: l10n.metricSteps,
     value: f.count(data.steps),
-    subtitle: 'steps of ${f.count(goals.steps.round())}',
+    subtitle:
+        '${l10n.unitSteps} ${l10n.dashboardGoalOf(f.count(goals.steps.round()))}',
     accent: AppColors.steps,
     progress: _fraction(data.steps.toDouble(), goals.steps),
     location: AppRoutes.metricLocation('STEPS'),
@@ -388,18 +432,21 @@ DashboardSummary buildDashboardSummary(
   final weeklyCardio = wcl != null
       ? RingCardData(
           id: 'weekly_cardio',
-          title: 'Weekly cardio',
+          title: l10n.metricWeeklyCardioLoad,
           value: '${wcl.progressPercent}%',
-          subtitle: '${wcl.currentScore} of ${wcl.targetScore}',
+          subtitle: l10n.dashboardWeeklyCardioLoadProgress(
+            wcl.currentScore,
+            wcl.targetScore,
+          ),
           accent: AppColors.workout,
           progress: wcl.progressFraction,
           location: AppRoutes.cardioLoadDetail,
         )
-      : const RingCardData(
+      : RingCardData(
           id: 'weekly_cardio',
-          title: 'Weekly cardio',
+          title: l10n.metricWeeklyCardioLoad,
           value: '—',
-          subtitle: 'No data',
+          subtitle: l10n.noData,
           accent: AppColors.workout,
           progress: 0,
           location: AppRoutes.cardioLoadDetail,
@@ -469,7 +516,7 @@ DashboardSummary buildDashboardSummary(
   final distance = f.distance(data.distanceMeters);
   addRequired(
     DashboardMetric.distance,
-    title: 'Distance',
+    title: l10n.metricDistance,
     value: distance.value,
     unit: distance.unit,
     icon: Icons.straighten_outlined,
@@ -482,7 +529,7 @@ DashboardSummary buildDashboardSummary(
   final caloriesOutValue = caloriesOut == null ? null : f.energy(caloriesOut);
   add(
     DashboardMetric.caloriesOut,
-    title: 'Total calories',
+    title: l10n.metricCaloriesOut,
     value: caloriesOutValue?.value,
     unit: caloriesOutValue?.unit,
     icon: Icons.local_fire_department_outlined,
@@ -495,7 +542,7 @@ DashboardSummary buildDashboardSummary(
   final activeValue = activeCalories == null ? null : f.energy(activeCalories);
   add(
     DashboardMetric.activeCalories,
-    title: 'Active calories',
+    title: l10n.metricActiveCalories,
     value: activeValue?.value,
     unit: activeValue?.unit,
     icon: Icons.local_fire_department_outlined,
@@ -507,7 +554,7 @@ DashboardSummary buildDashboardSummary(
   final floors = _positiveInt(data.floorsClimbed);
   add(
     DashboardMetric.floors,
-    title: 'Floors',
+    title: l10n.metricFloors,
     value: floors == null ? null : f.count(floors),
     icon: Icons.stairs_outlined,
     accent: AppColors.floors,
@@ -519,7 +566,7 @@ DashboardSummary buildDashboardSummary(
   final elevationValue = elevation == null ? null : f.elevation(elevation);
   add(
     DashboardMetric.elevation,
-    title: 'Elevation',
+    title: l10n.metricElevation,
     value: elevationValue?.value,
     unit: elevationValue?.unit,
     icon: Icons.terrain_outlined,
@@ -531,7 +578,7 @@ DashboardSummary buildDashboardSummary(
   final pushes = _positiveInt(data.wheelchairPushes);
   add(
     DashboardMetric.wheelchairPushes,
-    title: 'Wheelchair pushes',
+    title: l10n.metricWheelchairPushes,
     value: pushes == null ? null : f.count(pushes),
     icon: Icons.accessible_forward_outlined,
     accent: AppColors.wheelchairPushes,
@@ -548,12 +595,12 @@ DashboardSummary buildDashboardSummary(
       sleep == null ? 0 : sleepDurationMsFromStages(sleep.stages, sleep.durationMs);
   add(
     DashboardMetric.sleep,
-    title: 'Sleep',
+    title: l10n.metricSleep,
     value: sleep == null ? null : f.duration(asleepMs),
     icon: Icons.bed_outlined,
     accent: AppColors.sleep,
     subtitle: sleepScore.confidence != SleepScoreConfidence.noData
-        ? '${sleepScore.score} · ${_sleepRating(sleepScore.score)}'
+        ? '${sleepScore.score} · ${_sleepRating(l10n, sleepScore.score)}'
         : null,
     noDataMessage: l10n.messageNoSleepDay,
     showTitle: false,
@@ -574,12 +621,15 @@ DashboardSummary buildDashboardSummary(
   final bodyEnergy = data.bodyEnergyTimeline;
   add(
     DashboardMetric.bodyEnergy,
-    title: 'Body Energy',
+    title: l10n.metricBodyEnergy,
     value: bodyEnergy == null ? null : f.count(bodyEnergy.currentScore),
     subtitle: bodyEnergy == null
         ? null
-        : 'Start ${bodyEnergy.startScore}  '
-            '+${bodyEnergy.charged} / -${bodyEnergy.drained}',
+        : l10n.dashboardBodyEnergySubtitle(
+            bodyEnergy.startScore,
+            bodyEnergy.charged,
+            bodyEnergy.drained,
+          ),
     icon: Icons.battery_charging_full_outlined,
     accent: AppColors.workout,
     noDataMessage: l10n.bodyEnergyNotSetUp,
@@ -590,7 +640,7 @@ DashboardSummary buildDashboardSummary(
   final hydration = f.hydration(data.hydrationLiters);
   addRequired(
     DashboardMetric.hydration,
-    title: 'Beverages',
+    title: l10n.metricHydration,
     value: hydration.value,
     unit: hydration.unit,
     icon: Icons.local_drink_outlined,
@@ -604,7 +654,7 @@ DashboardSummary buildDashboardSummary(
   final caloriesInValue = caloriesIn == null ? null : f.energy(caloriesIn);
   add(
     DashboardMetric.caloriesIn,
-    title: 'Calories in',
+    title: l10n.metricCaloriesIn,
     value: caloriesInValue?.value,
     unit: caloriesInValue?.unit,
     icon: Icons.restaurant_outlined,
@@ -627,9 +677,9 @@ DashboardSummary buildDashboardSummary(
     );
   }
 
-  addGrams(DashboardMetric.protein, 'Protein', data.proteinGrams, goals.proteinGrams);
-  addGrams(DashboardMetric.carbs, 'Carbs', data.carbsGrams, goals.carbsGrams);
-  addGrams(DashboardMetric.fat, 'Fat', data.fatGrams, goals.fatGrams);
+  addGrams(DashboardMetric.protein, l10n.metricProtein, data.proteinGrams, goals.proteinGrams);
+  addGrams(DashboardMetric.carbs, l10n.metricCarbs, data.carbsGrams, goals.carbsGrams);
+  addGrams(DashboardMetric.fat, l10n.metricFat, data.fatGrams, goals.fatGrams);
 
   final caffeineConsumed = _positive(data.caffeineGrams);
   final caffeineActive = _positive(data.activeCaffeineMg);
@@ -637,7 +687,7 @@ DashboardSummary buildDashboardSummary(
       caffeineConsumed == null ? null : f.decimal(caffeineConsumed * 1000, 0);
   add(
     DashboardMetric.caffeine,
-    title: 'Caffeine',
+    title: l10n.metricCaffeine,
     // Today (activeCaffeineMg computed): the headline is the ACTIVE amount —
     // a decaying stock that carries across midnight — with consumed-today as
     // the subtitle. A past day (or PK unavailable) keeps the consumed intake.
@@ -662,7 +712,7 @@ DashboardSummary buildDashboardSummary(
   final weightValue = weight == null ? null : f.weight(weight);
   add(
     DashboardMetric.weight,
-    title: 'Weight',
+    title: l10n.metricWeight,
     value: weightValue?.value,
     unit: weightValue?.unit,
     icon: Icons.monitor_weight_outlined,
@@ -674,7 +724,7 @@ DashboardSummary buildDashboardSummary(
   final heightValue = height == null ? null : f.height(height);
   add(
     DashboardMetric.height,
-    title: 'Height',
+    title: l10n.metricHeight,
     value: heightValue?.value,
     unit: heightValue?.unit,
     icon: Icons.monitor_weight_outlined,
@@ -685,7 +735,7 @@ DashboardSummary buildDashboardSummary(
   final bmi = _positive(data.bmi);
   add(
     DashboardMetric.bmi,
-    title: 'BMI',
+    title: l10n.metricBmi,
     value: bmi == null ? null : f.decimal(bmi, 1),
     icon: Icons.monitor_weight_outlined,
     accent: AppColors.weight,
@@ -695,7 +745,7 @@ DashboardSummary buildDashboardSummary(
   final ffmi = _positive(data.ffmi);
   add(
     DashboardMetric.ffmi,
-    title: 'FFMI',
+    title: l10n.metricFfmi,
     value: ffmi == null ? null : f.decimal(ffmi, 1),
     icon: Icons.fitness_center_outlined,
     accent: AppColors.bodyFat,
@@ -705,7 +755,7 @@ DashboardSummary buildDashboardSummary(
   final bodyFat = f.percent(data.bodyFatPercent);
   addRequired(
     DashboardMetric.bodyFat,
-    title: 'Body fat',
+    title: l10n.metricBodyFat,
     value: bodyFat.value,
     unit: bodyFat.unit,
     icon: Icons.monitor_weight_outlined,
@@ -717,7 +767,7 @@ DashboardSummary buildDashboardSummary(
   final leanValue = leanMass == null ? null : f.bodyMass(leanMass);
   add(
     DashboardMetric.leanMass,
-    title: 'Lean mass',
+    title: l10n.metricLeanMass,
     value: leanValue?.value,
     unit: leanValue?.unit,
     icon: Icons.monitor_weight_outlined,
@@ -729,7 +779,7 @@ DashboardSummary buildDashboardSummary(
   final bmrValue = bmr == null ? null : f.energy(bmr);
   add(
     DashboardMetric.bmr,
-    title: 'BMR',
+    title: l10n.metricBmr,
     value: bmrValue?.value,
     unit: bmrValue?.unit,
     icon: Icons.local_fire_department_outlined,
@@ -741,7 +791,7 @@ DashboardSummary buildDashboardSummary(
   final boneValue = boneMass == null ? null : f.bodyMass(boneMass);
   add(
     DashboardMetric.boneMass,
-    title: 'Bone mass',
+    title: l10n.metricBoneMass,
     value: boneValue?.value,
     unit: boneValue?.unit,
     icon: Icons.monitor_weight_outlined,
@@ -753,7 +803,7 @@ DashboardSummary buildDashboardSummary(
   final bodyWaterValue = bodyWater == null ? null : f.bodyMass(bodyWater);
   add(
     DashboardMetric.bodyWaterMass,
-    title: 'Body water',
+    title: l10n.metricBodyWater,
     value: bodyWaterValue?.value,
     unit: bodyWaterValue?.unit,
     icon: Icons.water_drop_outlined,
@@ -765,7 +815,7 @@ DashboardSummary buildDashboardSummary(
   final avgHr = f.heartRate(data.avgHeartRateBpm);
   addRequired(
     DashboardMetric.avgHeartRate,
-    title: 'Heart rate',
+    title: l10n.metricHeartRate,
     value: avgHr.value,
     unit: avgHr.unit,
     icon: Icons.favorite_border,
@@ -776,7 +826,7 @@ DashboardSummary buildDashboardSummary(
   final restingHr = f.heartRate(data.restingHeartRateBpm);
   addRequired(
     DashboardMetric.restingHeartRate,
-    title: 'Resting HR',
+    title: l10n.cardioLoadRestingHr,
     value: restingHr.value,
     unit: restingHr.unit,
     icon: Icons.favorite_border,
@@ -788,7 +838,7 @@ DashboardSummary buildDashboardSummary(
   final hrvValue = hrv == null ? null : f.hrv(hrv);
   add(
     DashboardMetric.hrv,
-    title: 'HRV',
+    title: l10n.homeWidgetHrvShort,
     value: hrvValue?.value,
     unit: hrvValue?.unit,
     icon: Icons.favorite_border,
@@ -803,7 +853,7 @@ DashboardSummary buildDashboardSummary(
       : null;
   add(
     DashboardMetric.bloodPressure,
-    title: 'Blood pressure',
+    title: l10n.metricBloodPressure,
     value: bp?.value,
     unit: bp?.unit,
     icon: Icons.favorite_border,
@@ -816,7 +866,7 @@ DashboardSummary buildDashboardSummary(
   final spo2Value = spo2 == null ? null : f.percent(spo2);
   add(
     DashboardMetric.spo2,
-    title: 'Blood oxygen',
+    title: l10n.metricBloodOxygen,
     value: spo2Value?.value,
     unit: spo2Value?.unit,
     icon: Icons.favorite_border,
@@ -829,7 +879,7 @@ DashboardSummary buildDashboardSummary(
   final vo2Value = vo2 == null ? null : f.vo2Max(vo2);
   add(
     DashboardMetric.vo2Max,
-    title: 'VO₂ max',
+    title: l10n.metricVo2MaxShort,
     value: vo2Value?.value,
     unit: vo2Value?.unit,
     icon: Icons.directions_run_outlined,
@@ -843,7 +893,7 @@ DashboardSummary buildDashboardSummary(
       respiratory == null ? null : f.respiratoryRate(respiratory);
   add(
     DashboardMetric.respiratoryRate,
-    title: 'Respiratory rate',
+    title: l10n.metricRespiratoryRate,
     value: respiratoryValue?.value,
     unit: respiratoryValue?.unit,
     icon: Icons.favorite_border,
@@ -855,7 +905,7 @@ DashboardSummary buildDashboardSummary(
   final bodyTempValue = bodyTemp == null ? null : f.temperature(bodyTemp);
   add(
     DashboardMetric.bodyTemperature,
-    title: 'Body temperature',
+    title: l10n.metricBodyTemperature,
     value: bodyTempValue?.value,
     unit: bodyTempValue?.unit,
     icon: Icons.device_thermostat_outlined,
@@ -867,7 +917,7 @@ DashboardSummary buildDashboardSummary(
   final glucoseValue = glucose == null ? null : f.bloodGlucose(glucose);
   add(
     DashboardMetric.bloodGlucose,
-    title: 'Blood glucose',
+    title: l10n.metricBloodGlucose,
     value: glucoseValue?.value,
     unit: glucoseValue?.unit,
     icon: Icons.water_drop_outlined,
@@ -880,7 +930,7 @@ DashboardSummary buildDashboardSummary(
   final skinTempValue = skinTemp == null ? null : f.temperatureDelta(skinTemp);
   add(
     DashboardMetric.skinTemperature,
-    title: 'Skin temperature',
+    title: l10n.metricSkinTemperature,
     value: skinTempValue?.value,
     unit: skinTempValue?.unit,
     icon: Icons.device_thermostat_outlined,
@@ -893,7 +943,7 @@ DashboardSummary buildDashboardSummary(
   final mindfulness = f.minutes(data.mindfulnessMinutes ?? 0);
   addRequired(
     DashboardMetric.mindfulness,
-    title: 'Mindfulness',
+    title: l10n.metricMindfulness,
     value: mindfulness.value,
     unit: mindfulness.unit,
     icon: Icons.self_improvement_outlined,
@@ -909,9 +959,9 @@ DashboardSummary buildDashboardSummary(
   final periodDays = _positiveInt(data.menstruationPeriodDays);
   add(
     DashboardMetric.cycle,
-    title: 'Cycle',
+    title: l10n.metricCycle,
     value: periodDays == null ? null : f.count(periodDays),
-    unit: 'days',
+    unit: l10n.unitDays,
     icon: Icons.favorite_border,
     accent: AppColors.cycle,
     noDataMessage: l10n.messageCycleBrowse,
@@ -970,11 +1020,11 @@ List<StatTileData> applyDashboardTileLayout(
     );
 
 /// Sleep-score rating label, from the Kotlin `sleepScoreRatingLabel(score)`.
-String _sleepRating(int score) {
-  if (score >= 90) return 'Excellent';
-  if (score >= 80) return 'Good';
-  if (score >= 60) return 'Fair';
-  return 'Poor';
+String _sleepRating(AppLocalizations l10n, int score) {
+  if (score >= 90) return l10n.sleepScoreRatingExcellent;
+  if (score >= 80) return l10n.sleepScoreRatingGood;
+  if (score >= 60) return l10n.sleepScoreRatingFair;
+  return l10n.sleepScoreRatingPoor;
 }
 
 /// Translates a saved dashboard layout from the legacy title keys to ids.

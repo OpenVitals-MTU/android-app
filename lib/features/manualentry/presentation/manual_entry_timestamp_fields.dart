@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// Date + time picker row used by the edit paths of the body/vitals/mindfulness
 /// entry forms. Port of the Kotlin `ManualEntryTimestampFields`: two outlined
 /// buttons that open a date picker (capped at today) and a time picker, then
@@ -29,7 +31,7 @@ class ManualEntryTimestampFields extends StatelessWidget {
       children: [
         Expanded(
           child: _PickerButton(
-            label: 'Date',
+            label: AppLocalizations.of(context).manualEntryDateLabel,
             value: _dateFormat.format(current),
             icon: Icons.calendar_month_outlined,
             enabled: enabled,
@@ -39,7 +41,7 @@ class ManualEntryTimestampFields extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: _PickerButton(
-            label: 'Time',
+            label: AppLocalizations.of(context).manualEntryTimeLabel,
             value: _timeFormat.format(current),
             icon: Icons.schedule_outlined,
             enabled: enabled,

@@ -60,7 +60,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Daily readiness'), findsOneWidget);
+    expect(find.text('Daily Readiness'), findsOneWidget);
     expect(find.text('Score'), findsOneWidget);
     expect(find.byType(DataSourceEducationItem), findsOneWidget);
   });
@@ -72,7 +72,7 @@ void main() {
     await tester.pumpWidget(await _bootstrap(date: LocalDate.now()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Training'), findsOneWidget);
+    expect(find.text('Training Readiness'), findsOneWidget);
     expect(find.text('Body energy'), findsNothing);
   });
 

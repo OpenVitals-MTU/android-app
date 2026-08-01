@@ -103,28 +103,28 @@ class _CaffeinePreferencesCardState
               ),
               const SizedBox(height: 8),
               _NumberField(
-                label: 'Half-life',
+                label: l10n.caffeineHalfLifeLabel,
                 suffix: 'min',
                 controller: _halfLifeController,
                 onValue: (value) =>
                     updateDraft(draft.copyWith(halfLifeMinutes: value)),
               ),
               _NumberField(
-                label: 'Absorption',
+                label: l10n.caffeineAbsorptionLabel,
                 suffix: 'min',
                 controller: _absorptionController,
                 onValue: (value) =>
                     updateDraft(draft.copyWith(absorptionMinutes: value)),
               ),
               _NumberField(
-                label: 'Sleep threshold',
+                label: l10n.caffeineSleepThreshold,
                 suffix: 'mg',
                 controller: _sleepThresholdController,
                 onValue: (value) =>
                     updateDraft(draft.copyWith(sleepThresholdMg: value)),
               ),
               _TimeField(
-                label: 'Bedtime',
+                label: l10n.caffeineBedtimeLabel,
                 controller: _bedtimeController,
                 onValue: (value) =>
                     updateDraft(draft.copyWith(bedtime: value)),
@@ -132,7 +132,7 @@ class _CaffeinePreferencesCardState
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Effective half-life '
+                  '${l10n.caffeineEffectiveHalfLife} '
                   '${draft.effectiveHalfLifeMinutes(bodyProfile)} min',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant),

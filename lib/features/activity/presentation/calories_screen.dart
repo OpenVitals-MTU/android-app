@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../ui/charts/chart_skeleton.dart';
 import '../../../ui/theme/chart_tokens.dart';
 
@@ -67,7 +68,7 @@ class _CaloriesScreenState extends ConsumerState<CaloriesScreen> {
     final syncPaused = !ref.watch(healthConnectSyncEnabledProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calories')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).screenCalories)),
       body: HealthConnectGate(
         requiredPermissions: {
           HcPermissions.readTotalCalories,
@@ -87,7 +88,7 @@ class _CaloriesScreenState extends ConsumerState<CaloriesScreen> {
           weekPeriodMode: weekMode,
           syncPaused: syncPaused,
           onSelectionChanged: (selection) => notifier.load(selection),
-          content: (period) => _content(state, formatter, period, weekMode),
+          content: (period) => _content(context, state, formatter, period, weekMode),
         ),
       ),
     );
@@ -95,6 +96,7 @@ class _CaloriesScreenState extends ConsumerState<CaloriesScreen> {
 }
 
 List<Widget> _content(
+  BuildContext context,
   CaloriesState state,
   UnitFormatter formatter,
   DatePeriod period,
@@ -107,14 +109,14 @@ List<Widget> _content(
         ChartSkeleton(shape: ChartSkeletonShape.bars, height: kChartHeightPeriodBar),
       ];
     }
-    return const [
+    return [
       Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: MetricCardPlaceholder(
-          title: 'Calories',
+          title: AppLocalizations.of(context).screenCalories,
           icon: Icons.local_fire_department_outlined,
           accentColor: Colors.redAccent,
-          message: 'No calories data for this period.',
+          message: AppLocalizations.of(context).messageNoCaloriesPeriod,
         ),
       ),
     ];
@@ -141,12 +143,12 @@ List<Widget> _content(
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: MetricCard(
-          title: 'Basal metabolic rate',
+          title: AppLocalizations.of(context).settingsCsvImportMetricBasalMetabolicRate,
           value: formatter.energy(state.latestBmrKcal!).value,
           unit: 'kcal/day',
           icon: Icons.bolt_outlined,
           accentColor: Colors.orange,
-          subtitle: 'Latest resting energy expenditure',
+          subtitle: AppLocalizations.of(context).caloriesBmrSubtitle,
         ),
       ),
   ];

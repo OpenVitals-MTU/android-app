@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../core/presentation/reference_link.dart';
 import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
@@ -69,7 +70,7 @@ class _TrainingReadinessDetailsScreenState
     final notifier = ref.read(trainingReadinessDetailsProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Training Readiness')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).screenTrainingReadiness)),
       body: HealthConnectGate(
         requiredPermissions: {
           HcPermissions.readHeartRate,
@@ -144,6 +145,7 @@ class _Content extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final signals = display.signals;
     final guidance = display.guidance;
 
@@ -169,33 +171,24 @@ class _Content extends StatelessWidget {
           score: display.score,
           verdict: display.verdict,
           confidence: display.confidence,
-          summary:
-              'A training-side score for how well current recovery and load '
-              'signals support exercise intensity.',
+          summary: l10n.trainingReadinessDetailsSummary,
         ),
       ),
-      const _CardPad(
+      _CardPad(
         child: _ExplanationCard(
-          body: 'Training Readiness uses training-side signals: sleep, HRV '
-              'status, resting heart rate, training load, intensity minutes, '
-              'physiological stress, temperature, and activity context. It '
-              'estimates whether harder training fits today.',
-          scale: 'Scale: 80-100 ready for hard training, 60-79 controlled '
-              'training, 40-59 light training, 0-39 rest-focused.',
+          body: l10n.trainingReadinessDetailsHowCalculatedBody,
+          scale: l10n.trainingReadinessDetailsScale,
         ),
       ),
-      _CardPad(child: _ListCard(title: 'Signals used', items: signals)),
-      _CardPad(child: _ListCard(title: 'What this means', items: guidance)),
-      const _CardPad(
+      _CardPad(child: _ListCard(title: l10n.readinessDetailsSignalsUsed, items: signals)),
+      _CardPad(child: _ListCard(title: l10n.readinessDetailsGuidance, items: guidance)),
+      _CardPad(
         child: _ListCard(
-          title: 'Caveats',
+          title: l10n.readinessDetailsCaveats,
           items: [
-            'This is a local rule-based estimate from the data currently '
-                'available in OpenVitals.',
-            'It is not a diagnosis, medical advice, coaching, or injury '
-                'prediction.',
-            'Missing permissions, sparse samples, or missing baselines lower '
-                'confidence.',
+            l10n.readinessDetailsCaveatLocal,
+            l10n.readinessDetailsCaveatNotMedical,
+            l10n.readinessDetailsCaveatMissingData,
           ],
         ),
       ),
@@ -259,7 +252,7 @@ class _ScoreCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Training Readiness',
+                      Text(AppLocalizations.of(context).screenTrainingReadiness,
                           style: theme.textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600)),
                       Text(confidence,
@@ -308,7 +301,7 @@ class _ExplanationCard extends StatelessWidget {
                 Icon(Icons.info_outline,
                     color: theme.colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
-                Text('How this is calculated',
+                Text(AppLocalizations.of(context).readinessDetailsHowCalculated,
                     style: theme.textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.w600)),
               ],
@@ -431,17 +424,17 @@ class _SourcesCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Backed links',
+              AppLocalizations.of(context).readinessReferencesTitle,
               style: theme.textTheme.titleSmall
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            const ReferenceLinkButton(
-              title: 'Multidimensional sleep health',
+            ReferenceLinkButton(
+              title: AppLocalizations.of(context).sleepScoreReferenceSleepHealth,
               url: _readinessSleepUrl,
             ),
-            const ReferenceLinkButton(
-              title: 'Banister TRIMP training load',
+            ReferenceLinkButton(
+              title: AppLocalizations.of(context).cardioLoadReferenceBanister,
               url: _readinessTrainingLoadUrl,
             ),
           ],

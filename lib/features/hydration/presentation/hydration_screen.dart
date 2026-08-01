@@ -49,7 +49,7 @@ class HydrationScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hydration'),
+        title: Text(AppLocalizations.of(context).hydrationTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -99,12 +99,12 @@ List<Widget> _content(
     return [
       sectionPadded(
         MetricCardPlaceholder(
-          title: 'Hydration',
+          title: AppLocalizations.of(context).hydrationTitle,
           icon: Icons.local_drink_outlined,
           accentColor: AppColors.hydration,
           message: entries.isEmpty
-              ? 'No hydration logged for this period.'
-              : 'No hydration added for this period.',
+              ? AppLocalizations.of(context).messageNoHydrationLoggedPeriod
+              : AppLocalizations.of(context).messageNoHydrationAddedPeriod,
         ),
       ),
       // Reminders are configurable with no data logged yet — that is exactly
@@ -131,21 +131,22 @@ List<Widget> _content(
         children: [
           Expanded(
             child: MetricCard(
-              title: 'Total hydration',
+              title: AppLocalizations.of(context).metricTotalHydration,
               value: total.value,
               unit: total.unit,
               icon: Icons.local_drink_outlined,
               accentColor: AppColors.hydration,
               subtitle:
-                  'Daily average ${formatter.hydration(summary.averageLiters).text}',
+                  '${AppLocalizations.of(context).statDailyAverage} '
+                  '${formatter.hydration(summary.averageLiters).text}',
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: MetricCard(
-              title: 'Logged days',
+              title: AppLocalizations.of(context).metricLoggedDays,
               value: formatter.count(summary.trackedDays),
-              unit: 'days',
+              unit: AppLocalizations.of(context).unitDays,
               icon: Icons.local_drink_outlined,
               accentColor: AppColors.hydration,
               subtitle: '${formatter.count(summary.loggedDays)} in range',
@@ -168,7 +169,7 @@ List<Widget> _content(
               formatter: formatter,
             )
           : MetricBarChart(
-              title: 'Hydration',
+              title: AppLocalizations.of(context).hydrationTitle,
               values: display.chartValues,
               selectedRange: state.selectedRange,
               period: period,
@@ -187,7 +188,7 @@ List<Widget> _content(
       sectionPadded(
         HydrationDrinkBreakdownCard(display: display, formatter: formatter),
       ),
-    const SectionHeader('Statistics'),
+    SectionHeader(AppLocalizations.of(context).sectionStatistics),
     sectionPadded(
       _HydrationStatisticsCard(summary: summary, formatter: formatter),
     ),
@@ -238,7 +239,7 @@ class _HydrationGoalCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Daily goal', style: theme.textTheme.titleSmall),
+                      Text(AppLocalizations.of(context).hydrationDailyGoal, style: theme.textTheme.titleSmall),
                       Text(
                         '${summary.goalMetDays} of ${summary.elapsedDays} days met',
                         style: theme.textTheme.bodySmall
@@ -307,7 +308,7 @@ class HydrationDrinkBreakdownCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Drink breakdown', style: theme.textTheme.titleSmall),
+            Text(AppLocalizations.of(context).hydrationDrinkBreakdown, style: theme.textTheme.titleSmall),
             for (final slice in slices)
               Padding(
                 padding: const EdgeInsets.only(top: 10),

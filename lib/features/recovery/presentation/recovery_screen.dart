@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../core/presentation/refresh_on_signal.dart';
 import '../../../core/presentation/screen_error.dart';
 import '../../../core/time/local_date.dart';
@@ -61,7 +62,7 @@ class _StressDetailsScreenState extends ConsumerState<StressDetailsScreen>
     final notifier = ref.read(recoveryProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Stress')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).settingsWatchMetricStress)),
       body: HealthConnectGate(
         requiredPermissions: {
           HcPermissions.readHeartRate,
@@ -127,7 +128,7 @@ class _StressBody extends StatelessWidget {
         _CardPad(child: _StressExplanationCard(stress: stress)),
         _CardPad(
           child: _StressListCard(
-            title: 'Inputs',
+            title: AppLocalizations.of(context).stressDetailsInputs,
             items: stress.contributingFactors.isEmpty
                 ? const ['No stress inputs are available for this day.']
                 : stress.contributingFactors,
@@ -135,14 +136,14 @@ class _StressBody extends StatelessWidget {
         ),
         _CardPad(
           child: _StressListCard(
-            title: 'Data coverage',
+            title: AppLocalizations.of(context).stressDetailsDataCoverage,
             items: stress.dataCoverage.isEmpty
                 ? const ['No same-day sample coverage was available.']
                 : stress.dataCoverage,
           ),
         ),
         _CardPad(
-          child: _StressListCard(title: 'Caveats', items: stress.caveats),
+          child: _StressListCard(title: AppLocalizations.of(context).stressDetailsCaveats, items: stress.caveats),
         ),
         const DataSourceEducationItem(),
       ] else
@@ -200,7 +201,7 @@ class _StressScoreCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Stress tracking',
+                      Text(AppLocalizations.of(context).screenStressTracking,
                           style: theme.textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600)),
                       Text(_confidenceText(stress),
@@ -252,7 +253,7 @@ class _StressExplanationCard extends StatelessWidget {
               children: [
                 Icon(Icons.info_outline, size: 20, color: scheme.primary),
                 const SizedBox(width: 8),
-                Text('How this is tracked',
+                Text(AppLocalizations.of(context).stressDetailsHowTracked,
                     style: theme.textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.w600)),
               ],
