@@ -118,6 +118,68 @@ void main() {
       expect(axis.max, 14 * 60);
     });
 
+    test('one impossible night does not stretch the axis past a day', () {
+      // Reported on a monthly chart (issue: 36-hour sleep chart). A single
+      // record running 09:00 to 08:00 the NEXT morning still starts inside the
+      // 18:00-10:00 window, so it reaches the chart; normalised it lands at 2280
+      // anchored minutes and dragged the range to ~32 hours, wrapping past
+      // midnight twice and flattening every real night.
+      final days = [
+        SleepScheduleDay(
+          date: LocalDate(2026, 7, 5),
+          inBedStart: at(5, 0, 16),
+          inBedEnd: at(5, 6, 29),
+        ),
+        SleepScheduleDay(
+          date: LocalDate(2026, 7, 6),
+          inBedStart: at(6, 9, 0),
+          inBedEnd: at(7, 8, 0), // ~23 h in bed: not a night, a bad record
+        ),
+        SleepScheduleDay(
+          date: LocalDate(2026, 7, 7),
+          inBedStart: at(7, 23, 40),
+          inBedEnd: at(8, 7, 10),
+        ),
+      ];
+
+      final axis = scheduleAxisRange(days)!;
+
+      // Scaled by the two real nights only: 23:40 -> anchored 340, floored to
+      // 300; 07:10 -> anchored 790, ceiled to 840.
+      expect(axis.min, 5 * 60);
+      expect(axis.max, 14 * 60);
+      expect(axis.span, lessThan(kMinutesPerDay));
+    });
+
+    test('a long but possible lie-in still counts', () {
+      // The guard rejects the impossible, not the merely unusual: 14 h in bed is
+      // a real thing a person can do and must still set the scale.
+      final days = [
+        SleepScheduleDay(
+          date: LocalDate(2026, 7, 5),
+          inBedStart: at(4, 20, 0),
+          inBedEnd: at(5, 10, 0),
+        ),
+      ];
+
+      final axis = scheduleAxisRange(days)!;
+      expect(axis.min, 2 * 60); // 20:00 -> anchored 120
+      expect(axis.max, 16 * 60); // 10:00 -> anchored 960
+    });
+
+    test('is null when every night is impossible', () {
+      // Nothing plausible to scale by: the caller falls back to the duration
+      // bar chart rather than drawing a nonsense axis.
+      final days = [
+        SleepScheduleDay(
+          date: LocalDate(2026, 7, 6),
+          inBedStart: at(6, 9, 0),
+          inBedEnd: at(7, 8, 0),
+        ),
+      ];
+      expect(scheduleAxisRange(days), isNull);
+    });
+
     test('label ticks are hourly, thinning to two-hourly over eight hours', () {
       const short = ScheduleAxis(min: 240, max: 600); // 6 h
       expect(short.labelMinutes(), [240, 300, 360, 420, 480, 540, 600]);
@@ -219,6 +281,27 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Sleep'), findsOneWidget);
       expect(find.text('Avg 7.8h · 2 nights'), findsOneWidget);
+    });
+
+    testWidgets('an impossible night still renders, it just does not scale',
+        (tester) async {
+      // The axis leaves a >16 h record out of its range so it cannot flatten the
+      // chart, but the bar is still painted (clipped to the canvas by `yFor`).
+      // Dropping it would hide that the day has any data at all.
+      await pumpChart(tester, [
+        SleepScheduleDay(
+          date: LocalDate(2026, 7, 5),
+          inBedStart: at(5, 23),
+          inBedEnd: at(6, 7),
+        ),
+        SleepScheduleDay(
+          date: LocalDate(2026, 7, 6),
+          inBedStart: at(6, 9),
+          inBedEnd: at(7, 8),
+        ),
+      ]);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Sleep'), findsOneWidget);
     });
 
     testWidgets('tapping a night reports that night, not its neighbour',

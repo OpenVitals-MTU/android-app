@@ -71,21 +71,43 @@ class ScheduleAxis {
   }
 }
 
+/// Longest in-bed window a single night may contribute to the axis.
+///
+/// A night is collected inside the sleep window — 18:00 to 10:00 by default —
+/// so 16 h is as wide as one can legitimately be. Beyond that it is not a long
+/// night, it is a bad record, and one was enough to set the scale for a whole
+/// month: a session running 09:00 to 08:00 the next morning still STARTS inside
+/// the window, so it reached the chart, and normalised to 2280 anchored minutes
+/// it stretched the range to ~32 hours — wrapping past midnight twice and
+/// flattening every real night into a sliver.
+///
+/// Only the axis applies this. The night itself is summarised elsewhere and is
+/// not second-guessed here; this is about what gets to decide the scale.
+const double kMaxNightSpanMinutes = 16 * 60;
+
 /// Kotlin `scheduleAxisRange`. Null when no night has an in-bed window, which is
 /// the caller's signal to fall back to the duration bar chart.
+///
+/// Nights spanning [kMaxNightSpanMinutes] or more are left out of the range.
+/// They are still DRAWN — the painter clips them to the axis — because dropping
+/// a bar would hide that the day has data at all; they simply do not get to
+/// decide the scale for every other night.
 ScheduleAxis? scheduleAxisRange(List<SleepScheduleDay> days) {
   var min = double.maxFinite;
   var max = -double.maxFinite;
+  var sawPlausibleNight = false;
   for (final day in days) {
     final start = day.inBedStart;
     final end = day.inBedEnd;
     if (start == null || end == null) continue;
     final startMinute = anchoredMinutes(start);
     final endMinute = normalizedEndMinutes(start, end);
+    if (endMinute - startMinute >= kMaxNightSpanMinutes) continue;
+    sawPlausibleNight = true;
     if (startMinute < min) min = startMinute;
     if (endMinute > max) max = endMinute;
   }
-  if (min == double.maxFinite || max <= min) return null;
+  if (!sawPlausibleNight || max <= min) return null;
   // Pad to whole hours so the top and bottom gridlines frame the bars.
   return ScheduleAxis(
     min: (min / 60.0).floorToDouble() * 60.0,
