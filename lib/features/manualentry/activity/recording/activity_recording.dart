@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../../domain/insights/route_elevation.dart';
 import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import '../../../../domain/preferences/activity_recording_dashboard_layout.dart';
@@ -276,8 +277,16 @@ abstract class ActivityRecordingState with _$ActivityRecordingState {
     ];
   }
 
-  double displayElevationGainedMeters() =>
-      hasBarometerElevation ? barometerElevationGainedMeters : elevationGainedMeters;
+  /// Elevation gain to show while recording — and the same figure that will be
+  /// saved, so the dashboard cannot disagree with the review screen.
+  ///
+  /// [elevationGainedMeters] is a running sum of raw per-point rises and is NOT
+  /// used: GPS vertical noise makes it wildly high (a real 750 m climb reported
+  /// 15 km). The route is re-derived through the smoothing + hysteresis filter
+  /// instead. The barometer figure is already filtered and wins when present.
+  double displayElevationGainedMeters() => hasBarometerElevation
+      ? barometerElevationGainedMeters
+      : routeElevationGain(points);
 
   List<ActivityRecordingLap> closedManualLaps(DateTime endTime) {
     if (manualLaps.isEmpty) return const [];

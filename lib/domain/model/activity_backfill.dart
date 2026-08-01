@@ -1,5 +1,6 @@
 import '../../core/geo/geo_distance.dart';
 import '../insights/activity_splits.dart';
+import '../insights/route_elevation.dart';
 import 'activity_models.dart';
 import 'exercise_session_metrics.dart';
 import 'heart_models.dart';
@@ -7,7 +8,6 @@ import '../../core/stats/stats.dart';
 
 const double _minBackfillDistanceMeters = 1.0;
 const double _minBackfillElevationMeters = 1.0;
-const double _minBackfillElevationDeltaMeters = 1.0;
 
 extension ActivityBackfill on ExerciseData {
   ExerciseData withRouteBackfilledMetrics() {
@@ -158,16 +158,15 @@ _RouteBackfillMetrics _routeBackfillMetrics(List<ExerciseRoutePoint> points) {
     final end = sorted[index + 1];
     distanceMeters += _distanceMetersTo(start, end);
 
-    final startAltitude = start.altitudeMeters;
-    final endAltitude = end.altitudeMeters;
-    if (startAltitude != null && endAltitude != null) {
+    if (start.altitudeMeters != null && end.altitudeMeters != null) {
       altitudePairCount += 1;
-      final gain = endAltitude - startAltitude;
-      if (gain >= _minBackfillElevationDeltaMeters) {
-        elevationGainMeters += gain;
-      }
     }
   }
+
+  // Gain is computed over the WHOLE route, not per pair: GPS vertical noise is
+  // larger than any sane per-pair threshold, so summing pairwise rises banked
+  // kilometres of phantom climb on flat routes.
+  elevationGainMeters = routeElevationGain(sorted);
 
   return _RouteBackfillMetrics(
     distanceMeters: distanceMeters.isFinite ? distanceMeters : 0.0,

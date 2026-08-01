@@ -12,6 +12,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 import '../../../../core/presentation/unit_formatter.dart';
 import '../../../../data/prefs/preferences_repository.dart';
+import '../../../../domain/insights/route_elevation.dart';
 import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import '../../../../domain/preferences/activity_recording_dashboard_layout.dart';
@@ -806,9 +807,13 @@ class ActivityRecordingService implements ActivityRecordingController {
       manualLaps: manualLaps,
       markers: current.markers,
       distanceMeters: current.distanceMeters,
+      // The barometer figure is already noise-filtered. The GPS one is NOT
+      // accumulated safely point-by-point, so recompute it over the whole route
+      // with the smoothing + hysteresis filter rather than trusting the running
+      // total: summing raw per-point rises inflated a real 750 m climb to 15 km.
       elevationGainedMeters: current.hasBarometerElevation
           ? current.barometerElevationGainedMeters
-          : current.elevationGainedMeters,
+          : routeElevationGain(current.points),
       repetitionCount: current.repetitionCount,
       repetitionSets: repetitionSets,
       bleSamples: bleSamples,

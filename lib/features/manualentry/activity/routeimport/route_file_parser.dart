@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:xml/xml.dart';
 
 import '../../../../core/geo/geo_distance.dart';
+import '../../../../domain/insights/route_elevation.dart';
 import '../../../../domain/model/activity_models.dart';
 import '../../../../domain/model/ble_sensor_models.dart';
 import '../../../activity/maps/route_geometry.dart';
@@ -325,18 +326,12 @@ double routeDistanceMeters(List<ExerciseRoutePoint> points) {
   return total;
 }
 
-double routeElevationGainMeters(List<ExerciseRoutePoint> points) {
-  var total = 0.0;
-  for (var i = 0; i + 1 < points.length; i++) {
-    final startAltitude = points[i].altitudeMeters;
-    final endAltitude = points[i + 1].altitudeMeters;
-    if (startAltitude != null && endAltitude != null) {
-      final delta = endAltitude - startAltitude;
-      total += delta > 0.0 ? delta : 0.0;
-    }
-  }
-  return total;
-}
+/// Cumulative ascent over an imported route.
+///
+/// Delegates to [routeElevationGain], which filters GPS vertical noise. Summing
+/// raw positive differences here reported kilometres of climb for flat routes.
+double routeElevationGainMeters(List<ExerciseRoutePoint> points) =>
+    routeElevationGain(points);
 
 const int minRoutePoints = 2;
 const int maxRouteFileBytes = 15 * 1024 * 1024;

@@ -66,17 +66,17 @@ void main() {
           _routePoint(
               seconds: 0, latitude: 0.0, longitude: 0.0, altitudeMeters: 10.0),
           _routePoint(
-              seconds: 60, latitude: 0.0, longitude: 0.01, altitudeMeters: 12.0),
+              seconds: 60, latitude: 0.0, longitude: 0.01, altitudeMeters: 40.0),
           _routePoint(
               seconds: 120,
               latitude: 0.01,
               longitude: 0.01,
-              altitudeMeters: 11.0),
+              altitudeMeters: 35.0),
           _routePoint(
               seconds: 180,
               latitude: 0.01,
               longitude: 0.02,
-              altitudeMeters: 14.5),
+              altitudeMeters: 80.0),
         ],
       ),
     );
@@ -84,7 +84,9 @@ void main() {
     final result = workout.withRouteBackfilledMetrics();
 
     expect(result.totalDistanceMeters ?? 0.0, closeTo(3335.85, 0.1));
-    expect(result.elevationGainedMeters ?? 0.0, closeTo(5.5, 0.001));
+    // 10 -> 40 -> 35 -> 80. The dip is real and larger than the noise floor, so
+    // only the two ascents count: 30 + 40.
+    expect(result.elevationGainedMeters ?? 0.0, closeTo(70.0, 0.001));
   });
 
   test('route backfill replaces empty zero summaries with route values', () {
@@ -97,7 +99,7 @@ void main() {
           _routePoint(
               seconds: 0, latitude: 0.0, longitude: 0.0, altitudeMeters: 10.0),
           _routePoint(
-              seconds: 60, latitude: 0.0, longitude: 0.01, altitudeMeters: 13.0),
+              seconds: 60, latitude: 0.0, longitude: 0.01, altitudeMeters: 90.0),
         ],
       ),
     );
@@ -105,7 +107,7 @@ void main() {
     final result = workout.withRouteBackfilledMetrics();
 
     expect(result.totalDistanceMeters ?? 0.0, closeTo(1111.95, 0.1));
-    expect(result.elevationGainedMeters ?? 0.0, closeTo(3.0, 0.001));
+    expect(result.elevationGainedMeters ?? 0.0, closeTo(80.0, 0.001));
   });
 
   test('route backfill preserves recorded summaries', () {
@@ -118,7 +120,7 @@ void main() {
           _routePoint(
               seconds: 0, latitude: 0.0, longitude: 0.0, altitudeMeters: 10.0),
           _routePoint(
-              seconds: 60, latitude: 0.0, longitude: 0.01, altitudeMeters: 13.0),
+              seconds: 60, latitude: 0.0, longitude: 0.01, altitudeMeters: 90.0),
         ],
       ),
     );
