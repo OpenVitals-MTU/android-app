@@ -144,6 +144,43 @@ void main() {
     expect(mark.caloriesByType, isEmpty);
   });
 
+  test('the open-bucket seed values survive a round trip', () async {
+    await setUpStore();
+    await store.save({
+      '2026-07-31': FitCounterWatermark(
+        time: DateTime(2026, 7, 31, 9, 20),
+        steps: 3400,
+        stepsByType: const {6: 3400},
+        openBucketSteps: 120,
+        openBucketDistance: 9500,
+        openBucketCalories: 8,
+      ),
+    });
+
+    final mark = GarminCounterWatermarkStore(prefs).load()['2026-07-31']!;
+    expect(mark.openBucketSteps, 120);
+    expect(mark.openBucketDistance, 9500);
+    expect(mark.openBucketCalories, 8);
+  });
+
+  test('a line from before the open-bucket seeds loads them as zero', () async {
+    // Correct, not merely tolerated: those versions withheld the open bucket,
+    // so there is nothing already written for the seed to restate.
+    SharedPreferences.setMockInitialValues(const {
+      'garmin_counter_watermarks': <String>[
+        '2026-07-30|1753822800000|3400|0|0|1|6:3400|-|-',
+      ],
+    });
+    prefs = await SharedPreferences.getInstance();
+    store = GarminCounterWatermarkStore(prefs);
+
+    final mark = store.load()['2026-07-30']!;
+    expect(mark.stepsByType, {6: 3400});
+    expect(mark.openBucketSteps, 0);
+    expect(mark.openBucketDistance, 0);
+    expect(mark.openBucketCalories, 0);
+  });
+
   test('a line from before the maps loads with them null, and stays null',
       () async {
     // Null is "types unknowable", an empty map is "no types" — the mapper

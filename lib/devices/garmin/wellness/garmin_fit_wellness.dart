@@ -58,7 +58,15 @@ class FitHrvReading {
 }
 
 /// [FitMonitoringPoint.activityType] for a counter whose message named no
-/// activity, and which followed no message that did.
+/// activity — neither `activity_type` (5) nor `current_activity_type_intensity`
+/// (24).
+///
+/// Message-local on purpose, matching Gadgetbridge's `getComputedActivityType`:
+/// FIT fields are fixed per definition message, so a counter record without a
+/// type field is untyped by design, not an abbreviation of the previous
+/// message's type. Inheriting the last-declared type stamped whole-day-total
+/// restatements with whatever type happened to come before them, and a total
+/// landing on a small type's context minted the difference as fresh steps.
 ///
 /// Deliberately outside FIT's `activity_type` enum: it is not a kind of
 /// activity, it is the absence of one, and the day-total sum has to be able to
@@ -792,9 +800,6 @@ class _GarminWellnessInterpreter {
   // Monitoring high-frequency series, and the running full timestamp used to
   // reconstruct each message's `timestamp_16`.
   int? _monLastTimestampRaw;
-  // The last-declared activity type, carried forward: the cumulative-counter
-  // messages don't repeat it, they inherit the context set by an earlier message.
-  int? _monCurrentActivityType;
   final List<(DateTime, int)> _monHeartRate = [];
   final List<(DateTime, double)> _respiration = [];
   final List<(DateTime, int)> _stress = [];
@@ -1140,12 +1145,10 @@ class _GarminWellnessInterpreter {
       _monHeartRate.add((time, hr));
     }
     final intensityByte = values[_fitMonitoringActivityTypeIntensityFieldNumber];
-    final declaredType = values[_fitMonitoringActivityTypeFieldNumber] ??
+    final activityType = values[_fitMonitoringActivityTypeFieldNumber] ??
         (intensityByte != null
             ? intensityByte & _fitMonitoringActivityTypeMask
-            : null);
-    if (declaredType != null) _monCurrentActivityType = declaredType;
-    final activityType = _monCurrentActivityType ?? unknownFitActivityType;
+            : unknownFitActivityType);
     final steps = values[_fitMonitoringStepsFieldNumber];
     if (steps != null) {
       _monSteps.add(FitMonitoringPoint(

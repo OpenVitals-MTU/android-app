@@ -42,11 +42,16 @@ class GarminCounterWatermarkStore {
       // day's steps or write them twice, and re-importing from the day's start
       // is the safer of the two mistakes.
       //
-      // Five/six fields are the older forms, kept readable rather than
-      // dropped. Five predates [FitCounterWatermark.legacyRetired]; both
-      // predate the per-type maps, which load as null so the mapper adopts
-      // their types silently instead of re-counting them.
-      if (parts.length != 5 && parts.length != 6 && parts.length != 9) {
+      // Five/six/nine fields are the older forms, kept readable rather than
+      // dropped. Five predates [FitCounterWatermark.legacyRetired]; five and
+      // six predate the per-type maps, which load as null so the mapper adopts
+      // their types silently instead of re-counting them. Nine predates the
+      // open-bucket seed values, which load as zero — correct, because those
+      // versions never wrote the open bucket.
+      if (parts.length != 5 &&
+          parts.length != 6 &&
+          parts.length != 9 &&
+          parts.length != 12) {
         continue;
       }
       final timeMs = int.tryParse(parts[1]);
@@ -78,10 +83,18 @@ class GarminCounterWatermarkStore {
         return types;
       }
 
-      final stepsByType = parts.length == 9 ? decodeTypes(parts[6]) : null;
-      final distanceByType = parts.length == 9 ? decodeTypes(parts[7]) : null;
-      final caloriesByType = parts.length == 9 ? decodeTypes(parts[8]) : null;
-      if (!readable) continue;
+      final stepsByType = parts.length >= 9 ? decodeTypes(parts[6]) : null;
+      final distanceByType = parts.length >= 9 ? decodeTypes(parts[7]) : null;
+      final caloriesByType = parts.length >= 9 ? decodeTypes(parts[8]) : null;
+      final openSteps = parts.length == 12 ? int.tryParse(parts[9]) : 0;
+      final openDistance = parts.length == 12 ? int.tryParse(parts[10]) : 0;
+      final openCalories = parts.length == 12 ? int.tryParse(parts[11]) : 0;
+      if (!readable ||
+          openSteps == null ||
+          openDistance == null ||
+          openCalories == null) {
+        continue;
+      }
       marks[parts[0]] = FitCounterWatermark(
         time: DateTime.fromMillisecondsSinceEpoch(timeMs),
         steps: steps,
@@ -90,6 +103,9 @@ class GarminCounterWatermarkStore {
         stepsByType: stepsByType,
         distanceByType: distanceByType,
         caloriesByType: caloriesByType,
+        openBucketSteps: openSteps,
+        openBucketDistance: openDistance,
+        openBucketCalories: openCalories,
         legacyRetired: parts.length >= 6 && parts[5] == '1',
       );
     }
@@ -120,7 +136,10 @@ class GarminCounterWatermarkStore {
             '|${merged[day]!.legacyRetired ? 1 : 0}'
             '|${encodeTypes(merged[day]!.stepsByType)}'
             '|${encodeTypes(merged[day]!.distanceByType)}'
-            '|${encodeTypes(merged[day]!.caloriesByType)}',
+            '|${encodeTypes(merged[day]!.caloriesByType)}'
+            '|${merged[day]!.openBucketSteps}'
+            '|${merged[day]!.openBucketDistance}'
+            '|${merged[day]!.openBucketCalories}',
     ]);
   }
 

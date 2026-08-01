@@ -326,15 +326,35 @@ zeroes the one it left (note generic above: 709 m of distance and 6181 s of
 active time with no steps at all, its step count having gone to walking). Taking
 per-bucket peaks kept the abandoned peak and added it to the bucket that
 inherited it: 24,724 steps on the wrist reached Health Connect as 49,448, exactly
-twice. A counter naming no `activity_type`, and following none that did, is not a
-bucket of its own either — unless the file names no type anywhere, where it IS
-the total.
+twice. A counter naming no `activity_type` is not a bucket of its own either —
+unless the file names no type anywhere, where it IS the total.
+
+**The type is message-local, never inherited.** FIT fields are fixed per
+definition message, so a counter record whose definition carries no
+`activity_type` (5) or `current_activity_type_intensity` (24) is untyped by
+design — it is the whole-day restatement above, not an abbreviation of the
+previous message's type. The decoder used to carry the last declared type
+forward onto it; a day total landing on one type's context minted the
+difference as fresh movement. Gadgetbridge's `getComputedActivityType` is
+message-local for the same reason.
 
 **Records are intraday differences, not one total per day.** A single record per
 day says how far you walked and never when, so Health Connect draws the day as
 one straight ramp from midnight. Consecutive snapshots are differenced instead,
 one record per interval the counter actually moved in (`garmin_fit_steps_<start
 epoch ms>`), zero-difference intervals writing nothing.
+
+**The bucket a sync stops inside is written half-filled, then rewritten in
+full.** A bucket's id is a pure function of the clock, so the next sync
+recomputes the whole bucket — the already-written amounts the watermark kept
+(`openBucket*`) plus the new movement — and the upsert replaces the half with
+the whole. Withholding the still-filling bucket for the next sync to finish,
+as this used to, silently dropped the FINAL bucket of every day: the next
+sync's points belong to the next day and never come back to close it, so the
+day's last minutes either vanished or, when the day's own file was gone by the
+next sync, leaked into the following day's first bucket. This is
+Gadgetbridge's shape — cumulative rows keyed by timestamp, insert-or-replace —
+translated to a sink that stores differences.
 
 **The seam between files needs a watermark — a per-type one.** Each file holds
 only the minutes since the last sync, so the steps between one sync's last

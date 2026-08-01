@@ -208,6 +208,49 @@ void main() {
       expect(records.whereType<StepsImportRecord>(), isEmpty);
     });
 
+    test('a typed message does not lend its type to the untyped one after it',
+        () {
+      // FIT fields are fixed per definition message, so a counter record whose
+      // definition carries no activity_type is untyped by design — on the
+      // watch it restates the whole day. Inheriting the last declared type
+      // (as the decoder used to) landed that total on one type's context, and
+      // the difference walked into Health Connect as fresh steps.
+      final data = _W()..def(3, 0, [
+        [0, 1, 0x00]
+      ]);
+      data
+        ..u8(3)
+        ..u8(32); // file_id type 32
+      data.def(4, 55, [
+        [253, 4, 0x86],
+        [5, 1, 0x00],
+        [3, 4, 0x86],
+      ]);
+      data
+        ..u8(4)
+        ..u32(_fitTimestamp(DateTime.utc(2024, 1, 18, 12)))
+        ..u8(6) // walking
+        ..u32(500);
+      data.def(2, 55, [
+        [253, 4, 0x86],
+        [3, 4, 0x86],
+      ]);
+      data
+        ..u8(2)
+        ..u32(_fitTimestamp(DateTime.utc(2024, 1, 18, 12, 1)))
+        ..u32(620); // the day's total, restated with no type of its own
+      final m = parseGarminWellness(_wrap(data.toBytes())).monitoring!;
+
+      expect(m.stepPoints, hasLength(2));
+      expect(m.stepPoints[0].activityType, 6);
+      expect(m.stepPoints[1].activityType, unknownFitActivityType);
+
+      // ...which lets the mapper's untyped rule drop the restatement instead
+      // of minting 620 - 500 = 120 steps that were never taken.
+      final import = fitMonitoringCounterRecords(fitMonitoringCounters(m));
+      expect(_stepsTotal(import), 500);
+    });
+
     test('a day of counters becomes intraday records, not one flat total', () {
       // One record per day said how far you walked and never when, so Health
       // Connect drew the day as a straight ramp from midnight to now. The watch
@@ -283,6 +326,62 @@ void main() {
       expect(_steps(second).first.count, 600);
       // Every step the wrist counted, and each one only once.
       expect(_stepsTotal(first) + _stepsTotal(second), 1700);
+    });
+
+    test("the day's last movement is written, not left for a sync that never "
+        'comes', () {
+      // The still-filling bucket used to be withheld for the next sync to
+      // finish — but for the FINAL bucket of a day the next sync's points
+      // belong to the next day, so its movement was never written at all:
+      // every day came up short by whatever moved after its last grid line.
+      final import = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 9), 100),
+          (DateTime(2024, 1, 18, 9, 16), 150),
+          (DateTime(2024, 1, 18, 9, 20), 250),
+        ],
+      );
+
+      expect(_stepsTotal(import), 250);
+      final last = _steps(import).last;
+      expect(last.startTime.toLocal(), DateTime(2024, 1, 18, 9, 15));
+      expect(last.count, 100);
+    });
+
+    test('the open bucket is rewritten in full next sync, under the same id',
+        () {
+      // Writing a half-filled bucket is safe because its id is a pure function
+      // of the clock: the next sync recomputes the WHOLE bucket — the seed the
+      // watermark kept plus the new movement — and the upsert replaces the
+      // half with the whole. Nothing lost, nothing counted twice.
+      final first = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 9), 100),
+          (DateTime(2024, 1, 18, 9, 16), 150),
+          (DateTime(2024, 1, 18, 9, 20), 200),
+        ],
+      );
+      final firstOpen = _steps(first).last;
+      expect(firstOpen.count, 50);
+
+      final second = _counterImport(
+        stepsCumulative: [
+          (DateTime(2024, 1, 18, 9, 25), 275),
+          (DateTime(2024, 1, 18, 9, 40), 300),
+        ],
+        previous: first.watermarks,
+      );
+
+      final rewritten = _steps(second)
+          .singleWhere((r) => r.clientRecordId == firstOpen.clientRecordId);
+      expect(rewritten.count, 150);
+      // What Health Connect holds after both upserts — the latest version of
+      // each id — is exactly the wrist's total.
+      final latest = <String, int>{
+        for (final r in _steps(first)) r.clientRecordId: r.count,
+        for (final r in _steps(second)) r.clientRecordId: r.count,
+      };
+      expect(latest.values.fold(0, (a, b) => a + b), 300);
     });
 
     test('re-importing a file already behind the watermark writes nothing', () {
@@ -796,9 +895,9 @@ Uint8List _fitMonitoringSeriesBytes({
   }
   // monitoring steps carrying their activity_type (local 4, global 55), as a
   // real watch writes them: one message per active type at each timestamp.
-  // Written AFTER the untyped ones above so those keep no type — the decoder
-  // carries the last declared type forward, so a message following a typed one
-  // inherits it rather than counting as unknown.
+  // The type is message-local — a message whose definition has no type field
+  // is untyped no matter what came before it — so the order of the untyped
+  // messages above against these does not matter.
   data.def(4, 55, [
     [253, 4, 0x86],
     [5, 1, 0x00],
@@ -1038,17 +1137,19 @@ void _incrementalSyncRegression() {
       expect(second.watermarks['2024-01-18']!.legacyRetired, isTrue);
     });
 
-    test('a day whose first sync emitted nothing still retires the legacy id',
-        () {
-      // Everything the sync saw fell inside the first grid bucket, so that
-      // bucket was still filling and nothing was emitted. Keying on "the bucket
-      // at midnight" gave such a day no second chance: the next sync starts at
-      // the watermark and has no midnight bucket either, so the whole-day
-      // record survived beside every intraday record written afterwards.
+    test('a day whose first sync only touched the open bucket still retires '
+        'the legacy id, with a later bucket', () {
+      // Everything the first sync saw fell inside one still-filling bucket.
+      // That bucket goes out under its grid id — it will be rewritten in full
+      // next sync, and a day-keyed twin would stack beside the rewrite — so
+      // the legacy id waits for the first bucket that never wore a grid id.
       final first = _counterImport(
         stepsCumulative: [(DateTime(2024, 1, 18, 0, 5), 300)],
       );
-      expect(_steps(first), isEmpty);
+      expect(_steps(first), hasLength(1));
+      expect(_steps(first).single.clientRecordId,
+          isNot('garmin_fit_steps_2024-01-18'));
+      expect(_steps(first).single.count, 300);
       expect(first.watermarks['2024-01-18']!.legacyRetired, isFalse);
 
       final second = _counterImport(
@@ -1059,7 +1160,14 @@ void _incrementalSyncRegression() {
         previous: first.watermarks,
       );
 
-      expect(_steps(second).first.clientRecordId, 'garmin_fit_steps_2024-01-18');
+      final ids = _steps(second).map((r) => r.clientRecordId).toList();
+      expect(ids, contains('garmin_fit_steps_2024-01-18'));
+      expect(
+        ids,
+        contains(_steps(first).single.clientRecordId),
+        reason: 'the previously open bucket is rewritten under its grid id, '
+            'never day-keyed',
+      );
       expect(second.watermarks['2024-01-18']!.legacyRetired, isTrue);
     });
 

@@ -269,6 +269,9 @@ class FitCounterWatermark {
     this.stepsByType,
     this.distanceByType,
     this.caloriesByType,
+    this.openBucketSteps = 0,
+    this.openBucketDistance = 0,
+    this.openBucketCalories = 0,
     this.legacyRetired = false,
   });
 
@@ -276,6 +279,19 @@ class FitCounterWatermark {
   final int steps;
   final int distance;
   final int calories;
+
+  /// What has already been written into the grid bucket containing [time].
+  ///
+  /// The last bucket a sync touches is usually half-filled, and it still gets
+  /// written — for the final bucket of a day no later sync would ever finish
+  /// it, and its movement either vanished or leaked into the next day's first
+  /// bucket. A bucket's id is a pure function of the clock, so the next sync
+  /// recomputes it IN FULL — these values plus the new deltas — and the upsert
+  /// replaces the half with the whole. Zero on a watermark stored before these
+  /// existed, which is exactly right: those syncs never wrote the open bucket.
+  final int openBucketSteps;
+  final int openBucketDistance;
+  final int openBucketCalories;
 
   /// The per-activity-type readings behind the sums, as of [time].
   ///
@@ -400,15 +416,26 @@ FitCounterImport fitMonitoringCounterRecords(
     // Deltas folded onto a fixed grid anchored at local midnight, so a record's
     // identity is a pure function of its wall clock.
     final buckets = <int, _CounterDeltas>{};
-    // The bucket currently filling, and the counter context as it stood when it
-    // opened. Emitting a half-filled bucket and then overwriting it on the next
-    // sync would LOSE its first half, so the open one is left for next time and
-    // the watermark rewinds to where it began.
     var from = start;
-    var openBucket = _counterBucketStart(from, day.start);
-    var openSteps = Map<int, int>.of(stepsContext);
-    var openDistance = Map<int, int>.of(distanceContext);
-    var openCalories = Map<int, int>.of(caloriesContext);
+
+    // The bucket the previous sync stopped inside was written half-filled (see
+    // [FitCounterWatermark.openBucketSteps]). Seed it with what is already in
+    // Health Connect, so the deltas this run folds in produce the WHOLE bucket
+    // and the upsert replaces the half rather than losing it.
+    int? seededBucket;
+    if (mark != null &&
+        (mark.openBucketSteps > 0 ||
+            mark.openBucketDistance > 0 ||
+            mark.openBucketCalories > 0)) {
+      seededBucket = _counterBucketStart(mark.time, day.start);
+      buckets[seededBucket] = _CounterDeltas(
+        DateTime.fromMillisecondsSinceEpoch(seededBucket),
+      )
+        ..steps = mark.openBucketSteps
+        ..distance = mark.openBucketDistance
+        ..calories = mark.openBucketCalories
+        ..stretchTo(mark.time);
+    }
 
     for (final at in instants) {
       // Already imported. Not an error — every sync re-reads the file it was
@@ -430,13 +457,6 @@ FitCounterImport fitMonitoringCounterRecords(
       );
 
       from = at;
-      final reached = _counterBucketStart(from, day.start);
-      if (reached != openBucket) {
-        openBucket = reached;
-        openSteps = Map.of(stepsContext);
-        openDistance = Map.of(distanceContext);
-        openCalories = Map.of(caloriesContext);
-      }
     }
 
     // An interval that starts in one bucket can end in the next, so a bucket's
@@ -450,15 +470,26 @@ FitCounterImport fitMonitoringCounterRecords(
       );
     }
 
+    // The bucket the walk stopped inside stays open: the next sync recomputes
+    // it in full from the watermark's seed. Every bucket is emitted, the open
+    // one included — that is what saves the final bucket of a day, which no
+    // later sync would ever come back to close.
+    final openBucket = _counterBucketStart(from, day.start);
+
     // One bucket per day is written under the legacy day-keyed id, so that it
     // OVERWRITES the pre-intraday whole-day record instead of stacking beside
-    // it. The id is handed to the first bucket EMITTED for the day, once,
-    // latched — see [FitCounterWatermark.legacyRetired].
-    final emitted = (buckets.keys.toList()..sort())
-        .where((bucket) => bucket != openBucket)
-        .toList();
+    // it. Only a bucket never yet written under its grid id can retire it:
+    // the open bucket goes out under a grid id this run, and the seeded one
+    // did last run, so day-keying either would leave the grid-id record
+    // standing beside the day-keyed one — the double count this exists to
+    // prevent. The id is handed out once, latched — see
+    // [FitCounterWatermark.legacyRetired].
+    final emitted = buckets.keys.toList()..sort();
     var legacyRetired = mark?.legacyRetired ?? false;
-    final retiringWith = legacyRetired || emitted.isEmpty ? null : emitted.first;
+    final closed = emitted
+        .where((bucket) => bucket != openBucket && bucket != seededBucket)
+        .toList();
+    final retiringWith = legacyRetired || closed.isEmpty ? null : closed.first;
 
     for (final bucket in emitted) {
       final key = bucket == retiringWith ? day.key : '$bucket';
@@ -466,21 +497,22 @@ FitCounterImport fitMonitoringCounterRecords(
     }
     if (retiringWith != null) legacyRetired = true;
 
+    final open = buckets[openBucket];
     watermarks[day.key] = FitCounterWatermark(
-      time: DateTime.fromMillisecondsSinceEpoch(openBucket),
-      steps: _contextSum(openSteps),
-      distance: _contextSum(openDistance),
-      calories: _contextSum(openCalories),
-      stepsByType: openSteps,
-      distanceByType: openDistance,
-      caloriesByType: openCalories,
+      time: from,
+      steps: _contextSum(stepsContext),
+      distance: _contextSum(distanceContext),
+      calories: _contextSum(caloriesContext),
+      stepsByType: Map.of(stepsContext),
+      distanceByType: Map.of(distanceContext),
+      caloriesByType: Map.of(caloriesContext),
+      openBucketSteps: open?.steps ?? 0,
+      openBucketDistance: open?.distance ?? 0,
+      openBucketCalories: open?.calories ?? 0,
       legacyRetired: legacyRetired,
     );
 
-    // The TRUE end of the walk, not the rewound watermark: the minutes the
-    // watermark gives back are this day's to write again, and handing them to
-    // tomorrow as well would count them twice. A counter this day never
-    // reported keeps whatever was carried into it.
+    // A counter this day never reported keeps whatever was carried into it.
     carry = _CounterCarry(
       day: day.start,
       stepsByType: steps.isEmpty ? carried.stepsByType : Map.of(stepsContext),
@@ -665,6 +697,12 @@ class _CounterDeltas {
   /// start.
   void clampEndTo(DateTime limit) {
     if (end.isAfter(limit)) end = limit.isAfter(start) ? limit : start;
+  }
+
+  /// Extends the end to [until] without adding movement — for re-seeding a
+  /// half-written bucket with the span its record already claims.
+  void stretchTo(DateTime until) {
+    if (until.isAfter(end)) end = until;
   }
 
   List<ImportRecord> toRecords(String key) => [
