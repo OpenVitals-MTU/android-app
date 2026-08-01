@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -10,6 +12,8 @@ import '../../../domain/insights/daily_goals.dart';
 import '../../../domain/insights/daily_readiness.dart';
 import '../../../domain/model/dashboard_query.dart';
 import '../../../domain/model/refresh_mode.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../state/app_providers.dart';
 import 'daily_readiness_view_model.dart' show dailyReadinessMetrics;
 import 'training_readiness_display.dart';
 
@@ -86,7 +90,7 @@ class TrainingReadinessDetailsViewModel
         state = state.copyWith(
           isLoading: false,
           insight: insight,
-          display: buildTrainingReadinessDisplay(insight),
+          display: buildTrainingReadinessDisplay(insight, _localizations()),
           error: null,
         );
       case Err(:final failure):
@@ -94,6 +98,18 @@ class TrainingReadinessDetailsViewModel
           isLoading: false,
           error: failure.toScreenError(fallback: 'Unknown error'),
         );
+    }
+  }
+
+  /// Mirrors `DailyReadinessViewModel._localizations`.
+  AppLocalizations _localizations() {
+    final tag = ref.read(appLanguageProvider).languageTag;
+    final locale =
+        tag != null ? Locale(tag) : PlatformDispatcher.instance.locale;
+    try {
+      return lookupAppLocalizations(locale);
+    } on FlutterError {
+      return lookupAppLocalizations(const Locale('en'));
     }
   }
 

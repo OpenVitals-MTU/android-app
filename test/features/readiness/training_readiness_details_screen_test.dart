@@ -102,7 +102,10 @@ class _FakeViewModel extends TrainingReadinessDetailsViewModel {
         selectedDate: LocalDate.now(),
         isLoading: false,
         insight: insight,
-        display: buildTrainingReadinessDisplay(insight),
+        display: buildTrainingReadinessDisplay(
+          insight,
+          lookupAppLocalizations(const Locale('en')),
+        ),
       );
 
   @override

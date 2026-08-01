@@ -1,6 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../domain/insights/daily_readiness.dart';
+import '../../../l10n/app_localizations.dart';
+import 'readiness_l10n.dart';
 
 part 'training_readiness_display.freezed.dart';
 
@@ -49,57 +51,44 @@ abstract class TrainingReadinessDisplay with _$TrainingReadinessDisplay {
 }
 
 /// Pure derivation from the insight to its display model. No clock, no ref, no
-/// I/O — unit-testable with a fixture insight.
+/// I/O — unit-testable with a fixture insight and any [AppLocalizations].
 TrainingReadinessDisplay buildTrainingReadinessDisplay(
   DailyReadinessInsight insight,
+  AppLocalizations l10n,
 ) {
   final isUnknown = insight.state == ReadinessState.unknown;
   final factors = insight.factors
       .where((factor) => trainingReadinessFactorKinds.contains(factor.kind))
       .toList();
   final signals = factors.isEmpty
-      ? const ['No usable training-side signals were available.']
-      : [for (final f in factors) '${f.label}: ${f.detail}'];
-  final strain = [
-    insight.strainTarget,
-    if (insight.currentStrain != null) insight.currentStrain!,
-  ].join(' · ');
+      ? [l10n.trainingReadinessDetailsNoSignals]
+      : [
+          for (final f in factors)
+            () {
+              final localized = localizeReadinessFactor(l10n, insight, f);
+              return '${localized.label}: ${localized.detail}';
+            }(),
+        ];
   final guidance = <String>[
-    'Recommended: ${insight.suggestedWorkout}',
-    'Avoid: ${insight.avoid}',
-    if (strain.trim().isNotEmpty) 'Strain target: $strain',
+    '${l10n.dashboardReadinessRecommended}: '
+        '${readinessSuggestedWorkout(l10n, insight.state)}',
+    '${l10n.dashboardReadinessAvoid}: ${readinessAvoid(l10n, insight.state)}',
+    '${l10n.dashboardReadinessStrain}: ${readinessStrainValue(l10n, insight)}',
   ];
   return TrainingReadinessDisplay(
     score: insight.trainingReadinessScore,
-    verdict: _scoreBandLabel(insight.trainingReadinessScore, isUnknown),
-    confidence: _confidenceText(insight.confidence, insight.confidenceReason),
+    verdict: _scoreBandLabel(l10n, insight.trainingReadinessScore, isUnknown),
+    confidence: readinessConfidenceText(l10n, insight),
     signals: signals,
     guidance: guidance,
   );
 }
 
 /// Verdict band for a readiness score (Kotlin `scoreBandLabel`).
-String _scoreBandLabel(int score, bool isUnknown) {
-  if (isUnknown) return 'Needs more data';
-  if (score >= 80) return 'Strong';
-  if (score >= 60) return 'Steady';
-  if (score >= 40) return 'Limited';
-  return 'Low';
-}
-
-/// Confidence line (Kotlin `readinessConfidenceText`).
-String _confidenceText(ReadinessConfidence confidence, String reason) {
-  final label = switch (confidence) {
-    ReadinessConfidence.high => 'High confidence',
-    ReadinessConfidence.medium => 'Medium confidence',
-    ReadinessConfidence.low => 'Low confidence',
-  };
-  final reasonLabel = switch (reason) {
-    'complete_data' => 'complete local data',
-    'missing_sleep_data' => 'sleep data missing',
-    'missing_hrv_data' => 'HRV data missing',
-    'new_user_not_enough_baseline' => 'baseline still building',
-    _ => 'partial local data',
-  };
-  return '$label · $reasonLabel';
+String _scoreBandLabel(AppLocalizations l10n, int score, bool isUnknown) {
+  if (isUnknown) return l10n.readinessDetailsScoreNeedsMoreData;
+  if (score >= 80) return l10n.readinessDetailsScoreStrong;
+  if (score >= 60) return l10n.readinessDetailsScoreSteady;
+  if (score >= 40) return l10n.readinessDetailsScoreLimited;
+  return l10n.readinessDetailsScoreLow;
 }

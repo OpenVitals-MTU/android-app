@@ -170,8 +170,7 @@ void main() {
 
   group('training readiness detail', () {
     test('score, verdict, confidence, signals and guidance', () {
-      final display = buildTrainingReadinessDisplay(
-        _insight(
+      final display = buildTrainingReadinessDisplay(_insight(
           factors: [
             _factor(
               ReadinessFactorKind.trainingLoadNormal,
@@ -179,8 +178,7 @@ void main() {
               detail: 'This week is 100% of your current load target.',
             ),
           ],
-        ),
-      );
+        ), _l10n);
 
       expect(display.score, 84);
       expect(display.verdict, 'Strong');
@@ -189,8 +187,11 @@ void main() {
         'Training load is stable: This week is 100% of your current load '
             'target.',
       ]);
+      // Guidance derives from the state through the catalog now, not from the
+      // insight's own composites — the canonical wording for `ready`.
       expect(display.guidance, [
-        'Recommended: Strength training or intervals.',
+        'Recommended: Strength training, intervals, a long bike ride, or '
+            'your normal planned workout.',
         'Avoid: Overreaching if you feel sore.',
         "Strain target: Today's strain target: 10-14 · Current strain: 6.0",
       ]);
@@ -199,9 +200,7 @@ void main() {
     test('no training-side factors falls back to the no-signals message', () {
       // A recovery-side factor is not a training-side one, so it is filtered out
       // and the card must not pretend it was used.
-      final display = buildTrainingReadinessDisplay(
-        _insight(factors: [_factor(ReadinessFactorKind.hydrationLow)]),
-      );
+      final display = buildTrainingReadinessDisplay(_insight(factors: [_factor(ReadinessFactorKind.hydrationLow)]), _l10n);
 
       expect(display.signals, [
         'No usable training-side signals were available.',
@@ -209,18 +208,14 @@ void main() {
     });
 
     test('an unknown state reads as needs-more-data, whatever the score', () {
-      final display = buildTrainingReadinessDisplay(
-        _insight(state: ReadinessState.unknown, trainingReadinessScore: 0),
-      );
+      final display = buildTrainingReadinessDisplay(_insight(state: ReadinessState.unknown, trainingReadinessScore: 0), _l10n);
 
       expect(display.verdict, 'Needs more data');
       expect(display.score, 0);
     });
 
     test('the verdict bands', () {
-      String verdictFor(int score) => buildTrainingReadinessDisplay(
-            _insight(trainingReadinessScore: score),
-          ).verdict;
+      String verdictFor(int score) => buildTrainingReadinessDisplay(_insight(trainingReadinessScore: score), _l10n).verdict;
 
       expect(verdictFor(80), 'Strong');
       expect(verdictFor(79), 'Steady');
@@ -230,13 +225,19 @@ void main() {
       expect(verdictFor(39), 'Low');
     });
 
-    test('an empty strain drops the strain bullet entirely', () {
+    test('the strain bullet always renders, from the state', () {
+      // The bullet used to vanish when the insight's English composite was
+      // empty; the target now derives from the state, so it always has one.
       final display = buildTrainingReadinessDisplay(
         _insight(strainTarget: '', currentStrain: null),
+        _l10n,
       );
 
-      expect(display.guidance, hasLength(2));
-      expect(display.guidance.last, startsWith('Avoid:'));
+      expect(display.guidance, hasLength(3));
+      expect(
+        display.guidance.last,
+        "Strain target: Today's strain target: 10-14",
+      );
     });
   });
 }
