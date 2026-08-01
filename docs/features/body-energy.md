@@ -12,7 +12,7 @@ Body Energy is a local derived view that estimates available energy across the d
 
 ### Turn it on
 
-1. **Open Body Energy.** Tap the **Body Energy** tile (battery icon) on the dashboard, or the **Body energy** tile inside [Daily Readiness](daily-readiness.md). Before setup the tile reads **"Not set up"**.
+1. **Open Body Energy.** Tap the **Body Energy** tile (battery icon) on the dashboard. Before setup the tile reads **"Not set up"**. Since 2.4.1 this view is also the home of [Daily Readiness](daily-readiness.md), which appears as the day's verdict below the battery.
 2. **Set it up.** On first open the screen shows only the **"Turn on Body Energy"** card. Enter your **birth year** and press **Save** to accept automatic zones, or turn on **Manual heart zones**, enter your **Zone 1–5 lower bpm** bounds and then **Save**. The timeline appears once setup is complete.
 
    The birth year is required for automatic zones and only for them. Zones are derived from the reserve between your resting and maximum heart rate, and the maximum comes from the highest trustworthy effort in the last four weeks — or, when there is no such effort, from your age. With neither, the model would have to guess a maximum from your resting rate alone, and that guess is wrong enough to read an ordinary walk as near-maximal. Manual zones need no birth year: they *are* the ladder.
@@ -54,12 +54,11 @@ If confidence stays **Low**, it usually means incomplete calibration or sparse H
 
 Body Energy can appear in:
 
-- Daily Readiness.
 - The dashboard.
-- A dedicated Body Energy detail flow.
+- The Body Energy detail flow, which hosts the [Daily Readiness](daily-readiness.md) verdict.
 - Android home screen widgets.
 
-The detail view can show a summary, timeline, confidence, and context for the selected day.
+The detail view can show a summary, timeline, confidence, readiness, and context for the selected day.
 
 ## Calibration
 

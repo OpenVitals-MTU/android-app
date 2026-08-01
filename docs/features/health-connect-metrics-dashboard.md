@@ -21,6 +21,8 @@ The dashboard (`Summary`) is the app's home screen — a single **selected-day**
 
 To rearrange the dashboard, tap the **pencil (Edit dashboard)** button in the action row — see [Metric detail customization](metric-detail-customization.md).
 
+Tiles with no data for the selected day sink below the ones with some, so what you actually track is in reach without manual reordering. The partition is display-time only: your saved order still decides the sequence within each group, and edit mode shows the true saved order so a drag lands where it visually is. A tile that is merely still loading holds its place rather than jumping down and back up.
+
 ## What It Shows
 
 - Activity metrics such as steps, distance, calories, active calories, floors, elevation, wheelchair pushes, and workouts.

@@ -110,12 +110,12 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 ### Daily Readiness
 
-- View a local Daily Readiness score with confidence context.
-- View Body Energy and Training Readiness scores.
+- View a local Daily Readiness score with confidence context, as the day's verdict inside the Body Energy view.
+- Have the verdict weigh the measured Body Energy battery when it is calibrated, so an empty battery counts even after a good night.
 - View HRV status, intensity minutes, physiological stress level, recommended activity, activity to avoid, alternatives, strain target, and adaptive goal guidance.
-- View detailed Body Energy, Training Readiness, and Stress Tracking explanation screens.
+- View detailed Training Readiness and Stress Tracking explanation screens.
 - View signal breakdowns and caveats that explain how available Health Connect data affected the recommendation.
-- Move between days, open the calendar, and refresh readiness data.
+- Move between days, open the calendar, and refresh readiness data from the hosting Body Energy view.
 
 ### Nutrition
 

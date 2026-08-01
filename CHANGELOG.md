@@ -1,5 +1,63 @@
 # Changelog
 
+## 2.4.1 - 2026-08-01
+
+### English
+
+- **Phone notifications on a Garmin watch.** Dismiss, answer or act on them from the wrist - no Garmin account, no network, the app still ships no INTERNET permission. Off by default, with an "Apps to silence" list. Experimental, verified on a vivoactive 5.
+- **Steps from a Garmin watch now match the wrist.** The sync could multiply a day (6,323 steps arriving as 19,906) or leave every day short by its last minutes; the counter import now follows Gadgetbridge's algorithm.
+- **Daily Readiness lives inside Body Energy.** One screen: the battery, then the day's verdict - which now weighs the measured battery, so a drained morning counts. The readiness widget keeps working.
+- **Drink from the notification.** The hydration reminder offers your last two cup sizes; one tap logs it without opening the app (Android).
+- **The dashboard sinks tiles with no data below the ones with some.** Your saved order still rules within each group.
+- **Import reports can be shared** to other apps as a .txt attachment - and saving one on Android now lands where a file manager can see it.
+- **Fixes:** GPS noise no longer inflates recorded elevation gain (750 m climbs saved as ~15 km); one bad sleep record no longer stretches the schedule chart to 36 hours; the top-bar battery icon shows only for devices its screen actually lists; an Apple Health import crash.
+- **German, Italian and Estonian translations are complete** (machine-assisted, awaiting native-speaker review).
+
+### Espanol
+
+- **Notificaciones del telefono en un reloj Garmin.** Descartalas, respondelas o actua desde la muneca - sin cuenta Garmin, sin red, la app sigue sin permiso INTERNET. Desactivado por defecto, con una lista de "Apps a silenciar". Experimental, verificado en un vivoactive 5.
+- **Los pasos de un reloj Garmin ahora coinciden con la muneca.** La sincronizacion podia multiplicar un dia (6.323 pasos llegaban como 19.906) o dejar cada dia corto en sus ultimos minutos; la importacion sigue ahora el algoritmo de Gadgetbridge.
+- **Daily Readiness vive dentro de Body Energy.** Una sola pantalla: la bateria y despues el veredicto del dia - que ahora pesa la bateria medida, asi que una manana agotada cuenta. El widget de readiness sigue funcionando.
+- **Bebe desde la notificacion.** El recordatorio de hidratacion ofrece tus dos ultimos tamanos de vaso; un toque lo registra sin abrir la app (Android).
+- **El panel hunde las tarjetas sin datos bajo las que tienen.** Tu orden guardado sigue mandando dentro de cada grupo.
+- **Los informes de importacion se pueden compartir** a otras apps como adjunto .txt - y guardarlos en Android ahora acaba donde un gestor de archivos los ve.
+- **Correcciones:** el ruido GPS ya no infla el desnivel registrado (subidas de 750 m guardadas como ~15 km); un mal registro de sueno ya no estira el grafico de horario a 36 horas; el icono de bateria solo aparece para dispositivos que su pantalla lista; un cierre inesperado del importador de Apple Health.
+- **Las traducciones al aleman, italiano y estonio estan completas** (asistidas por maquina, pendientes de revision nativa).
+
+### Deutsch
+
+- **Telefon-Benachrichtigungen auf einer Garmin-Uhr.** Vom Handgelenk verwerfen, beantworten oder darauf reagieren - kein Garmin-Konto, kein Netz, die App hat weiterhin keine INTERNET-Berechtigung. Standardmaessig aus, mit einer Liste "Apps stummschalten". Experimentell, geprueft auf einer vivoactive 5.
+- **Schritte einer Garmin-Uhr stimmen jetzt mit dem Handgelenk ueberein.** Die Synchronisation konnte einen Tag vervielfachen (6.323 Schritte kamen als 19.906 an) oder jeden Tag um seine letzten Minuten verkuerzen; der Import folgt jetzt dem Algorithmus von Gadgetbridge.
+- **Daily Readiness wohnt jetzt in Body Energy.** Ein Bildschirm: die Batterie, dann das Urteil des Tages - das jetzt die gemessene Batterie gewichtet, ein leerer Morgen zaehlt also. Das Readiness-Widget funktioniert weiter.
+- **Trinken aus der Benachrichtigung.** Die Trink-Erinnerung bietet deine letzten zwei Bechergroessen an; ein Tipp protokolliert, ohne die App zu oeffnen (Android).
+- **Das Dashboard senkt Kacheln ohne Daten unter die mit Daten.** Deine gespeicherte Reihenfolge gilt weiter innerhalb jeder Gruppe.
+- **Import-Berichte lassen sich teilen** - als .txt-Anhang an andere Apps, und das Speichern unter Android landet jetzt dort, wo ein Dateimanager es sieht.
+- **Korrekturen:** GPS-Rauschen blaeht den aufgezeichneten Hoehengewinn nicht mehr auf (750-m-Anstiege als ~15 km gespeichert); ein fehlerhafter Schlafeintrag streckt das Zeitplan-Diagramm nicht mehr auf 36 Stunden; das Batterie-Symbol erscheint nur fuer Geraete, die sein Bildschirm auch listet; ein Absturz des Apple-Health-Imports.
+- **Deutsch, Italienisch und Estnisch sind vollstaendig uebersetzt** (maschinell unterstuetzt, Muttersprachler-Pruefung steht aus).
+
+### Italiano
+
+- **Notifiche del telefono su un orologio Garmin.** Scartale, rispondi o agisci dal polso - nessun account Garmin, nessuna rete, l'app resta senza permesso INTERNET. Disattivato per impostazione predefinita, con una lista "App da silenziare". Sperimentale, verificato su un vivoactive 5.
+- **I passi di un orologio Garmin ora coincidono con il polso.** La sincronizzazione poteva moltiplicare un giorno (6.323 passi arrivavano come 19.906) o lasciare ogni giorno corto dei suoi ultimi minuti; l'importazione segue ora l'algoritmo di Gadgetbridge.
+- **Daily Readiness vive dentro Body Energy.** Una sola schermata: la batteria, poi il verdetto del giorno - che ora pesa la batteria misurata, quindi una mattina scarica conta. Il widget di readiness continua a funzionare.
+- **Bevi dalla notifica.** Il promemoria idratazione offre le ultime due misure di bicchiere; un tocco registra senza aprire l'app (Android).
+- **La dashboard affonda le tessere senza dati sotto quelle con dati.** Il tuo ordine salvato comanda ancora dentro ogni gruppo.
+- **I rapporti di importazione si possono condividere** con altre app come allegato .txt - e salvarli su Android ora finisce dove un file manager li vede.
+- **Correzioni:** il rumore GPS non gonfia piu il dislivello registrato (salite di 750 m salvate come ~15 km); un cattivo record di sonno non stira piu il grafico dell'orario a 36 ore; l'icona della batteria appare solo per dispositivi che la sua schermata elenca; un crash dell'importazione Apple Health.
+- **Le traduzioni tedesca, italiana ed estone sono complete** (assistite da macchina, in attesa di revisione madrelingua).
+
+### Eesti
+
+- **Telefoni teavitused Garmini kellal.** Luka tagasi, vasta voi tegutse randmelt - Garmini kontot pole, vorku pole, rakendusel pole endiselt INTERNET-luba. Vaikimisi valjas, nimekirjaga "Vaigistatavad rakendused". Eksperimentaalne, kontrollitud vivoactive 5 peal.
+- **Garmini kella sammud klapivad nuud randmega.** Sunkroonimine vois paeva korrutada (6323 sammu joudis kohale kui 19 906) voi jatta iga paeva viimastest minutitest iluta; import jargib nuud Gadgetbridge'i algoritmi.
+- **Daily Readiness elab nuud Body Energy sees.** Uks ekraan: patarei, siis paeva otsus - mis nuud arvestab moodetud patareid, nii et tuhi hommik loeb. Readiness-vidin tootab edasi.
+- **Joo otse teavitusest.** Joogimeeldetuletus pakub su kaht viimast topsisuurust; uks puude logib ilma rakendust avamata (Android).
+- **Tooulaud vajutab andmeteta paanid andmetega omade alla.** Su salvestatud jarjestus kehtib igas ruhmas edasi.
+- **Impordiaruandeid saab jagada** teistele rakendustele .txt-manusena - ja Androidis salvestamine joub nuud sinna, kus failihaldur seda naeb.
+- **Parandused:** GPS-mura ei paisuta enam salvestatud tousumeetreid (750 m tousud salvestusid ~15 km-na); uks vigane unekirje ei venita enam ajakava graafikut 36 tunnini; patareiikoon ilmub ainult seadmete jaoks, mida selle ekraan ka loetleb; Apple Healthi impordi krahh.
+- **Saksa, itaalia ja eesti tolked on taielikud** (masintoetusega, ootavad emakeelse koneleja ulevaatust).
+
+
 ## 2.4.0 - 2026-07-28
 
 ### English

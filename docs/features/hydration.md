@@ -57,6 +57,8 @@ OpenVitals-created hydration entries can be edited or deleted from the relevant 
 
 Hydration reminders are local notification reminders. The feature stores reminder preferences locally, checks notification permission on supported Android versions, and does not create Health Connect records when reminders fire.
 
+On Android the reminder notification carries two quick-add action buttons offering the last two cup sizes you logged ("Add 350 ml" / "Add 250 ml", falling back to the last custom amount, then 250/500 ml). Tapping one logs the drink silently in the background — the app does not open — dismisses the reminder, and reschedules the batch with refreshed labels. iOS keeps a plain tap-to-open reminder: its notification actions are fixed at app start and cannot carry per-schedule labels.
+
 ## Related Features
 
 - [`beverage-logging-and-caffeine.md`](beverage-logging-and-caffeine.md): drink logging, hydration multipliers, caffeine, and nutrition defaults.
