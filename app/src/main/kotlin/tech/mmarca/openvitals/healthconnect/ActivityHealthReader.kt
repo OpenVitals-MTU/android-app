@@ -868,7 +868,7 @@ internal class ActivityHealthReader(
     suspend fun readSpeedSamples(start: Instant, end: Instant): List<SpeedSample> =
         support.withLogging("readSpeedSamples[$start..$end]", emptyList()) {
             support.client().readSeriesSamples(SpeedRecord::class, start, end) { record ->
-                val source = record.metadata.dataOrigin.packageName
+                val source = SyncedSourceOverlay.displaySource(record.metadata)
                 record.samples.map { sample ->
                     TimedSample(
                         sample.time,
@@ -886,7 +886,7 @@ internal class ActivityHealthReader(
         support.withLogging("readActivityCadenceSamples[$start..$end]", emptyList()) {
             val cyclingSamples = support.client()
                 .readSeriesSamples(CyclingPedalingCadenceRecord::class, start, end) { record ->
-                    val source = record.metadata.dataOrigin.packageName
+                    val source = SyncedSourceOverlay.displaySource(record.metadata)
                     record.samples.map { sample ->
                         TimedSample(
                             sample.time,
@@ -901,7 +901,7 @@ internal class ActivityHealthReader(
                 }
             val stepsSamples = support.client()
                 .readSeriesSamples(StepsCadenceRecord::class, start, end) { record ->
-                    val source = record.metadata.dataOrigin.packageName
+                    val source = SyncedSourceOverlay.displaySource(record.metadata)
                     record.samples.map { sample ->
                         TimedSample(
                             sample.time,
@@ -935,7 +935,7 @@ internal class ActivityHealthReader(
                     completedExerciseSessionId = record.completedExerciseSessionId,
                     notes = record.notes,
                     blockCount = record.blocks.size,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                     blocks = record.blocks.map { it.toPlannedExerciseBlockData() },
                 )
             }

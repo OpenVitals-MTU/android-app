@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.core.presentation
 
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import java.text.NumberFormat
 import java.util.Locale
@@ -8,33 +9,43 @@ import kotlin.math.roundToInt
 class UnitFormatter(
     private val unitSystemProvider: () -> UnitSystem,
     private val localeProvider: () -> Locale = { Locale.getDefault() },
+    private val unitOverrideProvider: (UnitQuantity) -> UnitSystem? = { null },
 ) {
     fun unitSystem(): UnitSystem = unitSystemProvider()
+
+    /**
+     * The effective system for one quantity: its per-quantity override when
+     * set, otherwise whatever the base unit setting resolves to. Every
+     * formatting method routes through this, so overrides apply everywhere
+     * without per-screen changes.
+     */
+    fun unitSystem(quantity: UnitQuantity): UnitSystem =
+        unitOverrideProvider(quantity) ?: unitSystem()
 
     fun count(value: Long): String = integerFormat().format(value)
 
     fun count(value: Int): String = integerFormat().format(value)
 
     fun distance(meters: Double): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.DISTANCE)) {
             UnitSystem.METRIC -> metricDistance(meters)
             UnitSystem.IMPERIAL -> imperialDistance(meters)
         }
 
     fun elevation(meters: Double): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.ELEVATION)) {
             UnitSystem.METRIC -> metricDistance(meters)
             UnitSystem.IMPERIAL -> DisplayValue(count(metersToFeet(meters).roundToInt()), "ft")
         }
 
     fun weight(kg: Double): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.WEIGHT)) {
             UnitSystem.METRIC -> DisplayValue(decimal(kg, 1), "kg")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(kgToPounds(kg), 1), "lb")
         }
 
     fun height(centimeters: Double): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.HEIGHT)) {
             UnitSystem.METRIC -> DisplayValue(decimal(centimeters, 0), "cm")
             UnitSystem.IMPERIAL -> {
                 val totalInches = (centimeters / 2.54).roundToInt()
@@ -45,13 +56,13 @@ class UnitFormatter(
         }
 
     fun bodyMass(kg: Double, decimals: Int = 1): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.WEIGHT)) {
             UnitSystem.METRIC -> DisplayValue(decimal(kg, decimals), "kg")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(kgToPounds(kg), decimals), "lb")
         }
 
     fun hydration(liters: Double): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.HYDRATION)) {
             UnitSystem.METRIC -> DisplayValue(decimal(liters, 2), "L")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(litersToFluidOunces(liters), 0), "fl oz")
         }
@@ -59,18 +70,19 @@ class UnitFormatter(
     fun energy(kcal: Double): DisplayValue = DisplayValue(count(kcal.roundToInt()), "kcal")
 
     fun temperature(celsius: Double): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.TEMPERATURE)) {
             UnitSystem.METRIC -> DisplayValue(decimal(celsius, 1), "deg C")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(celsiusToFahrenheit(celsius), 1), "deg F")
         }
 
     fun temperatureDelta(celsius: Double): DisplayValue {
-        val value = when (unitSystem()) {
+        val system = unitSystem(UnitQuantity.TEMPERATURE)
+        val value = when (system) {
             UnitSystem.METRIC -> celsius
             UnitSystem.IMPERIAL -> celsius * 9.0 / 5.0
         }
         val prefix = if (value > 0.0) "+" else ""
-        val unit = when (unitSystem()) {
+        val unit = when (system) {
             UnitSystem.METRIC -> "deg C"
             UnitSystem.IMPERIAL -> "deg F"
         }
@@ -78,7 +90,7 @@ class UnitFormatter(
     }
 
     fun bloodGlucose(millimolesPerLiter: Double): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.BLOOD_GLUCOSE)) {
             UnitSystem.METRIC -> DisplayValue(decimal(millimolesPerLiter, 1), "mmol/L")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(millimolesPerLiter * 18.0, 0), "mg/dL")
         }
@@ -110,14 +122,17 @@ class UnitFormatter(
         } else {
             0.0
         }
-        return when (unitSystem()) {
+        // Speed and pace ride the distance override: they are distance-derived
+        // units, and mixed km-distance/mph-speed displays would contradict
+        // each other on the same screen.
+        return when (unitSystem(UnitQuantity.DISTANCE)) {
             UnitSystem.METRIC -> DisplayValue(decimal(metersPerHour / 1000.0, 1), "km/h")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(metersPerHour / 1609.344, 1), "mph")
         }
     }
 
     fun speed(metersPerSecond: Double): DisplayValue =
-        when (unitSystem()) {
+        when (unitSystem(UnitQuantity.DISTANCE)) {
             UnitSystem.METRIC -> DisplayValue(decimal(metersPerSecond * 3.6, 1), "km/h")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(metersPerSecond * 2.2369362921, 1), "mph")
         }
@@ -128,7 +143,8 @@ class UnitFormatter(
 
     fun averagePace(distanceMeters: Double, durationMs: Long): DisplayValue? {
         if (distanceMeters <= 0.0 || durationMs <= 0L) return null
-        val distanceUnitMeters = when (unitSystem()) {
+        val system = unitSystem(UnitQuantity.DISTANCE)
+        val distanceUnitMeters = when (system) {
             UnitSystem.METRIC -> 1000.0
             UnitSystem.IMPERIAL -> 1609.344
         }
@@ -140,7 +156,7 @@ class UnitFormatter(
             .coerceAtLeast(0)
         val minutes = secondsPerUnit / 60
         val seconds = secondsPerUnit % 60
-        val unit = when (unitSystem()) {
+        val unit = when (system) {
             UnitSystem.METRIC -> "min/km"
             UnitSystem.IMPERIAL -> "min/mi"
         }

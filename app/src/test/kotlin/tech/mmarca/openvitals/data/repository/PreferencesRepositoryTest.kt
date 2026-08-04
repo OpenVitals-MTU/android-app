@@ -13,6 +13,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
@@ -34,7 +35,9 @@ import tech.mmarca.openvitals.domain.preferences.CaffeineHormonalStatus
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.CaffeineSleepSensitivity
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 
 /**
@@ -168,7 +171,54 @@ class PreferencesRepositoryTest {
 
     // endregion
 
-    // region the unit-system default is a function of the locale, not the host
+    // region the unit-system default follows the OS, resolved through one seam
+
+    @Test fun `an unset preference defaults to follow-system`() {
+        val (repo, _) = newRepo()
+        assertEquals(UnitSystemPreference.SYSTEM, repo.unitSystemPreference)
+    }
+
+    @Test fun `a follow-system preference resolves through the injected provider`() {
+        val prefs = seededPrefs()
+        val repo = PreferencesRepository(contextFor(prefs)) { UnitSystem.IMPERIAL }
+        assertEquals(UnitSystem.IMPERIAL, repo.unitSystem)
+        assertEquals(UnitSystem.IMPERIAL, repo.unitSystemFlow.value)
+    }
+
+    @Test fun `an explicit choice never consults the provider`() {
+        val prefs = seededPrefs(mapOf("unit_system" to "METRIC"))
+        val repo = PreferencesRepository(contextFor(prefs)) {
+            throw AssertionError("resolved an explicit choice against the OS")
+        }
+        assertEquals(UnitSystemPreference.METRIC, repo.unitSystemPreference)
+        assertEquals(UnitSystem.METRIC, repo.unitSystem)
+    }
+
+    @Test fun `a stored explicit choice is never rewritten`() {
+        val (repo, prefs) = newRepo(mapOf("unit_system" to "IMPERIAL"))
+        assertEquals(UnitSystemPreference.IMPERIAL, repo.unitSystemPreference)
+        assertEquals(UnitSystem.IMPERIAL, repo.unitSystem)
+        assertEquals("IMPERIAL", prefs.getString("unit_system", null))
+    }
+
+    @Test fun `follow-system round-trips through storage`() {
+        val (repo, prefs) = newRepo(mapOf("unit_system" to "METRIC"))
+        repo.unitSystemPreference = UnitSystemPreference.SYSTEM
+        assertEquals("SYSTEM", prefs.getString("unit_system", null))
+        assertEquals(UnitSystemPreference.SYSTEM, reload(prefs).unitSystemPreference)
+    }
+
+    @Test fun `refreshSystemUnitSystem re-resolves after the OS setting changes`() {
+        val prefs = seededPrefs()
+        var systemUnitSystem = UnitSystem.METRIC
+        val repo = PreferencesRepository(contextFor(prefs)) { systemUnitSystem }
+        assertEquals(UnitSystem.METRIC, repo.unitSystem)
+
+        systemUnitSystem = UnitSystem.IMPERIAL
+        repo.refreshSystemUnitSystem()
+        assertEquals(UnitSystem.IMPERIAL, repo.unitSystem)
+        assertEquals(UnitSystem.IMPERIAL, repo.unitSystemFlow.value)
+    }
 
     @Test fun `a US device starts out imperial`() {
         withDefaultLocale(Locale("en", "US")) {
@@ -213,20 +263,102 @@ class PreferencesRepositoryTest {
 
     // endregion
 
+    // region per-quantity unit overrides
+
+    @Test fun `overrides start unset so display matches the base setting`() {
+        val (repo, _) = newRepo()
+        UnitQuantity.entries.forEach { quantity ->
+            assertNull(quantity.name, repo.unitOverride(quantity))
+        }
+        assertTrue(repo.unitOverridesFlow.value.isEmpty())
+    }
+
+    @Test fun `an override round-trips through storage under its own key`() {
+        val (repo, prefs) = newRepo()
+        repo.setUnitOverride(UnitQuantity.WEIGHT, UnitSystem.IMPERIAL)
+        assertEquals("IMPERIAL", prefs.getString("unit_override_weight", null))
+        assertEquals(UnitSystem.IMPERIAL, repo.unitOverride(UnitQuantity.WEIGHT))
+        assertEquals(UnitSystem.IMPERIAL, reload(prefs).unitOverride(UnitQuantity.WEIGHT))
+    }
+
+    @Test fun `every quantity stores under its documented key`() {
+        val (repo, prefs) = newRepo()
+        UnitQuantity.entries.forEach { repo.setUnitOverride(it, UnitSystem.METRIC) }
+        listOf(
+            "unit_override_distance",
+            "unit_override_elevation",
+            "unit_override_weight",
+            "unit_override_height",
+            "unit_override_temperature",
+            "unit_override_hydration",
+            "unit_override_blood_glucose",
+        ).forEach { key -> assertEquals(key, "METRIC", prefs.getString(key, null)) }
+    }
+
+    @Test fun `clearing an override removes the stored key`() {
+        val (repo, prefs) = newRepo(mapOf("unit_override_distance" to "IMPERIAL"))
+        assertEquals(UnitSystem.IMPERIAL, repo.unitOverride(UnitQuantity.DISTANCE))
+        repo.setUnitOverride(UnitQuantity.DISTANCE, null)
+        assertFalse(prefs.contains("unit_override_distance"))
+        assertNull(reload(prefs).unitOverride(UnitQuantity.DISTANCE))
+    }
+
+    @Test fun `an unrecognized stored override reads as unset`() {
+        val (repo, _) = newRepo(mapOf("unit_override_temperature" to "FURLONGS"))
+        assertNull(repo.unitOverride(UnitQuantity.TEMPERATURE))
+    }
+
+    @Test fun `setting an override notifies the flow`() {
+        val (repo, _) = newRepo()
+        repo.setUnitOverride(UnitQuantity.HYDRATION, UnitSystem.IMPERIAL)
+        assertEquals(
+            mapOf(UnitQuantity.HYDRATION to UnitSystem.IMPERIAL),
+            repo.unitOverridesFlow.value,
+        )
+        repo.setUnitOverride(UnitQuantity.HYDRATION, null)
+        assertTrue(repo.unitOverridesFlow.value.isEmpty())
+    }
+
+    @Test fun `an override beats the base while unset quantities chain to a follow-system base`() {
+        val prefs = seededPrefs()
+        // Unset preference => SYSTEM base, resolved imperial by the provider.
+        val repo = PreferencesRepository(contextFor(prefs)) { UnitSystem.IMPERIAL }
+        repo.setUnitOverride(UnitQuantity.TEMPERATURE, UnitSystem.METRIC)
+        val formatter = UnitFormatter(
+            unitSystemProvider = { repo.unitSystem },
+            localeProvider = { Locale.US },
+            unitOverrideProvider = { repo.unitOverride(it) },
+        )
+        // The override pins its quantity...
+        assertEquals("37.0 deg C", formatter.temperature(37.0).text)
+        // ...and DEFAULT quantities follow the system-resolved base.
+        assertEquals("1.0 mi", formatter.distance(1_609.344).text)
+        assertEquals("154.3 lb", formatter.weight(70.0).text)
+    }
+
+    // endregion
+
     // region enum-backed reactive values
 
-    @Test fun `unitSystem set and read notifies the flow`() {
+    @Test fun `unitSystemPreference set and read notifies both flows`() {
         val (repo, _) = newRepo()
         // Toggle to whichever value differs from the host-derived default so
         // the emission is guaranteed to be a change.
         val target = if (repo.unitSystem == UnitSystem.METRIC) {
+            UnitSystemPreference.IMPERIAL
+        } else {
+            UnitSystemPreference.METRIC
+        }
+        repo.unitSystemPreference = target
+        assertEquals(target, repo.unitSystemPreference)
+        assertEquals(target, repo.unitSystemPreferenceFlow.value)
+        val resolved = if (target == UnitSystemPreference.IMPERIAL) {
             UnitSystem.IMPERIAL
         } else {
             UnitSystem.METRIC
         }
-        repo.unitSystem = target
-        assertEquals(target, repo.unitSystem)
-        assertEquals(target, repo.unitSystemFlow.value)
+        assertEquals(resolved, repo.unitSystem)
+        assertEquals(resolved, repo.unitSystemFlow.value)
     }
 
     @Test fun `appThemeMode and sleep window round-trip via a fresh instance`() {

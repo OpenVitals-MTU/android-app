@@ -1031,9 +1031,7 @@
     <string name="settings_manual_permissions_body">Mõnda Health Connecti luba ei saa anda tavalisest päringudialoogist. Ava Health Connect ja luba need OpenVitalsi jaoks.</string>
     <string name="settings_open_health_permissions">Ava Health Connecti load</string>
     <string name="settings_display_group_title">Kuva</string>
-    <string name="settings_display_group_body">Keel, ühikud ja teema</string>
     <string name="settings_activities_group_title">Treeningud</string>
-    <string name="settings_activities_group_body">Veerevad kuupäevad, lemmiktreening, salvestamine ja võrguühenduseta kaardid</string>
     <string name="settings_sensors_group_title">Andurid ja seadmed</string>
     <string name="settings_sensors_group_body">Pulsi-, sagedus- ja võimsusandurid</string>
     <string name="settings_sensors_empty_title">Andureid veel pole</string>

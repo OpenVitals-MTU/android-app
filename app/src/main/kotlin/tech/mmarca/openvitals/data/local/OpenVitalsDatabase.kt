@@ -11,6 +11,8 @@ import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyDayEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
+import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
+import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
@@ -23,8 +25,9 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         BodyEnergyDayEntity::class,
         BodyEnergyBucketEntity::class,
         GarminWellnessSampleEntity::class,
+        SyncedRecordOriginEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class OpenVitalsDatabase : RoomDatabase() {
@@ -35,6 +38,8 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
     abstract fun bodyEnergyTimelineDao(): BodyEnergyTimelineDao
 
     abstract fun garminWellnessDao(): GarminWellnessDao
+
+    abstract fun syncedRecordOriginDao(): SyncedRecordOriginDao
 
     companion object {
         val MIGRATION_1_3 = beverageMigration(1)
@@ -72,6 +77,19 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 createGarminWellnessTable(db)
+            }
+        }
+
+        /**
+         * Original source apps of records received through phone-to-phone
+         * sync. Creation only, no data copy: records synced before this
+         * version landed without their origin on the wire, so there is
+         * nothing to backfill — they keep displaying the receiver's own
+         * attribution until a peer on a carrying version re-syncs them.
+         */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createSyncedRecordOriginsTable(db)
             }
         }
 
@@ -157,6 +175,18 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                     `recovery_debt_drain` REAL NOT NULL,
                     `primary_influence` TEXT NOT NULL,
                     PRIMARY KEY(`epoch_day`, `time_millis`)
+                )
+                """.trimIndent()
+            )
+        }
+
+        private fun createSyncedRecordOriginsTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `synced_record_origins` (
+                    `client_record_id` TEXT NOT NULL,
+                    `origin_package` TEXT NOT NULL,
+                    PRIMARY KEY(`client_record_id`)
                 )
                 """.trimIndent()
             )

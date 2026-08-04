@@ -11,9 +11,11 @@ import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyCalibrationCard
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.HeartRateThresholds
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 internal fun LazyListScope.settingsScreenContent(
     section: SettingsSection?,
@@ -71,9 +73,19 @@ internal fun LazyListScope.settingsScreenContent(
             item { SettingsCardSpacer() }
             item {
                 UnitSystemCard(
-                    selected = state.unitSystem,
+                    selected = state.unitSystemPreference,
+                    resolvedUnitSystem = state.unitSystem,
                     onSelect = viewModel::selectUnitSystem,
                     modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            item { SettingsCardSpacer() }
+            item {
+                UnitOverridesCard(
+                    overrides = state.unitOverrides,
+                    baseUnitSystem = state.unitSystem,
+                    onSelect = viewModel::selectUnitOverride,
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
                 )
             }
             item { SettingsCardSpacer() }
@@ -94,9 +106,7 @@ internal fun LazyListScope.settingsScreenContent(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
-        }
-        SettingsSection.ACTIVITIES -> {
-            item { SectionHeader(stringResource(section.titleRes)) }
+            item { SettingsCardSpacer() }
             item {
                 ActivityWeekModeCard(
                     selected = state.activityWeekMode,
@@ -104,7 +114,9 @@ internal fun LazyListScope.settingsScreenContent(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
-            item { SettingsCardSpacer() }
+        }
+        SettingsSection.ACTIVITIES -> {
+            item { SectionHeader(stringResource(section.titleRes)) }
             item {
                 FavoriteActivityCard(
                     selectedExerciseType = state.favoriteActivityExerciseType,
@@ -116,7 +128,7 @@ internal fun LazyListScope.settingsScreenContent(
             item {
                 ActivitySplitDistanceCard(
                     selectedMeters = state.activitySplitDistanceMeters,
-                    unitSystem = state.unitSystem,
+                    unitSystem = state.effectiveUnitSystem(UnitQuantity.DISTANCE),
                     onSelect = viewModel::setActivitySplitDistance,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
@@ -167,7 +179,7 @@ internal fun LazyListScope.settingsScreenContent(
             item {
                 HydrationGoalCard(
                     goalLiters = state.hydrationDailyGoalLiters,
-                    unitSystem = state.unitSystem,
+                    unitSystem = state.effectiveUnitSystem(UnitQuantity.HYDRATION),
                     onGoalChange = viewModel::setHydrationDailyGoalLiters,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
@@ -187,7 +199,8 @@ internal fun LazyListScope.settingsScreenContent(
             item {
                 BodyProfileCard(
                     profile = state.bodyProfile,
-                    unitSystem = state.unitSystem,
+                    // The card's only unit-sensitive input is body weight.
+                    unitSystem = state.effectiveUnitSystem(UnitQuantity.WEIGHT),
                     onSave = viewModel::updateBodyProfile,
                     weightMeasured = state.bodyProfileWeightMeasured,
                     heightMeasured = state.bodyProfileHeightMeasured,

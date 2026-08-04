@@ -17,7 +17,9 @@ import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
@@ -31,6 +33,7 @@ import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
 import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
 import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntryState
@@ -98,7 +101,11 @@ data class SettingsUiState(
     val offlineMapImportProgress: OfflineMapImportProgress? = null,
     val offlineMapImportResult: OfflineMapImportResult? = null,
     val offlineMapImportError: String? = null,
+    val unitSystemPreference: UnitSystemPreference = UnitSystemPreference.SYSTEM,
+    /** Already resolved — never carries the SYSTEM preference itself. */
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    /** Per-quantity display overrides; an absent quantity follows [unitSystem]. */
+    val unitOverrides: Map<UnitQuantity, UnitSystem> = emptyMap(),
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val dynamicColor: Boolean = false,
@@ -138,6 +145,10 @@ data class SettingsUiState(
 
     val missingRouteImportWritePermissions: Set<String>
         get() = routeImportWritePermissions - grantedPermissions
+
+    /** What one quantity displays in: its override, else the resolved base. */
+    fun effectiveUnitSystem(quantity: UnitQuantity): UnitSystem =
+        unitOverrides[quantity] ?: unitSystem
 }
 
 @Immutable
@@ -225,7 +236,9 @@ class SettingsViewModel @Inject constructor(
                 dataImportWritePermissions = repository.dataImportWritePermissions,
                 routeImportWritePermissions = activityRepository.activityWritePermissions(),
                 manualOnlyPermissions = repository.manualOnlyPermissions,
+                unitSystemPreference = preferencesRepository.unitSystemPreference,
                 unitSystem = preferencesRepository.unitSystem,
+                unitOverrides = preferencesRepository.unitOverridesFlow.value,
                 appLanguage = preferencesRepository.appLanguage,
                 appThemeMode = preferencesRepository.appThemeMode,
                 dynamicColor = preferencesRepository.dynamicColor,
@@ -558,16 +571,19 @@ class SettingsViewModel @Inject constructor(
 
                 runCatching {
                     val routeImport = routeFileImporter.import(uri)
+                    // Headless import: the route's texts are generated and
+                    // parsed with the same units, so any consistent pair works.
+                    val importUnits = ActivityEntryUnits.uniform(_uiState.value.unitSystem)
                     val routeState = initialActivityEntryState(
                         clock = clock,
                         repository = activityRepository,
                         selectedActivityType = preferredActivityType(requireGpsRoute = routeImport.points.isNotEmpty()),
                     ).withRouteImport(
                         routeImport = routeImport,
-                        unitSystem = _uiState.value.unitSystem,
+                        units = importUnits,
                         clock = clock,
                     )
-                    val request = buildWriteRequest(routeState, _uiState.value.unitSystem)
+                    val request = buildWriteRequest(routeState, importUnits)
                         ?: throw IllegalArgumentException("Imported route could not be converted into an activity.")
                     val hasPermission = activityRepository.hasActivityWritePermission(request)
                     if (!hasPermission) {
@@ -774,9 +790,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun selectUnitSystem(unitSystem: UnitSystem) {
-        preferencesRepository.unitSystem = unitSystem
-        _uiState.value = _uiState.value.copy(unitSystem = unitSystem)
+    fun selectUnitSystem(preference: UnitSystemPreference) {
+        preferencesRepository.unitSystemPreference = preference
+        _uiState.value = _uiState.value.copy(
+            unitSystemPreference = preference,
+            unitSystem = preferencesRepository.unitSystem,
+        )
+    }
+
+    fun selectUnitOverride(quantity: UnitQuantity, override: UnitSystem?) {
+        preferencesRepository.setUnitOverride(quantity, override)
+        _uiState.value = _uiState.value.copy(
+            unitOverrides = preferencesRepository.unitOverridesFlow.value,
+        )
     }
 
     fun selectAppLanguage(appLanguage: AppLanguage) {

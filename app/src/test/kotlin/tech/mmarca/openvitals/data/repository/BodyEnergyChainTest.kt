@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.local.bodyenergy.FakeBodyEnergyTimelineDao
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
+import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.insights.BodyEnergyConfidence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyNeutralStartScore
 import tech.mmarca.openvitals.domain.insights.BodyEnergySeedSource
@@ -53,13 +54,14 @@ class BodyEnergyChainTest {
     private fun repo(
         heartRepository: FakeHeartRepository = heart,
         withStore: Boolean = true,
+        healthRepository: HealthRepository = grantedHealthRepository(),
     ) = BodyEnergyRepositoryImpl(
         heartRepository = heartRepository.repository,
         sleepRepository = emptySleepRepository(),
         activityRepository = emptyActivityRepository(),
         vitalsRepository = emptyVitalsRepository(),
         bodyRepository = emptyBodyRepository(),
-        healthRepository = grantedHealthRepository(),
+        healthRepository = healthRepository,
         preferencesRepository = prefs,
         baselineCacheStore = baselines,
         timelineStore = if (withStore) timelines else null,
@@ -323,6 +325,34 @@ class BodyEnergyChainTest {
 
     // endregion
 
+    // region a transiently unreadable permission set
+
+    @Test
+    fun `a failed permission read does not orphan the stored chain`() = runTest {
+        // The regression behind the widget's intermittent "Start: 50": the
+        // permission hash used to collapse to a constant when the read failed,
+        // which made every stored day look like it came from another permission
+        // world — no anchor validated, and the day silently reopened neutral.
+        val yesterdayEnd = seedStoredDay(repo(), today.minusDays(1))
+
+        val day = load(repo(healthRepository = failingPermissionsHealthRepository()), today)
+
+        assertEquals(BodyEnergySeedSource.CARRIED_OVER, day.inputSummary.seedSource)
+        assertEquals(bodyEnergySeedScore(yesterdayEnd), day.startScore)
+    }
+
+    @Test
+    fun `a permission read that never succeeded still starts neutral`() = runTest {
+        // Nothing cached to fall back on — a fresh install whose very first
+        // read fails. The documented neutral default is the whole truth then.
+        val day = load(repo(healthRepository = failingPermissionsHealthRepository()), today)
+
+        assertEquals(BodyEnergyNeutralStartScore, day.startScore)
+        assertEquals(BodyEnergySeedSource.NEUTRAL, day.inputSummary.seedSource)
+    }
+
+    // endregion
+
     // region the seed mirror
 
     @Test
@@ -336,7 +366,7 @@ class BodyEnergyChainTest {
         assertEquals(BodyEnergySeedSource.CARRIED_OVER, day.inputSummary.seedSource)
         assertEquals(
             "${today.minusDays(1).toEpochDay()}|${day.inputSummary.previousEndScore}",
-            mirrored,
+            mirrored?.split("|")?.take(2)?.joinToString("|"),
         )
     }
 
@@ -363,6 +393,72 @@ class BodyEnergyChainTest {
             afterYesterday,
             prefs.bodyEnergyChainSeedMirror,
         )
+    }
+
+    @Test
+    fun `an empty store falls back to the mirror, not the neutral 50`() = runTest {
+        // The store exists but holds nothing — a cleared database under prefs
+        // that survived. That is the store-less situation wearing a store, and
+        // it degrades the same way: the mirrored score, not a reset.
+        prefs.bodyEnergyChainSeedMirror = "${today.minusDays(1).toEpochDay()}|43"
+
+        val day = load(repo(), today)
+
+        assertEquals(BodyEnergySeedSource.CARRIED_OVER, day.inputSummary.seedSource)
+        assertEquals(43, day.startScore)
+    }
+
+    @Test
+    fun `a chain gap still carries yesterday's mirrored score`() = runTest {
+        // The anchor is too far back to fill, but the mirror knows what
+        // yesterday closed on — its row was lost, not the day itself.
+        val r = repo()
+        seedStoredDay(r, today.minusDays(5))
+        prefs.bodyEnergyChainSeedMirror = "${today.minusDays(1).toEpochDay()}|37"
+
+        val day = load(r, today)
+
+        assertEquals(BodyEnergySeedSource.CARRIED_OVER, day.inputSummary.seedSource)
+        assertEquals(37, day.startScore)
+    }
+
+    @Test
+    fun `computing today keeps the mirror fresh`() = runTest {
+        // Mirroring only completed days froze the mirror on whatever past day
+        // was last recomputed; on a device where only the widgets run (they ask
+        // for today alone) it was reliably stale by the time it was needed.
+        val day = load(repo(), today)
+
+        assertEquals(
+            "${today.toEpochDay()}|${day.currentScore}|${day.startScore}|0",
+            prefs.bodyEnergyChainSeedMirror,
+        )
+    }
+
+    @Test
+    fun `a rescued day reopens on the same chained score across recomputes`() = runTest {
+        // The first rescue moves the mirror onto today; the day's own opening
+        // score keeps later refreshes from oscillating back to 50.
+        prefs.bodyEnergyChainSeedMirror = "${today.minusDays(1).toEpochDay()}|43"
+        val r = repo()
+
+        val first = load(r, today, refreshMode = RefreshMode.FORCE)
+        val second = load(r, today, refreshMode = RefreshMode.FORCE)
+
+        assertEquals(43, first.startScore)
+        assertEquals(43, second.startScore)
+        assertEquals(BodyEnergySeedSource.CARRIED_OVER, second.inputSummary.seedSource)
+    }
+
+    @Test
+    fun `a neutrally opened day does not relabel itself as chained on recompute`() = runTest {
+        val r = repo()
+        load(r, today, refreshMode = RefreshMode.FORCE)
+
+        val second = load(r, today, refreshMode = RefreshMode.FORCE)
+
+        assertEquals(BodyEnergySeedSource.NEUTRAL, second.inputSummary.seedSource)
+        assertEquals(BodyEnergyNeutralStartScore, second.startScore)
     }
 
     // endregion

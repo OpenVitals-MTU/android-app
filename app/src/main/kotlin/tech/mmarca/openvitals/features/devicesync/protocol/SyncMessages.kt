@@ -49,17 +49,30 @@ class SyncMessageFormatException(message: String, cause: Throwable? = null) :
  * (e.g. `StepsRecord`) so the receiver can group and route it.
  *
  * The protocol treats [payload] as opaque bytes — the health-record codec
- * fills it in. Dedup is entirely by [key].
+ * fills it in. Dedup is entirely by [key]; [originPackage] rides OUTSIDE both
+ * the payload and the key so it can never perturb the content fingerprint.
  */
 class SyncItem(
     val key: String,
     val recordType: String,
     val payload: ByteArray,
+    /**
+     * Package of the app that ORIGINALLY recorded this data — the sender's
+     * Health Connect `dataOrigin`, or, when the sender itself received the
+     * record by sync, the origin it preserved (so an A→B→C chain passes the
+     * original through). Optional on the wire (`o`): a build predating the
+     * field omits it, and decoding a message without it yields null — both
+     * directions of a mixed-version pair still sync, the receiver merely
+     * falls back to its own attribution as before. Still protocol version 1
+     * for exactly that reason.
+     */
+    val originPackage: String? = null,
 ) {
     internal fun toJson(): JsonObject = buildJsonObject {
         put("k", key)
         put("t", recordType)
         put("p", Base64.getEncoder().encodeToString(payload))
+        if (originPackage != null) put("o", originPackage)
     }
 
     internal companion object {
@@ -67,6 +80,9 @@ class SyncItem(
             key = json.string("k"),
             recordType = json.string("t"),
             payload = Base64.getDecoder().decode(json.string("p")),
+            originPackage = json["o"]
+                ?.takeIf { it !is JsonNull }
+                ?.jsonPrimitive?.content,
         )
     }
 }

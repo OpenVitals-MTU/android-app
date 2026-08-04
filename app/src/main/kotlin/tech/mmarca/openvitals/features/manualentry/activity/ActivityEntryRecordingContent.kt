@@ -40,7 +40,7 @@ internal fun ActivityEntryRecordingContent(
         onEndRepetitionSet = viewModel::endRepetitionSet,
         onStartNextRepetitionSet = viewModel::startNextRepetitionSet,
         onFinishRecording = {
-            viewModel.finishGpsRecording(unitFormatter.unitSystem())
+            viewModel.finishGpsRecording(ActivityEntryUnits.from(unitFormatter))
         },
         onEndHeartRateRecoveryEffort = viewModel::endHeartRateRecoveryEffort,
         onActivityRecordingTitleChanged = onActivityRecordingTitleChanged,

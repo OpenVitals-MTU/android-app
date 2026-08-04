@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
@@ -75,8 +76,8 @@ fun BodyMeasurementEntryScreen(
         viewModel.refreshPermission()
     }
 
-    LaunchedEffect(type, unitFormatter.unitSystem()) {
-        viewModel.setType(type, unitFormatter.unitSystem())
+    LaunchedEffect(type, unitFormatter.unitSystemFor(type)) {
+        viewModel.setType(type, unitFormatter.unitSystemFor(type))
     }
     LaunchedEffect(state.saveCompleted) {
         if (state.saveCompleted) {
@@ -100,7 +101,7 @@ fun BodyMeasurementEntryScreen(
                         canonicalBodyMeasurementValue(
                             input = state.inputText,
                             type = state.type,
-                            unitSystem = unitFormatter.unitSystem(),
+                            unitSystem = unitFormatter.unitSystemFor(state.type),
                         )
                     )
                 },
@@ -124,7 +125,7 @@ private fun BodyMeasurementEntryCard(
     modifier: Modifier = Modifier,
 ) {
     val title = stringResource(state.type.titleRes())
-    val unitLabel = state.type.inputUnitLabel(unitFormatter.unitSystem())
+    val unitLabel = state.type.inputUnitLabel(unitFormatter.unitSystemFor(state.type))
     val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
@@ -285,4 +286,10 @@ fun BodyMeasurementType.icon(): ImageVector = when (this) {
 fun BodyMeasurementType.accentColor(): Color = when (this) {
     BodyMeasurementType.BODY_FAT -> BodyFatColor
     else -> WeightColor
+}
+
+private fun UnitFormatter.unitSystemFor(type: BodyMeasurementType): UnitSystem = when (type) {
+    BodyMeasurementType.WEIGHT -> unitSystem(UnitQuantity.WEIGHT)
+    BodyMeasurementType.HEIGHT -> unitSystem(UnitQuantity.HEIGHT)
+    BodyMeasurementType.BODY_FAT -> unitSystem()
 }

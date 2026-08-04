@@ -31,7 +31,7 @@ internal class CycleHealthReader(
                 MenstruationFlowEntry(
                     time = record.time,
                     flow = record.flow,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -47,7 +47,7 @@ internal class CycleHealthReader(
                 MenstruationPeriodEntry(
                     startTime = record.startTime,
                     endTime = record.endTime,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -63,7 +63,7 @@ internal class CycleHealthReader(
                 OvulationTestEntry(
                     time = record.time,
                     result = record.result,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -80,7 +80,7 @@ internal class CycleHealthReader(
                     time = record.time,
                     appearance = record.appearance,
                     sensation = record.sensation,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -97,7 +97,7 @@ internal class CycleHealthReader(
                     time = record.time,
                     temperatureCelsius = record.temperature.inCelsius,
                     measurementLocation = record.measurementLocation,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -112,7 +112,7 @@ internal class CycleHealthReader(
             ).map { record ->
                 IntermenstrualBleedingEntry(
                     time = record.time,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -128,7 +128,7 @@ internal class CycleHealthReader(
                 SexualActivityEntry(
                     time = record.time,
                     protectionUsed = record.protectionUsed,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }

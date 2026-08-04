@@ -20,7 +20,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
@@ -41,9 +40,9 @@ internal const val MaxActivityStepCount = 1_000_000L
 
 internal fun buildWriteRequest(
     state: ActivityEntryUiState,
-    unitSystem: UnitSystem,
+    units: ActivityEntryUnits,
 ): ActivityWriteRequest? {
-    if (validateActivityEntry(state, unitSystem).isNotEmpty()) return null
+    if (validateActivityEntry(state, units).isNotEmpty()) return null
 
     val sessionRange = activityEntrySessionRange(state) ?: return null
     val start = sessionRange.first
@@ -104,20 +103,20 @@ internal fun buildWriteRequest(
     val distanceMeters = when {
         !supportsDistance -> null
         state.distanceText.isNotBlank() && importedRoute != null &&
-            state.distanceText.trim() == routeDistanceInputText(importedRoute, unitSystem) -> {
+            state.distanceText.trim() == routeDistanceInputText(importedRoute, units.distance) -> {
             importedRoute.distanceMeters.takeIf { it > 0.0 }
         }
-        state.distanceText.isNotBlank() -> parseDistanceMeters(state.distanceText, unitSystem) ?: return null
+        state.distanceText.isNotBlank() -> parseDistanceMeters(state.distanceText, units.distance) ?: return null
         routePoints.isNotEmpty() -> state.importedRoute?.distanceMeters?.takeIf { it > 0.0 }
         else -> null
     }
     val elevationMeters = when {
         !supportsElevation -> null
         state.elevationText.isNotBlank() && importedRoute != null &&
-            state.elevationText.trim() == routeElevationInputText(importedRoute, unitSystem) -> {
+            state.elevationText.trim() == routeElevationInputText(importedRoute, units.elevation) -> {
             importedRoute.elevationGainedMeters.takeIf { it > 0.0 }
         }
-        state.elevationText.isNotBlank() -> parseElevationMeters(state.elevationText, unitSystem) ?: return null
+        state.elevationText.isNotBlank() -> parseElevationMeters(state.elevationText, units.elevation) ?: return null
         routePoints.isNotEmpty() -> state.importedRoute?.elevationGainedMeters?.takeIf { it > 0.0 }
         else -> null
     }
@@ -232,7 +231,7 @@ internal fun ActivityEntryUiState.activitySaveNotes(): String? {
 
 internal fun validateActivityEntry(
     state: ActivityEntryUiState,
-    unitSystem: UnitSystem,
+    units: ActivityEntryUnits,
 ): Set<ActivityEntryValidationError> {
     val errors = mutableSetOf<ActivityEntryValidationError>()
     val startDate = state.startDateText.trim()
@@ -266,8 +265,8 @@ internal fun validateActivityEntry(
     if (state.distanceText.isNotBlank() && state.selectedActivityType.supportsDistance) {
         when {
             importedRoute != null &&
-                state.distanceText.trim() == routeDistanceInputText(importedRoute, unitSystem) -> Unit
-            parseDistanceMeters(state.distanceText, unitSystem) == null -> {
+                state.distanceText.trim() == routeDistanceInputText(importedRoute, units.distance) -> Unit
+            parseDistanceMeters(state.distanceText, units.distance) == null -> {
                 errors += ActivityEntryValidationError.DISTANCE_INVALID
             }
         }
@@ -276,8 +275,8 @@ internal fun validateActivityEntry(
     if (state.elevationText.isNotBlank() && state.selectedActivityType.supportsElevation) {
         when {
             importedRoute != null &&
-                state.elevationText.trim() == routeElevationInputText(importedRoute, unitSystem) -> Unit
-            parseElevationMeters(state.elevationText, unitSystem) == null -> {
+                state.elevationText.trim() == routeElevationInputText(importedRoute, units.elevation) -> Unit
+            parseElevationMeters(state.elevationText, units.elevation) == null -> {
                 errors += ActivityEntryValidationError.ELEVATION_INVALID
             }
         }

@@ -53,22 +53,7 @@ data class SleepStage(
  * night with 8h in bed and 40 minutes awake reads 7h20m. Sessions whose
  * writer recorded no stages keep the plain session duration.
  */
-fun SleepData.asleepDurationMs(): Long {
-    if (stages.isEmpty()) return durationMs
-    val asleepMs = stages
-        .filter { it.stageType.isAsleepStageType() }
-        .sumOf { it.durationMs }
-    return if (asleepMs > 0L) asleepMs else durationMs
-}
-
-private fun Int.isAsleepStageType(): Boolean = when (this) {
-    SleepStage.STAGE_SLEEPING,
-    SleepStage.STAGE_LIGHT,
-    SleepStage.STAGE_DEEP,
-    SleepStage.STAGE_REM,
-    -> true
-    else -> false
-}
+fun SleepData.asleepDurationMs(): Long = sleepDurationMsFromStages(stages, durationMs)
 
 data class DailySleepDuration(
     val date: LocalDate,
@@ -133,8 +118,12 @@ fun combineNightStages(
             null
         }
     }
-    return (stages + gapStages)
-        .sortedWith(compareBy<SleepStage> { it.startTime }.thenBy { it.endTime })
+    return resolveSleepStages(
+        stages = (stages + gapStages)
+            .sortedWith(compareBy<SleepStage> { it.startTime }.thenBy { it.endTime }),
+        sessionStart = orderedSessions.minOf { it.startTime },
+        sessionEnd = orderedSessions.maxOf { it.endTime },
+    )
 }
 
 /** Sum of stage durations, negative stages ignored. */
@@ -163,9 +152,9 @@ val AwakeStageTypes: Set<Int> = setOf(SleepStage.STAGE_AWAKE, SleepStage.STAGE_A
 /** Stage types shown as "Core" (Apple naming) — light plus generic sleeping. */
 val CoreStageTypes: Set<Int> = setOf(SleepStage.STAGE_LIGHT, SleepStage.STAGE_SLEEPING)
 
-/** Total duration of the stages whose [SleepStage.stageType] is in [types]. */
+/** Total duration of the stages whose [SleepStage.stageType] is in [types], overlaps counted once. */
 fun List<SleepStage>.durationMsForTypes(types: Set<Int>): Long =
-    filter { it.stageType in types }.sumOf { it.durationMs.coerceAtLeast(0L) }
+    filter { it.stageType in types }.unionDurationMs()
 
 internal fun sleepDurationMsFromStages(
     stages: List<SleepStage>,
@@ -173,9 +162,11 @@ internal fun sleepDurationMsFromStages(
 ): Long {
     if (stages.isEmpty()) return fallbackDurationMs.coerceAtLeast(0L)
 
+    // Union, not a sum: a writer recording the same stretch under two stages
+    // must never make asleep time exceed time in bed.
     val sleepStageDurationMs = stages
         .filter { it.stageType.isSleepDurationStage() }
-        .sumOf { it.durationMs.coerceAtLeast(0L) }
+        .unionDurationMs()
 
     return sleepStageDurationMs.takeIf { it > 0L } ?: fallbackDurationMs.coerceAtLeast(0L)
 }
@@ -186,4 +177,96 @@ private fun Int.isSleepDurationStage(): Boolean = when (this) {
     SleepStage.STAGE_DEEP,
     SleepStage.STAGE_REM -> true
     else -> false
+}
+
+/**
+ * When a writer records overlapping stage intervals for one session — the
+ * bug shape: one stretch stored as BOTH light and deep — every instant must
+ * belong to exactly one stage. This resolves the overlaps the way Google Fit
+ * renders the same data: the deeper stage wins the disputed region.
+ */
+private fun sleepStageOverlapRank(stageType: Int): Int = when (stageType) {
+    SleepStage.STAGE_DEEP -> 7
+    SleepStage.STAGE_REM -> 6
+    SleepStage.STAGE_LIGHT -> 5
+    SleepStage.STAGE_SLEEPING -> 4
+    SleepStage.STAGE_AWAKE_IN_BED -> 3
+    SleepStage.STAGE_AWAKE -> 2
+    SleepStage.STAGE_OUT_OF_BED -> 1
+    else -> 0
+}
+
+/**
+ * The canonical stage timeline for a session: stages clipped to
+ * [sessionStart, sessionEnd], overlaps resolved by [sleepStageOverlapRank],
+ * adjacent fragments of one winner merged. All stored [SleepData.stages] pass
+ * through here, so every duration, percentage, and hypnogram downstream
+ * describes the same non-overlapping intervals. An already-clean list is
+ * returned as-is.
+ */
+fun resolveSleepStages(
+    stages: List<SleepStage>,
+    sessionStart: Instant,
+    sessionEnd: Instant,
+): List<SleepStage> {
+    if (stages.isEmpty()) return stages
+    if (stagesAlreadyResolved(stages, sessionStart, sessionEnd)) return stages
+
+    val clipped = stages.mapNotNull { stage ->
+        val start = maxOf(stage.startTime, sessionStart)
+        val end = minOf(stage.endTime, sessionEnd)
+        if (end.isAfter(start)) stage.copy(startTime = start, endTime = end) else null
+    }
+    if (clipped.isEmpty()) return emptyList()
+
+    val boundaries = clipped
+        .flatMap { listOf(it.startTime, it.endTime) }
+        .distinct()
+        .sorted()
+    val resolved = mutableListOf<SleepStage>()
+    boundaries.zipWithNext().forEach { (segmentStart, segmentEnd) ->
+        val winner = clipped
+            .filter { !it.startTime.isAfter(segmentStart) && !it.endTime.isBefore(segmentEnd) }
+            .maxByOrNull { sleepStageOverlapRank(it.stageType) }
+            ?: return@forEach // an uncovered gap between stages stays a gap
+        val previous = resolved.lastOrNull()
+        if (previous != null && previous.stageType == winner.stageType && previous.endTime == segmentStart) {
+            resolved[resolved.lastIndex] = previous.copy(endTime = segmentEnd)
+        } else {
+            resolved += SleepStage(segmentStart, segmentEnd, winner.stageType)
+        }
+    }
+    return resolved
+}
+
+private fun stagesAlreadyResolved(
+    stages: List<SleepStage>,
+    sessionStart: Instant,
+    sessionEnd: Instant,
+): Boolean {
+    var previousEnd = sessionStart
+    for (stage in stages) {
+        if (stage.startTime.isBefore(previousEnd)) return false
+        if (!stage.endTime.isAfter(stage.startTime)) return false
+        previousEnd = stage.endTime
+    }
+    return !previousEnd.isAfter(sessionEnd)
+}
+
+private fun List<SleepStage>.unionDurationMs(): Long {
+    val intervals = filter { it.endTime.isAfter(it.startTime) }.sortedBy { it.startTime }
+    if (intervals.isEmpty()) return 0L
+    var totalMs = 0L
+    var currentStart = intervals.first().startTime
+    var currentEnd = intervals.first().endTime
+    for (stage in intervals.drop(1)) {
+        if (stage.startTime.isAfter(currentEnd)) {
+            totalMs += currentEnd.toEpochMilli() - currentStart.toEpochMilli()
+            currentStart = stage.startTime
+            currentEnd = stage.endTime
+        } else if (stage.endTime.isAfter(currentEnd)) {
+            currentEnd = stage.endTime
+        }
+    }
+    return totalMs + (currentEnd.toEpochMilli() - currentStart.toEpochMilli())
 }

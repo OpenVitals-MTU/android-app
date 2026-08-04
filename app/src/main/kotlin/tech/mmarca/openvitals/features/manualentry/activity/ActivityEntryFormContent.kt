@@ -95,10 +95,10 @@ internal fun ActivityEntryFormContent(
                         onCreateNewPlannedWorkout = viewModel::createNewPlannedWorkout,
                         onApplyPlannedWorkout = viewModel::applyPlannedWorkout,
                         onSavePlannedWorkout = {
-                            viewModel.saveCurrentAsPlannedWorkout(unitFormatter.unitSystem())
+                            viewModel.saveCurrentAsPlannedWorkout(ActivityEntryUnits.from(unitFormatter))
                         },
                         onUpdatePlannedWorkout = {
-                            viewModel.saveCurrentAsPlannedWorkout(unitFormatter.unitSystem(), updateSelected = true)
+                            viewModel.saveCurrentAsPlannedWorkout(ActivityEntryUnits.from(unitFormatter), updateSelected = true)
                         },
                         onDistanceChanged = viewModel::updateDistance,
                         onElevationChanged = viewModel::updateElevation,
@@ -108,7 +108,7 @@ internal fun ActivityEntryFormContent(
                         onChooseSource = viewModel::chooseSource,
                         onRequestWritePermission = onRequestWritePermissions,
                         onAddEntry = {
-                            viewModel.addEntry(unitFormatter.unitSystem())
+                            viewModel.addEntry(ActivityEntryUnits.from(unitFormatter))
                         },
                         onDiscardRecordingDraft = viewModel::discardRecordingDraft,
                         isEditMode = state.isEditMode,

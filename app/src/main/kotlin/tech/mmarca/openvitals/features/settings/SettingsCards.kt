@@ -103,7 +103,9 @@ import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.ActivitySplitDistance
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.features.activity.splitDistanceLabel
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportProgress
@@ -126,6 +128,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 @Composable
 internal fun SettingsCardSpacer() {
@@ -1370,8 +1373,9 @@ internal fun ActivitySplitDistanceCard(
 
 @Composable
 internal fun UnitSystemCard(
-    selected: UnitSystem,
-    onSelect: (UnitSystem) -> Unit,
+    selected: UnitSystemPreference,
+    resolvedUnitSystem: UnitSystem,
+    onSelect: (UnitSystemPreference) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OpenVitalsCard(
@@ -1391,26 +1395,178 @@ internal fun UnitSystemCard(
                     .fillMaxWidth()
                     .padding(top = 12.dp),
             ) {
-                UnitSystem.entries.forEachIndexed { index, unitSystem ->
+                UnitSystemPreference.entries.forEachIndexed { index, preference ->
                     SegmentedButton(
-                        selected = selected == unitSystem,
-                        onClick = { onSelect(unitSystem) },
+                        selected = selected == preference,
+                        onClick = { onSelect(preference) },
                         shape = SegmentedButtonDefaults.itemShape(
                             index = index,
-                            count = UnitSystem.entries.size,
+                            count = UnitSystemPreference.entries.size,
                         ),
                         label = {
                             Text(
-                                when (unitSystem) {
-                                    UnitSystem.METRIC -> stringResource(R.string.settings_unit_metric)
-                                    UnitSystem.IMPERIAL -> stringResource(R.string.settings_unit_imperial)
+                                when (preference) {
+                                    UnitSystemPreference.SYSTEM -> stringResource(R.string.settings_unit_follow_system)
+                                    UnitSystemPreference.METRIC -> stringResource(R.string.settings_unit_metric)
+                                    UnitSystemPreference.IMPERIAL -> stringResource(R.string.settings_unit_imperial)
                                 }
                             )
                         },
                     )
                 }
             }
+            if (selected == UnitSystemPreference.SYSTEM) {
+                Text(
+                    text = stringResource(
+                        R.string.settings_unit_follow_system_body,
+                        stringResource(
+                            when (resolvedUnitSystem) {
+                                UnitSystem.METRIC -> R.string.settings_unit_metric
+                                UnitSystem.IMPERIAL -> R.string.settings_unit_imperial
+                            },
+                        ),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = Spacing.sm),
+                )
+            }
         }
+    }
+}
+
+@Composable
+internal fun UnitOverridesCard(
+    overrides: Map<UnitQuantity, UnitSystem>,
+    baseUnitSystem: UnitSystem,
+    onSelect: (UnitQuantity, UnitSystem?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+
+    ) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            Text(
+                text = stringResource(R.string.settings_unit_overrides_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(R.string.settings_unit_overrides_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+            UnitQuantity.entries.forEach { quantity ->
+                UnitOverrideRow(
+                    quantity = quantity,
+                    selected = overrides[quantity],
+                    baseUnitSystem = baseUnitSystem,
+                    onSelect = { onSelect(quantity, it) },
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UnitOverrideRow(
+    quantity: UnitQuantity,
+    selected: UnitSystem?,
+    baseUnitSystem: UnitSystem,
+    onSelect: (UnitSystem?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val defaultLabel = stringResource(
+        R.string.settings_unit_override_default,
+        quantity.unitLabel(baseUnitSystem),
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = stringResource(quantity.labelRes()),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Box {
+            OpenVitalsOutlinedButton(onClick = { expanded = true }) {
+                Text(
+                    when (selected) {
+                        null -> defaultLabel
+                        else -> unitSystemOptionLabel(quantity, selected)
+                    }
+                )
+                Spacer(Modifier.widthIn(min = Spacing.xs))
+                Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null,
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(defaultLabel) },
+                    onClick = {
+                        expanded = false
+                        onSelect(null)
+                    },
+                )
+                UnitSystem.entries.forEach { system ->
+                    DropdownMenuItem(
+                        text = { Text(unitSystemOptionLabel(quantity, system)) },
+                        onClick = {
+                            expanded = false
+                            onSelect(system)
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun unitSystemOptionLabel(quantity: UnitQuantity, system: UnitSystem): String =
+    stringResource(
+        R.string.settings_unit_override_option,
+        stringResource(
+            when (system) {
+                UnitSystem.METRIC -> R.string.settings_unit_metric
+                UnitSystem.IMPERIAL -> R.string.settings_unit_imperial
+            },
+        ),
+        quantity.unitLabel(system),
+    )
+
+@StringRes
+private fun UnitQuantity.labelRes(): Int = when (this) {
+    UnitQuantity.DISTANCE -> R.string.settings_unit_quantity_distance
+    UnitQuantity.ELEVATION -> R.string.settings_unit_quantity_elevation
+    UnitQuantity.WEIGHT -> R.string.settings_unit_quantity_weight
+    UnitQuantity.HEIGHT -> R.string.settings_unit_quantity_height
+    UnitQuantity.TEMPERATURE -> R.string.settings_unit_quantity_temperature
+    UnitQuantity.HYDRATION -> R.string.settings_unit_quantity_hydration
+    UnitQuantity.BLOOD_GLUCOSE -> R.string.settings_unit_quantity_blood_glucose
+}
+
+// The unit symbols UnitFormatter itself renders, so the picker previews
+// exactly what the screens will show.
+private fun UnitQuantity.unitLabel(system: UnitSystem): String {
+    val imperial = system == UnitSystem.IMPERIAL
+    return when (this) {
+        UnitQuantity.DISTANCE -> if (imperial) "mi" else "km"
+        UnitQuantity.ELEVATION -> if (imperial) "ft" else "m"
+        UnitQuantity.WEIGHT -> if (imperial) "lb" else "kg"
+        UnitQuantity.HEIGHT -> if (imperial) "ft/in" else "cm"
+        UnitQuantity.TEMPERATURE -> if (imperial) "deg F" else "deg C"
+        UnitQuantity.HYDRATION -> if (imperial) "fl oz" else "L"
+        UnitQuantity.BLOOD_GLUCOSE -> if (imperial) "mg/dL" else "mmol/L"
     }
 }
 

@@ -282,7 +282,7 @@ internal class VitalsHealthReader(
             time = time,
             systolicMmHg = systolic.inMillimetersOfMercury.toInt(),
             diastolicMmHg = diastolic.inMillimetersOfMercury.toInt(),
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             id = metadata.id,
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
@@ -291,7 +291,7 @@ internal class VitalsHealthReader(
         SpO2Entry(
             time = time,
             percent = percentage.value,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             id = metadata.id,
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
@@ -300,7 +300,7 @@ internal class VitalsHealthReader(
         RespiratoryRateEntry(
             time = time,
             breathsPerMinute = rate,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             id = metadata.id,
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
@@ -309,7 +309,7 @@ internal class VitalsHealthReader(
         BodyTempEntry(
             time = time,
             temperatureCelsius = temperature.inCelsius,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             id = metadata.id,
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
@@ -318,7 +318,7 @@ internal class VitalsHealthReader(
         Vo2MaxEntry(
             time = time,
             vo2MaxMlPerKgPerMin = vo2MillilitersPerMinuteKilogram,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
         )
 
     private fun BloodGlucoseRecord.toEntry(): BloodGlucoseEntry =
@@ -328,7 +328,7 @@ internal class VitalsHealthReader(
             specimenSource = specimenSource,
             mealType = mealType,
             relationToMeal = relationToMeal,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
         )
 
     private fun SkinTemperatureRecord.toEntry(): SkinTemperatureEntry {
@@ -341,7 +341,7 @@ internal class VitalsHealthReader(
             minDeltaCelsius = deltasCelsius.minOrNull(),
             maxDeltaCelsius = deltasCelsius.maxOrNull(),
             measurementLocation = measurementLocation,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
         )
     }
 
@@ -528,7 +528,7 @@ internal class VitalsHealthReader(
             time = time,
             value = systolic.inMillimetersOfMercury,
             secondaryValue = diastolic.inMillimetersOfMercury,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 
@@ -538,7 +538,7 @@ internal class VitalsHealthReader(
             type = VitalsMeasurementType.SPO2,
             time = time,
             value = percentage.value,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 
@@ -548,7 +548,7 @@ internal class VitalsHealthReader(
             type = VitalsMeasurementType.RESPIRATORY_RATE,
             time = time,
             value = rate,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 
@@ -558,7 +558,7 @@ internal class VitalsHealthReader(
             type = VitalsMeasurementType.BODY_TEMPERATURE,
             time = time,
             value = temperature.inCelsius,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 }

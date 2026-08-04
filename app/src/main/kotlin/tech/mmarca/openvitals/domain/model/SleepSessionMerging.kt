@@ -187,7 +187,11 @@ private fun mergedSleepStages(
             }
         }
 
-    return (stages + gapStages).sortedWith(
-        compareBy<SleepStage> { it.startTime }.thenBy { it.endTime },
+    return resolveSleepStages(
+        stages = (stages + gapStages).sortedWith(
+            compareBy<SleepStage> { it.startTime }.thenBy { it.endTime },
+        ),
+        sessionStart = orderedSessions.minOf { it.startTime },
+        sessionEnd = orderedSessions.maxOf { it.endTime },
     )
 }

@@ -203,6 +203,55 @@ class HomeMetricWidgetSnapshotTest {
     }
 
     @Test
+    fun `writing a snapshot round-trips the plot series through the widget state`() {
+        val snapshot = HomeMetricWidgetSnapshot(
+            title = "Body Energy",
+            value = "74",
+            unit = "",
+            subtitle = "Steady",
+            route = "daily_readiness/body_energy/2026-07-10",
+            series = listOf(70, 68, 72, 75, 74),
+        )
+
+        val preferences = mutablePreferencesOf()
+        preferences.putHomeWidgetSnapshot(metricId = "BODY_ENERGY", snapshot = snapshot)
+
+        assertEquals("70,68,72,75,74", preferences[HomeMetricWidgetState.seriesKey])
+        assertEquals(snapshot, preferences.toWidgetSnapshot(context))
+    }
+
+    @Test
+    fun `a snapshot with no series clears the one a previous write left`() {
+        val preferences = mutablePreferencesOf(HomeMetricWidgetState.seriesKey to "70,68,72")
+
+        preferences.putHomeWidgetSnapshot(
+            metricId = "STEPS",
+            snapshot = HomeMetricWidgetSnapshot(
+                title = "Steps",
+                value = "8,432",
+                unit = "",
+                subtitle = "Today",
+                route = "metric/STEPS",
+            ),
+        )
+
+        assertNull(preferences[HomeMetricWidgetState.seriesKey])
+        assertEquals(emptyList<Int>(), preferences.toWidgetSnapshot(context)?.series)
+    }
+
+    @Test
+    fun `an unparseable series value is dropped, not defaulted to zero`() {
+        // A zero is a legitimate score, so substituting one would draw a cliff
+        // to the floor the day never had.
+        val preferences = mutablePreferencesOf(
+            HomeMetricWidgetState.titleKey to "Body Energy",
+            HomeMetricWidgetState.seriesKey to "70,not-a-score, 72 ,",
+        )
+
+        assertEquals(listOf(70, 72), preferences.toWidgetSnapshot(context)?.series)
+    }
+
+    @Test
     fun `an unconfigured instance drops the stored metric id`() {
         val preferences = mutablePreferencesOf(HomeMetricWidgetState.metricIdKey to "STEPS")
 

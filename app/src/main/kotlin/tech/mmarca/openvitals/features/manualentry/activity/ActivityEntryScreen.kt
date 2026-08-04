@@ -114,14 +114,14 @@ fun ActivityEntryScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshPermission()
     }
-    LaunchedEffect(unitFormatter.unitSystem()) {
-        viewModel.loadEditEntry(unitFormatter.unitSystem())
+    LaunchedEffect(ActivityEntryUnits.from(unitFormatter)) {
+        viewModel.loadEditEntry(ActivityEntryUnits.from(unitFormatter))
     }
-    LaunchedEffect(pendingRouteImportRequestId, pendingRouteImportUri, unitFormatter.unitSystem()) {
+    LaunchedEffect(pendingRouteImportRequestId, pendingRouteImportUri, ActivityEntryUnits.from(unitFormatter)) {
         val requestId = pendingRouteImportRequestId
         val uri = pendingRouteImportUri
         if (requestId != null && uri != null) {
-            viewModel.importRouteFile(uri, unitFormatter.unitSystem())
+            viewModel.importRouteFile(uri, ActivityEntryUnits.from(unitFormatter))
             onPendingRouteImportHandled(requestId)
         }
     }

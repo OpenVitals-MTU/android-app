@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.onScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
@@ -496,7 +497,7 @@ class ActivityEntryViewModel(
         }
     }
 
-    fun importRouteFile(uri: Uri, unitSystem: UnitSystem) {
+    fun importRouteFile(uri: Uri, units: ActivityEntryUnits) {
         val importer = routeFileImporter
         if (importer == null) {
             _uiState.value = _uiState.value.copy(
@@ -517,7 +518,7 @@ class ActivityEntryViewModel(
             )
             runCatching { importer.import(uri) }
                 .onSuccess { routeImport ->
-                    applyRouteImport(routeImport, unitSystem)
+                    applyRouteImport(routeImport, units)
                 }
                 .onScreenError(
                     logTag = TAG,
@@ -623,12 +624,12 @@ class ActivityEntryViewModel(
         )
     }
 
-    fun saveCurrentAsPlannedWorkout(unitSystem: UnitSystem, updateSelected: Boolean = false) {
+    fun saveCurrentAsPlannedWorkout(units: ActivityEntryUnits, updateSelected: Boolean = false) {
         val current = _uiState.value
-        val validationErrors = validatePlannedExerciseWriteRequest(current, unitSystem)
+        val validationErrors = validatePlannedExerciseWriteRequest(current, units)
         val request = buildPlannedExerciseWriteRequest(
             state = current,
-            unitSystem = unitSystem,
+            units = units,
             updateExistingId = current.selectedPlannedWorkoutId.takeIf { updateSelected },
         )
         if (validationErrors.isNotEmpty() || request == null) {
@@ -934,7 +935,7 @@ class ActivityEntryViewModel(
         chooseSource()
     }
 
-    fun finishGpsRecording(unitSystem: UnitSystem) {
+    fun finishGpsRecording(units: ActivityEntryUnits) {
         val snapshot = activityRecorder?.finishRecording()
         if (snapshot == null) {
             _uiState.value = _uiState.value.copy(
@@ -959,7 +960,7 @@ class ActivityEntryViewModel(
                     hasImportedTimeRange = true,
                     originalPointCount = snapshot.points.size,
                 ),
-                unitSystem,
+                units,
             )
             _uiState.value = _uiState.value.copy(
                 recordedPauseIntervals = snapshot.pauseIntervals,
@@ -978,7 +979,7 @@ class ActivityEntryViewModel(
         recordingDraftStore?.store(_uiState.value)
     }
 
-    fun loadEditEntry(unitSystem: UnitSystem) {
+    fun loadEditEntry(units: ActivityEntryUnits) {
         val recordId = editActivityId ?: return
         if (editEntryLoaded) return
         editEntryLoaded = true
@@ -998,7 +999,7 @@ class ActivityEntryViewModel(
                     .orEmpty()
                 val current = _uiState.value
                 _uiState.value = workout.toEditState(
-                    unitSystem = unitSystem,
+                    units = units,
                     clock = clock,
                     repository = repository,
                     canWrite = current.canWrite,
@@ -1023,7 +1024,7 @@ class ActivityEntryViewModel(
         }
     }
 
-    fun addEntry(unitSystem: UnitSystem) {
+    fun addEntry(units: ActivityEntryUnits) {
         if (_uiState.value.mode == ActivityEntryMode.CHOOSE_SOURCE) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
@@ -1033,7 +1034,7 @@ class ActivityEntryViewModel(
             return
         }
 
-        val validationErrors = validateActivityEntry(_uiState.value, unitSystem)
+        val validationErrors = validateActivityEntry(_uiState.value, units)
         if (validationErrors.isNotEmpty()) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
@@ -1043,7 +1044,7 @@ class ActivityEntryViewModel(
             return
         }
 
-        val request = buildWriteRequest(_uiState.value, unitSystem)
+        val request = buildWriteRequest(_uiState.value, units)
         if (request == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
@@ -1120,8 +1121,8 @@ class ActivityEntryViewModel(
         _uiState.value = _uiState.value.copy(saveCompleted = false)
     }
 
-    private fun applyRouteImport(routeImport: RouteFileImport, unitSystem: UnitSystem) {
-        _uiState.value = _uiState.value.withRouteImport(routeImport, unitSystem, clock)
+    private fun applyRouteImport(routeImport: RouteFileImport, units: ActivityEntryUnits) {
+        _uiState.value = _uiState.value.withRouteImport(routeImport, units, clock)
         refreshPermission()
     }
 
@@ -1190,7 +1191,9 @@ class ActivityEntryViewModel(
             elevationText = if (selectedActivityType.supportsElevation && snapshot.elevationGainedMeters > 0.0) {
                 elevationInputText(
                     snapshot.elevationGainedMeters,
-                    preferencesRepository?.unitSystem ?: UnitSystem.METRIC,
+                    preferencesRepository?.let { prefs ->
+                        prefs.unitOverride(UnitQuantity.ELEVATION) ?: prefs.unitSystem
+                    } ?: UnitSystem.METRIC,
                 )
             } else {
                 ""
@@ -1267,12 +1270,12 @@ private fun ActivityRecordingLap.toExerciseLapData(): ExerciseLapData =
 
 internal fun buildPlannedExerciseWriteRequest(
     state: ActivityEntryUiState,
-    unitSystem: UnitSystem,
+    units: ActivityEntryUnits,
     updateExistingId: String? = null,
 ): PlannedExerciseWriteRequest? {
     if (!state.selectedActivityType.supportsSetRepetitions) return null
-    if (validatePlannedExerciseWriteRequest(state, unitSystem).isNotEmpty()) return null
-    val activityRequest = buildWriteRequest(state, unitSystem) ?: return null
+    if (validatePlannedExerciseWriteRequest(state, units).isNotEmpty()) return null
+    val activityRequest = buildWriteRequest(state, units) ?: return null
     val title = state.titleText.trim().takeIf { it.isNotEmpty() } ?: return null
     val segmentType = state.selectedActivityType.segmentType ?: ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
     val steps = when (state.repetitionMode) {
@@ -1313,10 +1316,10 @@ internal fun buildPlannedExerciseWriteRequest(
 
 internal fun validatePlannedExerciseWriteRequest(
     state: ActivityEntryUiState,
-    unitSystem: UnitSystem,
+    units: ActivityEntryUnits,
 ): Set<ActivityEntryValidationError> =
     buildSet {
-        addAll(validateActivityEntry(state, unitSystem))
+        addAll(validateActivityEntry(state, units))
         if (state.titleText.isBlank()) {
             add(ActivityEntryValidationError.TRAINING_PLAN_TITLE_REQUIRED)
         }

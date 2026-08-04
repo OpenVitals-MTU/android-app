@@ -20,12 +20,17 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
+import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
+import tech.mmarca.openvitals.data.repository.TestDispatcherProvider
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
 import tech.mmarca.openvitals.features.devicesync.store.HealthConnectSyncStore
 import tech.mmarca.openvitals.features.devicesync.store.encodeSyncRecordPayload
 import tech.mmarca.openvitals.features.devicesync.store.syncFingerprint
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.SyncedSourceOverlay
 
 /**
  * Port of the Flutter `health_connect_sync_store_test.dart` suite.
@@ -74,24 +79,44 @@ class HealthConnectSyncStoreTest {
         }
     }
 
+    /** In-memory `synced_record_origins`, one per fake phone. */
+    private class FakeOriginDao : SyncedRecordOriginDao {
+        val rows = linkedMapOf<String, SyncedRecordOriginEntity>()
+
+        override suspend fun all(): List<SyncedRecordOriginEntity> = rows.values.toList()
+
+        override suspend fun upsertAll(origins: List<SyncedRecordOriginEntity>) {
+            origins.forEach { rows[it.clientRecordId] = it }
+        }
+    }
+
     private val windowStart: Instant = Instant.parse("2025-01-01T00:00:00Z")
     private val windowEnd: Instant = Instant.parse("2027-01-01T00:00:00Z")
 
     private lateinit var hc: FakeHealthConnect
     private lateinit var store: HealthConnectSyncStore
 
-    private fun storeOver(fake: FakeHealthConnect) = HealthConnectSyncStore(
+    private fun storeOver(
+        fake: FakeHealthConnect,
+        originDao: FakeOriginDao = FakeOriginDao(),
+    ) = HealthConnectSyncStore(
         healthConnectManager = fake.manager,
         importRepository = fake.repository,
+        originRepository = SyncedRecordOriginRepository(originDao, TestDispatcherProvider),
+        localPackageName = "tech.mmarca.openvitals",
         windowStart = windowStart,
         windowEnd = windowEnd,
     )
 
-    private fun weight(day: Int, kilograms: Double): WeightRecord = WeightRecord(
+    private fun weight(
+        day: Int,
+        kilograms: Double,
+        clientRecordId: String = "ignored",
+    ): WeightRecord = WeightRecord(
         time = Instant.parse("2026-01-%02dT00:00:00Z".format(day)),
         zoneOffset = null,
         weight = Mass.kilograms(kilograms),
-        metadata = Metadata.manualEntry(device = Device(type = Device.TYPE_PHONE), clientRecordId = "ignored"),
+        metadata = Metadata.manualEntry(device = Device(type = Device.TYPE_PHONE), clientRecordId = clientRecordId),
     )
 
     @Before
@@ -106,6 +131,8 @@ class HealthConnectSyncStoreTest {
     @After
     fun tearDown() {
         unmockkStatic(Log::class)
+        // The repository hydrates the process-wide display overlay; reset it.
+        SyncedSourceOverlay.update(emptyMap())
     }
 
     @Test
@@ -188,6 +215,73 @@ class HealthConnectSyncStoreTest {
         val written = store.writeItems(items)
 
         assertEquals(setOf(items.single().key), written)
+    }
+
+    @Test
+    fun `readItems passes a preserved origin through instead of the local attribution`() = runTest {
+        // Phone B: the record arrived by sync from A (Gadgetbridge) and was
+        // therefore written carrying its fingerprint as clientRecordId, with
+        // B's origin table mapping that fingerprint. When B re-sends toward C,
+        // the item must announce Gadgetbridge, not B's own re-stamped package.
+        val fingerprint = syncFingerprint(weight(10, 74.0))
+        hc.seed(weight(10, 74.0, clientRecordId = fingerprint))
+        val dao = FakeOriginDao().apply {
+            rows[fingerprint] = SyncedRecordOriginEntity(
+                clientRecordId = fingerprint,
+                originPackage = "com.espruino.gadgetbridge.banglejs",
+            )
+        }
+
+        val items = storeOver(hc, dao).readItems(setOf("WeightRecord"))
+
+        assertEquals("com.espruino.gadgetbridge.banglejs", items.single().originPackage)
+    }
+
+    @Test
+    fun `writeItems persists a foreign origin for each landed record`() = runTest {
+        val record = weight(11, 75.0)
+        val dao = FakeOriginDao()
+        val item = SyncItem(
+            key = syncFingerprint(record),
+            recordType = "WeightRecord",
+            payload = encodeSyncRecordPayload(record),
+            originPackage = "com.espruino.gadgetbridge.banglejs",
+        )
+
+        val written = storeOver(hc, dao).writeItems(listOf(item))
+
+        assertEquals(setOf(item.key), written)
+        assertEquals(
+            "com.espruino.gadgetbridge.banglejs",
+            dao.rows[item.key]?.originPackage,
+        )
+    }
+
+    @Test
+    fun `writeItems does not persist an origin that is our own package or absent`() = runTest {
+        val ownRecord = weight(12, 76.0)
+        val legacyRecord = weight(13, 77.0)
+        val dao = FakeOriginDao()
+        val items = listOf(
+            // A record genuinely authored in OpenVitals on the sender.
+            SyncItem(
+                key = syncFingerprint(ownRecord),
+                recordType = "WeightRecord",
+                payload = encodeSyncRecordPayload(ownRecord),
+                originPackage = "tech.mmarca.openvitals",
+            ),
+            // A record from a peer build that predates the origin field.
+            SyncItem(
+                key = syncFingerprint(legacyRecord),
+                recordType = "WeightRecord",
+                payload = encodeSyncRecordPayload(legacyRecord),
+            ),
+        )
+
+        val written = storeOver(hc, dao).writeItems(items)
+
+        assertEquals(items.map { it.key }.toSet(), written)
+        assertEquals(0, dao.rows.size)
     }
 
     @Test

@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.core.presentation
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
 class UnitFormatterTest {
@@ -121,9 +122,101 @@ class UnitFormatterTest {
         assertEquals(null, formatter(UnitSystem.METRIC).averagePace(5_000.0, 0L))
     }
 
-    private fun formatter(unitSystem: UnitSystem): UnitFormatter =
+    // region per-quantity overrides route only their own quantity
+
+    @Test fun `a quantity override beats the base system`() {
+        val formatter = formatter(
+            UnitSystem.METRIC,
+            overrides = mapOf(UnitQuantity.WEIGHT to UnitSystem.IMPERIAL),
+        )
+        assertEquals("154.3 lb", formatter.weight(70.0).text)
+        assertEquals("154.3 lb", formatter.bodyMass(70.0).text)
+    }
+
+    @Test fun `an override leaves every other quantity on the base system`() {
+        val formatter = formatter(
+            UnitSystem.METRIC,
+            overrides = mapOf(UnitQuantity.WEIGHT to UnitSystem.IMPERIAL),
+        )
+        assertEquals("1.5 km", formatter.distance(1_500.0).text)
+        assertEquals("2.00 L", formatter.hydration(2.0).text)
+        assertEquals("37.0 deg C", formatter.temperature(37.0).text)
+    }
+
+    @Test fun `without an override a quantity follows the base system`() {
+        val formatter = formatter(UnitSystem.IMPERIAL)
+        assertEquals("1.0 mi", formatter.distance(1_609.344).text)
+    }
+
+    @Test fun `a metric override pins a quantity under an imperial base`() {
+        val formatter = formatter(
+            UnitSystem.IMPERIAL,
+            overrides = mapOf(UnitQuantity.TEMPERATURE to UnitSystem.METRIC),
+        )
+        assertEquals("37.0 deg C", formatter.temperature(37.0).text)
+        assertEquals("+1.5 deg C", formatter.temperatureDelta(1.5).text)
+        assertEquals("154.3 lb", formatter.weight(70.0).text)
+    }
+
+    @Test fun `speed and pace ride the distance override`() {
+        val formatter = formatter(
+            UnitSystem.METRIC,
+            overrides = mapOf(UnitQuantity.DISTANCE to UnitSystem.IMPERIAL),
+        )
+        assertEquals("1.0 mi", formatter.distance(1_609.344).text)
+        assertEquals("11.2 mph", formatter.speed(5.0).text)
+        assertEquals("6.0 mph", formatter.averageSpeed(1_609.344, 600_000L).text)
+        assertEquals("10:00 min/mi", formatter.averagePace(1_609.344, 600_000L)?.text)
+    }
+
+    @Test fun `elevation overrides independently of distance`() {
+        val formatter = formatter(
+            UnitSystem.METRIC,
+            overrides = mapOf(UnitQuantity.ELEVATION to UnitSystem.IMPERIAL),
+        )
+        assertEquals("33 ft", formatter.elevation(10.0).text)
+        assertEquals("1.5 km", formatter.distance(1_500.0).text)
+    }
+
+    @Test fun `height and blood glucose route through their overrides`() {
+        val formatter = formatter(
+            UnitSystem.METRIC,
+            overrides = mapOf(
+                UnitQuantity.HEIGHT to UnitSystem.IMPERIAL,
+                UnitQuantity.BLOOD_GLUCOSE to UnitSystem.IMPERIAL,
+            ),
+        )
+        assertEquals("5' 11\"", formatter.height(180.0).text)
+        assertEquals("101 mg/dL", formatter.bloodGlucose(5.6).text)
+    }
+
+    @Test fun `hydration routes through its override`() {
+        val formatter = formatter(
+            UnitSystem.METRIC,
+            overrides = mapOf(UnitQuantity.HYDRATION to UnitSystem.IMPERIAL),
+        )
+        assertEquals("68 fl oz", formatter.hydration(2.0).text)
+    }
+
+    @Test fun `unit-invariant quantities ignore overrides`() {
+        val formatter = formatter(
+            UnitSystem.METRIC,
+            overrides = UnitQuantity.entries.associateWith { UnitSystem.IMPERIAL },
+        )
+        assertEquals("120/80 mmHg", formatter.bloodPressure(120, 80).text)
+        assertEquals("250 W", formatter.power(250.4).text)
+        assertEquals("251 kcal", formatter.energy(250.6).text)
+    }
+
+    // endregion
+
+    private fun formatter(
+        unitSystem: UnitSystem,
+        overrides: Map<UnitQuantity, UnitSystem> = emptyMap(),
+    ): UnitFormatter =
         UnitFormatter(
             unitSystemProvider = { unitSystem },
             localeProvider = { Locale.US },
+            unitOverrideProvider = { overrides[it] },
         )
 }

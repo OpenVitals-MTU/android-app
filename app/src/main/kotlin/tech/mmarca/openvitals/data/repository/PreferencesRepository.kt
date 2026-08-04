@@ -27,7 +27,10 @@ import tech.mmarca.openvitals.domain.preferences.CaffeineSleepSensitivity
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
+import tech.mmarca.openvitals.domain.preferences.SystemUnitSystemProvider
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
@@ -41,7 +44,6 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.LocalTime
-import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,10 +54,13 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class PreferencesRepository @Inject constructor(
     @ApplicationContext context: Context,
+    private val systemUnitSystem: SystemUnitSystemProvider = SystemUnitSystemProvider.Default,
 ) {
 
     private val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
-    private val _unitSystem = MutableStateFlow(readUnitSystem())
+    private val _unitSystemPreference = MutableStateFlow(readUnitSystemPreference())
+    private val _unitSystem = MutableStateFlow(_unitSystemPreference.value.resolve(systemUnitSystem::current))
+    private val _unitOverrides = MutableStateFlow(readUnitOverrides())
     private val _appLanguage = MutableStateFlow(readAppLanguage())
     private val _appThemeMode = MutableStateFlow(readAppThemeMode())
     private val _dynamicColor = MutableStateFlow(readDynamicColor())
@@ -68,7 +73,17 @@ class PreferencesRepository @Inject constructor(
     private val _bodyEnergyCalibration = MutableStateFlow(readBodyEnergyCalibration())
     private val _caffeinePreferences = MutableStateFlow(readCaffeinePreferences())
     private val _bodyProfile = MutableStateFlow(readBodyProfile())
+    val unitSystemPreferenceFlow: StateFlow<UnitSystemPreference> = _unitSystemPreference.asStateFlow()
+
+    /** The resolved system — never [UnitSystemPreference.SYSTEM]'s raw form. */
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
+
+    /**
+     * Per-quantity display-unit overrides; a quantity absent from the map
+     * follows the base unit setting. Overrides act only at the formatting
+     * boundary — stored health data stays metric.
+     */
+    val unitOverridesFlow: StateFlow<Map<UnitQuantity, UnitSystem>> = _unitOverrides.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
     val dynamicColorFlow: StateFlow<Boolean> = _dynamicColor.asStateFlow()
@@ -108,12 +123,44 @@ class PreferencesRepository @Inject constructor(
         )
         set(value) { prefs.edit { putBoolean(KEY_HEALTH_CONNECT_MINDFULNESS_ENABLED, value) } }
 
-    var unitSystem: UnitSystem
+    /** The unit system to display, with a SYSTEM preference already resolved. */
+    val unitSystem: UnitSystem
         get() = _unitSystem.value
+
+    var unitSystemPreference: UnitSystemPreference
+        get() = _unitSystemPreference.value
         set(value) {
-            prefs.edit { putString(KEY_UNIT_SYSTEM, value.name) }
-            _unitSystem.value = value
+            prefs.edit { putString(KEY_UNIT_SYSTEM, value.storageValue) }
+            _unitSystemPreference.value = value
+            _unitSystem.value = value.resolve(systemUnitSystem::current)
         }
+
+    /**
+     * Re-resolves a [UnitSystemPreference.SYSTEM] choice against the OS.
+     * Called on configuration changes, which is how locale and Android 14+
+     * regional-preference (`-u-ms-`) changes arrive.
+     */
+    fun refreshSystemUnitSystem() {
+        _unitSystem.value = _unitSystemPreference.value.resolve(systemUnitSystem::current)
+    }
+
+    /** The stored override for one quantity, or null to follow the base setting. */
+    fun unitOverride(quantity: UnitQuantity): UnitSystem? = _unitOverrides.value[quantity]
+
+    fun setUnitOverride(quantity: UnitQuantity, override: UnitSystem?) {
+        prefs.edit {
+            if (override == null) {
+                remove(unitOverrideKey(quantity))
+            } else {
+                putString(unitOverrideKey(quantity), override.name)
+            }
+        }
+        _unitOverrides.value = if (override == null) {
+            _unitOverrides.value - quantity
+        } else {
+            _unitOverrides.value + (quantity to override)
+        }
+    }
 
     var appLanguage: AppLanguage
         get() = _appLanguage.value
@@ -339,9 +386,11 @@ class PreferencesRepository @Inject constructor(
         set(value) { prefs.edit { putLong(KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS, value) } }
 
     /**
-     * `epochDay|endScore` for the newest completed Body Energy day, mirrored out
-     * of Room so a context that cannot open the database still chains across
-     * midnight instead of restarting at the neutral score.
+     * `epochDay|endScore|startScore|chained` for the newest computed Body
+     * Energy day, mirrored out of Room so a context that cannot serve the
+     * chain from storage still carries it instead of restarting at the neutral
+     * score. Rows written before the two trailing fields existed are still
+     * accepted for the day-after read.
      */
     var bodyEnergyChainSeedMirror: String?
         get() = prefs.getString(KEY_BODY_ENERGY_CHAIN_SEED_MIRROR, null)
@@ -351,6 +400,27 @@ class PreferencesRepository @Inject constructor(
                     remove(KEY_BODY_ENERGY_CHAIN_SEED_MIRROR)
                 } else {
                     putString(KEY_BODY_ENERGY_CHAIN_SEED_MIRROR, value)
+                }
+            }
+        }
+
+    /**
+     * The permission-set hash the Body Energy chain signatures were last
+     * computed from, kept so a FAILED permission read does not have to be
+     * reported as a permission CHANGE. Null until the first successful read.
+     */
+    var bodyEnergyPermissionSignature: Int?
+        get() = if (prefs.contains(KEY_BODY_ENERGY_PERMISSION_SIGNATURE)) {
+            prefs.getInt(KEY_BODY_ENERGY_PERMISSION_SIGNATURE, 0)
+        } else {
+            null
+        }
+        set(value) {
+            prefs.edit {
+                if (value == null) {
+                    remove(KEY_BODY_ENERGY_PERMISSION_SIGNATURE)
+                } else {
+                    putInt(KEY_BODY_ENERGY_PERMISSION_SIGNATURE, value)
                 }
             }
         }
@@ -799,10 +869,21 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    private fun readUnitSystem(): UnitSystem =
-        prefs.getString(KEY_UNIT_SYSTEM, null)
-            ?.let { value -> runCatching { UnitSystem.valueOf(value) }.getOrNull() }
-            ?: defaultUnitSystem()
+    // A user who saved METRIC/IMPERIAL before SYSTEM existed keeps that
+    // explicit choice; only the unset (fresh-install) case follows the OS.
+    private fun readUnitSystemPreference(): UnitSystemPreference =
+        UnitSystemPreference.fromStorageValue(prefs.getString(KEY_UNIT_SYSTEM, null))
+            ?: UnitSystemPreference.SYSTEM
+
+    private fun readUnitOverrides(): Map<UnitQuantity, UnitSystem> =
+        UnitQuantity.entries.mapNotNull { quantity ->
+            prefs.getString(unitOverrideKey(quantity), null)
+                ?.let { value -> runCatching { UnitSystem.valueOf(value) }.getOrNull() }
+                ?.let { quantity to it }
+        }.toMap()
+
+    private fun unitOverrideKey(quantity: UnitQuantity): String =
+        KEY_UNIT_OVERRIDE_PREFIX + quantity.storageKey
 
     private fun readAppLanguage(): AppLanguage =
         AppLanguage.fromStorageValue(prefs.getString(KEY_APP_LANGUAGE, null))
@@ -941,11 +1022,6 @@ class PreferencesRepository @Inject constructor(
             hormonalStatus = prefs.getString(KEY_CAFFEINE_HORMONAL_STATUS, null)
                 .toEnumOrDefault(CaffeineHormonalStatus.NONE),
         ).normalized()
-
-    private fun defaultUnitSystem(): UnitSystem {
-        val country = Locale.getDefault().country.uppercase(Locale.US)
-        return if (country in IMPERIAL_COUNTRIES) UnitSystem.IMPERIAL else UnitSystem.METRIC
-    }
 
     private fun String.toMindfulnessBellSound(): MindfulnessBellSound? =
         when (this) {
@@ -1100,6 +1176,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ACKNOWLEDGED_FEATURE_PREFIX = "acknowledged_feature_permissions_"
         private const val KEY_LAST_PROMPTED_PERMISSION_SET_VERSION = "last_prompted_permission_set_version"
         private const val KEY_UNIT_SYSTEM = "unit_system"
+        private const val KEY_UNIT_OVERRIDE_PREFIX = "unit_override_"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
@@ -1165,6 +1242,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_BODY_ENERGY_WATCH_FIT_EPOCH = "body_energy_watch_fit_epoch"
         private const val KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS = "body_energy_watch_fit_watermark_millis"
         private const val KEY_BODY_ENERGY_CHAIN_SEED_MIRROR = "body_energy_chain_seed_mirror"
+        private const val KEY_BODY_ENERGY_PERMISSION_SIGNATURE = "body_energy_permission_signature"
         private const val KEY_BODY_PROFILE_BIRTH_YEAR = "body_profile_birth_year"
         private const val KEY_BODY_PROFILE_WEIGHT_KG = "body_profile_weight_kg"
         private const val KEY_BODY_PROFILE_HEIGHT_CM = "body_profile_height_cm"
@@ -1218,6 +1296,5 @@ class PreferencesRepository @Inject constructor(
         private const val MAX_CUSTOM_HYDRATION_DRINKS = 25
         private const val ROUTE_GAP_OFF = 0
         private const val RECORDING_INTERVAL_OFF = 0
-        private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
     }
 }

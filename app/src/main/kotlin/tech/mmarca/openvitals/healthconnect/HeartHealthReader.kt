@@ -70,7 +70,7 @@ internal class HeartHealthReader(
     private suspend fun readRawOrAggregatedFallback(start: Instant, end: Instant): List<HeartRateSample> {
         val samples = support.client()
             .readSeriesSamples(HeartRateRecord::class, start, end) { record ->
-                val source = record.metadata.dataOrigin.packageName
+                val source = SyncedSourceOverlay.displaySource(record.metadata)
                 record.samples.map { sample ->
                     TimedSample(
                         sample.time,
@@ -171,7 +171,7 @@ internal class HeartHealthReader(
                 RestingHeartRateSample(
                     time = record.time,
                     beatsPerMinute = record.beatsPerMinute,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -219,7 +219,7 @@ internal class HeartHealthReader(
                 HrvSample(
                     time = record.time,
                     rmssdMs = record.heartRateVariabilityMillis,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }

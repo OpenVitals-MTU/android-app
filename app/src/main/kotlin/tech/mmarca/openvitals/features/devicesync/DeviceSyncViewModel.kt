@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
 import tech.mmarca.openvitals.features.devicesync.bluetooth.BluetoothSyncManager
 import tech.mmarca.openvitals.features.devicesync.bluetooth.DiscoveredSyncDevice
 import tech.mmarca.openvitals.features.devicesync.bluetooth.SyncConnectionState
@@ -55,6 +56,7 @@ class DeviceSyncViewModel @Inject constructor(
     private val bluetooth: BluetoothSyncManager,
     private val healthConnectManager: HealthConnectManager,
     private val importRepository: AppleHealthImportRepository,
+    private val originRepository: SyncedRecordOriginRepository,
     private val reportStore: DeviceSyncReportStore,
     private val recordingController: ActivityRecordingController,
 ) : ViewModel() {
@@ -330,6 +332,8 @@ class DeviceSyncViewModel @Inject constructor(
             val store = HealthConnectSyncStore(
                 healthConnectManager = healthConnectManager,
                 importRepository = importRepository,
+                originRepository = originRepository,
+                localPackageName = context.packageName,
                 windowStart = window.first,
                 windowEnd = window.second,
             )

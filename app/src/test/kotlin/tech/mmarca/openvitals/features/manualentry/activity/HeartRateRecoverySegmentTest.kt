@@ -77,7 +77,7 @@ class HeartRateRecoverySegmentTest {
 
     @Test
     fun `the recovery is written as a trailing rest segment and read back`() {
-        val request = buildWriteRequest(recordedTest(recoveryStart = effortEnded), UnitSystem.METRIC)
+        val request = buildWriteRequest(recordedTest(recoveryStart = effortEnded), ActivityEntryUnits.uniform(UnitSystem.METRIC))
         assertNotNull(request)
 
         val rest = request!!.exerciseSegments
@@ -118,7 +118,7 @@ class HeartRateRecoverySegmentTest {
                 recoveryStart = effortEnded,
                 pauses = listOf(ActivityPauseInterval(startTime = pauseStart, endTime = pauseEnd)),
             ),
-            UnitSystem.METRIC,
+            ActivityEntryUnits.uniform(UnitSystem.METRIC),
         )
 
         val pauses = request!!.exerciseSegments
@@ -129,7 +129,7 @@ class HeartRateRecoverySegmentTest {
 
     @Test
     fun `an ordinary recording gets no recovery mark at all`() {
-        val request = buildWriteRequest(recordedTest(recoveryStart = null), UnitSystem.METRIC)
+        val request = buildWriteRequest(recordedTest(recoveryStart = null), ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         assertTrue(
             request!!.exerciseSegments.none {

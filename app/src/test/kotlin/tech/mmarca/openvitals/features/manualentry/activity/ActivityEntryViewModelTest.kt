@@ -70,7 +70,7 @@ class ActivityEntryViewModelTest {
             distanceText = "10.5",
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, request.exerciseType)
@@ -90,7 +90,7 @@ class ActivityEntryViewModelTest {
             durationMinutesText = "45",
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals("Felt good.\n\nKept the last mile steady.", request.notes)
@@ -107,7 +107,7 @@ class ActivityEntryViewModelTest {
             repetitionTotalText = "25",
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertNull(request.distanceMeters)
@@ -123,7 +123,7 @@ class ActivityEntryViewModelTest {
             totalCaloriesText = "300",
         )
 
-        assertNull(buildWriteRequest(state, UnitSystem.METRIC))
+        assertNull(buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC)))
     }
 
     @Test fun `validateActivityEntry returns field specific errors`() {
@@ -136,7 +136,7 @@ class ActivityEntryViewModelTest {
             totalCaloriesText = "0",
         )
 
-        val errors = validateActivityEntry(state, UnitSystem.METRIC)
+        val errors = validateActivityEntry(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         assertTrue(ActivityEntryValidationError.START_DATE_INVALID in errors)
         assertTrue(ActivityEntryValidationError.START_TIME_INVALID in errors)
@@ -157,7 +157,7 @@ class ActivityEntryViewModelTest {
         vm.startManualEntry()
         vm.updateDurationMinutes("0")
         vm.updateDistance("-1")
-        vm.addEntry(UnitSystem.METRIC)
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryError.INVALID_VALUE, vm.uiState.value.entryError)
@@ -202,7 +202,7 @@ class ActivityEntryViewModelTest {
             importedRoute = route,
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(2, request.routePoints.size)
@@ -231,7 +231,7 @@ class ActivityEntryViewModelTest {
             importedRoute = route,
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         val expectedStart = java.time.LocalDateTime.of(
@@ -260,7 +260,7 @@ class ActivityEntryViewModelTest {
             ),
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(1, request.pauseIntervals.size)
@@ -295,7 +295,7 @@ class ActivityEntryViewModelTest {
             ),
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertFalse(request.routePoints.isNotEmpty())
@@ -318,7 +318,7 @@ class ActivityEntryViewModelTest {
                 .withHeartRateSample(sampleTime.plusSeconds(30), 140),
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING, request.exerciseType)
@@ -353,7 +353,7 @@ class ActivityEntryViewModelTest {
             ),
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS, request.exerciseType)
@@ -379,7 +379,7 @@ class ActivityEntryViewModelTest {
             ),
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(3, request.exerciseSegments.size)
@@ -408,7 +408,7 @@ class ActivityEntryViewModelTest {
                 .withHeartRateSample(sampleTime.plusSeconds(30), 136),
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS, request.exerciseType)
@@ -433,7 +433,7 @@ class ActivityEntryViewModelTest {
             ),
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals("planned-id", request.plannedExerciseSessionId)
@@ -453,7 +453,7 @@ class ActivityEntryViewModelTest {
             ),
         )
 
-        val request = buildPlannedExerciseWriteRequest(state, UnitSystem.METRIC)
+        val request = buildPlannedExerciseWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals("Pull day", request.title)
@@ -473,7 +473,7 @@ class ActivityEntryViewModelTest {
             repetitionTotalText = "2400",
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL, request.exerciseType)
@@ -492,7 +492,7 @@ class ActivityEntryViewModelTest {
             repetitionTotalText = "2100",
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_WALKING, request.exerciseType)
@@ -511,7 +511,7 @@ class ActivityEntryViewModelTest {
             distanceText = "1.6",
         )
 
-        val request = buildWriteRequest(state, UnitSystem.METRIC)
+        val request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
 
         requireNotNull(request)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_WALKING, request.exerciseType)
@@ -528,7 +528,7 @@ class ActivityEntryViewModelTest {
 
         vm.startManualEntry()
         advanceUntilIdle()
-        vm.addEntry(UnitSystem.METRIC)
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryError.MISSING_WRITE_PERMISSION, vm.uiState.value.entryError)
@@ -548,7 +548,7 @@ class ActivityEntryViewModelTest {
         vm.updateDistance("5")
         vm.refreshPermission()
         advanceUntilIdle()
-        vm.addEntry(UnitSystem.METRIC)
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         coVerify {
@@ -697,7 +697,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.loadEditEntry(UnitSystem.METRIC)
+        vm.loadEditEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals("pull_ups", vm.uiState.value.selectedActivityType.id)
@@ -736,7 +736,7 @@ class ActivityEntryViewModelTest {
         vm.startManualEntry()
         advanceUntilIdle()
         vm.applyPlannedWorkout("planned-id")
-        vm.addEntry(UnitSystem.METRIC)
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         coVerify {
@@ -761,7 +761,7 @@ class ActivityEntryViewModelTest {
         vm.addRepetitionSet()
         vm.updateRepetitionSetRepetitions(1, "6")
         advanceUntilIdle()
-        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC)
+        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         coVerify {
@@ -793,7 +793,7 @@ class ActivityEntryViewModelTest {
 
         assertTrue(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
 
-        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC, updateSelected = true)
+        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC), updateSelected = true)
         advanceUntilIdle()
 
         coVerify {
@@ -817,7 +817,7 @@ class ActivityEntryViewModelTest {
         vm.updateRepetitionMode(ActivityRepetitionEntryMode.SETS)
         vm.updateRepetitionSetRepetitions(0, "8")
         advanceUntilIdle()
-        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC)
+        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryError.INVALID_VALUE, vm.uiState.value.entryError)
@@ -850,7 +850,7 @@ class ActivityEntryViewModelTest {
 
         vm.updateTitle("New pull-up plan")
         vm.updateRepetitionSetRepetitions(0, "5")
-        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC)
+        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         coVerify {
@@ -874,7 +874,7 @@ class ActivityEntryViewModelTest {
         vm.updateRepetitionMode(ActivityRepetitionEntryMode.SETS)
         vm.updateRepetitionSetRepetitions(0, "8")
         advanceUntilIdle()
-        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC)
+        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryError.MISSING_WRITE_PERMISSION, vm.uiState.value.entryError)
@@ -948,7 +948,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.finishGpsRecording(UnitSystem.METRIC)
+        vm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
@@ -982,7 +982,7 @@ class ActivityEntryViewModelTest {
         firstVm.selectActivityType(DefaultActivityEntryTypes.first { it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_BIKING })
         advanceUntilIdle()
 
-        firstVm.finishGpsRecording(UnitSystem.METRIC)
+        firstVm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         val restoredVm = ActivityEntryViewModel(
@@ -1028,7 +1028,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.finishGpsRecording(UnitSystem.METRIC)
+        vm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryMode.ROUTE_IMPORT, vm.uiState.value.mode)
@@ -1060,7 +1060,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.finishGpsRecording(UnitSystem.METRIC)
+        vm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         val restoredVm = ActivityEntryViewModel(
@@ -1070,7 +1070,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        restoredVm.addEntry(UnitSystem.METRIC)
+        restoredVm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertNull(draftStore.restore())
@@ -1101,7 +1101,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.finishGpsRecording(UnitSystem.METRIC)
+        vm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         vm.discardRecordingDraft()
@@ -1153,7 +1153,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.importRouteFile(uri, UnitSystem.IMPERIAL)
+        vm.importRouteFile(uri, ActivityEntryUnits.uniform(UnitSystem.IMPERIAL))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryMode.ROUTE_IMPORT, vm.uiState.value.mode)
@@ -1187,7 +1187,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.importRouteFile(uri, UnitSystem.METRIC)
+        vm.importRouteFile(uri, ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryMode.ROUTE_IMPORT, vm.uiState.value.mode)
@@ -1224,7 +1224,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.importRouteFile(uri, UnitSystem.METRIC)
+        vm.importRouteFile(uri, ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals("Tempo Run", vm.uiState.value.titleText)
@@ -1267,7 +1267,7 @@ class ActivityEntryViewModelTest {
         assertFalse(vm.uiState.value.isSavingEntry)
         assertFalse(vm.uiState.value.saveCompleted)
 
-        vm.addEntry(UnitSystem.METRIC)
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(true, savingWhileWriting)
@@ -1296,7 +1296,7 @@ class ActivityEntryViewModelTest {
         vm.startManualEntry()
         advanceUntilIdle()
 
-        vm.addEntry(UnitSystem.METRIC)
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isSavingEntry)
@@ -1315,7 +1315,7 @@ class ActivityEntryViewModelTest {
         vm.startManualEntry()
         advanceUntilIdle()
 
-        vm.addEntry(UnitSystem.METRIC)
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryError.MISSING_WRITE_PERMISSION, vm.uiState.value.entryError)
@@ -1388,7 +1388,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.loadEditEntry(UnitSystem.METRIC)
+        vm.loadEditEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.isEditMode)
@@ -1413,7 +1413,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.loadEditEntry(UnitSystem.METRIC)
+        vm.loadEditEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryError.WRITE_FAILED, vm.uiState.value.entryError)
@@ -1449,7 +1449,7 @@ class ActivityEntryViewModelTest {
         viewModel = vm
         advanceUntilIdle()
 
-        vm.importRouteFile(uri, UnitSystem.METRIC)
+        vm.importRouteFile(uri, ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(true, importingWhileParsing)
@@ -1474,7 +1474,7 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.importRouteFile(uri, UnitSystem.METRIC)
+        vm.importRouteFile(uri, ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isImportingRoute)
@@ -1582,7 +1582,7 @@ class ActivityEntryViewModelTest {
         val vm = recordingViewModel(recorder)
         advanceUntilIdle()
 
-        vm.finishGpsRecording(UnitSystem.METRIC)
+        vm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryError.RECORDING_FAILED, vm.uiState.value.entryError)

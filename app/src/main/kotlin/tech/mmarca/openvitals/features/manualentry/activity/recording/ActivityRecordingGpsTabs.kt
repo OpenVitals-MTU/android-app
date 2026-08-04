@@ -128,6 +128,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItemS
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardTemplate
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.isDarkTheme
 import tech.mmarca.openvitals.ui.components.AutoResizeText
@@ -153,7 +154,7 @@ internal fun GpsRecordingTabs(
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ActivityRecordingTab.STATS) }
     var timeSplitMinutes by rememberSaveable { mutableIntStateOf(DefaultTimeSplitMinutes) }
-    val unitSystem = unitFormatter.unitSystem()
+    val unitSystem = unitFormatter.unitSystem(UnitQuantity.DISTANCE)
     var distanceSplitMeters by rememberSaveable(unitSystem) {
         mutableDoubleStateOf(defaultDistanceSplitMeters(unitSystem))
     }

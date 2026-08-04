@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
@@ -19,10 +21,12 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -36,6 +40,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import dagger.hilt.android.EntryPointAccessors
 import java.time.LocalDate
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,6 +53,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
+import tech.mmarca.openvitals.domain.insights.BodyEnergySeedSource
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.DailyReadinessGoalInputs
 import tech.mmarca.openvitals.domain.insights.DailyReadinessInsight
@@ -82,11 +88,17 @@ class HomeDailyReadinessWidgetReceiver : UpdatingHomeWidgetReceiver() {
 
 class HomeBodyEnergyWidget : GlanceAppWidget() {
     override val stateDefinition = HomeMetricWidgetState.definition
-    override val sizeMode = SizeMode.Responsive(HomeStatusWidgetSizes)
+
+    // EXACT, not Responsive: the curve is drawn to fit the width it is given,
+    // so it needs the width the widget actually has. Responsive reports the
+    // largest DECLARED size that fits, which on a 309dp widget is the 220dp
+    // bucket — and the plot would then be drawn far narrower than the card it
+    // sits in, with the rest of it empty.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            HomeWidgetContentFromState(context.getString(R.string.screen_body_energy))
+            HomeBodyEnergyContentFromState(context.getString(R.string.screen_body_energy))
         }
     }
 }
@@ -181,10 +193,42 @@ suspend fun refreshBodyEnergyWidget(context: Context, appWidgetId: Int) {
     if (!hasAppWidgetInfo(context, appWidgetId)) return
 
     val glanceId = glanceAppWidgetId(appWidgetId)
-    loadBodyEnergySnapshot(context)?.let { snapshot ->
+    loadBodyEnergyTimeline(context).map { timeline ->
+        val candidate = buildBodyEnergySnapshot(context, timeline)
+        val previous = getAppWidgetState(context, HomeMetricWidgetState.definition, glanceId)
+            .toWidgetSnapshot(context)
+        bodyEnergySnapshotToWrite(candidate, timeline, previous)
+    }.getOrNull()?.let { snapshot ->
         writeHomeWidgetSnapshot(context, glanceId, "body_energy", snapshot)
     }
     HomeBodyEnergyWidget().update(context, glanceId)
+}
+
+/**
+ * Whether a freshly built Body Energy snapshot may replace [previous], the one
+ * the tile is showing — the [candidate] to write, or null to keep the tile as
+ * it is.
+ *
+ * A timeline whose seed DEFAULTED (no previous day could be found to carry
+ * from) is still built from real data, so it produces a plausible-looking tile
+ * whose "Start" is the neutral 50 rather than yesterday's end. When the tile
+ * is already showing a chained snapshot for the same day, those stale-but-right
+ * numbers win over the fresh-but-wrong ones; the next refresh that resolves the
+ * chain replaces them. A different route means a different day (the route
+ * carries the date), and a rowless previous snapshot is the not-yet-configured
+ * fallback — both always give way.
+ */
+internal fun bodyEnergySnapshotToWrite(
+    candidate: HomeMetricWidgetSnapshot,
+    timeline: BodyEnergyTimeline?,
+    previous: HomeMetricWidgetSnapshot?,
+): HomeMetricWidgetSnapshot? {
+    if (timeline == null) return candidate
+    if (timeline.inputSummary.seedSource == BodyEnergySeedSource.CARRIED_OVER) return candidate
+    if (previous == null) return candidate
+    if (previous.route != candidate.route) return candidate
+    if (previous.rows.isEmpty()) return candidate
+    return null
 }
 
 suspend fun refreshTodayVitalsWidget(context: Context, appWidgetId: Int) {
@@ -210,6 +254,136 @@ private fun HomeWidgetContentFromState(fallbackTitle: String) {
             route = Screen.Dashboard.route,
         )
     HomeMetricWidgetContent(snapshot = snapshot)
+}
+
+/**
+ * Body Energy: the numbers, and the day's curve beside them.
+ *
+ * One layout at every size rather than a stacked variant for tall widgets. The
+ * numbers are what the widget is for and the curve is context around them, so
+ * the text column keeps what it needs and the curve takes the whole of the
+ * rest — all the leftover width, all the height. Making it wider or taller
+ * grows the plot; making it narrower shrinks the plot, and nothing else moves.
+ *
+ * Only when the leftover is too thin to hold a shape does the plot go, and the
+ * tile falls back to the plain text layout.
+ */
+@Composable
+private fun HomeBodyEnergyContentFromState(fallbackTitle: String) {
+    val context = LocalContext.current
+    val size = LocalSize.current
+    val preferences = currentState<Preferences>()
+    val snapshot = preferences.toWidgetSnapshot(context)
+        ?: HomeMetricWidgetSnapshot(
+            title = fallbackTitle,
+            value = "--",
+            unit = "",
+            subtitle = context.getString(R.string.home_metric_widget_open_for_details),
+            route = Screen.Dashboard.route,
+        )
+
+    // Sized to the widest line it holds ("Charged: +34" at 11sp) rather than
+    // padded out: every dp kept here is a dp the curve does not get.
+    val textWidth = 108.dp
+    val gap = 10.dp
+    val plotWidth = size.width.value - 2 * BodyEnergyPadding.value - textWidth.value - gap.value
+    val plotHeight = size.height.value - 2 * BodyEnergyPadding.value
+
+    val plot = if (snapshot.series.size >= 2 && plotWidth >= BodyEnergyMinPlotWidth) {
+        renderPlot(
+            context = context,
+            series = snapshot.series,
+            widthDp = plotWidth,
+            heightDp = plotHeight,
+        )
+    } else {
+        null
+    }
+    if (plot == null) {
+        HomeMetricWidgetContent(snapshot = snapshot)
+        return
+    }
+
+    Row(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(ColorProvider(WidgetBackground))
+            .clickable(actionStartActivity(openMetricIntent(context, snapshot.route)))
+            .padding(BodyEnergyPadding),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+    ) {
+        Column(modifier = GlanceModifier.width(textWidth)) {
+            Text(
+                text = snapshot.title,
+                maxLines = 1,
+                style = TextStyle(
+                    color = ColorProvider(WidgetMutedText),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+            Text(
+                text = snapshot.value,
+                maxLines = 1,
+                style = TextStyle(
+                    color = ColorProvider(WidgetPrimaryText),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+            if (snapshot.subtitle.isNotBlank()) {
+                Text(
+                    text = snapshot.subtitle,
+                    maxLines = 1,
+                    style = TextStyle(
+                        color = ColorProvider(WidgetMutedText),
+                        fontSize = 13.sp,
+                    ),
+                )
+            }
+            // Only where there is height to hold them. On a short widget these
+            // are what gives way, not the score or the curve.
+            if (plotHeight >= BodyEnergyRowsMinHeight) {
+                snapshot.rows.take(2).forEach { row ->
+                    Text(
+                        text = "${row.label}: ${row.value}",
+                        maxLines = 1,
+                        style = TextStyle(
+                            color = ColorProvider(WidgetPrimaryText),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                    )
+                }
+            }
+        }
+        Spacer(modifier = GlanceModifier.width(gap))
+        Image(
+            provider = ImageProvider(plot),
+            // Described by what it shows, not as "chart": a screen reader
+            // saying "39 Low" reads the same thing the sighted user does.
+            contentDescription = "${snapshot.value} ${snapshot.subtitle}".trim(),
+            contentScale = ContentScale.FillBounds,
+            modifier = GlanceModifier.width(plotWidth.dp).height(plotHeight.dp),
+        )
+    }
+}
+
+/** Rasterises the curve at the exact size it will be drawn at. */
+private fun renderPlot(
+    context: Context,
+    series: List<Int>,
+    widthDp: Float,
+    heightDp: Float,
+): android.graphics.Bitmap? {
+    if (widthDp <= 0f || heightDp <= 0f) return null
+    val density = context.resources.displayMetrics.density
+    return BodyEnergyPlot.render(
+        series = series,
+        widthPx = (widthDp * density).toInt(),
+        heightPx = (heightDp * density).toInt(),
+        density = density,
+    )
 }
 
 @Composable
@@ -436,12 +610,6 @@ internal fun buildDailyReadinessSnapshot(
     )
 }
 
-/** Null when the read failed; see [refreshDailyReadinessWidget]. */
-private suspend fun loadBodyEnergySnapshot(context: Context): HomeMetricWidgetSnapshot? =
-    loadBodyEnergyTimeline(context).map { timeline ->
-        buildBodyEnergySnapshot(context, timeline)
-    }.getOrNull()
-
 /** The Body Energy widget's snapshot, from an already-loaded timeline. */
 internal fun buildBodyEnergySnapshot(
     context: Context,
@@ -459,6 +627,7 @@ internal fun buildBodyEnergySnapshot(
         unit = "",
         subtitle = bodyEnergyStatus(context, timeline.currentScore),
         route = route,
+        series = homeWidgetSeries(timeline.points.map { it.score }),
         rows = listOf(
             HomeMetricWidgetRow(
                 label = context.getString(R.string.body_energy_timeline_start),
@@ -475,6 +644,23 @@ internal fun buildBodyEnergySnapshot(
         ),
     )
 }
+
+/**
+ * Thins [values] down to at most [MaxHomeWidgetSeriesPoints], evenly.
+ *
+ * The LAST value always survives. It is the one the widget also prints as the
+ * current score, and a plot whose line ended somewhere other than the number
+ * beside it would be visibly disagreeing with itself.
+ */
+internal fun homeWidgetSeries(values: List<Int>): List<Int> {
+    if (values.size <= MaxHomeWidgetSeriesPoints) return values.toList()
+    // Spread the sample points across the whole range rather than taking every
+    // Nth from the start, which would stop short of the end by up to N.
+    val step = (values.size - 1).toDouble() / (MaxHomeWidgetSeriesPoints - 1)
+    return List(MaxHomeWidgetSeriesPoints) { index -> values[(index * step).roundToInt()] }
+}
+
+internal const val MaxHomeWidgetSeriesPoints = 48
 
 /**
  * Null when the dashboard read failed; see [refreshDailyReadinessWidget].
@@ -751,6 +937,14 @@ private val TodayVitalsMetrics = setOf(
     DashboardMetric.WEEKLY_CARDIO_LOAD,
     DashboardMetric.HYDRATION,
 )
+
+/** Below this the leftover strip is too thin to read a day off. */
+private const val BodyEnergyMinPlotWidth = 48f
+
+/** Below this there is no room for the start/charged lines under the score. */
+private const val BodyEnergyRowsMinHeight = 96f
+
+private val BodyEnergyPadding = 16.dp
 
 private val HomeStatusWidgetSizes = setOf(
     DpSize(220.dp, 110.dp),

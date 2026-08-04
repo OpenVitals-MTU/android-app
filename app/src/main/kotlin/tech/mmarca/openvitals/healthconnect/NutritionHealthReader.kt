@@ -164,7 +164,7 @@ internal class NutritionHealthReader(
                     fatGrams = nutrientValues[NutritionNutrient.TOTAL_FAT],
                     fiberGrams = nutrientValues[NutritionNutrient.DIETARY_FIBER],
                     sugarGrams = nutrientValues[NutritionNutrient.SUGAR],
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                     nutrientValues = nutrientValues,
                     id = record.metadata.id,
                     clientRecordId = record.metadata.clientRecordId,

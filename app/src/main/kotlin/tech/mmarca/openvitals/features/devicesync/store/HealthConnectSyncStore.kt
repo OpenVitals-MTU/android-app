@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.Record
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRecordStore
 import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
@@ -21,16 +22,29 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * [AppleHealthImportRepository.insertImportedRecords]. Because both phones
  * compute the same fingerprint and write it as the clientRecordId, re-syncs
  * converge and Health Connect upserts rather than duplicating.
+ *
+ * ORIGINAL SOURCE PRESERVATION — Health Connect re-stamps every record this
+ * phone writes with OpenVitals' own package, so each outgoing [SyncItem] also
+ * carries the ORIGINAL source app ([resolveOriginalSource]: the local
+ * `dataOrigin`, or the preserved origin when the record itself arrived by
+ * sync, so chains pass the original through). Each incoming foreign origin is
+ * persisted per fingerprint through [SyncedRecordOriginRepository] and only
+ * ever used for display — it never enters the fingerprint or the payload, so
+ * convergence with builds that predate the field is untouched.
  */
 class HealthConnectSyncStore(
     private val healthConnectManager: HealthConnectManager,
     private val importRepository: AppleHealthImportRepository,
+    private val originRepository: SyncedRecordOriginRepository,
+    /** This phone's own package — origins matching it are not worth a row. */
+    private val localPackageName: String,
     /** The inclusive sync window the user chose ("how far back"). */
     private val windowStart: Instant,
     private val windowEnd: Instant,
 ) : SyncRecordStore {
 
     override suspend fun readItems(types: Set<String>): List<SyncItem> {
+        val preservedOrigins = originRepository.preservedOrigins()
         val items = mutableListOf<SyncItem>()
         for (type in types) {
             val recordClass = syncRecordClassFor(type) ?: continue
@@ -43,6 +57,11 @@ class HealthConnectSyncStore(
                         key = syncFingerprint(record),
                         recordType = type,
                         payload = encodeSyncRecordPayload(record),
+                        originPackage = resolveOriginalSource(
+                            clientRecordId = record.metadata.clientRecordId,
+                            dataOriginPackage = record.metadata.dataOrigin.packageName,
+                            preservedOrigins = preservedOrigins,
+                        ),
                     )
                 }.getOrNull() ?: continue
                 items += item
@@ -59,6 +78,7 @@ class HealthConnectSyncStore(
         // the sync continues with the types that do write.
         val recordsByType = mutableMapOf<String, MutableList<Record>>()
         val keysByType = mutableMapOf<String, MutableList<String>>()
+        val originsByKey = mutableMapOf<String, String>()
         for (item in items) {
             val record = try {
                 ownedRecord(item)
@@ -72,9 +92,14 @@ class HealthConnectSyncStore(
                 Log.w(TAG, "skipping undecodable ${item.recordType}: ${e.message}")
                 continue
             }
+            // Keyed on the RECOMPUTED fingerprint (what actually gets written
+            // as the clientRecordId), not the peer-claimed item.key.
+            val key = record.metadata.clientRecordId ?: item.key
             recordsByType.getOrPut(item.recordType) { mutableListOf() } += record
-            keysByType.getOrPut(item.recordType) { mutableListOf() } +=
-                record.metadata.clientRecordId ?: item.key
+            keysByType.getOrPut(item.recordType) { mutableListOf() } += key
+            persistableOrigin(item.originPackage, localPackageName)?.let { origin ->
+                originsByKey[key] = origin
+            }
         }
         val written = mutableSetOf<String>()
         for ((type, records) in recordsByType) {
@@ -97,6 +122,21 @@ class HealthConnectSyncStore(
                     // written, so the session won't count them as imported.
                     Log.w(TAG, "WRITE FAILED for ${records.size} $type: ${e.message}")
                 }
+            }
+        }
+        // Remember each landed record's original source app so the UI can keep
+        // attributing it to Gadgetbridge (etc.) instead of OpenVitals.
+        // Duplicate-converged keys are included on purpose: the mapping is an
+        // upsert, and Health Connect already holds that exact fingerprint.
+        // Best-effort — a failure here loses display attribution, not records.
+        val landedOrigins = originsByKey.filterKeys { it in written }
+        if (landedOrigins.isNotEmpty()) {
+            try {
+                originRepository.recordOrigins(landedOrigins)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "failed to persist ${landedOrigins.size} record origins: ${e.message}")
             }
         }
         return written
@@ -153,3 +193,28 @@ class HealthConnectSyncStore(
         const val TAG = "DeviceSync"
     }
 }
+
+/**
+ * The ORIGINAL source app to announce for an outgoing record.
+ *
+ * A record this phone itself received by sync carries a preserved origin under
+ * its `sync_<hex>` clientRecordId — that wins, so an A→B→C chain forwards A's
+ * Gadgetbridge, not B's re-stamped OpenVitals. Anything else (a native record,
+ * or one synced before origins were carried) announces its local Health
+ * Connect `dataOrigin`.
+ */
+internal fun resolveOriginalSource(
+    clientRecordId: String?,
+    dataOriginPackage: String,
+    preservedOrigins: Map<String, String>,
+): String = clientRecordId?.let(preservedOrigins::get) ?: dataOriginPackage
+
+/**
+ * The origin worth persisting for an incoming record, or null.
+ *
+ * Null (an old-version peer that does not carry origins), blank, and
+ * [localPackageName] (a record genuinely authored in OpenVitals — the
+ * receiver's default attribution is already right) all map to null.
+ */
+internal fun persistableOrigin(originPackage: String?, localPackageName: String): String? =
+    originPackage?.takeIf { it.isNotBlank() && it != localPackageName }

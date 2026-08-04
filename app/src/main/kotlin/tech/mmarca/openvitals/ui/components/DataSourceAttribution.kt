@@ -42,6 +42,12 @@ fun DataSourceAttribution(
     packageName: String,
     modifier: Modifier = Modifier,
     showIcon: Boolean = true,
+    /**
+     * True for a record that arrived via phone-to-phone sync and shows its
+     * preserved ORIGINAL source app; the label gains a "(synced)" qualifier so
+     * the attribution is not mistaken for a native Health Connect origin.
+     */
+    synced: Boolean = false,
 ) {
     val context = LocalContext.current
     val source = remember(packageName) {
@@ -50,8 +56,13 @@ fun DataSourceAttribution(
     val iconPainter = remember(source.icon) {
         source.icon?.toPainter()
     }
-    val label = remember(source.label) {
+    val truncatedLabel = remember(source.label) {
         truncatedDataSourceLabel(source.label)
+    }
+    val label = if (synced) {
+        stringResource(R.string.data_source_synced_label, truncatedLabel)
+    } else {
+        truncatedLabel
     }
     AssistChip(
         onClick = {},

@@ -53,7 +53,7 @@ class RecordedSessionRangeTest {
         val lastSample = start.plusSeconds(179)
         val request = buildWriteRequest(
             recorded(heartRate(listOf(start.plusSeconds(60) to 120L, lastSample to 150L))),
-            UnitSystem.METRIC,
+            ActivityEntryUnits.uniform(UnitSystem.METRIC),
         )
 
         assertTrue(request!!.endTime.isAfter(lastSample))
@@ -68,7 +68,7 @@ class RecordedSessionRangeTest {
         // fiction.
         val request = buildWriteRequest(
             recorded(heartRate(listOf(start.minusSeconds(30) to 110L, start.plusSeconds(30) to 120L))),
-            UnitSystem.METRIC,
+            ActivityEntryUnits.uniform(UnitSystem.METRIC),
         )
 
         assertTrue(request!!.bleSamples.isEmpty())
@@ -78,7 +78,7 @@ class RecordedSessionRangeTest {
     fun `a session already containing its samples is untouched`() {
         val request = buildWriteRequest(
             recorded(heartRate(listOf(start.plusSeconds(30) to 120L, start.plusSeconds(60) to 130L))),
-            UnitSystem.METRIC,
+            ActivityEntryUnits.uniform(UnitSystem.METRIC),
         )
 
         assertEquals(start, request!!.startTime)

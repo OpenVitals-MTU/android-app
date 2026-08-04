@@ -48,6 +48,7 @@ import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
@@ -572,7 +573,9 @@ class RouteBulkImportTest {
 
     private fun prefs(): PreferencesRepository =
         mockk<PreferencesRepository>().also { prefs ->
+            every { prefs.unitSystemPreference } returns UnitSystemPreference.SYSTEM
             every { prefs.unitSystem } returns UnitSystem.METRIC
+            every { prefs.unitOverridesFlow } returns MutableStateFlow(emptyMap())
             every { prefs.appLanguage } returns AppLanguage.SYSTEM
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.dynamicColor } returns false

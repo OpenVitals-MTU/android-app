@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.activity
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
 /**
@@ -17,7 +18,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
  * disagree about what "every 1 km" means.
  */
 internal fun splitDistanceLabel(unitFormatter: UnitFormatter, meters: Double): String =
-    when (unitFormatter.unitSystem()) {
+    when (unitFormatter.unitSystem(UnitQuantity.DISTANCE)) {
         UnitSystem.METRIC -> {
             val kilometers = meters / 1000.0
             "${unitFormatter.decimal(kilometers, splitDistanceLabelDecimals(kilometers))} km"

@@ -402,10 +402,10 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Change unit system: metric or imperial.
 - Change theme: system, light, dark, or AMOLED, with optional dynamic color.
 - Change chart aggregation: raw samples, or an average line with a min/max band per time bucket.
+- Change rolling dates mode: calendar week/month/year or rolling 7/30/365-day windows.
 
 ### Activity Settings
 
-- Change rolling dates mode: calendar week/month/year or rolling 7/30/365-day windows.
 - Choose the favorite/default activity behavior used by activity entry.
 - Use the latest activity or a route-capable default activity type as the favorite activity source.
 

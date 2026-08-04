@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -79,8 +80,8 @@ fun VitalsMeasurementEntryScreen(
         viewModel.refreshPermission()
     }
 
-    LaunchedEffect(type, unitFormatter.unitSystem()) {
-        viewModel.setType(type, unitFormatter.unitSystem())
+    LaunchedEffect(type, unitFormatter.unitSystemFor(type)) {
+        viewModel.setType(type, unitFormatter.unitSystemFor(type))
     }
     LaunchedEffect(state.saveCompleted) {
         if (state.saveCompleted) {
@@ -105,7 +106,7 @@ fun VitalsMeasurementEntryScreen(
                         value = canonicalVitalsValue(
                             input = state.inputText,
                             type = state.type,
-                            unitSystem = unitFormatter.unitSystem(),
+                            unitSystem = unitFormatter.unitSystemFor(state.type),
                         ),
                         secondaryValue = if (state.type == VitalsMeasurementType.BLOOD_PRESSURE) {
                             state.secondaryInputText.toVitalsDoubleOrNull()
@@ -135,7 +136,7 @@ private fun VitalsMeasurementEntryCard(
     modifier: Modifier = Modifier,
 ) {
     val title = stringResource(state.type.titleRes())
-    val unitLabel = state.type.inputUnitLabel(unitFormatter.unitSystem())
+    val unitLabel = state.type.inputUnitLabel(unitFormatter.unitSystemFor(state.type))
     val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
@@ -332,4 +333,9 @@ fun VitalsMeasurementType.accentColor(): Color = when (this) {
     VitalsMeasurementType.SPO2 -> OxygenColor
     VitalsMeasurementType.RESPIRATORY_RATE -> RespiratoryColor
     VitalsMeasurementType.BODY_TEMPERATURE -> TemperatureColor
+}
+
+private fun UnitFormatter.unitSystemFor(type: VitalsMeasurementType): UnitSystem = when (type) {
+    VitalsMeasurementType.BODY_TEMPERATURE -> unitSystem(UnitQuantity.TEMPERATURE)
+    else -> unitSystem()
 }

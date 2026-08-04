@@ -321,7 +321,7 @@ internal fun ActivityTimePickerDialog(
 @Composable
 internal fun ActivityMetricInputs(
     state: ActivityEntryUiState,
-    unitSystem: UnitSystem,
+    units: ActivityEntryUnits,
     enabled: Boolean,
     onDistanceChanged: (String) -> Unit,
     onElevationChanged: (String) -> Unit,
@@ -350,7 +350,7 @@ internal fun ActivityMetricInputs(
                         Text(
                             stringResource(
                                 R.string.activity_entry_distance_label,
-                                if (unitSystem == UnitSystem.IMPERIAL) "mi" else "km",
+                                if (units.distance == UnitSystem.IMPERIAL) "mi" else "km",
                             )
                         )
                     },
@@ -370,7 +370,7 @@ internal fun ActivityMetricInputs(
                         Text(
                             stringResource(
                                 R.string.activity_entry_elevation_label,
-                                if (unitSystem == UnitSystem.IMPERIAL) "ft" else "m",
+                                if (units.elevation == UnitSystem.IMPERIAL) "ft" else "m",
                             )
                         )
                     },

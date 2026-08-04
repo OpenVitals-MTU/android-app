@@ -153,6 +153,9 @@ object HomeMetricWidgetState {
     val subtitleKey = stringPreferencesKey("subtitle")
     val routeKey = stringPreferencesKey("route")
     val rowCountKey = intPreferencesKey("row_count")
+    // One comma-joined string rather than a key per point: the state is a flat
+    // preferences map, and forty-eight keys per refresh would dwarf the rest.
+    val seriesKey = stringPreferencesKey("series")
     val definition = androidx.glance.state.PreferencesGlanceStateDefinition
 }
 
@@ -239,6 +242,8 @@ data class HomeMetricWidgetSnapshot(
     val subtitle: String,
     val route: String,
     val rows: List<HomeMetricWidgetRow> = emptyList(),
+    /** Day scores for a widget that draws a plot. Empty for the others. */
+    val series: List<Int> = emptyList(),
 )
 
 data class HomeMetricWidgetRow(
@@ -268,9 +273,15 @@ suspend fun refreshHomeMetricWidget(
 
     // A read that did not happen leaves the tile showing its last good
     // snapshot rather than replacing real numbers with "--" — see the same
-    // reasoning on refreshDailyReadinessWidget.
-    loadSnapshot(context, resolvedMetricId)?.let { snapshot ->
-        writeHomeWidgetSnapshot(context, glanceId, resolvedMetricId.name, snapshot)
+    // reasoning on refreshDailyReadinessWidget. A Body Energy read that DID
+    // happen but opened the day on a defaulted seed is held to the same
+    // standard by [bodyEnergySnapshotToWrite].
+    loadSnapshot(context, resolvedMetricId)?.let { load ->
+        val previous = getAppWidgetState(context, HomeMetricWidgetState.definition, glanceId)
+            .toWidgetSnapshot(context)
+        bodyEnergySnapshotToWrite(load.snapshot, load.bodyEnergyTimeline, previous)?.let { snapshot ->
+            writeHomeWidgetSnapshot(context, glanceId, resolvedMetricId.name, snapshot)
+        }
     }
     HomeMetricWidget().update(context, glanceId)
 }
@@ -313,6 +324,11 @@ internal fun MutablePreferences.putHomeWidgetSnapshot(
     this[HomeMetricWidgetState.unitKey] = snapshot.unit
     this[HomeMetricWidgetState.subtitleKey] = snapshot.subtitle
     this[HomeMetricWidgetState.routeKey] = snapshot.route
+    if (snapshot.series.isEmpty()) {
+        remove(HomeMetricWidgetState.seriesKey)
+    } else {
+        this[HomeMetricWidgetState.seriesKey] = snapshot.series.joinToString(",")
+    }
     this[HomeMetricWidgetState.rowCountKey] = snapshot.rows.size.coerceAtMost(MaxHomeWidgetRows)
     for (index in 0 until MaxHomeWidgetRows) {
         val row = snapshot.rows.getOrNull(index)
@@ -347,7 +363,20 @@ internal fun Preferences.toWidgetSnapshot(context: Context): HomeMetricWidgetSna
         subtitle = this[HomeMetricWidgetState.subtitleKey].orEmpty(),
         route = this[HomeMetricWidgetState.routeKey] ?: Screen.Dashboard.route,
         rows = rows,
+        series = parseHomeWidgetSeries(this[HomeMetricWidgetState.seriesKey]),
     )
+}
+
+/**
+ * The stored comma-joined plot values, parsed back.
+ *
+ * Anything unparseable is DROPPED rather than defaulted to zero: a zero is a
+ * legitimate score, so substituting one would draw a cliff to the floor that
+ * the day never had.
+ */
+private fun parseHomeWidgetSeries(raw: String?): List<Int> {
+    if (raw.isNullOrBlank()) return emptyList()
+    return raw.split(',').mapNotNull { it.trim().toIntOrNull() }
 }
 
 @Composable
@@ -427,6 +456,16 @@ internal fun HomeMetricWidgetContent(snapshot: HomeMetricWidgetSnapshot) {
 }
 
 /**
+ * What a metric tile refresh produced: the snapshot, plus — for the Body
+ * Energy tile only — the timeline it was built from, so the writer can tell a
+ * chained day from one that opened on a defaulted seed.
+ */
+internal class HomeMetricWidgetLoad(
+    val snapshot: HomeMetricWidgetSnapshot,
+    val bodyEnergyTimeline: BodyEnergyTimeline? = null,
+)
+
+/**
  * The tile's contents, or null when the read did not happen.
  *
  * A failed or timed-out read must not be written over a tile that is showing
@@ -436,7 +475,7 @@ internal fun HomeMetricWidgetContent(snapshot: HomeMetricWidgetSnapshot) {
 internal suspend fun loadSnapshot(
     context: Context,
     metricId: DashboardWidgetId,
-): HomeMetricWidgetSnapshot? {
+): HomeMetricWidgetLoad? {
     val title = context.getString(metricId.homeMetricTitleRes())
     val today = LocalDate.now()
     val route = homeMetricWidgetRoute(metricId, today)
@@ -472,13 +511,15 @@ internal suspend fun loadSnapshot(
         } else {
             DashboardData(date = LocalDate.now())
         }
-        buildMetricWidgetSnapshot(
-            context = context,
-            metricId = metricId,
-            data = data,
-            unitFormatter = entryPoint.unitFormatter(),
-            title = title,
-            route = route,
+        HomeMetricWidgetLoad(
+            buildMetricWidgetSnapshot(
+                context = context,
+                metricId = metricId,
+                data = data,
+                unitFormatter = entryPoint.unitFormatter(),
+                title = title,
+                route = route,
+            )
         )
     }.getOrNull()
 }
@@ -534,7 +575,7 @@ private suspend fun loadBodyEnergyMetricSnapshot(
     title: String,
     route: String,
     date: LocalDate,
-): HomeMetricWidgetSnapshot? {
+): HomeMetricWidgetLoad? {
     // The timeout wraps the LOAD, not the day it produced: a day with nothing
     // on it is a legitimate result and still gets drawn.
     val result = withTimeoutOrNull(WidgetLoadTimeoutMillis) {
@@ -546,7 +587,10 @@ private suspend fun loadBodyEnergyMetricSnapshot(
             )
         )
     } ?: return null
-    return buildBodyEnergyMetricSnapshot(context, result.latestDay, title, route)
+    return HomeMetricWidgetLoad(
+        snapshot = buildBodyEnergyMetricSnapshot(context, result.latestDay, title, route),
+        bodyEnergyTimeline = result.latestDay,
+    )
 }
 
 /** The Body Energy metric tile, from an already-loaded timeline. */

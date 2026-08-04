@@ -9,11 +9,11 @@ enum class SettingsSection(
 ) {
     DISPLAY(
         titleRes = R.string.settings_display_group_title,
-        summaryRes = R.string.settings_display_group_body,
+        summaryRes = R.string.settings_display_group_summary,
     ),
     ACTIVITIES(
         titleRes = R.string.settings_activities_group_title,
-        summaryRes = R.string.settings_activities_group_body,
+        summaryRes = R.string.settings_activities_group_summary,
     ),
     SENSORS(
         titleRes = R.string.settings_sensors_group_title,

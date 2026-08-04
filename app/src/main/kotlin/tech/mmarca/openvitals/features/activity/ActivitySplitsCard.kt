@@ -34,6 +34,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.insights.ActivitySplit
 import tech.mmarca.openvitals.domain.insights.ActivitySplits
 import tech.mmarca.openvitals.domain.insights.SplitSource
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
@@ -59,7 +60,7 @@ internal fun ActivitySplitsCard(
     val rows = splits.splits
     if (rows.isEmpty()) return
 
-    val unitMeters = when (unitFormatter.unitSystem()) {
+    val unitMeters = when (unitFormatter.unitSystem(UnitQuantity.DISTANCE)) {
         UnitSystem.METRIC -> 1000.0
         UnitSystem.IMPERIAL -> 1609.344
     }

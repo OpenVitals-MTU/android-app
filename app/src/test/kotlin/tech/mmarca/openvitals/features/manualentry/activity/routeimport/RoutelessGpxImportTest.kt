@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.activity.routeimport
 
 import tech.mmarca.openvitals.features.manualentry.*
+import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
@@ -54,10 +55,10 @@ class RoutelessGpxImportTest {
     private fun import(parsed: RouteFileImport): ImportOutcome {
         val clock = Clock.systemDefaultZone()
         val state = ActivityEntryUiState()
-            .withRouteImport(parsed, UnitSystem.METRIC, clock)
+            .withRouteImport(parsed, ActivityEntryUnits.uniform(UnitSystem.METRIC), clock)
         return ImportOutcome(
             type = state.selectedActivityType,
-            request = buildWriteRequest(state, UnitSystem.METRIC),
+            request = buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC)),
             activeCalories = state.activeCaloriesText,
         )
     }

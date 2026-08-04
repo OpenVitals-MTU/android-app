@@ -34,6 +34,7 @@ Users can configure:
 - Unit system.
 - Theme mode, including system, light, dark, and AMOLED, plus dynamic color.
 - Chart aggregation, which replaces raw samples with an average line and a min/max band per time bucket.
+- Rolling dates mode, such as calendar week/month/year or rolling 7/30/365-day windows.
 
 Display preferences affect app presentation only. They do not rewrite Health Connect records.
 
@@ -41,7 +42,6 @@ Display preferences affect app presentation only. They do not rewrite Health Con
 
 Metric-specific settings include:
 
-- Rolling dates mode, such as calendar week/month/year or rolling 7/30/365-day windows.
 - Favorite or latest activity defaults used by activity entry and recording setup.
 - Split distance used by activity splits.
 - Activity recording preferences, including keep-screen-on.

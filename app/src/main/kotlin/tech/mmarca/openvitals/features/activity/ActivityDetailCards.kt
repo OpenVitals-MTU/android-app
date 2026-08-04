@@ -40,6 +40,7 @@ import tech.mmarca.openvitals.ui.components.DetailSectionCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.DataSourceEducationLink
+import tech.mmarca.openvitals.healthconnect.SyncedSourceOverlay
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.ZoneId
@@ -91,7 +92,10 @@ internal fun WorkoutSummaryCard(
                         )
                     }
                 }
-                SourceChip(source = workout.source)
+                SourceChip(
+                    source = workout.source,
+                    synced = SyncedSourceOverlay.isSyncedRecord(workout.clientRecordId),
+                )
             }
 
             Spacer(Modifier.height(16.dp))

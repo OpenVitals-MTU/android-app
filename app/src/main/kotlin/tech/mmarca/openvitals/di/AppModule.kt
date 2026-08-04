@@ -16,8 +16,10 @@ import tech.mmarca.openvitals.data.local.OpenVitalsDatabase
 import tech.mmarca.openvitals.data.local.beverage.BeverageDao
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
+import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.domain.preferences.SystemUnitSystemProvider
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -40,6 +42,7 @@ object AppModule {
             OpenVitalsDatabase.MIGRATION_3_4,
             OpenVitalsDatabase.MIGRATION_4_5,
             OpenVitalsDatabase.MIGRATION_5_6,
+            OpenVitalsDatabase.MIGRATION_6_7,
         ).build()
 
     @Provides
@@ -64,8 +67,21 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSyncedRecordOriginDao(database: OpenVitalsDatabase): SyncedRecordOriginDao =
+        database.syncedRecordOriginDao()
+
+    @Provides
+    @Singleton
+    fun provideSystemUnitSystemProvider(): SystemUnitSystemProvider =
+        SystemUnitSystemProvider.Default
+
+    @Provides
+    @Singleton
     fun provideUnitFormatter(preferencesRepository: PreferencesRepository): UnitFormatter =
-        UnitFormatter(unitSystemProvider = { preferencesRepository.unitSystem })
+        UnitFormatter(
+            unitSystemProvider = { preferencesRepository.unitSystem },
+            unitOverrideProvider = { preferencesRepository.unitOverride(it) },
+        )
 
     @Provides
     @Singleton

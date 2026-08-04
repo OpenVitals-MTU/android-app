@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.activity.routeimport
 
 import tech.mmarca.openvitals.features.manualentry.*
+import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
@@ -45,8 +46,8 @@ class TcxRouteParserTest {
     private fun writeRequest(parsed: RouteFileImport): ActivityWriteRequest? {
         val clock = Clock.systemDefaultZone()
         val state = ActivityEntryUiState()
-            .withRouteImport(parsed, UnitSystem.METRIC, clock)
-        return buildWriteRequest(state, UnitSystem.METRIC)
+            .withRouteImport(parsed, ActivityEntryUnits.uniform(UnitSystem.METRIC), clock)
+        return buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
     }
 
     // An indoor ride: no GPS, and a whole activity anyway.

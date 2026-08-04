@@ -5,10 +5,14 @@ import java.time.LocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.insights.BodyEnergyInputSummary
+import tech.mmarca.openvitals.domain.insights.BodyEnergySeedSource
+import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.DailyReadinessGoalInputs
 import tech.mmarca.openvitals.domain.insights.calculateDailyReadiness
@@ -158,6 +162,108 @@ class HomeStatusWidgetSnapshotTest {
         )
         assertEquals("daily_readiness/body_energy/2026-07-10", snapshot.route)
         assertEquals(emptyList<HomeMetricWidgetRow>(), snapshot.rows)
+    }
+
+    @Test
+    fun `body energy carries the day's scores as the plot series`() {
+        val scores = listOf(70, 68, 72, 75, 74)
+
+        val snapshot = buildBodyEnergySnapshot(
+            context,
+            bodyEnergyTimeline(currentScore = 74, scores = scores),
+            date,
+        )
+
+        assertEquals(scores, snapshot.series)
+    }
+
+    @Test
+    fun `a long day is thinned to the series cap, keeping both ends`() {
+        // A full day is 288 five-minute buckets; the widget state carries 48.
+        val scores = List(288) { it % 101 }
+
+        val series = homeWidgetSeries(scores)
+
+        assertEquals(MaxHomeWidgetSeriesPoints, series.size)
+        assertEquals(scores.first(), series.first())
+        assertEquals(
+            "the last value is the printed current score and must survive",
+            scores.last(),
+            series.last(),
+        )
+    }
+
+    @Test
+    fun `a short day's series is passed through untouched`() {
+        val scores = listOf(50, 51, 53)
+        assertEquals(scores, homeWidgetSeries(scores))
+    }
+
+    // --- Which snapshot the Body Energy tile keeps ---------------------------
+
+    private fun carriedTimeline(currentScore: Int = 74): BodyEnergyTimeline =
+        bodyEnergyTimeline(currentScore = currentScore).copy(
+            inputSummary = BodyEnergyInputSummary(
+                previousEndScore = 70,
+                seedSource = BodyEnergySeedSource.CARRIED_OVER,
+            ),
+        )
+
+    private fun defaultedTimeline(currentScore: Int = 66): BodyEnergyTimeline =
+        bodyEnergyTimeline(currentScore = currentScore, startScore = 50).copy(
+            inputSummary = BodyEnergyInputSummary(
+                previousEndScore = null,
+                seedSource = BodyEnergySeedSource.NEUTRAL,
+            ),
+        )
+
+    @Test
+    fun `a chained timeline always replaces the shown snapshot`() {
+        val timeline = carriedTimeline()
+        val candidate = buildBodyEnergySnapshot(context, timeline, date)
+        val previous = buildBodyEnergySnapshot(context, carriedTimeline(currentScore = 71), date)
+
+        assertEquals(candidate, bodyEnergySnapshotToWrite(candidate, timeline, previous))
+    }
+
+    @Test
+    fun `a defaulted seed must not overwrite a chained snapshot of the same day`() {
+        // The shipped bug: a refresh that could not resolve the chain rendered
+        // "Start: 50" over a tile that had been showing the real carried start
+        // all morning. Stale-but-right wins; the tile keeps what it has.
+        val timeline = defaultedTimeline()
+        val candidate = buildBodyEnergySnapshot(context, timeline, date)
+        val previous = buildBodyEnergySnapshot(context, carriedTimeline(), date)
+
+        assertNull(bodyEnergySnapshotToWrite(candidate, timeline, previous))
+    }
+
+    @Test
+    fun `a defaulted seed still draws a tile that has nothing better to show`() {
+        val timeline = defaultedTimeline()
+        val candidate = buildBodyEnergySnapshot(context, timeline, date)
+
+        assertEquals(candidate, bodyEnergySnapshotToWrite(candidate, timeline, previous = null))
+    }
+
+    @Test
+    fun `a defaulted seed replaces yesterday's snapshot after the date rolls`() {
+        // The route carries the date, so yesterday's tile never blocks today's
+        // first render — a neutral start beats showing the wrong day forever.
+        val timeline = defaultedTimeline()
+        val candidate = buildBodyEnergySnapshot(context, timeline, date)
+        val previous = buildBodyEnergySnapshot(context, carriedTimeline(), date.minusDays(1))
+
+        assertEquals(candidate, bodyEnergySnapshotToWrite(candidate, timeline, previous))
+    }
+
+    @Test
+    fun `a defaulted seed replaces the rowless not-yet-configured fallback`() {
+        val timeline = defaultedTimeline()
+        val candidate = buildBodyEnergySnapshot(context, timeline, date)
+        val previous = buildBodyEnergySnapshot(context, timeline = null, date = date)
+
+        assertEquals(candidate, bodyEnergySnapshotToWrite(candidate, timeline, previous))
     }
 
     // --- Today ---------------------------------------------------------------

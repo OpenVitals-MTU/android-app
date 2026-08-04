@@ -192,12 +192,36 @@ fun syncFingerprint(record: Record): String {
 }
 
 /**
- * Encodes [record]'s times + values to wire bytes (JSON). The record type and
- * clientRecordId travel separately on the `SyncItem`, so they are not repeated
- * here.
+ * Encodes [record]'s times + values to wire bytes (JSON), plus the record's
+ * recording [Device] (manufacturer/model/type) when it has one, so hardware
+ * provenance survives in the receiver's Health Connect store itself — visible
+ * to EVERY consumer, not just OpenVitals. The record type and clientRecordId
+ * travel separately on the `SyncItem`, so they are not repeated here.
+ *
+ * The `device` key is optional in both directions (the codec's JSON parser
+ * ignores unknown keys, so a build predating it skips it, and its absence
+ * decodes to the phone-device default) and, like everything metadata, it is
+ * NOT part of [fingerprintParts] — payload bytes may differ across versions,
+ * but the dedup key never does.
  */
-fun encodeSyncRecordPayload(record: Record): ByteArray =
-    encode(record).toString().toByteArray(Charsets.UTF_8)
+fun encodeSyncRecordPayload(record: Record): ByteArray {
+    val json = encode(record)
+    val device = record.metadata.device
+    val withDevice = if (device == null) {
+        json
+    } else {
+        JsonObject(
+            json + (
+                "device" to buildJsonObject {
+                    put("t", device.type)
+                    put("mf", device.manufacturer)
+                    put("md", device.model)
+                }
+                ),
+        )
+    }
+    return withDevice.toString().toByteArray(Charsets.UTF_8)
+}
 
 /**
  * Reconstructs a [Record] of [recordType] carrying [clientRecordId] from a
@@ -205,17 +229,48 @@ fun encodeSyncRecordPayload(record: Record): ByteArray =
  */
 fun decodeSyncRecord(recordType: String, clientRecordId: String, payload: ByteArray): Record {
     val json = CodecJson.parseToJsonElement(payload.toString(Charsets.UTF_8)).jsonObject
-    return decode(recordType, syncMetadata(clientRecordId), json)
+    return decode(recordType, syncMetadata(clientRecordId, decodeDevice(json["device"])), json)
 }
 
 private val CodecJson = Json { ignoreUnknownKeys = true }
 private const val HEX_DIGITS = "0123456789abcdef"
 
-private fun syncMetadata(clientRecordId: String): Metadata =
+private fun syncMetadata(clientRecordId: String, device: Device?): Metadata =
     Metadata.manualEntry(
-        device = Device(type = Device.TYPE_PHONE),
+        // The sender's original recording device when the wire carried one
+        // (older builds do not send it); the pre-field placeholder otherwise.
+        device = device ?: Device(type = Device.TYPE_PHONE),
         clientRecordId = clientRecordId,
     )
+
+/** The wire `device` object as a [Device], or null when absent/malformed. */
+private fun decodeDevice(element: JsonElement?): Device? {
+    val json = (element as? JsonObject) ?: return null
+    return Device(
+        manufacturer = json.strOrNull("mf"),
+        model = json.strOrNull("md"),
+        type = deviceType(json.intOrNull("t")),
+    )
+}
+
+/**
+ * A peer's device type, or UNKNOWN if it is not one we recognise — the same
+ * closed-set policy as [bloodPressureBodyPosition]: the wire carries a bare
+ * int from another phone, and an unrecognised constant must not be handed to
+ * the platform verbatim.
+ */
+private fun deviceType(raw: Int?): Int = when (raw) {
+    Device.TYPE_WATCH,
+    Device.TYPE_PHONE,
+    Device.TYPE_SCALE,
+    Device.TYPE_RING,
+    Device.TYPE_HEAD_MOUNTED,
+    Device.TYPE_FITNESS_BAND,
+    Device.TYPE_CHEST_STRAP,
+    Device.TYPE_SMART_DISPLAY,
+    -> raw
+    else -> Device.TYPE_UNKNOWN
+}
 
 /**
  * Renders a fingerprint part as a stable string. Doubles are quantized to 6

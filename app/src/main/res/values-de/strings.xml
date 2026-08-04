@@ -1030,9 +1030,7 @@
     <string name="settings_manual_permissions_body">Einige Health-Connect-Berechtigungen können nicht über den normalen Anfragedialog erteilt werden. Öffne Health Connect und aktiviere sie für OpenVitals.</string>
     <string name="settings_open_health_permissions">Health-Connect-Berechtigungen öffnen</string>
     <string name="settings_display_group_title">Anzeige</string>
-    <string name="settings_display_group_body">Sprache, Einheiten und Erscheinungsbild</string>
     <string name="settings_activities_group_title">Aktivitäten</string>
-    <string name="settings_activities_group_body">Gleitende Daten, Lieblingsaktivität, Aufzeichnung und Offline-Karten</string>
     <string name="settings_sensors_group_title">Sensoren &amp; Geräte</string>
     <string name="settings_sensors_group_body">Herzfrequenz-, Trittfrequenz- und Leistungssensoren</string>
     <string name="settings_sensors_empty_title">Noch keine Sensoren</string>

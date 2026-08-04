@@ -4,12 +4,11 @@ import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImport
 
 internal fun ActivityEntryUiState.withRouteImport(
     routeImport: RouteFileImport,
-    unitSystem: UnitSystem,
+    units: ActivityEntryUnits,
     clock: Clock,
 ): ActivityEntryUiState {
     val start = routeImport.startTime.atZone(clock.zone)
@@ -72,8 +71,8 @@ internal fun ActivityEntryUiState.withRouteImport(
                 ?: ""
         },
         notesText = notesText.ifBlank { routeImport.description.orEmpty() },
-        distanceText = distanceText.ifBlank { routeDistanceInputText(routeImport, unitSystem) },
-        elevationText = elevationText.ifBlank { routeElevationInputText(routeImport, unitSystem) },
+        distanceText = distanceText.ifBlank { routeDistanceInputText(routeImport, units.distance) },
+        elevationText = elevationText.ifBlank { routeElevationInputText(routeImport, units.elevation) },
         activeCaloriesText = activeCaloriesText.ifBlank {
             importedActiveCaloriesText ?: calorieEstimate?.activeCaloriesText.orEmpty()
         },

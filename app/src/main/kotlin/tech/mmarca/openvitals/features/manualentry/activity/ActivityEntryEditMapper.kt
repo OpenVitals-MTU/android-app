@@ -28,7 +28,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 
 internal fun ExerciseData.toEditState(
-    unitSystem: UnitSystem,
+    units: ActivityEntryUnits,
     clock: Clock,
     repository: ActivityRepository,
     canWrite: Boolean,
@@ -64,8 +64,8 @@ internal fun ExerciseData.toEditState(
         startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
         startTimeText = TimeFormatter.format(start.toLocalTime()),
         durationMinutesText = durationMinutes.toString(),
-        distanceText = totalDistanceMeters?.takeIf { it > 0.0 }?.toDistanceInputText(unitSystem).orEmpty(),
-        elevationText = elevationGainedMeters?.takeIf { it > 0.0 }?.toElevationInputText(unitSystem).orEmpty(),
+        distanceText = totalDistanceMeters?.takeIf { it > 0.0 }?.toDistanceInputText(units.distance).orEmpty(),
+        elevationText = elevationGainedMeters?.takeIf { it > 0.0 }?.toElevationInputText(units.elevation).orEmpty(),
         activeCaloriesText = activeCaloriesKcal?.takeIf { it > 0.0 }?.toInputText(maxFractionDigits = 1).orEmpty(),
         totalCaloriesText = totalCaloriesKcal?.takeIf { it > 0.0 }?.toInputText(maxFractionDigits = 1).orEmpty(),
         repetitionMode = repetitionEditState.mode,

@@ -110,6 +110,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.features.activity.exerciseTypeIcon
 import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
 import tech.mmarca.openvitals.ui.components.AutoResizeText
+import tech.mmarca.openvitals.healthconnect.SyncedSourceOverlay
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.DayNavigator
 import tech.mmarca.openvitals.ui.components.ErrorMessage
@@ -671,7 +672,10 @@ internal fun WorkoutCard(
                     }
                 }
                 if (workout.source.isNotBlank()) {
-                    SourceChip(source = workout.source)
+                    SourceChip(
+                        source = workout.source,
+                        synced = SyncedSourceOverlay.isSyncedRecord(workout.clientRecordId),
+                    )
                 }
             }
             Spacer(Modifier.weight(1f))

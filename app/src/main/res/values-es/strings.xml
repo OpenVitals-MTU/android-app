@@ -1031,9 +1031,7 @@
     <string name="settings_manual_permissions_body">Algunos permisos de Health Connect no pueden concederse desde el diálogo normal. Abre Health Connect y actívalos para OpenVitals.</string>
     <string name="settings_open_health_permissions">Abrir permisos de Health Connect</string>
     <string name="settings_display_group_title">Visualización</string>
-    <string name="settings_display_group_body">Idioma, unidades y tema</string>
     <string name="settings_activities_group_title">Actividades</string>
-    <string name="settings_activities_group_body">Fechas móviles, actividad favorita, grabación y mapas sin conexión</string>
     <string name="settings_sensors_group_title">Sensores y dispositivos</string>
     <string name="settings_sensors_group_body">Sensores de frecuencia cardiaca, cadencia y potencia</string>
     <string name="settings_sensors_empty_title">Sin sensores todavía</string>

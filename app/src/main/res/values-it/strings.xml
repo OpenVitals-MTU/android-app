@@ -1030,9 +1030,7 @@
     <string name="settings_manual_permissions_body">Alcune autorizzazioni di Health Connect non possono essere concesse dalla finestra di richiesta standard. Apri Health Connect e abilitale per OpenVitals.</string>
     <string name="settings_open_health_permissions">Apri autorizzazioni Health Connect</string>
     <string name="settings_display_group_title">Visualizzazione</string>
-    <string name="settings_display_group_body">Lingua, unità di misura e tema</string>
     <string name="settings_activities_group_title">Attività</string>
-    <string name="settings_activities_group_body">Date mobili, attività preferita, registrazione e mappe offline</string>
     <string name="settings_sensors_group_title">Sensori &amp; dispositivi</string>
     <string name="settings_sensors_group_body">Frequenza cardiaca, cadenza e sensori di potenza</string>
     <string name="settings_sensors_empty_title">Ancora nessun sensore</string>

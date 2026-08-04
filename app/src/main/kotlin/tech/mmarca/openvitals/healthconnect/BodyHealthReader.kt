@@ -49,7 +49,7 @@ internal class BodyHealthReader(
                 WeightEntry(
                     time = record.time,
                     weightKg = record.weight.inKilograms,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                     id = record.metadata.id,
                     isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
@@ -69,7 +69,7 @@ internal class BodyHealthReader(
                 WeightEntry(
                     time = record.time,
                     weightKg = record.weight.inKilograms,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                     id = record.metadata.id,
                     isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
@@ -86,7 +86,7 @@ internal class BodyHealthReader(
                 WeightEntry(
                     time = record.time,
                     weightKg = record.weight.inKilograms,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                     id = record.metadata.id,
                     isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
@@ -108,7 +108,7 @@ internal class BodyHealthReader(
                 HeightEntry(
                     time = record.time,
                     heightCm = record.height.inMeters * 100.0,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                     id = record.metadata.id,
                     isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
@@ -125,7 +125,7 @@ internal class BodyHealthReader(
                 HeightEntry(
                     time = record.time,
                     heightCm = record.height.inMeters * 100.0,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                     id = record.metadata.id,
                     isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
@@ -153,7 +153,7 @@ internal class BodyHealthReader(
                 BodyFatEntry(
                     time = record.time,
                     percent = record.percentage.value,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                     id = record.metadata.id,
                     isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
@@ -181,7 +181,7 @@ internal class BodyHealthReader(
                 LeanBodyMassEntry(
                     time = record.time,
                     massKg = record.mass.inKilograms,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -207,7 +207,7 @@ internal class BodyHealthReader(
                 BmrEntry(
                     time = record.time,
                     kcalPerDay = record.basalMetabolicRate.inKilocaloriesPerDay,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -233,7 +233,7 @@ internal class BodyHealthReader(
                 BoneMassEntry(
                     time = record.time,
                     massKg = record.mass.inKilograms,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -259,7 +259,7 @@ internal class BodyHealthReader(
                 BodyWaterMassEntry(
                     time = record.time,
                     massKg = record.mass.inKilograms,
-                    source = record.metadata.dataOrigin.packageName,
+                    source = SyncedSourceOverlay.displaySource(record.metadata),
                 )
             }
         }
@@ -406,7 +406,7 @@ internal class BodyHealthReader(
             type = BodyMeasurementType.WEIGHT,
             time = time,
             value = weight.inKilograms,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 
@@ -416,7 +416,7 @@ internal class BodyHealthReader(
             type = BodyMeasurementType.HEIGHT,
             time = time,
             value = height.inMeters * CentimetersPerMeter,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 
@@ -426,7 +426,7 @@ internal class BodyHealthReader(
             type = BodyMeasurementType.BODY_FAT,
             time = time,
             value = percentage.value,
-            source = metadata.dataOrigin.packageName,
+            source = SyncedSourceOverlay.displaySource(metadata),
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 }

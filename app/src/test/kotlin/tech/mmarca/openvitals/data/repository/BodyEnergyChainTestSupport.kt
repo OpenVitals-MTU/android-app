@@ -108,6 +108,16 @@ fun grantedHealthRepository(
     coEvery { it.grantedPermissions() } returns granted
 }
 
+/**
+ * A health repository whose permission read fails — Health Connect throttling a
+ * background caller, or the provider mid-update. Data reads are not routed
+ * through it, so a day can still compute while this read is down.
+ */
+fun failingPermissionsHealthRepository(): HealthRepository = mockk<HealthRepository>().also {
+    every { it.availability() } returns HealthConnectAvailability.AVAILABLE
+    coEvery { it.grantedPermissions() } throws IllegalStateException("rate limited")
+}
+
 /** A baseline store backed by a map instead of SharedPreferences. */
 fun inMemoryBaselineStore(): BodyEnergyBaselineCacheStore = mockk<BodyEnergyBaselineCacheStore>().also { store ->
     val entries = mutableMapOf<String, BodyEnergyBaselineCacheEntry>()
@@ -140,6 +150,7 @@ fun inMemoryPreferences(
     var watchFitEpoch = 0
     var watermarkMillis = 0L
     var seedMirror: String? = null
+    var permissionSignature: Int? = null
 
     every { prefs.bodyEnergyCalibration() } answers { storedCalibration }
     every { prefs.setBodyEnergyCalibration(any()) } answers {
@@ -162,4 +173,9 @@ fun inMemoryPreferences(
 
     every { prefs.bodyEnergyChainSeedMirror } answers { seedMirror }
     every { prefs.bodyEnergyChainSeedMirror = any() } answers { seedMirror = firstArg() }
+
+    every { prefs.bodyEnergyPermissionSignature } answers { permissionSignature }
+    every { prefs.bodyEnergyPermissionSignature = any() } answers {
+        permissionSignature = firstArg()
+    }
 }

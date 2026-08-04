@@ -35,7 +35,9 @@ import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -149,6 +151,48 @@ class SettingsViewModelTest {
 
         verify { prefs.appThemeMode = AppThemeMode.AMOLED }
         assertEquals(AppThemeMode.AMOLED, vm.uiState.value.appThemeMode)
+    }
+
+    @Test fun `selectUnitSystem persists preference and re-reads the resolved system`() = runTest {
+        val prefs = prefs()
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+            appleHealthImportWorkController = importController(),
+            permissionUxState = permissionUxState(),
+        )
+
+        vm.selectUnitSystem(UnitSystemPreference.IMPERIAL)
+
+        verify { prefs.unitSystemPreference = UnitSystemPreference.IMPERIAL }
+        assertEquals(UnitSystemPreference.IMPERIAL, vm.uiState.value.unitSystemPreference)
+        // The displayed system is whatever the repository resolved, not the
+        // raw preference — the fake resolves everything to metric.
+        assertEquals(UnitSystem.METRIC, vm.uiState.value.unitSystem)
+    }
+
+    @Test fun `selectUnitOverride persists and resolves through ui state`() = runTest {
+        val prefs = prefs()
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+            appleHealthImportWorkController = importController(),
+            permissionUxState = permissionUxState(),
+        )
+
+        vm.selectUnitOverride(UnitQuantity.WEIGHT, UnitSystem.IMPERIAL)
+
+        verify { prefs.setUnitOverride(UnitQuantity.WEIGHT, UnitSystem.IMPERIAL) }
+        assertEquals(
+            mapOf(UnitQuantity.WEIGHT to UnitSystem.IMPERIAL),
+            vm.uiState.value.unitOverrides,
+        )
+        // The override wins for its quantity; everything else stays on the base.
+        assertEquals(UnitSystem.IMPERIAL, vm.uiState.value.effectiveUnitSystem(UnitQuantity.WEIGHT))
+        assertEquals(UnitSystem.METRIC, vm.uiState.value.effectiveUnitSystem(UnitQuantity.DISTANCE))
+
+        vm.selectUnitOverride(UnitQuantity.WEIGHT, null)
+        assertTrue(vm.uiState.value.unitOverrides.isEmpty())
     }
 
     @Test fun `setDynamicColor persists preference and updates ui state`() = runTest {
@@ -869,7 +913,18 @@ class SettingsViewModelTest {
     private fun prefs(): PreferencesRepository {
         var caffeinePreferences = CaffeinePreferences()
         return mockk<PreferencesRepository>().also { prefs ->
+            every { prefs.unitSystemPreference } returns UnitSystemPreference.SYSTEM
+            every { prefs.unitSystemPreference = any() } just runs
             every { prefs.unitSystem } returns UnitSystem.METRIC
+            var unitOverrides = mapOf<UnitQuantity, UnitSystem>()
+            every { prefs.unitOverridesFlow } answers { MutableStateFlow(unitOverrides) }
+            every { prefs.unitOverride(any()) } answers { unitOverrides[firstArg()] }
+            every { prefs.setUnitOverride(any(), any()) } answers {
+                unitOverrides = unitOverrides + (firstArg<UnitQuantity>() to secondArg<UnitSystem>())
+            }
+            every { prefs.setUnitOverride(any(), isNull()) } answers {
+                unitOverrides = unitOverrides - firstArg<UnitQuantity>()
+            }
             every { prefs.appLanguage } returns AppLanguage.SYSTEM
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.dynamicColor } returns false

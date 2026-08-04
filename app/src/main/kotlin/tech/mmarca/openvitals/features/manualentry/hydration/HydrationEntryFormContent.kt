@@ -104,6 +104,7 @@ import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.manualentry.ManualEntryTimestampFields
 import tech.mmarca.openvitals.features.nutrition.titleRes
@@ -1493,7 +1494,7 @@ private fun HydrationSavedDrinkEntryDialog(
 ) {
     // The preset amount arrives focused and fully selected, so the first
     // keystroke replaces it rather than appending to it.
-    var amountValue by remember(drink.id, unitFormatter.unitSystem()) {
+    var amountValue by remember(drink.id, unitFormatter.unitSystem(UnitQuantity.HYDRATION)) {
         val text = hydrationInputAmountText(drink.volumeMilliliters, unitFormatter)
         mutableStateOf(TextFieldValue(text, selection = TextRange(0, text.length)))
     }
@@ -1503,7 +1504,7 @@ private fun HydrationSavedDrinkEntryDialog(
     }
     val amountText = amountValue.text
     var entryTime by remember(drink.id) { mutableStateOf(Instant.now()) }
-    val amountMilliliters = hydrationInputMilliliters(amountText, unitFormatter.unitSystem())
+    val amountMilliliters = hydrationInputMilliliters(amountText, unitFormatter.unitSystem(UnitQuantity.HYDRATION))
     val isAmountValid = amountMilliliters?.let(::isValidHydrationContainerMilliliters) == true
     val isFormValid = amountText.isNotBlank() && isAmountValid
 
@@ -1528,7 +1529,7 @@ private fun HydrationSavedDrinkEntryDialog(
                         Text(
                             stringResource(
                                 R.string.hydration_drink_amount_label,
-                                hydrationInputUnitLabel(unitFormatter.unitSystem()),
+                                hydrationInputUnitLabel(unitFormatter.unitSystem(UnitQuantity.HYDRATION)),
                             )
                         )
                     },
@@ -1588,7 +1589,7 @@ internal fun HydrationCustomDrinkDialog(
     onSave: (CustomHydrationDrinkInput) -> Unit,
 ) {
     var nameText by remember(initialName) { mutableStateOf(initialName) }
-    var amountText by remember(initialMilliliters, unitFormatter.unitSystem()) {
+    var amountText by remember(initialMilliliters, unitFormatter.unitSystem(UnitQuantity.HYDRATION)) {
         mutableStateOf(hydrationInputAmountText(initialMilliliters, unitFormatter))
     }
     var hydrationImpactOption by remember(initialHydrationMultiplier) {
@@ -1618,7 +1619,7 @@ internal fun HydrationCustomDrinkDialog(
         )
     }
     var nutrientChooserOpen by remember { mutableStateOf(false) }
-    val amountMilliliters = hydrationInputMilliliters(amountText, unitFormatter.unitSystem())
+    val amountMilliliters = hydrationInputMilliliters(amountText, unitFormatter.unitSystem(UnitQuantity.HYDRATION))
     val isAmountValid = amountMilliliters?.let(::isValidHydrationContainerMilliliters) == true
     // A row that was added but left blank is simply skipped on save — the user
     // should not have to delete it before Save works. Only a row with text that
@@ -1671,7 +1672,7 @@ internal fun HydrationCustomDrinkDialog(
                         Text(
                             stringResource(
                                 R.string.hydration_drink_amount_label,
-                                hydrationInputUnitLabel(unitFormatter.unitSystem()),
+                                hydrationInputUnitLabel(unitFormatter.unitSystem(UnitQuantity.HYDRATION)),
                             )
                         )
                     },
@@ -2136,7 +2137,7 @@ internal fun hydrationEntryErrorText(
 }
 
 internal fun hydrationAmountLabel(liters: Double, unitFormatter: UnitFormatter): String =
-    if (unitFormatter.unitSystem() == UnitSystem.METRIC && liters < 1.0) {
+    if (unitFormatter.unitSystem(UnitQuantity.HYDRATION) == UnitSystem.METRIC && liters < 1.0) {
         "${unitFormatter.count((liters * 1000.0).roundToInt())} ml"
     } else {
         unitFormatter.hydration(liters).text
@@ -2208,7 +2209,7 @@ internal fun hydrationInputAmountText(
     unitFormatter: UnitFormatter,
 ): String {
     if (milliliters == null) return ""
-    return when (unitFormatter.unitSystem()) {
+    return when (unitFormatter.unitSystem(UnitQuantity.HYDRATION)) {
         UnitSystem.METRIC -> unitFormatter.count(milliliters.roundToInt())
         UnitSystem.IMPERIAL -> unitFormatter.decimal(milliliters / MillilitersPerFluidOunce, 1)
     }
@@ -2222,7 +2223,7 @@ internal fun hydrationInputUnitLabel(unitSystem: UnitSystem): String =
 
 @Composable
 internal fun hydrationInputInvalidAmountText(unitFormatter: UnitFormatter): String {
-    val unitSystem = unitFormatter.unitSystem()
+    val unitSystem = unitFormatter.unitSystem(UnitQuantity.HYDRATION)
     val unitLabel = hydrationInputUnitLabel(unitSystem)
     val minimum = when (unitSystem) {
         UnitSystem.METRIC -> unitFormatter.count(MinHydrationContainerMilliliters.roundToInt())

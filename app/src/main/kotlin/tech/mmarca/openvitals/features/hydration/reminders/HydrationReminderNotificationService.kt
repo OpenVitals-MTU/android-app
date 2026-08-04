@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.manualentry.hydration.isValidHydrationContainerMilliliters
 
@@ -104,7 +105,7 @@ class HydrationReminderNotificationService @Inject constructor(
     private fun quickAddLabel(milliliters: Double): String =
         hydrationQuickAddLabel(
             milliliters = milliliters,
-            unitSystem = preferencesRepository.unitSystem,
+            unitSystem = unitFormatter.unitSystem(UnitQuantity.HYDRATION),
             unitFormatter = unitFormatter,
         )
 

@@ -7,6 +7,7 @@ import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
 import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
 import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntryState
@@ -111,7 +112,7 @@ class GarminActivityImporter @Inject constructor(
             file.bytes,
             fileName = "${file.entry.type.label}_${file.entry.fileIndex}.fit",
         )
-        val unitSystem = preferencesRepository.unitSystem
+        val units = ActivityEntryUnits.uniform(preferencesRepository.unitSystem)
         val state = initialActivityEntryState(
             clock = clock,
             repository = activityRepository,
@@ -120,10 +121,10 @@ class GarminActivityImporter @Inject constructor(
             ),
         ).withRouteImport(
             routeImport = routeImport,
-            unitSystem = unitSystem,
+            units = units,
             clock = clock,
         )
-        return buildWriteRequest(state, unitSystem)
+        return buildWriteRequest(state, units)
     }
 
     /** Mirror of the settings importer's preferred-type resolution. */

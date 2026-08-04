@@ -160,7 +160,7 @@ internal fun ActivityEntryCard(
 
             ActivityMetricInputs(
                 state = state,
-                unitSystem = unitFormatter.unitSystem(),
+                units = ActivityEntryUnits.from(unitFormatter),
                 enabled = true,
                 onDistanceChanged = onDistanceChanged,
                 onElevationChanged = onElevationChanged,

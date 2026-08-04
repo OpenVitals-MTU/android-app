@@ -173,6 +173,11 @@ class BodyEnergyRepositoryImpl(
             date.minusDays(ChainLookbackDays),
             date.minusDays(1),
         )
+        // A store with no history at all degrades exactly like a store-less
+        // context: the prefs mirror. Distinct from the anchor==null case below,
+        // where stored rows EXIST but none validates — that is a deliberate
+        // chain break (zone edit, permission change) the mirror must not undo.
+        if (window.isEmpty()) return seedFromMirror(date)
         val byEpochDay = window.associateBy { it.date.toEpochDay() }
 
         // The newest stored day strictly before `date` whose CHAIN signature
@@ -192,9 +197,10 @@ class BodyEnergyRepositoryImpl(
             }
         }
 
-        // Nothing stored in the window. Seeding neutral is correct here: there
-        // is no previous day to be continuous with. The warm service builds
-        // history so the next open is chained.
+        // Rows exist but none validates: a deliberate chain break (a zone edit,
+        // a permission change), and seeding neutral is the honest reading of
+        // one. NOT rescued by the mirror — it carries no signature, so it would
+        // resurrect exactly the chain the break severed.
         if (anchor == null) return ChainSeed.Neutral
 
         val gap = date.toEpochDay() - anchor.date.toEpochDay() - 1
@@ -205,8 +211,11 @@ class BodyEnergyRepositoryImpl(
             // over a week ago through a field the screen labels as the previous
             // day's would be a worse lie than an honest reset, so the day starts
             // neutral and says so. The warm service closes the gap for next
-            // time.
-            return ChainSeed.ChainGap
+            // time. The mirror can still rescue the seed: it is accepted only
+            // when it holds exactly yesterday's score, and yesterday having no
+            // stored row while the mirror has it means the row was lost (a
+            // forward ripple), not that the day never happened.
+            return mirrorSeedOr(date, ChainSeed.ChainGap)
         }
 
         // Close the gap forward, oldest first, persisting each day so the next
@@ -229,7 +238,16 @@ class BodyEnergyRepositoryImpl(
         } catch (_: Throwable) {
             null
         }
-        return filled ?: ChainSeed.ChainGap
+        // A fill that failed or timed out degrades to the mirror before it
+        // degrades to a gap: yesterday's mirrored score is the chained value
+        // the fill was trying to reconstruct.
+        return filled ?: mirrorSeedOr(date, ChainSeed.ChainGap)
+    }
+
+    /** [seedFromMirror] when it genuinely carries a score, else [fallback]. */
+    private fun mirrorSeedOr(date: LocalDate, fallback: ChainSeed): ChainSeed {
+        val mirrored = seedFromMirror(date)
+        return if (mirrored.score != null) mirrored else fallback
     }
 
     /**
@@ -309,20 +327,27 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * The store-less fallback: the mirrored end score, accepted only when it
-     * belongs to the day immediately before [date].
+     * The store-less fallback: the mirrored scores, accepted when they belong
+     * to the day immediately before [date] — or to [date] itself, in which
+     * case the day REOPENS on the same score it opened on before, so a rescue
+     * survives its own recompute (the first rescued compute moves the mirror
+     * onto [date], and without this clause the next refresh would find nothing
+     * for yesterday and fall back to 50 again). The `chained` flag keeps a
+     * neutrally-opened day honest: reopening one is a fresh Neutral, never a
+     * carry-over it did not have.
      */
     private fun seedFromMirror(date: LocalDate): ChainSeed {
         val encoded = preferencesRepository.bodyEnergyChainSeedMirror ?: return ChainSeed.Neutral
         val parts = encoded.split("|")
-        if (parts.size != 2) return ChainSeed.Neutral
+        if (parts.size < 2) return ChainSeed.Neutral
         val epochDay = parts[0].toLongOrNull() ?: return ChainSeed.Neutral
         val endScore = parts[1].toIntOrNull() ?: return ChainSeed.Neutral
-        return if (epochDay == date.minusDays(1).toEpochDay()) {
-            ChainSeed.carried(endScore)
-        } else {
-            ChainSeed.Neutral
+        if (epochDay == date.minusDays(1).toEpochDay()) return ChainSeed.carried(endScore)
+        if (epochDay == date.toEpochDay() && parts.size >= 4 && parts[3] == "1") {
+            val startScore = parts[2].toIntOrNull() ?: return ChainSeed.Neutral
+            return ChainSeed.carried(startScore)
         }
+        return ChainSeed.Neutral
     }
 
     private suspend fun computeDay(
@@ -433,16 +458,25 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * Mirrors the newest completed day's end score for a store-less context.
-     * Only moves forward, so an old day being backfilled cannot overwrite it.
+     * Mirrors the newest computed day for a context whose store cannot serve
+     * the chain, as `epochDay|endScore|startScore|chained`. TODAY's row is
+     * mirrored too — mirroring only completed days left the mirror frozen on
+     * whatever past day was last recomputed, so on a device where only the
+     * widgets run (which ask for today alone) it was reliably stale by the
+     * time it was needed, and every fallback that consulted it landed on the
+     * neutral 50 instead. Today's running score is exactly what tomorrow's
+     * seed should be once midnight passes, and today's own opening score is
+     * what a mid-day rescue reopens on (see [seedFromMirror]). Only moves
+     * forward, so an old day being backfilled cannot overwrite it.
      */
     private fun writeSeedMirror(timeline: BodyEnergyTimeline) {
-        if (!timeline.date.isBefore(today())) return
+        if (timeline.date.isAfter(today())) return
         val existing = preferencesRepository.bodyEnergyChainSeedMirror
         val existingEpochDay = existing?.substringBefore("|")?.toLongOrNull()
         if (existingEpochDay != null && existingEpochDay > timeline.date.toEpochDay()) return
+        val chained = if (timeline.inputSummary.seedSource == BodyEnergySeedSource.CARRIED_OVER) 1 else 0
         preferencesRepository.bodyEnergyChainSeedMirror =
-            "${timeline.date.toEpochDay()}|${timeline.currentScore}"
+            "${timeline.date.toEpochDay()}|${timeline.currentScore}|${timeline.startScore}|$chained"
     }
 
     /**
@@ -507,6 +541,17 @@ class BodyEnergyRepositoryImpl(
         return adjacent
     }
 
+    /**
+     * The granted-permission hash the chain signatures embed — or, when the
+     * live read fails or Health Connect is momentarily unavailable, the last
+     * hash a successful read produced.
+     *
+     * Falling back to a constant here (the old behaviour) turned every
+     * transient read failure into an apparent permission CHANGE: no stored day
+     * validated as an anchor any more, so the widget's next refresh silently
+     * reopened the day on the neutral 50 until a later read succeeded. A failed
+     * read says nothing about the permissions, so the last known truth stands.
+     */
     private suspend fun permissionSignature(): Int =
         runCatching {
             if (healthRepository.availability() == HealthConnectAvailability.AVAILABLE) {
@@ -514,10 +559,17 @@ class BodyEnergyRepositoryImpl(
                     .sorted()
                     .joinToString(",")
                     .hashCode()
+                    .also { signature ->
+                        if (preferencesRepository.bodyEnergyPermissionSignature != signature) {
+                            preferencesRepository.bodyEnergyPermissionSignature = signature
+                        }
+                    }
             } else {
-                0
+                null
             }
-        }.getOrDefault(0)
+        }.getOrNull()
+            ?: preferencesRepository.bodyEnergyPermissionSignature
+            ?: 0
 
     /**
      * The signature a row for [date] is stored under: the chain part, plus the

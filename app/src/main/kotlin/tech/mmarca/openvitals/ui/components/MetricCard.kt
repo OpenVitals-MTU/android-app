@@ -140,6 +140,6 @@ fun MetricCardPlaceholder(
 }
 
 @Composable
-fun SourceChip(source: String, modifier: Modifier = Modifier) {
-    DataSourceAttribution(packageName = source, modifier = modifier)
+fun SourceChip(source: String, modifier: Modifier = Modifier, synced: Boolean = false) {
+    DataSourceAttribution(packageName = source, modifier = modifier, synced = synced)
 }

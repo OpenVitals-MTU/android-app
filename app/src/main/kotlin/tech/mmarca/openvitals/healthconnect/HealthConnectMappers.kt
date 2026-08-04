@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepDeviceData
 import tech.mmarca.openvitals.domain.model.SleepStage
+import tech.mmarca.openvitals.domain.model.resolveSleepStages
 import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
 import tech.mmarca.openvitals.domain.model.withRouteBackfilledMetrics
 
@@ -46,7 +47,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
     startTime = startTime,
     endTime = endTime,
     durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
-    source = metadata.dataOrigin.packageName,
+    source = SyncedSourceOverlay.displaySource(metadata),
     totalDistanceMeters = totalDistanceMeters,
     totalCaloriesKcal = totalCaloriesKcal,
     totalCaloriesSource = totalCaloriesSource,
@@ -117,13 +118,17 @@ private fun ExerciseRouteResult.toExerciseRouteData(): ExerciseRouteData = when 
 }
 
 internal fun SleepSessionRecord.toSleepData(): SleepData {
-    val mappedStages = stages.map { stage ->
-        SleepStage(
-            startTime = stage.startTime,
-            endTime = stage.endTime,
-            stageType = stage.stage,
-        )
-    }
+    val mappedStages = resolveSleepStages(
+        stages = stages.map { stage ->
+            SleepStage(
+                startTime = stage.startTime,
+                endTime = stage.endTime,
+                stageType = stage.stage,
+            )
+        },
+        sessionStart = startTime,
+        sessionEnd = endTime,
+    )
     val spanDurationMs = endTime.toEpochMilli() - startTime.toEpochMilli()
 
     return SleepData(
@@ -157,6 +162,6 @@ internal fun MindfulnessSessionRecord.toMindfulnessSession(appPackageName: Strin
     startTime = startTime,
     endTime = endTime,
     durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
-    source = metadata.dataOrigin.packageName,
+    source = SyncedSourceOverlay.displaySource(metadata),
     isOpenVitalsEntry = appPackageName?.let { isOpenVitalsRecord(metadata.dataOrigin.packageName, it) } ?: false,
 )
