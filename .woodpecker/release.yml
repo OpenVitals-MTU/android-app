@@ -116,12 +116,21 @@ steps:
           test -n "$${aab_path}"
           cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
         fi
+      # Nightly keeps a single stable download page, so the `nightly` tag is force-moved
+      # to this commit over git (the release API key doubles as the git push credential).
+      # Codeberg's REST tag endpoint returns 500s and cannot be relied on -- see the
+      # script -- so the move goes straight through git instead.
+      #
+      # The versionCode goes with it: moving the tag means deleting the release that
+      # pins it, and that release body is the counter's database. The script mirrors
+      # the code to an append-only ref first and refuses a code that has gone
+      # backwards, which is what left a nightly that would not install (2026-07).
       - |
         if { [ "$${CI_PIPELINE_EVENT}" = "cron" ] || [ "$${CI_PIPELINE_EVENT}" = "manual" ]; } && [ "$${OPENVITALS_RELEASE_CHANNEL}" = "nightly" ]; then
           test -n "$${CODEBERG_RELEASE_API_KEY}"
           nightly_pipeline_number="$${CI_PIPELINE_NUMBER:-1}"
           api_base="$${CI_FORGE_URL%/}/api/v1/repos/$${CI_REPO}"
-          scripts/update-codeberg-tag.py "$${api_base}" "$${CODEBERG_RELEASE_API_KEY}" nightly "$${CI_COMMIT_SHA}" "OpenVitals nightly $${nightly_pipeline_number}"
+          scripts/update-codeberg-tag.py "$${api_base}" "$${CODEBERG_RELEASE_API_KEY}" nightly "$${CI_COMMIT_SHA}" "OpenVitals nightly $${nightly_pipeline_number}" "$${OPENVITALS_VERSION_CODE}"
         fi
 
   - name: publish-play-open-testing

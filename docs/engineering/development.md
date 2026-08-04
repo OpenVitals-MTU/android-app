@@ -139,9 +139,18 @@ checksum assets instead of creating another release page. `versionName` and
 `versionName` carries the human release name (`1.7.7`, `1.7.7-nightly.335`),
 while `versionCode` is only a monotonic Android update counter. Both nightly and
 versioned releases use the same counter line. CI reads
-`OpenVitals-Version-Code` markers from existing Codeberg release notes, uses
-`max(previous markers, baseVersionCode) + 1` for new release artifacts, and
-stores the chosen code back into the release notes. Production deployments reuse
+`OpenVitals-Version-Code` markers from existing Codeberg release notes plus the
+append-only `refs/version-code/*` mirror, uses
+`max(markers, refs, baseVersionCode) + 1` for new release artifacts, stores the
+chosen code back into the release notes, and mirrors it into a
+`refs/version-code/<code>` ref before the nightly tag move can delete the
+release that carries the marker (see `scripts/update-codeberg-tag.py`; the
+2026-07 counter rewind is why the mirror exists). The survey only sees
+Codeberg: codes that exist solely on Google Play (such as the Flutter era's
+`base*10` AAB codes, whose markers recorded the 9-digit base) are invisible to
+it, so `baseVersionCode` must be kept at or above every code any channel has
+ever served; the fastlane publish lanes additionally compare the incoming code
+against the live Play track before uploading. Production deployments reuse
 the marker from the already published `vX.Y.Z` release so the Play AAB matches
 the Codeberg APK's install order. The nightly release job also prunes old
 versioned Codeberg release pages so only the newest nine remain, while

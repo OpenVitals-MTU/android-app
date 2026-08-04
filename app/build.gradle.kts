@@ -49,12 +49,22 @@ val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
     .orElse(providers.environmentVariable("APPLE_HEALTH_EXPORT"))
 // versionCode is a monotonic release counter, independent of versionName.
 //
-// The Flutter era multiplied the then-base by 10 and added a per-ABI digit, so
-// the last shipped code is 1070304402 (2.4.1, arm64). Anything below that is a
-// DOWNGRADE: Android refuses the update and F-Droid rejects the build. This
-// value continues that number line — old base x10, last digit free for a
-// per-ABI split if one is ever needed again.
-val baseVersionCode = 1070304410
+// The Flutter era multiplied the then-base by 10 and added a per-ABI digit
+// (armeabi-v7a 1, arm64-v8a 2), while its Play AABs took the bare x10. Its
+// Codeberg release markers recorded the 9-digit BASE, and the nightly line kept
+// running after 2.4.1 (base 107030440): the append-only refs/version-code/*
+// refs on origin show bases up to 107030443. So Google Play open testing
+// serves AAB code 1070304430, and the last Flutter nightly's Codeberg/F-Droid
+// APKs shipped 1070304431/1070304432. None of that is visible to the marker
+// survey in scripts/version-code.sh — Play-only codes have no Codeberg marker,
+// and the 9-digit base markers sit below any 10-digit floor — so THIS floor is
+// the defense and must clear every code any channel has ever served. Anything
+// at or below those codes is a DOWNGRADE: Play rejects the rollout ("does not
+// allow any existing users to upgrade"), Android refuses the update, and
+// F-Droid rejects the build. This value continues that number line — old base
+// x10, last digit free for a per-ABI split if one is ever needed again. The
+// first nightly on this floor ships versionCode 1070304441.
+val baseVersionCode = 1070304440
 val baseVersionName = "2.5.0"
 val translationCoverageResDir = layout.buildDirectory.dir("generated/res/translationCoverage").get().asFile
 val generateTranslationCoverage by tasks.registering(Exec::class) {

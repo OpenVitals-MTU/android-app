@@ -42,6 +42,19 @@ platform :android do
         UI.message("Version code #{version_code} is already on Google Play open testing; skipping upload.")
         next
       end
+
+      # Play refuses a rollout no existing user can upgrade to. Codes that only
+      # ever went to Play carry no Codeberg marker, so the versionCode counter
+      # cannot see them; fail here with the fix instead of letting supply
+      # surface a cryptic Google API error.
+      max_existing = existing_codes.max
+      if max_existing && max_existing >= version_code.to_i
+        UI.user_error!(
+          "Google Play track 'beta' already serves versionCode #{max_existing} >= incoming #{version_code}; " \
+          "no existing user could upgrade, so supply would be rejected. " \
+          "Bump baseVersionCode in app/build.gradle.kts past #{max_existing}."
+        )
+      end
     end
 
     supply(
@@ -83,6 +96,17 @@ platform :android do
       if existing_codes.include?(version_code.to_i)
         UI.message("Version code #{version_code} is already on Google Play production; skipping production upload.")
         next
+      end
+
+      # Same guard as open_testing: surface a downgrade as an actionable
+      # failure before supply hits Play's opaque rollout error.
+      max_existing = existing_codes.max
+      if max_existing && max_existing >= version_code.to_i
+        UI.user_error!(
+          "Google Play track 'production' already serves versionCode #{max_existing} >= incoming #{version_code}; " \
+          "no existing user could upgrade, so supply would be rejected. " \
+          "Bump baseVersionCode in app/build.gradle.kts past #{max_existing}."
+        )
       end
     end
 
