@@ -13,8 +13,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
@@ -152,7 +155,7 @@ class OpenVitalsConnectedFlowTest {
             }
         }
 
-        composeRule.onNodeWithText(string(R.string.manual_entry_hydration_title)).performClick()
+        composeRule.onNodeWithText(string(R.string.manual_entry_hydration_label)).performClick()
         composeRule.runOnIdle { assertEquals("hydration", opened) }
 
         composeRule.onNodeWithText(string(R.string.metric_carbs)).performClick()
@@ -166,7 +169,7 @@ class OpenVitalsConnectedFlowTest {
 
         composeRule.runOnIdle { isEditingWidgets = true }
         composeRule.waitForIdle()
-        composeRule.onAllNodesWithText(string(R.string.manual_entry_hydration_title)).onFirst().assertExists()
+        composeRule.onAllNodesWithText(string(R.string.manual_entry_hydration_label)).onFirst().assertExists()
         composeRule.runOnIdle { assertTrue(removed.isEmpty()) }
     }
 
@@ -286,11 +289,14 @@ class OpenVitalsConnectedFlowTest {
             }
         }
 
-        composeRule.onNodeWithText("Display").performClick()
-        composeRule.onNodeWithText("Activities").performClick()
-        composeRule.onNodeWithText("Nutrition").performClick()
-        composeRule.onNodeWithText("Recovery").performClick()
-        composeRule.onNodeWithText("Health Connect").performClick()
+        // The LazyColumn only composes what fits the viewport, and the cards'
+        // full-line-height text boxes push the later sections below it — scroll
+        // each label in before clicking.
+        listOf("Display", "Activities", "Nutrition", "Recovery", "Health Connect")
+            .forEach { label ->
+                composeRule.onNode(hasScrollAction()).performScrollToNode(hasText(label))
+                composeRule.onNodeWithText(label).performClick()
+            }
 
         composeRule.runOnIdle {
             assertEquals(
