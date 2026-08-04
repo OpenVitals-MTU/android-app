@@ -96,4 +96,23 @@ if [ -n "${GRADLE_USER_HOME:-}" ]; then
 fi
 
 "$JAVA_HOME/bin/java" -version
+
+# The runner-mounted cache is shared by every pipeline container, but each
+# container has its own PID namespace, so Gradle's lock-liveness check cannot
+# tell a concurrent holder from a stale lock (identical images even produce
+# identical PIDs — "Owner PID: 79, Our PID: 79"). Serialize builds with an
+# advisory flock on the shared volume instead; once the exclusive lock is
+# held, any Gradle lock file still on disk is provably stale (a killed run's
+# leftover) and safe to sweep.
+if [ "${GRADLE_USER_HOME:-}" = /woodpecker/cache/gradle ] && command -v flock >/dev/null 2>&1; then
+    exec 9>"$GRADLE_USER_HOME/.ci-build.flock"
+    if ! flock -w 2700 9; then
+        echo "Timed out after 45m waiting for another pipeline's Gradle build on the shared cache." >&2
+        exit 1
+    fi
+    find "$GRADLE_USER_HOME/caches" -name '*.lock' -type f -delete 2>/dev/null || true
+fi
+
+# fd 9 stays open across exec, so the flock is held for Gradle's lifetime and
+# released by the kernel when the process exits, however it exits.
 exec ./gradlew --no-daemon "$@"
