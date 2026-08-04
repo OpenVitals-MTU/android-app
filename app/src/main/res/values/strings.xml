@@ -1282,7 +1282,7 @@
     <string name="settings_units_body">Choose how distances, weights, hydration, and temperature are displayed.</string>
     <string name="settings_unit_metric">Metric</string>
     <string name="settings_unit_imperial">Imperial</string>
-    <string name="settings_unit_follow_system">Follow system</string>
+    <string name="settings_unit_system">System</string>
     <string name="settings_unit_follow_system_body">Currently %1$s, from your device\'s measurement system setting.</string>
     <string name="settings_unit_overrides_title">Units per measurement</string>
     <string name="settings_unit_overrides_body">Mix systems per measurement — kilometres for distance but pounds for weight. Default follows the unit setting above.</string>

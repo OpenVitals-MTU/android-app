@@ -1404,7 +1404,7 @@ internal fun UnitSystemCard(
                         label = {
                             Text(
                                 when (preference) {
-                                    UnitSystemPreference.SYSTEM -> stringResource(R.string.settings_unit_follow_system)
+                                    UnitSystemPreference.SYSTEM -> stringResource(R.string.settings_unit_system)
                                     UnitSystemPreference.METRIC -> stringResource(R.string.settings_unit_metric)
                                     UnitSystemPreference.IMPERIAL -> stringResource(R.string.settings_unit_imperial)
                                 }
