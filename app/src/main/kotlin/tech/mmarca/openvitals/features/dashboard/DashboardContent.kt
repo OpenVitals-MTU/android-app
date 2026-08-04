@@ -90,6 +90,7 @@ internal fun DashboardContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     canGoForward: Boolean,
     isRefreshing: Boolean,
+    syncPaused: Boolean = false,
     dashboardWidgets: List<DashboardWidgetId>,
     isEditingDashboard: Boolean,
     onPreviousDay: () -> Unit,
@@ -162,12 +163,14 @@ internal fun DashboardContent(
             ),
         ) {
             // A reload that kept the old data on screen announces itself with the
-            // syncing banner instead of blanking anything.
-            if (isRefreshing) {
+            // syncing banner instead of blanking anything. This is the ONLY sync
+            // banner the dashboard renders — the screen shell's inline one is
+            // switched off so a single load cannot show up twice.
+            if (syncPaused || isRefreshing) {
                 item {
                     HealthConnectSyncStatusBanner(
-                        syncPaused = false,
-                        syncInProgress = true,
+                        syncPaused = syncPaused,
+                        syncInProgress = isRefreshing && !syncPaused,
                         modifier = Modifier.padding(
                             horizontal = DashboardScreenPadding,
                             vertical = 4.dp,

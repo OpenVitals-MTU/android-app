@@ -104,7 +104,11 @@ fun DashboardScreen(
         feature = HealthConnectFeature.DASHBOARD,
         isLoading = isLoading && loadedData != null,
         refreshKey = refreshRequest to permissionReloadKey,
-    ) {
+        // The dashboard body renders the sync banner itself, inside its list —
+        // the shell rendering a second one on top is how the screen ended up
+        // with two "Syncing…" banners for a single load.
+        showInlineSyncBanner = false,
+    ) { hcUx ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing && loadedData != null,
             onRefresh = viewModel::refresh,
@@ -121,6 +125,7 @@ fun DashboardScreen(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     canGoForward = selectedDate.isBefore(LocalDate.now()),
                     isRefreshing = state.isRefreshing,
+                    syncPaused = hcUx.syncPaused,
                     dashboardWidgets = state.dashboardWidgets,
                     isEditingDashboard = state.isEditingDashboard,
                     onPreviousDay = viewModel::previousDay,

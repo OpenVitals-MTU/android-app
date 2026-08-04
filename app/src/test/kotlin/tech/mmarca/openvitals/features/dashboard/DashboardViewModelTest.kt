@@ -43,6 +43,7 @@ import io.mockk.verify
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -602,6 +603,74 @@ class DashboardViewModelTest {
         vm.load(today)
 
         assertEquals(today, vm.uiState.value.data?.date)
+    }
+
+    // ─── Open coalescing ──────────────────────────────────────────────────────
+    // Opening the dashboard fires the init load and the first ON_RESUME within
+    // the same frame. Restarting the in-flight load would issue every Health
+    // Connect read twice per open — the rate-limit budget this screen keeps
+    // blowing — so the duplicate NORMAL request is absorbed instead.
+
+    @Test fun `the first resume is absorbed by the in-flight open load`() = runTest {
+        val loader = mockDashboardDataLoader()
+        val gate = CompletableDeferred<Unit>()
+        var loads = 0
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            loads += 1
+            gate.await()
+            DashboardData(date = today, steps = 8_000)
+        }
+
+        val vm = dashboardViewModel(loader, prefs())
+        // The ON_RESUME that lands while the init load is still reading.
+        vm.resumeCurrentDay()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(1, loads)
+        assertEquals(8_000L, vm.uiState.value.data?.steps)
+        assertFalse(vm.uiState.value.isLoading)
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test fun `a resume after the open load settles still reloads the day`() = runTest {
+        val loader = mockDashboardDataLoader()
+        var loads = 0
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            loads += 1
+            DashboardData(date = today)
+        }
+
+        val vm = dashboardViewModel(loader, prefs())
+        advanceUntilIdle()
+        assertEquals(1, loads)
+
+        // Returning to the app after backgrounding: the only signal that Health
+        // Connect data may have changed, so it must genuinely reload.
+        vm.resumeCurrentDay()
+        advanceUntilIdle()
+
+        assertEquals(2, loads)
+    }
+
+    @Test fun `force refresh is not absorbed by an in-flight load`() = runTest {
+        val loader = mockDashboardDataLoader()
+        val gate = CompletableDeferred<Unit>()
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            queries += firstArg<DashboardQuery>()
+            gate.await()
+            DashboardData(date = today)
+        }
+
+        val vm = dashboardViewModel(loader, prefs())
+        // Pull-to-refresh while the open load is still in flight restarts it.
+        vm.refresh()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(2, queries.size)
+        assertEquals(RefreshMode.FORCE, queries.last().refreshMode)
     }
 
     @Test fun `refreshPreferences reloads dashboard when sleep range mode changes`() = runTest {

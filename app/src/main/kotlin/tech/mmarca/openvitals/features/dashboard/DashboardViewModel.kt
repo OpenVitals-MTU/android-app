@@ -160,6 +160,16 @@ class DashboardViewModel @Inject constructor(
     private var bodyEnergyJob: Job? = null
     private var loadGeneration = 0L
 
+    /**
+     * The day the current coordinator job is loading, or null once it settles.
+     * Opening the dashboard fires both the init load and the first ON_RESUME
+     * within one frame; restarting the in-flight load would throw away Health
+     * Connect reads already issued and pay for them a second time. A NORMAL
+     * request for the day already being loaded is therefore absorbed here —
+     * FORCE (pull-to-refresh) and date changes still restart as before.
+     */
+    private var inFlightLoadDate: LocalDate? = null
+
     init {
         observeSensorStatus()
         load(_uiState.value.selectedDate)
@@ -239,7 +249,9 @@ class DashboardViewModel @Inject constructor(
             }
         }
         if (sleepRangeChanged || activityWeekModeChanged || calorieModeChanged) {
-            load(current.selectedDate)
+            // Bypasses the in-flight dedupe on purpose: a load already running
+            // read the old preferences, so it has to be restarted, not absorbed.
+            load(current.selectedDate, RefreshMode.NORMAL, retryOnCancellation = true)
         }
     }
 
@@ -254,7 +266,9 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun load(date: LocalDate, refreshMode: RefreshMode = RefreshMode.NORMAL) {
-        load(date = date, refreshMode = refreshMode, retryOnCancellation = true)
+        val clampedDate = date.coerceAtMost(LocalDate.now())
+        if (refreshMode == RefreshMode.NORMAL && clampedDate == inFlightLoadDate) return
+        load(date = clampedDate, refreshMode = refreshMode, retryOnCancellation = true)
     }
 
     private fun load(
@@ -266,118 +280,138 @@ class DashboardViewModel @Inject constructor(
         val generation = ++loadGeneration
         backgroundMetricsJob?.cancel()
         bodyEnergyJob?.cancel()
+        inFlightLoadDate = clampedDate
         loadCoordinator.launch(viewModelScope) load@{
-            val sleepWindow = prefs.sleepWindow
-            val activityWeekMode = prefs.activityWeekMode
-            val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
-            val dailyGoals = prefs.dashboardDailyGoals()
-            permissionPromptDismissedForLoad = false
-            val current = _uiState.value
-            val availability = repository.availability()
-            val granted = if (availability == HealthConnectAvailability.AVAILABLE) {
-                repository.grantedPermissions()
-            } else {
-                emptySet()
+            try {
+                runLoadPass(
+                    clampedDate = clampedDate,
+                    refreshMode = refreshMode,
+                    retryOnCancellation = retryOnCancellation,
+                    generation = generation,
+                )
+            } finally {
+                // A superseded job must not clear the marker the newer load owns.
+                if (isCurrent) inFlightLoadDate = null
             }
-            val keepCurrentDataVisible = refreshMode == RefreshMode.FORCE && current.data != null
-            _uiState.value = current.copy(
-                selectedDate = clampedDate,
-                isLoading = !keepCurrentDataVisible,
-                isRefreshing = true,
-                error = null,
-                sleepWindow = sleepWindow,
-                activityWeekMode = activityWeekMode,
-                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
-                dailyGoals = dailyGoals,
-                healthConnectSyncEnabled = prefs.healthConnectSyncEnabled,
-                healthConnectAvailability = availability,
-                minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
-                loadingWidgets = emptySet(),
-            )
-            val quickWidgetIds = firstVisibleDashboardWidgetIds(_uiState.value.dashboardWidgets)
-            val quickMetrics = quickWidgetIds.toDashboardMetrics()
-            val dashboardQuery = DashboardQuery(
-                date = clampedDate,
-                sleepWindow = sleepWindow,
-                activityWeekMode = activityWeekMode,
-                visibleMetrics = quickMetrics,
-                refreshMode = refreshMode,
-                includeHistoricalBaselines = false,
-                includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in quickMetrics,
-            )
-            val data = try {
-                loadDashboardDayUseCase(dashboardQuery)
-            } catch (error: CancellationException) {
-                if (!isCurrent) return@load
-                if (retryOnCancellation) {
-                    load(
-                        date = clampedDate,
-                        refreshMode = refreshMode,
-                        retryOnCancellation = false,
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isRefreshing = false,
-                        error = null,
-                    )
-                }
-                return@load
-            } catch (error: Throwable) {
-                if (!isCurrent) return@load
+        }
+    }
+
+    private suspend fun LoadCoordinator.LoadScope.runLoadPass(
+        clampedDate: LocalDate,
+        refreshMode: RefreshMode,
+        retryOnCancellation: Boolean,
+        generation: Long,
+    ) {
+        val sleepWindow = prefs.sleepWindow
+        val activityWeekMode = prefs.activityWeekMode
+        val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
+        val dailyGoals = prefs.dashboardDailyGoals()
+        permissionPromptDismissedForLoad = false
+        val current = _uiState.value
+        val availability = repository.availability()
+        val granted = if (availability == HealthConnectAvailability.AVAILABLE) {
+            repository.grantedPermissions()
+        } else {
+            emptySet()
+        }
+        val keepCurrentDataVisible = refreshMode == RefreshMode.FORCE && current.data != null
+        _uiState.value = current.copy(
+            selectedDate = clampedDate,
+            isLoading = !keepCurrentDataVisible,
+            isRefreshing = true,
+            error = null,
+            sleepWindow = sleepWindow,
+            activityWeekMode = activityWeekMode,
+            showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+            dailyGoals = dailyGoals,
+            healthConnectSyncEnabled = prefs.healthConnectSyncEnabled,
+            healthConnectAvailability = availability,
+            minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
+            loadingWidgets = emptySet(),
+        )
+        val quickWidgetIds = firstVisibleDashboardWidgetIds(_uiState.value.dashboardWidgets)
+        val quickMetrics = quickWidgetIds.toDashboardMetrics()
+        val dashboardQuery = DashboardQuery(
+            date = clampedDate,
+            sleepWindow = sleepWindow,
+            activityWeekMode = activityWeekMode,
+            visibleMetrics = quickMetrics,
+            refreshMode = refreshMode,
+            includeHistoricalBaselines = false,
+            includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in quickMetrics,
+        )
+        val data = try {
+            loadDashboardDayUseCase(dashboardQuery)
+        } catch (error: CancellationException) {
+            if (!isCurrent) return
+            if (retryOnCancellation) {
+                load(
+                    date = clampedDate,
+                    refreshMode = refreshMode,
+                    retryOnCancellation = false,
+                )
+            } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isRefreshing = false,
-                    error = error.toScreenError("Unknown error"),
+                    error = null,
                 )
-                return@load
             }
-
-            if (!isCurrent) return@load
-            val currentData = _uiState.value.data
-            val mergedData = if (currentData?.date == clampedDate) {
-                currentData.mergeLoaded(data)
-            } else {
-                data
-            }
-            val backgroundWidgetIds = (_uiState.value.dashboardWidgets - quickWidgetIds.toSet())
-            val loadingWidgets = buildSet {
-                addAll(backgroundWidgetIds)
-                if (bodyEnergyRepository != null &&
-                    DashboardWidgetId.BODY_ENERGY in _uiState.value.dashboardWidgets &&
-                    mergedData.bodyEnergyTimeline == null
-                ) {
-                    add(DashboardWidgetId.BODY_ENERGY)
-                }
-            }
-            publishDashboardData(
-                data = mergedData,
-                loadingWidgets = loadingWidgets,
-                sleepWindow = sleepWindow,
-                activityWeekMode = activityWeekMode,
-                goals = prefs.dashboardDailyGoals(),
+            return
+        } catch (error: Throwable) {
+            if (!isCurrent) return
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                isRefreshing = false,
+                error = error.toScreenError("Unknown error"),
             )
-            if (data.loadedMetrics.isNotEmpty() || quickMetrics.isEmpty()) {
-                launchBackgroundMetricLoad(
-                    date = clampedDate,
-                    refreshMode = refreshMode,
-                    quickMetrics = quickMetrics,
-                    generation = generation,
-                )
+            return
+        }
+
+        if (!isCurrent) return
+        val currentData = _uiState.value.data
+        val mergedData = if (currentData?.date == clampedDate) {
+            currentData.mergeLoaded(data)
+        } else {
+            data
+        }
+        val backgroundWidgetIds = (_uiState.value.dashboardWidgets - quickWidgetIds.toSet())
+        val loadingWidgets = buildSet {
+            addAll(backgroundWidgetIds)
+            if (bodyEnergyRepository != null &&
+                DashboardWidgetId.BODY_ENERGY in _uiState.value.dashboardWidgets &&
+                mergedData.bodyEnergyTimeline == null
+            ) {
+                add(DashboardWidgetId.BODY_ENERGY)
             }
-            launchBodyEnergyLoad(
+        }
+        publishDashboardData(
+            data = mergedData,
+            loadingWidgets = loadingWidgets,
+            sleepWindow = sleepWindow,
+            activityWeekMode = activityWeekMode,
+            goals = prefs.dashboardDailyGoals(),
+        )
+        if (data.loadedMetrics.isNotEmpty() || quickMetrics.isEmpty()) {
+            launchBackgroundMetricLoad(
                 date = clampedDate,
                 refreshMode = refreshMode,
+                quickMetrics = quickMetrics,
                 generation = generation,
             )
-            // Once per app open, after the dashboard's own load has settled:
-            // drain the daily-aggregate caches' changes tokens. Incremental
-            // only — a cache that never full-synced stays untouched until its
-            // screen pays for the first rebuild.
-            historySyncScheduler?.let { scheduler ->
-                viewModelScope.launch {
-                    runCatching { scheduler.drainIncrementalOnce() }
-                }
+        }
+        launchBodyEnergyLoad(
+            date = clampedDate,
+            refreshMode = refreshMode,
+            generation = generation,
+        )
+        // Once per app open, after the dashboard's own load has settled:
+        // drain the daily-aggregate caches' changes tokens. Incremental
+        // only — a cache that never full-synced stays untouched until its
+        // screen pays for the first rebuild.
+        historySyncScheduler?.let { scheduler ->
+            viewModelScope.launch {
+                runCatching { scheduler.drainIncrementalOnce() }
             }
         }
     }
