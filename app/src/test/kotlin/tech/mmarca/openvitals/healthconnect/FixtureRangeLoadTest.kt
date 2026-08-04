@@ -253,7 +253,16 @@ class FixtureRangeLoadTest {
 
     private companion object {
         const val APP_PACKAGE = "tech.mmarca.openvitals"
-        val ZONE: ZoneId = ZoneId.systemDefault()
+
+        /**
+         * The zone the corpus was RECORDED in, not the machine's. The fake keeps
+         * only interval records wholly inside an instant window, and the corpus's
+         * overnight sleep sessions only fit wholly inside a day drawn on the
+         * corpus's own clock — a UTC machine's day window starts 43 minutes into
+         * the anchor night's session and the read comes back empty.
+         */
+        val ZONE: ZoneId = HcFixture.exercise().first().startZoneOffset
+            ?: error("the corpus's exercise records carry no zone offset")
 
         val corpus: FakeHealthConnectClient by lazy {
             runBlocking {
