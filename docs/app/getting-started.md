@@ -52,16 +52,11 @@ GPS recording needs precise location permission. Bluetooth LE sensor recording n
 
 Recording notifications, Apple Health import progress, and reminders use notification permission on Android versions that require it.
 
-## Pairing A Watch
+## Using A Watch
 
-Settings, Watches pairs a Garmin watch over Bluetooth and copies what the watch recorded into OpenVitals.
+OpenVitals does not pair with watches directly. Pair the watch with a companion app that writes to Health Connect — for example Gadgetbridge, which supports Garmin and many other makes — and grant OpenVitals the matching Health Connect read permissions. The watch's recorded activities, sleep, and heart rate then appear on the normal metric screens like data from any other source.
 
-- Keep the watch awake and close to the phone while scanning.
-- Confirm the pairing code shown on the watch.
-- Android asks separately whether OpenVitals may access the watch. Allowing it lets sync keep running in the background; declining still works, the watch is just more likely to be interrupted mid-sync.
-- Synced data goes into Health Connect where a matching record type exists. Watch-only series such as stress and Body Battery are stored locally in OpenVitals instead, because Health Connect has no type for them.
-
-Forwarding phone notifications to the watch is optional and off until it is turned on. It needs Android's notification access, which is granted from an Android settings screen rather than an in-app prompt. Notifications are read on the phone and sent only to the paired watch. Individual apps can be silenced from Settings, Watches, Notifications.
+A watch that broadcasts standard Bluetooth LE heart rate can additionally be added under Settings, Sensors, to stream live heart rate into an activity recording.
 
 ## Syncing With Another Phone
 

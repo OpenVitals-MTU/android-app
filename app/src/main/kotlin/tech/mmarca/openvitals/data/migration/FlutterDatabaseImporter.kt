@@ -8,8 +8,6 @@ import java.io.File
 import kotlinx.coroutines.runBlocking
 import tech.mmarca.openvitals.data.local.beverage.BeverageDao
 import tech.mmarca.openvitals.data.local.beverage.BeverageEntity
-import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
-import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
 
 /**
  * Imports the beverage catalog from the Flutter build's drift database.
@@ -23,10 +21,9 @@ import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
  *
  * ## Deliberately untouched tables
  *
- * * `garmin_wellness_samples` — imported by [importGarminWellness] into the
- *   Room table of the same shape (watch-only data with no Health Connect
- *   representation, so it cannot be re-synced from anywhere else). The drift
- *   rows are still PRESERVED IN PLACE afterwards, like every Flutter file.
+ * * `garmin_wellness_samples` — the retired watch integration used to import
+ *   these rows; with it gone they are no longer copied, but the drift rows
+ *   stay PRESERVED IN PLACE like every Flutter file.
  * * `vitals_daily_aggregates` / `vitals_sync_cursors` — derived caches; the
  *   supported path is a full Health Connect re-sync from empty cursors.
  * * `body_energy_days` / `body_energy_buckets` — owned by the body-energy
@@ -50,30 +47,6 @@ class FlutterDatabaseImporter(private val context: Context) {
         }
         runBlocking { beverageDao.replaceAll(beverages) }
         Log.i(TAG, "Imported ${beverages.size} beverages from the Flutter database.")
-    }
-
-    /**
-     * Copies the Flutter era's watch-only wellness samples into the Room
-     * `garmin_wellness_samples` table — the honored half of the phase-7
-     * contract in the class KDoc. The tables are column-identical and both
-     * keyed on `(metric, time_millis)`, so an UPSERT is convergent: rows a
-     * watch sync has already re-pulled simply overwrite with the same values,
-     * and nothing existing is deleted (this is watch data with no Health
-     * Connect representation — the one table that cannot be re-synced from
-     * anywhere else).
-     */
-    fun importGarminWellness(dao: GarminWellnessDao) {
-        val samples = readTable("garmin_wellness_samples", ::queryGarminWellness) ?: return
-        if (samples.isEmpty()) {
-            Log.i(TAG, "Flutter wellness table is empty; nothing to import.")
-            return
-        }
-        runBlocking {
-            samples.chunked(WELLNESS_UPSERT_CHUNK).forEach { chunk ->
-                dao.upsertSamples(chunk)
-            }
-        }
-        Log.i(TAG, "Imported ${samples.size} Garmin wellness samples from the Flutter database.")
     }
 
     private fun <T> readTable(tableName: String, query: (SQLiteDatabase) -> T): T? {
@@ -122,24 +95,6 @@ class FlutterDatabaseImporter(private val context: Context) {
             scratchDir.deleteRecursively()
         }
     }
-
-    private fun queryGarminWellness(database: SQLiteDatabase): List<GarminWellnessSampleEntity> =
-        database.rawQuery(
-            "SELECT metric, time_millis, value FROM garmin_wellness_samples",
-            null,
-        ).use { cursor ->
-            buildList {
-                while (cursor.moveToNext()) {
-                    add(
-                        GarminWellnessSampleEntity(
-                            metric = cursor.getString(0),
-                            timeMillis = cursor.getLong(1),
-                            value = cursor.getLong(2),
-                        ),
-                    )
-                }
-            }
-        }
 
     private fun queryBeverages(database: SQLiteDatabase): List<BeverageEntity> =
         database.rawQuery("SELECT * FROM beverages", null).use { cursor ->
@@ -193,7 +148,6 @@ class FlutterDatabaseImporter(private val context: Context) {
 
         const val DATABASE_NAME = "openvitals.db"
         private const val CACHE_COPY_DIR = "flutter_migration_db"
-        private const val WELLNESS_UPSERT_CHUNK = 500
         private const val TAG = "FlutterDbImporter"
     }
 }

@@ -36,7 +36,7 @@ class FitFileMessages(
 /**
  * Generic FIT container reader: walks a `.FIT` byte stream and emits its data
  * messages as [FitMessage]s, knowing NOTHING about what any message means. The
- * domain interpretation (activity route import, Garmin wellness) lives in
+ * domain interpretation (activity route import, wellness HRV) lives in
  * separate consumers that switch on [FitMessage.globalMessageNumber].
  *
  * Decodes EVERY field of EVERY message — there is no message allowlist —

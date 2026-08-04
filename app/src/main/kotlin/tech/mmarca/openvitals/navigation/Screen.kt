@@ -48,8 +48,6 @@ const val CAFFEINE_ENTRY_ID_ARG = "caffeineEntryId"
 const val VITALS_MEASUREMENT_TYPE_ARG = "vitalsMeasurementType"
 const val VITALS_ENTRY_ID_ARG = "vitalsEntryId"
 const val STRESS_DATE_ARG = "stressDate"
-const val WATCH_DEVICE_ID_ARG = "watchDeviceId"
-const val WATCH_SETTINGS_SCREEN_ID_ARG = "screenId"
 const val BODY_ENERGY_DATE_ARG = "bodyEnergyDate"
 const val TRAINING_READINESS_DATE_ARG = "trainingReadinessDate"
 
@@ -155,7 +153,6 @@ sealed class Screen(val route: String) {
     data object SettingsDisplay : Screen("settings/display")
     data object SettingsActivities : Screen("settings/activities")
     data object SettingsSensors : Screen("settings/sensors")
-    data object SettingsWatches : Screen("settings/watches")
     data object SettingsNutrition : Screen("settings/nutrition")
     data object SettingsCalories : Screen("settings/calories")
     data object SettingsCaffeine : Screen("settings/caffeine")
@@ -169,28 +166,5 @@ sealed class Screen(val route: String) {
     data object SettingsHealthConnect : Screen("settings/health_connect")
     data object SettingsPermissions : Screen("settings/permissions")
     data object SettingsDebugDiagnostics : Screen("settings/debug_diagnostics")
-    data object WatchDevice : Screen("watch/{$WATCH_DEVICE_ID_ARG}") {
-        fun createRoute(watchDeviceId: String): String =
-            "watch/${Uri.encode(watchDeviceId)}"
-    }
-    data object WatchData : Screen("watch/{$WATCH_DEVICE_ID_ARG}/data") {
-        fun createRoute(watchDeviceId: String): String =
-            "watch/${Uri.encode(watchDeviceId)}/data"
-    }
-    data object WatchNotifications : Screen("watch/{$WATCH_DEVICE_ID_ARG}/notifications") {
-        fun createRoute(watchDeviceId: String): String =
-            "watch/${Uri.encode(watchDeviceId)}/notifications"
-    }
-
-    /**
-     * The watch's own settings tree. The route pattern is registered ahead of
-     * sub-milestone 7f, which supplies the browser; until then it resolves to
-     * a placeholder and nothing links to it (see `WatchSettingsTreeAvailable`).
-     */
-    data object WatchSettings :
-        Screen("watch/{$WATCH_DEVICE_ID_ARG}/settings/{$WATCH_SETTINGS_SCREEN_ID_ARG}") {
-        fun createRoute(watchDeviceId: String, screenId: Int): String =
-            "watch/${Uri.encode(watchDeviceId)}/settings/$screenId"
-    }
     data object Achievements : Screen("achievements")
 }

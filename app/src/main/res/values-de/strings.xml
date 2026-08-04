@@ -1772,9 +1772,4 @@
     <string name="body_energy_confidence_medium">Mittel</string>
     <string name="body_energy_confidence_low">Niedrig</string>
     <string name="body_energy_confidence_no_data">Keine Daten</string>
-    <string name="body_energy_personalization_watch_none">Synchronisiere eine Uhr, die ihre eigene Körperenergie erfasst, um diese Werte zu personalisieren.</string>
-    <plurals name="body_energy_personalization_watch_body">
-        <item quantity="one">Aus 1 Uhrmessung gelernt. Jede ist ein einfacher Multiplikator, den du unten sehen kannst.</item>
-        <item quantity="other">Aus %1$d Uhrmessungen gelernt. Jede ist ein einfacher Multiplikator, den du unten sehen kannst.</item>
-    </plurals>
 </resources>

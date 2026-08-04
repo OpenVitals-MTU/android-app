@@ -1009,9 +1009,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Returns the learned gains to neutral and forgets the watch readings behind
-     * them, leaving the user's own zone settings alone — they did not learn
-     * anything, so there is nothing there to unlearn.
+     * Returns the personal gains to neutral, leaving the user's own zone
+     * settings alone — they did not learn anything, so there is nothing there
+     * to unlearn.
      */
     fun resetBodyEnergyPersonalTuning() {
         val current = preferencesRepository.bodyEnergyCalibration()
@@ -1021,7 +1021,6 @@ class SettingsViewModel @Inject constructor(
                 activityDrainGain = 1.0,
                 basalDrainGain = 1.0,
                 stressDrainGain = 1.0,
-                watchObservationCount = 0,
             )
         )
     }

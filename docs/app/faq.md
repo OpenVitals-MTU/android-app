@@ -38,10 +38,9 @@ OpenVitals needs precise location to record route-backed activities. Without it,
 
 ## Why Does OpenVitals Need Bluetooth Permission?
 
-Bluetooth is used for three separate things, all of them local:
+Bluetooth is used for two separate things, both of them local:
 
 - Connecting to Bluetooth LE sensors during activity recording.
-- Pairing with and syncing a Garmin watch.
 - Copying Health Connect records to another nearby phone.
 
 Nearby-device Bluetooth permissions do not add internet access.
@@ -63,17 +62,11 @@ Reminders are local and optional.
 
 ## Why Does OpenVitals Ask For Notification Access?
 
-Notification access is a different, optional permission from notification permission, and it is used for one thing only: showing your phone's notifications on a paired watch.
+OpenVitals no longer requests notification access. Earlier releases used it to mirror phone notifications to a directly paired watch; that watch integration has been removed, and the permission with it. If an older install still shows OpenVitals under Android's notification access settings, it can safely be revoked.
 
-OpenVitals reads the notification, sends it to the watch over Bluetooth, and keeps it in memory only. Nothing is written to a file, a database, or Health Connect, and the app has no internet permission, so there is nowhere else for it to go. Android grants this from its own settings screen; OpenVitals shows a disclosure first, and the feature does nothing until access is granted. Individual apps can be silenced, the feature can be turned off, and access can be revoked at any time.
+## How Do I Use OpenVitals With My Watch?
 
-## Why Does Android Ask To Let OpenVitals Access My Watch?
-
-That is Android's companion device dialog. Allowing it lets Android keep OpenVitals running while the watch is nearby, so a sync that takes several minutes is not killed halfway through. Declining is fine: the watch is still paired and still syncs, just without the background priority.
-
-## Where Does Watch Data Go?
-
-Data from a synced watch is written to Health Connect wherever a matching record type exists. Watch-only series such as stress, Body Battery, and watch sleep scores have no Health Connect type, so OpenVitals keeps those in its own local database on the device.
+Pair the watch with a companion app that writes to Health Connect — for example [Gadgetbridge](https://gadgetbridge.org/), which supports Garmin and many other makes — and grant OpenVitals the matching Health Connect read permissions. The watch's activities, sleep, and heart rate then appear in OpenVitals like data from any other source. OpenVitals does not pair with watches directly. A watch that broadcasts standard Bluetooth LE heart rate can also be added as a live sensor for activity recording.
 
 ## Is OpenVitals A Medical App?
 

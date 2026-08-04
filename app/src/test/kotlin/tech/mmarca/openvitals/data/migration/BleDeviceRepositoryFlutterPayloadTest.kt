@@ -11,11 +11,11 @@ import tech.mmarca.openvitals.domain.model.BleSensorCapability
 
 /**
  * The Flutter registry JSON carries extra `kind` / `integration` /
- * `lastSyncedAt` fields (added for the watch integrations) that the current
- * Kotlin decoder does not know. The migration copies the payload VERBATIM into
- * `ble_sensor_devices`, so [BleDeviceRepository] must tolerate — i.e. silently
- * ignore — those fields rather than fail parsing. Phase 7 will start reading
- * them.
+ * `lastSyncedAt` fields (written for the retired watch integrations). The
+ * migration copies the payload VERBATIM into `ble_sensor_devices`, so
+ * [BleDeviceRepository] must tolerate — i.e. silently ignore — those fields
+ * rather than fail parsing. The app no longer links to watches, so nothing
+ * reads them, but the entries must keep decoding without a crash.
  *
  * Runs on the local JVM against the real `org.json` artifact (declared as a
  * test dependency; the android.jar copy is a throwing stub).

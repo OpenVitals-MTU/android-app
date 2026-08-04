@@ -7,6 +7,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * The watch integration is retired, but its storage vocabulary lives on as
+ * parsing tolerance: migrated Flutter registries (and Kotlin watch-era ones)
+ * contain `WATCH`/`GARMIN`/`WEAROS` entries that must keep decoding losslessly
+ * and stay out of everything live-sensor-shaped.
+ */
 class BleDeviceKindTest {
 
     @Test
@@ -32,60 +38,27 @@ class BleDeviceKindTest {
         assertEquals(BleDeviceKind.SENSOR, device.kind)
         assertNull(device.integration)
         assertNull(device.lastSyncedAt)
-        assertFalse(device.isWatch)
-        assertFalse(device.isGarminGfdi)
         assertTrue(device.isLiveSensorCapable)
-        // A sensor is neither kind of watch, nor a bike computer, whatever
-        // integration it is stamped with.
-        assertFalse(device.isGarminWatch)
-        assertFalse(device.isWearosWatch)
-        assertFalse(device.isBikeComputer)
-        val stamped = device(integration = DeviceIntegration.GARMIN)
-        assertFalse(stamped.isGarminWatch)
-        assertFalse(stamped.isWearosWatch)
-        assertFalse(stamped.isBikeComputer)
+        // A stale integration stamp alone changes nothing.
+        assertTrue(device(integration = DeviceIntegration.GARMIN).isLiveSensorCapable)
     }
 
     @Test
-    fun `an explicit Garmin watch is a Garmin watch`() {
-        val watch = device(kind = BleDeviceKind.WATCH, integration = DeviceIntegration.GARMIN)
-        assertTrue(watch.isGarminWatch)
-        assertFalse(watch.isWearosWatch)
-        // A watch pulls FIT files over GFDI and streams nothing live.
-        assertTrue(watch.isGarminGfdi)
-        assertFalse(watch.isLiveSensorCapable)
+    fun `a stored watch-era entry is never live-sensor capable`() {
+        assertFalse(device(kind = BleDeviceKind.WATCH).isLiveSensorCapable)
+        assertFalse(
+            device(kind = BleDeviceKind.WATCH, integration = DeviceIntegration.GARMIN)
+                .isLiveSensorCapable,
+        )
+        assertFalse(
+            device(kind = BleDeviceKind.WATCH, integration = DeviceIntegration.WEAROS)
+                .isLiveSensorCapable,
+        )
     }
 
     @Test
-    fun `a null-integration watch is legacy Garmin`() {
-        // A Garmin watch stored before the integration field existed — it must
-        // keep reading as Garmin, the only watch integration that existed then.
-        val watch = device(kind = BleDeviceKind.WATCH)
-        assertTrue(watch.isWatch)
-        assertTrue(watch.isGarminWatch)
-        assertTrue(watch.isGarminGfdi)
-        assertFalse(watch.isWearosWatch)
-        assertFalse(watch.isLiveSensorCapable)
-    }
-
-    @Test
-    fun `a wearos watch is a watch but never on the Garmin sync path`() {
-        val watch = device(kind = BleDeviceKind.WATCH, integration = DeviceIntegration.WEAROS)
-        assertTrue(watch.isWatch)
-        assertTrue(watch.isWearosWatch)
-        assertFalse(watch.isGarminWatch)
-        assertFalse(watch.isGarminGfdi)
-        assertFalse(watch.isLiveSensorCapable)
-    }
-
-    @Test
-    fun `a bike computer syncs over GFDI and can still be a live sensor`() {
+    fun `a bike computer can still be a live sensor`() {
         val edge = device(kind = BleDeviceKind.BIKE_COMPUTER, integration = DeviceIntegration.GARMIN)
-        assertFalse(edge.isWatch)
-        assertTrue(edge.isBikeComputer)
-        assertTrue(edge.isGarminGfdi)
-        assertFalse(edge.isGarminWatch)
-        assertFalse(edge.isWearosWatch)
         assertTrue(edge.isLiveSensorCapable)
     }
 

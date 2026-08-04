@@ -1773,9 +1773,4 @@
     <string name="body_energy_confidence_medium">Media</string>
     <string name="body_energy_confidence_low">Baja</string>
     <string name="body_energy_confidence_no_data">Sin datos</string>
-    <string name="body_energy_personalization_watch_none">Sincroniza un reloj que mida su propia energía corporal para empezar a personalizar estos datos.</string>
-    <plurals name="body_energy_personalization_watch_body">
-        <item quantity="one">Calculado a partir de 1 lectura de reloj. Cada una es un multiplicador simple que puedes ver abajo.</item>
-        <item quantity="other">Calculado a partir de %1$d lecturas de reloj. Cada una es un multiplicador simple que puedes ver abajo.</item>
-    </plurals>
 </resources>

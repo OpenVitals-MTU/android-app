@@ -122,8 +122,8 @@ class BodyEnergyViewModel(
     }
 
     /**
-     * Returns the four gains to neutral and forgets the watch readings behind
-     * them. The objective model is untouched — that is what a gain of 1.0 means.
+     * Returns the four gains to neutral. The objective model is untouched —
+     * that is what a gain of 1.0 means.
      */
     fun resetPersonalTuning() {
         val current = preferencesRepository.bodyEnergyCalibration()
@@ -133,7 +133,6 @@ class BodyEnergyViewModel(
                 activityDrainGain = 1.0,
                 basalDrainGain = 1.0,
                 stressDrainGain = 1.0,
-                watchObservationCount = 0,
                 setupCompleted = true,
             )
         )

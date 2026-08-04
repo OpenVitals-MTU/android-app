@@ -664,10 +664,9 @@ class DashboardViewModel @Inject constructor(
  * The dashboard's roll-up of the paired BLE devices the Sensors & devices screen
  * actually lists — [BleSensorDevice.isLiveSensorCapable] ones. The top-bar
  * battery action opens that screen, so its visibility has to mean "there is
- * something behind this tap": a paired watch alone used to put the icon up over
- * an empty list (watches live under Settings > Watches, with their own battery
- * surface), and its battery skewed the "lowest battery" figure. A bike computer
- * still counts — it broadcasts standard GATT like any sensor.
+ * something behind this tap": a stored watch-era registry entry alone must not
+ * put the icon up over an empty list, nor skew the "lowest battery" figure. A
+ * bike computer still counts — it broadcasts standard GATT like any sensor.
  */
 internal fun List<BleSensorDevice>.toDashboardSensorStatus(
     connectionStatuses: List<BleDeviceConnectionStatus>,

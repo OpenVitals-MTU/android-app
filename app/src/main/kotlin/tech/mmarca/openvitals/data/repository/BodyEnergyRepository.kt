@@ -28,7 +28,6 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergySeedSource
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineAlgorithmVersion
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineInputs
-import tech.mmarca.openvitals.domain.insights.BodyEnergyWatchFitEpoch
 import tech.mmarca.openvitals.domain.insights.calculateBodyEnergyTimeline
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
@@ -276,20 +275,18 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * Returns the learned gains to neutral once, when the algorithm they were
+     * Returns the personal gains to neutral once, when the algorithm they were
      * fitted against has been replaced.
      *
      * A gain is a multiplier on a component, so it only means anything relative
      * to the model that produced the errors it came from. A `sleepChargeGain` of
      * 0.80 fitted under an older model can suppress exactly the charge the new
-     * one introduced, leaving the model fighting its own correction while the
-     * watch fit crawls back at 0.1 per observation.
+     * one introduced, leaving the model fighting its own correction.
      *
-     * Only the four multipliers and the observation count reset — manual heart
-     * zones, the body profile and the setup flag are untouched.
+     * Only the four multipliers reset — manual heart zones, the body profile
+     * and the setup flag are untouched.
      */
     private fun resetGainsIfAlgorithmChanged() {
-        rewindWatchFitIfEpochChanged()
         if (preferencesRepository.bodyEnergyGainsAlgorithmVersion == BodyEnergyTimelineAlgorithmVersion) {
             return
         }
@@ -301,29 +298,10 @@ class BodyEnergyRepositoryImpl(
                     activityDrainGain = 1.0,
                     basalDrainGain = 1.0,
                     stressDrainGain = 1.0,
-                    watchObservationCount = 0,
                 )
             )
         }
         preferencesRepository.bodyEnergyGainsAlgorithmVersion = BodyEnergyTimelineAlgorithmVersion
-    }
-
-    /**
-     * Rewinds the watch fit watermark once per [BodyEnergyWatchFitEpoch].
-     *
-     * The watermark records how far the watch evidence has already been
-     * consumed, so leaving it ahead while the gains go back to 1.0 means the
-     * model is told to relearn and then denied everything it would relearn from.
-     * An epoch of its own says what is meant — "the fit machinery changed,
-     * re-read the evidence" — without claiming a model change or discarding the
-     * stored chain the way an algorithm bump would. Hanging it off the
-     * algorithm-version reset made it dead code on every install already at the
-     * current version, which is all of them.
-     */
-    private fun rewindWatchFitIfEpochChanged() {
-        if (preferencesRepository.bodyEnergyWatchFitEpoch == BodyEnergyWatchFitEpoch) return
-        preferencesRepository.bodyEnergyWatchFitWatermarkMillis = 0L
-        preferencesRepository.bodyEnergyWatchFitEpoch = BodyEnergyWatchFitEpoch
     }
 
     /**
@@ -587,12 +565,12 @@ class BodyEnergyRepositoryImpl(
      * Everything a CARRY-OVER SCORE depends on, with the learned gains left out.
      *
      * A seed is one number from the previous day, not a timeline, and it has to
-     * survive the watch fit nudging a gain by a fraction of a percent. Folding
-     * the gains in meant every observation the learner absorbed invalidated all
-     * fourteen stored days at once, so the next load found no valid predecessor
-     * and fell back to the neutral 50 — turning a sub-percent model change into
-     * a visible 40-point jump, which is the exact discontinuity the chain exists
-     * to remove.
+     * survive a gain moving by a fraction of a percent (historically the watch
+     * fit nudged them per observation). Folding the gains in meant every such
+     * nudge invalidated all fourteen stored days at once, so the next load
+     * found no valid predecessor and fell back to the neutral 50 — turning a
+     * sub-percent model change into a visible 40-point jump, which is the
+     * exact discontinuity the chain exists to remove.
      *
      * Serving a cached timeline still requires the full signature. This is only
      * for deciding whether a stored day is a legitimate ANCHOR to continue from.
@@ -615,8 +593,8 @@ class BodyEnergyRepositoryImpl(
      * Whether [timeline] should be recomputed rather than served.
      *
      * Three tiers. Today is volatile and re-reads every 15 minutes. A day inside
-     * [BodyEnergyChainSettlingDays] can still gain late-arriving watch data, so
-     * it re-reads daily. A settled day never does: nothing new will arrive for
+     * [BodyEnergyChainSettlingDays] can still gain late-arriving Health
+     * Connect data (a source app syncing its backlog), so it re-reads daily. A settled day never does: nothing new will arrive for
      * it, and recomputing would spend ~8 Health Connect reads to reproduce what
      * is already stored — which is what made the whole bucket table write-only,
      * since retention keeps 120 days but nothing read one older than a day.

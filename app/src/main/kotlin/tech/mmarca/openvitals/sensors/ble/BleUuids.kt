@@ -42,33 +42,12 @@ internal object BleUuids {
         measurementUuid = UUID.fromString("00002a53-0000-1000-8000-00805f9b34fb"),
     )
 
-    /**
-     * Garmin's Bluetooth SIG member service (16-bit `0xFE1F`) — what a Garmin
-     * watch actually puts in its ADVERTISEMENT, and therefore the only Garmin
-     * UUID a scan filter can match on.
-     *
-     * Confirmed against a vívoactive 5, whose advertisement carries exactly
-     * `mServiceUuids=[0000fe1f-…]`, service data under the same UUID, and
-     * manufacturer ID 135 (0x0087, Garmin International) — and carries no
-     * trace of the GFDI transport service (`GarminUuids.GFDI_SERVICE_V1`),
-     * which is GATT-only and appears only after connecting.
-     *
-     * A device advertising this is a watch/bike computer to onboard as
-     * `BleDeviceKind.WATCH`, never a source of live capabilities — which is
-     * why [capabilitiesForService] returns empty for it. Garmin's GFDI
-     * transport UUIDs (never advertised) live in `devices/garmin/GarminUuids`;
-     * this shared catalog holds only the one a scan filter can match.
-     */
-    val GARMIN_MEMBER_SERVICE: UUID =
-        UUID.fromString("0000fe1f-0000-1000-8000-00805f9b34fb")
-
     val SCAN_SERVICE_UUIDS = listOf(
         HEART_RATE.serviceUuid,
         HEART_RATE_MIBAND.serviceUuid,
         CYCLING_SPEED_CADENCE.serviceUuid,
         CYCLING_POWER.serviceUuid,
         RUNNING_SPEED_CADENCE.serviceUuid,
-        GARMIN_MEMBER_SERVICE,
     )
 
     fun capabilitiesForService(serviceUuid: UUID): Set<tech.mmarca.openvitals.domain.model.BleSensorCapability> =

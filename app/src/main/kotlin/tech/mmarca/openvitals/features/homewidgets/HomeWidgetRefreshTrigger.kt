@@ -24,7 +24,7 @@ internal val HomeWidgetReceivers: List<Class<*>> = listOf(
  * Tells every placed widget to redraw, after data landed from outside the app.
  *
  * A widget's own periodic tick is `updatePeriodMillis`, which the system honours
- * at its convenience and not at all in Doze. So a Garmin sync at 08:05 or a
+ * at its convenience and not at all in Doze. So a phone-to-phone sync at 08:05 or a
  * finished Apple Health import leaves the morning's tiles showing pre-sync
  * numbers for up to half an hour, and in practice often longer — the user is
  * looking at their home screen having just watched the sync succeed.

@@ -644,8 +644,7 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
                     // a fully clamped bucket scales every component to zero, and
                     // deriving the influence from those would report a hard
                     // workout as `STEADY`. The chart then draws a zero-height bar
-                    // in the right colour, and the watch fit keeps a truthful
-                    // driver.
+                    // in the right colour, with a truthful driver.
                     delta = applied,
                     state = state,
                     confidence = confidence,

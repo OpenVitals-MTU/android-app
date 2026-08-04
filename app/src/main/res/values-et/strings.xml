@@ -1772,9 +1772,4 @@
     <string name="body_energy_confidence_medium">Keskmine</string>
     <string name="body_energy_confidence_low">Madal</string>
     <string name="body_energy_confidence_no_data">Andmed puuduvad</string>
-    <string name="body_energy_personalization_watch_none">Sünkrooni kell, mis jälgib oma keha energiat, et neid isikupärastama hakata.</string>
-    <plurals name="body_energy_personalization_watch_body">
-        <item quantity="one">Õpitud 1 kella näidu põhjal. Iga näit on lihtne kordaja, mida näed allpool.</item>
-        <item quantity="other">Õpitud %1$d kella näidu põhjal. Iga näit on lihtne kordaja, mida näed allpool.</item>
-    </plurals>
 </resources>

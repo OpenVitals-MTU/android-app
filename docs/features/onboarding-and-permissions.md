@@ -51,9 +51,8 @@ Body Energy calibration and the body profile are not part of onboarding. They ar
 Android's own permissions are requested where and when the feature that needs them is used, never at first run:
 
 - Location, for GPS activity recording.
-- Nearby devices, for Bluetooth LE sensors, for pairing a watch, and for sync with another phone.
+- Nearby devices, for Bluetooth LE sensors and for sync with another phone.
 - Notifications, for reminders and for recording, import, and sync progress.
-- Notification access, only for forwarding phone notifications to a watch, and only after an in-app disclosure. Android grants it from its own settings screen.
 
 The app declares no internet permission and removes the ones its dependencies would otherwise contribute. See [Permissions](../app/permissions.md).
 

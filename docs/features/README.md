@@ -11,7 +11,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Metric detail customization](metric-detail-customization.md): reorder dashboard widgets, manual entry widgets, and metric detail sections.
 - [Home screen widgets](home-widgets.md): Android launcher widgets for metric summaries, readiness, Body Energy, Today Vitals, and quick beverage logging.
 - [Onboarding and permissions](onboarding-and-permissions.md): first-run Health Connect setup, permission categories, and privacy expectations.
-- [Settings and preferences](settings-and-preferences.md): language, units, theme, body profile, goals, reminders, Health Connect access, imports, sensors, watches, phone-to-phone sync, and diagnostics.
+- [Settings and preferences](settings-and-preferences.md): language, units, theme, body profile, goals, reminders, Health Connect access, imports, sensors, phone-to-phone sync, and diagnostics.
 - [Privacy, support, and diagnostics](privacy-support-diagnostics.md): local-first privacy model, diagnostics surfaces, support links, and health disclaimer.
 - [Achievements](achievements.md): local badge progress for supported wellness categories.
 
@@ -38,7 +38,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Recording of activity](activity-recording.md): GPS and repetition-oriented activity recording before saving to Health Connect.
 - [Activity and training plans](activity-training-plans.md): planned workouts, activity setup defaults, favorite activities, repetitions, sets, and review flows.
 - [Bluetooth LE sensors](ble-sensors.md): supported heart-rate, cadence, power, and footpod sensors during activity recording.
-- [Watches](watches.md): experimental Garmin and WearOS support, watch sync, watch-only metrics, notification forwarding, watch settings, and find-my-watch.
+- [Watches](watches.md): watch data arrives via Health Connect (e.g. Gadgetbridge); the app does not link to watches directly.
 - [GPX/KML/KMZ/TCX route import](route-file-import.md): route and indoor activity file import for review before saving.
 - [FIT files import](fit-files-import.md): Settings Data Importers support for FIT activity, course, and workout files.
 - [CSV import](csv-import.md): mapped import of body measurements and vitals from a CSV file.

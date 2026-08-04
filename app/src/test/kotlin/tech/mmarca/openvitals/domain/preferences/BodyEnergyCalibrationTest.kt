@@ -64,23 +64,19 @@ class BodyEnergyCalibrationTest {
 
         assertEquals(1.0, automatic.sleepChargeGain, 0.0)
         assertFalse(automatic.hasPersonalGains)
-        assertFalse(automatic.hasWatchObservations)
 
         val normalized = BodyEnergyCalibration(
             sleepChargeGain = 9.0,
             activityDrainGain = 0.0,
-            watchObservationCount = -4,
         ).normalized()
 
         assertEquals(BodyEnergyCalibration.MaxGain, normalized.sleepChargeGain, 0.0)
         assertEquals(BodyEnergyCalibration.MinGain, normalized.activityDrainGain, 0.0)
-        assertEquals(0, normalized.watchObservationCount)
     }
 
     @Test
-    fun `the zone signature ignores the gains the watch learner moves`() {
-        // A cache keyed on both halves together would be invalidated by the
-        // learner doing its job; the chain anchor only wants the configuration.
+    fun `the zone signature ignores the personal gains`() {
+        // The chain anchor only wants the configuration half, not the gains.
         val neutral = BodyEnergyCalibration()
         val learned = BodyEnergyCalibration(activityDrainGain = 1.4)
 

@@ -1772,9 +1772,4 @@
     <string name="body_energy_confidence_medium">Media</string>
     <string name="body_energy_confidence_low">Bassa</string>
     <string name="body_energy_confidence_no_data">Nessun dato</string>
-    <string name="body_energy_personalization_watch_none">Sincronizza un orologio che monitora la propria energia corporea per iniziare a personalizzare questi valori.</string>
-    <plurals name="body_energy_personalization_watch_body">
-        <item quantity="one">Appreso da 1 lettura dell\'orologio. Ognuna è un semplice moltiplicatore che puoi vedere qui sotto.</item>
-        <item quantity="other">Appreso da %1$d letture dell\'orologio. Ognuna è un semplice moltiplicatore che puoi vedere qui sotto.</item>
-    </plurals>
 </resources>

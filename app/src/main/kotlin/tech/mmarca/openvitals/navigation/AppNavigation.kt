@@ -137,8 +137,6 @@ fun AppNavigation(
     var isActivityRecordingFocusMode by remember { mutableStateOf(false) }
     // The drink screen's title is the drink's own name, which only the screen knows.
     var caffeineDrinkTitle by remember { mutableStateOf<String?>(null) }
-    // Likewise the watch device screen's title is the watch's display name.
-    var watchDeviceTitle by remember { mutableStateOf<String?>(null) }
     var dashboardRefreshRequest by remember { mutableIntStateOf(0) }
     var dashboardDeviceActionVisible by remember { mutableStateOf(false) }
     var settingsRouteImportRequest by remember { mutableStateOf<ExternalRouteImportRequest?>(null) }
@@ -213,7 +211,6 @@ fun AppNavigation(
             Screen.SettingsDisplay.route,
             Screen.SettingsActivities.route,
             Screen.SettingsSensors.route,
-            Screen.SettingsWatches.route,
             Screen.SettingsNutrition.route,
             Screen.SettingsCalories.route,
             Screen.SettingsCaffeine.route,
@@ -357,7 +354,6 @@ fun AppNavigation(
         Screen.SettingsDisplay.route -> stringResource(R.string.settings_display_group_title)
         Screen.SettingsActivities.route -> stringResource(R.string.settings_activities_group_title)
         Screen.SettingsSensors.route -> stringResource(R.string.settings_sensors_group_title)
-        Screen.SettingsWatches.route -> stringResource(R.string.settings_watches_group_title)
         Screen.SettingsNutrition.route,
         Screen.SettingsCalories.route,
         Screen.SettingsCaffeine.route -> stringResource(R.string.settings_nutrition_group_title)
@@ -370,12 +366,6 @@ fun AppNavigation(
         Screen.SettingsHealthConnect.route,
         Screen.SettingsPermissions.route -> stringResource(R.string.settings_health_connect_group_title)
         Screen.SettingsDebugDiagnostics.route -> stringResource(R.string.settings_debug_diagnostics_group_title)
-        // The watch device screen is titled with the watch's own name, which
-        // only the screen knows (the caffeine drink screen's idiom).
-        Screen.WatchDevice.route -> watchDeviceTitle.orEmpty()
-        Screen.WatchData.route -> stringResource(R.string.settings_watch_data_title)
-        Screen.WatchNotifications.route -> stringResource(R.string.screen_watch_notifications)
-        Screen.WatchSettings.route -> stringResource(R.string.settings_watch_on_device_settings)
         Screen.Achievements.route -> stringResource(R.string.screen_achievements)
         else -> ""
     }
@@ -987,11 +977,6 @@ fun AppNavigation(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                 )
             }
-
-            watchRoutes(
-                navController = navController,
-                onWatchDeviceTitleChanged = { watchDeviceTitle = it },
-            )
 
             settingsRoutes(
                 navController = navController,

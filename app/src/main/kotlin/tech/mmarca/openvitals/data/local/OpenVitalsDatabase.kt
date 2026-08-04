@@ -9,8 +9,6 @@ import tech.mmarca.openvitals.data.local.beverage.BeverageEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyBucketEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyDayEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
-import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
-import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
@@ -24,10 +22,9 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         VitalsSyncCursorEntity::class,
         BodyEnergyDayEntity::class,
         BodyEnergyBucketEntity::class,
-        GarminWellnessSampleEntity::class,
         SyncedRecordOriginEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class OpenVitalsDatabase : RoomDatabase() {
@@ -36,8 +33,6 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
     abstract fun vitalsDailyCacheDao(): VitalsDailyCacheDao
 
     abstract fun bodyEnergyTimelineDao(): BodyEnergyTimelineDao
-
-    abstract fun garminWellnessDao(): GarminWellnessDao
 
     abstract fun syncedRecordOriginDao(): SyncedRecordOriginDao
 
@@ -66,13 +61,11 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
         }
 
         /**
-         * Garmin watch-only wellness samples (stress, Body Battery, sleep
-         * score, …) get their system of record.
-         *
-         * Creation only, no data copy: the table is column-identical to the
-         * Flutter build's drift `garmin_wellness_samples`, and phase 5's
-         * migrator imports the preserved drift rows 1:1 after this table
-         * exists.
+         * Historical: the retired Garmin watch integration's wellness samples
+         * (stress, Body Battery, sleep score, …) got their system of record
+         * here. The table is created so upgrades pass through this version
+         * unchanged; [MIGRATION_7_8] drops it again now that the app no
+         * longer links to watches.
          */
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -90,6 +83,19 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 createSyncedRecordOriginsTable(db)
+            }
+        }
+
+        /**
+         * The watch integration is gone: watch data now arrives through
+         * Health Connect (e.g. via Gadgetbridge), so the Garmin wellness
+         * table has no writer and no reader left. Dropped outright — the
+         * samples were watch-only data with no Health Connect counterpart,
+         * and nothing remaining can display them.
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `garmin_wellness_samples`")
             }
         }
 

@@ -354,14 +354,12 @@ class PreferencesRepository @Inject constructor(
             normalized.manualZoneThresholdsBpm?.let {
                 putString(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM, it.toPreferenceString())
             } ?: remove(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM)
-            // The learned gains persist too. They are the whole point of the
-            // watch fit, and an algorithm bump can only *reset* something that
-            // survived a process restart.
+            // The gains persist too — an algorithm bump can only *reset*
+            // something that survived a process restart.
             putFloat(KEY_BODY_ENERGY_SLEEP_CHARGE_GAIN, normalized.sleepChargeGain.toFloat())
             putFloat(KEY_BODY_ENERGY_ACTIVITY_DRAIN_GAIN, normalized.activityDrainGain.toFloat())
             putFloat(KEY_BODY_ENERGY_BASAL_DRAIN_GAIN, normalized.basalDrainGain.toFloat())
             putFloat(KEY_BODY_ENERGY_STRESS_DRAIN_GAIN, normalized.stressDrainGain.toFloat())
-            putInt(KEY_BODY_ENERGY_WATCH_OBSERVATION_COUNT, normalized.watchObservationCount)
         }
         _bodyEnergyCalibration.value = normalized
     }
@@ -374,16 +372,6 @@ class PreferencesRepository @Inject constructor(
     var bodyEnergyGainsAlgorithmVersion: Int
         get() = prefs.getInt(KEY_BODY_ENERGY_GAINS_ALGORITHM_VERSION, 0)
         set(value) { prefs.edit { putInt(KEY_BODY_ENERGY_GAINS_ALGORITHM_VERSION, value) } }
-
-    /** The watch-fit machinery generation the watermark below belongs to. */
-    var bodyEnergyWatchFitEpoch: Int
-        get() = prefs.getInt(KEY_BODY_ENERGY_WATCH_FIT_EPOCH, 0)
-        set(value) { prefs.edit { putInt(KEY_BODY_ENERGY_WATCH_FIT_EPOCH, value) } }
-
-    /** How far the watch evidence has already been consumed by the fit. */
-    var bodyEnergyWatchFitWatermarkMillis: Long
-        get() = prefs.getLong(KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS, 0L)
-        set(value) { prefs.edit { putLong(KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS, value) } }
 
     /**
      * `epochDay|endScore|startScore|chained` for the newest computed Body
@@ -939,7 +927,6 @@ class PreferencesRepository @Inject constructor(
             activityDrainGain = prefs.getFloat(KEY_BODY_ENERGY_ACTIVITY_DRAIN_GAIN, 1.0f).toDouble(),
             basalDrainGain = prefs.getFloat(KEY_BODY_ENERGY_BASAL_DRAIN_GAIN, 1.0f).toDouble(),
             stressDrainGain = prefs.getFloat(KEY_BODY_ENERGY_STRESS_DRAIN_GAIN, 1.0f).toDouble(),
-            watchObservationCount = prefs.getInt(KEY_BODY_ENERGY_WATCH_OBSERVATION_COUNT, 0),
         ).normalized()
 
     private fun readBodyProfile(): BodyProfile {
@@ -1237,10 +1224,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_BODY_ENERGY_ACTIVITY_DRAIN_GAIN = "body_energy_activity_drain_gain"
         private const val KEY_BODY_ENERGY_BASAL_DRAIN_GAIN = "body_energy_basal_drain_gain"
         private const val KEY_BODY_ENERGY_STRESS_DRAIN_GAIN = "body_energy_stress_drain_gain"
-        private const val KEY_BODY_ENERGY_WATCH_OBSERVATION_COUNT = "body_energy_watch_observation_count"
         private const val KEY_BODY_ENERGY_GAINS_ALGORITHM_VERSION = "body_energy_gains_algorithm_version"
-        private const val KEY_BODY_ENERGY_WATCH_FIT_EPOCH = "body_energy_watch_fit_epoch"
-        private const val KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS = "body_energy_watch_fit_watermark_millis"
         private const val KEY_BODY_ENERGY_CHAIN_SEED_MIRROR = "body_energy_chain_seed_mirror"
         private const val KEY_BODY_ENERGY_PERMISSION_SIGNATURE = "body_energy_permission_signature"
         private const val KEY_BODY_PROFILE_BIRTH_YEAR = "body_profile_birth_year"

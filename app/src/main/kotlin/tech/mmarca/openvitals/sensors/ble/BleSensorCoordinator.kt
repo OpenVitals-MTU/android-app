@@ -28,13 +28,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
-import tech.mmarca.openvitals.devices.core.DeviceClassification
-import tech.mmarca.openvitals.devices.core.DeviceClassifier
-import tech.mmarca.openvitals.devices.core.DeviceScanClassifier
-import tech.mmarca.openvitals.devices.core.classifyDevice
-import tech.mmarca.openvitals.devices.garmin.GarminDeviceClassifier
-import tech.mmarca.openvitals.devices.garmin.GarminScanClassifier
-import tech.mmarca.openvitals.devices.wearos.WearOsDeviceClassifier
 import tech.mmarca.openvitals.domain.model.BleConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
@@ -68,18 +61,6 @@ class BleSensorCoordinator @Inject constructor(
     private var scanCallback: ScanCallback? = null
     private val scanResults = ConcurrentHashMap<String, BleDiscoveredDevice>()
 
-    /**
-     * The per-integration classifiers consulted to tell a file-sync watch from
-     * a live sensor. Advertisement-shaped ([DeviceScanClassifier]) for the
-     * scan-time `advertisesSyncService` evidence; device-shaped
-     * ([DeviceClassifier]) for the `(integration, kind)` verdict onboarding
-     * asks for via [classifyDiscoveredDevice].
-     */
-    private val scanClassifiers: List<DeviceScanClassifier> = listOf(GarminScanClassifier())
-    private val deviceClassifiers: List<DeviceClassifier> = listOf(
-        GarminDeviceClassifier(),
-        WearOsDeviceClassifier(),
-    )
     private var metricsTimeoutTickerScheduled = false
     private val metricsTimeoutTicker = object : Runnable {
         override fun run() {
@@ -291,38 +272,15 @@ class BleSensorCoordinator @Inject constructor(
         val serviceCapabilities = advertisedUuids
             .flatMap { BleUuids.capabilitiesForService(it) }
             .toSet()
-        // Which integration (if any) claims this advertisement as a file-sync
-        // watch rather than a live sensor — asked per integration, so the
-        // generic scanner carries no protocol knowledge of its own. (A watch
-        // advertises its member service, e.g. Garmin's 0xFE1F; the GFDI
-        // transport is GATT-only and never advertised.)
-        val advertisedUuidStrings = advertisedUuids.map { it.toString() }
-        val advertisesSync =
-            scanClassifiers.any { it.advertisesSyncService(advertisedUuidStrings) }
         val existing = scanResults[address]
         scanResults[address] = BleDiscoveredDevice(
             address = address,
             name = device.name ?: existing?.name,
             rssi = result.rssi,
             suggestedCapabilities = (existing?.suggestedCapabilities.orEmpty() + serviceCapabilities).toSet(),
-            // Sticky across advertisements: a watch does not put every service
-            // in every packet, so one sighting of the member service settles
-            // it for this scan.
-            advertisesSyncService = advertisesSync || (existing?.advertisesSyncService ?: false),
         )
         publishScanResults()
     }
-
-    /**
-     * Maps a discovered device to how it should be registered: a Garmin watch
-     * family name → `(GARMIN, WATCH)`, an Edge → `(GARMIN, BIKE_COMPUTER)`, a
-     * WearOS-style smartwatch name → `(WEAROS, WATCH)`, anything else → a
-     * plain sensor. Order matters — Garmin's verdict (backed by its member
-     * service surfacing the device at all) beats the generic smartwatch name
-     * match.
-     */
-    fun classifyDiscoveredDevice(device: BleDiscoveredDevice): DeviceClassification =
-        classifyDevice(device, deviceClassifiers)
 
     private fun publishScanResults() {
         _discoveredDevices.value = scanResults.values.sortedWith(

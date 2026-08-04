@@ -42,9 +42,8 @@ The global Browse feature has been removed. Entries and sessions should be brows
 
 These features already show the intended direction.
 
-Beyond the metric screens, the app now carries three subsystems that are not metric features and do not follow the period-detail pattern:
+Beyond the metric screens, the app now carries two subsystems that are not metric features and do not follow the period-detail pattern:
 
-- `devices/` — the device layer: the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding. `features/watches` is its UI.
 - `features/devicesync/` — phone-to-phone Health Connect sync over Bluetooth Classic RFCOMM.
 - `data/migration/` — a one-time Flutter-to-Kotlin data importer that runs in two phases from `OpenVitalsApp.onCreate()`. Its ordering around `super.onCreate()` is load-bearing; read the architecture doc before touching startup.
 
@@ -90,11 +89,10 @@ Do not break these without an explicit decision. They are app-wide, and each has
 
 - **No `INTERNET` permission.** The manifest removes `INTERNET`, `ACCESS_NETWORK_STATE`, and `ACCESS_WIFI_STATE`. Phone-to-phone sync is Bluetooth Classic specifically so this stays true. Never add a dependency that needs a socket.
 - **One foreground service at a time.** Activity recording, the Apple Health import, and phone sync contend for the single foreground slot and refuse rather than queue.
-- **One BLE radio, leased per address.** Everything that opens a BLE link takes a lease from `devices/core/RadioLease.kt` under one of the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`.
 - **A missing permission is `ScreenError.PermissionDenied`.** Use `isPermissionFailure()` / `toScreenError()`; never pattern-match exception messages. The screens render this as a grant affordance.
 - **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`.
 - **`values-*/strings.xml` are Weblate-owned.** Add new strings to `values/strings.xml` only. See the translation-gate note in [development.md](docs/engineering/development.md).
-- **Room is at version 6.** A new entity means a `MIGRATION_6_7` and a bump, not `fallbackToDestructiveMigration`.
+- **Room is at version 8.** A new entity means a `MIGRATION_8_9` and a bump, not `fallbackToDestructiveMigration`.
 
 ## Implementation Rules
 
@@ -119,7 +117,6 @@ Shared code belongs in:
 - `domain/model`, `domain/insights`, and `domain/preferences` for app-local pure models, calculations, and preference enums
 - `core/presentation` for shared formatters, `ScreenError`, and UI models that remain repository-free
 - `core/fit` for FIT container decoding; interpretation stays with the consumer
-- `devices/core` for device-agnostic ports and the radio lease
 
 Do not put feature-specific business logic into `ui/components`.
 

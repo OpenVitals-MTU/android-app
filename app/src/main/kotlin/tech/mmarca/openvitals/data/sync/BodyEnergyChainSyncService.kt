@@ -87,7 +87,7 @@ class BodyEnergyChainSyncService(
      * Warm the chain. Concurrent calls share one run.
      *
      * Pass [force] to bypass the throttle — for a caller that has just made the
-     * stored chain wrong (a watch sync back-filling days) rather than one merely
+     * stored chain wrong (an import back-filling days) rather than one merely
      * opening a screen. A forced call still joins an in-flight run: whatever is
      * already walking will pick up the holes.
      */
@@ -193,12 +193,12 @@ class BodyEnergyChainSyncService(
      * folds in the body profile, whose value varies by date — that belongs on
      * the row, not here.
      *
-     * The learned gains are deliberately NOT in it, because a mismatch here
-     * purges every stored day and every stored bucket. The watch fit nudges a
-     * gain by a fraction of a percent whenever it absorbs an observation, so
-     * including them would delete up to `BodyEnergyBucketRetentionDays` of
-     * history on essentially every watch sync, which is no way to build the
-     * weekly view those buckets exist for. A gain change does not make a stored
+     * The personal gains are deliberately NOT in it, because a mismatch here
+     * purges every stored day and every stored bucket. Gains can move by a
+     * fraction of a percent (historically the watch fit nudged them per
+     * observation), so including them would delete up to
+     * `BodyEnergyBucketRetentionDays` of history on a sub-percent change,
+     * which is no way to build the weekly view those buckets exist for. A gain change does not make a stored
      * row wrong enough to destroy it: the per-day signature still refuses to
      * SERVE one, so it is recomputed on demand, and the seed lookup can still
      * anchor on it in the meantime.

@@ -56,7 +56,10 @@ class BleDevicesViewModel @Inject constructor(
         localState,
     ) { devices, discovered, local ->
         local.copy(
-            devices = devices,
+            // Watch-era WATCH entries can still sit in the migrated registry
+            // (the app no longer links to watches); they are preserved in
+            // storage but hidden from the sensors UI.
+            devices = devices.filter { it.isLiveSensorCapable },
             discoveredDevices = discovered,
         )
     }.stateInViewModel(initial = BleDevicesUiState())
