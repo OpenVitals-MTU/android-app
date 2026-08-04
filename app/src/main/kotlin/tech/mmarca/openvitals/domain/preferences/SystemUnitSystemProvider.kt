@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.domain.preferences
 
 import android.icu.util.LocaleData
 import android.icu.util.ULocale
+import android.os.Build
 import java.util.Locale
 
 /**
@@ -42,14 +43,18 @@ fun interface SystemUnitSystemProvider {
                 ?: countryFallback(locale)
         }
 
-        private fun icuMeasurementSystem(locale: Locale): UnitSystem? =
-            runCatching {
+        private fun icuMeasurementSystem(locale: Locale): UnitSystem? {
+            // LocaleData.getMeasurementSystem exists from API 28; below that
+            // (minSdk is 26) the -u-ms- extension or country fallback decides.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+            return runCatching {
                 when (LocaleData.getMeasurementSystem(ULocale.forLocale(locale))) {
                     LocaleData.MeasurementSystem.US -> UnitSystem.IMPERIAL
                     // SI, and UK as metric-first — see unitSystemForMeasurementSystem.
                     else -> UnitSystem.METRIC
                 }
             }.getOrNull()
+        }
 
         private val ImperialCountries = setOf("US", "LR", "MM")
 
