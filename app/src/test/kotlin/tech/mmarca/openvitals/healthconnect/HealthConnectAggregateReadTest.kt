@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
@@ -362,6 +363,44 @@ class HealthConnectAggregateReadTest {
     @Test
     fun `no contributions means no points`() = onARealClock {
         assertThat(progress(seeded())).isEmpty()
+    }
+
+    // ── chunked long-range reads ────────────────────────────────────────────
+
+    /**
+     * A long day-bucketed aggregate is ONE Binder parcel, and a year of buckets
+     * measured ~800KB against the shared 1MB buffer
+     * (`TransactionTooLargeException: data parcel size 811824 bytes`). So the
+     * nutrition series must never issue a request wider than
+     * [DailyAggregateMaxQueryDays] — and the chunks must stitch back into the
+     * one series the caller asked for.
+     */
+    @Test
+    fun `readDailyNutrition chunks a long range and stitches the series back together`() = runTest {
+        val zone = ZoneId.systemDefault()
+        val firstDay = date.minusDays(300)
+        fun burn(day: LocalDate, kcal: Double) = TotalCaloriesBurnedRecord(
+            startTime = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600),
+            startZoneOffset = null,
+            endTime = day.atStartOfDay(zone).toInstant().plusSeconds(13 * 3_600),
+            endZoneOffset = null,
+            energy = Energy.kilocalories(kcal),
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val client = seeded(burn(firstDay, 1_800.0), burn(date, 2_200.0))
+
+        val series = NutritionHealthReader(support(client), APP_PACKAGE)
+            .readDailyNutrition(startDate = firstDay, endDate = date, includeHydration = false)
+
+        // The read went out in more than one request, none wider than the slice.
+        assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
+        client.groupByDurationRequestRanges.forEach { (start, end) ->
+            val days = java.time.Duration.between(start, end).toDays()
+            assertThat(days).isAtMost(DailyAggregateMaxQueryDays)
+        }
+        // And the stitched series still carries both ends of the range.
+        assertThat(series.single { it.date == firstDay }.caloriesBurnedKcal).isWithin(1e-6).of(1_800.0)
+        assertThat(series.single { it.date == date }.caloriesBurnedKcal).isWithin(1e-6).of(2_200.0)
     }
 
     // ── harness ─────────────────────────────────────────────────────────────

@@ -88,12 +88,16 @@ class AggregatingFakeHealthConnectClient(
         return compute(request.internalMetrics(), start, end)
     }
 
+    /** Every aggregateGroupByDuration request's bounds, in call order — so a test can assert HOW a reader asked, not just what it got. */
+    val groupByDurationRequestRanges = mutableListOf<Pair<Instant, Instant>>()
+
     override suspend fun aggregateGroupByDuration(
         request: AggregateGroupByDurationRequest,
     ): List<AggregationResultGroupedByDuration> {
         val metrics = request.internalMetrics()
         val (start, end) = bounds(request.internalTimeRange())
         val slice = request.internalSlicer()
+        groupByDurationRequestRanges += start to end
 
         val out = mutableListOf<AggregationResultGroupedByDuration>()
         var bucketStart = start

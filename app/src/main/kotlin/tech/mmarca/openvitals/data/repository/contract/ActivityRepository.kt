@@ -23,6 +23,12 @@ interface ActivityRepository {
      * an intraday line pays a Health Connect aggregate for nothing — and, before
      * the read was given a timeout, could be stranded on the loading spinner by
      * it while Week/Month/Year kept working.
+     *
+     * [includeComparisonWindows] opts out of the previous/baseline window reads.
+     * They exist for the movement-metric screens' period comparison; a screen
+     * that renders the current window alone (the calories overview) would pay
+     * up to four extra year-long Health Connect aggregates for series it never
+     * draws.
      */
     suspend fun loadActivityPeriod(
         query: PeriodLoadQuery,
@@ -30,6 +36,7 @@ interface ActivityRepository {
         includeNutrition: Boolean,
         includeWheelchairPushes: Boolean = false,
         includeActivityProgress: Boolean = true,
+        includeComparisonWindows: Boolean = true,
         refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): ActivityPeriodData
 

@@ -101,6 +101,7 @@ class ActivityRepositoryImpl @Inject constructor(
         includeNutrition: Boolean,
         includeWheelchairPushes: Boolean,
         includeActivityProgress: Boolean,
+        includeComparisonWindows: Boolean,
         refreshMode: RefreshMode,
     ): ActivityPeriodData {
         val windows = query.windows
@@ -120,7 +121,7 @@ class ActivityRepositoryImpl @Inject constructor(
                 }
             }
             val previousDailySteps = async {
-                if (includeSteps || includeWheelchairPushes) {
+                if (includeComparisonWindows && (includeSteps || includeWheelchairPushes)) {
                     loadDailySteps(
                         start = windows.previous.start,
                         end = windows.previous.end,
@@ -133,7 +134,7 @@ class ActivityRepositoryImpl @Inject constructor(
                 }
             }
             val baselineDailySteps = async {
-                if (includeSteps || includeWheelchairPushes) {
+                if (includeComparisonWindows && (includeSteps || includeWheelchairPushes)) {
                     loadDailySteps(
                         start = windows.baseline.start,
                         end = windows.baseline.end,
@@ -153,14 +154,14 @@ class ActivityRepositoryImpl @Inject constructor(
                 }
             }
             val previousNutrition = async {
-                if (includeNutrition) {
+                if (includeComparisonWindows && includeNutrition) {
                     loadDailyNutrition(windows.previous.start, windows.previous.end, granted)
                 } else {
                     emptyList()
                 }
             }
             val baselineNutrition = async {
-                if (includeNutrition) {
+                if (includeComparisonWindows && includeNutrition) {
                     loadDailyNutrition(windows.baseline.start, windows.baseline.end, granted)
                 } else {
                     emptyList()

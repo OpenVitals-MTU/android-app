@@ -204,3 +204,39 @@ internal fun List<AggregationResultGroupedByDuration>.byLocalDate(
     groupBy { dayBucketDate(it.startTime, it.endTime, zone) }
         .toSortedMap()
         .map { (date, buckets) -> DayBuckets(date, buckets) }
+
+/**
+ * The widest date range a single day-bucketed aggregate request may cover.
+ *
+ * A grouped-by-day aggregate response is one Binder parcel: every bucket
+ * carries its requested metrics plus their data origins, so the parcel grows
+ * with days × metrics. A year-long six-metric request measured ~800KB on a
+ * dense dataset — `TransactionTooLargeException: data parcel size 811824
+ * bytes` — and the 1MB Binder buffer is shared across a process's in-flight
+ * transactions, so two concurrent long reads can fail even when each alone
+ * would squeak through. A quarter-year slice keeps the worst response around
+ * a quarter of the budget.
+ */
+internal const val DailyAggregateMaxQueryDays = 122L
+
+/**
+ * Splits `[startDate, endDate]` (inclusive) into consecutive inclusive chunks
+ * of at most [maxDays] days, for day-bucketed aggregate reads that must not
+ * exceed [DailyAggregateMaxQueryDays] per request. Empty for inverted ranges.
+ */
+internal fun dailyAggregateDateChunks(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    maxDays: Long = DailyAggregateMaxQueryDays,
+): List<Pair<LocalDate, LocalDate>> {
+    if (endDate.isBefore(startDate) || maxDays <= 0L) return emptyList()
+
+    val chunks = mutableListOf<Pair<LocalDate, LocalDate>>()
+    var chunkStart = startDate
+    while (!chunkStart.isAfter(endDate)) {
+        val chunkEnd = minOf(chunkStart.plusDays(maxDays - 1), endDate)
+        chunks += chunkStart to chunkEnd
+        chunkStart = chunkEnd.plusDays(1)
+    }
+    return chunks
+}

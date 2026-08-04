@@ -55,92 +55,135 @@ internal class NutritionHealthReader(
         includeCalories: Boolean = true,
         includeEstimatedCalories: Boolean = false,
     ): List<DailyNutrition> {
+        if (endDate.isBefore(startDate)) return emptyList()
         val zone = ZoneId.systemDefault()
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withLogging("readDailyNutrition[$start..$end]", emptyList()) {
             val client = support.client()
+            // One reading serves every chunk: the estimate wants the latest BMR
+            // on record, which does not change with the chunk being read.
             val bmrKcalPerDay = if (includeCalories && includeEstimatedCalories) {
                 client.readLatestBmrKcalPerDayBefore(end)
             } else {
                 null
             }
-            val metrics = buildSet {
-                if (includeHydration) add(HydrationRecord.VOLUME_TOTAL)
-                if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
-                if (includeCalories && includeEstimatedCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
-            }
-            val aggregateRows = client.aggregateGroupByDuration(
-                AggregateGroupByDurationRequest(
-                    metrics = metrics,
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    timeRangeSlicer = Duration.ofDays(1),
-                )
-            ).byLocalDate(zone).map { day ->
-                val date = day.date
-                // Health Connect synthesizes a basal baseline for TotalCaloriesBurned
-                // even over ranges without a single record — a never-tracked year still
-                // aggregates to ~BMR kcal on every day. A bucket no record contributed
-                // to reports empty dataOrigins; treat it as no data, not as a burn.
-                // Origins cover the whole request, so the check is only sound while the
-                // request carries calorie metrics alone; with hydration in the same
-                // request a hydration-only day would defeat it, so it is skipped there.
-                val hasCalorieRecords =
-                    includeHydration || day.any { it.dataOrigins.isNotEmpty() }
-                val totalCaloriesKcal = if (includeCalories && hasCalorieRecords) {
-                    day.totalOrNull { it[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories }
-                } else {
-                    null
-                }
-                val activeCaloriesKcal = if (includeCalories && includeEstimatedCalories && hasCalorieRecords) {
-                    day.totalOrNull { it[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories }
-                } else {
-                    null
-                }
-                val caloriesBurned = totalCaloriesRecordedOrDailyEstimated(
-                    recordedTotalCaloriesKcal = totalCaloriesKcal,
-                    activeCaloriesKcal = activeCaloriesKcal,
+            // Chunked like readDailySteps: a year-long day-bucketed aggregate is
+            // one parcel that can overflow the Binder buffer (see
+            // DailyAggregateMaxQueryDays). One guard around all chunks, so a
+            // failure anywhere still fails the whole read to its empty fallback
+            // — callers branch on "no data", and a half-zeroed year would lie.
+            val aggregateRows = dailyAggregateDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
+                readDailyNutritionChunk(
+                    startDate = chunkStart,
+                    endDate = chunkEnd,
+                    includeHydration = includeHydration,
+                    includeCalories = includeCalories,
+                    includeEstimatedCalories = includeEstimatedCalories,
                     bmrKcalPerDay = bmrKcalPerDay,
-                )
-                DailyNutrition(
-                    date = date,
-                    hydrationLiters = if (includeHydration) {
-                        day.total { it[HydrationRecord.VOLUME_TOTAL]?.inLiters }
-                    } else {
-                        0.0
-                    },
-                    caloriesBurnedKcal = caloriesBurned?.kcal ?: 0.0,
-                    caloriesBurnedSource = caloriesBurned?.source ?: CaloriesBurnedSource.NO_DATA,
                 )
             }
             if (aggregateRows.isNotEmpty()) aggregateRows else dailyNutritionSeries(startDate, endDate)
         }
     }
 
+    private suspend fun readDailyNutritionChunk(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        includeHydration: Boolean,
+        includeCalories: Boolean,
+        includeEstimatedCalories: Boolean,
+        bmrKcalPerDay: Double?,
+    ): List<DailyNutrition> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.atStartOfDay(zone).toInstant()
+        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
+        val metrics = buildSet {
+            if (includeHydration) add(HydrationRecord.VOLUME_TOTAL)
+            if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+            if (includeCalories && includeEstimatedCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+        }
+        return support.client().aggregateGroupByDuration(
+            AggregateGroupByDurationRequest(
+                metrics = metrics,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                timeRangeSlicer = Duration.ofDays(1),
+            )
+        ).byLocalDate(zone).map { day ->
+            val date = day.date
+            // Health Connect synthesizes a basal baseline for TotalCaloriesBurned
+            // even over ranges without a single record — a never-tracked year still
+            // aggregates to ~BMR kcal on every day. A bucket no record contributed
+            // to reports empty dataOrigins; treat it as no data, not as a burn.
+            // Origins cover the whole request, so the check is only sound while the
+            // request carries calorie metrics alone; with hydration in the same
+            // request a hydration-only day would defeat it, so it is skipped there.
+            val hasCalorieRecords =
+                includeHydration || day.any { it.dataOrigins.isNotEmpty() }
+            val totalCaloriesKcal = if (includeCalories && hasCalorieRecords) {
+                day.totalOrNull { it[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories }
+            } else {
+                null
+            }
+            val activeCaloriesKcal = if (includeCalories && includeEstimatedCalories && hasCalorieRecords) {
+                day.totalOrNull { it[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories }
+            } else {
+                null
+            }
+            val caloriesBurned = totalCaloriesRecordedOrDailyEstimated(
+                recordedTotalCaloriesKcal = totalCaloriesKcal,
+                activeCaloriesKcal = activeCaloriesKcal,
+                bmrKcalPerDay = bmrKcalPerDay,
+            )
+            DailyNutrition(
+                date = date,
+                hydrationLiters = if (includeHydration) {
+                    day.total { it[HydrationRecord.VOLUME_TOTAL]?.inLiters }
+                } else {
+                    0.0
+                },
+                caloriesBurnedKcal = caloriesBurned?.kcal ?: 0.0,
+                caloriesBurnedSource = caloriesBurned?.source ?: CaloriesBurnedSource.NO_DATA,
+            )
+        }
+    }
+
+    // Chunked like readDailyNutrition — with ~40 nutrient metrics per bucket, a
+    // year-long request is the biggest parcel this reader can produce. Same
+    // single guard around all chunks: a failure anywhere fails the whole read.
     suspend fun readDailyMacros(startDate: LocalDate, endDate: LocalDate): List<DailyMacros> {
         val zone = ZoneId.systemDefault()
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withLogging("readDailyMacros[$start..$end]", emptyList()) {
-            support.client().aggregateGroupByDuration(
-                AggregateGroupByDurationRequest(
-                    metrics = nutritionAggregateMetrics,
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    timeRangeSlicer = Duration.ofDays(1),
-                )
-            ).byLocalDate(zone).map { day ->
-                DailyMacros(
-                    date = day.date,
-                    nutrientValues = day.buckets
-                        .map { it.result.nutritionNutrientValues() }
-                        .reduceOrNull { totals, bucket ->
-                            totals.toMutableMap().apply {
-                                bucket.forEach { (nutrient, value) -> merge(nutrient, value, Double::plus) }
-                            }
-                        }
-                        .orEmpty(),
-                )
+            dailyAggregateDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
+                readDailyMacrosChunk(chunkStart, chunkEnd)
             }
+        }
+    }
+
+    private suspend fun readDailyMacrosChunk(startDate: LocalDate, endDate: LocalDate): List<DailyMacros> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.atStartOfDay(zone).toInstant()
+        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
+        return support.client().aggregateGroupByDuration(
+            AggregateGroupByDurationRequest(
+                metrics = nutritionAggregateMetrics,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                timeRangeSlicer = Duration.ofDays(1),
+            )
+        ).byLocalDate(zone).map { day ->
+            DailyMacros(
+                date = day.date,
+                nutrientValues = day.buckets
+                    .map { it.result.nutritionNutrientValues() }
+                    .reduceOrNull { totals, bucket ->
+                        totals.toMutableMap().apply {
+                            bucket.forEach { (nutrient, value) -> merge(nutrient, value, Double::plus) }
+                        }
+                    }
+                    .orEmpty(),
+            )
         }
     }
 

@@ -159,11 +159,11 @@ class ActivityHealthReaderTest {
     }
 
     @Test
-    fun `dailyStepDateChunks splits long ranges into inclusive chunks`() {
+    fun `dailyAggregateDateChunks splits long ranges into inclusive chunks`() {
         val start = LocalDate.of(2026, 1, 1)
         val end = LocalDate.of(2026, 1, 10)
 
-        val chunks = dailyStepDateChunks(start, end, maxDays = 4)
+        val chunks = dailyAggregateDateChunks(start, end, maxDays = 4)
 
         assertEquals(
             listOf(
@@ -176,13 +176,39 @@ class ActivityHealthReaderTest {
     }
 
     @Test
-    fun `dailyStepDateChunks returns empty list for invalid ranges`() {
+    fun `dailyAggregateDateChunks returns empty list for invalid ranges`() {
         assertTrue(
-            dailyStepDateChunks(
+            dailyAggregateDateChunks(
                 startDate = LocalDate.of(2026, 1, 10),
                 endDate = LocalDate.of(2026, 1, 1),
             ).isEmpty()
         )
+    }
+
+    /**
+     * The Binder-parcel budget: no default chunk may cover more days than
+     * [DailyAggregateMaxQueryDays], the range must be covered exactly once, and
+     * the chunks must tile it in order with no gap or overlap.
+     */
+    @Test
+    fun `dailyAggregateDateChunks never exceeds the parcel-safe slice by default`() {
+        val start = LocalDate.of(2024, 8, 5)
+        val end = LocalDate.of(2026, 8, 4) // two years, the history lookback shape
+
+        val chunks = dailyAggregateDateChunks(start, end)
+
+        assertTrue(chunks.isNotEmpty())
+        assertEquals(start, chunks.first().first)
+        assertEquals(end, chunks.last().second)
+        chunks.forEach { (chunkStart, chunkEnd) ->
+            assertTrue(!chunkEnd.isBefore(chunkStart))
+            assertTrue(
+                java.time.temporal.ChronoUnit.DAYS.between(chunkStart, chunkEnd) + 1 <= DailyAggregateMaxQueryDays
+            )
+        }
+        chunks.zipWithNext().forEach { (a, b) ->
+            assertEquals(a.second.plusDays(1), b.first)
+        }
     }
 
     @Test

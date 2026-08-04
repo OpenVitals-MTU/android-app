@@ -16,6 +16,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
@@ -151,6 +152,40 @@ class CaloriesHistorySyncServiceTest {
 
         coVerify { dao.deleteDay(VitalsCacheKeys.CALORIES_BURNED, day.toEpochDay()) }
         coVerify { dao.writeToken(VitalsCacheKeys.CALORIES_BURNED, "new-token") }
+    }
+
+    /**
+     * The backfill window: a first full sync must cover the whole
+     * [HistoryLookbackDays] lookback — a shorter fill would make the Year range
+     * fall through to the live read forever — walked newest-first in chunks
+     * that tile the window exactly and never exceed a year per read.
+     */
+    @Test fun `full sync backfills the whole lookback window in bounded newest-first chunks`() = runTest {
+        val hc = hc()
+        val readRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
+        coEvery { hc.readDailyNutrition(any(), any(), any(), any(), any()) } answers {
+            readRanges += firstArg<LocalDate>() to secondArg<LocalDate>()
+            emptyList()
+        }
+        val dao = dao(cursorToken = null)
+
+        CaloriesHistorySyncService(hc, dao).syncAll()
+
+        val earliest = today.minusDays(HistoryLookbackDays)
+        // Newest chunk first, ending today; oldest chunk starts at the lookback edge.
+        assertEquals(today, readRanges.first().second)
+        assertEquals(earliest, readRanges.last().first)
+        readRanges.forEach { (start, end) ->
+            assertTrue("chunk $start..$end inverted", !end.isBefore(start))
+            assertTrue(
+                "chunk $start..$end exceeds a year",
+                java.time.temporal.ChronoUnit.DAYS.between(start, end) < 365,
+            )
+        }
+        // Chunks tile the window: each older chunk ends the day before its newer neighbour starts.
+        readRanges.zipWithNext().forEach { (newer, older) ->
+            assertEquals(newer.first.minusDays(1), older.second)
+        }
     }
 
     @Test fun `ungranted permission is a no-op`() = runTest {

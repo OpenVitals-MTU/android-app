@@ -229,6 +229,65 @@ class ActivityRepositoryTest {
         assertEquals(nutrition, result)
     }
 
+    @Test
+    fun `comparison-window opt-out reads only the current window`() = runTest {
+        val date = LocalDate.of(2026, 6, 1)
+        val hc = hc(granted = setOf(stepsPermission, totalCaloriesPermission))
+        coEvery { hc.readDailyNutrition(any(), any(), any(), any(), any()) } returns emptyList()
+
+        val result = ActivityRepositoryImpl(hc).loadActivityPeriod(
+            query = PeriodLoadQuery(range = TimeRange.YEAR, anchorDate = date),
+            includeSteps = true,
+            includeNutrition = true,
+            includeComparisonWindows = false,
+        )
+
+        // The comparison series come back empty rather than absent…
+        assertEquals(emptyList<DailySteps>(), result.previousDailySteps)
+        assertEquals(emptyList<DailySteps>(), result.baselineDailySteps)
+        assertEquals(emptyList<DailyNutrition>(), result.previousNutrition)
+        assertEquals(emptyList<DailyNutrition>(), result.baselineNutrition)
+        // …and, the point: only the current window was paid for. On the Year
+        // range the previous/baseline windows are each another long
+        // Health Connect read.
+        coVerify(exactly = 1) {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        }
+        coVerify(exactly = 1) { hc.readDailyNutrition(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `comparison windows are read by default`() = runTest {
+        val date = LocalDate.of(2026, 6, 1)
+        val hc = hc(granted = setOf(stepsPermission, totalCaloriesPermission))
+        coEvery { hc.readDailyNutrition(any(), any(), any(), any(), any()) } returns emptyList()
+
+        ActivityRepositoryImpl(hc).loadActivityPeriod(
+            query = PeriodLoadQuery(range = TimeRange.WEEK, anchorDate = date),
+            includeSteps = true,
+            includeNutrition = true,
+        )
+
+        coVerify(exactly = 3) {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        }
+        coVerify(exactly = 3) { hc.readDailyNutrition(any(), any(), any(), any(), any()) }
+    }
+
     private fun hc(
         granted: Set<String>,
         dailySteps: List<DailySteps> = emptyList(),

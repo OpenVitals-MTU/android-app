@@ -33,6 +33,7 @@ import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
 
 @Immutable
 data class CaloriesUiState(
@@ -67,6 +68,7 @@ class CaloriesViewModel(
     private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
     private val calorieDataModeChanges: Flow<Boolean> = emptyFlow(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
+    private val caloriesSync: CaloriesHistorySyncService? = null,
 ) : ViewModel() {
 
     @Inject
@@ -75,6 +77,7 @@ class CaloriesViewModel(
         bodyRepository: BodyRepository,
         preferencesRepository: PreferencesRepository,
         savedStateHandle: androidx.lifecycle.SavedStateHandle,
+        caloriesSync: CaloriesHistorySyncService,
     ) : this(
         activityRepository = activityRepository,
         bodyRepository = bodyRepository,
@@ -86,7 +89,10 @@ class CaloriesViewModel(
         onRangeSelected = { range ->
             preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.CALORIES, range)
         },
+        caloriesSync = caloriesSync,
     )
+
+    private var caloriesSyncKicked = false
 
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
@@ -188,6 +194,11 @@ class CaloriesViewModel(
                                 // range, so it keeps the hourly aggregate. The read's
                                 // own timeout is what stops it hanging the Day view.
                                 includeActivityProgress = true,
+                                // This screen renders the current window alone — no
+                                // previous/baseline comparison — so it skips the four
+                                // extra window reads. On the Year range that is the
+                                // difference between two long aggregates and six.
+                                includeComparisonWindows = false,
                             )
                         } else {
                             activityRepository.loadActivityPeriod(
@@ -199,6 +210,11 @@ class CaloriesViewModel(
                                 // range, so it keeps the hourly aggregate. The read's
                                 // own timeout is what stops it hanging the Day view.
                                 includeActivityProgress = true,
+                                // This screen renders the current window alone — no
+                                // previous/baseline comparison — so it skips the four
+                                // extra window reads. On the Year range that is the
+                                // difference between two long aggregates and six.
+                                includeComparisonWindows = false,
                                 refreshMode = refreshMode,
                             )
                         }
@@ -227,6 +243,7 @@ class CaloriesViewModel(
                     latestBmrKcal = latestBmr,
                     activityProgress = activity.activityProgress,
                 )
+                kickCaloriesHistorySyncOnce()
             }.onFailure {
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
@@ -235,6 +252,26 @@ class CaloriesViewModel(
                     error = it.toScreenError(),
                 )
             }
+        }
+    }
+
+    /**
+     * Kicks the calories history sync once per screen open, AFTER the first
+     * load settles (Health Connect serializes reads, so a full-history sync
+     * beside the screen's own read makes both slower). The first sync pays for
+     * the chunked history rebuild that every later open serves from SQLite —
+     * this screen is what needs the cache, so this screen owns starting it,
+     * exactly like the Dart app's calories screen did; the app-open drain is
+     * incremental-only and never starts it. One reload when it completes
+     * re-derives the period from the now-populated cache.
+     */
+    private fun kickCaloriesHistorySyncOnce() {
+        val sync = caloriesSync ?: return
+        if (caloriesSyncKicked) return
+        caloriesSyncKicked = true
+        viewModelScope.launch {
+            runCatching { sync.syncAll() }
+            load()
         }
     }
 

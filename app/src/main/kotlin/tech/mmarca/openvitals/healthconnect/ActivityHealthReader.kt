@@ -60,8 +60,6 @@ import java.time.ZoneId
 import java.util.UUID
 import kotlin.reflect.KClass
 
-private const val DailyStepsMaxQueryDays = 366L
-
 internal class ActivityHealthReader(
     private val support: HealthConnectReaderSupport,
     private val appPackageName: String,
@@ -90,7 +88,7 @@ internal class ActivityHealthReader(
         includeActiveCalories: Boolean = false,
         includeElevation: Boolean = false,
     ): List<DailySteps> =
-        dailyStepDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
+        dailyAggregateDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
             readDailyStepsChunk(
                 startDate = chunkStart,
                 endDate = chunkEnd,
@@ -1413,23 +1411,6 @@ internal class ActivityHealthReader(
         private const val MaxActivityCaloriesKcal = 1_000_000.0
         private const val MaxActivitySteps = 1_000_000L
     }
-}
-
-internal fun dailyStepDateChunks(
-    startDate: LocalDate,
-    endDate: LocalDate,
-    maxDays: Long = DailyStepsMaxQueryDays,
-): List<Pair<LocalDate, LocalDate>> {
-    if (endDate.isBefore(startDate) || maxDays <= 0L) return emptyList()
-
-    val chunks = mutableListOf<Pair<LocalDate, LocalDate>>()
-    var chunkStart = startDate
-    while (!chunkStart.isAfter(endDate)) {
-        val chunkEnd = minOf(chunkStart.plusDays(maxDays - 1), endDate)
-        chunks += chunkStart to chunkEnd
-        chunkStart = chunkEnd.plusDays(1)
-    }
-    return chunks
 }
 
 internal fun PlannedExerciseBlock.toPlannedExerciseBlockData(): PlannedExerciseBlockData =

@@ -80,6 +80,7 @@ class AchievementsEmptyHistoryTest {
             includeNutrition: Boolean,
             includeWheelchairPushes: Boolean,
             includeActivityProgress: Boolean,
+            includeComparisonWindows: Boolean,
             refreshMode: tech.mmarca.openvitals.domain.model.RefreshMode,
         ) = error("unused")
 

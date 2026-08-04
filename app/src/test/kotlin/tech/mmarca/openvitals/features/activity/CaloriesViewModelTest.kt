@@ -21,6 +21,7 @@ import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.query.ActivityPeriodData
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 class CaloriesViewModelTest {
@@ -32,7 +33,9 @@ class CaloriesViewModelTest {
 
     private fun activityRepo(data: ActivityPeriodData = ActivityPeriodData()) =
         mockk<ActivityRepository>().also { repo ->
-            coEvery { repo.loadActivityPeriod(any(), any(), any()) } returns data
+            coEvery {
+                repo.loadActivityPeriod(any(), any(), any(), any(), any(), any(), any())
+            } returns data
         }
 
     private fun bodyRepo(
@@ -72,6 +75,10 @@ class CaloriesViewModelTest {
                 query = any<PeriodLoadQuery>(),
                 includeSteps = true,
                 includeNutrition = true,
+                // This screen never renders the previous/baseline comparison, so
+                // it must not pay for those windows — on Year, four extra
+                // year-long aggregates.
+                includeComparisonWindows = false,
             )
         }
         coVerify { bodyRepository.loadBmrEntries(any(), any()) }
@@ -103,7 +110,9 @@ class CaloriesViewModelTest {
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
         assertEquals(TimeRange.MONTH, savedRange)
-        coVerify(atLeast = 2) { activityRepository.loadActivityPeriod(any(), true, true) }
+        coVerify(atLeast = 2) {
+            activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)
+        }
         coVerify(atLeast = 2) { bodyRepository.loadBmrEntries(any(), any()) }
     }
 
@@ -120,19 +129,65 @@ class CaloriesViewModelTest {
 
         calorieDataMode.value = true
 
-        coVerify(exactly = 2) { activityRepository.loadActivityPeriod(any(), true, true) }
+        coVerify(exactly = 2) {
+            activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)
+        }
         coVerify(exactly = 2) { bodyRepository.loadBmrEntries(any(), any()) }
     }
 
     @Test
     fun `load failure sets error and clears loading`() = runTest {
         val activityRepository = mockk<ActivityRepository>()
-        coEvery { activityRepository.loadActivityPeriod(any(), any(), any()) } throws RuntimeException("timeout")
+        coEvery {
+            activityRepository.loadActivityPeriod(any(), any(), any(), any(), any(), any(), any())
+        } throws RuntimeException("timeout")
         val bodyRepository = bodyRepo()
 
         val vm = CaloriesViewModel(activityRepository, bodyRepository)
 
         assertFalse(vm.uiState.value.isLoading)
         assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
+    }
+
+    @Test
+    fun `first load kicks the calories history sync once, then reloads from the cache`() = runTest {
+        val activityRepository = activityRepo()
+        val sync = mockk<CaloriesHistorySyncService>()
+        coEvery { sync.syncAll() } returns Unit
+
+        CaloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
+
+        // The screen owns the cache's first full sync (the app-open drain is
+        // incremental-only), and one reload re-derives the period from it.
+        coVerify(exactly = 1) { sync.syncAll() }
+        coVerify(exactly = 2) {
+            activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)
+        }
+    }
+
+    @Test
+    fun `the sync kick fires once per screen open, not once per load`() = runTest {
+        val activityRepository = activityRepo()
+        val sync = mockk<CaloriesHistorySyncService>()
+        coEvery { sync.syncAll() } returns Unit
+        val vm = CaloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
+
+        vm.selectRange(TimeRange.YEAR)
+
+        coVerify(exactly = 1) { sync.syncAll() }
+    }
+
+    @Test
+    fun `a failed load does not kick the sync`() = runTest {
+        val activityRepository = mockk<ActivityRepository>()
+        coEvery {
+            activityRepository.loadActivityPeriod(any(), any(), any(), any(), any(), any(), any())
+        } throws RuntimeException("timeout")
+        val sync = mockk<CaloriesHistorySyncService>()
+        coEvery { sync.syncAll() } returns Unit
+
+        CaloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
+
+        coVerify(exactly = 0) { sync.syncAll() }
     }
 }
