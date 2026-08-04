@@ -411,10 +411,10 @@ internal fun manualEntryWidgetSpecs(
     return listOf(
         ManualEntryWidgetSpec(
             id = ManualEntryWidgetId.HYDRATION,
-            title = stringResource(R.string.manual_entry_hydration_title),
+            title = stringResource(R.string.manual_entry_hydration_label),
             content = { modifier ->
                 ManualEntryMetricTile(
-                    title = stringResource(R.string.manual_entry_hydration_title),
+                    title = stringResource(R.string.manual_entry_hydration_label),
                     icon = Icons.Outlined.LocalDrink,
                     accentColor = HydrationColor,
                     modifier = modifier,
@@ -537,12 +537,20 @@ internal fun vitalsMeasurementWidgetSpec(
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
 ): ManualEntryWidgetSpec {
     val click = if (isEditingWidgets) null else ({ onOpenVitalsMeasurementEntry(type) })
+    // Grid tiles carry the long names the Flutter add-entry screen ships
+    // (Blood oxygen, Body temperature); the entry screens keep the short
+    // titleRes names (SpO2, Body temp), matching Flutter's split.
+    val gridTitleRes = when (type) {
+        VitalsMeasurementType.SPO2 -> R.string.screen_spo2
+        VitalsMeasurementType.BODY_TEMPERATURE -> R.string.screen_body_temperature
+        else -> type.titleRes()
+    }
     return ManualEntryWidgetSpec(
         id = id,
-        title = stringResource(type.titleRes()),
+        title = stringResource(gridTitleRes),
         content = { modifier ->
             ManualEntryMetricTile(
-                title = stringResource(type.titleRes()),
+                title = stringResource(gridTitleRes),
                 icon = type.icon(),
                 accentColor = type.accentColor(),
                 modifier = modifier,

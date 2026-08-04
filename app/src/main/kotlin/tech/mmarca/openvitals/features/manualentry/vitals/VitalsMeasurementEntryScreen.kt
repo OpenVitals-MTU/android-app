@@ -321,7 +321,7 @@ private fun VitalsMeasurementType.inputUnitLabel(unitSystem: UnitSystem): String
 }
 
 fun VitalsMeasurementType.icon(): ImageVector = when (this) {
-    VitalsMeasurementType.BLOOD_PRESSURE -> Icons.Outlined.Favorite
+    VitalsMeasurementType.BLOOD_PRESSURE -> Icons.Outlined.FavoriteBorder
     VitalsMeasurementType.SPO2 -> Icons.Outlined.FavoriteBorder
     VitalsMeasurementType.RESPIRATORY_RATE -> Icons.Outlined.Air
     VitalsMeasurementType.BODY_TEMPERATURE -> Icons.Outlined.DeviceThermostat

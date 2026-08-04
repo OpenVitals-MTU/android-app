@@ -111,7 +111,6 @@
     <string name="screen_body_energy">Körperenergie</string>
     <string name="screen_training_readiness">Trainingsbereitschaft</string>
     <string name="screen_body">Körper</string>
-    <string name="screen_hydration">Hydrierung</string>
     <string name="screen_nutrition">Ernährung</string>
     <string name="screen_mindfulness">Achtsamkeit</string>
     <string name="screen_cycle">Zyklus</string>
@@ -126,7 +125,6 @@
     <string name="screen_body_measurement_entry">Körpermessungseintrag</string>
     <string name="screen_vitals_measurement_entry">Vitalwerteeintrag</string>
     <string name="bottom_nav_dashboard">Übersicht</string>
-    <string name="manual_entry_hydration_title">Hydrierung</string>
     <string name="manual_entry_activity_title">Aktivität</string>
     <string name="manual_entry_date_label">Eintragsdatum</string>
     <string name="manual_entry_time_label">Eintragszeit</string>

@@ -100,11 +100,12 @@ internal fun MetricRouteContent(
     when (val destination = metricRouteDestinationFor(metricId)) {
         MetricRouteDestination.Calories -> {
             val caloriesViewModel = hiltViewModel<CaloriesViewModel>()
+            // No section-edit affordance: the shipped Flutter calories screen
+            // has no app-bar tune toggle, so the edit state is not hoisted.
             CaloriesScreen(
                 viewModel = caloriesViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         is MetricRouteDestination.Nutrition -> {
@@ -203,12 +204,13 @@ internal fun MetricRouteContent(
         }
         MetricRouteDestination.Hydration -> {
             val hydrationViewModel = hiltViewModel<HydrationViewModel>()
+            // No section-edit affordance: the shipped Flutter hydration
+            // screen's only app-bar action is the add-drink shortcut.
             HydrationScreen(
                 viewModel = hydrationViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onEditHydrationEntry = onEditHydrationEntry,
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         MetricRouteDestination.Caffeine -> {
@@ -218,7 +220,6 @@ internal fun MetricRouteContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenDrink = onOpenCaffeineDrink,
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         MetricRouteDestination.Mindfulness -> {

@@ -112,7 +112,6 @@
     <string name="screen_body_energy">Energia Corporea</string>
     <string name="screen_training_readiness">Prontezza Allenamento</string>
     <string name="screen_body">Corpo</string>
-    <string name="screen_hydration">Idratazione</string>
     <string name="screen_nutrition">Nutrizione</string>
     <string name="screen_mindfulness">Consapevolezza</string>
     <string name="screen_cycle">Ciclo</string>
@@ -127,7 +126,6 @@
     <string name="screen_body_measurement_entry">Voce misurazione corporea</string>
     <string name="screen_vitals_measurement_entry">Voce parametri vitali</string>
     <string name="bottom_nav_dashboard">Sommario</string>
-    <string name="manual_entry_hydration_title">Idratazione</string>
     <string name="manual_entry_activity_title">Attività</string>
     <string name="manual_entry_date_label">Inserisci data</string>
     <string name="manual_entry_time_label">Inserisci ora</string>

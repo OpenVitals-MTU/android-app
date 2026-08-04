@@ -113,7 +113,6 @@
     <string name="screen_body_energy">Kehaenergia</string>
     <string name="screen_training_readiness">Treeningvalmisolek</string>
     <string name="screen_body">Keha</string>
-    <string name="screen_hydration">Joogid</string>
     <string name="screen_nutrition">Toitumine</string>
     <string name="screen_mindfulness">Teadvelolek</string>
     <string name="screen_cycle">Tsükkel</string>
@@ -128,7 +127,6 @@
     <string name="screen_body_measurement_entry">Kehamõõtmise kirje</string>
     <string name="screen_vitals_measurement_entry">Elunäitajate kirje</string>
     <string name="bottom_nav_dashboard">Kokkuvõte</string>
-    <string name="manual_entry_hydration_title">Joogid</string>
     <string name="manual_entry_activity_title">Treening</string>
     <string name="manual_entry_date_label">Kirje kuupäev</string>
     <string name="manual_entry_time_label">Kirje kellaaeg</string>

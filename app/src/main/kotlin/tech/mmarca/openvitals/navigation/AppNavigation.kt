@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
@@ -101,7 +102,12 @@ fun AppNavigation(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val currentRoute = currentDestination?.route
+    // Destinations that accept a pinned day register with SELECTED_DAY_QUERY_PATTERN
+    // appended, so the raw pattern is e.g. `metric/{metricId}?selectedDay={selectedDay}`.
+    // Every comparison below is against the bare Screen route — strip the query
+    // pattern once here (a bare `== Screen.Metric.route` would otherwise never
+    // match, which is how every metric screen lost its top-bar title).
+    val currentRoute = currentDestination?.route?.substringBefore('?')
     val currentMetricId = if (currentRoute == Screen.Metric.route) {
         navBackStackEntry?.arguments?.getString(METRIC_ID_ARG)?.toDashboardWidgetIdOrNull()
     } else {
@@ -158,7 +164,8 @@ fun AppNavigation(
 
     fun finishActivityEntrySave() {
         markDashboardDirty()
-        val previousRoute = navController.previousBackStackEntry?.destination?.route
+        val previousRoute =
+            navController.previousBackStackEntry?.destination?.route?.substringBefore('?')
         if (
             previousRoute == Screen.Dashboard.route ||
             previousRoute == Screen.Activity.route ||
@@ -256,8 +263,13 @@ fun AppNavigation(
         )
     }
 
-    LaunchedEffect(currentRoute) {
+    // Keyed on the metric id too: navigating metric→metric (widget taps, deep
+    // links) must drop the previous screen's edit toggle — a metric screen that
+    // does not register section editing would otherwise inherit a stale one.
+    LaunchedEffect(currentRoute, currentMetricId) {
         if (currentRoute !in metricSectionRoutes) {
+            metricSectionTopBarState = null
+        } else if (currentRoute == Screen.Metric.route) {
             metricSectionTopBarState = null
         }
     }
@@ -287,7 +299,14 @@ fun AppNavigation(
             currentRoute != Screen.Onboarding.route
         ) {
             navController.navigate(externalNavigationRoute) {
-                launchSingleTop = true
+                // singleTop only for argument-less destinations: on parameterized
+                // routes (metric/{id}, body energy dates, drink logs) it would
+                // reuse the top entry — and its ViewModel, seeded with the
+                // PREVIOUS arguments — so a FLOORS widget tap from the steps
+                // screen would render floors content over a steps-seeded state.
+                launchSingleTop = externalNavigationRoute == Screen.Dashboard.route ||
+                    externalNavigationRoute == Screen.HydrationEntry.route ||
+                    externalNavigationRoute == Screen.ActivityEntry.createRoute()
             }
             onExternalNavigationHandled()
         }
@@ -382,6 +401,21 @@ fun AppNavigation(
         navigationContentDescription = stringResource(R.string.cd_back),
         action = addEntryAction,
         topBarActions = {
+            // The hydration screen's app-bar add-drink shortcut, as shipped in
+            // Flutter (its only app-bar action on that screen).
+            if (currentRoute == Screen.Metric.route &&
+                currentMetricId == DashboardWidgetId.HYDRATION
+            ) {
+                OpenVitalsIconButton(
+                    onClick = { navController.navigate(Screen.HydrationEntry.route) },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = stringResource(R.string.cd_add_drink),
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             val topBarEditState = when (currentRoute) {
                 Screen.ManualEntry.route -> manualEntryTopBarState
                 in metricSectionRoutes -> metricSectionTopBarState
@@ -405,10 +439,15 @@ fun AppNavigation(
                 val isActivityRecordingEditState = isActivityRecordingRoute
                 OpenVitalsIconButton(onClick = topBarEditState.onToggleEdit) {
                     Icon(
-                        imageVector = if (isActivityRecordingEditState && topBarEditState.isEditing) {
-                            Icons.Outlined.Check
-                        } else {
-                            Icons.Outlined.Edit
+                        imageVector = when {
+                            topBarEditState.isEditing &&
+                                (isActivityRecordingEditState || currentRoute in metricSectionRoutes) ->
+                                Icons.Outlined.Check
+                            // Metric detail screens use the section-layout affordance the
+                            // Flutter app shipped: tune sliders, flipping to a check while
+                            // editing.
+                            currentRoute in metricSectionRoutes -> Icons.Outlined.Tune
+                            else -> Icons.Outlined.Edit
                         },
                         contentDescription = stringResource(
                             when {
@@ -981,37 +1020,18 @@ private fun addEntryActionForCurrentRoute(
     currentMetricId: DashboardWidgetId?,
     onNavigate: (String) -> Unit,
 ): MetricAction? {
-    val destinationRoute = when {
-        currentRoute == Screen.Activity.route -> Screen.ActivityEntry.createRoute()
-        currentRoute == Screen.Metric.route -> currentMetricId?.entryRoute()
-        else -> null
-    } ?: return null
-
+    // The shipped Flutter app's only floating add affordance is the
+    // mindfulness "Log session" FAB. Every other screen adds entries through
+    // its own content, the dashboard Log sheet, or — for hydration — the
+    // app-bar add-drink shortcut rendered in topBarActions.
+    if (currentRoute != Screen.Metric.route) return null
+    if (currentMetricId != DashboardWidgetId.MINDFULNESS) return null
     return MetricAction(
-        labelRes = R.string.action_add,
+        labelRes = R.string.mindfulness_log_session,
         icon = Icons.Outlined.Add,
-        onClick = { onNavigate(destinationRoute) },
+        onClick = { onNavigate(Screen.MindfulnessEntry.route) },
     )
 }
-
-private fun DashboardWidgetId.entryRoute(): String? =
-    when (this) {
-        DashboardWidgetId.HYDRATION -> Screen.HydrationEntry.route
-        DashboardWidgetId.CARBS -> Screen.CarbsEntry.route
-        DashboardWidgetId.MINDFULNESS -> Screen.MindfulnessEntry.route
-        DashboardWidgetId.WEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.WEIGHT.name)
-        DashboardWidgetId.HEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.HEIGHT.name)
-        DashboardWidgetId.BODY_FAT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.BODY_FAT.name)
-        DashboardWidgetId.WORKOUT -> Screen.ActivityEntry.createRoute()
-        DashboardWidgetId.BLOOD_PRESSURE ->
-            Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.BLOOD_PRESSURE.name)
-        DashboardWidgetId.SPO2 -> Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.SPO2.name)
-        DashboardWidgetId.RESPIRATORY_RATE ->
-            Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.RESPIRATORY_RATE.name)
-        DashboardWidgetId.BODY_TEMPERATURE ->
-            Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.BODY_TEMPERATURE.name)
-        else -> null
-    }
 
 private fun metricTitleRes(metricId: DashboardWidgetId): Int =
     when (metricId) {
@@ -1020,16 +1040,18 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.CALORIES_OUT -> R.string.screen_calories
         DashboardWidgetId.ACTIVE_CALORIES -> R.string.screen_calories
         DashboardWidgetId.FLOORS -> R.string.metric_floors_climbed
-        DashboardWidgetId.ELEVATION -> R.string.metric_elevation
+        DashboardWidgetId.ELEVATION -> R.string.metric_elevation_gained
         DashboardWidgetId.WHEELCHAIR_PUSHES -> R.string.metric_wheelchair_pushes
-        DashboardWidgetId.WORKOUT -> R.string.metric_workout
+        // The WORKOUT tile lands on the activities overview; Flutter titles it
+        // with the screen's own name, not the tile label.
+        DashboardWidgetId.WORKOUT -> R.string.screen_activities
         DashboardWidgetId.SLEEP -> R.string.metric_sleep
         DashboardWidgetId.BODY_ENERGY -> R.string.metric_body_energy
-        DashboardWidgetId.HYDRATION -> R.string.metric_hydration
-        DashboardWidgetId.CALORIES_IN -> R.string.screen_nutrition
-        DashboardWidgetId.PROTEIN -> R.string.screen_nutrition
-        DashboardWidgetId.CARBS -> R.string.screen_nutrition
-        DashboardWidgetId.FAT -> R.string.screen_nutrition
+        DashboardWidgetId.HYDRATION -> R.string.screen_hydration_title
+        DashboardWidgetId.CALORIES_IN -> R.string.metric_calories_in
+        DashboardWidgetId.PROTEIN -> R.string.metric_protein
+        DashboardWidgetId.CARBS -> R.string.metric_carbs
+        DashboardWidgetId.FAT -> R.string.metric_fat
         DashboardWidgetId.CAFFEINE -> R.string.metric_caffeine
         DashboardWidgetId.WEIGHT -> R.string.screen_body
         DashboardWidgetId.HEIGHT -> R.string.screen_body
@@ -1040,20 +1062,20 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.BMR -> R.string.screen_calories
         DashboardWidgetId.BONE_MASS -> R.string.screen_body
         DashboardWidgetId.BODY_WATER_MASS -> R.string.screen_body
-        DashboardWidgetId.AVG_HEART_RATE -> R.string.metric_avg_heart_rate
+        DashboardWidgetId.AVG_HEART_RATE -> R.string.screen_heart_rate
         DashboardWidgetId.RESTING_HEART_RATE -> R.string.metric_resting_heart_rate
-        DashboardWidgetId.HRV -> R.string.metric_hrv
+        DashboardWidgetId.HRV -> R.string.screen_hrv
         DashboardWidgetId.BLOOD_PRESSURE -> R.string.metric_blood_pressure
-        DashboardWidgetId.SPO2 -> R.string.metric_spo2
+        DashboardWidgetId.SPO2 -> R.string.screen_spo2
         DashboardWidgetId.VO2_MAX -> R.string.metric_vo2_max
         DashboardWidgetId.RESPIRATORY_RATE -> R.string.metric_respiratory_rate
-        DashboardWidgetId.BODY_TEMPERATURE -> R.string.metric_body_temp
+        DashboardWidgetId.BODY_TEMPERATURE -> R.string.screen_body_temperature
         DashboardWidgetId.BLOOD_GLUCOSE -> R.string.metric_blood_glucose
         DashboardWidgetId.SKIN_TEMPERATURE -> R.string.metric_skin_temperature
-        DashboardWidgetId.WEEKLY_CARDIO_LOAD -> R.string.metric_weekly_cardio_load
-        DashboardWidgetId.CARDIO_LOAD -> R.string.metric_weekly_cardio_load
+        DashboardWidgetId.WEEKLY_CARDIO_LOAD -> R.string.metric_cardio_load
+        DashboardWidgetId.CARDIO_LOAD -> R.string.metric_cardio_load
         DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
-        DashboardWidgetId.CYCLE -> R.string.metric_cycle
+        DashboardWidgetId.CYCLE -> R.string.metric_cycle_tracking
     }
 
 private data class TopBarEditState(

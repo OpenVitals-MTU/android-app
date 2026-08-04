@@ -116,7 +116,6 @@
     <string name="screen_body_energy">Body energy</string>
     <string name="screen_training_readiness">Training Readiness</string>
     <string name="screen_body">Body</string>
-    <string name="screen_hydration">Beverages</string>
     <string name="screen_nutrition">Nutrition</string>
     <string name="screen_mindfulness">Mindfulness</string>
     <string name="screen_cycle">Cycle</string>
@@ -132,7 +131,6 @@
     <string name="screen_vitals_measurement_entry">Vitals entry</string>
 
     <string name="bottom_nav_dashboard">Summary</string>
-    <string name="manual_entry_hydration_title">Beverages</string>
     <string name="manual_entry_activity_title">Activity</string>
     <string name="manual_entry_date_label">Entry date</string>
     <string name="manual_entry_time_label">Entry time</string>
@@ -557,6 +555,15 @@
     <string name="metric_body_temp">Body temp</string>
     <string name="metric_blood_glucose">Blood glucose</string>
     <string name="metric_skin_temperature">Skin temperature</string>
+    <!-- Detail-screen titles where the shipped wording differs from the dashboard tile label. -->
+    <string name="screen_heart_rate">Heart rate</string>
+    <string name="screen_hrv">Heart rate variability</string>
+    <string name="screen_spo2">Blood oxygen</string>
+    <string name="screen_body_temperature">Body temperature</string>
+    <string name="screen_hydration_title">Hydration</string>
+    <string name="mindfulness_log_session">Log session</string>
+    <string name="cd_add_drink">Add drink</string>
+    <string name="manual_entry_hydration_label">Hydration</string>
     <string name="metric_recorded_speed">Recorded speed</string>
     <string name="metric_average_power">Average power</string>
     <string name="metric_steps_cadence">Step cadence</string>

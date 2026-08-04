@@ -13,10 +13,14 @@ different base.
 ## Using it
 
 Both pipelines run `ghcr.io/mmarca-tech/openvitals-android-ci:android-37`
-(pushed 2026-08-04). The package is **private** on ghcr — the Woodpecker
-runner's registry credentials cover it, exactly as they did the Flutter era's
-image; making it public in the GitHub package settings would remove that
-dependency, and nothing in the image is secret.
+(pushed 2026-08-04). The package must be **public** on ghcr — the Woodpecker
+runner pulls anonymously, exactly as it did the Flutter era's public
+`mobile-app-ci` image. ghcr creates new packages private, so after the FIRST
+push of a new package name, flip it in the GitHub package settings
+(https://github.com/users/mmarca-tech/packages/container/openvitals-android-ci/settings
+→ Change visibility → Public); a private package fails the pipeline at image
+pull with `error from registry: unauthorized`. Nothing in the image is secret —
+it is a public base plus the public Android SDK.
 
 To rebuild after a `compileSdk` bump:
 
