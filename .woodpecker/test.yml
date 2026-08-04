@@ -12,23 +12,23 @@ variables:
   # Prebaked CI image: cirruslabs/android-sdk:tools plus the Android platform
   # and build-tools this app compiles against (see ci-image/Dockerfile), so no
   # sdkmanager runs at CI time. Rebuild + push (scripts/build-ci-image.sh
-  # --push) and bump this tag together when compileSdk moves. The package is
-  # private on ghcr; the runner's registry credentials cover it, as they did
-  # the Flutter era's image.
+  # --push) and bump this tag together when compileSdk moves. The package must
+  # stay PUBLIC on ghcr — the runner pulls anonymously, and ghcr creates new
+  # package names private, so flip visibility after the first push of a new
+  # name (see ci-image/README.md).
   - &android_image ghcr.io/mmarca-tech/openvitals-android-ci:android-37
 
 steps:
-  - name: unit-tests
+  # One Gradle invocation covers everything the pipeline verifies. verifyCi is
+  # the root-project aggregate of verifyCiUnitTest (:app:testCiUnitTest) and
+  # verifyCiPreflight (verifyTranslations, :app:lintCi, :app:assembleCi,
+  # :app:compileCiAndroidTestKotlin). Splitting these into separate steps buys
+  # nothing: Woodpecker steps share the workspace and run sequentially, so a
+  # second step only repeats the setup script, JVM startup, and Gradle
+  # configuration for zero parallelism.
+  - name: verify
     image: *android_image
     commands:
       - set -eu
-      - scripts/ci-android-gradle.sh verifyCiUnitTest
-
-  - name: app-preflight
-    depends_on:
-      - unit-tests
-    image: *android_image
-    commands:
-      - set -eu
-      - scripts/ci-android-gradle.sh verifyCiPreflight
+      - scripts/ci-android-gradle.sh verifyCi
       - git diff --check

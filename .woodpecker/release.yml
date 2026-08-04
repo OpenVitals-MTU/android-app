@@ -19,9 +19,10 @@ variables:
   # Prebaked CI image: cirruslabs/android-sdk:tools plus the Android platform
   # and build-tools this app compiles against (see ci-image/Dockerfile), so no
   # sdkmanager runs at CI time. Rebuild + push (scripts/build-ci-image.sh
-  # --push) and bump this tag together when compileSdk moves. The package is
-  # private on ghcr; the runner's registry credentials cover it, as they did
-  # the Flutter era's image.
+  # --push) and bump this tag together when compileSdk moves. The package must
+  # stay PUBLIC on ghcr — the runner pulls anonymously, and ghcr creates new
+  # package names private, so flip visibility after the first push of a new
+  # name (see ci-image/README.md).
   - &android_image ghcr.io/mmarca-tech/openvitals-android-ci:android-37
   - &ruby_image ruby:3.3
   - &fastlane_environment
@@ -38,7 +39,11 @@ steps:
       - chmod +x scripts/ci-release-context.sh scripts/version-code.sh
       - scripts/ci-release-context.sh
 
-  - name: unit-tests
+  # Single prerelease verification pass: verifyCi aggregates verifyCiUnitTest
+  # and verifyCiPreflight, so one Gradle invocation (one setup run, one
+  # configuration pass) covers what used to be the sequential unit-tests +
+  # release-preflight steps.
+  - name: release-preflight
     depends_on:
       - resolve-release-context
     image: *android_image
@@ -46,24 +51,11 @@ steps:
       - set -eu
       - |
         if [ "$${CI_PIPELINE_EVENT}" = "deployment" ] && [ "$${CI_PIPELINE_DEPLOY_TARGET:-}" = "production" ]; then
-          echo "Skipping prerelease unit tests for production deployment."
-          exit 0
-        fi
-      - scripts/ci-android-gradle.sh verifyCiUnitTest
-
-  - name: release-preflight
-    depends_on:
-      - unit-tests
-    image: *android_image
-    commands:
-      - set -eu
-      - |
-        if [ "$${CI_PIPELINE_EVENT}" = "deployment" ] && [ "$${CI_PIPELINE_DEPLOY_TARGET:-}" = "production" ]; then
-          echo "Skipping prerelease app preflight for production deployment."
+          echo "Skipping prerelease verification for production deployment."
           git diff --check
           exit 0
         fi
-      - scripts/ci-android-gradle.sh verifyCiPreflight
+      - scripts/ci-android-gradle.sh verifyCi
       - git diff --check
 
   - name: build-apk
