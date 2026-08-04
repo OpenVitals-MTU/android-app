@@ -1,5 +1,87 @@
 # Changelog
 
+## 2.5.0 - 2026-08-03
+
+### English
+
+- **OpenVitals is native Kotlin again.** Every feature the 2.x line added has been rebuilt on the Android-native app. Your data and settings from the previous version are imported automatically the first time you open it - nothing to export, nothing to set up twice.
+- **Watch support, experimental: Garmin and WearOS.** Pair a watch, sync the activities it recorded and its wellness data, and read the measures only the watch keeps - stress, Body Battery, intensity minutes, sleep score, recovery and training readiness.
+- **More from the wrist:** forward your phone's notifications to the watch, browse the watch's own settings menus from the phone, and ring the watch when you have mislaid it.
+- **Sync health data with another phone over Bluetooth.** Both phones stay offline - no account, no internet is used at any point.
+- **Import health data from CSV files** through a guided wizard that maps your own columns.
+- **Sturdier reminders.** Quick-add a drink from the notification with one tap, a countdown anchored to your last drink instead of the clock, and reminders that survive a reboot or a change of timezone.
+- **Record a run or ride without GPS** - the barometer still counts the climb and the phone still counts your steps.
+- **A guided heart-rate recovery test,** plus TCX and indoor-workout file import for treadmill runs, trainer rides and strength sessions.
+- **More accurate elevation:** GPS noise no longer inflates the climb on a recorded route.
+- **Settings:** Body profile is a section of its own, with your height and the measurements Health Connect resolves; high and low heart-rate alert thresholds; a hydration goal stepper; and a mindfulness integration toggle.
+- **Fixes:** elevation on backfilled activities, the skin-temperature card blanking when the newest reading carries no change, an unchanged battery reading re-stamping its time, permission errors that now offer a way to grant access instead of a dead end, dashboard tiles no longer offered for metrics your device cannot provide, and a paired watch no longer counted as a sensor.
+
+Watch support is experimental: it has been verified against one Garmin model, and watches on the older V1 transport are not supported.
+
+### Espanol
+
+- **OpenVitals vuelve a ser Kotlin nativo.** Todo lo que anadio la linea 2.x se ha reconstruido sobre la app nativa de Android. Tus datos y ajustes de la version anterior se importan automaticamente la primera vez que la abres - nada que exportar, nada que configurar dos veces.
+- **Soporte de relojes, experimental: Garmin y WearOS.** Vincula un reloj, sincroniza las actividades que grabo y sus datos de bienestar, y consulta las medidas que solo guarda el reloj - estres, Body Battery, minutos de intensidad, puntuacion de sueno, recuperacion y preparacion para entrenar.
+- **Mas cosas desde la muneca:** reenvia al reloj las notificaciones del telefono, explora desde el telefono los propios menus de ajustes del reloj y haz sonar el reloj cuando no lo encuentres.
+- **Sincroniza datos de salud con otro telefono por Bluetooth.** Los dos telefonos siguen sin conexion - sin cuenta y sin usar internet en ningun momento.
+- **Importa datos de salud desde archivos CSV** con un asistente guiado que asigna tus propias columnas.
+- **Recordatorios mas solidos.** Anade una bebida desde la notificacion con un solo toque, con la cuenta atras anclada a tu ultima bebida en vez de al reloj, y recordatorios que sobreviven a un reinicio o a un cambio de zona horaria.
+- **Graba una carrera o una salida en bici sin GPS** - el barometro sigue contando el desnivel y el telefono sigue contando tus pasos.
+- **Una prueba guiada de recuperacion de la frecuencia cardiaca,** ademas de importacion de archivos TCX y de entrenamientos en interior para cinta, rodillo y sesiones de fuerza.
+- **Desnivel mas preciso:** el ruido del GPS ya no infla la subida de una ruta grabada.
+- **Ajustes:** el perfil corporal es una seccion propia, con tu altura y las medidas que resuelve Health Connect; umbrales de aviso de frecuencia cardiaca alta y baja; un selector de objetivo de hidratacion; y un interruptor de integracion de mindfulness.
+- **Correcciones:** el desnivel de las actividades recuperadas, la tarjeta de temperatura cutanea que se quedaba en blanco cuando la lectura mas reciente no traia variacion, una lectura de bateria sin cambios que volvia a marcar su hora, los errores de permisos que ahora ofrecen una forma de concederlos en vez de un callejon sin salida, las tarjetas del panel que ya no se ofrecen para metricas que tu dispositivo no puede dar, y un reloj vinculado que ya no cuenta como sensor.
+
+El soporte de relojes es experimental: se ha verificado con un solo modelo Garmin y los relojes con el transporte V1 antiguo no son compatibles.
+
+### Deutsch
+
+- **OpenVitals ist wieder natives Kotlin.** Alles, was die 2.x-Reihe gebracht hat, wurde auf der Android-nativen App neu aufgebaut. Deine Daten und Einstellungen aus der vorherigen Version werden beim ersten Start automatisch uebernommen - nichts zu exportieren, nichts doppelt einzurichten.
+- **Uhren-Unterstuetzung, experimentell: Garmin und WearOS.** Koppele eine Uhr, synchronisiere die aufgezeichneten Aktivitaeten und ihre Wellness-Daten und lies die Werte, die nur die Uhr fuehrt - Stress, Body Battery, Intensitaetsminuten, Schlaf-Score, Erholung und Trainingsbereitschaft.
+- **Mehr vom Handgelenk:** leite die Benachrichtigungen deines Telefons an die Uhr weiter, durchsuche die eigenen Einstellungsmenues der Uhr vom Telefon aus und lass die Uhr klingeln, wenn du sie verlegt hast.
+- **Synchronisiere Gesundheitsdaten per Bluetooth mit einem anderen Telefon.** Beide Telefone bleiben offline - kein Konto, und zu keinem Zeitpunkt wird Internet genutzt.
+- **Importiere Gesundheitsdaten aus CSV-Dateien** mit einem gefuehrten Assistenten, der deine eigenen Spalten zuordnet.
+- **Robustere Erinnerungen.** Trage ein Getraenk mit einem Tipp direkt aus der Benachrichtigung ein, der Countdown haengt jetzt an deinem letzten Getraenk statt an der Uhr, und Erinnerungen ueberstehen einen Neustart oder einen Zeitzonenwechsel.
+- **Zeichne einen Lauf oder eine Fahrt ohne GPS auf** - das Barometer zaehlt weiter die Hoehenmeter und das Telefon weiter deine Schritte.
+- **Ein gefuehrter Herzfrequenz-Erholungstest,** dazu Import von TCX-Dateien und Indoor-Trainings fuer Laufband, Rolle und Krafteinheiten.
+- **Genauere Hoehenmeter:** GPS-Rauschen blaeht den Anstieg einer aufgezeichneten Route nicht mehr auf.
+- **Einstellungen:** Das Koerperprofil ist ein eigener Bereich mit deiner Groesse und den von Health Connect ermittelten Massen; Schwellen fuer hohe und niedrige Herzfrequenz; ein Schrittwaehler fuer das Trinkziel; und ein Schalter fuer die Achtsamkeits-Integration.
+- **Korrekturen:** Hoehenmeter nachgetragener Aktivitaeten, die Hauttemperatur-Karte, die leer blieb, wenn der neueste Messwert keine Abweichung trug, ein unveraenderter Batteriewert, der seinen Zeitstempel erneuerte, Berechtigungsfehler, die jetzt einen Weg zum Erteilen anbieten statt einer Sackgasse, Dashboard-Kacheln, die nicht mehr fuer Metriken angeboten werden, die dein Geraet nicht liefern kann, und eine gekoppelte Uhr, die nicht mehr als Sensor zaehlt.
+
+Die Uhren-Unterstuetzung ist experimentell: sie wurde mit einem einzigen Garmin-Modell geprueft, und Uhren mit dem aelteren V1-Transport werden nicht unterstuetzt.
+
+### Italiano
+
+- **OpenVitals torna a essere Kotlin nativo.** Tutto cio che ha portato la linea 2.x e stato ricostruito sull'app nativa Android. I tuoi dati e le tue impostazioni della versione precedente vengono importati automaticamente al primo avvio - niente da esportare, niente da riconfigurare.
+- **Supporto orologi, sperimentale: Garmin e WearOS.** Associa un orologio, sincronizza le attivita che ha registrato e i suoi dati di benessere, e leggi le misure che solo l'orologio conserva - stress, Body Battery, minuti di intensita, punteggio del sonno, recupero e prontezza all'allenamento.
+- **Piu cose dal polso:** inoltra all'orologio le notifiche del telefono, sfoglia dal telefono i menu di impostazioni dell'orologio stesso e fai suonare l'orologio quando non lo trovi.
+- **Sincronizza i dati di salute con un altro telefono via Bluetooth.** Entrambi i telefoni restano offline - nessun account e nessun uso di internet in alcun momento.
+- **Importa dati di salute da file CSV** con una procedura guidata che mappa le tue colonne.
+- **Promemoria piu solidi.** Aggiungi una bevanda dalla notifica con un tocco, con il conto alla rovescia ancorato all'ultima bevuta invece che all'orologio, e promemoria che sopravvivono a un riavvio o a un cambio di fuso orario.
+- **Registra una corsa o un'uscita in bici senza GPS** - il barometro continua a contare il dislivello e il telefono continua a contare i passi.
+- **Un test guidato di recupero della frequenza cardiaca,** piu l'importazione di file TCX e di allenamenti indoor per tapis roulant, rulli e sessioni di forza.
+- **Dislivello piu preciso:** il rumore del GPS non gonfia piu la salita di un percorso registrato.
+- **Impostazioni:** il profilo corporeo e una sezione a se, con la tua altezza e le misure risolte da Health Connect; soglie di avviso per frequenza cardiaca alta e bassa; un selettore per l'obiettivo di idratazione; e un interruttore per l'integrazione mindfulness.
+- **Correzioni:** il dislivello delle attivita recuperate, la scheda della temperatura cutanea che restava vuota quando la lettura piu recente non portava una variazione, una lettura della batteria invariata che riscriveva il proprio orario, gli errori di permessi che ora offrono un modo per concederli invece di un vicolo cieco, le tessere della dashboard non piu proposte per metriche che il tuo dispositivo non puo fornire, e un orologio associato non piu contato come sensore.
+
+Il supporto orologi e sperimentale: e stato verificato su un solo modello Garmin e gli orologi con il vecchio trasporto V1 non sono supportati.
+
+### Eesti
+
+- **OpenVitals on taas natiivne Kotlin.** Koik, mille 2.x liin lisas, on ules ehitatud Androidi natiivsele rakendusele. Eelmise versiooni andmed ja seaded imporditakse esimesel avamisel automaatselt - midagi ei pea eksportima ega uuesti seadistama.
+- **Kella tugi, eksperimentaalne: Garmin ja WearOS.** Seo kell, sunkrooni selle salvestatud treeningud ja heaoluandmed ning vaata naitajaid, mida hoiab ainult kell - stress, Body Battery, intensiivsusminutid, uneskoor, taastumine ja treeninguvalmidus.
+- **Rohkem randmelt:** suuna telefoni teavitused kellale, sirvi telefonist kella enda seadete menuusid ja lase kellal heliseda, kui oled selle ara kaotanud.
+- **Sunkrooni terviseandmeid teise telefoniga Bluetoothi kaudu.** Molemad telefonid jaavad vorguuhenduseta - kontot pole vaja ja internetti ei kasutata kordagi.
+- **Impordi terviseandmeid CSV-failidest** juhendatud viisardiga, mis seob sinu enda veerud.
+- **Tugevamad meeldetuletused.** Lisa jook teavitusest uhe puudutusega, loendus algab viimasest joogist, mitte kellaajast, ja meeldetuletused jaavad pusima ka pärast taaskaivitust voi ajavoondi muutust.
+- **Salvesta jooks voi soit ilma GPS-ita** - baromeeter loeb ikka touse ja telefon loeb ikka samme.
+- **Juhendatud pulsi taastumise test** ning TCX- ja sisetreeningu failide import jooksulindi, treeningrulli ja jouharjutuste jaoks.
+- **Tapsemad tousumeetrid:** GPS-mura ei suurenda enam salvestatud raja touse.
+- **Seaded:** kehaprofiil on omaette jaotis koos pikkuse ja Health Connecti tuvastatud mootmistega; korge ja madala pulsi hoiatuspiirid; vedelikutarbimise eesmargi samm; ning mindfulnessi integratsiooni lulit.
+- **Parandused:** tousumeetrid taidetud treeningutel, nahatemperatuuri kaardi tuhjenemine, kui uusimal lugemil pole muutust, muutumatu aku lugemi aja ulekirjutamine, oiguste vead pakuvad nuud voimalust luba anda umbtee asemel, tookslaua paanid ei ilmu enam naitajatele, mida seade ei toeta, ning seotud kella ei loeta enam anduriks.
+
+Kella tugi on eksperimentaalne: seda on kontrollitud uhe Garmini mudeliga ja vanema V1 transpordiga kellad ei ole toetatud.
+
 ## 2.4.1 - 2026-08-01
 
 ### English
@@ -57,7 +139,6 @@
 - **Parandused:** GPS-mura ei paisuta enam salvestatud tousumeetreid (750 m tousud salvestusid ~15 km-na); uks vigane unekirje ei venita enam ajakava graafikut 36 tunnini; patareiikoon ilmub ainult seadmete jaoks, mida selle ekraan ka loetleb; Apple Healthi impordi krahh.
 - **Saksa, itaalia ja eesti tolked on taielikud** (masintoetusega, ootavad emakeelse koneleja ulevaatust).
 
-
 ## 2.4.0 - 2026-07-28
 
 ### English
@@ -109,7 +190,6 @@ Gli utenti esistenti passano una volta dalla nuova configurazione; cio che era g
 - **Turvalisem ebatavalistel seadmetel:** OpenVitals ei kusi kunagi luba, mida sinu Health Connect anda ei saa - juhtum, mis voibs moned Google'ita telefonid susteemirakenduse kokku jooksutada.
 
 Olemasolevad kasutajad labivad uue seadistamise uhe korra; juba antut uuesti ei kusita.
-
 
 ## 2.3.2 - 2026-07-25
 

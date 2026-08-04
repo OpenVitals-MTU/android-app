@@ -110,12 +110,12 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 ### Daily Readiness
 
-- View a local Daily Readiness score with confidence context, as the day's verdict inside the Body Energy view.
-- Have the verdict weigh the measured Body Energy battery when it is calibrated, so an empty battery counts even after a good night.
+- View a local Daily Readiness score with confidence context.
+- View Body Energy and Training Readiness scores.
 - View HRV status, intensity minutes, physiological stress level, recommended activity, activity to avoid, alternatives, strain target, and adaptive goal guidance.
-- View detailed Training Readiness and Stress Tracking explanation screens.
+- View detailed Body Energy, Training Readiness, and Stress Tracking explanation screens.
 - View signal breakdowns and caveats that explain how available Health Connect data affected the recommendation.
-- Move between days, open the calendar, and refresh readiness data from the hosting Body Energy view.
+- Move between days, open the calendar, and refresh readiness data.
 
 ### Nutrition
 
@@ -205,12 +205,26 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View observation rows with date/time, value, and source.
 - View data confidence and statistics for period days, ovulation tests, basal body temperature readings, and total entries.
 
+### Watch Data
+
+- View measurements that only a paired Garmin watch produces and Health Connect has no record type for.
+- View stress with today's average.
+- View Body Battery with today's highest value.
+- View intensity minutes against the weekly target, counting vigorous minutes double.
+- View the watch's sleep score, time awake, times woken, and sleep need for last night.
+- View recovery time, training readiness, and acute and chronic training load.
+- View which of these a watch did not send, rather than a blank row.
+- View watch pairing state, last sync time, and paired-watch management.
+- Watch-recorded activities, sleep, heart rate, and other supported measures are viewed on the normal metric screens once written to Health Connect.
+
 ### Health Connect And Sources
 
 - View data from Health Connect-compatible sources.
 - View source labels on entries where available.
 - View missing-permission callouts and request relevant permissions from metric screens.
 - View records imported from Apple Health once written to Health Connect.
+- View records imported from a CSV file once written to Health Connect.
+- View records received from another phone once written to Health Connect.
 
 ## Insert / Update / Delete Data
 
@@ -256,10 +270,14 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Delete OpenVitals-created workout/activity sessions.
 - Choose activity type, start date, start time, duration, distance, elevation, active calories, total calories, repetitions, title, and notes.
 - Enter repetition-based workouts using total repetitions or sets with repetitions and rest minutes.
-- Import route/activity files in GPX, KML, KMZ, or FIT formats.
-- Bulk import multiple GPX, KML, or KMZ route files from Settings.
+- Import route/activity files in GPX, KML, KMZ, TCX, or FIT formats.
+- Import indoor and routeless activity files, which carry timing and recorded series but no positions.
+- Bulk import multiple route files from Settings.
 - Preview imported routes and inferred activity details before saving.
 - Save imported route data with inferred type, title, notes, distance, elevation, time range, and calorie estimates where available.
+- Save the heart rate, cadence, and speed series an imported file recorded, so imported activities have the same charts as recorded ones.
+- Record a GPS-capable activity with GPS switched off, keeping duration, heart rate, steps, and barometric elevation.
+- Run a guided heart-rate recovery test during a timed recording with a connected heart-rate sensor.
 - Import PMTiles or Mapsforge map packs from Settings for offline activity maps.
 - Use imported offline maps while recording activities and previewing saved or imported routes.
 - Record route-based activities with GPS.
@@ -322,37 +340,49 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Skip HRV SDNN import because the current Health Connect mapping is incompatible with that Apple Health record type.
 - No rollback/delete flow is provided for an Apple Health import after records are written.
 
-### Garmin Watch Sync
+### CSV Import
 
-- Pair a Garmin watch over Bluetooth, including the Android bond and the optional companion-device association.
-- Decline the companion association and still pair and sync, without the background priority it grants.
-- Detect a watch whose Bluetooth transport the app cannot read, and say so instead of pairing it.
-- Sync on demand from the watch's device view or from its tile on the summary screen; there is no background sync.
-- Insert supported watch records into Health Connect including sleep sessions and stages, heart rate, resting heart rate, HRV, VO2 max, oxygen saturation, respiratory rate, steps, distance, active calories, BMR, and recorded workouts with routes.
-- Store watch measures Health Connect has no type for in the app's own database: stress, Body Battery, intensity minutes, recovery time, training readiness, acute and chronic training load, sleep score, awakenings, time awake, sleep pressure, sleep need, and Health Snapshot samples.
-- Feed watch Body Battery into the app's own Body Energy calibration.
-- Skip files a previous sync already imported, and deduplicate anything that does arrive twice using stable client record IDs.
-- Keep a copy of every downloaded file before telling the watch it may archive it.
-- Gate each watch action on the capability list the watch itself reports.
-- Read the watch's own settings tree live, including alarms, and render whatever screens the watch sends in the watch's own language.
-- Switch, retime, relabel, add, and delete alarms on the watch.
-- Show settings rows the phone cannot act on as unavailable rather than hiding them.
-- Make the watch alert to find it, and stop the alert early.
-- Sleep stage durations derived from watch files disagree with the watch's own time-awake figure and are not yet reliable.
-- Number settings are read-only because the watch does not send their allowed range.
+- Import body measurements and vitals from a CSV file through a five-step wizard: choose a file, map the columns, confirm, import, read the result.
+- Choose the column separator and whether the first row holds column names, both detected and both overridable.
+- Map each column to nothing, to the date and time, or to one of the supported measurements.
+- Import weight, body fat, lean body mass, bone mass, body water, height, basal metabolic rate, heart rate, resting heart rate, heart rate variability, blood oxygen, respiratory rate, body temperature, basal body temperature, blood glucose, and VO2 max.
+- Choose the unit of each column, which describes the file rather than the app's display unit system.
+- Read a body-fat column given as a mass, converting it to a percentage using the weight in the same row.
+- Choose the date format, or detect it from the data, and pick which of day-first and month-first the file uses when both fit.
+- Choose how a timestamp without an offset is interpreted: this phone's time zone, UTC, or a fixed offset. A timestamp that states its own offset is used as written.
+- Reject a row for an unusable timestamp or too few columns, and reject a single value for an unusable number or an implausible value, keeping the rest of the row.
+- Read the result as written, already present, and rejected counts, with rejections grouped by reason.
+- Copy or save the full import report, including the parsing settings and the column mapping actually used.
+- Blood pressure and interval records such as steps, sleep, and workouts are deliberately not supported.
+- Re-importing writes no duplicates; a corrected value replaces the record at the same instant.
+- No rollback/delete flow is provided for a CSV import after records are written.
 
-### Garmin Watch Notifications
+### Sync With Another Phone
 
-- Show the phone's notifications on a paired Garmin watch, off by default.
-- Confirm what will be read before Android's notification-access screen is opened.
-- Silence individual apps; everything else keeps sending.
-- Dismiss a notification from the wrist, which clears it on the phone too.
-- Use the posting app's own action buttons from the wrist, up to five.
-- Reply from the wrist on apps that publish a wearable reply action.
-- Skip ongoing, group-summary, local-only, empty and minimum-importance notifications, and skip everything while the phone is in Do Not Disturb.
-- Hold the Bluetooth link open while the watch is in range, reconnecting with a backoff if it goes away.
-- Give the radio back within seconds when a sync, find or settings browse is started.
-- Do not offer actions the phone cannot perform from the background, including SMS replies.
+- Copy Health Connect records between two nearby phones over Bluetooth, with no account and no network.
+- Choose whether this phone is the host or the guest.
+- Confirm a six-digit pairing code before any health data moves.
+- Choose how far back to sync: 30 days, 6 months, a year, or everything.
+- Choose which data categories to sync from those both phones support.
+- Exchange records in both directions in a single session.
+- Read a report of what was merged, what was already present, and a per-record-type breakdown, and copy or share it.
+- Re-running a sync writes no duplicates.
+
+### Watch Sync
+
+- Pair a Garmin watch and copy the activity, sleep, and wellness files it recorded, over Bluetooth only.
+- Register a WearOS or other recognized smartwatch; its data reaches the app through Health Connect.
+- Write watch-recorded activities to Health Connect as exercise sessions with routes and series.
+- Write watch sleep sessions and stages, heart rate, resting heart rate, heart rate variability, respiratory rate, VO2 max, basal metabolic rate, and intraday steps, distance, and active calories to Health Connect.
+- Store watch-only measurements locally where Health Connect has no record type for them.
+- Re-syncing the same day writes no duplicates.
+- Forward phone notifications to a paired watch, after an in-app disclosure and Android's notification access.
+- Silence individual apps so their notifications do not reach the watch.
+- Dismiss, reply to, and act on a forwarded notification from the watch.
+- Browse and change the watch's own settings tree and alarms, read live from the watch.
+- Make the watch alert so it can be found, and stop the alert.
+- Rename, disable, or remove a paired watch.
+- Sync is always user-initiated; there is no background or scheduled watch sync.
 
 ### View-Only Or External-Only Data
 
@@ -370,7 +400,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 - Change language: system default, English, Spanish, German, or Italian.
 - Change unit system: metric or imperial.
-- Change theme: system, light, dark, or AMOLED.
+- Change theme: system, light, dark, or AMOLED, with optional dynamic color.
+- Change chart aggregation: raw samples, or an average line with a min/max band per time bucket.
 
 ### Activity Settings
 
@@ -384,10 +415,22 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Use Health Connect calorie totals only.
 - Or allow OpenVitals to calculate total calories from active calories plus BMR when Health Connect totals are missing.
 
-### Sleep Settings
+### Sleep And Recovery Settings
 
-- Change sleep range mode.
-- Supported sleep range modes include rolling 24 hours, noon boundary, and evening 18:00 boundary.
+- Set the evening hour a night starts and the morning hour it ends. Sleep outside that window counts as a daytime nap.
+- Set the high heart-rate alert threshold in beats per minute.
+- Set the low heart-rate alert threshold in beats per minute.
+- Adjust Body Energy calibration and reset the tuning learned from a watch.
+
+### Body Profile Settings
+
+- Set birth year.
+- Set weight, in the selected unit system.
+- Set height.
+- Set resting heart rate and maximum heart rate, which define the heart zones when manual zones are off.
+- See when weight or height comes from a recorded measurement rather than a typed value.
+- Have a changed weight or height saved as a real body measurement, so one number serves BMI, FFMI context, Body Energy, and caffeine estimates.
+- Set the metabolism factors that change how quickly caffeine is cleared. All are optional, and leaving them alone uses population averages.
 
 ### Cycle Tracking Settings
 
@@ -399,9 +442,26 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Open Apple Health import.
 - Grant import permissions.
 - Select Apple Health export files.
-- Import one GPX, KML, KMZ, or FIT activity file for review before saving.
-- Bulk import multiple GPX, KML, or KMZ route files directly into Health Connect.
+- Import one GPX, KML, KMZ, TCX, or FIT activity file for review before saving.
+- Bulk import multiple route files directly into Health Connect.
+- Open the CSV importer and map a CSV file's columns to body measurements and vitals.
 - Monitor import progress and read import reports.
+
+### Watch Settings
+
+- Pair a watch, and grant the nearby-device permission it needs.
+- Optionally allow Android to keep OpenVitals running while the watch is nearby, so a long sync is not interrupted.
+- Sync a paired watch, and open its watch-only data screen.
+- Turn notification forwarding on or off, and choose which apps are silenced.
+- Open the watch's own settings tree and its alarms.
+- Find a paired watch.
+- Rename a watch, switch it off without unpairing, or remove it.
+
+### Sync With Another Phone Settings
+
+- Open the phone-to-phone sync wizard.
+- Choose the host or guest role, the time range, and the data categories to sync.
+- Copy or share the sync report.
 
 ### Permission Settings
 
@@ -409,6 +469,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Grant missing requestable permissions from inside the app.
 - Open Health Connect when permissions must be granted manually.
 - See the all-requestable-permissions-granted state.
+- Turn the Health Connect sync switch on or off.
+- Turn mindfulness integration on or off, where the device's Health Connect version supports it.
 
 ### Dashboard And Manual Entry Customization
 
@@ -420,13 +482,18 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 - Configure daily goals for supported metrics, including hydration, activity metrics, workout minutes, sleep, nutrition metrics, and mindfulness.
 - Configure hydration reminders, reminder interval, and active reminder window.
+- Configure the daily hydration goal with a stepper.
 - Configure caffeine sensitivity, daily limit, and bedtime guidance.
 - Configure mindfulness reminders and reminder time.
 - Store custom hydration container sizes.
+- Log a drink with one tap from a hydration reminder notification, using recently used container sizes.
+- Have reminder schedules restored after a reboot, an app update, a time zone change, or a clock change.
 
 ### Privacy And App Information
 
 - View privacy notes explaining that OpenVitals uses no account, no cloud sync, no analytics, and no ads.
-- View that health data is read from and written to Health Connect on device.
+- View that health data is read from and written to Health Connect on device, apart from watch-only measurements Health Connect has no record type for, which stay in the app's local database.
 - View the read-only dashboard/privacy positioning and health disclaimer.
 - View app version information.
+- The app declares no internet permission. Watch sync, notification forwarding, and phone-to-phone sync all run over Bluetooth.
+- In diagnostics builds, save or share sanitized logs, post a test hydration reminder, and list the apps that contributed heart-rate and sleep records over the last seven days.

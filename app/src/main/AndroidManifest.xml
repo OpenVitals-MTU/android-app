@@ -1,0 +1,568 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Health Connect permissions - Phase 1 -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.WRITE_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP" />
+    <!-- Manual-only Health Connect permission; Android ignores standard request-dialog attempts. -->
+    <uses-permission android:name="android.permission.health.READ_EXERCISE_ROUTES" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE_ROUTE" />
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
+    <uses-permission android:name="android.permission.health.WRITE_ELEVATION_GAINED" />
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED" />
+
+    <!-- Health Connect permissions - Phase 2 -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_WEIGHT" />
+    <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_HEIGHT" />
+    <uses-permission android:name="android.permission.health.WRITE_HEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
+    <uses-permission android:name="android.permission.health.WRITE_BODY_FAT" />
+    <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS" />
+    <uses-permission android:name="android.permission.health.WRITE_LEAN_BODY_MASS" />
+    <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_BASAL_METABOLIC_RATE" />
+    <uses-permission android:name="android.permission.health.READ_BONE_MASS" />
+    <uses-permission android:name="android.permission.health.WRITE_BONE_MASS" />
+    <uses-permission android:name="android.permission.health.READ_BODY_WATER_MASS" />
+    <uses-permission android:name="android.permission.health.WRITE_BODY_WATER_MASS" />
+    <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED" />
+    <uses-permission android:name="android.permission.health.WRITE_FLOORS_CLIMBED" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" />
+    <uses-permission android:name="android.permission.health.READ_WHEELCHAIR_PUSHES" />
+    <uses-permission android:name="android.permission.health.WRITE_WHEELCHAIR_PUSHES" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_SPEED" />
+    <uses-permission android:name="android.permission.health.WRITE_SPEED" />
+    <uses-permission android:name="android.permission.health.READ_POWER" />
+    <uses-permission android:name="android.permission.health.WRITE_POWER" />
+    <uses-permission android:name="android.permission.health.READ_STEPS_CADENCE" />
+    <uses-permission android:name="android.permission.health.WRITE_STEPS_CADENCE" />
+    <uses-permission android:name="android.permission.health.READ_CYCLING_PEDALING_CADENCE" />
+    <uses-permission android:name="android.permission.health.WRITE_CYCLING_PEDALING_CADENCE" />
+    <uses-permission android:name="android.permission.health.READ_PLANNED_EXERCISE" />
+    <uses-permission android:name="android.permission.health.WRITE_PLANNED_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_HYDRATION" />
+    <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
+    <uses-permission android:name="android.permission.health.READ_NUTRITION" />
+    <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
+    <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
+    <uses-permission android:name="android.permission.health.WRITE_MINDFULNESS" />
+
+    <!-- Health Connect permissions - Phase 3 (requested from Vitals) -->
+    <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE" />
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_PRESSURE" />
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.WRITE_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_RESPIRATORY_RATE" />
+    <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.WRITE_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_VO2_MAX" />
+    <uses-permission android:name="android.permission.health.WRITE_VO2_MAX" />
+    <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE" />
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE" />
+    <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
+
+    <!-- Health Connect permissions - Phase 4 (cycle tracking opt-in) -->
+    <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
+    <uses-permission android:name="android.permission.health.WRITE_MENSTRUATION" />
+    <uses-permission android:name="android.permission.health.READ_OVULATION_TEST" />
+    <uses-permission android:name="android.permission.health.WRITE_OVULATION_TEST" />
+    <uses-permission android:name="android.permission.health.READ_CERVICAL_MUCUS" />
+    <uses-permission android:name="android.permission.health.WRITE_CERVICAL_MUCUS" />
+    <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.WRITE_BASAL_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_INTERMENSTRUAL_BLEEDING" />
+    <uses-permission android:name="android.permission.health.WRITE_INTERMENSTRUAL_BLEEDING" />
+    <uses-permission android:name="android.permission.health.READ_SEXUAL_ACTIVITY" />
+    <uses-permission android:name="android.permission.health.WRITE_SEXUAL_ACTIVITY" />
+
+    <!-- Health Connect permissions - optional data access modes -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+
+    <!-- Live activity recording permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!--
+        Phone-to-phone Health Connect sync (features/devicesync) reuses
+        BLUETOOTH_SCAN + BLUETOOTH_CONNECT above and additionally needs
+        BLUETOOTH_ADVERTISE (API 31+) for ACTION_REQUEST_DISCOVERABLE, so the
+        other phone can find this one. RFCOMM (Bluetooth Classic) is used
+        deliberately over Wi-Fi: any TCP/UDP socket on Android requires the
+        INTERNET permission, which this app never declares (see the offline-only
+        block below). Bluetooth keeps the transfer peer-to-peer with no network.
+    -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADVERTISE"
+        tools:targetApi="s" />
+    <!--
+        Garmin watch onboarding (devices/core/pairing/CompanionDevicePairing.kt).
+        The companion association is what lets the OS keep this app's process
+        alive while the watch is in range, so a FIT-file sync that runs for
+        minutes is not killed halfway through. Both are install-time grants with
+        no runtime prompt of their own — the user's consent IS the system
+        "Allow OpenVitals to access <watch>?" dialog. Declining it is supported:
+        the watch is bonded and syncs regardless, just without the priority
+        boost.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+    <!--
+        Required by start/stopObservingDevicePresence, which is what actually
+        makes the OS bind OpenVitalsCompanionDeviceService when the watch comes
+        into range. Without it those calls throw SecurityException and the
+        association exists but buys nothing.
+
+        Deliberately NOT declared: REQUEST_COMPANION_USE_DATA_IN_BACKGROUND. It
+        governs background NETWORK use, and this app ships no INTERNET
+        permission at all, so asking for it would be meaningless.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!--
+        The recording cues buzz: the rest bell, and the guided heart-rate
+        recovery transitions. Without this the vibrate call is dropped silently,
+        so a cue meant to be felt while the phone is in a pocket never arrives
+        and nothing reports it. Install-time permission, no prompt.
+    -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- OpenVitals is offline-only. Do not inherit network permissions from dependencies. -->
+    <uses-permission
+        android:name="android.permission.INTERNET"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_WIFI_STATE"
+        tools:node="remove" />
+    <uses-feature
+        android:name="android.hardware.wifi"
+        tools:node="remove" />
+
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.sensor.accelerometer"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.sensor.proximity"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.sensor.stepdetector"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <!--
+        CompanionDeviceManager (Garmin watch onboarding). NOT optional
+        boilerplate: without this declaration `CompanionDeviceManager.associate`
+        throws "Must declare uses-feature android.software.companion_device_setup
+        in manifest to use this API" from the system service, so the association
+        can never be offered. `required="false"` keeps the app installable on
+        devices that lack companion support, where onboarding degrades to a
+        plain bond that syncs fine without the background priority boost.
+    -->
+    <uses-feature
+        android:name="android.software.companion_device_setup"
+        android:required="false" />
+
+    <!-- Query for Health Connect package (needed on Android 11+) -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+        <package android:name="com.android.vending" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+        <intent>
+            <action android:name="android.health.connect.action.MANAGE_HEALTH_PERMISSIONS" />
+        </intent>
+        <intent>
+            <action android:name="android.health.connect.action.HEALTH_HOME_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="androidx.health.ACTION_HEALTH_CONNECT_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.health.connect.action.MANAGE_HEALTH_DATA" />
+        </intent>
+        <intent>
+            <action android:name="androidx.health.ACTION_MANAGE_HEALTH_DATA" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+        <!--
+            Launcher apps, for the watch-notification blocklist picker and for
+            resolving a posting app's display name
+            (devices/notifications/OpenVitalsNotificationListenerService).
+
+            Deliberately NOT `QUERY_ALL_PACKAGES`: that one is a Play-RESTRICTED
+            permission, and its mere presence blocks upload unless a declaration
+            is filed and accepted. A MAIN/LAUNCHER query is unrestricted and
+            covers every app a user could sensibly want to silence.
+        -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".OpenVitalsApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.OpenVitals">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.OpenVitals">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/gpx" />
+                <data android:mimeType="application/gpx+xml" />
+                <data android:mimeType="application/vnd.google-earth.kml+xml" />
+                <data android:mimeType="application/vnd.google-earth.kmz" />
+                <data android:mimeType="application/vnd.google-earth.kmz+xml" />
+                <data android:mimeType="application/vnd.ant.fit" />
+                <data android:mimeType="application/vnd.garmin.fit" />
+                <data android:mimeType="application/fit" />
+                <data android:mimeType="application/x-fit" />
+                <data android:mimeType="application/vnd.garmin.tcx+xml" />
+                <data android:mimeType="application/tcx+xml" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern="/.*\\.gpx" />
+                <data android:pathPattern="/.*\\.GPX" />
+                <data android:pathPattern="/.*\\.kml" />
+                <data android:pathPattern="/.*\\.KML" />
+                <data android:pathPattern="/.*\\.kmz" />
+                <data android:pathPattern="/.*\\.KMZ" />
+                <data android:pathPattern="/.*\\.fit" />
+                <data android:pathPattern="/.*\\.FIT" />
+                <data android:pathPattern="/.*\\.tcx" />
+                <data android:pathPattern="/.*\\.TCX" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="application/gpx" />
+                <data android:mimeType="application/gpx+xml" />
+                <data android:mimeType="application/vnd.google-earth.kml+xml" />
+                <data android:mimeType="application/vnd.google-earth.kmz" />
+                <data android:mimeType="application/vnd.google-earth.kmz+xml" />
+                <data android:mimeType="application/vnd.ant.fit" />
+                <data android:mimeType="application/vnd.garmin.fit" />
+                <data android:mimeType="application/fit" />
+                <data android:mimeType="application/x-fit" />
+                <data android:mimeType="application/vnd.garmin.tcx+xml" />
+                <data android:mimeType="application/tcx+xml" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".core.diagnostics.CrashReportEmailActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.OpenVitals">
+            <intent-filter>
+                <action android:name="android.intent.action.APP_ERROR" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".PermissionsRationaleActivity"
+            android:exported="true"
+            android:theme="@style/Theme.OpenVitals">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".features.homewidgets.HomeMetricWidgetConfigurationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.OpenVitals">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".features.homewidgets.HomeQuickBeverageWidgetConfigurationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.OpenVitals">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".features.manualentry.activity.recording.ActivityRecordingService"
+            android:exported="false"
+            android:foregroundServiceType="location|health|connectedDevice" />
+
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
+        <!-- Inert keep-alive for a phone-to-phone sync transfer; the transfer
+             itself runs in-process (see DeviceSyncForegroundService). -->
+        <service
+            android:name=".features.devicesync.DeviceSyncForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <!-- Bound by the OS while an associated Garmin watch is in range. It
+             runs no logic of its own — the BINDING is the point, because it
+             elevates this process's priority so a multi-minute BLE file sync
+             is not killed by the low-memory killer. `exported` and the
+             BIND_COMPANION_DEVICE_SERVICE permission are both required by the
+             platform contract: the system alone may bind it. API 31+; below
+             that the OS simply never binds it. -->
+        <service
+            android:name=".devices.core.pairing.OpenVitalsCompanionDeviceService"
+            android:exported="true"
+            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE"
+            tools:targetApi="s">
+            <intent-filter>
+                <action android:name="android.companion.CompanionDeviceService" />
+            </intent-filter>
+        </service>
+
+        <!--
+            devices/notifications: reads the phone's notifications so they can
+            be mirrored to a paired Garmin watch.
+
+            `exported="true"` and the BIND_NOTIFICATION_LISTENER_SERVICE
+            permission are both required by the platform contract — the system
+            alone may bind this, and the permission is a SIGNATURE permission
+            held by the system, so it is declared here rather than requested
+            with <uses-permission>. There is no runtime prompt: the user grants
+            notification access from a system settings screen, and the feature
+            stays dormant until they do.
+
+            What it reads never leaves the phone by any route but the watch:
+            the content is held in a bounded in-memory buffer, written to no
+            file and no database, and the manifest removes INTERNET outright
+            (see the offline-only block above).
+        -->
+        <service
+            android:name=".devices.notifications.OpenVitalsNotificationListenerService"
+            android:exported="true"
+            android:label="@string/notification_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".features.hydration.reminders.HydrationReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".features.hydration.reminders.HydrationQuickAddReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".features.hydration.reminders.HydrationReminderBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".features.mindfulness.reminders.MindfulnessReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".features.mindfulness.reminders.MindfulnessReminderBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeMetricWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_metric_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeQuickBeverageWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_quick_beverage_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeQuickBeverageOneTapWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_quick_beverage_one_tap_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeDailyReadinessWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_daily_readiness_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeBodyEnergyWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_body_energy_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeTodayVitalsWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_today_vitals_widget_info" />
+        </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <activity-alias
+            android:name=".ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".PermissionsRationaleActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity
+            android:name=".HealthConnectOnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.OpenVitals" />
+
+        <activity-alias
+            android:name=".OnboardingActivity"
+            android:exported="true"
+            android:targetActivity=".HealthConnectOnboardingActivity"
+            android:permission="com.google.android.apps.healthdata.permission.START_ONBOARDING">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_ONBOARDING" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".UAndAboveOnboardingActivity"
+            android:exported="true"
+            android:targetActivity=".HealthConnectOnboardingActivity"
+            android:permission="android.permission.health.START_ONBOARDING">
+            <intent-filter>
+                <action android:name="android.health.connect.action.SHOW_ONBOARDING" />
+            </intent-filter>
+        </activity-alias>
+    </application>
+
+</manifest>

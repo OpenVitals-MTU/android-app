@@ -2,46 +2,35 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/imports/applehealth/`, `lib/features/settings/presentation/cards/apple_health_import_card.dart`, `lib/data/repository/contract/import_write_repository.dart` (+ `impl/import_write_repository_impl.dart` — the shared bulk-write boundary, not Apple-specific).
-> **Navigation:** `/settings/data_import` (`SettingsSection.dataImport`).
+> **Implementation:** `features/imports/applehealth`.
+> **Navigation:** `Screen.SettingsDataImport`, settings section `DATA_IMPORT`.
 > **Related:** [Feature map](feature-map.md), [Settings and preferences](settings-and-preferences.md), [Permissions](../app/permissions.md).
 
 OpenVitals can analyze supported records from Apple Health exports, let the user choose which categories to import, and then write the selected Health Connect-compatible records with duplicate checks, route handling, and a downloadable full report.
-
-## How to use it
-
-1. **Export from Apple Health** on your iPhone (Health app › your profile › **Export All Health Data**) to get an `export.zip`, and copy it to your Android device.
-2. In OpenVitals, go to **Settings › Data Importers** and open the **Apple Health Importer** card. Grant the import (write) permissions if the card shows some are missing.
-3. Tap **Analyze Apple Health export** and pick your `export.xml` or `export.zip`. The analyze pass **only scans** — nothing is written yet — and reports how many compatible records it found.
-4. Review the **per-category checklist** (Workouts, Activity, Heart, Sleep, Body, Vitals, Nutrition, Hydration, Mindfulness, Cycle), all pre-selected with counts. Untick anything you don't want.
-5. Tap **Import selected categories**. The import runs as a background service, so **you can leave the Settings screen** and it keeps going (an ongoing notification shows progress). It can't run while a GPS recording is active, since both use the one foreground service.
-6. When it finishes, read the counters (**Imported / Duplicates / Not selected / Unsupported / Skipped / Failed**) and, if you need to troubleshoot, use **Copy report**, **Download full report**, or **Share report** to send it to another app as an attachment.
-
-Tips: prefer importing only the categories you actually want — on a multi-gigabyte export, a tight selection is much faster and lighter. If the import is interrupted, re-pick the **same** export with the **same** categories and it resumes from the last saved batch instead of redoing everything.
 
 ## Input Files
 
 The import starts from Settings and accepts Apple Health `export.xml` or `export.zip` files. Zipped exports may also contain Apple workout route files under `workout-routes/*.gpx`; these are matched to `WorkoutRoute` file references in `export.xml`.
 
-Large exports run as user-started background work so the import can continue after leaving the Settings screen. The picked file is first staged into app-private storage with a verified byte count (`apple_health_import_staging_store.dart`); nothing downstream ever holds the export as a byte list.
-
-The background mechanism is a **foreground service** (`flutter_foreground_task`), driven by `apple_health_import_task_handler.dart`, not a WorkManager worker. That has one user-visible consequence the Kotlin app did not have: the app declares exactly one foreground service, so an Apple Health import **cannot start while a GPS activity recording is running** and is refused with an explicit message (`AppleHealthImportLaunch.serviceBusy` in `apple_health_import_foreground_controller.dart`). Where no foreground service exists (tests, desktop, a missing plugin) the import falls back to running in-process through the same job function the service isolate runs.
+Large exports run as user-started background work so the import can continue after leaving the Settings screen.
 
 ## Analyze And Import Flow
 
-The app consumes the export as a stream of XML events (`package:xml`'s `parseEvents`, in `apple_health_import_parser.dart`) rather than materializing a DOM. A leading `<!DOCTYPE ...>` declaration is stripped before parsing, so Apple export doctypes never force entity or grammar resolution (`apple_health_import_xml_support.dart`), and Apple date strings keep their timezone offsets when records are mapped to Health Connect. A zipped export is read **sequentially** from its ZIP local file headers, so an archive whose tail is truncated is still usable: `export.xml` is extracted to a temp file, and damage inside a later `workout-routes/*.gpx` entry costs only the routes after it.
+The app scans the export with a streaming SAX parser rather than loading the whole XML document into memory. External DTD/entity loading is disabled so Apple export doctypes do not force network or grammar resolution, and Apple date strings keep their timezone offsets when records are mapped to Health Connect.
 
-The first pass is analysis-only. It streams the selected export, maps Apple types to import categories, and shows detected import categories such as workouts and routes, activity metrics, heart, sleep, body, vitals, nutrition, hydration, mindfulness, and cycle tracking. Nothing is written to Health Connect during this analysis pass, and the analyzer does not parse GPX route geometry or construct Health Connect records just to build the checkbox menu: it runs with `parseRecordDetails: false` and `parseRouteFiles: false`, so it skips timestamps, metadata and numeric values and only needs each record's Apple type.
+The first pass is analysis-only. Before decompression, OpenVitals copies the compressed export atomically into app-private storage, flushes it to disk, and verifies the copied byte count against the document provider's advertised size when one is available. Analysis then reads that stable local copy, and a successful copy is reused by the background import instead of reading the provider again. A short provider copy fails before multi-gigabyte XML inflation begins; any analysis failure clears the staged file so retrying cannot reuse it.
 
-After analysis, the user can select or unselect categories with checkboxes. The import pass then re-parses the same staged export, parses GPX route geometry when route files are present (and skips the route entries entirely when Workouts is deselected), and writes only converted records whose Health Connect target category is selected. A known record type whose category is *not* selected is never materialized at all — which matters here, because this port buffers the parsed export in memory before converting it, so on a multi-gigabyte heart-rate export with only Body selected that filter is the difference between completing and running out of memory. The export **file** is never held as bytes; the parsed record list is.
+The analyzer streams the staged export, maps Apple types to import categories, and shows detected import categories such as workouts and routes, activity metrics, heart, sleep, body, vitals, nutrition, hydration, mindfulness, and cycle tracking. Nothing is written to Health Connect during this pass, and the analyzer does not parse GPX route geometry or construct Health Connect records just to build the checkbox menu. Analysis only needs each record's Apple type, so it skips parsing timestamps, metadata, and numeric values. It streams `export.xml` directly from the compressed local copy without extracting a multi-gigabyte temporary XML file, keeping memory and storage use bounded by the compressed export plus streaming buffers.
+
+After analysis, the user can select or unselect categories with checkboxes. The import pass then re-parses the same export and writes only converted records whose Health Connect target category is selected. Known unselected record types are counted directly at the SAX boundary using a shared lightweight skip marker: the importer does not parse their dates and values, allocate metadata maps, build conversion objects, or construct Health Connect records. Distance and active-energy samples are the narrow exception when selected workouts need them for overlap protection. Workout GPX entries are parsed only when **Workouts and routes** is selected; otherwise the importer streams `export.xml` and stops reading the ZIP as soon as that entry is complete. In Apple's normal export ordering, where workout routes follow `export.xml`, later unselected damaged routes therefore cannot fail a Sleep, Body, Vitals, Nutrition, Hydration, or Mindfulness import. A nonstandard archive that puts entries before `export.xml` still has to be traversed sequentially to locate it. This keeps allocation and memory pressure proportional to selected data even though every XML element must still be traversed.
+
+If a ZIP ends unexpectedly while the full import is reading a `workout-routes/*.gpx` entry, OpenVitals can continue only when `export.xml` was already copied intact. It imports the health records and any workout routes parsed before the damaged entry, marks workout routes as incomplete in the result, and records a `route_archive_truncated` diagnostic in the report. Workout sessions whose referenced GPX files were unavailable are imported without route geometry and listed under **Activities Requiring Manual Route Import** with their Apple activity type, time range, and missing file path so the user can identify them for manual recovery. The damaged route and remaining ZIP entries are unavailable. Damage before `export.xml` is complete still fails the import rather than accepting partial health data.
 
 The importer requests required Health Connect write permissions before writing accepted records into Health Connect. Large exports are processed with targeted lookups and time-window chunking to reduce memory pressure. Progress and result counts are shown while the import runs.
 
-Import progress is split into explicit stages: scanning the export, converting records, checking duplicates, writing records, and building the report. During the import pass, the determinate percentage is based on the compatible records in the categories the user selected, not the full export. The downloadable report logs start and finish entries for these stages, including batch counts where available, so long-running imports can show whether time is being spent parsing, deduplicating, writing to Health Connect, or preparing diagnostics.
+Import progress is split into explicit stages: scanning the export, converting records, checking duplicates, writing records, and building the report. During the import pass, the determinate percentage uses raw elements scanned against the total measured during analysis, so long stretches of unselected records still advance visibly. Selected-record preparation and imported counts remain visible alongside it. The worker adds periodic progress heartbeats to the downloadable report, and the report logs start and finish entries for each stage, including batch counts where available, so a slow scan can be distinguished from a stalled worker.
 
-The import pipeline is **sequential**, not a producer/consumer pipeline: the export is parsed and converted in one pass, and the converted records are then deduplicated and written in 300-record batches, one batch at a time (`apple_health_import_service.dart`). Existing-record duplicate lookups are chunked by time window per record type to keep each Health Connect query bounded. (The Kotlin app overlapped parse/convert with the write coroutine; this port deliberately does not, and the file says so.)
-
-Every successfully written batch writes a **checkpoint** (`apple_health_import_checkpoint_store.dart`). An import that is killed part-way can be resumed: the user re-picks the same export, the batch writer drops the records it already committed, and the imported/duplicate/failed and per-type totals carry over. A checkpoint is only reused when both the source key (uri, name, size) and the selected-category set match; anything else starts clean. This matters more than it did in Kotlin, because a foreground service is more likely to be killed than a WorkManager worker.
+Parsing/converting and the Health Connect duplicate-check/write steps run concurrently on a producer/consumer pipeline instead of blocking each other: while one batch of converted records is being checked and written, the parser keeps reading and converting the next batch. Health Connect duplicate lookups for a batch also run as several bounded concurrent queries instead of one at a time. Both changes shorten wall-clock import time without changing which records get imported, deduplicated, or skipped.
 
 Result summaries can include parsed, imported, duplicate, not selected, unsupported, skipped, and failed counts.
 
@@ -63,18 +52,23 @@ For additive metrics where double-counting is common, such as steps, active calo
 
 ## Reports And Diagnostics
 
-After an import finishes, Settings can download a full text report. The report starts with a short summary, then includes selected categories, importer logs, per-category counts, per-type counts, grouped diagnostics, raw diagnostics, and worker logs. If the import fails before completion, the failure report includes the summary, worker logs, and full exception stack trace.
+After an import finishes, Settings can download a full text report. The report starts with a short summary, then includes selected categories, importer logs, per-category counts, per-type counts, grouped diagnostics, raw diagnostics, and worker logs. A recovered truncated workout-route section is shown as a partial-route warning and `route_archive_truncated` diagnostic rather than failing the health-record import. If the import fails before completion, the failure report includes the summary, worker logs, and full exception stack trace.
 
-**Share report**, alongside **Copy report** and **Download full report**, sends the same text out as an attached `.txt` through the system share sheet — a WhatsApp, Signal or Telegram message, an email attachment. It is the practical way to get a report to a maintainer: Copy caps out at what a text field will hold, and Download keeps the file on the phone. Nothing is uploaded by the app itself (it holds no internet permission) — the file is handed to whichever app is picked from the sheet.
-
-These import reports are intentionally not sanitized. They are explicit user exports for troubleshooting and may include file names, timestamps, record values, failure details, and stack traces. That is worth knowing before sharing one: it is a troubleshooting export, not a redacted summary. Grouped diagnostic counts (for example, how many records were skipped for a given reason) are always complete; the raw per-record diagnostic log underneath is capped at 1,000 entries per source so that re-importing an already-imported export cannot grow the report to an unbounded size.
+These import reports are intentionally not sanitized beyond Android WorkManager output limits for inline status. They are explicit user exports for troubleshooting and may include file names, timestamps, record values, failure details, and stack traces. Grouped diagnostic counts (for example, how many records were skipped for a given reason) are always complete; the raw per-record diagnostic log underneath is capped at 1,000 entries per source so that re-importing an already-imported export cannot grow the report to an unbounded size.
 
 ## Local Smoke Test
 
-**There is no local smoke test in the Flutter app.** The retired Kotlin app had a desktop-JVM Gradle smoke test that could run the importer against a real `export.zip` (`-PappleHealthExport=...`) without building or installing the app. It has no Flutter equivalent, and the gap is tracked in [development.md](../engineering/development.md#known-gaps).
+Contributors can run the importer parser/converter on a desktop JVM without building or installing the whole app:
 
-What does cover the importer today is unit tests over synthetic exports in `test/features/imports/applehealth/` — parser, converter, progress, staging, checkpointing, notification and error formatting. Nothing exercises a real multi-gigabyte export off-device.
+```bash
+./gradlew app:testCiUnitTest \
+  --tests tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportSmokeTest \
+  -PappleHealthExport=/path/to/export.zip \
+  --console=plain
+```
+
+The `appleHealthExport` value may point to `export.zip`, `export.xml`, or an unzipped Apple Health export directory. The smoke test parses XML, parses GPX route files when present, converts supported records, and prints counts including parsed records, unsupported entries, skipped records, failures, route-backed sessions, and GPX files.
 
 ## Data Ownership
 
-Imported records are written to Health Connect. OpenVitals does not upload the export to an OpenVitals server and does not provide a bulk rollback after records are written.
+Imported records are written to Health Connect. The compressed export is staged only in app-private local storage for analysis and the pending background import; it is cleared after a successful import or an analysis failure, replaced when another export is staged, and removed with the app's private data. OpenVitals does not upload the export to an OpenVitals server and does not provide a bulk rollback after records are written.

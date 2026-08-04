@@ -32,6 +32,14 @@ OpenVitals writes to Health Connect only from explicit entry, recording, edit/de
 
 Large Apple Health imports run as explicit user-started background work with progress notifications while records are scanned and written.
 
+Records also reach Health Connect from three newer workflows, all user-started and all on device:
+
+- A CSV import from Settings, Data Importers, for point-in-time measurements such as weight, body composition, heart rate, and vitals.
+- A Garmin watch sync, which writes what the watch recorded and keeps watch-only series such as stress and Body Battery in OpenVitals' own local storage instead, because Health Connect has no type for them.
+- A phone-to-phone sync over Bluetooth, which copies records between two phones running OpenVitals.
+
+All three deduplicate, so running them again does not create duplicate records.
+
 ## History And Background Access
 
 Health Connect may limit how much historical data an app can read unless Health history access is granted.
@@ -42,7 +50,7 @@ OpenVitals can request Health history and background-read access where Android a
 
 Workout routes are sensitive Health Connect data. Route previews may require manual approval from Health Connect settings.
 
-OpenVitals can import GPX/KML/KMZ route files from activity entries, import FIT activity, course, or workout files from Settings Data Importers into activity review, import PMTiles or Mapsforge map packs for offline route previews, record GPS routes, open saved routes in map apps, and export routes as GPX or KMZ when route data is available.
+OpenVitals can import GPX/KML/KMZ route files from Settings Data Importers into activity review, bulk import multiple GPX/KML/KMZ files directly, import FIT and TCX activity, course, or workout files from Settings Data Importers into activity review, import PMTiles or Mapsforge map packs for offline route previews, record GPS routes, open saved routes in map apps, and export routes as GPX or KMZ when route data is available.
 
 ## Platform Notes
 

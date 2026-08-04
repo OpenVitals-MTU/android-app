@@ -1,4 +1,0 @@
-enum PermissionGrantMode {
-  requestable,
-  manual,
-}

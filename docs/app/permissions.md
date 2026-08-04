@@ -110,38 +110,52 @@ Declared for explicit save, edit/delete, recording, and supported import workflo
 - `android.permission.ACCESS_FINE_LOCATION`: required for reliable GPS activity recording.
 - `android.permission.ACCESS_COARSE_LOCATION`: declared with location access for Android permission compatibility.
 - `android.permission.ACTIVITY_RECOGNITION`: used where Android requires activity-recognition access for recorded activity workflows.
-- `android.permission.BLUETOOTH_SCAN`: used to find paired Bluetooth LE sensors for experimental activity recording.
-- `android.permission.BLUETOOTH_CONNECT`: used to connect to paired Bluetooth LE sensors for experimental activity recording, and to a paired Garmin watch when syncing what it recorded.
-- `android.permission.FOREGROUND_SERVICE`: used for foreground activity recording and user-started import work.
-- `android.permission.FOREGROUND_SERVICE_DATA_SYNC`: marks long-running Apple Health imports as user-started data sync work.
-- `android.permission.FOREGROUND_SERVICE_LOCATION`: marks the recording service as location-based.
-- `android.permission.FOREGROUND_SERVICE_HEALTH`: marks the recording service as health-related where Android supports it.
-- `android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE`: marks recording with connected Bluetooth LE devices where Android supports it.
 - `android.permission.HIGH_SAMPLING_RATE_SENSORS`: supports higher-rate sensor access for activity recording on devices that expose it.
-- `android.permission.POST_NOTIFICATIONS`: used for activity recording, Apple Health import progress, and reminder notifications.
+- `android.permission.POST_NOTIFICATIONS`: used for activity recording, Apple Health import progress, watch sync progress, and reminder notifications.
 - `android.permission.RECEIVE_BOOT_COMPLETED`: used to reschedule reminders after reboot or app update.
+
+## Bluetooth Permissions
+
+OpenVitals uses Bluetooth for three separate things: Bluetooth LE sensors during activity recording, Garmin watches, and phone-to-phone sync. They share the same nearby-device permissions:
+
+- `android.permission.BLUETOOTH_SCAN`: used to find Bluetooth LE sensors, to find a Garmin watch during pairing, and to discover a nearby phone for sync. It is declared with `neverForLocation`, so OpenVitals does not derive location from Bluetooth scan results.
+- `android.permission.BLUETOOTH_CONNECT`: used to connect to a Bluetooth LE sensor, to talk to a paired watch, and to open the sync connection to another phone.
+- `android.permission.BLUETOOTH_ADVERTISE`: used only by phone-to-phone sync on Android 12 and newer, so this phone can be made discoverable while the other phone looks for it.
+
+Nearby-device Bluetooth permissions never add internet access. Phone-to-phone sync uses Bluetooth Classic (RFCOMM) rather than Wi-Fi precisely because any Wi-Fi or TCP socket on Android would require the `INTERNET` permission, which OpenVitals does not declare.
 
 ## Companion Device Permissions
 
-Used only for [Garmin watch sync](../features/garmin-watch-sync.md). These are install-time grants with no runtime prompt of their own — the consent is the system **"Allow OpenVitals to access your watch?"** dialog shown while pairing. Declining that dialog is supported: the watch still pairs and still syncs, without the background priority described below.
+Garmin watch pairing uses Android's companion device manager. The association is what lets Android keep OpenVitals alive while the watch is in range, so a file sync that takes minutes is not killed halfway through:
 
-- `android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND`: lets Android keep the app's process alive while the watch is nearby, so a file sync that runs for minutes is not killed halfway through.
-- `android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE`: lets Android tell the app when the watch comes into range, which is what triggers the priority boost above.
-- `android.software.companion_device_setup` (a *feature* declaration, not a permission, and marked not required): without it Android refuses the association outright. Marked optional so the app still installs on devices with no companion support, where watch pairing falls back to a plain Bluetooth bond that syncs fine.
+- `android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND`
+- `android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE`
 
-`REQUEST_COMPANION_USE_DATA_IN_BACKGROUND` is deliberately **not** declared: it governs background network use, and this app has no network permission at all.
+Neither shows a permission prompt of its own. The consent is the system dialog that asks whether OpenVitals may access the selected watch. Declining it is supported: the watch is still bonded and still syncs, only without the background priority boost.
+
+The manifest also declares the `android.software.companion_device_setup` feature as not required, so the app stays installable on devices without companion support. `android.permission.REQUEST_COMPANION_USE_DATA_IN_BACKGROUND` is deliberately not declared, because it governs background network use and OpenVitals has no network access at all.
+
+The app declares `.devices.core.pairing.OpenVitalsCompanionDeviceService`, which Android binds while an associated watch is in range. It runs no logic of its own; the binding exists only to raise the app's process priority during a sync.
 
 ## Notification Access
 
-Used only for [Garmin watch notifications](../features/watch-notifications.md), and only after you turn the feature on.
+Notification access is optional and used for exactly one thing: forwarding phone notifications to a paired Garmin watch.
 
-- `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE`: declared on the `OpenVitalsNotificationListenerService` component, not requested with `<uses-permission>`. It is a **signature** permission held by the system — the platform contract requires the service to declare it so that only the system may bind it. There is no runtime prompt: notification access is granted by you on Android's own **Notification access** settings screen, and OpenVitals cannot request it any other way.
+- The app declares `.devices.notifications.OpenVitalsNotificationListenerService`, protected by the system-only `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE`.
+- There is no runtime prompt. Android grants notification access from its own settings screen, and OpenVitals shows a prominent disclosure before sending you there.
+- The feature stays dormant until the user grants access, and it can be turned off in OpenVitals or revoked in Android settings at any time.
+- Notification content is read on the device, held in a bounded in-memory buffer, and sent only to the paired watch over Bluetooth. It is not written to a file or a database, and the app has no internet permission.
+- Settings, Watches, Notifications includes a per-app list so individual apps can be stopped from reaching the watch.
 
-The feature is off by default, and the app shows you what will be read and asks you to confirm before that settings screen is opened. Everything read is processed on the device and sent only to the paired watch over Bluetooth; see [Privacy](privacy.md).
+## Foreground Service Permissions
 
-`<queries>` with a `MAIN`/`LAUNCHER` intent is declared so the app can list installed apps for the "Apps to silence" picker and resolve a notification's app name. `QUERY_ALL_PACKAGES` is deliberately **not** declared — it is a Play-restricted permission, and the launcher-intent query is sufficient.
+- `android.permission.FOREGROUND_SERVICE`: base permission for foreground work.
+- `android.permission.FOREGROUND_SERVICE_LOCATION`: marks the recording service as location-based.
+- `android.permission.FOREGROUND_SERVICE_HEALTH`: marks the recording service as health-related where Android supports it.
+- `android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE`: used by activity recording with connected Bluetooth LE sensors and by the keep-alive service that runs during a phone-to-phone sync transfer.
+- `android.permission.FOREGROUND_SERVICE_DATA_SYNC`: marks long-running Apple Health imports as user-started data sync work.
 
-`RECEIVE_SMS` and `SEND_SMS` are deliberately **not** declared. Replying to an SMS from the watch would require both (a stock SMS app exposes no reply action that can be triggered remotely), and that is out of scope — see the feature doc's Known Limitations.
+OpenVitals treats the foreground slot as effectively single. Activity recording, an Apple Health import, and a phone-to-phone sync contend for it, so the app does not run them at the same time.
 
 ## Removed Network Permissions
 
@@ -151,10 +165,14 @@ The manifest explicitly removes inherited network permissions from dependencies:
 - `android.permission.ACCESS_NETWORK_STATE`
 - `android.permission.ACCESS_WIFI_STATE`
 
-These removals preserve the local app's internet-free boundary.
+The `android.hardware.wifi` feature is removed the same way.
+
+These removals preserve the local app's internet-free boundary, and every device feature added since is built to keep it: watch sync and notification forwarding run over Bluetooth to the watch, and phone-to-phone sync runs over Bluetooth Classic.
+
+The app also queries the launcher for installed apps, which is what the watch-notification per-app list uses. It deliberately does not request `QUERY_ALL_PACKAGES`.
 
 ## File And Route Intents
 
-OpenVitals can receive GPX, KML, KMZ, and FIT files through Android open/share intents so imported activities can be reviewed and saved to Health Connect. It can also import PMTiles and Mapsforge map packs from Settings for offline activity maps.
+OpenVitals can receive GPX, KML, KMZ, FIT, and TCX files through Android open/share intents so imported activities can be reviewed and saved to Health Connect. It can also import PMTiles and Mapsforge map packs from Settings for offline activity maps.
 
 The app uses a local file provider to export route files, such as GPX or KMZ, to other apps.

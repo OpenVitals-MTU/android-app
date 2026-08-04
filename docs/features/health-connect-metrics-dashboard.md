@@ -2,26 +2,11 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/dashboard/`, `lib/data/repository/dashboard/dashboard_data_loader.dart`, `lib/data/repository/contract/health_repository.dart`.
-> **Navigation:** `/dashboard`; tiles link to `/metric/:metricId` and to the aggregate routes (`/body`, `/heart_vitals`, `/calories`, `/nutrition`, `/activity/cardio_load`, `/daily_readiness/body_energy/:date`). Metric route ids are `DashboardMetricId`; the read set is `DashboardMetric`.
+> **Implementation:** `features/dashboard`, `data/repository/HealthRepository.kt`.
+> **Navigation:** `Screen.Dashboard`, `Screen.Metric`, dashboard widgets in `DashboardWidgetId`.
 > **Related:** [Feature map](feature-map.md), [Metric detail customization](metric-detail-customization.md), [Permissions](../app/permissions.md).
 
 OpenVitals treats Health Connect as the source of truth. The dashboard reads granted Health Connect records, groups them into scan-friendly widgets, and links each widget to a focused detail screen.
-
-## How to use it
-
-The dashboard (`Summary`) is the app's home screen — a single **selected-day** view. There is no bottom navigation; everything is reached from here.
-
-1. **Pick a day.** Use the day navigator at the top: tap the left/right chevrons (**Previous day** / **Next day**), swipe the date left or right, or tap the date (or the **calendar** button) to jump to any day. **Next day** is disabled once you are on today.
-2. **Read the summary.** Two hero **rings** (Steps and Weekly cardio load) sit above a paged grid of **metric tiles**. Swipe the tile grid left/right to move between pages (the dots show your position).
-3. **Open a detail screen.** Tap any ring or tile to open its detail, which carries the day you were viewing. Tiles route to the right place automatically — body tiles open the Body overview, heart/vitals tiles open Heart & vitals, calorie tiles open Calories, nutrient tiles open Nutrition, and the cardio ring opens Cardio load.
-4. **Log or record.** Tap **Log** to open the add-entry hub, or **Start workout** to begin activity recording.
-5. **See today's activities.** The **Activities** section lists workouts recorded for the day; tap one to open its detail, or tap the section header to open the full activity list.
-6. **Refresh.** Pull down to re-read Health Connect. If a permission is missing you will see a **"Some permissions are missing"** callout (with a Grant action), or a **"Set up your health data"** card with **Get started** on first run.
-
-To rearrange the dashboard, tap the **pencil (Edit dashboard)** button in the action row — see [Metric detail customization](metric-detail-customization.md).
-
-Tiles with no data for the selected day sink below the ones with some, so what you actually track is in reach without manual reordering. The partition is display-time only: your saved order still decides the sequence within each group, and edit mode shows the true saved order so a drag lands where it visually is. A tile that is merely still loading holds its place rather than jumping down and back up.
 
 ## What It Shows
 

@@ -2,241 +2,211 @@
 
 ## Build Requirements
 
-- Flutter SDK 3.44.x (Dart `^3.12.0`). CI runs `ghcr.io/cirruslabs/flutter:3.44.0` — cirruslabs
-  publishes one image per Flutter release, and 3.44.0 is the newest that exists. A tag it has not
-  built fails the pipeline with `manifest unknown`, so check
-  [the tag list](https://ghcr.io/v2/cirruslabs/flutter/tags/list) before bumping. That image carries
-  Dart 3.12.0, which is why the pubspec constraint is `^3.12.0` and not the 3.12.2 a newer local
-  toolchain happens to ship — raising it would break CI with a version-solve error, not a clear one.
-- Android SDK Platform 37 with SDK Build-Tools 37.0.0 — `compileSdk = 37`, because the
-  Health Connect `connect-client` alpha resolves its record/permission mappings against API 37.
-  Note the package is **`platforms;android-37.0`**, not `android-37` (Android ships
-  minor-versioned platforms now), and `sdkmanager` only *warns* on an unknown package — it
-  exits 0, so a typo here fails much later inside Gradle looking like something else.
+- Android SDK Platform 37.0 with SDK Build-Tools 37.0.0
 - JDK 17
-- **CMake ≥ 3.21 and Ninja.** `vector_map_tiles` 10.x renders tiles on the GPU via
-  `flutter_scene`, whose `flutter_scene_importer` native-assets build hook shells out to CMake.
-  **That hook runs on `flutter test` and `flutter analyze` too, not just builds** — so without
-  CMake *every* Flutter command dies with `Building native assets failed` and a bare
-  `ProcessException: No such file or directory / Command: cmake`, which never names the missing
-  tool. If you use a snap-installed Flutter, its bundled CMake 3.16 shadows the host one and
-  causes exactly this.
-- `minSdk` is 26 (Health Connect); `targetSdk` is 36
+- Gradle wrapper files, including `gradle/wrapper/gradle-wrapper.jar`
 
-Generated code (`*.g.dart`, `*.freezed.dart`, `*.g.kt`, `lib/l10n/app_localizations*.dart`) is **not
-tracked** — `.gitignore` excludes all of it, and every consumer reproduces it:
-
-- `scripts/ci-flutter.sh` runs `build_runner` and `pigeon` once per pipeline step, so `analyze`,
-  `test` and `build` all resolve the generated symbols.
-- The l10n output needs no step anywhere: `generate: true` in `pubspec.yaml` makes Flutter
-  regenerate it on every `pub get` and build.
-
-There is therefore **no staleness gate, and nothing to commit** — the question cannot arise, because
-what CI compiles is what it just generated. What this does mean is that *your* checkout can be stale:
-re-run `build_runner` yourself after touching a model, or `flutter analyze` reports missing members
-in code you did not change.
+The wrapper jar is intentionally tracked. `.gitignore` allows this file even though other jars are ignored.
 
 ## Local Verification
 
-Run the same checks CI runs, before pushing:
+Run the main checks before pushing architecture or feature changes:
 
 ```bash
-flutter analyze lib test
-flutter test
-dart run tool/verify_l10n.dart                  # ARB coverage + placeholder parity
-sh scripts/verify-geolocator-fork.sh --offline  # no Play Services in the vendored fork
+./gradlew verifyCi
 git diff --check
 ```
 
-This mirrors `.woodpecker/test.yml`: `flutter test` is its own `unit-tests` step, and the other four
-are the `app-preflight` step, in that order. `verify_l10n.dart` checks the **ARBs**, not the
-generated Dart — the ARBs are the source of truth, since Weblate edits them directly.
+`verifyCi` is an aggregate defined in the root `build.gradle.kts`:
 
-### Dates in test fixtures
+- `verifyCiUnitTest` runs `:app:testCiUnitTest`.
+- `verifyCiPreflight` runs `verifyTranslations`, `:app:lintCi`, `:app:assembleCi`,
+  and `:app:compileCiAndroidTestKotlin`.
 
-**Derive a test's days from `LocalDate`, never from hour arithmetic on an
-instant.** A day window is a local calendar thing; `now.subtract(Duration(hours:
-26))` is an absolute one, and they differ by the runner's UTC offset — enough to
-put a fixture on the other side of a day boundary, so the same assertion passes
-on a developer machine and fails on CI.
-
-Use `localDayBefore()` / `instantDaysBefore()` from
-`test/support/today_fixtures.dart` for "N days ago", and `earlierToday()` for
-"still today". `test/contract/local_day_fixture_test.dart` fails the build on the
-absolute form, and takes an opt-out comment for the cases that genuinely want it.
-
-Worth knowing that CI runs in **UTC**: a suite that is green locally can still be
-zone-dependent. `TZ=UTC flutter test` reproduces what CI sees, and
-`TZ=Pacific/Kiritimati` (UTC+14) is the far end of the range.
-
-After changing a freezed model, a drift table, or a Riverpod generator annotation:
+Unit tests run against the `ci` build type. There is no debug unit-test variant,
+so the task is `:app:testCiUnitTest`; `:app:testDebugUnitTest` does not exist.
+To run a single test class:
 
 ```bash
-dart run build_runner build
+./gradlew :app:testCiUnitTest --tests 'tech.mmarca.openvitals.SomeTest'
 ```
 
-No `--delete-conflicting-outputs`: build_runner 2.15 deletes conflicting outputs by default and
-dropped the flag from its documented options (`build_runner build --help` no longer lists it).
-Passing it anyway still exits 0 — it is an undocumented no-op, not an error, so an old habit or an
-old script costs nothing. A genuinely unknown flag exits 64.
+`verifyAndroidTest` runs `:app:connectedCiAndroidTest`, but only locally and only
+when `ANDROID_SERIAL` is set; it is disabled in CI.
 
-`pubspec.yaml` carries `dependency_overrides` with a comment explaining each one. They are not
-cruft — `sqlparser` in particular is pinned below 0.44.6 because it made `DartPlaceholder` sealed
-and removed a helper `drift_dev` still calls, which breaks `build_runner` outright. Read the comment
-before removing an override.
+### Translation Gate
 
-## Dependency Injection
+For translation-only changes, the fast local check is:
 
-Riverpod, not Hilt. There is no annotation processor in the app's critical path:
+```bash
+./gradlew verifyTranslations
+```
 
-- Providers live in `lib/di/providers.dart` and `lib/state/app_providers.dart`.
-- Screen state is a `Notifier` + an immutable `*State` (e.g. `lib/features/sleep/application/sleep_view_model.dart`).
-- Route arguments come from go_router (`lib/navigation/app_router.dart`), not `SavedStateHandle`.
-- Tests inject fakes with `ProviderContainer(overrides: [...])` / `overrideWithValue`. That override
-  seam is the reason repositories take their data source as a constructor argument — keep it.
+That task shells out to `scripts/verify-translations.py`, which enforces
+greater-than-70% coverage per locale, placeholder safety, plural shape, and
+`translatable="false"` handling. `verifyCi` includes it, so Weblate pull requests
+must keep locale files more than 70% translated and placeholders intact.
 
-See `docs/engineering/architecture.md` for the layering, and `AGENTS.md` for the invariants that have
-already been broken once.
+Current state: `./gradlew verifyCi` fails on `verifyTranslations` alone, on two
+Weblate-managed files that no source change in this repo caused:
 
-### The AGP 9 Kotlin warning is expected
+```text
+- app/src/main/res/values-es/strings.xml: activity_type_stats_activity_count has extra plural quantity many
+- app/src/main/res/values-gl/strings.xml: translation coverage is 3.8%; must be greater than 70%
+```
 
-The build prints a warning that some plugins still apply the Kotlin Gradle Plugin instead of Flutter's
-Built-in Kotlin. **This is not actionable from here** — it is emitted by third-party plugins, and it is
-not a failure. Do not chase it.
+Both are translation-side, not code-side:
 
-What *is* actionable: adding an Android plugin can break `GeneratedPluginRegistrant` with a
-"cannot find symbol" error that unit tests will never catch. **Always run `flutter build apk --debug`
-after adding a plugin with native Android code.** This is also why `share_plus` is pinned to `^12.x` —
-the 13.x line drags in a `package_info_plus` that breaks the AGP 9 build. The pin has a comment.
+- `values-es` gained a `many` plural quantity that the English base string does
+  not define. It has to be removed on the Weblate side, or the base string has to
+  grow the quantity.
+- `values-gl` is a newly started language that is still far below the 70% gate.
+  Under the shipping policy in [Translations](translations.md) a new locale file
+  is only merged above that threshold, so it either keeps translating or the file
+  is held back.
+
+Do not "fix" these by editing `values-*/strings.xml` by hand; they are owned by
+Weblate. When verifying unrelated work locally, run `./gradlew verifyCiUnitTest`
+plus `:app:lintCi` and `:app:assembleCi` and treat the two lines above as the
+known baseline failure.
+
+For Apple Health importer work, there is also a desktop JVM smoke test that can exercise the Kotlin importer against a real local export without building or installing the app:
+
+```bash
+./gradlew app:testCiUnitTest \
+  --tests tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportSmokeTest \
+  -PappleHealthExport=/path/to/export.zip \
+  --console=plain
+```
+
+`-PappleHealthExport` can point to an Apple Health `export.zip`, `export.xml`, or an unzipped export directory. The test parses XML, parses GPX route files when present, runs supported Health Connect conversion logic, and prints import-shape counts. It is skipped automatically when no export path is provided.
+
+On Windows, use `gradlew.bat`:
+
+```powershell
+.\gradlew.bat verifyCi
+git diff --check
+```
+
+## Hilt And KSP
+
+The local app uses Hilt in the `:app` module:
+
+- `@HiltAndroidApp` on `OpenVitalsApp`
+- `@AndroidEntryPoint` on `MainActivity`
+- `@HiltViewModel` for screen ViewModels
+- `hiltViewModel()` in navigation destinations
+- KSP for Hilt code generation
+
+AGP 9 built-in Kotlin currently requires `android.disallowKotlinSourceSets=false` so KSP generated sources are accepted. Keep this in `gradle.properties` unless the Android Gradle Plugin/KSP behavior changes.
 
 ## CI
 
-Two Woodpecker pipelines, both running `scripts/ci-flutter.sh` (which provisions Android platform 37
-and the Gradle/pub caches, then execs `flutter`).
-
-**`.woodpecker/test.yml`** — on every pull request and every push to `main`: `flutter test`, then
-`flutter analyze`, the translation gate (`tool/verify_l10n.dart`), the F-Droid gate
-(`scripts/verify-geolocator-fork.sh --offline`), and `git diff --check`.
-
-**`.woodpecker/release.yml`** — the release DAG. `resolve-release-context` computes everything ONCE
-(`scripts/ci-release-context.sh`) and writes `.woodpecker/tmp/release-context.env`, which every later
-step sources. This is deliberate: it is what stops the nightly and tag paths from drifting apart.
-
-| Trigger | Builds | Publishes |
-|---|---|---|
-| Woodpecker cron `nightly` (00:00 UTC, default branch) or a manual run | release APK + AAB, version name `X.Y.Z-nightly.<pipeline>`, with `--dart-define=OPENVITALS_DIAGNOSTICS=true` | APK → the mutable Codeberg `nightly` release; AAB → Play **open testing** (API track name `beta`) |
-| A pushed `vX.Y.Z` / `VX.Y.Z` tag | release APK | its own versioned Codeberg **prerelease** |
-| An approved Woodpecker deployment with target `production`, from the tag commit | release AAB | Play **production**, and only then is the Codeberg prerelease flipped to stable |
-
-The nightly release is intentionally **mutable**: each run force-moves the fixed `nightly` tag through
-the Forgejo API and replaces the assets in place, so the download page URL never changes.
-
-APKs ship only `armeabi-v7a` and `arm64-v8a` (`--target-platform android-arm,android-arm64`) to stay
-under Codeberg's asset size limit. The production `applicationId` is used for every published build;
-debug builds carry the `.debug` suffix and install side by side.
-
-**Diagnostics are gated on `kDiagnosticsEnabled`, not `kDebugMode`** (`lib/core/diagnostics/diagnostics_build_config.dart`).
-Nightly is a *release* build, so gating on `kDebugMode` would have shipped it with no diagnostics UI at
-all — the one thing the nightly channel exists for. CI passes the dart-define; a plain release passes
-nothing and the section stays compiled out.
-
-### Version codes are not stored in git
-
-`versionName` and `versionCode` are deliberately detached. The name is human (`1.9.0`,
-`1.9.0-nightly.412`); the code is only a monotonic Android update counter, shared by the nightly and
-release lines.
-
-**The counter's source of truth is the Codeberg release notes.** `scripts/version-code.sh` pages the
-Codeberg API, reads `<!-- OpenVitals-Version-Code: N -->` markers out of every release body, and
-returns `max(marker, floor) + 1` — then CI writes the chosen code back into the new release's notes.
-A production deployment instead *reuses* the marker already published on that `vX.Y.Z` release, so the
-Play AAB carries exactly the code the Codeberg APK had.
-
-Two consequences worth internalising:
-
-- **Publishing from a different Codeberg repo resets the counter**, and Play then rejects every upload
-  as a duplicate. This is the main reason the Flutter app replaces the Kotlin app on the *same* repo.
-- A nightly can consume a code between a `pubspec.yaml` bump and the tag. `scripts/ci-release-context.sh`
-  detects this and fails the tag build with "version code … is stale" rather than colliding on Play.
-
-The nightly job also prunes old versioned Codeberg release pages, keeping the newest nine plus the
-fixed `nightly` page. Git tags are never deleted.
-
-### Secrets
-
-All are Woodpecker repository secrets:
-
-| Secret | Purpose |
-|---|---|
-| `OPENVITALS_RELEASE_KEYSTORE_BASE64` | base64 of the PKCS12 release keystore |
-| `OPENVITALS_RELEASE_STORE_PASSWORD` | keystore password |
-| `OPENVITALS_RELEASE_KEY_ALIAS` | signing key alias |
-| `OPENVITALS_RELEASE_KEY_PASSWORD` | declared, but a `.p12` has one password, so CI overwrites it with the store password |
-| `CODEBERG_RELEASE_API_KEY` | Codeberg token with release create/edit **and repo write** (needed to move `refs/tags/nightly`) |
-| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` | base64 of the Play service-account JSON |
-
-If the Play account may stage edits but not submit them, set
-`OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW=true` and send the release for review by hand in Play
-Console.
-
-The GitHub mirror is configured as a **Codeberg push-mirror on the repository**, not as a pipeline
-step — you will not find it in either YAML.
-
-### Signing, and why a missing secret must fail loudly
-
-`android/app/build.gradle.kts` reads the four `OPENVITALS_RELEASE_*` variables from the environment.
-Nothing is read from `gradle.properties` or `local.properties`, and no keystore is ever committed.
-
-Two details are load-bearing:
-
-- **PKCS12 has a single password**, so the store password is reused as the key password. Remove that
-  and CI fails with the thoroughly misleading "keystore password was incorrect".
-- **There is no debug-key fallback.** With no signing environment the release build comes out
-  *unsigned*. That is intentional: an unsigned artifact is an obvious failure, whereas a debug-signed
-  one looks fine right up until it reaches a real device and cannot update the installed app.
-
-The published app's certificate is the same one the Kotlin app shipped with. A different certificate
-means every existing user gets `INSTALL_FAILED_UPDATE_INCOMPATIBLE` and the update simply will not
-install. Before any release, check the build against the certificate that is actually live:
+Woodpecker uses the Gradle wrapper directly. The test pipeline runs:
 
 ```bash
-apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk
+./gradlew --no-daemon verifyCi
+git diff --check
 ```
 
-It must print exactly:
+Release CI also uses the wrapper for local app test/lint and APK builds. There
+are two Codeberg release outputs:
 
-```
-certificate DN: CN=Manuel Marcatili, OU=OpenVitals, O=mmarca.tech, L=Tallinn, ST=Harjumaa, C=EE
-certificate SHA-256 digest: 0416c0651543e951ef3b6c1ed9beb13833bff3a2be9ddacf492270712861e05d
-```
+- The Woodpecker cron job named `nightly`, or a manually triggered Woodpecker
+  run, builds `:app:assembleNightly` and `:app:assembleDebug`, then publishes
+  `OpenVitals-nightly.apk` and `OpenVitals-nightly-debug.apk` to the fixed
+  Codeberg `nightly` prerelease. The same run builds `:app:bundleNightly` and
+  uploads the signed AAB to the Google Play open testing track, whose Play
+  Developer API track name is `beta`.
+- A pushed `vX.Y.Z` or `VX.Y.Z` tag builds `:app:assembleRelease` and
+  `:app:assembleDebug`, then publishes `OpenVitals-vX.Y.Z.apk` and
+  `OpenVitals-vX.Y.Z-debug.apk` to its own versioned Codeberg prerelease, which
+  can be promoted after validation by an approved Woodpecker deployment to
+  `production`.
 
-That fingerprint is taken from the published `v1.9.0` APK on Codeberg — the last release built from
-the Kotlin sources. If your build prints anything else, **stop**: it is signed with the wrong key and
-cannot update the installed app.
+Nightly and release APKs use the release-style production application ID,
+minification, packaging, and signing model. Published Debug APKs use the
+separate `tech.mmarca.openvitals.debug` application ID and are signed with the
+stable release signing configuration so Codeberg Debug-to-Debug updates keep the
+same certificate across ephemeral runners. Codeberg APK artifacts compress
+bundled native libraries and include only ARM 32/64-bit ABIs (`armeabi-v7a` and
+`arm64-v8a`) so direct-download APKs stay below the forge upload limit.
+
+The nightly release is intentionally mutable: each successful `nightly` cron or
+manual run updates the fixed `nightly` tag and replaces the existing APK and
+checksum assets instead of creating another release page. `versionName` and
+`versionCode` are intentionally detached:
+`versionName` carries the human release name (`1.7.7`, `1.7.7-nightly.335`),
+while `versionCode` is only a monotonic Android update counter. Both nightly and
+versioned releases use the same counter line. CI reads
+`OpenVitals-Version-Code` markers from existing Codeberg release notes, uses
+`max(previous markers, baseVersionCode) + 1` for new release artifacts, and
+stores the chosen code back into the release notes. Production deployments reuse
+the marker from the already published `vX.Y.Z` release so the Play AAB matches
+the Codeberg APK's install order. The nightly release job also prunes old
+versioned Codeberg release pages so only the newest nine remain, while
+preserving the fixed `nightly` release and all Git tags. The approved production
+deployment uploads the signed release AAB to Google Play production and then
+promotes the matching Codeberg prerelease to stable.
+
+Configure the Woodpecker cron named `nightly` to run at `00:00 UTC` on the
+default branch. The cron-triggered release workflow and the manual release
+workflow both build and publish the nightly artifacts directly, then move the
+fixed `nightly` tag to the published commit.
+
+Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
+edit repository releases and has repository write access so CI can move
+`refs/tags/nightly` over HTTPS. Configure the release signing secrets
+`OPENVITALS_RELEASE_KEYSTORE_BASE64`, `OPENVITALS_RELEASE_STORE_PASSWORD`,
+`OPENVITALS_RELEASE_KEY_ALIAS`, and `OPENVITALS_RELEASE_KEY_PASSWORD` so CI can
+produce updateable Debug, nightly, and release APKs. Configure
+`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` with the base64-encoded JSON key for a
+Google Play service account that can release to open testing and production for
+`tech.mmarca.openvitals`. If the account is allowed to stage edits but not send
+them for review, set `OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW=true`; the
+open testing or production release will then need to be sent for review manually
+in Play Console.
+
+After a successful `main` push pipeline, Woodpecker mirrors the checked commit to
+`git@github.com:mmarca-tech/OpenVitals.git`. Configure the Woodpecker secret
+`GITHUB_MIRROR_SSH_KEY` with a private SSH key whose public key is installed as a
+write-enabled deploy key on the GitHub mirror repository.
 
 ## Release Checklist
 
-1. Author the release notes first — they are inputs, not afterthoughts:
-   - `CHANGELOG.md` (the user-facing summary)
-   - `docs/releases/<version>.md` (becomes the annotated tag body, and thence the Codeberg release notes)
-   - `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt` (Play's "What's new").
-     These must be named after the **new** version code, which you can get in advance with
-     `sh scripts/version-code.sh next --floor <current>`.
-2. Update README/docs if navigation, permissions, screenshots, or bundled assets changed.
-3. Run the local verification block above.
-4. `scripts/release.sh <version>` — it bumps `pubspec.yaml` (`version: X.Y.Z+CODE`), sweeps in the files
-   from step 1, commits, annotated-tags, and pushes. It builds and uploads nothing; pushing the tag is
-   what starts the pipeline.
-5. Validate the published prerelease APK on a device — including **installing it over an existing
-   install**, which is the only check that proves the signing certificate still matches.
-6. Press the Woodpecker deployment button with target `production` from the tag commit. That uploads
-   the AAB to Play production and then promotes the Codeberg prerelease to stable.
+For a versioned prerelease:
 
-Do not hand-pick a version code, and do not derive one from `vX.Y.Z` — let `scripts/version-code.sh` do it.
+1. Bump `baseVersionName` in `app/build.gradle.kts`. Let `scripts/release.sh`
+   bump `baseVersionCode` with `scripts/version-code.sh next`; do not derive the
+   code from `vX.Y.Z`.
+2. When preparing a store release, add Play changelog files under
+   `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`.
+3. Add the user-facing release summary to `CHANGELOG.md`.
+4. Update README or docs when the user-facing navigation, permissions, screenshots, or bundled assets change.
+5. Run:
 
-## Known gaps
+```bash
+./gradlew verifyCi
+git diff --check
+```
 
-- The Kotlin app had a desktop JVM smoke test that could run the Apple Health importer against a real
-  `export.zip` without building the app (`-PappleHealthExport`). **There is no Flutter equivalent yet.**
-  The importer is covered by unit tests over synthetic exports
-  (`test/features/imports/applehealth/`), but nothing exercises a real multi-GB export off-device.
+6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag
+   such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag
+   message, and push both the branch and tag. The tag pipeline runs the release
+   checks and publishes the versioned Codeberg prerelease APK.
+7. After validation, use the approved Woodpecker deployment button with target
+   `production` from the version tag commit. The deployment uploads the signed
+   release AAB to Google Play production and then promotes the matching Codeberg
+   prerelease to stable.
+
+For an immediate nightly release, move the fixed `nightly` tag to the desired
+commit and push it. The tag pipeline runs the same release checks, publishes the
+APK to the mutable Codeberg `nightly` prerelease, and uploads the signed AAB to
+Google Play open testing. The scheduled Woodpecker cron performs the same tag
+move automatically at midnight UTC.
+
+Use the exact `versionName` for release notes, changelog references, and tags.
+For a final release, that means file name, `versionName`, and tag such as
+`1.0.0` / `v1.0.0`. Keep the Play `versionCode` unique and increasing, and add
+matching Fastlane changelog files for that exact code when preparing a store
+release.

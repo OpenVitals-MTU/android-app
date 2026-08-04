@@ -1,198 +1,193 @@
 # AGENTS.md
 
-Implementation guide for coding agents working in this repository.
+This file is the implementation guide for future agents working in this repository.
 
-Read this before adding a feature, extending a metric screen, or touching health, l10n, or background code.
+Read this before adding a new feature or extending an existing metric screen.
 
-This app is a 1:1 Flutter port of the Kotlin OpenVitals app, which it REPLACED in place on this same repository (same Play listing, same package `tech.mmarca.openvitals`, same signing key). The Kotlin sources no longer exist in the working tree -- read them from git history: `git show 23c14d0:app/src/main/kotlin/...`. Behaviour parity with the Kotlin source is the default requirement; deviate only with a reason, and write the reason down.
+## Purpose
+
+The app is moving toward a consistent, period-based detail architecture for health metrics.
+
+The goal is:
+
+- dashboard-first navigation
+- feature-first code organization
+- clear separation between data access, feature state, and UI
+- reusable screen scaffolding without forcing all metrics into one generic chart system
 
 ## Source Of Truth
 
+Use these docs together:
+
 - [docs/README.md](docs/README.md): doc index
-- [docs/engineering/architecture.md](docs/engineering/architecture.md): architecture and target direction
-- [docs/engineering/feature-playbook.md](docs/engineering/feature-playbook.md): step-by-step guide for adding a feature
-- [docs/features/feature-map.md](docs/features/feature-map.md): feature to route/screen mapping
-- [docs/engineering/translations.md](docs/engineering/translations.md): ARB, Weblate, and the l10n gate
+- [docs/engineering/architecture.md](docs/engineering/architecture.md): target architecture, package map, and the app-wide cross-cutting rules
+- [docs/engineering/feature-playbook.md](docs/engineering/feature-playbook.md): step-by-step guide for adding a feature, a settings section, a Room entity, or a device integration
+- [docs/engineering/development.md](docs/engineering/development.md): build and verification tasks, including the known translation-gate failure
+- [docs/engineering/test-parity/README.md](docs/engineering/test-parity/README.md): Flutter ↔ Kotlin test parity matrix and outstanding gaps
+- [docs/engineering/analysis/README.md](docs/engineering/analysis/README.md): code analysis (MVVM, Clean Architecture, Compose performance, refactor backlog)
 
 If code and docs disagree, prefer the docs for new work and refactor toward them incrementally.
 
-Caveat while the port completes: the docs under `docs/engineering/` still carry Kotlin-era mechanics in places (Gradle tasks, Hilt, Compose). Their *principles* are binding; their *Kotlin specifics* are stale — the Flutter equivalents are in this file and in `README.md`.
+## Current State
 
-## Golden Path For A New Metric Feature
+The codebase already has aligned period-based detail screens for:
 
-1. Define the feature contract: screen state, user actions, derived display fields.
-2. Make it period-driven: `Day / Week / Month / Year`, a selected anchor date, previous/next navigation, capped at the current period.
-3. Keep the frame reusable, keep the charts specific: reuse `lib/ui/components/metric_detail_scaffold.dart` and `lib/ui/components/period_navigator.dart`; keep metric-specific cards and charts inside the feature directory.
-4. Keep repository APIs query-oriented: pass a `DatePeriod` (`lib/core/period/`) or a query object from `lib/domain/query/`, not another ad hoc `loadX(start, end)` overload.
-5. Register the feature from the dashboard: dashboard card, route in `lib/navigation/app_routes.dart` + `lib/navigation/app_router.dart`, screen title.
-6. Declare what the screen reads: pass `refreshDomains` to `MetricDetailScaffold` (or mix in `RefreshOnSignal` if the screen does not use it). See *Refreshing* below.
-7. Update the docs if the pattern evolves.
+- steps/activity
+- sleep
+- heart
+- activities
+- body
 
-## Layout Rules
+The global Browse feature has been removed. Entries and sessions should be browsable from the relevant dashboard widget/detail screen instead of through a standalone app destination.
 
-Feature code lives under `lib/features/<feature>/`, split into two subdirectories: `application/` (the view-model, its `freezed` state, and — as features migrate — the pure `build<X>Display` functions) and `presentation/` (screens, cards, charts). Feature sub-domains keep their own subdirectory (`reminders/`, `applehealth/`, `maps/`; settings cards live in `presentation/cards/`). See `lib/features/sleep/` or `lib/features/heart/` for the intended shape. `homewidgets/` is the one flat exception — background-isolate glue with no view-model.
+These features already show the intended direction.
 
-Shared code lives in:
+Beyond the metric screens, the app now carries three subsystems that are not metric features and do not follow the period-detail pattern:
 
-- `lib/ui/components/` — reusable shell components (no feature business logic)
-- `lib/ui/charts/`, `lib/ui/theme/` — shared chart and theme primitives
-- `lib/core/period/` — period math and window formatting
-- `lib/core/presentation/` — repository-free formatters and UI models
-- `lib/domain/model/`, `lib/domain/insights/`, `lib/domain/preferences/` — pure models, calculations, preference enums
-- `lib/data/repository/contract/` + `impl/` — the repository boundary
-- `lib/di/providers.dart`, `lib/state/app_providers.dart` — provider wiring
+- `devices/` — the device layer: the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding. `features/watches` is its UI.
+- `features/devicesync/` — phone-to-phone Health Connect sync over Bluetooth Classic RFCOMM.
+- `data/migration/` — a one-time Flutter-to-Kotlin data importer that runs in two phases from `OpenVitalsApp.onCreate()`. Its ordering around `super.onCreate()` is load-bearing; read the architecture doc before touching startup.
 
-### State
+The following areas are still transitional and should not be copied as the default pattern:
 
-One view-model per screen — a Riverpod `Notifier` / `AsyncNotifier` subclass named `<X>ViewModel` in `application/<x>_view_model.dart` — with state as a `freezed` class. (MVVM per the Flutter app-architecture guide; the Riverpod notifier IS the view-model, so nothing feature-side carries the Notifier suffix.) A view-model owns loading state, owns the selected range/anchor date, calls use-cases/repositories, and exposes UI-ready state. It must not carry large formatting blocks (that is `lib/core/presentation/`), must not re-implement period math, and must not mirror raw Health Connect record shapes when a cleaner UI model is warranted.
+- duplicated period selection logic in multiple ViewModels
+- broad shared component files that still mix several concerns
+- oversized screen files that should keep being split into route, section, card, and helper files
 
-The one exception to `freezed`: when the whole state **is** a single already-immutable value, `Notifier<int?>` / `Notifier<double>` / `Notifier<SomeValueObject>` is the state. A freezed wrapper around it would add a field and no information. Three settings card view-models are like this; everything else is freezed.
+## Golden Path For New Metric Features
 
-**A widget never holds a repository** — not even to read a synchronous constant off one. If a screen needs a permission set for its `HealthConnectGate`, it watches a provider (`mindfulnessWritePermissionsProvider` and friends in `lib/di/data_providers.dart`), not `ref.watch(mindfulnessRepositoryProvider)`.
+When adding a new detail feature, follow this shape:
 
-**Derivation happens at load time, in the view-model** — never in a build path. A feature's `application/<x>_display.dart` holds a `freezed` `<X>Display` and a pure `build<X>Display(data)`; the view-model calls it on `Ok` and stores it on the state; the screen renders `state.display` and sorts/folds/groups nothing. `lib/features/mindfulness/` is the reference. (Migration in progress — `docs/engineering/refactor-tracker.md` says which features are done.)
+1. Define the feature contract.
+   - screen state
+   - user actions
+   - any derived display fields
 
-Dependencies come from providers, not constructors reaching into globals. After editing an annotated class (`freezed`, `json_serializable`, `riverpod`, `drift`), regenerate:
+2. Make the feature period-driven.
+   - support `Day / Week / Month / Year`
+   - use a selected anchor date
+   - support previous/next navigation
+   - cap navigation at the current period
 
-```bash
-dart run build_runner build
-```
+3. Keep the frame reusable, keep the charts specific.
+   - reuse the shared period scaffolding
+   - keep metric-specific cards and charts inside the feature package
 
-No `--delete-conflicting-outputs`: build_runner 2.15 does that by default and dropped the flag from its documented options. Passing it still exits 0 — it is a no-op, not an error. The output is gitignored and CI regenerates it, so there is nothing to commit; regenerate so *your* checkout compiles.
+4. Keep repository APIs query-oriented.
+   - prefer `DatePeriod` or feature query objects over adding more ad hoc overloads
+   - keep Health Connect specifics below the feature layer
 
-### Errors
+5. Register the feature from the dashboard.
+   - dashboard card
+   - route
+   - top bar title
 
-Repositories and use cases return `Result<T>` (`lib/core/result/`) — `Ok` or `Err(AppFailure)`. They do **not** throw: exceptions become failures in exactly one place, `runCatching` in the data layer. A view-model switches on the `Result` and maps a failure to the UI's `ScreenError` with `failure.toScreenError(fallback: ...)`.
+6. Update docs if the pattern evolves.
 
-`orThrow()` is a temporary bridge for call sites the migration has not reached. Do not add new ones.
+## Invariants
+
+Do not break these without an explicit decision. They are app-wide, and each has a section in [docs/engineering/architecture.md](docs/engineering/architecture.md).
+
+- **No `INTERNET` permission.** The manifest removes `INTERNET`, `ACCESS_NETWORK_STATE`, and `ACCESS_WIFI_STATE`. Phone-to-phone sync is Bluetooth Classic specifically so this stays true. Never add a dependency that needs a socket.
+- **One foreground service at a time.** Activity recording, the Apple Health import, and phone sync contend for the single foreground slot and refuse rather than queue.
+- **One BLE radio, leased per address.** Everything that opens a BLE link takes a lease from `devices/core/RadioLease.kt` under one of the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`.
+- **A missing permission is `ScreenError.PermissionDenied`.** Use `isPermissionFailure()` / `toScreenError()`; never pattern-match exception messages. The screens render this as a grant affordance.
+- **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`.
+- **`values-*/strings.xml` are Weblate-owned.** Add new strings to `values/strings.xml` only. See the translation-gate note in [development.md](docs/engineering/development.md).
+- **Room is at version 6.** A new entity means a `MIGRATION_6_7` and a bump, not `fallbackToDestructiveMigration`.
+
+## Implementation Rules
+
+### Feature packages
+
+Prefer adding code under `features/<metric>/...`.
+
+A feature should own:
+
+- screen composables
+- screen state
+- screen ViewModel
+- feature-specific chart and row components
+- feature-specific formatting only when it is truly metric-specific
+
+### Shared code
+
+Shared code belongs in:
+
+- `ui/components` for reusable shell components
+- `core/period` for app-local period math and formatting
+- `domain/model`, `domain/insights`, and `domain/preferences` for app-local pure models, calculations, and preference enums
+- `core/presentation` for shared formatters, `ScreenError`, and UI models that remain repository-free
+- `core/fit` for FIT container decoding; interpretation stays with the consumer
+- `devices/core` for device-agnostic ports and the radio lease
+
+Do not put feature-specific business logic into `ui/components`.
+
+### ViewModels
+
+Prefer one ViewModel per screen.
+
+ViewModels should:
+
+- own loading state
+- own selected range/date state
+- call repositories or query services
+- prepare UI-ready state
+
+ViewModels should not:
+
+- contain large formatting blocks
+- duplicate generic period math forever
+- directly mirror raw Health Connect response structures if a cleaner UI model is needed
 
 ### Repositories
 
-The boundary over Health Connect is deliberately narrow. `lib/data/source/health/health_data_source.dart` is the only thing that knows about the native bridge; the repositories in `lib/data/repository/contract/` are the only thing features may call. Do not import `package:health_connect_native` or `lib/data/source/health/native/` from a feature.
+`HealthRepository` is intentionally narrow and should stay that way.
 
-When adding capability, extend the feature-oriented repository API; do not widen `HealthRepository` into a grab bag.
+When adding new capability:
 
-### Health Connect screens
+- prefer a feature-oriented API
+- prefer query objects or `DatePeriod`
+- avoid adding both `loadX(range)` and `loadX(start, end)` unless it is temporary during migration
 
-Health Connect-backed destinations go through the shared gate, `lib/ui/components/health_connect_gate.dart`, plus `lib/ui/components/permission_callout.dart`. Do not hand-roll per-screen availability checks, sync banners, or permission prompts.
+### UI composition
 
-### Refreshing
+New detail screens should follow this mental model:
 
-The app re-reads its data at exactly **three** points. There is no fourth, and a feature must not invent one.
+- scaffold: refresh + range selector + period navigator + error + date picker
+- content:
+  - `Day` mode
+  - `Week / Month / Year` mode
+  - optional list/breakdown
 
-1. **The app is opened.** `lib/bootstrap/data_refresh_bootstrap.dart` sits above the router — and therefore above every `HealthConnectGate` — re-resolves availability and the granted permission set, and emits an `appOpen` signal. Guarded to once per 30s, bypassed on a day rollover. It also drains the daily-aggregate caches (`HistorySyncScheduler`) once the dashboard's foreground load has settled.
-2. **Pull-to-refresh.** The screen's own `onRefresh`. It stays a direct call: a manual refresh changes no data, so no *other* screen became stale by it. Always `RefreshMode.force`. On a cache-backed screen (vitals overview, calories, body energy) it drains the Changes API first and then reads — see `RefreshMode`'s doc comment for which caches `force` does and does not bypass.
-3. **A metric is inserted, updated or deleted.** The repository announces it through `DataChangeSink` (`lib/domain/refresh/`), and `RefreshCoordinator` (`lib/state/refresh_coordinator.dart`) turns that into a debounced signal.
+### Health Connect screen shell
 
-Rules that follow:
+Health Connect-backed destinations should use the shared shell instead of wiring access gates, sync banners, or permission callouts ad hoc:
 
-- **A write signals from the repository, never from the call site.** A view-model does not know what was actually stored — writing a drink also stores a nutrition record with the caffeine on it. Name only what you wrote; `kDerivedDomains` fans it out. Every previous attempt to remember at the call site missed a path.
-- **Screens listen, view-models do not.** Every feature provider here is non-auto-dispose and three screens build one per metric, so 25-40 view-models can be alive at once. Subscribing in a view-model's `build()` would fire that many concurrent Health Connect read waves, which Health Connect serializes.
-- **Only the visible screen re-reads.** `RefreshOnSignal` refreshes when the route is on top and otherwise marks itself dirty for `didPopNext`. A plain back-navigation with nothing changed is not a reload.
-- **Do not `ref.invalidate` a period view-model to refresh it.** Its `build()` fetches nothing (the load comes from `MetricDetailScaffold`'s post-frame callback), so invalidating resets it to loading with no load behind it.
-- A background isolate has no container and legitimately signals nothing — the app-open refresh is what covers it.
+- `WithHealthConnectFeatureScreen` / `HealthConnectScreenShell` in `ui/components`
+- `HealthConnectFeature` + `HealthConnectScreenUxCoordinator` in `healthconnect`
+- `rememberHealthConnectPermissionLauncher` for permission requests
 
-## Invariants That Have Already Been Broken
+Do not add per-screen `PermissionCallout`, inline `HealthConnectSyncStatusBanner`, or duplicate `HealthConnectAccessGate` wiring.
 
-These are not style preferences. Each one is a bug that shipped.
+### Do not copy these patterns
 
-### 1. A background isolate gets its `HealthDataSource` from `openBackgroundHealthAccess()`
-
-**Never construct `HealthConnectNativeDataSource` yourself.** Call `openBackgroundHealthAccess()` (`lib/bootstrap/background_health_access.dart`): it builds the data source *and* resolves its availability, and returns a `Result`.
-
-`HealthDataSource.cachedAvailability` starts at `notSupported`, and every repository gates on it: without `refreshAvailability()`, **every permission reads as missing and every read returns empty — with no error**. Screens get this for free because `HealthConnectGate` mounts it; background isolates do not.
-
-This has caused four separate bugs: home widgets showed "grant permission" to users who had granted everything, one-tap logging silently wrote nothing, and both reminder alarms read today's intake as 0 — so the goal never counted as met and they nagged forever. The rule used to be "remember to call `refreshAvailability()` first"; four bugs is enough evidence that remembering does not work, so now there is only one way to get a data source in an isolate and it does the call for you.
-
-If a background feature "does nothing", check this **first**, before the platform, the permissions, or the plugin.
-
-(The one deliberate exception is `apple_health_import_task_handler.dart`, which resolves access at a point the import job chooses — its throw is what aborts a run that would otherwise write nothing and report success.)
-
-### 2. Storage is metric; imperial is a UI-boundary concern
-
-All quantities are stored metric (ml, g, kg, cm, °C). Imperial is a *view* preference applied only when labelling and parsing text fields, via `extension MeasurementInput on UnitFormatter` in `lib/core/presentation/measurement_input.dart`.
-
-Never add a bare `unitSystem == UnitSystem.imperial` check or a local conversion constant in a feature file — add or reuse a helper on `MeasurementInput`. New entry screens label with `formatter.<x>InputUnit` and canonicalize with `formatter.<x>InputTo<Metric>`.
-
-Test gotcha: the default unit system derives from the host locale, so a widget test touching a unit-bearing field must override `unitSystemProvider` (`lib/state/app_providers.dart`) or it asserts different numbers on different machines.
-
-### 3. ARB is the l10n source of truth, and Weblate edits it
-
-`lib/l10n/app_*.arb` are the catalogs; `app_en.arb` is the template. **Weblate writes to these files directly.** Never regenerate them from the Kotlin `strings.xml`; that would destroy every translation newer than the snapshot. `tool/xml_to_arb.dart` is gone and must not be resurrected.
-
-Add a new string to `app_en.arb` and run `flutter gen-l10n`. Do **not** commit `lib/l10n/app_localizations*.dart` — it is gitignored, and `generate: true` rebuilds it on every `pub get`. Placeholders are ICU (`{arg0}`), not `%1$s`. The gate is `dart run tool/verify_l10n.dart`, and it checks the ARBs, not the generated Dart. Details: [docs/engineering/translations.md](docs/engineering/translations.md).
-
-### 4. Widget tests need the localization delegates
-
-Every widget-test `MaterialApp` must carry:
-
-```dart
-localizationsDelegates: AppLocalizations.localizationsDelegates,
-supportedLocales: AppLocalizations.supportedLocales,
-```
-
-Without them `AppLocalizations.of(context)` is null and the generated `!` throws `Null check operator used on a null value` — with a stack pointing at the *screen*, so it reads like a production bug. It is not. Fix the harness.
-
-Outside the widget tree (background isolates, foreground services), there is no context: use `lookupAppLocalizations(...)` as in `lib/features/homewidgets/home_widget_refresher.dart`.
-
-### 5. Gate on device support, not on the pinned client
-
-The app pins `connect-client` 1.2.0-alpha04, which is *ahead* of what most installed Health Connect providers implement. Feature availability must be resolved at runtime through `getFeatureStatus` and permissions filtered through `filterSupportedPermissions` (see `lib/domain/health/health_permissions.dart`). Requesting a permission the provider does not support throws.
-
-### 6. Home-screen widgets are render-only
-
-The Glance composables under `android/` only render a snapshot; all logic is in Dart (`lib/features/homewidgets/`). One shared prefs file backs every widget, so keys must stay namespaced per widget and per `appWidgetId`. The background isolate must never open drift. Keep `flutter_deeplinking_enabled=false` in `android/app/src/main/AndroidManifest.xml` — flipping it breaks every widget tap and every "Open with" intent.
-
-### 7. Do not reimplement plugins first-party
-
-iOS/HealthKit is planned, so a Kotlin-only reimplementation of something a cross-platform plugin already does is a future double-maintenance bill. Use the plugin; write native code only for what no plugin covers (that is what `packages/health_connect_native` and the recording sensor channels exist for).
-
-After adding any Android-side plugin, build the APK once: some plugins fail only at APK link time under AGP 9 (`cannot find symbol` in `GeneratedPluginRegistrant`).
-
-### 8. Internal calculations cite their science
-
-Every number the app derives from raw data — sleep score, sleep duration/efficiency, daily readiness, body energy, cardio/training load, caffeine clearance, and the like — must carry the research it is based on as a `// Research: <url>` doc comment on the calculation itself, and, where a detail screen explains it to the user, a tappable source link. Health metrics claim to mean something clinical ("time asleep", "readiness"); a formula with no citation is a guess we cannot defend. If a calculation cannot be backed by a source, it does not ship. These citations existed in the Kotlin app and several were dropped in the port — recover them from git history (`git show 23c14d0:app/src/main/kotlin/...`) rather than inventing new ones, and never remove one when refactoring.
-
-### 9. A test is done when it meets the checklist
-
-Every new or touched test:
-
-- The name states the scenario AND the expected outcome — a failure must be diagnosable from the name alone, in the red CI log, without opening the file.
-- It asserts user-visible behaviour or resulting state. Prefer `find.text('84.5 rpm')` over `find.byType(...)`; never count calls on a double when the outcome can be asserted instead.
-- No `DateTime.now()` in a test. Time comes from `earlierToday(...)` (`test/support/today_fixtures.dart`) when "recently, still today" is the point, or a fixed `withClock(Clock.fixed(...), ...)` when the code under test reads the clock — `LocalDate.now()` routes through `package:clock`, so a fixed clock pins the whole app's idea of "today". Five tests once failed every night between midnight and 06:00; that class of flake is extinct and stays extinct.
-- `pumpAndSettle` only where settling *is* the behaviour under test; otherwise a bounded `pump`.
-- Test doubles are hand-written fakes at owned boundaries (the pigeon host API, a method channel, a repository port). A new host-API method lands in `ExhaustiveFakeHostApi` in the same commit — the compiler enforces the override; `bootContainer` fails any test that strays onto an unimplemented method.
-- A bug fix ships its regression test in the same commit, named for the failure mode. Prove it bites: revert the fix locally and watch it go red.
-- A new screen's widget test covers at least one empty/error state, not just the happy path. A new chart gets a golden through `test/support/golden_harness.dart`.
-- Fixture data comes from `HcFixture` named scenarios or builders — never a hardcoded date the corpus happens to contain.
-- Nothing lands skipped. Fix it or delete it before the merge.
-
-## Do Not Copy These Patterns
-
-- ad hoc `Future`/`setState` loading inside a `StatefulWidget` for new feature work — use a view-model
-- a new navigator/router abstraction per feature — routes go in `lib/navigation/`
-- a new screen-specific period helper when `lib/core/period/` already has one
-- giant abstract base view-models
+- local coroutine loading directly in screens for new feature work
+- brand new navigator implementations per feature
+- new screen-specific period helper types if a shared one can be used
+- giant abstract base ViewModels
 - a universal chart abstraction that hides metric semantics
-- Health Connect availability/permission UI outside `health_connect_gate.dart`
-- `Platform.isAndroid` branches inside features — platform differences belong behind `HealthDataSource`
-- hardcoded English in a screen — every user-visible string goes through `AppLocalizations`
-- a bespoke resume/route-pop listener, or one view-model reaching into another's notifier after a write — both are what the refresh signal replaces
+- ad-hoc Health Connect permission UI outside the shared shell
+- a second FIT decoder, or a second radio-arbitration scheme
+- opening a BLE connection without taking a lease
+- editing `values-*/strings.xml` by hand to make `verifyTranslations` pass
 
-## Before Starting
+## Before Starting A New Feature
 
-Read [docs/engineering/feature-playbook.md](docs/engineering/feature-playbook.md). There is no sibling Kotlin checkout: if you need the original behaviour, read it out of git history (`git show 23c14d0:app/src/main/kotlin/...`).
+Read [docs/engineering/feature-playbook.md](docs/engineering/feature-playbook.md) and follow the checklist there.
 
-If the work would mean copying code out of an existing detail screen, stop and ask: "should this be a shared scaffold/component first?" The answer is usually yes for the shell and no for the chart body.
+If the feature would require copying code from `ActivityScreen`, `SleepScreen`, or `HeartScreen`, stop and ask:
 
-Before you push:
+"Should this be a shared scaffold/component first?"
 
-```bash
-flutter test
-flutter analyze lib test
-dart run tool/verify_l10n.dart
-sh scripts/verify-geolocator-fork.sh --offline
-git diff --check
-```
-
-Never `dart format` — this repo predates Dart's "tall" style and it rewrites whole files.
+In most cases, the answer should be yes for the shell, and no for the actual chart body.

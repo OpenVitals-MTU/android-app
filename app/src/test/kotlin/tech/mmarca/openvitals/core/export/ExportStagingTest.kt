@@ -1,0 +1,106 @@
+package tech.mmarca.openvitals.core.export
+
+import java.io.File
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import tech.mmarca.openvitals.core.diagnostics.DiagnosticsExportCacheDirectory
+import tech.mmarca.openvitals.features.activity.RouteExportCacheDirectory
+import tech.mmarca.openvitals.features.activity.stageRouteExport
+
+/**
+ * Ported from the Flutter `test/core/export/export_staging_test.dart`.
+ *
+ * The staging area every export passes through on its way to another app: the
+ * cache root stands in for `Context.cacheDir`, so the feature directory, the
+ * 24 h sweep and the overwrite-instead-of-stack rule are all exercised through
+ * the production staging call.
+ */
+class ExportStagingTest {
+
+    private lateinit var cacheRoot: File
+
+    @Before
+    fun setUp() {
+        cacheRoot = File.createTempFile("export_staging_test", "").let { file ->
+            file.delete()
+            file.also { it.mkdirs() }
+        }
+    }
+
+    @After
+    fun tearDown() {
+        cacheRoot.deleteRecursively()
+    }
+
+    @Test
+    fun `a staged file lands under the feature directory, named as asked`() {
+        val file = featureDirectory(RouteExportCacheDirectory)
+            .stageRouteExport("morning-run.gpx") { output -> output.write("x".toByteArray()) }
+
+        assertTrue(file.path, file.path.endsWith("/$RouteExportCacheDirectory/morning-run.gpx"))
+        // The receiving app is handed a path, so it must exist.
+        assertTrue(file.exists())
+    }
+
+    @Test
+    fun `two features staging the same name do not collide`() {
+        // The directory name is the only thing separating them, so this is the
+        // property that keeps a diagnostics log from overwriting a route export.
+        assertNotEquals(DiagnosticsExportCacheDirectory, RouteExportCacheDirectory)
+
+        val route = featureDirectory(RouteExportCacheDirectory)
+            .stageRouteExport("export.txt") { output -> output.write("route".toByteArray()) }
+        val diagnostics = featureDirectory(DiagnosticsExportCacheDirectory)
+            .stageRouteExport("export.txt") { output -> output.write("log".toByteArray()) }
+
+        assertNotEquals(route.path, diagnostics.path)
+        assertEquals("route", route.readText())
+        assertEquals("log", diagnostics.readText())
+    }
+
+    @Test
+    fun `staging prunes copies older than a day and keeps fresh ones`() {
+        val directory = featureDirectory(RouteExportCacheDirectory).apply { mkdirs() }
+        val stale = File(directory, "stale.gpx").apply { writeText("x") }
+        val fresh = File(directory, "fresh.gpx").apply { writeText("x") }
+        stale.setLastModified(System.currentTimeMillis() - 25 * 60 * 60 * 1000L)
+
+        directory.stageRouteExport("new.gpx") { output -> output.write("x".toByteArray()) }
+
+        assertFalse(stale.exists())
+        assertTrue(fresh.exists())
+    }
+
+    @Test
+    fun `re-staging the same name overwrites rather than stacking up`() {
+        val directory = featureDirectory(RouteExportCacheDirectory)
+        directory.stageRouteExport("report.txt") { output -> output.write("first".toByteArray()) }
+        directory.stageRouteExport("report.txt") { output -> output.write("second".toByteArray()) }
+
+        assertEquals(1, directory.listFiles().orEmpty().count { it.isFile })
+        assertEquals("second", File(directory, "report.txt").readText())
+    }
+
+    @Test
+    fun `a locked or vanished file does not abort the export`() {
+        // Best-effort pruning: the user asked for an export, not for cache hygiene.
+        val directory = featureDirectory(RouteExportCacheDirectory).apply { mkdirs() }
+        File(directory, "a-subdirectory").apply {
+            mkdirs()
+            setLastModified(System.currentTimeMillis() - 25 * 60 * 60 * 1000L)
+        }
+
+        val file = directory.stageRouteExport("report.txt") { output ->
+            output.write("x".toByteArray())
+        }
+
+        assertTrue(file.exists())
+    }
+
+    private fun featureDirectory(name: String): File = File(cacheRoot, name)
+}

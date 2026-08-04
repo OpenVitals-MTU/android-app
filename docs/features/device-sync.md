@@ -1,95 +1,64 @@
 # Sync With Another Phone
 
-OpenVitals can copy Health Connect records directly between two Android phones
-over **Bluetooth**, with no account and no network. It is reached from
-**Settings → Sync with another phone** (`/settings/device_sync`).
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/devicesync`, `features/settings`.
+> **Navigation:** `Screen.SettingsDeviceSync`; settings section `DEVICE_SYNC`.
+> **Related:** [Feature map](feature-map.md), [Settings and preferences](settings-and-preferences.md), [Permissions](../app/permissions.md), [Privacy](../app/privacy.md).
 
-## Why Bluetooth, not Wi-Fi
+Sync with another phone copies Health Connect records directly between two nearby Android phones over Bluetooth. There is no account, no server, and no network step.
 
-The app ships **no `android.permission.INTERNET`** — a property stated in the
-Play listing, [privacy.md](../app/privacy.md), and
-[local-and-connected-editions.md](../app/local-and-connected-editions.md). On
-Android every TCP/UDP socket (including Wi-Fi Direct and Wi-Fi Aware) requires
-INTERNET, so a Wi-Fi transfer would break that guarantee. **Bluetooth Classic
-RFCOMM** needs no INTERNET permission, so the transfer stays peer-to-peer with no
-network. A year of dense records gzips to a few megabytes — about ten seconds
-over RFCOMM — so the speed gap versus Wi-Fi does not matter in practice.
+It is reached from Settings, Sync with another phone, which opens its own wizard.
 
-`flutter_blue_plus` (the app's BLE-sensor dependency) is central-only and cannot
-advertise or open a server socket, so the RFCOMM transport is a small app-local
-native plugin, `packages/bluetooth_sync_native/`, modelled on
-`packages/health_connect_native/`. It moves raw bytes only.
+## The Wizard
 
-## The flow
+1. **Choose a role.** One phone makes itself discoverable and becomes the host. The other looks for a phone and becomes the guest.
+2. **Pair.** The host shows a six-digit pairing code and waits. The guest scans, picks the host from the list of nearby phones, and types the code. Already-paired phones appear in the list before the scan finishes.
+3. **Choose how far back.** The last 30 days, the last 6 months, the last year, or everything. The last year is the default.
+4. **Choose what to sync.** The picker lists data categories such as activity, workouts, heart, sleep, body measurements, vitals, nutrition, hydration, mindfulness, and cycle tracking. A category appears only when this phone can both read and write at least one of its record types, and everything supported is selected by default.
+5. **Sync.** Progress shows the current phase and live sent, received, and written counts.
+6. **Read the report.** The report shows how many records were merged, how many were already present, and a per-record-type breakdown of what arrived. It can be copied or shared as text.
 
-1. **Choose a role.** One phone taps *Make this phone discoverable* (host); the
-   other taps *Find a phone* (guest).
-2. **Pair.** The host shows a 6-digit code and waits. The guest scans, taps the
-   host, and types the code.
-3. **Pick how far back** to sync (30 days / 6 months / 1 year / everything).
-4. **Pick data types.** Defaults to every type both phones support.
-5. **Sync.** Both phones exchange records, dedupe, and write only what they were
-   missing (a bidirectional merge).
-6. **Report.** Each phone shows what it imported and skipped, like the Apple
-   Health import report. It can be copied, saved as `openvitals-sync-report.txt`,
-   or shared to another app as a `.txt` attachment.
+Both phones choose their own range and their own categories. The exchange uses the record types both phones support.
 
-## What the 6-digit code protects
+## Both Directions At Once
 
-The encryption and MITM resistance of the link come from **Bluetooth bonding**
-(Secure Simple Pairing), which the OS performs on first connection. The app-layer
-6-digit code is a **mutual-confirmation + anti-mixup** token: both phones derive a
-session key from it (`HMAC-SHA256(code, hostNonce ‖ guestNonce)`) and prove
-knowledge of it with a challenge bound to the peer's nonce, so a wrong code (wrong
-phone, or a typo) fails the session before any health data moves. Because the link
-is already bonded-encrypted, the low entropy of the code is acceptable — an
-attacker cannot observe the handshake to brute-force it offline. It is not an
-independent PAKE; if the code itself ever needs to be cryptographically
-load-bearing, a SPAKE2/X25519 exchange (via the `cryptography` package) is the
-documented upgrade.
+The exchange is bidirectional within a single session. Both phones send and receive over the same connection at the same time, and each phone reports what it wrote.
 
-## Deduplication
+The category selection controls what this phone sends. What it receives is decided by the other phone's selection, which is why the picker is framed as what to accept and shows the types both phones agreed on.
 
-Records read natively from Health Connect have a per-device HC id and usually a
-null `clientRecordId`, so dedup keys on **content**, not identity. Each record is
-hashed into a `sync_<hex>` fingerprint (the same construction the Apple Health
-importer uses, including the whole-second instant formatting that prevents
-re-import duplicates). Both phones compute the same fingerprint for the same
-logical record, received records are written under that fingerprint as their
-`clientRecordId`, and Health Connect upserts on it — so **re-running a sync writes
-nothing new** and the two phones converge.
+## Bluetooth, Not The Internet
 
-## Implementation
+The transfer runs over Bluetooth Classic RFCOMM on a private OpenVitals service identifier, so the app only ever connects to another OpenVitals.
 
-- **Transport (native):** `packages/bluetooth_sync_native/` — Pigeon host API
-  (discoverable, discovery, RFCOMM server/client, `sendBytes`) + Flutter API
-  events (`onDeviceDiscovered`, `onConnectionStateChanged`, `onBytesReceived`).
-  Needs `BLUETOOTH_ADVERTISE` (added to the host manifest) plus the existing
-  `BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT`.
-- **Protocol (pure Dart):** `lib/data/source/sync/` — `sync_frame` (length-prefixed
-  framing), `sync_pairing` (session key + proofs), `sync_messages` (gzipped
-  batches), `sync_session` (the symmetric handshake → auth → bidirectional
-  exchange state machine), `sync_transport` (the `SyncByteTransport` seam + an
-  in-memory pipe for tests). Fully unit-tested with no Bluetooth.
-- **Health Connect bridge:** `import_record_sync_codec` (fingerprint + record
-  serialization for all 34 `ImportRecord` types), `health_connect_sync_store`
-  (reads → fingerprinted items, dedup via `filterExistingClientIds`, writes via
-  `insertImportedRecords`), and `HealthDataSource.readImportRecords`.
-- **Feature layer:** `lib/features/devicesync/` — `DeviceSyncViewModel` (the wizard
-  state machine over the service + session + store) and `DeviceSyncScreen`.
+This is a deliberate choice rather than a convenience. Any Wi-Fi or TCP socket on Android requires the `INTERNET` permission, which OpenVitals does not declare and actively removes from the manifest. Bluetooth Classic needs no such permission, so the transfer stays peer-to-peer with no network involved. See [Permissions](../app/permissions.md).
 
-## Current scope and follow-ups
+The host phone must be made discoverable, which Android asks about with its own dialog. Connecting to a phone for the first time triggers Android's standard pairing dialog; that bond is what encrypts the link.
 
-- **Syncable types today:** the instant Health Connect "entry" types with working
-  reads — weight, height, body fat, lean/bone/body-water mass, BMR, hydration,
-  blood pressure, SpO2, respiratory rate, body temperature, VO2 max, blood
-  glucose, and mindfulness. Interval/series/session types (steps, distance,
-  calories, heart-rate series, sleep, nutrition, exercise, cycle) need dedicated
-  raw reads that preserve every field and zone offset; they are added as those
-  reads land.
-- **In-process transfer:** the sync currently runs while the screen is
-  foregrounded. A foreground-service variant (surviving backgrounding, like the
-  Apple Health import) and a file-backed report store are planned.
-- **On-device validation:** RFCOMM needs two physical phones (the emulator has no
-  Bluetooth Classic radio). Confirm real discovery, bonding, transfer, and that
-  `BLUETOOTH_SCAN`'s `neverForLocation` flag still surfaces Classic devices.
+## What The Pairing Code Protects
+
+Confidentiality and tamper resistance come from the Bluetooth bond that Android establishes. The six-digit code is a mutual confirmation between the two phones in front of the two users: both derive a session key from it and prove they know it before any health data moves. A wrong code, or the right code typed at the wrong phone, ends the session before anything is exchanged.
+
+## Re-Syncing Does Not Duplicate
+
+Each record is identified by a fingerprint computed from its own content: the record type, its timestamps, and its values. Both phones compute the same fingerprint for the same logical record.
+
+- Before exchanging, each phone fingerprints what it already has. An incoming record it already holds is counted as already present and is not written.
+- Records that are written carry their fingerprint as the Health Connect client record ID, so Health Connect updates in place rather than duplicating.
+- A receiving phone re-derives the fingerprint from the record it decoded rather than trusting the identifier the other phone sent, so a sync cannot overwrite an unrelated record.
+
+Running the same sync twice therefore writes nothing new, and the two phones converge.
+
+## While The Sync Runs
+
+A quiet ongoing notification, "Syncing with another phone", asks the user to keep both phones nearby. It exists so Android does not kill the app while the user is looking at something else.
+
+The transfer belongs to the wizard screen: switching to another app is fine, but navigating away from the wizard inside OpenVitals ends the session. A sync also will not start while an activity recording is running; the recording has to be finished or discarded first.
+
+## Permissions
+
+Sync asks for nearby-device Bluetooth permissions, and for location on Android versions before 12 where classic Bluetooth discovery requires it. It then asks for the Health Connect read and write permissions for the record types it can exchange, and finally, on the host, for Android's discoverable window.
+
+## Privacy
+
+Records move directly between the two phones over Bluetooth and are written to Health Connect on each device. Nothing is uploaded, and the app has no internet permission to upload with. The most recent sync report is stored locally as a text file in the app's own storage; only the latest one is kept.

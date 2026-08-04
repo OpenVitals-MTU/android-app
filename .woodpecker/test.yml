@@ -3,52 +3,32 @@ when:
   - event: push
     branch: main
 
-# Pin to our dedicated CI runner, which mounts the persistent pub/Gradle caches.
+# Pin to the dedicated CI runner, which mounts the persistent Gradle caches.
+# (Registered for the org during the Flutter era; the label carries over.)
 labels:
   runner: openvitals
 
 variables:
-  # Prebaked CI image: cirruslabs/flutter:3.44.0 plus the native-assets toolchain and
-  # the Android platform this app builds against (see ci-image/Dockerfile), so no
-  # apt-get / sdkmanager runs at CI time. Rebuild + push (scripts/build-ci-image.sh)
-  # and bump this tag together when the Flutter version changes.
-  #
-  # The wrapped cirruslabs/flutter:3.44.0 carries Dart 3.12.0, which is why pubspec asks
-  # for `sdk: ^3.12.0` rather than the 3.12.2 the local toolchain happens to ship.
-  # cirruslabs publishes one image per Flutter release; check
-  # https://ghcr.io/v2/cirruslabs/flutter/tags/list before bumping the base.
-  - &flutter_image ghcr.io/mmarca-tech/mobile-app-ci:flutter-3.44.0
+  # Prebaked CI image: cirruslabs/android-sdk:tools plus the Android platform
+  # and build-tools this app compiles against (see ci-image/Dockerfile), so no
+  # sdkmanager runs at CI time. Rebuild + push (scripts/build-ci-image.sh
+  # --push) and bump this tag together when compileSdk moves. The package is
+  # private on ghcr; the runner's registry credentials cover it, as they did
+  # the Flutter era's image.
+  - &android_image ghcr.io/mmarca-tech/openvitals-android-ci:android-37
 
 steps:
   - name: unit-tests
-    image: *flutter_image
+    image: *android_image
     commands:
       - set -eu
-      # Goldens are engine-sensitive pixels and CI pins a different Flutter patch
-      # than the local toolchain, so they are the REFACTOR's safety net rather than
-      # CI's gate. See dart_test.yaml and scripts/goldens.sh.
-      #
-      # Ordering is randomized so hidden test-order dependence surfaces here, on a
-      # PR, instead of years later when a file gets renamed. The chosen seed is
-      # printed at the top of the run; to reproduce a failure locally:
-      #   flutter test --test-randomize-ordering-seed=<seed from the red log>
-      - scripts/ci-flutter.sh test --exclude-tags golden --test-randomize-ordering-seed=random
+      - scripts/ci-android-gradle.sh verifyCiUnitTest
 
   - name: app-preflight
     depends_on:
       - unit-tests
-    image: *flutter_image
+    image: *android_image
     commands:
       - set -eu
-      - scripts/ci-flutter.sh analyze lib test
-      # Translation gate. ARB is the source of truth (Weblate edits it directly), so
-      # this is what stops a below-threshold or placeholder-broken locale from merging.
-      - dart run tool/verify_l10n.dart
-      # F-Droid gate. If Play Services get back into the vendored geolocator fork,
-      # F-Droid's scanner deletes the plugin's build.gradle and the build dies with a
-      # bare NullPointerException -- so catch it here, on the PR that reintroduced it,
-      # not in a release. --offline skips the pub.dev staleness lookup: upstream can
-      # publish on a day nobody touched this repo, and that must not redden unrelated
-      # PRs. Staleness is a release gate instead (.woodpecker/release.yml).
-      - sh scripts/verify-geolocator-fork.sh --offline
+      - scripts/ci-android-gradle.sh verifyCiPreflight
       - git diff --check

@@ -2,53 +2,63 @@
 
 ## Purpose
 
-This document describes the architecture of the OpenVitals Flutter app as it exists today, plus the direction new work should follow.
+This document describes the architecture of OpenVitals as it exists today, plus the direction new work should follow.
 
-This app is a 1:1 port of the Kotlin OpenVitals app, which it replaced in place on this repository (the Kotlin sources survive only in git history, at `23c14d0`). The port keeps the Kotlin app's *architectural principles* — feature-first packages, a shared period shell, permission-aware feature repositories, proportional abstractions — but it does not keep its *mechanics*. Compose is Flutter widgets, ViewModels are Riverpod `Notifier` subclasses, Hilt is Riverpod providers, Room is drift, Navigation Compose is go_router. Where the port deliberately diverged from the Kotlin design, this document says so instead of pretending it didn't.
-
-The goal is unchanged: keep boundaries clear enough that a new metric can be added without copying screen scaffolding, period math, or Health Connect plumbing.
-
-For the day-to-day rules and the invariants that have already been broken once, read [AGENTS.md](../../AGENTS.md). This document is the *why* and the *shape*; AGENTS.md is the *don't*.
+The repo now has one Android app module for the local app. The goal is to keep boundaries clear enough that new metrics can be added without copying screen scaffolding, period math, or Health Connect plumbing everywhere, while keeping code app-local until there is a concrete need for a new module.
 
 ## Current Snapshot
 
-- App id: `tech.mmarca.openvitals` (unchanged from the Kotlin app — same Codeberg repo, same Play listing)
-- Project shape: one Flutter app (`lib/`) plus one first-party plugin, [`packages/health_connect_native`](../../packages/health_connect_native), which owns the Pigeon bridge to Health Connect. There is no other module.
-- Dependency wiring: Riverpod. [`lib/di/providers.dart`](../../lib/di/providers.dart) is the object graph (data source, repositories, use cases, reminders, widgets, maps); [`lib/state/app_providers.dart`](../../lib/state/app_providers.dart) holds the app-shell preference providers.
-- UI stack: Flutter + Material 3 + `MaterialApp.router` ([`lib/app.dart`](../../lib/app.dart)) + go_router ([`lib/navigation/app_router.dart`](../../lib/navigation/app_router.dart)) + Riverpod `Notifier` view-models + `freezed` state classes
-- Health data backend: Health Connect, behind [`lib/data/source/health/health_data_source.dart`](../../lib/data/source/health/health_data_source.dart) — the `HealthConnectManager` analogue
-- App-local domain code: pure models, insight calculations, queries, use cases and preference enums under [`lib/domain/`](../../lib/domain)
-- Shared period shell: in place, in [`lib/core/period/`](../../lib/core/period) and [`lib/ui/components/metric_detail_scaffold.dart`](../../lib/ui/components/metric_detail_scaffold.dart), and used by every metric detail/list screen
-- Feature repositories: split into `contract/` and `impl/` under [`lib/data/repository/`](../../lib/data/repository) for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, vitals, BLE devices, and Apple Health import
-- Dashboard: a dedicated day-based summary screen, not a period-detail screen
-- Manual entry: separate from the dashboard; writes explicit user-entered records straight to Health Connect
-- Persistence: drift ([`lib/data/local/open_vitals_database.dart`](../../lib/data/local/open_vitals_database.dart)) holds the beverage catalog, the daily-vitals aggregate cache and its sync cursors, the Garmin watch-only wellness samples, and the Body Energy chain (day summaries + 5-minute buckets). Everything else that persists lives in `SharedPreferences` via [`lib/data/prefs/preferences_repository.dart`](../../lib/data/prefs/preferences_repository.dart). Health Connect remains the source of truth for health data.
-- Background work: `android_alarm_manager_plus` (home-widget refresh, hydration/mindfulness reminders) and `flutter_foreground_task` (Apple Health import, activity recording). There is no WorkManager and no general background-sync layer.
+- App namespace: `tech.mmarca.openvitals`
+- Project shape: one local Android app module under `app/`
+- Dependency wiring: Hilt in the single `:app` module, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, and `di/DevicesModule.kt`
+- UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
+- Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
+- App-local domain code: pure models, insight calculations, and preference enums under [`domain`](../../app/src/main/kotlin/tech/mmarca/openvitals/domain)
+- Shared period shell: in place and used by all metric detail/list screens
+- Feature repositories: in place for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, and vitals
+- Dashboard: still a dedicated day-based summary screen, not a period-detail screen
+- Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
+- Room is at schema version 6. It holds derived summary caches plus the one table Health Connect cannot represent (`garmin_wellness_samples`); Health Connect remains the source of truth for everything it has a record type for
+- WorkManager is used for user-started Apple Health imports, offline map imports, and lightweight metric summary warmup
+- Device integration lives under [`devices`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices): the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding
+- Phone-to-phone Health Connect sync lives under [`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync) and runs over Bluetooth Classic RFCOMM
+- A one-time Flutter-to-Kotlin data migrator lives under [`data/migration`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/migration) and runs from `OpenVitalsApp.onCreate()`
 
-> **Correction to the Kotlin doc.** The Kotlin architecture doc claims "Room is present for derived metric summary caching only" and that "WorkManager is used for … lightweight metric summary warmup". Neither was ever true: the Kotlin `OpenVitalsDatabase` declares only `BeverageEntity`, and its workers are the Apple Health import and the offline-map import. This repo has since added *targeted* caches (see *Keep abstractions proportional*, below) — but there is still no universal metric summary cache, and none should be built.
+Most importantly, body and entry/session browsing now live in metric-owned detail screens. The former global Browse destination is no longer part of the app architecture.
 
-Body and entry/session browsing live in metric-owned detail screens. There is no global Browse destination.
+### Top-Level Package Map
+
+| Package | Owns |
+|---|---|
+| `core/` | app-wide primitives: `period`, `presentation`, `stats`, `geo`, `fit`, `performance`, `diagnostics` |
+| `data/` | `local` (Room), `repository` (feature-facing repositories + `contract` interfaces), `sync` (history/backfill services), `migration` (one-time Flutter import) |
+| `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener) |
+| `di/` | `AppModule`, `RepositoryModule`, `DevicesModule` |
+| `domain/` | pure models, insights, preferences, queries, use cases |
+| `features/` | one package per user-facing feature area |
+| `healthconnect/` | the Health Connect integration boundary: manager, per-area readers, permission/UX services |
+| `navigation/` | routes and graph registration |
+| `sensors/ble/` | live BLE sensor streaming during activity recording |
+| `ui/` | shared components, charts, theme |
 
 ## Architectural Principles
 
 ### 1. Feature-first code organization
 
-New product work lives under `lib/features/<feature>/`.
+New product work should live under `features/<feature>/`.
 
-Each feature owns, split into `application/` (view-model side) and `presentation/` (widget side):
+Each feature owns:
 
-- its screen widgets (`presentation/`)
-- its state class (`freezed`, e.g. `SleepState`)
-- its view-model (a Riverpod `Notifier` subclass named `<X>ViewModel`, e.g. `SleepViewModel`, in `application/<x>_view_model.dart`) and the `NotifierProvider` that exposes it
-- its own charts, cards, rows, and presentation mapping (`presentation/`)
+- screen composables
+- screen `UiState`
+- screen `ViewModel`
+- feature-specific charts, cards, rows, and formatting
 
-Feature sub-domains keep their own subdirectory (`reminders/`, `applehealth/`, `maps/`); `homewidgets/` stays flat because it is background-isolate glue with no view-model.
-
-Shared code moves out of a feature only when it is clearly reused by more than one screen.
+Shared code should only move out of a feature when it is clearly reused by multiple screens.
 
 ### 2. Shared shell, feature-owned visuals
 
-The app has a real shared shell for period-based screens, in `MetricDetailScaffold`:
+The app now has a real shared shell for period-based screens:
 
 - pull to refresh
 - range selector
@@ -56,402 +66,652 @@ The app has a real shared shell for period-based screens, in `MetricDetailScaffo
 - date picker
 - shared loading/error framing
 
-The metric presentation stays feature-local: the sleep stage timeline and schedule chart ([`lib/features/sleep/presentation/sleep_schedule_chart.dart`](../../lib/features/sleep/presentation/sleep_schedule_chart.dart)), the activity intraday chart, heart trend cards, workout rows, body composition cards.
+That shell belongs in shared UI.
 
-There is a deliberate, bounded exception: [`lib/ui/charts/`](../../lib/ui/charts) holds *value-over-time* primitives — `PeriodHistoryChart` (which dispatches to a bar chart, a month calendar heatmap, or a year dot heatmap by selected range), plus bar/line/sparkline/heatmap/axis building blocks. These are shared because "a number per day, drawn over a period" carries no metric semantics. They are **not** a universal chart abstraction, and nothing that encodes what a metric *means* belongs there.
+The actual metric presentation stays feature-local:
+
+- steps charts
+- sleep session timeline and stage bars
+- heart trend/timeline cards
+- workout rows
+- weight/body composition cards
+
+We do not want a universal chart abstraction that hides metric meaning.
 
 ### 3. Period-driven detail screens
 
-The canonical interaction model for metric screens:
+The canonical interaction model for metric screens is:
 
 - `Day / Week / Month / Year`
-- a selected anchor date
+- selected anchor date
 - previous/next navigation
 - direct calendar selection
 - forward navigation capped at the current period
-- the last selected range remembered independently per detail/list screen
+- last selected range remembered independently per detail/list screen
 
-It is implemented by the primitives in [`lib/core/period/`](../../lib/core/period) — `TimeRange` and `DatePeriod` (both in `time_range.dart`), `PeriodSelection`, `PeriodSelectionDriver`, `PeriodLoadQuery`, `PeriodWindows`, `PeriodRangePreferenceKey`, and the calculation/title helpers — and by `MetricDetailScaffold`.
+This pattern is implemented today by app-local period primitives in `core/period` and shell components in `ui/components`.
 
-### 4. View-models own screen state and orchestration — but not period selection
+### 4. ViewModels own screen state and orchestration
 
-Screens stay thin, and they derive nothing. A feature view-model is responsible for:
+Screens stay thin. ViewModels are responsible for:
 
+- selected range/date state
 - triggering loads and refreshes
-- combining use-case calls and switching on their `Result`
-- **precomputing the display model** at load time (`build<X>Display`, see Known Seams §1)
-- dropping stale results (every view-model keeps a monotonic `_generation` guard)
-- feature-owned preferences (e.g. the sleep-hours goal, the heart-rate thresholds)
+- combining repository calls
 - exposing UI-ready state
 
-**Divergence from the Kotlin design, and it is load-bearing.** In Kotlin, the ViewModel owns the `PeriodSelectionDriver` and the `PeriodRangePreferenceKey` persistence, and `MetricDetailScaffold` is a stateless composable that receives `selectedRange`/`selectedDate` and calls back. Here it is inverted: `MetricDetailScaffold` is a `ConsumerStatefulWidget` that **owns** the `PeriodSelectionDriver`, seeds it from the persisted range for its `rangePreferenceKey`, writes range changes back, and pushes a `PeriodSelection` down through `onSelectionChanged`. The view-model receives that selection and loads against it.
-
-`PeriodSelectionDriver` is referenced by exactly two files: its own, and the scaffold. Do not reintroduce a per-view-model driver — you would end up with two sources of truth for the selected period.
-
-The practical consequence: **period-navigation behaviour is tested through the scaffold widget, not through a view-model unit test.** A view-model test drives `load(PeriodSelection(...))` directly.
+Screens should mostly collect state, wire callbacks, and render sections.
 
 ### 5. Repositories are feature-facing and permission-aware
 
-Health Connect specifics stay below the feature layer. Repository methods answer feature questions — load workouts for a period, load sleep sessions for a period, load heart summaries for a period, load body entries for a period — and guard the permissions they need before reading.
+Health Connect specifics stay below the feature layer.
 
-They do not grow into one grab-bag repository with screen-specific overloads.
+Repository methods should answer feature questions such as:
 
-Each repository is a `contract/` abstract class plus an `impl/` class over `HealthDataSource`. That split is not ceremony: the contract is what a feature may import, and it is the seam a test overrides (see *Dependency wiring*, below).
+- load workouts for a period
+- load sleep sessions for a period
+- load heart summaries for a period
+- load body entries for a period
+
+They should not keep growing into one large grab-bag repository with screen-specific overloads.
 
 ### 6. Keep abstractions proportional
 
-The app does not need, and does not have:
+The current app does not need:
 
 - a reducer/effect architecture
-- a multi-package split of `lib/`
-- a raw Health Connect mirror in drift
+- a multi-module split
+- a raw Health Connect mirror
 
-Derived or expensive-to-read values may be cached, but only where the cost is *demonstrated*, never pre-emptively. A universal raw-metric cache was evaluated and rejected. What exists today:
+Derived summaries may be cached in Room when a screen otherwise repeats expensive Health Connect reads or calculations.
+The cache stores versioned UI/repository result envelopes and must be invalidated by permission fingerprint,
+calculation config, and schema version.
 
-- The **daily vitals aggregates** (`vitals_daily_aggregates` + `vitals_sync_cursors`), for the seven vitals Health Connect offers no aggregate for, plus daily calories-burned. Kept current through the Changes API.
-- The **Body Energy chain** ([`body_energy_timeline_store.dart`](../../lib/data/repository/body_energy_timeline_store.dart)): a day-summary row plus its 5-minute buckets. Not purely a cache — each day's end score is an *input* to the next day, so the stored chain is what makes the score continuous across midnight, and past a settling window (`bodyEnergyChainSettlingDays`) it is the record rather than a copy. Measured at 4.2 MB for the full 120-day bucket retention, ~127 B per bucket row, and 2.7 ms to rewrite a whole 288-bucket day — negligible beside the Health Connect reads that produce it, so the write path is deliberately a full replace rather than an incremental diff.
-- The **Body Energy baselines**, still in `SharedPreferences` ([`body_energy_baseline_cache_store.dart`](../../lib/data/repository/body_energy_baseline_cache_store.dart)).
+### 7. Keep module boundaries proportional
 
-Every one of them is keyed by a signature (permission fingerprint + calibration + algorithm version), so a permission or config change invalidates rather than silently serving stale derivations. That signature discipline is the pattern to copy if another cache is ever warranted.
+The current project should stay single-module unless a future app or library has a concrete, active need for extracted code. Prefer package boundaries first:
 
-### 7. Keep the package boundary proportional
-
-`lib/` stays one Dart library unless a second app or a genuinely reusable library needs the code. Prefer directory boundaries first:
-
-- pure models, insights, queries, use cases and preference enums in `lib/domain/`
-- period primitives in `lib/core/period/`
-- repository-free formatters and UI models in `lib/core/presentation/`
-- navigation, provider wiring, theme and local policy in the app directories
-
-The one thing that *is* a separate package is `packages/health_connect_native`, and only because it carries Kotlin/Pigeon platform code.
+- app-local domain models and calculations in `domain`
+- period primitives in `core/period`
+- app-only resources, navigation, Hilt wiring, and local policy in `:app`
 
 ## Logical Layers In The Current App
 
+These are logical layers inside the local app module.
+
 ### App shell
 
-Responsibilities: app startup, provider-graph bootstrap, theme, locale, route registration, the top-bar shell.
+Responsibilities:
+
+- app startup
+- Hilt application/component setup
+- theme setup
+- route registration
+- adaptive top app bar, navigation suite, and global action shell
 
 Current files:
 
-- [`lib/main.dart`](../../lib/main.dart)
-- [`lib/app.dart`](../../lib/app.dart)
-- [`lib/di/providers.dart`](../../lib/di/providers.dart)
-- [`lib/state/app_providers.dart`](../../lib/state/app_providers.dart)
-- [`lib/navigation/app_router.dart`](../../lib/navigation/app_router.dart)
-- [`lib/navigation/app_routes.dart`](../../lib/navigation/app_routes.dart)
-- [`lib/ui/components/adaptive_scaffold.dart`](../../lib/ui/components/adaptive_scaffold.dart)
-- [`lib/bootstrap/reminder_bootstrap.dart`](../../lib/bootstrap/reminder_bootstrap.dart)
+- [`OpenVitalsApp.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
+- [`MainActivity.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/MainActivity.kt)
+- [`di/AppModule.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/di/AppModule.kt)
+- [`navigation/AppNavigation.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/navigation/AppNavigation.kt)
+- [`navigation/Screen.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/navigation/Screen.kt)
+- [`ui/components/OpenVitalsAdaptiveScaffold.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/OpenVitalsAdaptiveScaffold.kt)
 
 Notes:
 
-- `main()` resolves `SharedPreferences`, builds a `ProviderContainer` with `sharedPreferencesProvider` overridden, and runs the app inside an `UncontrolledProviderScope`. It also calls `FlutterForegroundTask.initCommunicationPort()` (activity-recording notification buttons) and re-registers the home-widget interactivity callback on every start. Reminders are bootstrapped *after* `runApp` and never awaited.
-- `main()` has a second, modal entry path: if the launch carries `ACTION_APPWIDGET_CONFIGURE`, it runs `HomeWidgetConfigureApp` and returns — no router, no reminder bootstrap.
-- `OpenVitalsApp` (in `app.dart`) is the `MaterialApp.router`. It watches theme mode / dynamic colour / language so a settings change rebuilds the tree; the `GoRouter` itself is cached in `goRouterProvider` so navigation state survives those rebuilds.
-- `app_router.dart` owns route registration and the start destination (onboarding unless already completed). It also exports `routeObserver`, the `RouteAware` hook the dashboard uses to reload when a detail screen is popped — the stand-in for Kotlin's `LifecycleEventEffect(ON_RESUME)`.
-- `OpenVitalsHomeScaffold` is the top-bar shell. **The app has no bottom navigation**: the dashboard is home, everything else is pushed onto the root navigator with its own back-enabled app bar.
-
-### Dependency wiring
-
-Riverpod replaces Hilt. There is no annotation processor and no generated component; the graph is plain provider declarations.
-
-- **`lib/di/providers.dart`** — the object graph: `healthDataSourceProvider` (native on Android, `UnsupportedHealthDataSource` elsewhere), every `*RepositoryProvider` (contract type, impl instance), the three use-case providers, drift + `BeverageStore`, `PreferencesRepository`, reminders, home-widget services, offline-map import.
-- **`lib/state/app_providers.dart`** — app-shell preference providers (`appThemeModeProvider`, `unitSystemProvider`, `unitFormatterProvider`, `appLanguageProvider`, `weekPeriodModeProvider`, …). These bridge `PreferencesRepository`'s `ValueListenable`s into Riverpod, so a settings change rebuilds every watcher.
-- **`sharedPreferencesProvider` is the one provider that must be overridden at startup.** It throws by default. `main()` supplies it.
-
-**The override-in-tests seam.** This is the direct replacement for Hilt's `@TestInstallIn`, and it is the reason repositories have a `contract/` type at all: a test wraps the widget or view-model in a `ProviderScope` (or builds a `ProviderContainer`) and overrides exactly the providers it needs:
-
-```dart
-ProviderScope(
-  overrides: [
-    sharedPreferencesProvider.overrideWithValue(prefs),
-    sleepRepositoryProvider.overrideWithValue(FakeSleepRepository()),
-    grantedHealthPermissionsProvider.overrideWith((ref) async => {HcPermissions.readSleep}),
-    unitSystemProvider.overrideWithValue(UnitSystem.metric),
-  ],
-  child: ...,
-)
-```
-
-Two of those overrides are not optional:
-
-- `sharedPreferencesProvider` — nothing resolves without it.
-- `unitSystemProvider` — the default follows the **host locale**, so a test touching any unit-bearing field asserts different numbers on different machines unless it is pinned. See AGENTS.md §2.
-
-Health-gated screens additionally need `healthConnectAvailabilityProvider` and `grantedHealthPermissionsProvider` (both declared in [`lib/ui/components/health_connect_gate.dart`](../../lib/ui/components/health_connect_gate.dart)), or the gate replaces the screen under test with a permission prompt.
-
-Widget tests also need `localizationsDelegates` on the `MaterialApp`, or `AppLocalizations.of(context)` is null and the generated `!` throws a null-check error whose stack points at the *screen*. It is a harness bug, not a screen bug. See AGENTS.md §4.
+- `OpenVitalsApp` owns the Hilt application component and locale bootstrap.
+- `MainActivity` owns the onboarding-complete preference and chooses the start destination.
+- `AppNavigation` owns route registration and top-level destination selection; route composables obtain `@HiltViewModel` instances through `hiltViewModel()`.
+- `OpenVitalsAdaptiveScaffold` owns the Material 3 top app bar, `NavigationSuiteScaffold`, and contextual Add action.
 
 ### Data access
 
-Responsibilities: availability checks, permission queries, record and aggregate reads, explicit manual-entry writes, mapping platform responses into app models, feature-facing repository APIs.
+Responsibilities:
+
+- Health Connect availability checks
+- permission queries
+- record reads and aggregate reads
+- explicit manual-entry writes to Health Connect
+- mapping Health Connect responses into app models
+- feature-facing repository APIs
 
 Current files:
 
-- [`lib/data/source/health/health_data_source.dart`](../../lib/data/source/health/health_data_source.dart) — the low-level facade
-- [`lib/data/source/health/native/health_connect_native_data_source.dart`](../../lib/data/source/health/native/health_connect_native_data_source.dart) — the Android implementation over the Pigeon bridge
-- [`lib/data/source/health/unsupported_health_data_source.dart`](../../lib/data/source/health/unsupported_health_data_source.dart) — the non-Android fallback
-- [`lib/domain/health/health_permissions.dart`](../../lib/domain/health/health_permissions.dart) — `HcPermissions`, `HealthConnectFeatureFlags`, `HealthPermissionService`
-- [`lib/data/repository/contract/`](../../lib/data/repository/contract) — `HealthRepository`, `ActivityRepository`, `SleepRepository`, `HeartRepository`, `BodyRepository`, `BodyEnergyRepository`, `CaffeineRepository`, `HydrationRepository`, `NutritionRepository`, `MindfulnessRepository`, `CycleRepository`, `VitalsRepository`, `BleDeviceRepository`, `ImportWriteRepository`
-- [`lib/data/repository/impl/`](../../lib/data/repository/impl) — the implementations
-- [`lib/data/repository/dashboard/dashboard_data_loader.dart`](../../lib/data/repository/dashboard/dashboard_data_loader.dart) — the dashboard read orchestrator
-- [`lib/data/prefs/preferences_repository.dart`](../../lib/data/prefs/preferences_repository.dart)
-- [`lib/domain/model/`](../../lib/domain/model) — the app models
+- [`healthconnect/HealthConnectManager.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
+- [`data/repository/HealthRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/HealthRepository.kt)
+- [`data/repository/ActivityRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/ActivityRepository.kt)
+- [`data/repository/SleepRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/SleepRepository.kt)
+- [`data/repository/HeartRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/HeartRepository.kt)
+- [`data/repository/BodyRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/BodyRepository.kt)
+- [`data/repository/HydrationRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/HydrationRepository.kt)
+- [`data/repository/NutritionRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/NutritionRepository.kt)
+- [`data/repository/MindfulnessRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/MindfulnessRepository.kt)
+- [`data/repository/CycleRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/CycleRepository.kt)
+- [`data/repository/VitalsRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/VitalsRepository.kt)
+- [`data/repository/PreferencesRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/PreferencesRepository.kt)
+- feature-oriented model files under [`domain/model`](../../app/src/main/kotlin/tech/mmarca/openvitals/domain/model)
 
 Current boundary shape:
 
-- `HealthDataSource` is the only thing that knows about the native bridge. **A feature must never import `package:health_connect_native` or `lib/data/source/health/native/`.**
-- It is a plain base class, not an `abstract interface class`, and every method has a safe empty default (`[]` / `null` / `0`). That is what makes it subclassable in a test that only cares about two reads. It is also a trap: an un-overridden read makes a screen look permanently empty rather than failing.
-- `HealthRepository` is intentionally narrow: availability, permission state, and the app-level permission contract. It is not a data grab bag.
-- Feature repositories are thin, permission-aware facades over `HealthDataSource`.
-- Manual-entry view-models write through the same feature repositories, so write permission and write behaviour stay below the route.
+- `HealthConnectManager` is the low-level integration wrapper. It talks to the AndroidX client, performs reads, writes explicit manual entries, and maps results into app models.
+- `HealthRepository` is now intentionally narrow: Health Connect availability, permission state, and dashboard aggregation.
+- Feature repositories are thin, permission-aware facades over `HealthConnectManager`.
+- Manual entry ViewModels use the same feature repositories for writes, so write permission and write behavior stay below the UI route.
+- `healthconnect` depends on app-local domain models, not on `data.repository`; repositories depend on `healthconnect` and `domain`.
 
-**The availability invariant.** `HealthDataSource.cachedAvailability` starts at `notSupported`, and every repository gates on it. Any code that builds a `HealthDataSource` **outside the widget tree** must `await HealthRepositoryImpl(dataSource).refreshAvailability()` before any read or write, or every permission reads as missing and every read returns empty, silently. Screens get this for free because `HealthConnectGate` mounts it; background isolates do not. This has already caused four shipped bugs. See AGENTS.md §1 — it is the single most expensive thing in this codebase to relearn.
+This is a meaningful improvement over the earlier centralized repository approach. New feature reads should follow the feature-repository pattern, not expand `HealthRepository`.
 
-It is also why `DataRefreshBootstrap` re-resolves availability on every app open: `cachedAvailability` is written only by `refreshAvailability()`, so a cold start that resolved `notSupported` (Health Connect mid-update) used to pin the gate — and empty every read — for the whole process lifetime.
+Some repositories are now split into a `data/repository/contract/` interface and an implementation, bound in `di/RepositoryModule.kt`. Use that split when a repository is a seam another subsystem writes through, not by default.
 
-**Refreshing.** Three triggers, no fourth: the app being opened (`lib/bootstrap/data_refresh_bootstrap.dart`), pull-to-refresh (the screen's own `onRefresh`), and any insert/update/delete (announced by the repository through `DataChangeSink`, coordinated by `lib/state/refresh_coordinator.dart`). Screens declare the `DataDomain`s they read and listen through `RefreshOnSignal`; view-models never subscribe, and only the visible route re-reads. See AGENTS.md → *Refreshing*.
+### Local storage
 
-**Feature gating.** The app pins a `connect-client` that is *ahead* of what most installed Health Connect providers implement. Optional features must be resolved at runtime through `getFeatureStatus`, and permission sets filtered through `filterSupportedPermissions`, both surfaced on `HealthDataSource` and cached into `HealthPermissionService`. Requesting a permission the provider does not know throws. See AGENTS.md §5.
+[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `version = 6`, `exportSchema = false`, with migrations declared in its companion object.
 
-**Units.** Everything below the UI is metric (ml, g, kg, cm, °C). Imperial exists only at the text-field boundary, via `extension MeasurementInput on UnitFormatter` in [`lib/core/presentation/measurement_input.dart`](../../lib/core/presentation/measurement_input.dart). A bare `unitSystem == UnitSystem.imperial` check inside a feature file is a bug. See AGENTS.md §2.
+| Table | Package | Purpose |
+|---|---|---|
+| `beverages` | `data/local/beverage` | user and preloaded beverage catalog |
+| `vitals_daily_aggregates`, `vitals_sync_cursors` | `data/local/vitalscache` | derived daily summary cache and change-token cursors |
+| `body_energy_days`, `body_energy_buckets` | `data/local/bodyenergy` | the Body Energy chain, moved off SharedPreferences in migration 4 → 5 |
+| `garmin_wellness_samples` | `data/local/garmin` | watch-only wellness series, added in migration 5 → 6 |
 
-### Local persistence
+`garmin_wellness_samples` is the one table that is not a cache. It is the system of record for the series a Garmin watch produces that Health Connect has no record type for (stress, Body Battery, watch sleep scores). Its schema is `(metric, time_millis, value)` with `(metric, time_millis)` as the primary key, so re-syncing an overlapping window rewrites rows instead of duplicating them.
 
-- [`lib/data/local/open_vitals_database.dart`](../../lib/data/local/open_vitals_database.dart) — drift, schema version 8. Tables, in the order they were added: `beverages` (mirroring the Kotlin Room table exactly, including the verbatim `CREATE TABLE` its legacy migrations use), `vitals_daily_aggregates` + `vitals_sync_cursors`, `garmin_wellness_samples`, and `body_energy_days` + `body_energy_buckets`. Migrations are hand-written `CREATE TABLE IF NOT EXISTS` constants applied by `if (from < N)` in `onUpgrade` (v8 is the one exception: it DROPS the retired `feel_checks` log); there is no `drift_schemas` snapshot and no `SchemaVerifier`, so the schema-parity test in `open_vitals_database_migration_test.dart` is what keeps those constants honest.
-- [`lib/data/prefs/preferences_repository.dart`](../../lib/data/prefs/preferences_repository.dart) — everything else: widget order, section order, goals, thresholds, remembered ranges, theme, units, language.
+Access goes through [`GarminWellnessRepository`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/contract/GarminWellnessRepository.kt), which is deliberately a thin seam: `upsert`, `samplesBetween`, `latest`, `countFor` and nothing else. No windowing, aggregation, or interpretation happens there. It exists so the Garmin sync pipeline (which writes after decoding FIT wellness files) and the readers that chart or derive from these series never reach for the DAO directly. Keep it that way; interpretation belongs in `domain` or the feature.
 
-**Background isolates must never open drift.** A second connection to the same database file from the alarm/foreground isolate is a corruption risk, and the reminder and widget code paths are explicitly written to avoid it — see the file headers in [`home_widget_alarm.dart`](../../lib/features/homewidgets/home_widget_alarm.dart), [`home_widget_beverage_log.dart`](../../lib/features/homewidgets/home_widget_beverage_log.dart) and [`hydration_reminder_alarm.dart`](../../lib/features/hydration/reminders/hydration_reminder_alarm.dart). The practical cost: a background path cannot see the custom-drink catalog, and that is accepted.
+### Startup and the one-time Flutter migration
+
+[`data/migration`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/migration) holds a one-shot importer that brings Flutter-era user data forward. The Kotlin build installs over the Flutter build with the same `applicationId` and certificate, so the app's private directory survives the swap, and the Kotlin-era files still sitting in it are about a month stale. The migrator therefore overwrites them with the Flutter values on its guarded first run.
+
+It is deliberately split into two phases around `super.onCreate()` in [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt). This ordering is load-bearing, not stylistic:
+
+1. **Preferences, before `super.onCreate()`.** `@HiltAndroidApp` member-injects the `Application` *during* `super.onCreate()`, and `PreferencesRepository` eagerly snapshots its `SharedPreferences` into `StateFlow`s at construction. Any preference write that lands after that point is invisible to the running app. So `FlutterDataMigrator` is constructed by hand rather than injected, and every preference write goes through raw `SharedPreferences` with `commit()` rather than through a repository that may not exist yet.
+2. **Database import, after `super.onCreate()`.** The database phase needs the Hilt-provided Room singleton, which cannot exist before the Hilt component does. Room singletons are created lazily on first request, and no `Activity` can exist yet, so resolving `OpenVitalsDatabase` through `FlutterMigrationEntryPoint` immediately after `super.onCreate()` is both possible and safe.
+
+`migrateIfNeeded()` returns whether a migration is in flight; only then does `onCreate` call `importDatabaseAndFinish(...)`. The migrator never throws, sets its one-shot flag regardless of per-step failures so a failing migration cannot retry on every launch, never deletes a Flutter file, and no-ops on a fresh install after a single file stat.
+
+If you add a new preference or store that must survive the migration, add it to phase 1. Do not move phase 1 work behind Hilt.
 
 ### Shared UI / presentation
 
-Responsibilities: reusable shell components, period navigation UI, loading/error primitives, card building blocks, shared chart primitives.
+Responsibilities:
+
+- reusable shell components
+- period selection primitives
+- date navigation UI
+- loading/error primitives
+- dashboard/detail card building blocks
 
 Current files:
 
-- [`lib/ui/components/metric_detail_scaffold.dart`](../../lib/ui/components/metric_detail_scaffold.dart) — the canonical detail frame
-- [`lib/ui/components/period_navigator.dart`](../../lib/ui/components/period_navigator.dart)
-- [`lib/ui/components/health_date_picker.dart`](../../lib/ui/components/health_date_picker.dart)
-- [`lib/ui/components/metric_card.dart`](../../lib/ui/components/metric_card.dart)
-- [`lib/ui/components/loading_state.dart`](../../lib/ui/components/loading_state.dart)
-- [`lib/ui/components/permission_callout.dart`](../../lib/ui/components/permission_callout.dart)
-- [`lib/ui/components/health_connect_gate.dart`](../../lib/ui/components/health_connect_gate.dart)
-- [`lib/ui/charts/`](../../lib/ui/charts) — `PeriodHistoryChart` and the bar/line/sparkline/heatmap/axis primitives
-- [`lib/ui/theme/`](../../lib/ui/theme)
-- [`lib/core/presentation/`](../../lib/core/presentation) — `UnitFormatter`, `MeasurementInput`, `DisplayValue`, `ScreenError`, `MetricDetailSection` ordering, reorder helpers
+- [`ui/components/MetricDetailScaffold.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricDetailScaffold.kt)
+- [`ui/components/PeriodNavigator.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/PeriodNavigator.kt)
+- [`ui/components/DateNavigation.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/DateNavigation.kt)
+- [`ui/components/MetricCard.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricCard.kt)
+- [`ui/components/LoadingState.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/LoadingState.kt)
+- [`ui/components/PullToRefreshBox.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/PullToRefreshBox.kt)
+- [`ui/components/PermissionCallout.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/PermissionCallout.kt)
 
-Important current details:
+Important current detail:
 
-- `TimeRange`, `DatePeriod`, `PeriodSelection`, `PeriodSelectionDriver`, `PeriodLoadQuery`, `PeriodWindows`, `PeriodRangePreferenceKey` and the period title/calculation helpers all live in `lib/core/period/`. (`DatePeriod` is declared in `time_range.dart`, not in a file of its own.)
-- `PeriodRangePreferenceKey` persists the last selected `TimeRange` per screen — and it is `MetricDetailScaffold`, not the view-model, that reads and writes it.
-- `lib/core/presentation/` is a Flutter-side layer with no Kotlin counterpart in the old doc: repository-free formatters and UI models that several features share. Pure formatting belongs here, not in a view-model.
-- Metric detail screens have **user-orderable sections**: `MetricDetailSectionId` ([`lib/domain/preferences/metric_detail_section_id.dart`](../../lib/domain/preferences/metric_detail_section_id.dart)) plus `OrderedMetricDetailSections` and the `metricDetailSectionOrderProvider` / `metricDetailSectionEditProvider` in [`lib/core/presentation/metric_detail_sections.dart`](../../lib/core/presentation/metric_detail_sections.dart). A detail screen declares its sections and the shared layer renders them in the user's order, with an edit mode toggled from the app bar.
+- `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, `PeriodWindows`, `PeriodSelectionDriver`, and period formatting helpers live in `core/period`
+- `PeriodRangePreferenceKey` lives in `core/period`; `PreferencesRepository` persists the last selected `TimeRange` per detail/list screen
+- `PeriodNavigator` remains a UI component in `ui/components`
 
 ### Feature layer
 
-Responsibilities: feature state, screen orchestration, feature-specific cards/charts/lists, feature display language.
+Responsibilities:
 
-Current feature directories under [`lib/features/`](../../lib/features): `achievements`, `activity` (incl. `activity/maps`), `body`, `bodyenergy`, `caffeine`, `cycle`, `dashboard`, `heart`, `homewidgets`, `hydration`, `imports` (incl. `imports/applehealth`), `manualentry`, `mindfulness`, `nutrition`, `onboarding`, `readiness`, `recovery`, `settings`, `sleep`, `vitals`.
+- feature contracts (`UiState`, actions, derived display fields)
+- screen-specific orchestration
+- feature-specific cards/charts/lists
+- feature-specific display language
 
-Two practical notes:
+Current feature packages:
 
-- `features/activity` carries several screen families — the parametric `ActivityMetricScreen` (steps/distance/floors/elevation/wheelchair), `CaloriesScreen`, `ActivitiesScreen` (workout sessions), `ActivityDetailScreen`, `CardioLoadDetailScreen` — plus the offline-map stack under `activity/maps/`. They share `ActivityRepository`, which is why they share a directory. A detail screen still renders **one** metric; sharing a screen widget across metric *ids* is fine, showing several metrics at once in a metric's detail view is not.
-- Two features intentionally do not follow the canonical period-detail interaction: `features/caffeine` (a caffeine-specific analytics/setup experience with its own ranges and active-caffeine modelling) and `features/bodyenergy` (a selected-day derived wellness detail, not a `Day / Week / Month / Year` screen).
+- [`features/achievements`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/achievements)
+- [`features/onboarding`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/onboarding)
+- [`features/dashboard`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/dashboard)
+- [`features/activity`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/activity)
+- [`features/sleep`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/sleep)
+- [`features/heart`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/heart)
+- [`features/vitals`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/vitals)
+- [`features/body`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/body)
+- [`features/bodyenergy`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/bodyenergy)
+- [`features/caffeine`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/caffeine)
+- [`features/cycle`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/cycle)
+- [`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync)
+- [`features/homewidgets`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/homewidgets)
+- [`features/hydration`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/hydration)
+- [`features/imports/applehealth`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/imports/applehealth)
+- [`features/imports/csv`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/imports/csv)
+- [`features/manualentry`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry)
+- [`features/mindfulness`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/mindfulness)
+- [`features/nutrition`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/nutrition)
+- [`features/readiness`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/readiness)
+- [`features/recovery`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/recovery)
+- [`features/settings`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
+- [`features/watches`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/watches)
+
+Three of these are not metric features and follow their own shape: `features/watches` is the watch UI over the `devices` layer, `features/devicesync` is a phone-to-phone sync wizard, and `features/imports/*` are import workflows.
+
+One practical note: `features/activity` currently contains two screen families:
+
+- concrete metric entry screens such as `StepsScreen`, `DistanceScreen`, `CaloriesOutScreen`, `ActiveCaloriesScreen`, `FloorsScreen`, and `ElevationScreen`
+- `ActivitiesScreen` for workout sessions
+
+That is a reasonable local compromise today because these screens share `ActivityRepository`, but route-facing composables should stay metric-specific. Shared renderers inside a feature package are acceptable when they only remove local duplication and do not make the user-facing detail screen show several metrics at once.
+
+Two implemented features intentionally do not follow the canonical period-detail interaction:
+
+- `features/caffeine` is a caffeine-specific analytics and setup experience with custom ranges, active-caffeine modeling, timing guidance, and beverage/nutrition context.
+- `features/bodyenergy` is a selected-day derived wellness detail, not a `Day / Week / Month / Year` metric screen.
 
 ### Cross-metric insights
 
-Cross-metric insight calculations live in [`lib/domain/insights/`](../../lib/domain/insights) — sleep score, readiness, cardio load, stress, personal baselines, period comparison, data confidence, caffeine — even when the resulting card is rendered by exactly one feature.
+Cross-metric insight calculations should live in `domain/insights`, even when the card is rendered by one feature. The feature ViewModel or use case can load the secondary signal, and the presentation mapper can attach the resulting insight to the feature display state.
 
-Widgets render precomputed insight models. They do not own thresholds, correlation rules, or score adjustments, and **missing secondary data stays neutral**: a missing caffeine record must never reduce a sleep score.
+This keeps metric UI declarative: composables render precomputed insight models and do not own thresholds, correlation rules, or score adjustments. Missing secondary data should remain neutral. For example, planned caffeine-aware sleep insights should attach caffeine signals to sleep presentation state only after the domain signal and mapper are implemented; missing caffeine records must not reduce sleep scores. Today, caffeine timing guidance lives in the standalone caffeine feature.
 
-There is also a thin use-case layer, [`lib/domain/usecase/`](../../lib/domain/usecase): `LoadDashboardDayUseCase`, `LoadHeartPeriodUseCase`, `LoadSleepPeriodUseCase`. A use case exists only where a screen genuinely needs two repositories combined (sleep + heart for the HRV correlation; heart + vitals for the ten heart/vitals metrics). Do not add one per screen out of symmetry.
+## Shared FIT Decoding
+
+[`core/fit/FitDecoder.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/core/fit/FitDecoder.kt) is the one FIT decoder in the app. It was extracted from the route importer's private decoder once a second consumer appeared.
+
+It is a generic container walk and nothing more: it reads the FIT header, definition and data messages, compressed timestamps and developer fields, and returns `FitMessage` values keyed by global message number. It has no message allowlist and no semantics.
+
+Interpretation lives with the consumer, and the two interpreters are disjoint:
+
+- [`features/manualentry/activity/routeimport/FitRouteParser.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity/routeimport/FitRouteParser.kt) interprets activity, course, and workout files.
+- [`devices/garmin/wellness/GarminFitWellness.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices/garmin/wellness/GarminFitWellness.kt) interprets the Garmin-proprietary wellness messages a watch sync downloads.
+
+An activity file therefore yields empty wellness carriers and a wellness file yields no route, without either side needing to know about the other. A third FIT consumer should follow the same split: reuse `FitDecoder`, own its interpretation.
+
+## Device Layer
+
+`devices/` is a layer, not a feature. It owns everything that talks to a physical device over Bluetooth and exposes ports that features consume. It has no Compose code and no navigation. The user-facing screens live in `features/watches`.
+
+### `devices/core`
+
+Vendor-neutral ports plus the two things every integration shares.
+
+- [`RadioLease.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices/core/RadioLease.kt) — `object RadioLeases`, a process-wide lease keyed **per Bluetooth address**. Two holders on different peripherals is allowed by design; two holders on the same peripheral is not.
+- [`RadioLeaseUse.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices/core/RadioLeaseUse.kt) — `withRadioLease(address, owner) { ... }`, `RadioLeaseBusyException`, and `object RadioLeaseOwner` with the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`. They are strings rather than an enum because they appear in logcat.
+- `DeviceClassification.kt` / `DeviceScanClassifier.kt` — `DeviceClassifier` and `DeviceScanClassifier` function interfaces; the first non-null classification wins, otherwise the device is a plain sensor.
+- `core/pairing/` — `WatchPairingPort` (bond, unbond, associate, disassociate), its `BleWatchPairing` implementation, `CompanionDevicePairing` around `CompanionDeviceManager`, and `OpenVitalsCompanionDeviceService`.
+- `core/sync/DeviceSyncPort.kt` — `canSync(device)` plus a progress-reporting `sync(...)`, so the watch UI never names a vendor.
+
+### `devices/garmin`
+
+The GFDI protocol stack, bottom to top. Everything above the GATT client is transport-free and unit-testable:
+
+| Layer | Files |
+|---|---|
+| Byte primitives | `GarminByteReader/Writer`, `GarminCrc`, `GarminCobs`, `GarminProtobuf`, `GarminTime`, `GarminLog` |
+| BLE transport | `GarminUuids`, `GarminGattClient` (the only file touching `android.bluetooth`), `GarminGattProbe`, `GarminTransport`, `GarminTransportProbe`, `GarminMlTransport` |
+| Framing | `GarminGfdiFrame` |
+| Message vocabulary | `GarminMessages`, `GarminCapabilities` |
+| Session | `GarminSession`, `GarminProtobufTransport` |
+| File sync | `GarminWatchSyncService`, `GarminDirectory`, `GarminFileTypes`, `GarminFileStore`, `GarminDeviceStateStore`, `GarminCounterWatermarkStore`, `GarminActivityImporter` |
+| Wellness import | `wellness/GarminFitWellness` (decode), `wellness/FitWellnessImport` (mapping), `wellness/FitWellnessImporter` (orchestration) |
+| Notifications | `GarminNotificationBridge`, `GarminNotificationForwarder`, `GarminNotificationLink`, `GarminGncsHandler`, `GarminNotificationMessages`, `GarminNotificationActions` |
+| Settings link | `GarminSettingsLink`, `GarminSettingsService`, `GarminSettingsModel` |
+| Onboarding | `OnboardGarminWatchUseCase`, `GarminDeviceClassifier`, `GarminDeviceNames`, `GarminPhoneIdentity` |
+
+Notes worth carrying:
+
+- `GarminWatchSyncService` is a `@Singleton` class, not an Android `Service`, despite the name. It implements `DeviceSyncPort`.
+- A watch sync writes Health Connect records through `AppleHealthImportRepository.insertImportedRecords`, the same deterministic-`clientRecordId` path the Apple Health importer uses, so a re-import upserts instead of duplicating. Only the watch-only series go to `GarminWellnessRepository`.
+- The OS bond is the security boundary. GFDI's own auth challenge is answered with zeroes, so `OnboardGarminWatchUseCase` treats bonding as mandatory and the companion association as optional.
+
+### `devices/wearos`
+
+Classification and onboarding only. There is no protocol: `OnboardWearOsWatchUseCase` has a single `ASSOCIATING` step, and the device is registered with no capabilities.
+
+### `devices/notifications`
+
+`OpenVitalsNotificationListenerService` is the platform `NotificationListenerService`. It reads posted notifications, filters them through the pure `NotificationFilter`, buffers them in the memory-only `NotificationStore`, and hands them to `GarminNotificationBridge`. It touches no Bluetooth; the bridge owns the forwarding. Nothing is written to a file or a database.
+
+### Hilt wiring
+
+`di/DevicesModule.kt` is the only module for this layer. It binds `BleWatchPairing` to `WatchPairingPort` and `GarminWatchSyncService` to `DeviceSyncPort`, and provides the GATT probe and the two `SharedPreferences`-backed stores. Everything else is constructor injection. There are no `@Module` declarations inside `devices/` itself; keep it that way.
+
+## Phone-To-Phone Sync
+
+[`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync) copies Health Connect records between two phones over Bluetooth Classic RFCOMM. It is a feature, not part of `devices/`, because it talks to another instance of this app rather than to a peripheral.
+
+Three sub-packages, in dependency order:
+
+- `bluetooth/` — the only Android Bluetooth code. `BluetoothSyncManager` (`@Singleton`) owns discoverability, discovery, the socket, and the transport; `RfcommServer`/`RfcommClient` open the socket on a private app UUID; `RfcommByteChannel` pumps bytes; `BluetoothDiscoveryReceiver` bridges the discovery broadcasts.
+- `protocol/` — pure Kotlin over a `SyncByteTransport` seam, so the whole protocol is testable over an in-memory pipe with no Bluetooth. `SyncFrame` is a length-prefixed frame whose `SyncFrameType` ordinal is the wire byte, so the enum is append-only. `SyncMessages` carries `SYNC_PROTOCOL_VERSION` and compact JSON payloads with a gzipped record batch. `SyncPairing` derives the session key from the six-digit code plus both nonces. `SyncSession` is the state machine: handshake, authenticate, negotiate types, then a symmetric bidirectional exchange where both phones run the same code and differ only by `SyncRole`.
+- `store/` — the Health Connect side, kept out of the protocol. `SyncRecordCodec` encodes and decodes records and derives the content fingerprint used for dedup; `HealthConnectSyncStore` implements the protocol's `SyncRecordStore`; `DeviceSyncReportStore` writes the last report as plain text under `filesDir/device_sync/`.
+
+There is no Room table and no DataStore here. What sync persists is Health Connect itself, plus that one report file.
+
+`DeviceSyncForegroundService` is an inert keep-alive: the RFCOMM pumps run in the wizard's ViewModel, and the service exists only to hold the foreground slot for the duration of a transfer. `start()` is best-effort and `stop()` only ever stops its own class, so a sync that never got the slot cannot tear down someone else's service.
 
 ## Screen Families
 
 ### Dashboard
 
-The dashboard is deliberately different from the period-based detail screens. It is a daily snapshot, navigated by day only, powered by one aggregated `DashboardData`, and it is the main entry point into feature screens.
+The dashboard is intentionally different from the period-based detail screens.
+
+It is:
+
+- a daily snapshot
+- navigated by day only
+- powered by one aggregated `DashboardData` object
+- the main entry point into feature screens
 
 Current files:
 
-- [`lib/features/dashboard/application/dashboard_view_model.dart`](../../lib/features/dashboard/application/dashboard_view_model.dart)
-- [`lib/features/dashboard/presentation/dashboard_screen.dart`](../../lib/features/dashboard/presentation/dashboard_screen.dart)
-- [`lib/features/dashboard/application/dashboard_display.dart`](../../lib/features/dashboard/application/dashboard_display.dart)
-- [`lib/data/repository/dashboard/dashboard_data_loader.dart`](../../lib/data/repository/dashboard/dashboard_data_loader.dart)
+- [`features/dashboard/DashboardViewModel.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/dashboard/DashboardViewModel.kt)
+- [`features/dashboard/DashboardScreen.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/dashboard/DashboardScreen.kt)
 
-`DashboardDataLoader` assembles `DashboardData` for the visible metrics only; each metric read is permission-gated and individually error-guarded, so one failing metric does not blank the screen. The view-model loads in two passes — a fast pass for `dashboardQuickMetrics`, then a background pass merged in — mirroring the Kotlin quick/background split.
+Shared pieces it uses:
 
-The dashboard is read-only and must stay summary-first. It is not a second copy of detail-screen logic.
+- `PullToRefreshBox`
+- `DayNavigator`
+- `HealthDatePickerDialog`
+- `MetricCard`
+- `PermissionCallout`
 
-### Metric routing
+The dashboard should stay summary-first. It should not become a second copy of detail-screen logic.
 
-Metric cards route through **one parametric route**, `/metric/:metricId`, which `metricScreenFor` (in [`app_router.dart`](../../lib/navigation/app_router.dart)) dispatches to a feature screen. The dispatch *order* is load-bearing: the calories and body aggregates intercept their ids before the per-metric activity/body screens can claim them.
-
-> **Correction to the Kotlin doc.** The Kotlin architecture doc instructs that "navigation should call concrete metric screen entry points such as `ProteinScreen` or `RestingHeartRateScreen`, not a public screen with a metric parameter". That rule was never adopted — not here, and not in Kotlin, which has the same `metric/{metricId}` route dispatching through `MetricRouteContent` to parametric screens. The rule that *is* real, and that both apps do honour, is the one underneath it: **a metric's detail view renders that metric**, not every metric that happens to share its repository. Keep that; ignore the file-naming half.
-
-Ids without a dedicated screen still land on `MetricScreen` → `PlaceholderScreen` ([`lib/features/dashboard/presentation/metric_screen.dart`](../../lib/features/dashboard/presentation/metric_screen.dart)). That is a known gap, not a pattern.
-
-There is no global records browser. Entry and session lists live behind the relevant metric card / detail screen.
+Dashboard metric cards route to metric-specific detail destinations. Metrics that share a repository can still reuse the same feature package and ViewModel, but navigation should call concrete metric screen entry points such as `ProteinScreen` or `RestingHeartRateScreen`, not a public screen with a metric parameter. The rendered detail view should focus on the selected metric instead of showing every related metric in one grouped screen. There is no global records browser or fixed dashboard browse action; entry and session lists belong behind the relevant metric card/detail screen.
 
 ### Manual entry
 
-Manual entry is a separate screen family and the only app area that initiates Health Connect writes. The Add-entry picker is reached through contextual create actions, not as a primary browsing destination.
+Manual entry is a separate screen family from the dashboard. It is the only app area that should initiate *user-entered* Health Connect writes. The Add entry picker is reached through contextual create actions on the dashboard and supported metric screens, not as a primary browsing destination.
 
-Current files: [`lib/features/manualentry/`](../../lib/features/manualentry) — `manual_entry_screen.dart` plus per-metric entry screens and notifiers for hydration, carbs, activity (with GPS recording under `manualentry/activity/`), mindfulness, body measurements and vitals measurements, over the shared `manual_entry_form_scaffold.dart`.
+The other write paths are all imports or transfers rather than typed entry: `features/imports/applehealth`, `features/imports/csv`, `features/devicesync`, and the Garmin wellness import. They share one write door, `AppleHealthImportRepository.insertImportedRecords`, so deterministic `clientRecordId` upserts behave identically across them.
 
-Write permissions can be requested during onboarding or lazily from Add entry / a specific metric entry route. Each write goes straight to Health Connect; the app keeps only local UI preferences (widget order, mindfulness timer settings, the custom drink catalog).
+Current files:
+
+- [`features/manualentry/ManualEntryScreen.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/ManualEntryScreen.kt)
+- [`features/manualentry/ManualEntryViewModel.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/ManualEntryViewModel.kt)
+- [`features/manualentry/activity`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity)
+- [`features/manualentry/activity/recording`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity/recording)
+- [`features/manualentry/activity/routeimport`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity/routeimport)
+- [`features/manualentry/hydration`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/hydration)
+- [`features/manualentry/body`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/body)
+- [`features/manualentry/vitals`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/vitals)
+- [`features/manualentry/mindfulness`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/mindfulness)
+
+The current manual entry widgets cover hydration, activity sessions with manual entry, existing plans, or GPS recording, activity file review launched from Settings Data Importers for GPX/KML/KMZ, TCX, and FIT files, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature. Widget order is customizable in the same spirit as the dashboard, but the dashboard remains read-only.
+
+Write permissions can be requested during one-tap onboarding or lazily from Add entry and the specific metric entry route. The dashboard remains read-only. Each write goes directly to Health Connect; OpenVitals keeps only local UI preferences such as widget order and mindfulness timer/background-sound settings.
 
 ### Period-based detail/list screens
 
-The aligned screens are activity metrics, calories, activities, sleep, heart, vitals overview, body, hydration, nutrition (overview + per-nutrient), mindfulness and cycle. Every one of them passes a `rangePreferenceKey` to `MetricDetailScaffold`.
+The aligned detail/list screens are:
 
-The scaffold owns:
+- steps/activity
+- activities
+- sleep
+- heart
+- body
+- hydration
+- nutrition
+- mindfulness
+- cycle
+- vitals
 
-- the `PeriodSelectionDriver` and the persisted range for its `rangePreferenceKey`
+They all use [`MetricDetailScaffold`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricDetailScaffold.kt) as the shared shell.
+
+The scaffold currently owns:
+
 - pull to refresh
-- the `TimeRangeSelector`
-- the `PeriodNavigator` (forward-capped, tap-to-open date picker)
-- an optional sync banner
-- the shared error block
-- a `headerItems` slot and a `content: List<Widget> Function(DatePeriod)` slot
-- an `onSelectionChanged` callback, fired once on the first frame and then on every change
+- time range selector
+- period navigator
+- date picker
+- shared error block
+- `headerItems` slot
+- `content: LazyListScope.(DatePeriod) -> Unit` slot
 
-It does **not** own the metric visuals, and it does not load anything.
+This is the main reusable architectural frame for metric work in the app today.
 
 ### Permission surfaces
 
-Onboarding and Settings are not metric screens, but they centralize availability and permission management: [`lib/features/onboarding/`](../../lib/features/onboarding), [`lib/features/settings/`](../../lib/features/settings). They depend on `HealthRepository`, not on feature repositories.
+Onboarding and Settings are not metric screens, but they are important architectural surfaces because they centralize Health Connect availability and permission management.
 
-### The Health Connect gate
+Current files:
 
-Health Connect-backed destinations wrap their content in a single shared component, [`HealthConnectGate`](../../lib/ui/components/health_connect_gate.dart), which resolves availability, granted permissions and the sync-enabled preference, and replaces the content with the appropriate gate (unavailable / insufficient access / double-cancel recovery / sync paused) or launches the permission request. A screen passes its `requiredPermissions` and, when it hosts a `MetricDetailScaffold`, `showInlineSyncBanner: false` so the banner is not drawn twice.
+- [`features/onboarding`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/onboarding)
+- [`features/settings`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 
-This one widget replaces the Kotlin trio of `HealthConnectFeature`, `HealthConnectScreenUxCoordinator` and `WithHealthConnectFeatureScreen`. Do not hand-roll per-screen availability checks, sync banners or permission prompts.
+For availability and permission state these screens should keep using `HealthRepository`, not feature repositories.
 
-> **Deliberate deviation, documented in the file:** where Kotlin keeps the dashboard visible behind a small inline promo card, the gate here replaces the whole screen for the *unavailable* and *sync-paused* states. Only Kotlin's third promo variant (available and syncing, but minimum permissions missing) is reproduced inline on the dashboard. A parity audit will flag the two missing promo variants; that is intended.
+Settings has since grown past that: because it also hosts the import, offline map, and reminder workflows, `SettingsViewModel` legitimately injects a handful of feature repositories and import services alongside `HealthRepository`. Its section screens are still routed one section at a time, and bespoke sections such as Watches and Sync with another phone have their own ViewModels rather than growing this one. Prefer that split for anything new.
+
+### Health Connect screen shell
+
+Health Connect-backed screens (dashboard, metric detail, readiness, manual entry, imports) should wrap content with the shared shell:
+
+- [`HealthConnectFeature`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectFeature.kt) maps destinations to permission sets
+- [`HealthConnectScreenUxCoordinator`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectScreenUxCoordinator.kt) loads sync/access/contextual-prompt state
+- [`WithHealthConnectFeatureScreen`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/HealthConnectPermissionLauncher.kt) composes access gate, sync banner, contextual promotion, and permission launcher
+
+Metric detail screens pass `syncPaused` from the shell state into `MetricDetailScaffold` and set `showInlineSyncBanner = false` to avoid duplicate banners.
+
+## Cross-Cutting Rules
+
+These four rules hold app-wide. Breaking one is not a local decision.
+
+### 1. Exactly one foreground service at a time
+
+The app treats the Android foreground slot as effectively single. Activity recording, the Apple Health import, and a phone-to-phone sync contend for it, and the app does not run them concurrently:
+
+- [`ActivityRecordingService`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity/recording/ActivityRecordingService.kt) — `location|health|connectedDevice`.
+- [`DeviceSyncForegroundService`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync/DeviceSyncForegroundService.kt) — `connectedDevice`.
+- WorkManager's `SystemForegroundService` — `dataSync`, used by the Apple Health and offline map import workers.
+
+The contention is resolved by refusing, not by queueing: the sync wizard reports `RECORDING_ACTIVE` and `GarminWatchSyncService.sync` refuses outright while a recording is live. A new long-running workflow must either reuse one of these or state which one it excludes. A Garmin watch sync deliberately runs with **no** foreground service of its own; its process-priority story is the companion-device association instead.
+
+### 2. One BLE radio, leased per address
+
+Every subsystem that opens a BLE link to a device goes through `RadioLeases`. The four owners are `SYNC`, `FIND`, `SETTINGS`, and `NOTIFICATIONS`, and on a given address they mutually exclude: a file sync, a find-my-watch ring, an open settings link, and the notification forwarder cannot hold the same watch at once.
+
+The lease is not just a mutex. Three properties matter:
+
+- Leases expire, so a crashed holder cannot wedge the radio permanently.
+- `request()` registers a waiter; the current holder's next renew then fails, which is its cue to drop the link. That is how the indefinitely-held notification forwarder and settings link yield to a sync.
+- `release()` leaves a short settle window rather than clearing the entry, so a new GATT open cannot race the previous teardown.
+
+Live BLE sensor streaming during activity recording lives in `sensors/ble` and targets sensors, not watches; it is excluded from watch work by rule 1 rather than by the lease. New device work must take a lease, and must pick one of the existing owner tags rather than inventing a fifth without a reason.
+
+### 3. Health Connect reads and record mapping stay behind `healthconnect/*HealthReader`
+
+The per-area readers in [`healthconnect`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect) — `ActivityHealthReader`, `SleepHealthReader`, `HeartHealthReader`, `BodyHealthReader`, `VitalsHealthReader`, `HydrationHealthReader`, `NutritionHealthReader`, `MindfulnessHealthReader`, `CycleHealthReader` — own the record types, the reads, and the mapping into app models. Repositories consume readers; features consume repositories. No feature should call the AndroidX client or hold a raw `Record` in screen state.
+
+Two bounded exceptions exist today and should stay bounded:
+
+- **Constant vocabularies.** Display code may reference Health Connect's constant sets where the app has no reason to mirror them — `ExerciseSessionRecord` exercise types, `ExerciseSegment`, `MealType`, `SexualActivityRecord` protection values. That is naming, not data access.
+- **Write and import paths.** Importers and sync legitimately build `Record` instances. Each concentrates that in one place (`features/imports/applehealth`, `features/imports/csv`, `features/imports/garmin`, `features/devicesync/store/SyncRecordCodec.kt`, `devices/garmin/wellness/FitWellnessImport.kt`) and writes through `AppleHealthImportRepository.insertImportedRecords`, which is what makes deterministic `clientRecordId` upserts consistent across all of them.
+
+### 4. A missing permission is a type, not a message
+
+[`Throwable.isPermissionFailure()`](../../app/src/main/kotlin/tech/mmarca/openvitals/core/presentation/ScreenError.kt) is the single predicate for "this failed because a permission is missing". It walks the cause chain looking for `SecurityException`, because Health Connect throws that for an ungranted read or write and repositories throw the same type when they short-circuit a call whose permission they know is missing, often wrapped by a repository or worker.
+
+`ScreenErrorHandler.handle` checks that predicate first and returns `ScreenError.PermissionDenied` before it ever considers `throwable.message`. That matters because the screens turn this case into a grant affordance: `ScreenErrorContent` and `MetricDetailScaffold` render `PermissionDenied` as `HealthConnectPermissionDeniedCallout` rather than red error text. Collapsing it into `ScreenError.Message` would silently downgrade a recoverable state into a dead end.
+
+`AppleHealthImportErrorFormatter.isPermissionDenied` delegates to the same predicate so the import card and the screen error path cannot drift apart. Reuse it; do not pattern-match on exception messages.
 
 ## Canonical Detail Feature Pattern
 
-New metric detail work follows this shape. See [feature-playbook.md](feature-playbook.md) for the step-by-step version.
+New metric detail work should follow this shape.
 
 ### 1. Define a feature-owned contract
 
-A `freezed` state class in the feature directory, holding: the selection the scaffold reports back (`selectedRange`, `selectedDate`), the loaded payload (a `*PeriodLoadResult` or a `*PeriodData` from [`lib/domain/query/`](../../lib/domain/query)), `isLoading`, a `ScreenError?`, and any feature-owned preference the screen mutates (a goal, a threshold).
+At minimum:
+
+- `UiState`
+- selected range
+- selected date
+- loading state
+- feature payload
+- error state
+
+Keep derived fields in the state only when they genuinely simplify the UI.
 
 ### 2. Reuse the shared period model
 
-`TimeRange`, `DatePeriod`, `PeriodSelection`, `PeriodLoadQuery`, `PeriodWindows` from `lib/core/period/`. Load against the selected period query; do not invent navigation rules.
+Today the shared period model is:
 
-### 3. Keep the view-model in charge of loading
+- `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, `PeriodWindows`, and `PeriodSelectionDriver` in `core/period`
 
-The view-model: takes the `PeriodSelection` handed to it, builds a `PeriodLoadQuery`, calls the use case, guards staleness with a `_generation` counter, checks `ref.mounted`, then **switches on the returned `Result`** — `Ok` stores the payload *and its precomputed display model*, `Err` maps the `AppFailure` to a `ScreenError` with `failure.toScreenError(fallback: ...)`. It does **not** own the period driver or the range preference — the scaffold does.
+The feature should load data against the selected period query rather than inventing custom navigation rules.
 
-Repositories and use cases return `Result<T>` (`lib/core/result/`); they do not throw. Exceptions become failures in exactly one place, `runCatching` in the data layer. `orThrow()` is a **temporary migration bridge** for call sites not yet switched over — do not add new ones, and see `docs/engineering/refactor-tracker.md` for what is left.
+### 3. Keep the ViewModel in charge
+
+The ViewModel should:
+
+- update range/date
+- clamp future navigation
+- compute the active period
+- call repositories
+- expose UI-ready data
+
+Most current ViewModels already follow this shape.
 
 ### 4. Use `MetricDetailScaffold` as the shell
 
-Pass `rangePreferenceKey`, `onRefresh`, `onSelectionChanged`, `isLoading`, `screenError`, and a `content` builder. Add the new key to `PeriodRangePreferenceKey` if the screen needs its own remembered range. Persist range changes only; the selected date stays screen state.
+The screen should pass shared shell parameters and provide only feature content.
+
+The content lambda should render:
+
+- `Day` mode content
+- `Week / Month / Year` content
+- optional list/breakdown sections
+
+When registering a new period-based screen, add a `PeriodRangePreferenceKey` and inject `PreferencesRepository` into the screen ViewModel so the saved range is owned with the rest of the feature state. Persist only range changes; selected dates remain screen state.
 
 ### 5. Keep visuals local to the feature
 
-A custom chart, row or timeline stays in the feature directory unless another feature genuinely needs the same thing. Reach for `lib/ui/charts/` only when the thing you are drawing is "a value per day".
+If the feature needs a custom chart, row, or timeline, keep it in the feature package unless another feature genuinely needs the same thing.
 
 ## Repository Rules For New Work
 
 ### Use `HealthRepository` only for app-level concerns
 
-Availability, permission contract access, granted/missing permissions. Do not add feature-detail reads there.
+Keep using `HealthRepository` for:
+
+- availability
+- permission contract access
+- granted/missing permissions
+- dashboard loading
+
+Do not add new feature-detail data methods there unless the app is in a temporary migration step.
 
 ### Add or extend feature repositories for feature data
 
-Add the method to the `contract/` class and implement it in `impl/`. Each repository should guard its required permissions, call `HealthDataSource`, and return app models the notifier can use directly.
+Follow the current pattern:
+
+- `ActivityRepository`
+- `SleepRepository`
+- `HeartRepository`
+- `BodyRepository`
+- `HydrationRepository`
+- `NutritionRepository`
+- `MindfulnessRepository`
+- `CycleRepository`
+- `CaffeineRepository`
+- `BodyEnergyRepository`
+- `VitalsRepository`
+
+Each repository should:
+
+- guard required permissions
+- call `HealthConnectManager`
+- return app models ready for the ViewModel
+
+Not every repository is a Health Connect facade. `GarminWellnessRepository` is a thin seam over a Room DAO for series Health Connect has no type for, and `BleDeviceRepository` and `PreferencesRepository` own app-local device and preference state. Those are the exception. If a new repository is not backed by Health Connect, say in its KDoc why Health Connect cannot own the data.
 
 ### Keep queries period-oriented
 
-Prefer APIs that take a `DatePeriod` or a `PeriodLoadQuery` and return a feature result object — not another ad hoc `loadX(start, end)` overload. When a screen needs current, previous and baseline windows, use `PeriodWindows` and return one bundled result. Keep granular APIs only for real entry-list/detail reads.
+Prefer APIs shaped like:
+
+- `loadXPeriod(PeriodLoadQuery, featureOptions)`
+- feature-specific query/result objects when period windows need current, previous, and baseline data
+
+Keep granular APIs only when they are real detail or entry-list reads rather than compatibility paths for migrated screens. Avoid adding an aggregate browser layer unless product direction explicitly reintroduces one.
 
 ## What Should Stay Shared vs Local
 
 ### Shared
 
-- period calculation, windows, titles
-- period/day navigation components and the date picker
-- the detail-screen scaffold and the Health Connect gate
-- loading/error components, `MetricCard`, chips, section headers
-- unit formatting (`UnitFormatter`) and the imperial text-field boundary (`MeasurementInput`)
-- value-over-time chart primitives (`lib/ui/charts/`)
+- period calculation and titles
+- period/day navigation components
+- date picker dialog
+- detail-screen scaffold
+- pull-to-refresh wrapper
+- loading/error components
+- general card primitives like `MetricCard`
+- general chips and section headers
 
 ### Feature-local
 
-- metric-specific charts and timelines
-- metric-specific list rows and summaries
-- the presentation mapping from repository payload to display model
+- metric-specific charts
+- metric-specific timelines
+- metric-specific list rows
+- metric-specific summaries
 - metric-specific empty-state language when the domain meaning differs
 
 ## Known Seams And Next Refactors
 
-Real seams in the current codebase. None of them blocks feature work.
+These are real seams in the current codebase, but they are not urgent enough to block feature work.
 
-### 1. The view-model precomputes the display state *(being reversed — migration in progress)*
+### 1. Some screen files are still too broad
 
-**The rule, now:** a view-model builds its feature's display model **at load time** and stores it on its state. Widgets render `state.display` and derive nothing — no sorting, no folding, no grouping, no unit conversion in a build path. Flutter's app-architecture guidance is explicit that logic does not live in widgets, and the Kotlin originals precomputed a `SleepDisplayState` / `HeartDisplayState` for the same reason. The port dropped that on the grounds that the derivations were cheap; they stopped being cheap (`activities_ordered_sections.dart` folded five metrics and bucketed a period on every rebuild of a scrolling screen).
+Several feature screens still keep route/content/cards/charts in one file.
 
-The shape, per feature — `lib/features/mindfulness/` is the reference:
+Good future targets:
 
-- `application/<x>_display.dart` — a `freezed` `<X>Display` plus a **pure** top-level `build<X>Display(data)`. No clock, no `ref`, no I/O: this is the unit-test seam (`test/features/mindfulness/mindfulness_display_test.dart`).
-- `application/<x>_view_model.dart` — calls it once per successful load, stores the result on the state's `display` field.
-- `presentation/` — renders it. A trivial O(1) getter on the state class is still fine; a loop is not.
+- split route/container composables from chart/card/list sections
+- keep feature-specific visuals inside the feature package
+- move only reusable shell pieces to `ui/components`
 
-Migrated: mindfulness. Remaining: everything else, per `docs/engineering/refactor-tracker.md`. While a feature is unmigrated its screen still derives — that is a known state, not a licence to add more.
+### 2. Derived UI summaries should stay ViewModel-prepared
 
-### 2. Period selection lives in the widget, not the notifier
+Hydration, nutrition, heart/vitals, and body now prepare common summary values in state. Continue this pattern when a value requires sorting, grouping, or scanning a list.
 
-`MetricDetailScaffold` owns the `PeriodSelectionDriver` (principle 4). This makes screens trivially uniform and makes range persistence a one-line `rangePreferenceKey`, but it means the notifier cannot be unit-tested for period navigation, and a screen that needs a non-standard period rule has to work around the scaffold rather than through it. `features/caffeine` and `features/bodyenergy` already sit outside it. If a third screen needs to escape, that is the signal to make the driver injectable.
+### 3. Shared UI primitives are still grouped in broad files
 
-### 3. `metric_card.dart` is still a grab bag
+For example, [`MetricCard.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricCard.kt) currently contains:
 
-[`lib/ui/components/metric_card.dart`](../../lib/ui/components/metric_card.dart) currently holds `MetricCard`, `MetricCardPlaceholder`, `MetricValueRow`, `SourceChip`, `SectionHeader` and `TimeRangeSelector`. Fine at this repo size; split by responsibility if shared UI keeps growing. (The same seam exists in the Kotlin file — it was ported, not introduced.)
+- `MetricCard`
+- `MetricCardPlaceholder`
+- `SourceChip`
 
-### 4. Residual port stubs
+`SectionHeader` and `TimeRangeSelector` have since moved out into their own files, which is the direction the rest should follow if shared UI keeps growing.
 
-- `/metric/:metricId` falls through to `MetricScreen` → `PlaceholderScreen` for ids with no dedicated screen ([`metric_screen.dart`](../../lib/features/dashboard/presentation/metric_screen.dart), `TODO(phase5)`).
-- `TopLevelDestination` in [`app_routes.dart`](../../lib/navigation/app_routes.dart) is **dead code** — a bottom-navigation / `StatefulShellRoute` design that was abandoned (the shell has no bottom nav). It has zero references in `lib/` or `test/`. Delete it when touching that file.
-- A handful of `TODO(phase6)` gaps remain in hydration quick-add, the mindfulness timer UI, and the mindfulness entry screen.
+### 4. Background work is narrow and explicit
 
-### 5. Background work is narrow and explicit
+Room-backed caching is intentionally narrow: it stores derived summaries and the beverage catalog, not raw Health Connect records.
+The first cached surface is dashboard-style daily summaries, which also powers daily readiness.
+The one non-cache table, `garmin_wellness_samples`, exists only because Health Connect has no record type for those series; it is not a precedent for mirroring records Health Connect can already hold.
 
-Two mechanisms, both deliberate:
+WorkManager is used for the Apple Health import worker and the offline map import worker because those workflows can be long-running and user-visible.
+It is also used for small metric summary warmup jobs after app open. Long-running device work does **not** use WorkManager: a watch sync and a phone-to-phone sync are both foreground, user-initiated, and hold their own coroutine scope. Do not design new features as if a
+general background-sync layer or raw-record database already exists.
 
-- `android_alarm_manager_plus` — periodic home-widget refresh ([`home_widget_alarm.dart`](../../lib/features/homewidgets/home_widget_alarm.dart)) and the hydration/mindfulness reminder alarms. The alarm wakes the app so the reminder can re-check *today's actual intake* before notifying, rather than firing a pre-scheduled notification blind. The alarms are deliberately INEXACT (`setAndAllowWhileIdle`): exact alarms need `USE_EXACT_ALARM`, which Google restricts to alarm-clock and calendar apps, so declaring it on a health dashboard risks the app being pulled. See the comment in `android/app/src/main/AndroidManifest.xml`.
-- `flutter_foreground_task` — the Apple Health import ([`apple_health_import_task_handler.dart`](../../lib/features/imports/applehealth/apple_health_import_task_handler.dart)) and activity recording, both long-running and user-visible.
-
-Every isolate here builds its own object graph, opens **no drift**, must call `refreshAvailability()` first, and must use `lookupAppLocalizations(...)` rather than a `BuildContext`. Do not design a new feature as if a general background-sync layer or a raw-record database exists.
-
-### 6. Do not over-correct into a universal framework
+### 5. Do not over-correct into a universal framework
 
 Still avoid:
 
-- a universal chart abstraction that hides metric semantics
-- a giant abstract base notifier
-- a premature multi-package split of `lib/`
+- a universal chart abstraction
+- a giant base ViewModel hierarchy
+- premature multi-module refactors
 - a full reducer/effect framework for straightforward screens
-- a Kotlin-only reimplementation of something a cross-platform plugin already does — iOS/HealthKit is planned, and that is a double-maintenance bill (AGENTS.md §7)
-
-## Localization
-
-ARB is the source of truth. `lib/l10n/app_*.arb` are the catalogs, `app_en.arb` is the template, and **Weblate writes to these files directly**. Never regenerate them from the Kotlin `strings.xml` — that destroys every translation newer than the snapshot. `tool/xml_to_arb.dart` has been deleted and must not be resurrected.
-
-Add a string to `app_en.arb` and run `flutter gen-l10n`. The generated `lib/l10n/app_localizations*.dart` is **not** committed — `generate: true` rebuilds it on every `pub get`. Placeholders are ICU (`{arg0}`). The gate is `dart run tool/verify_l10n.dart`, over the ARBs. Details in [translations.md](translations.md).
-
-Every user-visible string goes through `AppLocalizations`. Outside the widget tree, use `lookupAppLocalizations(...)`.
 
 ## Success Criteria
 
-The architecture is working when:
+The architecture is working well when:
 
 - a new metric screen can be added without copying shell UI
-- Health Connect reads stay below the feature layer, behind a repository contract
+- Health Connect reads stay below the feature layer
 - feature repositories stay narrow and query-oriented
-- screens stay thin and notifiers stay free of formatting
-- charts stay understandable because metric-specific visuals stay local
+- screens remain thin
+- charts remain understandable because metric-specific visuals stay local
 - shared extraction happens for scaffolding, not for semantics
-- a background feature works the first time, because it resolved availability before reading
+- device protocol code stays transport-free and testable without a radio
+- a new device integration adds a port implementation, not a second radio-arbitration scheme

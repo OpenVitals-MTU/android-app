@@ -2,24 +2,13 @@
 
 > **Status:** Current implemented behavior and support policy.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/settings/`, `lib/core/diagnostics/` (`kDiagnosticsEnabled` gates both the settings card and the route), local support docs.
-> **Navigation:** `/settings/debug_diagnostics`, registered only in diagnostics-enabled builds; Settings support links.
+> **Implementation:** `features/settings`, diagnostics-gated settings, local support docs.
+> **Navigation:** `Screen.SettingsDebugDiagnostics` in diagnostics builds, Settings support links.
 > **Related:** [Feature map](feature-map.md), [Privacy](../app/privacy.md), [Support](../app/support.md).
 
 OpenVitals is designed as a local-first Health Connect app.
 
 For the standalone privacy reference, see [Privacy](../app/privacy.md). For support-oriented questions, see [FAQ](../app/faq.md).
-
-## How to use it
-
-Everything here lives in **Settings** (gear icon on the dashboard).
-
-- **Get help or support the project.** In the **Support** section, tap **Report an issue** (opens the Codeberg issue tracker), **Join Zulip discussions** (community support), or **Open Liberapay** (donations).
-- **Confirm the privacy model.** The **Privacy** section card, **"Data stays on your device,"** states that OpenVitals uploads no health data, has no ads, and shares nothing with third parties. A full **privacy policy** is available from there.
-- **Read the health disclaimer.** It's shown during onboarding: OpenVitals is for general wellness and information only and is not a medical device.
-- **Export diagnostics (troubleshooting builds only).** Debug/nightly builds add a **Debug diagnostics** section with **Share logs** and **Save logs** — these write a **sanitized** log file that drops or redacts identifiers, locations, dates, and raw sensor data. Regular release builds don't show this section.
-
-> Don't confuse the two exports: **Debug diagnostics** logs are sanitized, but an **Apple Health import report** is intentionally *not* sanitized (it includes export-derived values and stack traces). Share an import report only when you're comfortable with what it contains — see [Apple Health import](apple-health-import.md#reports-and-diagnostics).
 
 ## Privacy Model
 
@@ -32,13 +21,28 @@ OpenVitals does not require:
 
 Health data is read from and written to Health Connect on device. OpenVitals stores local preferences such as widget order, goals, reminders, calibration, and display choices.
 
+A small amount of health data lives in the app's own database rather than in Health Connect, because Health Connect has no record type for it: the watch-only measurements such as stress, Body Battery, and training load. See [Watches](watches.md).
+
 ## Internet Boundary
 
 The app does not need app-level internet access for normal health features. Offline map packs, imports, widgets, and Health Connect reads are handled locally.
 
+The connected-device features keep that boundary rather than widening it. A watch is read over Bluetooth, notifications are forwarded to the watch over Bluetooth, and sync with another phone deliberately uses Bluetooth Classic because any Wi-Fi or TCP socket on Android would require the internet permission the app does not declare.
+
+## Notification Access
+
+Forwarding phone notifications to a watch is the only feature that reads notifications, and it is off until it is turned on. OpenVitals shows a prominent disclosure of what it will read and where it goes before sending the user to Android's own notification access screen.
+
+Notification text is used only to display the notification on the paired watch. It is held in memory while it is needed, is never written to a file or a database, and can only reach the paired watch over Bluetooth. Individual apps can be blocked, the feature can be switched off in OpenVitals, and access can be revoked in Android settings.
+
 ## Diagnostics
 
 Diagnostics surfaces help users and maintainers understand local issues without sending health data automatically. They can include app version information, debug build separation, import reports, logs, and crash-report email drafts.
+
+Diagnostics builds add two cards that are useful when data appears to be missing:
+
+- A reminder test, which posts the hydration reminder notification immediately and exactly as a scheduled one would.
+- Health Connect sources, which lists the apps that contributed heart-rate and sleep records over the last seven days. It is the quickest way to tell whether a paired watch's data is actually landing in Health Connect.
 
 Apple Health import reports are explicit user downloads and intentionally include the full importer summary, logs, grouped diagnostics, worker logs, and full exception stacks on failure; the raw per-record diagnostic log is capped per source (see [Apple Health import](apple-health-import.md#reports-and-diagnostics)) so a large repeated import cannot make the report unbounded, but grouped diagnostic counts stay complete. They are not the same as sanitized debug diagnostics logs and should be shared only when the user is comfortable sharing the included export-derived details.
 

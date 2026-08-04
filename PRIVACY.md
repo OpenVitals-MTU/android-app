@@ -43,19 +43,6 @@ If you explicitly enable hydration reminders, OpenVitals uses locally stored rem
 
 The app does not use health data for advertising, profiling, credit decisions, insurance decisions, employment decisions, or any purpose unrelated to showing your health data back to you in the app.
 
-## Notification Access (Optional)
-
-If you pair a Garmin watch and turn on **Send notifications to the watch**, OpenVitals reads the notifications your phone receives so they can be shown on your wrist. This is off by default and does nothing until you turn it on.
-
-- OpenVitals asks you to confirm what will be read before Android's notification-access screen is opened.
-- Notification text is read on your device and sent only to the watch you paired, over Bluetooth.
-- Notification content is never written to a file or a database. It is held in memory only while it is needed — a short buffer on the phone, and the recent notifications your watch may still ask about — and is discarded after that.
-- The shipping app has no `INTERNET` permission, so notifications cannot be sent to OpenVitals or anywhere else on the internet.
-- Notifications marked by their app as ongoing, as group summaries, or as local-to-this-device are not forwarded, and neither are notifications from apps you silence in **Apps to silence**.
-- Your phone's Do Not Disturb setting is respected: while it is on, notifications are not forwarded.
-- Acting on a notification from the watch — dismissing it, replying, or using one of the app's own buttons — performs that action on the phone as if you had tapped it there. OpenVitals does not send SMS or messages itself.
-- You can turn the feature off at any time, and revoke notification access from Android settings. Revoking it stops the feature immediately.
-
 ## Data Sharing
 
 OpenVitals does not sell, rent, transfer, or share your health data with third parties.

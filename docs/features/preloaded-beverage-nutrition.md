@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented reference data.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/domain/insights/caffeine_health_drink_catalog.dart` and `beverage_nutrition_defaults.dart` (seed data), `lib/data/local/beverage/beverage_store.dart` (the drift `beverages` table), `lib/features/manualentry/presentation/hydration_catalog.dart`, `lib/features/nutrition/`.
-> **Navigation:** beverage logging from `/manual_entry/hydration` and `/manual_entry/hydration/log/:hydrationDrinkId`.
+> **Implementation:** `features/manualentry/hydration`, `features/nutrition`.
+> **Navigation:** beverage logging from hydration entry routes.
 > **Related:** [Feature map](feature-map.md), [Beverage logging and caffeine](beverage-logging-and-caffeine.md), [Nutrition](nutrition.md).
 
 Research date: 2026-07-02
@@ -19,15 +19,6 @@ reference for the beverage families represented by the preloaded catalog, not a
 claim that every branded SKU in the catalog has one universal label. Branded products
 change by market, package size, recipe, and date; use the linked sources or package
 label when an exact entry needs to be logged.
-
-## How to use it
-
-You don't set any of this up — the catalog is seeded on first use. The practical benefit while logging a beverage (see [Beverage logging and caffeine](beverage-logging-and-caffeine.md)):
-
-- **Tap and go.** Choosing a preset like a coffee or an energy drink logs its serving size, hydration impact, and caffeine (and other seeded nutrients) with no numbers to type.
-- **Adjust the amount.** The log dialog pre-fills the drink's serving; change it and the nutrients scale to what you actually drank.
-- **Correct a value.** Presets can be edited or deleted like your own custom drinks — if a branded product's label differs from the seeded default, edit the preset (or make a custom drink) so future logs are right.
-- **This table is a reference, not the exact stored values.** Use it to sanity-check a family of drinks; for an exact log, trust the package label over a generic row.
 
 ## Nutrition Table
 
@@ -61,13 +52,9 @@ multiple branded items in that family.
 
 ## Catalog Mapping Implications
 
-- The runtime beverage catalog is drift-backed: the `beverages` table in
-  [`lib/data/local/open_vitals_database.dart`](../../lib/data/local/open_vitals_database.dart),
-  accessed through `BeverageStore` (`lib/data/local/beverage/beverage_store.dart`).
-  It is the app's **only** database table.
-  `CaffeineHealthDrinkCatalog` (`lib/domain/insights/caffeine_health_drink_catalog.dart`)
-  is seed and matching metadata only, while user edits/deletes/category moves persist
-  in that table.
+- The runtime beverage catalog is Room-backed. `CaffeineHealthDrinkCatalog` is seed
+  and matching metadata, while user edits/deletes/category moves persist in the
+  local beverage table.
 - OpenVitals should keep Health Connect as the source of truth for logged nutrient
   amounts. The preloaded catalog can safely provide defaults, but user edits should
   override defaults before write.

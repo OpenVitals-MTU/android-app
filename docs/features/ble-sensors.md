@@ -2,28 +2,13 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/settings/presentation/ble_devices_screen.dart` + `ble_devices_notifier.dart`, `lib/features/manualentry/activity/recording/`, `lib/data/repository/contract/ble_device_repository.dart` (+ `impl/ble_device_repository_impl.dart`), `lib/domain/model/ble_sensor_models.dart`.
-> **Navigation:** `/settings/sensors` (the Sensors section renders `BleDevicesScreen` rather than the generic section screen), `/manual_entry/activity`.
-> **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Garmin watch sync](garmin-watch-sync.md), [Permissions](../app/permissions.md).
+> **Implementation:** `features/settings`, `features/manualentry/activity/recording`.
+> **Navigation:** `Screen.SettingsSensors`, `Screen.ActivityEntry`.
+> **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Watches](watches.md), [Permissions](../app/permissions.md).
 
 OpenVitals has experimental Bluetooth LE support for activity recording.
 
-This page covers sensors that **stream while you record** — a chest strap, a cadence sensor, a power meter. A watch is a separate section (**Settings › Watches**) because it does the opposite: it hands over files for what it already recorded, afterwards. See [Garmin watch sync](garmin-watch-sync.md). The two shared a screen only because they share a radio.
-
-## How to use it
-
-### Pair a sensor
-
-1. Go to **Settings › Sensors & devices**. With none paired you'll see **"No sensors yet"** and an **Add sensor** button.
-2. Tap **Add sensor**. OpenVitals requests **Nearby devices** (Bluetooth) permission first, then scans — **"Scanning for nearby sensors…"**. Wake your sensor and keep it close; use **Show all devices** if it doesn't appear, or **Open Bluetooth settings** if needed.
-3. Pick your device. OpenVitals discovers its capabilities, then lets you set a **Device name**, confirm the **Capabilities** (heart rate, cycling cadence, power, speed, running speed/cadence), and — for a cycling speed sensor — enter the **Wheel circumference (mm)**. Tap **Save**.
-
-### Manage and use sensors
-
-- Paired rows show the name, connection/battery status, capability chips, and an **Enabled** switch. Tap a row to **Edit** it or **Remove sensor**.
-- During a recording, every **enabled** sensor feeds live data into the recording dashboard (heart rate, cadence, power, speed) and into the saved activity's summary. Stale readings are timed out so an old value never lingers as if it were live.
-
-A connected heart-rate sensor is also what unlocks the **Heart rate recovery test** in the recorder — see [Heart rate recovery](heart-rate-recovery.md).
+Watches are managed separately, in Settings, Watches: a sensor streams while an activity is recorded, whereas a watch hands over files afterwards. See [Watches](watches.md).
 
 ## Supported Recording Signals
 

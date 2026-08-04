@@ -1,3 +1,1 @@
-# Generated/locked files: keep `git diff --check` (run in CI) from failing on them.
-*.lock -whitespace
-*.arb -whitespace
+*.lockfile -whitespace

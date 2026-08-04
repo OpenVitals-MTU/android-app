@@ -11,6 +11,11 @@ Support and contributions help with:
 - Improving documentation, screenshots, release notes, and translations.
 - Maintaining the local app's no-account, no-cloud, no-analytics, and no-ads boundary.
 
+App translations are managed on Codeberg Translate. You can translate OpenVitals
+into your language here:
+
+[translate.codeberg.org/projects/openvitals/android-app](https://translate.codeberg.org/projects/openvitals/android-app/)
+
 ## Where Support Belongs
 
 User-facing support questions should usually point to:

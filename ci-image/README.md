@@ -1,37 +1,27 @@
 # Prebaked CI image
 
-`Dockerfile` here extends `ghcr.io/cirruslabs/flutter:<version>` with the
-native-assets toolchain (cmake, ninja, clang) and the Android platform +
-build-tools this app compiles against — the things `scripts/ci-flutter.sh` would
-otherwise `apt-get` / `sdkmanager` from the network on **every** pipeline step.
+`Dockerfile` here extends `ghcr.io/cirruslabs/android-sdk:tools` with the
+Android platform and build-tools this app compiles against — the things
+`scripts/ci-android-setup.sh` would otherwise install from the network on every
+pipeline step. Baked in, its "already installed?" check passes instantly: no
+`sdkmanager` at CI time, minutes saved per pipeline, one network-flake failure
+mode gone.
 
-With them baked in, `ci-flutter.sh`'s "already installed?" checks pass instantly,
-so nothing is installed at CI time. That removes a couple of minutes per pipeline
-and a recurring network-flake failure mode. No `ci-flutter.sh` change is needed.
+This is the Android adaptation of the image the Flutter era ran; same design,
+different base.
 
-## Build & push
+## Using it
 
-Codeberg does **not** run a container registry, so use `ghcr.io` (aligns with the
-GitHub mirror), Docker Hub, or any OCI registry:
+Both pipelines run `ghcr.io/mmarca-tech/openvitals-android-ci:android-37`
+(pushed 2026-08-04). The package is **private** on ghcr — the Woodpecker
+runner's registry credentials cover it, exactly as they did the Flutter era's
+image; making it public in the GitHub package settings would remove that
+dependency, and nothing in the image is secret.
 
-```sh
-docker login ghcr.io             # GitHub username + a PAT with write:packages
-REGISTRY_IMAGE=ghcr.io/mmarca-tech/mobile-app-ci sh scripts/build-ci-image.sh
-```
+To rebuild after a `compileSdk` bump:
 
-Then make the package **public** (so CI pulls it without credentials) and point
-the `&flutter_image` anchor in `.woodpecker/test.yml` and
-`.woodpecker/release.yml` at the pushed reference.
-
-## Rebuild when
-
-- **Flutter version changes** — rebuild with the new `FLUTTER_VERSION` and bump
-  both the image tag here and the `&flutter_image` tag in the pipelines together.
-- **`compileSdk` changes** (`android/app/build.gradle.kts`) — bump
-  `ANDROID_PLATFORM` / `ANDROID_BUILD_TOOLS` here to match the defaults in
-  `scripts/ci-flutter.sh`.
-
-The image is a pure convenience layer: if it is ever unavailable, reverting the
-`&flutter_image` anchors to `ghcr.io/cirruslabs/flutter:<version>` restores the
-old behaviour, because `ci-flutter.sh` still installs the tools when they are
-missing.
+1. Update `ANDROID_PLATFORM` / `ANDROID_BUILD_TOOLS` here, in
+   `app/build.gradle.kts`, and in `scripts/ci-android-setup.sh` — they must
+   stay in lockstep.
+2. `scripts/build-ci-image.sh --push` (needs `docker login ghcr.io` with a
+   package-write token) and bump the tag in `.woodpecker/*.yml`.

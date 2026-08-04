@@ -2,33 +2,45 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/manualentry/activity/routeimport/`, `lib/features/imports/` (`route_import_intent.dart`, `pending_route_import.dart`), `lib/features/activity/`.
-> **Navigation:** started from `/settings/data_import` (the **GPX/KML/KMZ/TCX Importer** card); single-file import stages into `/manual_entry/activity` for review.
-> **Related:** [Feature map](feature-map.md), [FIT files import](fit-files-import.md), [Offline maps support](offline-maps-support.md).
+> **Implementation:** `features/manualentry/activity/routeimport`, `features/activity`.
+> **Navigation:** `Screen.SettingsDataImport`, `Screen.ActivityEntry`.
+> **Related:** [Feature map](feature-map.md), [FIT files import](fit-files-import.md), [Offline maps support](offline-maps-support.md), [Recording of activity](activity-recording.md).
 
-OpenVitals can import GPX, KML, KMZ, and TCX activity files, preview the result, and save supported activities to Health Connect.
-
-## How to use it
-
-1. Go to **Settings › Data Importers** and open the **GPX/KML/KMZ/TCX Importer** card.
-2. Choose one of:
-   - **Import GPX/KML/KMZ/TCX file** — pick a single file. OpenVitals parses it, then opens the **Activity Entry** review screen with an **Imported route** section (map preview, distance, elevation, point count, and a pace/speed line when the file has timestamps). The route's distance, elevation, duration, and calories pre-fill the editable fields. Tap **Save activity** to write it to Health Connect.
-   - **Bulk import GPX/KML/KMZ/TCX files** — pick several files and write them straight to Health Connect with **no per-file review**. Grant route-import permissions if prompted; a progress and result count are shown.
-3. To remove a bad route before saving a single import, use the clear/trash button in the **Imported route** section.
-
-Use single-file import when you want to check and tweak a route before saving; use bulk import to load a backlog quickly.
+OpenVitals can import GPX, KML, KMZ, and TCX activity files from Settings, Data Importers, preview one file in Activity Entry, and save supported activities to Health Connect. It can also bulk import multiple route files directly into Health Connect.
 
 ## Supported Formats
 
-- **GPX** for route tracks and timestamps where present.
-- **KML** and **KMZ** for route geometry.
-- **TCX** for activities including indoor ones that have no GPS route.
+- GPX for route tracks and timestamps where present.
+- KML and KMZ for route geometry.
+- TCX for recorded activities, including indoor ones.
 
-FIT activity, course, and workout files are imported from the separate **FIT Importer** card in the same Settings section. See [FIT files import](fit-files-import.md).
+FIT activity, course, and workout files are also imported from Settings, Data Importers. See [FIT files import](fit-files-import.md).
+
+The file's own content decides which parser is used, so a file with the wrong extension still imports correctly.
+
+## Indoor And Routeless Files
+
+A route file does not have to contain a route. A treadmill run or an indoor ride is a complete activity that simply has no positions in it, and OpenVitals imports it as one.
+
+- TCX is the format that expresses this best: its laps carry total time, distance, and calories, and its track points carry heart rate, cadence, and speed with the position optional.
+- A GPX whose track points carry timestamps but no coordinates is also accepted. It gives the start, the end, and the duration, plus whatever series the file recorded. Distance stays at zero because the file did not state one, and calories are left for the entry form to estimate.
+- A file with neither positions nor timestamps is refused, because there is nothing in it to import.
+
+## Imported Series
+
+Imported activities carry the per-second series the file recorded, not just its geometry:
+
+- Heart rate.
+- Cadence.
+- Speed.
+
+That is what gives an imported activity the same charts a recorded one has, and it is the only content an indoor file has to offer besides its timing.
 
 ## Import Flow
 
-Single-file import stages the parsed file and opens the **Activity Entry** review screen so the user sees the detected activity details before deciding whether to save. Bulk import skips the review and writes each file directly.
+The user opens Settings, Data Importers and chooses route file import, or shares a supported file with OpenVitals. OpenVitals then shows the detected activity details before the user decides whether to save.
+
+For mass import, the user chooses the bulk action from Settings, Data Importers, selects multiple files, grants route import write permissions if needed, and OpenVitals writes each valid activity directly. The card shows progress plus imported and failed counts.
 
 The review can include:
 
@@ -41,7 +53,9 @@ The review can include:
 
 ## Saved Data
 
-When saved, OpenVitals writes supported Health Connect exercise session data and related records such as route, distance, elevation, active calories, and total calories where permissions and data allow.
+When saved, OpenVitals writes supported Health Connect exercise session data and related records such as route, distance, elevation, heart rate, cadence, speed, active calories, and total calories where permissions and data allow.
+
+Elevation gain from route points is smoothed before it is saved, using the same filter activity recording uses, so GPS noise does not inflate the figure. See [Recording of activity](activity-recording.md).
 
 ## Export
 

@@ -1,41 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
-# Resolves everything the release pipeline needs to know -- ONCE -- and hands it to
-# the later steps as a sourceable env file in the shared Woodpecker workspace. Keeping
-# this in one place (rather than recomputing per step) is what stops the nightly and
-# tag paths from drifting apart.
-#
-# Outputs, all under .woodpecker/tmp/:
-#   release-context.env  sourced by every later step
-#   release-title.txt    Codeberg release title
-#   release-notes.md     Codeberg release body (carries the version-code marker)
-
 git fetch --tags --force origin
 mkdir -p .woodpecker/tmp
 
-# ABI filters, as Kotlin expressed them (ndk.abiFilters). Flutter takes the same
-# intent as --target-platform, so we translate below. Two ABIs keeps the APK under
-# Codeberg's release-asset size limit.
 apk_abi_filters="${OPENVITALS_APK_ABI_FILTERS:-armeabi-v7a,arm64-v8a}"
-target_platforms=""
-for abi in $(printf '%s' "$apk_abi_filters" | tr ',' ' '); do
-    case "$abi" in
-        armeabi-v7a) platform="android-arm" ;;
-        arm64-v8a)   platform="android-arm64" ;;
-        x86_64)      platform="android-x64" ;;
-        *)
-            echo "Unknown ABI filter '$abi'." >&2
-            exit 1
-            ;;
-    esac
-    if [ -z "$target_platforms" ]; then
-        target_platforms="$platform"
-    else
-        target_platforms="$target_platforms,$platform"
-    fi
-done
-
 release_tag="${CI_COMMIT_TAG:-}"
 
 if [ "${CI_PIPELINE_EVENT:-}" = "cron" ] || [ "${CI_PIPELINE_EVENT:-}" = "manual" ]; then
@@ -53,39 +22,44 @@ elif [ -z "$release_tag" ]; then
     esac
 fi
 
+gradle_task=":app:assembleRelease"
+bundle_task=""
+apk_variant_dir="release"
+aab_variant_dir=""
 aab_basename=""
 build_aab="false"
+build_debug_apk="false"
 play_track=""
 version_code=""
 version_name_override=""
-# Kotlin used a dedicated `nightly` AGP build type whose only real job was
-# buildConfigField OPENVITALS_DIAGNOSTICS=true. Flutter has no custom build types, so
-# nightly is an ordinary release build plus this dart-define. Without it a nightly
-# would ship with NO diagnostics UI, which is the whole point of the channel.
-dart_defines=""
+debug_apk_basename=""
 
-# pubspec.yaml carries `version: <name>+<code>` -- the Flutter equivalent of the
-# Kotlin app's baseVersionName / baseVersionCode.
-configured_version_code="$(sed -n 's/^version:[[:space:]]*[0-9.]*+\([0-9][0-9]*\).*/\1/p' pubspec.yaml | head -n 1)"
+configured_version_code="$(sed -n 's/.*baseVersionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
 if [ -z "$configured_version_code" ]; then
-    echo "Could not read the version code from pubspec.yaml (expected 'version: X.Y.Z+CODE')." >&2
+    echo "Could not read baseVersionCode from app/build.gradle.kts." >&2
     exit 1
 fi
 
-version_name="$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*\)+.*/\1/p' pubspec.yaml | head -n 1)"
+version_name="$(sed -n 's/.*baseVersionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
 if ! printf '%s\n' "$version_name" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-    echo "Release builds require a numeric version name in pubspec.yaml, found $version_name." >&2
+    echo "Release builds require a numeric baseVersionName, found $version_name." >&2
     exit 1
 fi
 
 if [ "$release_tag" = "nightly" ]; then
     release_channel="nightly"
+    gradle_task=":app:assembleNightly"
+    apk_variant_dir="nightly"
+    apk_basename="OpenVitals-nightly.apk"
+    bundle_task=":app:bundleNightly"
+    aab_variant_dir="nightly"
     aab_basename="OpenVitals-nightly.aab"
     release_title="OpenVitals Nightly"
     prerelease="true"
     build_aab="true"
+    build_debug_apk="true"
     play_track="beta"
-    dart_defines="--dart-define=OPENVITALS_DIAGNOSTICS=true"
+    debug_apk_basename="OpenVitals-nightly-debug.apk"
     pipeline_number="${CI_PIPELINE_NUMBER:-1}"
 
     if ! printf '%s\n' "$pipeline_number" | grep -Eq '^[0-9][0-9]*$'; then
@@ -97,6 +71,7 @@ if [ "$release_tag" = "nightly" ]; then
     version_name_override="$version_name-nightly.$pipeline_number"
 else
     release_channel="release"
+    apk_basename="OpenVitals-$release_tag.apk"
     release_title="OpenVitals $release_tag"
     prerelease="true"
 
@@ -106,40 +81,33 @@ else
     fi
 
     if ! printf '%s\n' "$release_tag" | grep -Eq '^[vV][0-9]+\.[0-9]+\.[0-9]+$'; then
-        echo "Release tags must use vX.Y.Z semantic version format, for example v1.10.0 or V1.10.0." >&2
+        echo "Release tags must use vX.Y.Z semantic version format, for example v1.8.0 or V1.8.0." >&2
         exit 1
     fi
 
     if [ "$version_name" != "${release_tag#[vV]}" ]; then
-        echo "Release tag $release_tag does not match the pubspec version name $version_name." >&2
+        echo "Release tag $release_tag does not match app versionName $version_name." >&2
         exit 1
     fi
 
     if [ "${CI_PIPELINE_EVENT:-}" = "deployment" ]; then
-        # Promotion to Play production reuses the code already published in this tag's
-        # Codeberg release notes, so the AAB carries exactly the code the APK had.
         prerelease="false"
+        bundle_task=":app:bundleRelease"
+        aab_variant_dir="release"
         aab_basename="OpenVitals-$release_tag.aab"
         build_aab="true"
         play_track="production"
         version_code="$(sh scripts/version-code.sh for-tag "$release_tag" --floor "$configured_version_code")"
     else
-        # Guard: a nightly may have consumed a code between the pubspec bump and the
-        # tag. If so the committed code is stale and would collide on Play.
+        build_debug_apk="true"
+        debug_apk_basename="OpenVitals-$release_tag-debug.apk"
         previous_configured_version_code="$((configured_version_code - 1))"
         expected_version_code="$(sh scripts/version-code.sh next --floor "$previous_configured_version_code")"
         if [ "$expected_version_code" != "$configured_version_code" ]; then
-            echo "pubspec version code $configured_version_code is stale; next expected versionCode is $expected_version_code." >&2
+            echo "baseVersionCode $configured_version_code is stale; next expected versionCode is $expected_version_code." >&2
             exit 1
         fi
         version_code="$configured_version_code"
-        # Build the AAB on a plain tag push too and attach it to the Codeberg
-        # release, so the Play upload artifact can be downloaded and submitted by
-        # hand. This does NOT publish to Play: the publish-play-* steps only run on
-        # cron/manual (beta open-testing) and deployment (production promotion), so
-        # a tag build just produces the AAB and leaves shipping it to the maintainer.
-        aab_basename="OpenVitals-$release_tag.aab"
-        build_aab="true"
     fi
 fi
 
@@ -148,8 +116,6 @@ printf '%s\n' "$release_title" > .woodpecker/tmp/release-title.txt
 notes_file=".woodpecker/tmp/release-notes.md"
 if [ "$release_channel" = "release" ]; then
     : > "$notes_file"
-    # The annotated tag's body (written by scripts/release.sh from docs/releases/X.Y.Z.md)
-    # is the release notes.
     if git rev-parse -q --verify "refs/tags/$release_tag" >/dev/null; then
         tag_object_type="$(git cat-file -t "$release_tag")"
         if [ "$tag_object_type" = "tag" ]; then
@@ -163,10 +129,14 @@ if [ "$release_channel" = "release" ]; then
             "Versioned prerelease build from commit ${CI_COMMIT_SHA:?}." \
             "" \
             "Assets:" \
-            "- OpenVitals-$release_tag-arm64-v8a.apk - 64-bit; almost every phone made in the last decade" \
-            "- OpenVitals-$release_tag-armeabi-v7a.apk - 32-bit; older devices" \
-            "- A SHA-256 checksum beside each" \
+            "- Signed release APK ($apk_abi_filters)" \
             > "$notes_file"
+        if [ "$build_debug_apk" = "true" ]; then
+            printf '%s\n' "- Signed Debug APK ($apk_abi_filters)" >> "$notes_file"
+            printf '%s\n' "- SHA-256 checksums" >> "$notes_file"
+        else
+            printf '%s\n' "- SHA-256 checksum" >> "$notes_file"
+        fi
     fi
 else
     printf '%s\n' \
@@ -177,14 +147,16 @@ else
         "This release keeps a stable download page. The APK and checksum assets are replaced by the next $release_channel build." \
         "" \
         "Assets:" \
-        "- Signed $release_channel APK per ABI (arm64-v8a for almost every phone; armeabi-v7a for older 32-bit ones)" \
-        "- A SHA-256 checksum beside each" \
+        "- Signed $release_channel APK ($apk_abi_filters)" \
         > "$notes_file"
+    if [ "$build_debug_apk" = "true" ]; then
+        printf '%s\n' "- Signed Debug APK ($apk_abi_filters)" >> "$notes_file"
+        printf '%s\n' "- SHA-256 checksums" >> "$notes_file"
+    else
+        printf '%s\n' "- SHA-256 checksum" >> "$notes_file"
+    fi
 fi
 
-# The marker in the release body IS the version-code database: scripts/version-code.sh
-# pages the Codeberg API and takes max(marker) + 1. Dropping it silently resets the
-# counter and Play then rejects every subsequent upload.
 if [ -n "$version_code" ]; then
     {
         printf '\n'
@@ -192,70 +164,22 @@ if [ -n "$version_code" ]; then
     } >> "$notes_file"
 fi
 
-# ── The ABI split ──────────────────────────────────────────────────────────────
-#
-# One APK per ABI, each with its own versionCode, because F-Droid asked for it and
-# because the alternative was a 60 MB download of which half was for the other
-# architecture. The scheme is F-Droid's:
-#
-#     versionCode * 10 + abiCode        armeabi-v7a 1, arm64-v8a 2, x86_64 3
-#
-# arm64 has to outrank armeabi-v7a: a 64-bit phone offered both must take the 64-bit
-# one, and the store ranks by versionCode.
-#
-# It is applied HERE, by building each ABI on its own with `--build-number`, rather
-# than in Gradle where F-Droid's own snippet puts it. Gradle cannot: the Flutter Gradle
-# Plugin already rewrites the versionCode of every ABI output when it sees
-# `--split-per-abi`, from an `afterEvaluate` that runs last, and the two COMPOUND rather
-# than replace each other (see the note in android/app/build.gradle.kts).
-#
-# The app bundle takes `versionCode * 10` with no ABI digit. That keeps Play interleaved
-# with the split APKs instead of a billion below them: leave Play on the bare counter and
-# anyone who ever installs an F-Droid or Codeberg APK is stranded on that channel, since
-# Play's next release would look like a downgrade to Android and never install.
-bundle_version_code=""
-apk_builds=""
-if [ -n "$version_code" ]; then
-    bundle_version_code=$((version_code * 10))
-    for platform in $(printf '%s' "$target_platforms" | tr ',' ' '); do
-        case "$platform" in
-            android-arm)   abi="armeabi-v7a"; abi_code=1 ;;
-            android-arm64) abi="arm64-v8a";   abi_code=2 ;;
-            android-x64)   abi="x86_64";      abi_code=3 ;;
-            *)
-                echo "No ABI version code is defined for target platform '$platform'." >&2
-                exit 1
-                ;;
-        esac
-        abi_version_code=$((version_code * 10 + abi_code))
-        # Named by ABI, not by version code, because the name is what a human reads off
-        # the releases page when choosing which file to download -- and a version code
-        # tells them nothing. F-Droid does not need the code in the name: its per-build
-        # `binary:` field gives EACH ABI its own URL (only the app-wide `Binaries:` is
-        # limited to %v and %c and so could not name an ABI). Same shape for nightly,
-        # whose stable page each build overwrites in place.
-        abi_apk_basename="OpenVitals-$release_tag-$abi.apk"
-        apk_builds="$apk_builds $platform:$abi_version_code:$abi_apk_basename"
-    done
-    apk_builds="${apk_builds# }"
-fi
-
 {
     printf 'OPENVITALS_RELEASE_CHANNEL=%s\n' "$release_channel"
     printf 'OPENVITALS_RELEASE_TAG=%s\n' "$release_tag"
-    # Quoted, alone among these: it is the only value holding more than one word (one
-    # spec per ABI). This file is SOURCED, so an unquoted space would end the assignment
-    # and run the rest of the line as a command.
-    printf "OPENVITALS_APK_BUILDS='%s'\n" "$apk_builds"
-    printf 'OPENVITALS_BUNDLE_VERSION_CODE=%s\n' "$bundle_version_code"
+    printf 'OPENVITALS_GRADLE_TASK=%s\n' "$gradle_task"
+    printf 'OPENVITALS_BUNDLE_TASK=%s\n' "$bundle_task"
+    printf 'OPENVITALS_APK_VARIANT_DIR=%s\n' "$apk_variant_dir"
+    printf 'OPENVITALS_APK_BASENAME=%s\n' "$apk_basename"
+    printf 'OPENVITALS_AAB_VARIANT_DIR=%s\n' "$aab_variant_dir"
     printf 'OPENVITALS_AAB_BASENAME=%s\n' "$aab_basename"
     printf 'OPENVITALS_APK_ABI_FILTERS=%s\n' "$apk_abi_filters"
-    printf 'OPENVITALS_TARGET_PLATFORMS=%s\n' "$target_platforms"
-    printf 'OPENVITALS_DART_DEFINES=%s\n' "$dart_defines"
     printf 'OPENVITALS_RELEASE_PRERELEASE=%s\n' "$prerelease"
     printf 'OPENVITALS_RELEASE_TARGET=%s\n' "${CI_COMMIT_SHA:?}"
     printf 'OPENVITALS_BUILD_AAB=%s\n' "$build_aab"
+    printf 'OPENVITALS_BUILD_DEBUG_APK=%s\n' "$build_debug_apk"
     printf 'OPENVITALS_PLAY_TRACK=%s\n' "$play_track"
     printf 'OPENVITALS_VERSION_CODE=%s\n' "$version_code"
     printf 'OPENVITALS_VERSION_NAME=%s\n' "$version_name_override"
+    printf 'OPENVITALS_DEBUG_APK_BASENAME=%s\n' "$debug_apk_basename"
 } > .woodpecker/tmp/release-context.env

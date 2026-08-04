@@ -9,16 +9,20 @@ when:
   - event: deployment
     evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
-# Pin to our dedicated CI runner, which mounts the persistent pub/Gradle caches.
+# Pin to the dedicated CI runner, which mounts the persistent Gradle caches.
+# (Registered for the org during the Flutter era; the label carries over.)
 labels:
   runner: openvitals
 
 variables:
   - &alpine_image alpine:3.20
-  # Prebaked CI image (cirruslabs/flutter:3.44.0 + native-assets toolchain + Android
-  # SDK; see ci-image/Dockerfile and the note in test.yml). Rebuild + push via
-  # scripts/build-ci-image.sh and bump this tag when the Flutter version changes.
-  - &flutter_image ghcr.io/mmarca-tech/mobile-app-ci:flutter-3.44.0
+  # Prebaked CI image: cirruslabs/android-sdk:tools plus the Android platform
+  # and build-tools this app compiles against (see ci-image/Dockerfile), so no
+  # sdkmanager runs at CI time. Rebuild + push (scripts/build-ci-image.sh
+  # --push) and bump this tag together when compileSdk moves. The package is
+  # private on ghcr; the runner's registry credentials cover it, as they did
+  # the Flutter era's image.
+  - &android_image ghcr.io/mmarca-tech/openvitals-android-ci:android-37
   - &ruby_image ruby:3.3
   - &fastlane_environment
     FASTLANE_DISABLE_COLORS: "1"
@@ -26,8 +30,6 @@ variables:
     FASTLANE_SKIP_UPDATE_CHECK: "1"
 
 steps:
-  # Everything the pipeline needs to know is resolved ONCE here and handed to the
-  # later steps as a sourceable env file in the shared workspace.
   - name: resolve-release-context
     image: *alpine_image
     commands:
@@ -39,7 +41,7 @@ steps:
   - name: unit-tests
     depends_on:
       - resolve-release-context
-    image: *flutter_image
+    image: *android_image
     commands:
       - set -eu
       - |
@@ -47,59 +49,27 @@ steps:
           echo "Skipping prerelease unit tests for production deployment."
           exit 0
         fi
-      # Goldens are excluded here for the same reason as in test.yml: they are
-      # engine-sensitive pixels and CI pins a different Flutter patch than the
-      # local toolchain, so they are the refactor's safety net rather than a
-      # gate. Running them only in the release pipeline made this the slowest
-      # and busiest of the two, which is where a racy test finally showed up.
-      - scripts/ci-flutter.sh test --exclude-tags golden --test-randomize-ordering-seed=random
+      - scripts/ci-android-gradle.sh verifyCiUnitTest
 
   - name: release-preflight
     depends_on:
       - unit-tests
-    image: *flutter_image
+    image: *android_image
     commands:
       - set -eu
-      # The F-Droid half of the fork guard runs on EVERY path, production included:
-      # `build` below recompiles the APK even for a production deployment, so Play
-      # Services creeping back into the vendored geolocator fork would break the
-      # F-Droid build no matter which event got us here.
-      - sh scripts/verify-geolocator-fork.sh --offline
       - |
         if [ "$${CI_PIPELINE_EVENT}" = "deployment" ] && [ "$${CI_PIPELINE_DEPLOY_TARGET:-}" = "production" ]; then
           echo "Skipping prerelease app preflight for production deployment."
           git diff --check
           exit 0
         fi
-      - scripts/ci-flutter.sh analyze lib test
-      - dart run tool/verify_l10n.dart
-      # The staleness half of the fork guard, and it cuts differently per channel.
-      #
-      # A nightly only WARNS. Upstream can publish on a day nobody touched this repo,
-      # and losing every nightly until someone ports the fork costs more than the
-      # staleness it would be nagging about -- a nightly is a moving snapshot anyway.
-      #
-      # A tagged release BLOCKS. That is the artifact users install and keep, so it must
-      # not be cut from a fork that has silently stopped tracking upstream (and so
-      # accumulated the bugs upstream already fixed).
-      #
-      # The production-deployment path returned above and never gets here, deliberately:
-      # the tag pipeline already ran this gate on the very same commit, and upstream
-      # could publish between cutting that tag and promoting it -- a fork that was
-      # current when the artifact was built must not block shipping that same artifact.
-      - . .woodpecker/tmp/release-context.env
-      - |
-        if [ "$${OPENVITALS_RELEASE_CHANNEL}" = "nightly" ]; then
-          sh scripts/verify-geolocator-fork.sh --warn-stale
-        else
-          sh scripts/verify-geolocator-fork.sh
-        fi
+      - scripts/ci-android-gradle.sh verifyCiPreflight
       - git diff --check
 
-  - name: build
+  - name: build-apk
     depends_on:
       - release-preflight
-    image: *flutter_image
+    image: *android_image
     environment:
       OPENVITALS_RELEASE_KEYSTORE_BASE64:
         from_secret: OPENVITALS_RELEASE_KEYSTORE_BASE64
@@ -114,110 +84,57 @@ steps:
     commands:
       - set -eu
       - . .woodpecker/tmp/release-context.env
-      # Assert the signing material up front. The Gradle config deliberately does NOT
-      # fall back to the debug key, so a missing secret would otherwise surface as a
-      # silently unsigned artifact.
       - test -n "$${OPENVITALS_RELEASE_KEYSTORE_BASE64}"
       - test -n "$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - test -n "$${OPENVITALS_RELEASE_KEY_ALIAS}"
       - keystore_path="$${CI_WORKSPACE}/.woodpecker/tmp/openvitals-release.p12"
       - printf '%s' "$${OPENVITALS_RELEASE_KEYSTORE_BASE64}" | base64 -d > "$${keystore_path}"
       - export OPENVITALS_RELEASE_STORE_FILE="$${keystore_path}"
-      # PKCS12 has a single password: the key password IS the store password.
       - export OPENVITALS_RELEASE_KEY_PASSWORD="$${OPENVITALS_RELEASE_STORE_PASSWORD}"
-      # Fail fast and legibly on a bad secret or a wrong alias, rather than 8 minutes
-      # later inside Gradle.
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
-      - test -n "$${OPENVITALS_TARGET_PLATFORMS}"
-      - test -n "$${OPENVITALS_VERSION_CODE}"
-      - test -n "$${OPENVITALS_APK_BUILDS}"
-      # One APK per ABI, each built on its own so it can carry its own versionCode
-      # (`versionCode * 10 + abiCode`, F-Droid's scheme -- see ci-release-context.sh).
-      # A single `--split-per-abi` build cannot do this: the Flutter Gradle Plugin
-      # rewrites the version code of every ABI output itself, and its rewrite lands ON
-      # TOP of any other rather than instead of it.
-      #
-      # It also halves what anyone downloads. The old fat APK was 60 MB, of which half
-      # was the other architecture and 4.4 MB was libraries for x86_64, which this app
-      # has never been able to run on.
+      - export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
+      - export OPENVITALS_MINIFY_DEBUG_FOR_CI=true
+      - if [ -n "$${OPENVITALS_VERSION_CODE:-}" ]; then export OPENVITALS_VERSION_CODE; fi
+      - if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then export OPENVITALS_VERSION_NAME; fi
+      - test -n "$${OPENVITALS_APK_ABI_FILTERS}"
       - |
-        for spec in $${OPENVITALS_APK_BUILDS}; do
-          platform="$${spec%%:*}"
-          rest="$${spec#*:}"
-          abi_version_code="$${rest%%:*}"
-          apk_basename="$${rest#*:}"
-
-          set -- build apk --release \
-            --target-platform "$${platform}" \
-            --build-number "$${abi_version_code}"
-          if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then
-            set -- "$${@}" --build-name "$${OPENVITALS_VERSION_NAME}"
-          fi
-          if [ -n "$${OPENVITALS_DART_DEFINES:-}" ]; then
-            set -- "$${@}" $${OPENVITALS_DART_DEFINES}
-          fi
-          scripts/ci-flutter.sh "$${@}"
-
-          apk_path="build/app/outputs/flutter-apk/app-release.apk"
-          test -f "$${apk_path}"
-          cp "$${apk_path}" ".woodpecker/tmp/$${apk_basename}"
-          (cd .woodpecker/tmp && sha256sum "$${apk_basename}" > "$${apk_basename}.sha256")
-          # Each build overwrites the last one's output, so it has to be taken away
-          # before the next runs -- otherwise a failed build would silently publish the
-          # previous ABI's APK under this ABI's name.
-          rm -f "$${apk_path}"
-        done
+        set -- "$${OPENVITALS_GRADLE_TASK}"
+        if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
+          set -- "$${@}" "$${OPENVITALS_BUNDLE_TASK}"
+        fi
+        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
+          set -- "$${@}" ":app:assembleDebug"
+        fi
+        env OPENVITALS_APK_ABI_FILTERS="$${OPENVITALS_APK_ABI_FILTERS}" scripts/ci-android-gradle.sh --stacktrace "$${@}"
+      - apk_path="$$(find "app/build/outputs/apk/$${OPENVITALS_APK_VARIANT_DIR}" -maxdepth 1 -name '*.apk' | head -n 1)"
+      - test -n "$${apk_path}"
+      - artifact_path=".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}"
+      - cp "$${apk_path}" "$${artifact_path}"
+      - (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_APK_BASENAME}" > "$${OPENVITALS_APK_BASENAME}.sha256")
+      - |
+        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
+          debug_apk_path="$$(find "app/build/outputs/apk/debug" -maxdepth 1 -name '*.apk' | head -n 1)"
+          test -n "$${debug_apk_path}"
+          cp "$${debug_apk_path}" ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}"
+          (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_DEBUG_APK_BASENAME}" > "$${OPENVITALS_DEBUG_APK_BASENAME}.sha256")
+        fi
       - |
         if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
-          test -n "$${OPENVITALS_BUNDLE_VERSION_CODE}"
-          # `versionCode * 10`, with no ABI digit: Play splits the bundle itself, so it
-          # needs one code, but it must sit in the SAME decade as the split APKs. Left on
-          # the bare counter it would be a billion below them, and anyone who ever
-          # installed an F-Droid or Codeberg APK could never be updated by Play again --
-          # every future Play release would look like a downgrade to Android.
-          set -- build appbundle --release \
-            --target-platform "$${OPENVITALS_TARGET_PLATFORMS}" \
-            --build-number "$${OPENVITALS_BUNDLE_VERSION_CODE}"
-          if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then
-            set -- "$${@}" --build-name "$${OPENVITALS_VERSION_NAME}"
-          fi
-          if [ -n "$${OPENVITALS_DART_DEFINES:-}" ]; then
-            set -- "$${@}" $${OPENVITALS_DART_DEFINES}
-          fi
-          scripts/ci-flutter.sh "$${@}"
-          aab_path="build/app/outputs/bundle/release/app-release.aab"
-          test -f "$${aab_path}"
+          aab_path="$$(find "app/build/outputs/bundle/$${OPENVITALS_AAB_VARIANT_DIR}" -maxdepth 1 -name '*.aab' | head -n 1)"
+          test -n "$${aab_path}"
           cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
-          # Checksum alongside it, matching the APKs, so a hand-downloaded AAB can
-          # be verified before it is uploaded to Play.
-          (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_AAB_BASENAME}" > "$${OPENVITALS_AAB_BASENAME}.sha256")
         fi
-      # Nightly keeps a single stable download page, so the `nightly` tag is force-moved
-      # to this commit over git (the release API key doubles as the git push credential).
-      # Codeberg's REST tag endpoint returns 500s and cannot be relied on -- see the
-      # script -- so the move goes straight through git instead.
-      #
-      # The versionCode goes with it: moving the tag means deleting the release that
-      # pins it, and that release body is the counter's database. The script mirrors
-      # the code to an append-only ref first and refuses a code that has gone
-      # backwards, which is what left a nightly that would not install (2026-07).
       - |
         if { [ "$${CI_PIPELINE_EVENT}" = "cron" ] || [ "$${CI_PIPELINE_EVENT}" = "manual" ]; } && [ "$${OPENVITALS_RELEASE_CHANNEL}" = "nightly" ]; then
           test -n "$${CODEBERG_RELEASE_API_KEY}"
           nightly_pipeline_number="$${CI_PIPELINE_NUMBER:-1}"
           api_base="$${CI_FORGE_URL%/}/api/v1/repos/$${CI_REPO}"
-          scripts/update-codeberg-tag.py "$${api_base}" "$${CODEBERG_RELEASE_API_KEY}" nightly "$${CI_COMMIT_SHA}" "OpenVitals nightly $${nightly_pipeline_number}" "$${OPENVITALS_VERSION_CODE}"
+          scripts/update-codeberg-tag.py "$${api_base}" "$${CODEBERG_RELEASE_API_KEY}" nightly "$${CI_COMMIT_SHA}" "OpenVitals nightly $${nightly_pipeline_number}"
         fi
 
   - name: publish-play-open-testing
-    # Gate on the Codeberg release, not just the build. That step records the
-    # version-code marker, which IS the counter's source of truth. If Play uploaded
-    # first and the Codeberg release then failed, the version code would be burned on
-    # Play but never recorded -- so the next nightly recomputes the same code and Play
-    # rejects it as a duplicate. That is exactly how this desynced. Recording the
-    # marker before Play consumes the code keeps the two in step.
     depends_on:
-      - publish-codeberg-release
+      - build-apk
     image: *ruby_image
     environment:
       <<: *fastlane_environment
@@ -238,7 +155,7 @@ steps:
         bundle exec fastlane android open_testing \
           json_key:"$${play_key_path}" \
           aab:"$${nightly_aab_path}" \
-          version_code:"$${OPENVITALS_BUNDLE_VERSION_CODE}"
+          version_code:"$${OPENVITALS_VERSION_CODE}"
     when:
       - event: manual
       - event: cron
@@ -246,7 +163,7 @@ steps:
 
   - name: publish-play-production
     depends_on:
-      - build
+      - build-apk
     image: *ruby_image
     environment:
       <<: *fastlane_environment
@@ -267,14 +184,14 @@ steps:
         bundle exec fastlane android production \
           json_key:"$${play_key_path}" \
           aab:"$${release_aab_path}" \
-          version_code:"$${OPENVITALS_BUNDLE_VERSION_CODE}"
+          version_code:"$${OPENVITALS_VERSION_CODE}"
     when:
       - event: deployment
         evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
   - name: publish-codeberg-release
     depends_on:
-      - build
+      - build-apk
     image: *alpine_image
     environment:
       CODEBERG_RELEASE_API_KEY:
@@ -286,29 +203,27 @@ steps:
       - test -n "$${CODEBERG_RELEASE_API_KEY}"
       - chmod +x scripts/publish-codeberg-release.sh
       - |
-        # One APK per ABI now, each with its checksum. The publisher takes any number
-        # of assets, so the list is simply built from the same specs the build looped
-        # over -- there is no second place that has to agree about the names.
-        set -- "$${OPENVITALS_RELEASE_TAG}" \
-          .woodpecker/tmp/release-title.txt \
-          .woodpecker/tmp/release-notes.md \
-          "$${OPENVITALS_RELEASE_PRERELEASE}" \
-          "$${OPENVITALS_RELEASE_TARGET}"
-        for spec in $${OPENVITALS_APK_BUILDS}; do
-          apk_basename="$${spec##*:}"
-          set -- "$${@}" \
-            ".woodpecker/tmp/$${apk_basename}" \
-            ".woodpecker/tmp/$${apk_basename}.sha256"
-        done
-        # The Play upload artifact rides along on the same release, so it can be
-        # downloaded and submitted to the console by hand (nightly and tag builds
-        # both produce it). Signed with the upload key; Play re-signs on ingest.
-        if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
-          set -- "$${@}" \
-            ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}" \
-            ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}.sha256"
+        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
+          scripts/publish-codeberg-release.sh \
+            "$${OPENVITALS_RELEASE_TAG}" \
+            .woodpecker/tmp/release-title.txt \
+            .woodpecker/tmp/release-notes.md \
+            "$${OPENVITALS_RELEASE_PRERELEASE}" \
+            "$${OPENVITALS_RELEASE_TARGET}" \
+            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
+            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256" \
+            ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}" \
+            ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}.sha256"
+        else
+          scripts/publish-codeberg-release.sh \
+            "$${OPENVITALS_RELEASE_TAG}" \
+            .woodpecker/tmp/release-title.txt \
+            .woodpecker/tmp/release-notes.md \
+            "$${OPENVITALS_RELEASE_PRERELEASE}" \
+            "$${OPENVITALS_RELEASE_TARGET}" \
+            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
+            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256"
         fi
-        scripts/publish-codeberg-release.sh "$${@}"
     when:
       - event: manual
       - event: cron
@@ -336,9 +251,6 @@ steps:
       - event: cron
         cron: nightly
 
-  # Promotes the versioned Codeberg prerelease to stable, but ONLY after Play
-  # production accepted the AAB -- so the download page never advertises a release
-  # that failed to ship.
   - name: publish-codeberg-stable
     depends_on:
       - publish-play-production

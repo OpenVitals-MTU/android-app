@@ -2,30 +2,11 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/manualentry/presentation/hydration_entry_screen.dart` + `hydration_catalog*.dart`, `lib/features/hydration/`, `lib/features/caffeine/`, `lib/features/nutrition/`, `lib/data/local/beverage/beverage_store.dart` (the drift `beverages` table), `lib/domain/insights/caffeine_health_drink_catalog.dart`.
-> **Navigation:** `/manual_entry/hydration`, `/manual_entry/hydration/log/:hydrationDrinkId`, `/metric/HYDRATION`, `/metric/CAFFEINE`.
+> **Implementation:** `features/manualentry/hydration`, `features/hydration`, `features/caffeine`, `features/nutrition`.
+> **Navigation:** `Screen.HydrationEntry`, `Screen.HydrationEntryLogDrink`, widgets `HYDRATION`, `CAFFEINE`.
 > **Related:** [Feature map](feature-map.md), [Hydration](hydration.md), [Caffeine sleep proposal](../proposals/caffeine-aware-sleep-insights.md).
 
 OpenVitals supports beverage logging as an explicit Health Connect write flow for hydration, caffeine, and selected nutrition values.
-
-## How to use it
-
-### Log a beverage
-
-1. Tap **Log › Hydration** on the dashboard to open **Beverage entry**, then pick a drink from the catalog. See [Hydration](hydration.md) for the step-by-step.
-2. **One drink writes three things at once:** a hydration record (the amount scaled by the drink's hydration impact), a caffeine value, and any other nutrients, all scaled to the amount you poured. A zero-hydration drink logs nutrition only and tells you **"Saved as nutrition only. No hydration was added."**
-
-### Make a custom drink
-
-1. In the catalog, tap **New drink**.
-2. Fill in **Name**, **Amount**, and **Category**, then choose a **Hydration impact** — **Counts fully**, **Counts partially** (reveals a "Counts as hydration (%)" field), or **Does not count**.
-3. Add **Nutrients** with **Add nutrient** (caffeine, calories, sugar, and so on). Save it, and it appears in your catalog to reuse, edit, or delete like any preset.
-
-### Track caffeine
-
-1. Open the **Caffeine** detail from its dashboard tile. It's read-only: **Active caffeine now**, a sleep-impact banner, a caffeine-decay curve, and a **Drinks** list (tap a drink for its own curve; swipe to delete one you logged).
-2. There is **no caffeine "+" button** — you add caffeine by logging a caffeinated beverage.
-3. **Personalize the model** in **Settings › Nutrition › Caffeine model**. This is a pharmacokinetic model, not a simple daily cap: set **half-life**, **absorption**, **sleep threshold (mg)**, **bedtime**, plus sensitivity and habituation options. A live "Effective half-life" readout updates as you change them; tap **Save**. These values drive the active-caffeine estimate and the bedtime/safe-sleep guidance.
 
 ## Beverage Catalog
 
@@ -48,6 +29,12 @@ Caffeine-aware drinks can write caffeine nutrition values and feed the caffeine 
 - Source and time-of-day context.
 - Daily limit and sensitivity settings.
 - Bedtime guidance.
+
+## Where The Caffeine Settings Live
+
+The caffeine model itself stays in Settings, Nutrition: half-life, absorption time, the sleep threshold, and bedtime, with the resulting effective half-life shown underneath.
+
+The physiological factors that change how fast caffeine is cleared moved to Settings, Body profile, under Metabolism. They are facts about the person rather than parameters of the model, so they sit with age, weight, and heart rate. Both cards edit the same stored preferences, and leaving the metabolism factors alone uses population averages. See [Settings and preferences](settings-and-preferences.md).
 
 ## Nutrition Defaults
 

@@ -1,29 +1,17 @@
 # Heart And Vitals
 
-> **Status:** Current implemented behavior. One parametric screen serves all ten metrics.
+> **Status:** Current implemented behavior with a transitional shared loader.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/heart/`, `lib/features/vitals/`, `lib/features/manualentry/presentation/vitals_measurement_entry_screen.dart`, `lib/data/repository/contract/heart_repository.dart` + `vitals_repository.dart`, `lib/domain/usecase/load_heart_period_use_case.dart`.
-> **Navigation:** `/heart_vitals` (overview); `/metric/:metricId` for all ten heart/vitals ids; `/manual_entry/vitals/:vitalsMeasurementType` (+ `/edit/:vitalsEntryId`).
+> **Implementation:** `features/heart`, `features/vitals`, `features/manualentry/vitals`, `data/repository/HeartRepository.kt`, `data/repository/VitalsRepository.kt`.
+> **Navigation:** `Screen.HeartVitals`, `Screen.Metric`, vitals entry routes; heart and vitals dashboard widgets.
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Statistics](statistics.md).
 
-## How to use it
+Heart and vitals are related but distinct feature areas.
 
-1. **Open the overview.** Tap any heart or vitals tile on the dashboard — they all open the **Heart & Vitals** overview. It's one scrolling screen with three groups you can reorder: **Heart** (average heart rate, resting heart rate, HRV), **Cardiovascular** (blood pressure, blood oxygen/SpO2, VO2 max, blood glucose), and **Respiratory** (respiratory rate, body temperature, skin temperature).
-2. **Open one metric.** Tap any card to open that metric's own detail, with the shared **Day / Week / Month / Year** controls, intraday charts, statistics, thresholds, and confidence notes (see [Statistics](statistics.md)). Cards with no data are still tappable and show **"No readings in this period."**
-3. **Check heart-rate recovery.** The **Average heart rate** detail has a **Heart rate recovery** row that opens the recovery history — see [Heart rate recovery](heart-rate-recovery.md).
-4. **Log a vital.** Four vitals accept manual entry — **Blood pressure**, **Blood oxygen**, **Respiratory rate**, **Body temperature**. Use **Log** on the dashboard, pick the vital, and fill the unit-aware field(s) (blood pressure has systolic and diastolic). Entries you logged in OpenVitals can be edited (tap the row) or deleted (swipe) on the detail screen; heart rate, resting HR, HRV, VO2 max, blood glucose, and skin temperature come from your device and stay read-only.
+- `features/heart` owns heart-rate-oriented state, presentation mapping, and route wrappers for average heart rate, resting heart rate, and HRV.
+- `features/vitals` owns vitals-facing screens and UI helpers such as blood pressure, SpO2, VO2 max, respiratory rate, body temperature, blood glucose, skin temperature, and the Today Vitals overview.
 
-> **"Today Vitals" is a home-screen widget, not an in-app screen.** The in-app equivalent is this **Heart & Vitals** overview. See [Home screen widgets](home-widgets.md).
-
-## How It Fits Together
-
-Heart and vitals are related but distinct feature areas, and the split is in the data layer, not the screen layer.
-
-- `lib/features/heart/` owns the **parametric detail screen** used by all ten metrics: `HeartMetricScreen`, configured by the `HeartMetric` enum (`heart_metric.dart`), backed by `HeartMetricViewModel`. There is no `RestingHeartRateScreen` or `BloodPressureScreen` in the route table.
-- `lib/features/vitals/` owns the Heart & Vitals overview (`heart_vitals_overview_screen.dart`; app-bar title "Heart & Vitals"). It also holds `vitals_screens.dart`, thin fixed-metric wrappers over `HeartMetricScreen` — a port artifact the router does not use; they are only exercised by `test/features/vitals/vitals_screens_test.dart`.
-- The read split is real: `HeartRepository` serves heart rate / resting heart rate / HRV, `VitalsRepository` serves the rest, and `LoadHeartPeriodUseCase` combines them so one screen can load either family.
-
-`HeartMetricViewModel` (a Riverpod `Notifier` over a `freezed` `HeartMetricState`) is shared across every heart and vitals route. That is an intentional shared loader, not a leftover: each `HeartMetric` declares whether it needs the heart-only or vitals-only load path. Unlike the retired Kotlin view model, the notifier does **not** precompute a display state — the per-metric derivations are cheap and are computed by the screen on demand.
+The current implementation still shares `HeartViewModel` and the heart period loader across heart and vitals routes. That is an intentional transitional boundary: the user-facing vitals UI lives in `features/vitals`, while some loading/state infrastructure remains shared until a deeper split is worth the extra complexity.
 
 ## Implemented Metrics
 
@@ -58,10 +46,10 @@ Heart and vitals detail screens use the shared metric detail scaffold:
 
 OpenVitals-created vitals entries can be edited or deleted when the app has write permission and ownership can be verified. External records stay read-only.
 
-## The Heart & Vitals Overview
+## Today Vitals
 
-The overview groups related metrics into heart, cardiovascular, and respiratory/body-temperature sections. It uses the same period shell as other metric details and links into focused metric screens. (The launcher widget named **Today Vitals** shows a compact subset of these values — see [Home screen widgets](home-widgets.md).)
+The vitals overview groups related metrics into heart, cardiovascular, and respiratory/body-temperature sections. It uses the same period shell as other metric details and links into focused metric screens.
 
 ## Data Boundaries
 
-Heart-rate and vitals records are read through feature-facing repository/use-case APIs rather than a global browser. Manual vitals entry is `lib/features/manualentry/presentation/vitals_measurement_entry_screen.dart` (there is no `manualentry/vitals/` subdirectory). Dashboard heart and vitals tiles open the `/heart_vitals` overview, which links on into the per-metric `/metric/:metricId` routes.
+Heart-rate and vitals records are read through feature-facing repository/use-case APIs rather than a global browser. Manual vitals entry lives under `features/manualentry/vitals`; dashboard cards route to focused heart or vitals detail destinations.

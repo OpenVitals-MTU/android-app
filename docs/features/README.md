@@ -2,8 +2,6 @@
 
 OpenVitals is a local-first Android app for Health Connect data, activity logging, imports, and simple on-device insights. This index points to current implemented behavior. Proposal and future-work notes live in [Proposals](../proposals/README.md).
 
-Every feature page below opens with a **"How to use it"** section — a step-by-step, task-oriented walkthrough (entry points, on-screen controls, and what to do when a screen is empty) — followed by reference detail. If you just want to *use* a feature, that first section is the user guide; the shared metric-screen controls (Day/Week/Month/Year, calendar, refresh, tap-a-bar) are documented once in [Statistics](statistics.md).
-
 Use the [feature map](feature-map.md) when you need the route/widget/package mapping. The [root feature inventory](../../Features.md) remains the detailed checklist.
 
 ## Dashboard And App Experience
@@ -13,7 +11,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Metric detail customization](metric-detail-customization.md): reorder dashboard widgets, manual entry widgets, and metric detail sections.
 - [Home screen widgets](home-widgets.md): Android launcher widgets for metric summaries, readiness, Body Energy, Today Vitals, and quick beverage logging.
 - [Onboarding and permissions](onboarding-and-permissions.md): first-run Health Connect setup, permission categories, and privacy expectations.
-- [Settings and preferences](settings-and-preferences.md): language, units, theme, goals, reminders, Health Connect access, imports, sensors, and diagnostics.
+- [Settings and preferences](settings-and-preferences.md): language, units, theme, body profile, goals, reminders, Health Connect access, imports, sensors, watches, phone-to-phone sync, and diagnostics.
 - [Privacy, support, and diagnostics](privacy-support-diagnostics.md): local-first privacy model, diagnostics surfaces, support links, and health disclaimer.
 - [Achievements](achievements.md): local badge progress for supported wellness categories.
 
@@ -25,7 +23,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Daily readiness](daily-readiness.md): Body Energy, Training Readiness, HRV status, stress context, and adaptive guidance.
 - [Body Energy](body-energy.md): selected-day energy timeline, calibration, confidence, dashboard support, and widgets.
 - [Heart and vitals](heart-and-vitals.md): heart rate, resting heart rate, HRV, blood pressure, SpO2, VO2 max, respiratory rate, body temperature, blood glucose, skin temperature, and Today Vitals.
-- [Heart rate recovery](heart-rate-recovery.md): the guided recovery test, the one-minute fall, the per-test card, the history trend, and how the measurement is validated.
+- [Heart rate recovery](heart-rate-recovery.md): the guided test, the marks, quality verdicts, and how effort is judged.
 - [Body metrics](body-metrics.md): weight, height, BMI, body fat, lean mass, BMR, bone mass, body water mass, and FFMI context.
 - [Nutrition](nutrition.md): calories in, protein, carbohydrates, fat, and selected nutrient totals.
 - [Hydration](hydration.md): hydration period detail, entry history, goals, and reminder controls.
@@ -40,11 +38,11 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Recording of activity](activity-recording.md): GPS and repetition-oriented activity recording before saving to Health Connect.
 - [Activity and training plans](activity-training-plans.md): planned workouts, activity setup defaults, favorite activities, repetitions, sets, and review flows.
 - [Bluetooth LE sensors](ble-sensors.md): supported heart-rate, cadence, power, and footpod sensors during activity recording.
-- [Garmin watch sync](garmin-watch-sync.md): pair a Garmin watch and copy what it recorded over Bluetooth, plus its alarms and on-watch settings.
-- [Garmin watch notifications](watch-notifications.md): show the phone's notifications on the wrist, and dismiss, reply or act on them from there.
-- [GPX/KML/KMZ route import](route-file-import.md): route file import for review before saving.
+- [Watches](watches.md): experimental Garmin and WearOS support, watch sync, watch-only metrics, notification forwarding, watch settings, and find-my-watch.
+- [GPX/KML/KMZ/TCX route import](route-file-import.md): route and indoor activity file import for review before saving.
 - [FIT files import](fit-files-import.md): Settings Data Importers support for FIT activity, course, and workout files.
-- [CSV import](csv-import.md): Settings Data Importers support for body-composition CSV exports, with a per-column mapping step.
+- [CSV import](csv-import.md): mapped import of body measurements and vitals from a CSV file.
+- [Sync with another phone](device-sync.md): copying Health Connect records between two phones over Bluetooth.
 - [Offline maps support](offline-maps-support.md): PMTiles or Mapsforge packs for local activity maps.
 - [Apple Health import](apple-health-import.md): supported Apple Health export records written into Health Connect.
 - [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md): imported caffeine beverage presets, nutrition families, common serving values, and source links.
