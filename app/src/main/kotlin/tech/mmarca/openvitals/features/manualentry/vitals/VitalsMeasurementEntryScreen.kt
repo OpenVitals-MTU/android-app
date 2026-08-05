@@ -72,6 +72,7 @@ import tech.mmarca.openvitals.domain.model.BpMealContext
 import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OptionDropdown
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 
@@ -226,7 +227,7 @@ private fun VitalsMeasurementEntryCard(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                BpOptionDropdown(
+                OptionDropdown(
                     label = stringResource(R.string.vitals_entry_bp_context_label),
                     options = BpMealContext.entries,
                     selected = state.bpMealContext,
@@ -234,7 +235,7 @@ private fun VitalsMeasurementEntryCard(
                     enabled = !state.isSavingEntry,
                     onSelect = onSelectBpMealContext,
                 )
-                BpOptionDropdown(
+                OptionDropdown(
                     label = stringResource(R.string.vitals_entry_bp_position_label),
                     options = BpBodyPositions,
                     selected = state.bpBodyPosition,
@@ -242,7 +243,7 @@ private fun VitalsMeasurementEntryCard(
                     enabled = !state.isSavingEntry,
                     onSelect = onSelectBpBodyPosition,
                 )
-                BpOptionDropdown(
+                OptionDropdown(
                     label = stringResource(R.string.vitals_entry_bp_location_label),
                     options = BpMeasurementLocations,
                     selected = state.bpMeasurementLocation,
@@ -393,69 +394,6 @@ internal fun BpMealContext.labelRes(): Int = when (this) {
     BpMealContext.AFTER_LUNCH -> R.string.bp_context_after_lunch
     BpMealContext.BEFORE_DINNER -> R.string.bp_context_before_dinner
     BpMealContext.AFTER_DINNER -> R.string.bp_context_after_dinner
-}
-
-/**
- * One compact optional-choice dropdown: the field shows the selection (or
- * "Not specified"), the menu lists "Not specified" first so a choice can
- * always be cleared. Chips showed every option at once and made the form a
- * wall; a closed dropdown costs one row.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun <T : Any> BpOptionDropdown(
-    label: String,
-    options: List<T>,
-    selected: T?,
-    optionText: @Composable (T) -> String,
-    enabled: Boolean,
-    onSelect: (T?) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { if (enabled) expanded = it },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        OutlinedTextField(
-            value = selected?.let { optionText(it) } ?: stringResource(R.string.option_not_specified),
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            enabled = enabled,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-            modifier = Modifier
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                .fillMaxWidth(),
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.option_not_specified)) },
-                onClick = {
-                    onSelect(null)
-                    expanded = false
-                },
-                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-            )
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(optionText(option)) },
-                    onClick = {
-                        onSelect(option)
-                        expanded = false
-                    },
-                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                )
-            }
-        }
-    }
 }
 
 /**

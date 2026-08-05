@@ -9,12 +9,9 @@ import tech.mmarca.openvitals.features.manualentry.hydration.*
 import tech.mmarca.openvitals.features.manualentry.mindfulness.*
 import tech.mmarca.openvitals.features.manualentry.vitals.*
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -27,11 +24,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.features.cycle.measurementLocationLabelRes
+import tech.mmarca.openvitals.ui.components.OptionDropdown
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
- * One labelled single-select chip row; tapping the selected chip clears it,
- * returning the section to "not logged".
+ * One labelled single-select section, rendered as a dropdown whose menu
+ * offers "Not specified" first — the section returns to "not logged" the
+ * same way a tapped-again chip used to.
  */
 @Composable
 internal fun CycleChipSection(
@@ -42,31 +41,15 @@ internal fun CycleChipSection(
     onSelect: (Int?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            options.forEach { (value, optionLabel) ->
-                FilterChip(
-                    selected = selection == value,
-                    enabled = enabled,
-                    onClick = { onSelect(if (selection == value) null else value) },
-                    label = { Text(optionLabel) },
-                )
-            }
-        }
-    }
+    OptionDropdown(
+        label = label,
+        options = options,
+        selected = options.firstOrNull { it.first == selection },
+        optionText = { it.second },
+        enabled = enabled,
+        onSelect = { onSelect(it?.first) },
+        modifier = modifier,
+    )
 }
 
 @Composable

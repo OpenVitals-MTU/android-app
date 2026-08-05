@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -81,9 +83,11 @@ class CycleEntryContentTest {
             .performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.cycle_observation_basal_body_temperature))
             .performScrollTo().assertIsDisplayed()
-        // ...but only the selected category's inputs render.
-        composeRule.onNodeWithText(string(R.string.cycle_flow_medium))
-            .performScrollTo().assertIsDisplayed()
+        // ...but only the selected category's input renders — as a collapsed
+        // dropdown showing "Not specified". Exactly one: the other sections'
+        // dropdowns are not in the tree at all.
+        composeRule.onAllNodesWithText(string(R.string.option_not_specified))
+            .assertCountEquals(1)
         composeRule.onNodeWithText(string(R.string.cycle_entry_section_spotting))
             .assertDoesNotExist()
         composeRule.onNodeWithText(string(R.string.cycle_entry_section_mucus_appearance))
@@ -121,12 +125,14 @@ class CycleEntryContentTest {
 
         composeRule.onNodeWithText(string(R.string.cycle_entry_bbt_location))
             .performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.cycle_flow_medium))
-            .assertDoesNotExist()
+        // "Period flow" appears once — the category chip. If the flow section
+        // rendered too, its dropdown label would make it two.
+        composeRule.onAllNodesWithText(string(R.string.cycle_entry_section_flow))
+            .assertCountEquals(1)
     }
 
     @Test
-    fun tappingAFlowChipReportsTheSelection() {
+    fun pickingAFlowOptionFromTheDropdownReportsTheSelection() {
         var selected: Int? = null
         setCard(
             CycleEntryUiState(
@@ -136,8 +142,9 @@ class CycleEntryContentTest {
             onSelectFlow = { selected = it },
         )
 
-        composeRule.onNodeWithText(string(R.string.cycle_flow_medium))
+        composeRule.onNodeWithText(string(R.string.option_not_specified))
             .performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.cycle_flow_medium)).performClick()
 
         assertEquals(CycleRecordValues.FLOW_MEDIUM, selected)
     }
