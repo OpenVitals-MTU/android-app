@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="translation_picker_minimum_coverage_percent">70</integer>
+    <string-array name="translation_picker_language_tags" translatable="false">
+        <item>en</item>
+        <item>de</item>
+        <item>es</item>
+        <item>et</item>
+        <item>it</item>
+    </string-array>
+    <string-array name="translation_picker_language_coverage" translatable="false">
+        <item>en:100</item>
+        <item>de:82</item>
+        <item>es:82</item>
+        <item>et:82</item>
+        <item>it:82</item>
+    </string-array>
+</resources>

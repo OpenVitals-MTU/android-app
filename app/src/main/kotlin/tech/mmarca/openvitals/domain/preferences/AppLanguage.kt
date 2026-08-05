@@ -34,6 +34,7 @@ class AppLanguage private constructor(
         val GERMAN = AppLanguage("de", "GERMAN")
         val ITALIAN = AppLanguage("it", "ITALIAN")
         val ESTONIAN = AppLanguage("et", "ESTONIAN")
+        val PORTUGUESE = AppLanguage("pt", "PORTUGUESE")
 
         private val knownByLegacyName = listOf(
             SYSTEM,
@@ -42,6 +43,7 @@ class AppLanguage private constructor(
             GERMAN,
             ITALIAN,
             ESTONIAN,
+            PORTUGUESE,
         ).associateBy { it.name }
 
         private val knownByLanguageTag = listOf(
@@ -50,6 +52,7 @@ class AppLanguage private constructor(
             GERMAN,
             ITALIAN,
             ESTONIAN,
+            PORTUGUESE,
         ).associateBy { checkNotNull(it.languageTag) }
 
         fun fromStorageValue(value: String?): AppLanguage =
