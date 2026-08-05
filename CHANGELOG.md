@@ -1,5 +1,67 @@
 # Changelog
 
+## 2.6.0 - 2026-08-05
+
+### English
+
+- **Menstrual cycle tracking.** Log period flow, spotting, sexual activity, ovulation tests, cervical mucus and basal body temperature - one category at a time, each its own Health Connect record. Period days derive from your flow entries, and cycle statistics predict the next period; when cycles vary too much for an honest prediction, the app says so. Cycle data stays a separately granted permission category and is stored only in Health Connect.
+- **Health report export (PDF).** Pick metrics, detail level and range, and OpenVitals builds a PDF on the device to share or save - charts, statistics and tables per metric, and clinical sections where the data has more to say: blood pressure with separate systolic/diastolic statistics and meal-context averages, glucose by relation to meal with fasting first, workouts by activity type with the full session list, and sleep with bedtime/wake-up averages and the stage mix. The report states its own gaps in print.
+- **Richer blood-pressure logging.** Optional dropdowns for when the reading was taken, body position and cuff location, plus a collapsible guide with the standard home-measurement protocol.
+- **Distance backfill from steps.** Opt-in under Activities: your stride length fills daily distance only for days that have steps and no distance from any source; derived records are marked and removed if you turn it off.
+- **Portuguese added,** and Spanish, Italian, Estonian and German are complete again at 100%.
+- **Dashboard keeps tiles with recent history.** A tile only sinks when its metric has no data today and none recently - Sleep no longer drops before tonight - and a "Sort empty tiles last" toggle makes it a choice.
+- **Fixes:** year-long heart-rate reads are chunked so they cannot come back empty; duplicated blood-pressure records count once in the report; cycle screens allow screenshots; the base unit option is named "System" everywhere.
+
+### Espanol
+
+- **Seguimiento del ciclo menstrual.** Registra flujo, manchado, actividad sexual, tests de ovulacion, moco cervical y temperatura basal - una categoria cada vez, cada una como su propio registro de Health Connect. Los dias de periodo se derivan de tus entradas de flujo y las estadisticas predicen el siguiente periodo; cuando tus ciclos varian demasiado para una prediccion honesta, la app lo dice. Los datos del ciclo siguen siendo una categoria de permisos concedida por separado y se guardan solo en Health Connect.
+- **Exportacion de informe de salud (PDF).** Elige metricas, nivel de detalle y rango, y OpenVitals crea un PDF en el dispositivo para compartir o guardar - graficos, estadisticas y tablas por metrica, y secciones clinicas donde los datos dan mas de si: tension arterial con estadisticas sistolica/diastolica separadas y medias por contexto de comida, glucosa por relacion con la comida con el ayuno primero, entrenamientos por tipo de actividad con la lista completa de sesiones, y sueno con medias de acostarse/despertar y la mezcla de fases. El informe declara sus propios huecos por escrito.
+- **Registro de tension arterial mas rico.** Desplegables opcionales para cuando se tomo la medida, posicion del cuerpo y posicion del manguito, mas una guia plegable con el protocolo estandar de medicion en casa.
+- **Relleno de distancia a partir de pasos.** Opcional en Actividades: tu longitud de zancada rellena la distancia diaria solo en dias con pasos y sin distancia de ninguna fuente; los registros derivados quedan marcados y se eliminan si lo desactivas.
+- **Portugues anadido,** y espanol, italiano, estonio y aleman vuelven a estar completos al 100%.
+- **El panel conserva las tarjetas con historial reciente.** Una tarjeta solo baja cuando su metrica no tiene datos hoy ni en los ultimos dias - Sueno ya no cae antes de que llegue la noche - y un ajuste "Ordenar tarjetas vacias al final" lo convierte en una eleccion.
+- **Correcciones:** las lecturas anuales de frecuencia cardiaca se trocean para que no puedan volver vacias; los registros duplicados de tension cuentan una sola vez en el informe; las pantallas del ciclo permiten capturas; y la opcion de unidades base se llama "Sistema" en todas partes.
+
+### Deutsch
+
+- **Zyklustracking.** Erfasse Periodenstaerke, Zwischenblutungen, sexuelle Aktivitaet, Ovulationstests, Zervixschleim und Basaltemperatur - eine Kategorie nach der anderen, jede als eigener Health-Connect-Eintrag. Periodentage werden aus deinen Eintraegen abgeleitet, und die Statistik sagt die naechste Periode voraus; schwanken deine Zyklen zu stark fuer eine ehrliche Vorhersage, sagt die App das. Zyklusdaten bleiben eine separat erteilte Berechtigungskategorie und liegen nur in Health Connect.
+- **Gesundheitsbericht als PDF.** Messwerte, Detailgrad und Zeitraum waehlen, und OpenVitals erstellt auf dem Geraet ein PDF zum Teilen oder Speichern - Diagramme, Statistiken und Tabellen pro Messwert, plus klinische Abschnitte, wo die Daten mehr hergeben: Blutdruck mit getrennten systolisch/diastolisch-Statistiken und Durchschnitten nach Mahlzeitkontext, Glukose nach Bezug zur Mahlzeit mit Nuechternwert zuerst, Trainings nach Aktivitaetstyp mit vollstaendiger Liste, und Schlaf mit Schlafens-/Aufwachzeit-Durchschnitten und Phasenverteilung. Der Bericht benennt seine eigenen Luecken schriftlich.
+- **Reichere Blutdruckerfassung.** Optionale Auswahlfelder fuer den Messzeitpunkt, die Koerperhaltung und die Manschettenposition, dazu eine aufklappbare Anleitung mit dem Standardprotokoll fuer die Heimmessung.
+- **Distanz aus Schritten auffuellen.** Opt-in unter Aktivitaeten: deine Schrittlaenge fuellt die Tagesdistanz nur fuer Tage mit Schritten und ohne Distanz aus irgendeiner Quelle; abgeleitete Eintraege sind markiert und verschwinden beim Abschalten wieder.
+- **Portugiesisch ist neu,** und Spanisch, Italienisch, Estnisch und Deutsch sind wieder zu 100% vollstaendig.
+- **Das Dashboard behaelt Kacheln mit juengerer Historie.** Eine Kachel sinkt nur, wenn ihr Messwert weder heute noch kuerzlich Daten hat - Schlaf faellt nicht mehr, bevor die Nacht da war - und ein Schalter "Leere Kacheln zuletzt" macht das Verhalten zur Wahl.
+- **Korrekturen:** jahreslange Herzfrequenz-Abfragen sind gestueckelt und koennen nicht mehr leer zurueckkommen; doppelte Blutdruckeintraege zaehlen im Bericht einmal; Zyklus-Bildschirme erlauben Screenshots; die Basiseinheiten-Option heisst ueberall "System".
+
+### Italiano
+
+- **Monitoraggio del ciclo mestruale.** Registra flusso, spotting, attivita sessuale, test di ovulazione, muco cervicale e temperatura basale - una categoria alla volta, ognuna come record Health Connect a se. I giorni del ciclo derivano dalle tue voci di flusso e le statistiche prevedono il prossimo ciclo; quando i cicli variano troppo per una previsione onesta, l'app lo dice. I dati del ciclo restano una categoria di permessi concessa a parte e vivono solo in Health Connect.
+- **Esportazione del report sulla salute (PDF).** Scegli metriche, dettaglio e intervallo, e OpenVitals crea un PDF sul dispositivo da condividere o salvare - grafici, statistiche e tabelle per metrica, piu sezioni cliniche dove i dati hanno di piu da dire: pressione con statistiche sistolica/diastolica separate e medie per contesto dei pasti, glicemia per relazione col pasto con il digiuno per primo, allenamenti per tipo di attivita con l'elenco completo, e sonno con medie di coricarsi/risveglio e la composizione delle fasi. Il report dichiara per iscritto le proprie lacune.
+- **Registrazione della pressione piu ricca.** Menu a tendina opzionali per quando e stata presa la misura, posizione del corpo e posizione del bracciale, piu una guida richiudibile col protocollo standard di misurazione a casa.
+- **Distanza ricavata dai passi.** Opzionale in Attivita: la tua lunghezza del passo riempie la distanza giornaliera solo nei giorni con passi e senza distanza da alcuna fonte; i record derivati sono marcati e vengono rimossi se disattivi la funzione.
+- **Aggiunto il portoghese,** e spagnolo, italiano, estone e tedesco tornano completi al 100%.
+- **La dashboard tiene le tessere con storia recente.** Una tessera scende solo quando la sua metrica non ha dati oggi ne di recente - Sonno non cala piu prima che arrivi la notte - e l'opzione "Tessere vuote in fondo" rende il comportamento una scelta.
+- **Correzioni:** le letture annuali della frequenza cardiaca sono suddivise e non possono piu tornare vuote; i record di pressione duplicati contano una volta nel report; le schermate del ciclo permettono gli screenshot; l'opzione delle unita di base si chiama "Sistema" ovunque.
+
+### Eesti
+
+- **Menstruaaltsukli jalgimine.** Logi voolust, maarimist, seksuaalset aktiivsust, ovulatsiooniteste, emakakaela lima ja basaaltemperatuuri - uks kategooria korraga, igauks oma Health Connecti kirjena. Perioodipaevad tuletatakse sinu sissekannetest ja statistika ennustab jargmist perioodi; kui tsuklid koiguvad ausa ennustuse jaoks liiga palju, utleb rakendus seda. Tsukliandmed jaavad eraldi antavaks loakategooriaks ja elavad ainult Health Connectis.
+- **Tervisearuande eksport (PDF).** Vali moodikud, detailsus ja vahemik ning OpenVitals koostab seadmes PDF-i, mida jagada voi salvestada - graafikud, statistika ja tabelid iga moodiku kohta ning kliinilised jaotised seal, kus andmetel on rohkem oelda: vererohk eraldi sustoolse/diastoolse statistikaga ja soogikonteksti keskmistega, veresuhkur soogi suhtes tuhja kohuga eespool, treeningud tegevustuubi kaupa taieliku loeteluga ning uni magamamineku/arkamise keskmiste ja faaside jaotusega. Aruanne nimetab oma lungad kirjalikult.
+- **Rikkam vererohu logimine.** Valikulised rippmenuud mootmise aja, kehaasendi ja manseti asukoha jaoks, lisaks kokkuklapitav juhend koduse mootmise standardprotokolliga.
+- **Distantsi taitmine sammudest.** Valikuline seade Tegevuste all: sinu sammupikkus taidab paevase distantsi ainult paevadel, kus on sammud, aga mitte uhestki allikast distantsi; tuletatud kirjed on margistatud ja eemaldatakse valja lulitamisel.
+- **Lisandus portugali keel,** ning hispaania, itaalia, eesti ja saksa keel on taas 100% taielikud.
+- **Tooslaud hoiab hiljutise ajalooga paane.** Paan vajub alla ainult siis, kui moodikul pole andmeid ei tana ega viimastel paevadel - Uni ei lange enam enne oo saabumist - ja lueliti "Tuhjad paanid lopus" teeb kaitumisest valiku.
+- **Parandused:** aastapikkused pulsilugemised on tukeldatud ega saa enam tuhjalt tagasi tulla; topelt vererohukirjed loevad aruandes uks kord; tsukliekraanid lubavad ekraanipilte; pohiuhikute valik kannab koikjal nime "Susteem".
+
+### Portugues
+
+- **Registo do ciclo menstrual.** Registe fluxo, spotting, atividade sexual, testes de ovulacao, muco cervical e temperatura basal - uma categoria de cada vez, cada uma como o seu proprio registo do Health Connect. Os dias de periodo derivam das suas entradas de fluxo e as estatisticas preveem o proximo periodo; quando os ciclos variam demasiado para uma previsao honesta, a app di-lo. Os dados do ciclo continuam a ser uma categoria de permissoes concedida em separado e vivem apenas no Health Connect.
+- **Exportacao de relatorio de saude (PDF).** Escolha metricas, detalhe e intervalo, e o OpenVitals cria um PDF no dispositivo para partilhar ou guardar - graficos, estatisticas e tabelas por metrica, e seccoes clinicas onde os dados tem mais para dizer: tensao arterial com estatisticas sistolica/diastolica separadas e medias por contexto de refeicao, glicose por relacao com a refeicao com o jejum primeiro, treinos por tipo de atividade com a lista completa, e sono com medias de deitar/acordar e a distribuicao de fases. O relatorio declara por escrito as suas proprias lacunas.
+- **Registo de tensao arterial mais rico.** Menus opcionais para quando foi medida, posicao do corpo e posicao da bracadeira, mais um guia recolhivel com o protocolo padrao de medicao em casa.
+- **Preenchimento de distancia a partir de passos.** Opcional em Atividades: o seu comprimento de passada preenche a distancia diaria apenas em dias com passos e sem distancia de qualquer fonte; os registos derivados ficam marcados e sao removidos se desativar.
+- **Portugues adicionado,** e espanhol, italiano, estonio e alemao voltam a estar completos a 100%.
+- **O painel mantem os cartoes com historial recente.** Um cartao so desce quando a sua metrica nao tem dados hoje nem nos ultimos dias - o Sono ja nao cai antes de a noite chegar - e a opcao "Ordenar cartoes vazios no fim" torna o comportamento uma escolha.
+- **Correcoes:** as leituras anuais de frequencia cardiaca sao divididas e ja nao podem voltar vazias; os registos duplicados de tensao contam uma vez no relatorio; os ecras do ciclo permitem capturas; e a opcao de unidades base chama-se "Sistema" em todo o lado.
+
 ## 2.5.0 - 2026-08-04
 
 ### English

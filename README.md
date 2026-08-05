@@ -33,6 +33,8 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 ## Highlights
 
 - Summary dashboard for activity, recovery, beverages, nutrition, body, heart, vitals, mindfulness, and optional cycle data
+- PDF health report export built fully on-device, with charts, statistics, and clinical sections for blood pressure, glucose, workouts, and sleep
+- Manual cycle logging with derived period days and next-period predictions, stored only in Health Connect
 - Period detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
 - Daily Readiness with Body Energy, Training Readiness, physiological stress, HRV status, intensity minutes, adaptive goals, and local explanation screens
 - Refreshed UI/UX with clearer Summary-first navigation, metric screens, and entry flows
@@ -42,7 +44,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ route import, FIT activity/course/workout import, offline PMTiles/Mapsforge map packs, and GPS activity recording with review before saving
 - Configurable activity recording dashboard with Focus mode, high-contrast outdoor mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
-- App language support with an in-app language picker for system default, English, Spanish, German, Italian, and Estonian
+- App language support with an in-app language picker for system default, English, Spanish, German, Italian, Estonian, and Portuguese
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
 - Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
 - Wheelchair activity and wheelchair push tracking when Health Connect data is available
