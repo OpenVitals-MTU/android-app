@@ -1344,6 +1344,9 @@
     <string name="settings_activity_recording_meters">%1$d m</string>
     <string name="settings_activity_recording_auto">Auto</string>
     <string name="settings_activity_recording_off">Off</string>
+    <string name="settings_step_distance_title">Distance from steps</string>
+    <string name="settings_step_distance_body">For apps that record steps but no distance: estimate distance as steps times your step length and save it to Health Connect. Only days with steps and no distance from any other source are filled.</string>
+    <string name="settings_step_distance_stride_label">Step length</string>
     <string name="settings_dashboard_sort_empty_title">Sort empty tiles last</string>
     <string name="settings_dashboard_sort_empty_body">Outside edit mode, tiles with no recent data move behind the ones with some. Turn off to always keep your exact arrangement.</string>
     <string name="settings_calorie_data_title">Total calories data</string>

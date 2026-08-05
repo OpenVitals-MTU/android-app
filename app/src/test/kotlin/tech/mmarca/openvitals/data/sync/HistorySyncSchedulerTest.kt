@@ -72,7 +72,11 @@ class HistorySyncSchedulerTest {
         coEvery { it.syncAll(any()) } coAnswers { recorder.run("bodyEnergy") }
     }
 
-    private val scheduler = HistorySyncScheduler(vitals, calories, bodyEnergy)
+    private val stepDistance = mockk<StepDistanceBackfillService>().also {
+        coEvery { it.syncIncremental() } coAnswers { recorder.run("stepDistance") }
+    }
+
+    private val scheduler = HistorySyncScheduler(vitals, calories, bodyEnergy, stepDistance)
 
     @Test
     fun `the drains run one after another, never at the same time`() = runTest {
@@ -80,7 +84,7 @@ class HistorySyncSchedulerTest {
         // the 30s->80s contention the per-screen sequencing exists to avoid.
         scheduler.drainIncrementalOnce()
 
-        assertEquals(listOf("vitals", "calories", "bodyEnergy"), recorder.started)
+        assertEquals(listOf("vitals", "calories", "bodyEnergy", "stepDistance"), recorder.started)
         assertEquals(emptySet<String>(), recorder.overlapped)
     }
 
@@ -104,7 +108,7 @@ class HistorySyncSchedulerTest {
 
         scheduler.drainIncrementalOnce()
 
-        assertEquals(listOf("calories", "bodyEnergy"), recorder.started)
+        assertEquals(listOf("calories", "bodyEnergy", "stepDistance"), recorder.started)
     }
 
     @Test
@@ -134,6 +138,6 @@ class HistorySyncSchedulerTest {
             ).awaitAll()
         }
 
-        assertEquals(listOf("vitals", "calories", "bodyEnergy"), recorder.started)
+        assertEquals(listOf("vitals", "calories", "bodyEnergy", "stepDistance"), recorder.started)
     }
 }

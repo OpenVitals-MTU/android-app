@@ -30,6 +30,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
@@ -466,6 +467,7 @@ class RouteBulkImportTest {
             sleepRepository = sleepRepo(),
             hydrationReminderController = mockk<HydrationReminderController>(relaxed = true),
             preferencesRepository = preferencesRepository,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportService = mockk<AppleHealthImportService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             routeFileImporter = routeFileImporter,
@@ -581,6 +583,8 @@ class RouteBulkImportTest {
             every { prefs.dynamicColor } returns false
             every { prefs.chartAggregationMode } returns ChartAggregationMode.OFF
             every { prefs.dashboardSortEmptyTilesLast } returns true
+            every { prefs.stepDistanceBackfillEnabled } returns false
+            every { prefs.strideLengthMeters } returns 0.7
             every { prefs.nightStartHour } returns SleepWindow.Default.startHour
             every { prefs.nightEndHour } returns SleepWindow.Default.endHour
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY

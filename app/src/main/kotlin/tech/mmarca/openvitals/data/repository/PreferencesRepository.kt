@@ -27,6 +27,7 @@ import tech.mmarca.openvitals.domain.preferences.CaffeineSleepSensitivity
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
+import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.domain.preferences.SystemUnitSystemProvider
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
@@ -243,6 +244,21 @@ class PreferencesRepository @Inject constructor(
         get() = prefs.getBoolean(KEY_DASHBOARD_SORT_EMPTY_TILES_LAST, true)
         set(value) {
             prefs.edit { putBoolean(KEY_DASHBOARD_SORT_EMPTY_TILES_LAST, value) }
+        }
+
+    var stepDistanceBackfillEnabled: Boolean
+        get() = prefs.getBoolean(KEY_STEP_DISTANCE_BACKFILL_ENABLED, false)
+        set(value) {
+            prefs.edit { putBoolean(KEY_STEP_DISTANCE_BACKFILL_ENABLED, value) }
+        }
+
+    var strideLengthMeters: Double
+        get() = StrideLength.normalize(
+            prefs.getFloat(KEY_STRIDE_LENGTH_METERS, StrideLength.defaultMeters.toFloat()).toDouble()
+        )
+        set(value) {
+            val normalized = StrideLength.normalize(value)
+            prefs.edit { putFloat(KEY_STRIDE_LENGTH_METERS, normalized.toFloat()) }
         }
 
     var healthConnectSyncEnabled: Boolean
@@ -1204,6 +1220,8 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_DASHBOARD_SORT_EMPTY_TILES_LAST = "dashboard_sort_empty_tiles_last"
+        private const val KEY_STEP_DISTANCE_BACKFILL_ENABLED = "step_distance_backfill_enabled"
+        private const val KEY_STRIDE_LENGTH_METERS = "stride_length_meters"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_METRIC_DETAIL_SECTION_ORDER = "metric_detail_section_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"

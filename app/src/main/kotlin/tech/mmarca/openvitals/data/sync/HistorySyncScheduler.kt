@@ -18,6 +18,7 @@ class HistorySyncScheduler @Inject constructor(
     private val vitalsSync: VitalsHistorySyncService,
     private val caloriesSync: CaloriesHistorySyncService,
     private val bodyEnergyChainSync: BodyEnergyChainSyncService,
+    private val stepDistanceSync: StepDistanceBackfillService,
 ) {
     private val drained = AtomicBoolean(false)
 
@@ -25,11 +26,14 @@ class HistorySyncScheduler @Inject constructor(
         if (!drained.compareAndSet(false, true)) return
         drain { vitalsSync.syncIncremental() }
         drain { caloriesSync.syncIncremental() }
-        // Last, and after the foreground load has settled: warming the chain is
-        // the most read-hungry of the three, and Health Connect serializes reads
+        // After the foreground load has settled: warming the chain is
+        // the most read-hungry of the drains, and Health Connect serializes reads
         // — running it beside a screen's own load makes both slower. Its own
         // 30-minute throttle keeps repeat opens cheap.
         drain { bodyEnergyChainSync.syncAll() }
+        // Last: the only drain that WRITES to Health Connect. Off unless the
+        // user opted into the distance backfill; throttled like the others.
+        drain { stepDistanceSync.syncIncremental() }
     }
 
     /**

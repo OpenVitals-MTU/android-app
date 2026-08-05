@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
+import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
@@ -33,6 +34,7 @@ import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
 import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
@@ -111,6 +113,8 @@ data class SettingsUiState(
     val dynamicColor: Boolean = false,
     val chartAggregationMode: ChartAggregationMode = ChartAggregationMode.OFF,
     val dashboardSortEmptyTilesLast: Boolean = true,
+    val stepDistanceBackfillEnabled: Boolean = false,
+    val strideLengthMeters: Double = StrideLength.defaultMeters,
     val nightStartHour: Int = SleepWindow.Default.startHour,
     val nightEndHour: Int = SleepWindow.Default.endHour,
     val highHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
@@ -186,6 +190,7 @@ class SettingsViewModel @Inject constructor(
     private val sleepRepository: SleepRepository,
     private val hydrationReminderController: HydrationReminderController,
     private val preferencesRepository: PreferencesRepository,
+    private val stepDistanceBackfillService: StepDistanceBackfillService,
     private val appleHealthImportService: AppleHealthImportService,
     private val appleHealthImportWorkController: AppleHealthImportWorkController,
     private val routeFileImporter: RouteFileImporter,
@@ -245,6 +250,8 @@ class SettingsViewModel @Inject constructor(
                 dynamicColor = preferencesRepository.dynamicColor,
                 chartAggregationMode = preferencesRepository.chartAggregationMode,
                 dashboardSortEmptyTilesLast = preferencesRepository.dashboardSortEmptyTilesLast,
+                stepDistanceBackfillEnabled = preferencesRepository.stepDistanceBackfillEnabled,
+                strideLengthMeters = preferencesRepository.strideLengthMeters,
                 nightStartHour = preferencesRepository.nightStartHour,
                 nightEndHour = preferencesRepository.nightEndHour,
                 highHeartRateThresholdBpm = preferencesRepository.highHeartRateThresholdBpm,
@@ -820,6 +827,24 @@ class SettingsViewModel @Inject constructor(
     fun setDynamicColor(enabled: Boolean) {
         preferencesRepository.dynamicColor = enabled
         _uiState.value = _uiState.value.copy(dynamicColor = enabled)
+    }
+
+    fun saveStepDistanceBackfill(enabled: Boolean, strideMeters: Double) {
+        val normalized = StrideLength.normalize(strideMeters)
+        val wasEnabled = preferencesRepository.stepDistanceBackfillEnabled
+        preferencesRepository.strideLengthMeters = normalized
+        preferencesRepository.stepDistanceBackfillEnabled = enabled
+        _uiState.value = _uiState.value.copy(
+            stepDistanceBackfillEnabled = enabled,
+            strideLengthMeters = normalized,
+        )
+        viewModelScope.launch {
+            if (enabled) {
+                stepDistanceBackfillService.syncNow()
+            } else if (wasEnabled) {
+                stepDistanceBackfillService.purgeDerivedRecords()
+            }
+        }
     }
 
     fun setDashboardSortEmptyTilesLast(enabled: Boolean) {

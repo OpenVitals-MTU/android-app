@@ -48,6 +48,8 @@ import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
+import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
@@ -88,10 +90,43 @@ class SettingsViewModelTest {
         unmockkStatic(Log::class)
     }
 
+    @Test fun `saving the step distance backfill normalizes and kicks a sync`() = runTest {
+        val prefs = prefs()
+        every { prefs.strideLengthMeters = any() } just runs
+        every { prefs.stepDistanceBackfillEnabled = any() } just runs
+        val service = mockk<StepDistanceBackfillService>(relaxed = true)
+        val vm = viewModel(preferencesRepository = prefs, stepDistanceBackfillService = service)
+
+        vm.saveStepDistanceBackfill(enabled = true, strideMeters = 9.0)
+        advanceUntilIdle()
+
+        verify { prefs.strideLengthMeters = StrideLength.maxMeters }
+        verify { prefs.stepDistanceBackfillEnabled = true }
+        coVerify(exactly = 1) { service.syncNow() }
+        coVerify(exactly = 0) { service.purgeDerivedRecords() }
+        assertEquals(StrideLength.maxMeters, vm.uiState.value.strideLengthMeters, 0.0)
+    }
+
+    @Test fun `disabling the step distance backfill purges derived records`() = runTest {
+        val prefs = prefs()
+        every { prefs.stepDistanceBackfillEnabled } returns true
+        every { prefs.strideLengthMeters = any() } just runs
+        every { prefs.stepDistanceBackfillEnabled = any() } just runs
+        val service = mockk<StepDistanceBackfillService>(relaxed = true)
+        val vm = viewModel(preferencesRepository = prefs, stepDistanceBackfillService = service)
+
+        vm.saveStepDistanceBackfill(enabled = false, strideMeters = 0.7)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { service.purgeDerivedRecords() }
+        coVerify(exactly = 0) { service.syncNow() }
+    }
+
     @Test fun `refresh includes cycle permissions with visible permissions`() = runTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -103,6 +138,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(grantedPermissions = setOf("steps")),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -115,6 +151,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(grantedPermissions = setOf("steps", "write", "route", "cycle")),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -128,6 +165,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -143,6 +181,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -158,6 +197,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -176,6 +216,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -200,6 +241,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -215,6 +257,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -230,6 +273,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -245,6 +289,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -260,6 +305,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -399,6 +445,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -414,6 +461,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -437,6 +485,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -452,6 +501,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -500,6 +550,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -516,6 +567,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repository,
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
@@ -534,6 +586,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportWorkController = importController,
             permissionUxState = permissionUxState(),
         )
@@ -564,6 +617,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportService = importService,
             appleHealthImportWorkController = importController,
             permissionUxState = permissionUxState(),
@@ -595,6 +649,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportService = importService,
             appleHealthImportWorkController = importController,
             permissionUxState = permissionUxState(),
@@ -625,6 +680,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportService = importService,
             appleHealthImportWorkController = importController,
             permissionUxState = permissionUxState(),
@@ -651,6 +707,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportService = importService(),
             appleHealthImportWorkController = importController,
             permissionUxState = permissionUxState(),
@@ -688,6 +745,7 @@ class SettingsViewModelTest {
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportService = importService,
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
@@ -716,6 +774,7 @@ class SettingsViewModelTest {
             repository = repo(grantedPermissions = setOf("write", "route")),
             activityRepository = activityRepository,
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             routeFileImporter = routeFileImporter,
         )
 
@@ -746,6 +805,7 @@ class SettingsViewModelTest {
             repository = repo(grantedPermissions = setOf("write", "route")),
             activityRepository = activityRepository,
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             routeFileImporter = routeFileImporter,
         )
 
@@ -771,6 +831,7 @@ class SettingsViewModelTest {
             repository = repo(grantedPermissions = setOf("write", "route")),
             activityRepository = activityRepository,
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             routeFileImporter = routeFileImporter,
         )
 
@@ -802,6 +863,7 @@ class SettingsViewModelTest {
             repository = repo(grantedPermissions = setOf("write", "route")),
             activityRepository = activityRepository,
             preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             routeFileImporter = routeFileImporter,
             fitHrvImportService = fitHrvImportService,
         )
@@ -833,6 +895,7 @@ class SettingsViewModelTest {
         sleepRepository: SleepRepository = sleepRepo(),
         hydrationReminderController: HydrationReminderController = mockk(relaxed = true),
         preferencesRepository: PreferencesRepository = prefs(),
+        stepDistanceBackfillService: StepDistanceBackfillService = mockk(relaxed = true),
         appleHealthImportService: AppleHealthImportService = importService(),
         appleHealthImportWorkController: AppleHealthImportWorkController = importController(),
         routeFileImporter: RouteFileImporter = routeFileImporter(),
@@ -849,6 +912,7 @@ class SettingsViewModelTest {
             sleepRepository = sleepRepository,
             hydrationReminderController = hydrationReminderController,
             preferencesRepository = preferencesRepository,
+            stepDistanceBackfillService = stepDistanceBackfillService,
             appleHealthImportService = appleHealthImportService,
             appleHealthImportWorkController = appleHealthImportWorkController,
             routeFileImporter = routeFileImporter,
@@ -930,6 +994,8 @@ class SettingsViewModelTest {
             every { prefs.dynamicColor } returns false
             every { prefs.chartAggregationMode } returns ChartAggregationMode.OFF
             every { prefs.dashboardSortEmptyTilesLast } returns true
+            every { prefs.stepDistanceBackfillEnabled } returns false
+            every { prefs.strideLengthMeters } returns 0.7
             every { prefs.nightStartHour } returns SleepWindow.Default.startHour
             every { prefs.nightEndHour } returns SleepWindow.Default.endHour
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY

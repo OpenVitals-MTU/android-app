@@ -116,6 +116,7 @@ class HealthConnectManager @Inject constructor(
     private val nutritionReader = NutritionHealthReader(readerSupport, context.packageName)
     private val mindfulnessReader = MindfulnessHealthReader(readerSupport, context.packageName)
     private val cycleReader = CycleHealthReader(readerSupport, context.packageName)
+    private val stepDistanceReader = StepDistanceHealthReader(readerSupport, context.packageName)
     private val vitalsReader = VitalsHealthReader(readerSupport, context.packageName)
     private val changesReader = HealthConnectChangesReader(readerSupport)
     private val syncRecordsReader = SyncRecordsReader(readerSupport)
@@ -591,6 +592,17 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun reconcileMenstruationPeriods(days: Set<LocalDate>) =
         withSyncEnabled { cycleReader.reconcileMenstruationPeriods(days) }
+
+    suspend fun reconcileStepDerivedDistance(
+        window: ClosedRange<LocalDate>,
+        stepsByDay: Map<LocalDate, Long>,
+        strideMeters: Double,
+    ) = withSyncEnabled {
+        stepDistanceReader.reconcileStepDerivedDistance(window, stepsByDay, strideMeters)
+    }
+
+    suspend fun purgeStepDerivedDistance(window: ClosedRange<LocalDate>) =
+        withSyncEnabled { stepDistanceReader.purgeStepDerivedDistance(window) }
 
     suspend fun readBloodPressureEntries(start: Instant, end: Instant): List<BloodPressureEntry> =
         vitalsReader.readBloodPressureEntries(start, end)
