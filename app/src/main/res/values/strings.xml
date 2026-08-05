@@ -1344,6 +1344,8 @@
     <string name="settings_activity_recording_meters">%1$d m</string>
     <string name="settings_activity_recording_auto">Auto</string>
     <string name="settings_activity_recording_off">Off</string>
+    <string name="settings_dashboard_sort_empty_title">Sort empty tiles last</string>
+    <string name="settings_dashboard_sort_empty_body">Outside edit mode, tiles with no recent data move behind the ones with some. Turn off to always keep your exact arrangement.</string>
     <string name="settings_calorie_data_title">Total calories data</string>
     <string name="settings_calorie_data_body">Show plain Health Connect total calories by default. Turn on OpenVitals calculations to fill missing totals from active calories and BMR.</string>
     <string name="settings_caffeine_title">Caffeine model</string>

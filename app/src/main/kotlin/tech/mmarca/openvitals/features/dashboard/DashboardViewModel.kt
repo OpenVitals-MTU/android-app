@@ -71,6 +71,7 @@ data class DashboardUiState(
     val placedDashboardWidgets: Set<DashboardWidgetId> = emptySet(),
     val dailyGoals: DashboardDailyGoals = DashboardDailyGoals(),
     val isEditingDashboard: Boolean = false,
+    val sortEmptyTilesLast: Boolean = true,
     val healthConnectSyncEnabled: Boolean = true,
     val healthConnectAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val minimumPermissionsGranted: Boolean = true,
@@ -277,6 +278,9 @@ class DashboardViewModel @Inject constructor(
         retryOnCancellation: Boolean,
     ) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
+        _uiState.value = _uiState.value.copy(
+            sortEmptyTilesLast = prefs.dashboardSortEmptyTilesLast,
+        )
         val generation = ++loadGeneration
         backgroundMetricsJob?.cancel()
         bodyEnergyJob?.cancel()

@@ -579,7 +579,10 @@ class DashboardDataLoaderTest {
 
         assertEquals(setOf(DashboardMetric.CYCLE), data.loadedMetrics)
         assertEquals(2, data.menstruationPeriodDays)
-        coVerify(exactly = 1) { hc.readMenstruationPeriods(any(), any()) }
+        // Two reads: the day window for the tile, the 45-day probe for the
+        // recent-history demotion signal.
+        coVerify(exactly = 2) { hc.readMenstruationPeriods(any(), any()) }
+        assertEquals(setOf(DashboardMetric.CYCLE), data.recentHistoryMetrics)
     }
 
     @Test fun `weekly cardio load uses rolling last seven days`() = runTest {

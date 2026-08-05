@@ -80,6 +80,7 @@ class DashboardViewModelTest {
         every { it.dailyGoalFor(any()) } answers { firstArg<MetricDailyGoalKey>().defaultValue }
         every { it.hydrationDailyGoalLiters } returns 2.0
         every { it.dashboardWidgetOrder() } returns null
+        every { it.dashboardSortEmptyTilesLast } returns true
         every { it.setDashboardWidgetOrder(any()) } returns Unit
         every { it.healthConnectSyncEnabled } returns true
         every { it.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic

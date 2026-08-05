@@ -110,6 +110,7 @@ data class SettingsUiState(
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val dynamicColor: Boolean = false,
     val chartAggregationMode: ChartAggregationMode = ChartAggregationMode.OFF,
+    val dashboardSortEmptyTilesLast: Boolean = true,
     val nightStartHour: Int = SleepWindow.Default.startHour,
     val nightEndHour: Int = SleepWindow.Default.endHour,
     val highHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
@@ -243,6 +244,7 @@ class SettingsViewModel @Inject constructor(
                 appThemeMode = preferencesRepository.appThemeMode,
                 dynamicColor = preferencesRepository.dynamicColor,
                 chartAggregationMode = preferencesRepository.chartAggregationMode,
+                dashboardSortEmptyTilesLast = preferencesRepository.dashboardSortEmptyTilesLast,
                 nightStartHour = preferencesRepository.nightStartHour,
                 nightEndHour = preferencesRepository.nightEndHour,
                 highHeartRateThresholdBpm = preferencesRepository.highHeartRateThresholdBpm,
@@ -818,6 +820,11 @@ class SettingsViewModel @Inject constructor(
     fun setDynamicColor(enabled: Boolean) {
         preferencesRepository.dynamicColor = enabled
         _uiState.value = _uiState.value.copy(dynamicColor = enabled)
+    }
+
+    fun setDashboardSortEmptyTilesLast(enabled: Boolean) {
+        preferencesRepository.dashboardSortEmptyTilesLast = enabled
+        _uiState.value = _uiState.value.copy(dashboardSortEmptyTilesLast = enabled)
     }
 
     fun setChartAggregationMode(mode: ChartAggregationMode) {

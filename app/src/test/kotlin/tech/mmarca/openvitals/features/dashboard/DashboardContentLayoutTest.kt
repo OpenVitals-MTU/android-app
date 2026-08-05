@@ -77,12 +77,14 @@ class DashboardContentLayoutTest {
         display: DashboardDisplayState = display(),
         isEditingDashboard: Boolean = false,
         placedWidgetIds: Set<DashboardWidgetId> = emptySet(),
+        sortEmptyTilesLast: Boolean = true,
     ) = dashboardVisibleWidgetIds(
         dashboardWidgets = widgets,
         specIds = savedOrder.toSet(),
         display = display,
         isEditingDashboard = isEditingDashboard,
         placedWidgetIds = placedWidgetIds,
+        sortEmptyTilesLast = sortEmptyTilesLast,
     )
 
     // ─── tiles with no data sink below the ones with some ─────────────────────
@@ -161,6 +163,53 @@ class DashboardContentLayoutTest {
         assertEquals(DashboardWidgetId.DISTANCE, visible[2])
         assertEquals(DashboardWidgetId.HYDRATION, visible.last())
         assertTrue(DashboardWidgetId.HYDRATION in visible)
+    }
+
+    @Test
+    fun `an empty tile with recent history holds its place instead of sinking`() {
+        // "Empty today" is not "unused": a sleep tile is empty every morning
+        // until the night syncs, and demoting it made the user's arrangement
+        // look ignored on every pencil toggle. Place the empty CALORIES_OUT
+        // ahead of the data tiles: without history it sinks, with it it holds.
+        val reordered = listOf(
+            DashboardWidgetId.STEPS,
+            DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+            DashboardWidgetId.CALORIES_OUT,
+            DashboardWidgetId.DISTANCE,
+            DashboardWidgetId.SLEEP,
+            DashboardWidgetId.HYDRATION,
+        )
+        val base = display()
+        val heldDisplay = base.copy(
+            widgets = base.widgets.mapValues { (id, model) ->
+                if (id == DashboardWidgetId.CALORIES_OUT) {
+                    model.copy(hasRecentHistory = true)
+                } else {
+                    model
+                }
+            },
+        )
+
+        assertEquals(
+            DashboardWidgetId.CALORIES_OUT,
+            visibleIds(widgets = reordered, display = heldDisplay)[2],
+        )
+        assertEquals(
+            DashboardWidgetId.HYDRATION,
+            visibleIds(widgets = reordered, display = heldDisplay).last(),
+        )
+        // The control: with no history signal the same saved order sinks it.
+        assertEquals(
+            DashboardWidgetId.DISTANCE,
+            visibleIds(widgets = reordered, display = base)[2],
+        )
+    }
+
+    @Test
+    fun `turning the sort off keeps the saved order verbatim`() {
+        val visible = visibleIds(sortEmptyTilesLast = false)
+
+        assertEquals(savedOrder, visible)
     }
 
     @Test

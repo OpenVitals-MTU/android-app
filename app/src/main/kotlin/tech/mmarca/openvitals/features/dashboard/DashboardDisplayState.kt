@@ -38,6 +38,8 @@ data class DashboardWidgetDisplayModel(
     val showTitle: Boolean = true,
     val requiresNoDataMessage: Boolean = false,
     val isNotSetUp: Boolean = false,
+    /** The metric has records in its recent lookback, just none for the selected day. */
+    val hasRecentHistory: Boolean = false,
 )
 
 @Immutable
@@ -102,8 +104,12 @@ data class BodyEnergyTileSubtitle(
 /**
  * Whether this tile may be sorted to the back of the carousel.
  *
- * An empty tile is worth demoting: there is nothing behind it today, and the
- * tiles that do carry a number are the ones worth reaching first.
+ * Only a tile whose metric shows nothing today AND has nothing in its recent
+ * lookback is worth demoting: the feature exists to sink metrics the user does
+ * not use at all, not ones that simply have not happened yet today. A sleep
+ * tile that is empty every morning until the night syncs must hold the spot
+ * the user gave it (see [DashboardWidgetDisplayModel.hasRecentHistory]);
+ * demoting it made every pencil toggle look like the arrangement was ignored.
  *
  * A tile that says "not set up" is the opposite. It is the invitation to turn a
  * feature on, and the dashboard tile is the only place in the app that offers
@@ -113,7 +119,7 @@ data class BodyEnergyTileSubtitle(
  * for anyone who had not already set it up, which is everyone who needs to.
  */
 internal fun DashboardWidgetDisplayModel.isDemotableEmptyTile(): Boolean =
-    showsNoDataMessage() && !isNotSetUp
+    showsNoDataMessage() && !isNotSetUp && !hasRecentHistory
 
 internal fun DashboardWidgetDisplayModel.showsNoDataMessage(): Boolean = when {
     isLoading -> false

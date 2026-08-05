@@ -284,6 +284,9 @@ internal fun DashboardWidgetGrid(
                 state = reorderableState,
                 key = spec.id,
                 enabled = isEditingDashboard,
+                // Animate demotion/promotion reshuffles outside edit mode; the
+                // reorderable library owns item movement while editing.
+                modifier = if (isEditingDashboard) Modifier else Modifier.animateItem(),
             ) { isDragging ->
                 Box(
                     modifier = Modifier

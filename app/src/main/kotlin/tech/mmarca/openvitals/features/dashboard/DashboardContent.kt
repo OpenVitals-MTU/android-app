@@ -40,6 +40,7 @@ internal fun dashboardVisibleWidgetIds(
     display: DashboardDisplayState,
     isEditingDashboard: Boolean,
     placedWidgetIds: Set<DashboardWidgetId> = emptySet(),
+    sortEmptyTilesLast: Boolean = true,
 ): List<DashboardWidgetId> {
     val ordered = dashboardWidgets
         .filter { it in specIds }
@@ -48,7 +49,7 @@ internal fun dashboardVisibleWidgetIds(
         // user never deliberately placed goes to the add tray, not the grid.
         // Once they place it from the tray it stays, exactly like any other.
         .filterNot { isEditingDashboard && it in display.unsupportedIds && it !in placedWidgetIds }
-    if (isEditingDashboard) return ordered
+    if (isEditingDashboard || !sortEmptyTilesLast) return ordered
     val fixed = dashboardWidgetIdsThatFitRows(ordered, DashboardFixedWidgetRows).toSet()
     val rest = ordered.filterNot { it in fixed }
     // A tile with nothing behind it today goes to the back; a tile offering to
@@ -93,6 +94,7 @@ internal fun DashboardContent(
     syncPaused: Boolean = false,
     dashboardWidgets: List<DashboardWidgetId>,
     isEditingDashboard: Boolean,
+    sortEmptyTilesLast: Boolean = true,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onOpenCalendar: () -> Unit,
@@ -130,13 +132,21 @@ internal fun DashboardContent(
         onOpenMetric = onOpenMetric,
     )
     val specsById = remember(specs) { specs.associateBy { it.id } }
-    val visibleIds = remember(dashboardWidgets, placedWidgetIds, specsById, display, isEditingDashboard) {
+    val visibleIds = remember(
+        dashboardWidgets,
+        placedWidgetIds,
+        specsById,
+        display,
+        isEditingDashboard,
+        sortEmptyTilesLast,
+    ) {
         dashboardVisibleWidgetIds(
             dashboardWidgets = dashboardWidgets,
             specIds = specsById.keys,
             display = display,
             isEditingDashboard = isEditingDashboard,
             placedWidgetIds = placedWidgetIds,
+            sortEmptyTilesLast = sortEmptyTilesLast,
         )
     }
     val hiddenSpecs = remember(isEditingDashboard, specs, visibleIds) {

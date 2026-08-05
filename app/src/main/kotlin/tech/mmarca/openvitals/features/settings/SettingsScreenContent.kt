@@ -108,6 +108,14 @@ internal fun LazyListScope.settingsScreenContent(
             }
             item { SettingsCardSpacer() }
             item {
+                DashboardSortEmptyTilesCard(
+                    enabled = state.dashboardSortEmptyTilesLast,
+                    onEnabledChange = viewModel::setDashboardSortEmptyTilesLast,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            item { SettingsCardSpacer() }
+            item {
                 ActivityWeekModeCard(
                     selected = state.activityWeekMode,
                     onSelect = viewModel::selectActivityWeekMode,

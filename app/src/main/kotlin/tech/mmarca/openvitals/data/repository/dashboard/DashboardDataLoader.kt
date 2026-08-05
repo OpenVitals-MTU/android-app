@@ -111,6 +111,7 @@ class DashboardDataLoader @Inject constructor(
         private const val TAG = "DashboardDataLoader"
         private const val DashboardCardioLoadHistoryPeriods = 4L
         private const val DashboardWeeklyCardioHeartRateSampleWeeks = 2L
+        private const val RecentCycleHistoryDays = 45L
     }
 
     private val readStepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
@@ -521,6 +522,18 @@ class DashboardDataLoader @Inject constructor(
         ) {
             hc.readMenstruationPeriods(dayStart, dayEnd)
         }
+        // Feeds tile demotion only: a cycle is monthly, so "recently used" has
+        // to look back further than the selected day (~1.5 cycles).
+        val recentCycleHistory = readIfNeeded(
+            wants(DashboardMetric.CYCLE),
+            readMenstruationPeriodPermission,
+            "recent cycle history",
+        ) {
+            val recentStart = date.minusDays(RecentCycleHistoryDays)
+                .atStartOfDay(ZoneId.systemDefault()).toInstant()
+            hc.readMenstruationPeriods(recentStart, dayEnd).isNotEmpty() ||
+                hc.readMenstruationFlowEntries(recentStart, dayEnd).isNotEmpty()
+        }
         val ovulationTests = readIfNeeded(wants(DashboardMetric.CYCLE), readOvulationTestPermission, "ovulation tests") {
             hc.readOvulationTests(dayStart, dayEnd)
         }
@@ -658,6 +671,13 @@ class DashboardDataLoader @Inject constructor(
             elevationGainedMeters = elevation?.await(),
             wheelchairPushes = wheelchairPushes?.await(),
             mindfulnessMinutes = mindfulnessMinutes?.await(),
+            recentHistoryMetrics = buildSet {
+                if (dashboardSleep?.hasRecentSessions == true) add(DashboardMetric.SLEEP)
+                if (recentCycleHistory?.await() == true) add(DashboardMetric.CYCLE)
+                if (trainingSignals?.hasRecentWorkouts == true) {
+                    add(DashboardMetric.WEEKLY_CARDIO_LOAD)
+                }
+            },
             menstruationPeriodDays = menstruationPeriods?.await()?.sumOf { period ->
                 val startDate = period.startTime.atZone(zone).toLocalDate()
                 val endDate = period.endTime.minusMillis(1).atZone(zone).toLocalDate()
@@ -729,6 +749,7 @@ class DashboardDataLoader @Inject constructor(
             } else {
                 SleepScoreEstimate.NoData
             },
+            hasRecentSessions = sessions.isNotEmpty(),
         )
     }
 
@@ -872,6 +893,7 @@ class DashboardDataLoader @Inject constructor(
             DashboardWeeklyTrainingSignals(
                 cardioLoad = cardioLoad,
                 intensityMinutes = intensityMinutes,
+                hasRecentWorkouts = workouts.isNotEmpty(),
             )
         }
     }
@@ -1032,11 +1054,13 @@ private data class DashboardLoadInputs(
 private data class DashboardSleepData(
     val sleep: SleepData?,
     val sleepScore: SleepScoreEstimate,
+    val hasRecentSessions: Boolean,
 )
 
 private data class DashboardWeeklyTrainingSignals(
     val cardioLoad: DashboardWeeklyCardioLoad?,
     val intensityMinutes: DashboardWeeklyIntensityMinutes,
+    val hasRecentWorkouts: Boolean = false,
 )
 
 private data class DashboardWeeklyTrainingRawData(

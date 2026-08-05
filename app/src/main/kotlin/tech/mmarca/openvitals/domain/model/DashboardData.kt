@@ -74,6 +74,12 @@ data class DashboardData(
     val missingPermissions: Set<String> = emptySet(),
     val loadedMetrics: Set<DashboardMetric> = emptySet(),
     /**
+     * Metrics with records in their recent lookback even when the selected day
+     * is empty. Feeds tile demotion: an empty-today tile whose metric appears
+     * here holds its saved position instead of sinking.
+     */
+    val recentHistoryMetrics: Set<DashboardMetric> = emptySet(),
+    /**
      * The metrics the installed Health Connect provider can serve AT ALL — every
      * permission the metric reads is one the provider defines. A metric outside
      * this set can never be granted, so the dashboard drops its tile entirely

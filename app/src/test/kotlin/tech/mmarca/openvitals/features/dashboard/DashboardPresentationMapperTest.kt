@@ -59,6 +59,34 @@ class DashboardPresentationMapperTest {
     }
 
     @Test
+    fun build_recentHistoryMetrics_reachTheirWidgetsAsHasRecentHistory() {
+        val data = DashboardData(
+            date = LocalDate.now(),
+            recentHistoryMetrics = setOf(
+                DashboardMetric.SLEEP,
+                DashboardMetric.CYCLE,
+                DashboardMetric.WEEKLY_CARDIO_LOAD,
+            ),
+        )
+
+        val display = DashboardPresentationMapper.build(
+            data = data,
+            dailyGoals = dailyGoals,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+
+        assertEquals(true, display.widgets[DashboardWidgetId.SLEEP]?.hasRecentHistory)
+        assertEquals(true, display.widgets[DashboardWidgetId.CYCLE]?.hasRecentHistory)
+        assertEquals(true, display.widgets[DashboardWidgetId.WEEKLY_CARDIO_LOAD]?.hasRecentHistory)
+        assertEquals(true, display.widgets[DashboardWidgetId.CARDIO_LOAD]?.hasRecentHistory)
+        assertEquals(false, display.widgets[DashboardWidgetId.HYDRATION]?.hasRecentHistory)
+        // The empty-but-recently-used sleep tile is exactly the case that must
+        // not sink.
+        assertEquals(false, display.widgets[DashboardWidgetId.SLEEP]?.isDemotableEmptyTile())
+    }
+
+    @Test
     fun build_cycleWidget_usesMenstruationDaysWhenPresent() {
         val data = DashboardData(date = LocalDate.now(), menstruationPeriodDays = 5)
 

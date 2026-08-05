@@ -929,6 +929,7 @@ class SettingsViewModelTest {
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.dynamicColor } returns false
             every { prefs.chartAggregationMode } returns ChartAggregationMode.OFF
+            every { prefs.dashboardSortEmptyTilesLast } returns true
             every { prefs.nightStartHour } returns SleepWindow.Default.startHour
             every { prefs.nightEndHour } returns SleepWindow.Default.endHour
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY

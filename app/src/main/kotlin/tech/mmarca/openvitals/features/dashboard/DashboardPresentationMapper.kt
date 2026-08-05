@@ -6,6 +6,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DashboardData
+import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.asleepDurationMs
 import tech.mmarca.openvitals.features.nutrition.displayValue
@@ -94,12 +95,14 @@ object DashboardPresentationMapper {
             id = widgetId,
             style = DashboardWidgetStyle.CIRCLE,
             weeklyCardioLoad = data.weeklyCardioLoad,
+            hasRecentHistory = DashboardMetric.WEEKLY_CARDIO_LOAD in data.recentHistoryMetrics,
             isLoading = isLoading,
         )
         DashboardWidgetId.CARDIO_LOAD -> weeklyCardioLoadWidget(
             id = widgetId,
             style = DashboardWidgetStyle.PILL,
             weeklyCardioLoad = data.weeklyCardioLoad,
+            hasRecentHistory = DashboardMetric.WEEKLY_CARDIO_LOAD in data.recentHistoryMetrics,
             isLoading = isLoading,
         )
         DashboardWidgetId.DISTANCE -> metricWidget(
@@ -185,6 +188,7 @@ object DashboardPresentationMapper {
         DashboardWidgetId.SLEEP -> optionalMetricWidget(
             id = widgetId,
             value = data.sleep?.let { DisplayValue(unitFormatter.duration(it.asleepDurationMs()), "") },
+            hasRecentHistory = DashboardMetric.SLEEP in data.recentHistoryMetrics,
             showTitle = false,
             sleepScore = data.sleepScore
                 .takeIf { it.confidence != SleepScoreConfidence.NO_DATA }
@@ -415,6 +419,7 @@ object DashboardPresentationMapper {
         DashboardWidgetId.CYCLE -> DashboardWidgetDisplayModel(
             id = widgetId,
             cycle = cycleDisplay(data),
+            hasRecentHistory = DashboardMetric.CYCLE in data.recentHistoryMetrics,
             isLoading = isLoading,
         )
         DashboardWidgetId.WORKOUT -> null
@@ -450,6 +455,7 @@ object DashboardPresentationMapper {
         showTitle: Boolean = true,
         requiresNoDataMessage: Boolean = false,
         isNotSetUp: Boolean = false,
+        hasRecentHistory: Boolean = false,
         isLoading: Boolean,
     ): DashboardWidgetDisplayModel =
         DashboardWidgetDisplayModel(
@@ -458,6 +464,7 @@ object DashboardPresentationMapper {
             value = value,
             hasValue = hasValue,
             progress = progress,
+            hasRecentHistory = hasRecentHistory,
             isLoading = isLoading,
             caloriesSubtitle = caloriesSubtitle,
             sleepScore = sleepScore,
@@ -473,12 +480,14 @@ object DashboardPresentationMapper {
         id: DashboardWidgetId,
         style: DashboardWidgetStyle,
         weeklyCardioLoad: tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoad?,
+        hasRecentHistory: Boolean = false,
         isLoading: Boolean,
     ): DashboardWidgetDisplayModel =
         DashboardWidgetDisplayModel(
             id = id,
             style = style,
             weeklyCardioLoad = weeklyCardioLoad,
+            hasRecentHistory = hasRecentHistory,
             isLoading = isLoading,
         )
 

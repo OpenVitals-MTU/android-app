@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -315,6 +316,49 @@ internal fun CalorieDataSourceCard(
                 Text(text = stringResource(R.string.settings_calorie_data_title), style = MaterialTheme.typography.titleSmall)
                 Text(
                     text = stringResource(R.string.settings_calorie_data_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            Switch(
+                checked = enabled,
+                onCheckedChange = onEnabledChange,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun DashboardSortEmptyTilesCard(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Dashboard,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .weight(1f),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_dashboard_sort_empty_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(R.string.settings_dashboard_sort_empty_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),

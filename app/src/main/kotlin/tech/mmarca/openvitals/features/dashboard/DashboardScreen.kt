@@ -128,6 +128,7 @@ fun DashboardScreen(
                     syncPaused = hcUx.syncPaused,
                     dashboardWidgets = state.dashboardWidgets,
                     isEditingDashboard = state.isEditingDashboard,
+                    sortEmptyTilesLast = state.sortEmptyTilesLast,
                     onPreviousDay = viewModel::previousDay,
                     onNextDay = viewModel::nextDay,
                     onOpenCalendar = { showDatePicker = true },
