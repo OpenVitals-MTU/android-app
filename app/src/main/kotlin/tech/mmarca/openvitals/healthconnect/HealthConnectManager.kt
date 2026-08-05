@@ -60,6 +60,7 @@ import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.model.SexualActivityEntry
 import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.SleepReadData
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.SpO2Entry
@@ -406,6 +407,12 @@ class HealthConnectManager @Inject constructor(
         endDate: LocalDate,
         sleepWindow: SleepWindow,
     ): SleepReadData = sleepReader.readSleepData(startDate, endDate, sleepWindow)
+
+    suspend fun readDailySleepDurations(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        sleepWindow: SleepWindow,
+    ): List<DailySleepDuration> = sleepReader.readDailySleepDurations(startDate, endDate, sleepWindow)
 
     suspend fun readSleepSession(id: String): SleepData? =
         sleepReader.readSleepSession(id)

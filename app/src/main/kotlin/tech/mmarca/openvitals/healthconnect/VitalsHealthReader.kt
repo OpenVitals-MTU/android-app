@@ -16,6 +16,9 @@ import androidx.health.connect.client.units.millimetersOfMercury
 import androidx.health.connect.client.units.percent
 import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
+import tech.mmarca.openvitals.domain.model.BpRecordValues
+import tech.mmarca.openvitals.domain.model.bpMealContextFromClientRecordId
+import tech.mmarca.openvitals.domain.model.withBpMealContext
 import tech.mmarca.openvitals.domain.model.BodyTempEntry
 import tech.mmarca.openvitals.domain.model.DailyBloodPressurePoint
 import tech.mmarca.openvitals.domain.model.DailyVitalPoint
@@ -285,6 +288,9 @@ internal class VitalsHealthReader(
             source = SyncedSourceOverlay.displaySource(metadata),
             id = metadata.id,
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+            mealContext = bpMealContextFromClientRecordId(metadata.clientRecordId),
+            bodyPosition = bodyPosition,
+            measurementLocation = measurementLocation,
         )
 
     private fun OxygenSaturationRecord.toEntry(): SpO2Entry =
@@ -350,7 +356,13 @@ internal class VitalsHealthReader(
 
         val time = request.time
         val zone = ZoneId.systemDefault()
-        val clientRecordId = "openvitals_vitals_${request.type.name.lowercase()}_${time.toEpochMilli()}_${UUID.randomUUID()}"
+        val baseClientRecordId =
+            "openvitals_vitals_${request.type.name.lowercase()}_${time.toEpochMilli()}_${UUID.randomUUID()}"
+        val clientRecordId = if (request.type == VitalsMeasurementType.BLOOD_PRESSURE) {
+            baseClientRecordId.withBpMealContext(request.bpMealContext)
+        } else {
+            baseClientRecordId
+        }
         val metadata = Metadata.manualEntry(
             device = Device(type = Device.TYPE_PHONE),
             clientRecordId = clientRecordId,
@@ -362,6 +374,9 @@ internal class VitalsHealthReader(
                 metadata = metadata,
                 systolic = request.value.millimetersOfMercury,
                 diastolic = requireNotNull(request.secondaryValue).millimetersOfMercury,
+                bodyPosition = request.bpBodyPosition ?: BpRecordValues.BODY_POSITION_UNKNOWN,
+                measurementLocation = request.bpMeasurementLocation
+                    ?: BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
             )
             VitalsMeasurementType.SPO2 -> OxygenSaturationRecord(
                 time = time,
@@ -415,6 +430,43 @@ internal class VitalsHealthReader(
 
             val time = request.time
             val zone = ZoneId.systemDefault()
+
+            // Blood pressure carries its meal context in the clientRecordId
+            // (the record has no field for it), and the uid-based Metadata
+            // factory cannot also carry a client id. So a BP edit goes through
+            // the client-id UPSERT instead: same id replaces in place (higher
+            // clientRecordVersion is what makes the provider take the new
+            // copy); a changed context is a new id, so the new record is
+            // inserted FIRST and the old one deleted after — never the
+            // reverse, a failure between the two must not lose the reading.
+            val existingClientRecordId = existing.metadata.clientRecordId
+            if (request.type == VitalsMeasurementType.BLOOD_PRESSURE && existingClientRecordId != null) {
+                val newClientRecordId = existingClientRecordId.withBpMealContext(request.bpMealContext)
+                val replacement = BloodPressureRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    metadata = Metadata.manualEntry(
+                        clientRecordId = newClientRecordId,
+                        clientRecordVersion = Instant.now().toEpochMilli(),
+                        device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
+                    ),
+                    systolic = request.value.millimetersOfMercury,
+                    diastolic = requireNotNull(request.secondaryValue).millimetersOfMercury,
+                    bodyPosition = request.bpBodyPosition ?: BpRecordValues.BODY_POSITION_UNKNOWN,
+                    measurementLocation = request.bpMeasurementLocation
+                        ?: BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
+                )
+                support.client().insertRecords(listOf(replacement))
+                if (newClientRecordId != existingClientRecordId) {
+                    support.client().deleteRecords(
+                        recordType = BloodPressureRecord::class,
+                        recordIdsList = listOf(existing.metadata.id),
+                        clientRecordIdsList = emptyList(),
+                    )
+                }
+                return@withContext
+            }
+
             val metadata = Metadata.manualEntryWithId(
                 id = id,
                 device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
@@ -426,6 +478,9 @@ internal class VitalsHealthReader(
                     metadata = metadata,
                     systolic = request.value.millimetersOfMercury,
                     diastolic = requireNotNull(request.secondaryValue).millimetersOfMercury,
+                    bodyPosition = request.bpBodyPosition ?: BpRecordValues.BODY_POSITION_UNKNOWN,
+                    measurementLocation = request.bpMeasurementLocation
+                        ?: BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
                 )
                 VitalsMeasurementType.SPO2 -> OxygenSaturationRecord(
                     time = time,
@@ -526,6 +581,10 @@ internal class VitalsHealthReader(
             id = metadata.id,
             type = VitalsMeasurementType.BLOOD_PRESSURE,
             time = time,
+            bpMealContext = bpMealContextFromClientRecordId(metadata.clientRecordId),
+            bpBodyPosition = bodyPosition.takeIf { it != BpRecordValues.BODY_POSITION_UNKNOWN },
+            bpMeasurementLocation = measurementLocation
+                .takeIf { it != BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN },
             value = systolic.inMillimetersOfMercury,
             secondaryValue = diastolic.inMillimetersOfMercury,
             source = SyncedSourceOverlay.displaySource(metadata),

@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.devicesync.DeviceSyncScreen
 import tech.mmarca.openvitals.features.imports.csv.CsvImportScreen
+import tech.mmarca.openvitals.features.reports.ReportBuilderScreen
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsSection
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
@@ -85,11 +86,20 @@ internal fun NavGraphBuilder.settingsRoutes(
                     launchSingleTop = true
                 }
             },
+            onOpenReportExport = {
+                navController.navigate(Screen.SettingsReportExport.route) {
+                    launchSingleTop = true
+                }
+            },
         )
     }
 
     composable(Screen.SettingsCsvImport.route) {
         CsvImportScreen(onDone = { navController.popBackStack() })
+    }
+
+    composable(Screen.SettingsReportExport.route) {
+        ReportBuilderScreen(onDone = { navController.popBackStack() })
     }
 
     // A full bespoke wizard, not a settings card list (mirrors the Flutter
@@ -134,6 +144,7 @@ private fun SettingsSectionScreen(
     onImportFitFile: (Uri) -> Unit,
     onRouteFilesImported: () -> Unit,
     onOpenCsvImport: () -> Unit = {},
+    onOpenReportExport: () -> Unit = {},
 ) {
     val settingsViewModel = hiltViewModel<SettingsViewModel>()
     SettingsScreen(
@@ -143,5 +154,6 @@ private fun SettingsSectionScreen(
         onImportFitFileSelected = onImportFitFile,
         onRouteFilesImported = onRouteFilesImported,
         onOpenCsvImport = onOpenCsvImport,
+        onOpenReportExport = onOpenReportExport,
     )
 }

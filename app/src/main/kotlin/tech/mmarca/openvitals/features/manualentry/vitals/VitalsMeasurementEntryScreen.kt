@@ -17,6 +17,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,8 +31,16 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeviceThermostat
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,6 +48,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +68,8 @@ import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.model.BpMealContext
+import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
@@ -100,6 +115,9 @@ fun VitalsMeasurementEntryScreen(
                 unitFormatter = unitFormatter,
                 onInputChanged = viewModel::updateInput,
                 onSecondaryInputChanged = viewModel::updateSecondaryInput,
+                onSelectBpMealContext = viewModel::selectBpMealContext,
+                onSelectBpBodyPosition = viewModel::selectBpBodyPosition,
+                onSelectBpMeasurementLocation = viewModel::selectBpMeasurementLocation,
                 onEntryTimeChanged = viewModel::updateEntryTime,
                 onAddEntry = {
                     viewModel.addEntry(
@@ -130,6 +148,9 @@ private fun VitalsMeasurementEntryCard(
     unitFormatter: UnitFormatter,
     onInputChanged: (String) -> Unit,
     onSecondaryInputChanged: (String) -> Unit,
+    onSelectBpMealContext: (BpMealContext?) -> Unit,
+    onSelectBpBodyPosition: (Int?) -> Unit,
+    onSelectBpMeasurementLocation: (Int?) -> Unit,
     onEntryTimeChanged: (java.time.Instant) -> Unit,
     onAddEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
@@ -205,6 +226,31 @@ private fun VitalsMeasurementEntryCard(
                         modifier = Modifier.weight(1f),
                     )
                 }
+                BpOptionDropdown(
+                    label = stringResource(R.string.vitals_entry_bp_context_label),
+                    options = BpMealContext.entries,
+                    selected = state.bpMealContext,
+                    optionText = { stringResource(it.labelRes()) },
+                    enabled = !state.isSavingEntry,
+                    onSelect = onSelectBpMealContext,
+                )
+                BpOptionDropdown(
+                    label = stringResource(R.string.vitals_entry_bp_position_label),
+                    options = BpBodyPositions,
+                    selected = state.bpBodyPosition,
+                    optionText = { stringResource(bpBodyPositionLabelRes(it)) },
+                    enabled = !state.isSavingEntry,
+                    onSelect = onSelectBpBodyPosition,
+                )
+                BpOptionDropdown(
+                    label = stringResource(R.string.vitals_entry_bp_location_label),
+                    options = BpMeasurementLocations,
+                    selected = state.bpMeasurementLocation,
+                    optionText = { stringResource(bpMeasurementLocationLabelRes(it)) },
+                    enabled = !state.isSavingEntry,
+                    onSelect = onSelectBpMeasurementLocation,
+                )
+                BpMeasurementGuide()
             } else {
                 VitalsValueField(
                     value = state.inputText,
@@ -338,4 +384,172 @@ fun VitalsMeasurementType.accentColor(): Color = when (this) {
 private fun UnitFormatter.unitSystemFor(type: VitalsMeasurementType): UnitSystem = when (type) {
     VitalsMeasurementType.BODY_TEMPERATURE -> unitSystem(UnitQuantity.TEMPERATURE)
     else -> unitSystem()
+}
+
+internal fun BpMealContext.labelRes(): Int = when (this) {
+    BpMealContext.BEFORE_BREAKFAST -> R.string.bp_context_before_breakfast
+    BpMealContext.AFTER_BREAKFAST -> R.string.bp_context_after_breakfast
+    BpMealContext.BEFORE_LUNCH -> R.string.bp_context_before_lunch
+    BpMealContext.AFTER_LUNCH -> R.string.bp_context_after_lunch
+    BpMealContext.BEFORE_DINNER -> R.string.bp_context_before_dinner
+    BpMealContext.AFTER_DINNER -> R.string.bp_context_after_dinner
+}
+
+/**
+ * One compact optional-choice dropdown: the field shows the selection (or
+ * "Not specified"), the menu lists "Not specified" first so a choice can
+ * always be cleared. Chips showed every option at once and made the form a
+ * wall; a closed dropdown costs one row.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun <T : Any> BpOptionDropdown(
+    label: String,
+    options: List<T>,
+    selected: T?,
+    optionText: @Composable (T) -> String,
+    enabled: Boolean,
+    onSelect: (T?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { if (enabled) expanded = it },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = selected?.let { optionText(it) } ?: stringResource(R.string.option_not_specified),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            enabled = enabled,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.option_not_specified)) },
+                onClick = {
+                    onSelect(null)
+                    expanded = false
+                },
+                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+            )
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(optionText(option)) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The standard home-measurement protocol (AHA/ESH), collapsed by default so
+ * the form stays a form — expanded it reads as the checklist a doctor hands
+ * out with the monitor.
+ */
+@Composable
+private fun BpMeasurementGuide() {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = stringResource(R.string.bp_guide_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .weight(1f),
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                listOf(
+                    R.string.bp_guide_posture,
+                    R.string.bp_guide_circumstances,
+                    R.string.bp_guide_equipment,
+                    R.string.bp_guide_technique,
+                    R.string.bp_guide_target,
+                ).forEach { lineRes ->
+                    Row {
+                        Text(
+                            text = "\u2022",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(lineRes),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val BpBodyPositions = listOf(
+    BpRecordValues.BODY_POSITION_SITTING_DOWN,
+    BpRecordValues.BODY_POSITION_STANDING_UP,
+    BpRecordValues.BODY_POSITION_LYING_DOWN,
+    BpRecordValues.BODY_POSITION_RECLINING,
+)
+
+private val BpMeasurementLocations = listOf(
+    BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM,
+    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM,
+    BpRecordValues.MEASUREMENT_LOCATION_LEFT_WRIST,
+    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST,
+)
+
+internal fun bpBodyPositionLabelRes(position: Int): Int = when (position) {
+    BpRecordValues.BODY_POSITION_STANDING_UP -> R.string.bp_position_standing
+    BpRecordValues.BODY_POSITION_SITTING_DOWN -> R.string.bp_position_sitting
+    BpRecordValues.BODY_POSITION_LYING_DOWN -> R.string.bp_position_lying
+    else -> R.string.bp_position_reclining
+}
+
+internal fun bpMeasurementLocationLabelRes(location: Int): Int = when (location) {
+    BpRecordValues.MEASUREMENT_LOCATION_LEFT_WRIST -> R.string.bp_location_left_wrist
+    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST -> R.string.bp_location_right_wrist
+    BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM -> R.string.bp_location_left_arm
+    else -> R.string.bp_location_right_arm
 }

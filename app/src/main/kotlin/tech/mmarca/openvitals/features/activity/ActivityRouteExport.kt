@@ -8,6 +8,7 @@ import android.util.Xml
 import androidx.core.content.FileProvider
 import org.xmlpull.v1.XmlSerializer
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.export.stageExport
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import java.io.ByteArrayOutputStream
@@ -104,26 +105,13 @@ private fun Context.createActivityRouteExportFile(
     format: ActivityRouteExportFormat,
 ): File =
     File(cacheDir, RouteExportCacheDirectory)
-        .stageRouteExport(workout.routeExportFileName(format)) { output ->
+        .stageExport(workout.routeExportFileName(format)) { output ->
             writeActivityRouteExport(
                 workout = workout,
                 format = format,
                 output = output,
             )
         }
-
-/**
- * Stages one export under this feature cache directory: creates it, prunes the
- * copies older than a day, then writes [fileName] through [write] — overwriting
- * any earlier copy of the same name rather than stacking up.
- */
-internal fun File.stageRouteExport(fileName: String, write: (OutputStream) -> Unit): File {
-    mkdirs()
-    deleteOldRouteExports()
-    val exportFile = File(this, fileName)
-    exportFile.outputStream().use(write)
-    return exportFile
-}
 
 private fun writeActivityRouteExport(
     workout: ExerciseData,
@@ -238,13 +226,6 @@ private fun XmlSerializer.textElement(name: String, value: String) {
     endTag(null, name)
 }
 
-private fun File.deleteOldRouteExports() {
-    val cutoffMillis = System.currentTimeMillis() - RouteExportRetentionMillis
-    listFiles()
-        ?.filter { file -> file.isFile && file.lastModified() < cutoffMillis }
-        ?.forEach { file -> runCatching { file.delete() } }
-}
-
 internal fun ExerciseData.routeExportFileName(format: ActivityRouteExportFormat): String {
     val titlePart = title
         ?.takeIf { it.isNotBlank() }
@@ -299,7 +280,6 @@ private const val KmlNamespace = "http://www.opengis.net/kml/2.2"
 private const val KmlGxNamespace = "http://www.google.com/kml/ext/2.2"
 private const val KmzDocumentFileName = "doc.kml"
 internal const val RouteExportCacheDirectory = "route_exports"
-private const val RouteExportRetentionMillis = 24 * 60 * 60 * 1000L
 private const val MaxRouteFileNamePrefixLength = 48
 private val RouteExportTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")
 private val UnsafeRouteFileNameChars = Regex("[^a-z0-9._-]+")

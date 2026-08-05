@@ -19,9 +19,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -31,6 +33,7 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
 import tech.mmarca.openvitals.data.sync.VitalsCacheKeys
+import tech.mmarca.openvitals.data.sync.HistoryLookbackDays
 import tech.mmarca.openvitals.data.sync.VitalsHistorySyncService
 import tech.mmarca.openvitals.domain.model.DailyBloodPressurePoint
 import tech.mmarca.openvitals.domain.model.DailyVitalPoint
@@ -205,6 +208,135 @@ class VitalsRepositoryTest {
         assertEquals(listOf(entry), result.spO2)
         assertTrue(result.spO2Daily.isEmpty())
         coVerify(exactly = 0) { hc.readDailySpO2(any(), any()) }
+    }
+
+    // ── the range reads behind the health report ────────────────────────────
+
+    @Test fun `loadDailyVitals serves the cache when the sync cursor covers the range`() = runTest {
+        val hc = hc()
+        val dao = mockk<VitalsDailyCacheDao>()
+        coEvery { dao.cursor(any()) } answers { VitalsSyncCursorEntity(firstArg(), "token", null) }
+        coEvery { dao.aggregatesBetween(VitalsCacheKeys.SPO2, any(), any()) } returns listOf(
+            VitalsDailyAggregateEntity(
+                metric = VitalsCacheKeys.SPO2,
+                epochDay = LocalDate.now().minusDays(3).toEpochDay(),
+                valueSum = 96.0 * 2,
+                secondarySum = null,
+                sampleCount = 2,
+            ),
+        )
+        val repository = VitalsRepositoryImpl(hc, cacheDao = dao)
+
+        val points = repository.loadDailyVitals(
+            VitalsPeriodMetric.SPO2,
+            LocalDate.now().minusDays(30),
+            LocalDate.now(),
+        )
+
+        assertEquals(96.0, points.single().value, 0.0001)
+        coVerify(exactly = 0) { hc.readDailySpO2(any(), any()) }
+    }
+
+    @Test fun `loadDailyVitals falls through to a live read when the cursor is missing`() = runTest {
+        val hc = hc()
+        val dao = mockk<VitalsDailyCacheDao>()
+        coEvery { dao.cursor(any()) } returns null
+        val live = DailyVitalPoint(date = LocalDate.now().minusDays(1), value = 15.5, count = 3)
+        coEvery { hc.readDailyRespiratoryRate(any(), any()) } returns listOf(live)
+        val repository = VitalsRepositoryImpl(hc, cacheDao = dao)
+
+        val points = repository.loadDailyVitals(
+            VitalsPeriodMetric.RESPIRATORY_RATE,
+            LocalDate.now().minusDays(30),
+            LocalDate.now(),
+        )
+
+        assertEquals(listOf(live), points)
+        coVerify(exactly = 0) { dao.aggregatesBetween(any(), any(), any()) }
+    }
+
+    @Test fun `loadDailyVitals ignores the cache for ranges older than the sync lookback`() = runTest {
+        val hc = hc()
+        val dao = mockk<VitalsDailyCacheDao>()
+        coEvery { dao.cursor(any()) } answers { VitalsSyncCursorEntity(firstArg(), "token", null) }
+        coEvery { hc.readDailySpO2(any(), any()) } returns emptyList()
+        val repository = VitalsRepositoryImpl(hc, cacheDao = dao)
+
+        repository.loadDailyVitals(
+            VitalsPeriodMetric.SPO2,
+            LocalDate.now().minusDays(HistoryLookbackDays + 10),
+            LocalDate.now(),
+        )
+
+        coVerify(exactly = 1) { hc.readDailySpO2(any(), any()) }
+        coVerify(exactly = 0) { dao.aggregatesBetween(any(), any(), any()) }
+    }
+
+    @Test fun `loadDailyVitals returns empty without reading when the permission is missing`() = runTest {
+        val spO2Permission = HealthPermission.getReadPermission(OxygenSaturationRecord::class)
+        val hc = hc(granted = allVitalsPermissions - spO2Permission)
+        val repository = VitalsRepositoryImpl(hc)
+
+        val points = repository.loadDailyVitals(VitalsPeriodMetric.SPO2, today.minusDays(30), today)
+
+        assertTrue(points.isEmpty())
+        coVerify(exactly = 0) { hc.readDailySpO2(any(), any()) }
+    }
+
+    @Test fun `loadDailyVitals returns empty when the provider lacks skin temperature`() = runTest {
+        val hc = hc()
+        coEvery { hc.isSkinTemperatureAvailable() } returns false
+        val repository = VitalsRepositoryImpl(hc)
+
+        val points = repository.loadDailyVitals(VitalsPeriodMetric.SKIN_TEMPERATURE, today.minusDays(30), today)
+
+        assertTrue(points.isEmpty())
+        coVerify(exactly = 0) { hc.readDailySkinTemperature(any(), any()) }
+    }
+
+    @Test fun `loadDailyVitals rejects the pseudo metrics`() = runTest {
+        val repository = VitalsRepositoryImpl(hc())
+
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repository.loadDailyVitals(VitalsPeriodMetric.ALL, today.minusDays(7), today) }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repository.loadDailyVitals(VitalsPeriodMetric.BLOOD_PRESSURE, today.minusDays(7), today) }
+        }
+    }
+
+    @Test fun `loadDailyBloodPressure maps secondarySum into diastolic from the cache`() = runTest {
+        val hc = hc()
+        val dao = mockk<VitalsDailyCacheDao>()
+        coEvery { dao.cursor(any()) } answers { VitalsSyncCursorEntity(firstArg(), "token", null) }
+        coEvery { dao.aggregatesBetween(VitalsCacheKeys.BLOOD_PRESSURE, any(), any()) } returns listOf(
+            VitalsDailyAggregateEntity(
+                metric = VitalsCacheKeys.BLOOD_PRESSURE,
+                epochDay = LocalDate.now().minusDays(2).toEpochDay(),
+                valueSum = 120.0 * 2,
+                secondarySum = 80.0 * 2,
+                sampleCount = 2,
+            ),
+        )
+        val repository = VitalsRepositoryImpl(hc, cacheDao = dao)
+
+        val points = repository.loadDailyBloodPressure(LocalDate.now().minusDays(30), LocalDate.now())
+
+        val point = points.single()
+        assertEquals(120.0, point.systolic, 0.0001)
+        assertEquals(80.0, point.diastolic, 0.0001)
+        coVerify(exactly = 0) { hc.readDailyBloodPressure(any(), any()) }
+    }
+
+    @Test fun `loadDailyBloodPressure returns empty without reading when the permission is missing`() = runTest {
+        val bpPermission = HealthPermission.getReadPermission(BloodPressureRecord::class)
+        val hc = hc(granted = allVitalsPermissions - bpPermission)
+        val repository = VitalsRepositoryImpl(hc)
+
+        val points = repository.loadDailyBloodPressure(today.minusDays(30), today)
+
+        assertTrue(points.isEmpty())
+        coVerify(exactly = 0) { hc.readDailyBloodPressure(any(), any()) }
     }
 
     // ── daily-cache write-through ───────────────────────────────────────────

@@ -5,6 +5,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
@@ -67,6 +68,18 @@ class SleepRepositoryImpl @Inject constructor(
                 baselineDailyDurations = baselineData.dailyAggregateDurations,
             )
         }
+    }
+
+    override suspend fun loadDailySleepDurations(
+        start: LocalDate,
+        end: LocalDate,
+        sleepWindow: SleepWindow,
+    ): List<DailySleepDuration> {
+        if (readSleepPermission !in grantedPermissionsIfAvailable()) {
+            Log.w(TAG, "Skipping loadDailySleepDurations missingCount=1")
+            return emptyList()
+        }
+        return hc.readDailySleepDurations(start, end, sleepWindow)
     }
 
     override suspend fun loadSleepSessions(start: LocalDate, end: LocalDate): List<SleepData> {

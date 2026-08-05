@@ -47,6 +47,7 @@ fun SettingsScreen(
     onImportFitFileSelected: (Uri) -> Unit = {},
     onRouteFilesImported: () -> Unit = {},
     onOpenCsvImport: () -> Unit = {},
+    onOpenReportExport: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -242,6 +243,7 @@ fun SettingsScreen(
             fitFilePicker.launch(FitImportMimeTypes)
         },
         onOpenCsvImport = onOpenCsvImport,
+        onOpenReportExport = onOpenReportExport,
         onImportOfflineMap = {
             offlineMapPicker.launch(OfflineMapMimeTypes)
         },

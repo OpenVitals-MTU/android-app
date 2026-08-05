@@ -45,7 +45,11 @@ interface ActivityRepository {
         refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): ActivitiesPeriodData
 
-    suspend fun loadDailySteps(start: LocalDate, end: LocalDate): List<DailySteps>
+    suspend fun loadDailySteps(
+        start: LocalDate,
+        end: LocalDate,
+        includeWheelchairPushes: Boolean = false,
+    ): List<DailySteps>
 
     suspend fun loadActivityProgress(date: LocalDate = LocalDate.now()): List<ActivityProgressPoint>
 

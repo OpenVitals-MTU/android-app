@@ -104,6 +104,35 @@ class SleepRepositoryTest {
         assertEquals(aggregateDurationMs, periodData.dailyDurations.single().durationMs)
     }
 
+    @Test fun `loadDailySleepDurations passes the range through without a session fetch`() = runTest {
+        val day = LocalDate.of(2026, 5, 6)
+        val durations = listOf(DailySleepDuration(date = day, durationMs = Duration.ofHours(7).toMillis()))
+        val hc = hc(grantedPermissions = setOf(sleepPermission))
+        coEvery { hc.readDailySleepDurations(any(), any(), any()) } returns durations
+        val repository = SleepRepositoryImpl(hc)
+
+        val result = repository.loadDailySleepDurations(day.minusDays(30), day, SleepWindow.Default)
+
+        assertEquals(durations, result)
+        coVerify(exactly = 1) { hc.readDailySleepDurations(day.minusDays(30), day, SleepWindow.Default) }
+        coVerify(exactly = 0) { hc.readSleepData(any(), any(), any()) }
+        coVerify(exactly = 0) { hc.readSleepSessions(any(), any()) }
+    }
+
+    @Test fun `loadDailySleepDurations returns empty without reading when the permission is missing`() = runTest {
+        val hc = hc(grantedPermissions = emptySet())
+        val repository = SleepRepositoryImpl(hc)
+
+        val result = repository.loadDailySleepDurations(
+            LocalDate.of(2026, 5, 1),
+            LocalDate.of(2026, 5, 6),
+            SleepWindow.Default,
+        )
+
+        assertEquals(emptyList<DailySleepDuration>(), result)
+        coVerify(exactly = 0) { hc.readDailySleepDurations(any(), any(), any()) }
+    }
+
     private fun hc(
         availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
         grantedPermissions: Set<String>,

@@ -32,8 +32,8 @@ enum class SettingsSection(
         summaryRes = R.string.settings_recovery_group_body,
     ),
     DATA_IMPORT(
-        titleRes = R.string.settings_data_import_group_title,
-        summaryRes = R.string.settings_data_import_group_body,
+        titleRes = R.string.settings_data_transfer_group_title,
+        summaryRes = R.string.settings_data_transfer_group_body,
     ),
     DEVICE_SYNC(
         titleRes = R.string.settings_device_sync_group_title,

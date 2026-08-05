@@ -88,6 +88,34 @@ internal class SleepHealthReader(
         )
     }
 
+    /**
+     * The daily aggregate durations alone — [readSleepData] without the
+     * session fetch, for range consumers (the health report) that only need
+     * one number per day. Chunked so a year-long range never rides in a
+     * single Binder parcel.
+     */
+    suspend fun readDailySleepDurations(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        sleepWindow: SleepWindow,
+    ): List<DailySleepDuration> {
+        if (startDate.isAfter(endDate)) return emptyList()
+
+        val durations = mutableMapOf<LocalDateTime, Long>()
+        dailyAggregateDateChunks(startDate, endDate).forEach { (chunkStart, chunkEnd) ->
+            durations += readSleepDurationsByLocalDay(
+                start = sleepRangeStartFor(chunkStart, sleepWindow),
+                end = sleepRangeEndFor(chunkEnd, sleepWindow),
+            )
+        }
+        return datesBetween(startDate, endDate).map { date ->
+            DailySleepDuration(
+                date = date,
+                durationMs = durations[sleepRangeStartFor(date, sleepWindow)] ?: 0L,
+            )
+        }
+    }
+
     private suspend fun readSleepSessionsForDates(
         startDate: LocalDate,
         endDate: LocalDate,

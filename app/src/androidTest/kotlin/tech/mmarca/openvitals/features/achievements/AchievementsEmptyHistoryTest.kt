@@ -71,8 +71,11 @@ class AchievementsEmptyHistoryTest {
 
     /** A phone Health Connect has no step or distance history for. */
     private object NoActivityRepository : ActivityRepository {
-        override suspend fun loadDailySteps(start: LocalDate, end: LocalDate): List<DailySteps> =
-            emptyList()
+        override suspend fun loadDailySteps(
+            start: LocalDate,
+            end: LocalDate,
+            includeWheelchairPushes: Boolean,
+        ): List<DailySteps> = emptyList()
 
         override suspend fun loadActivityPeriod(
             query: tech.mmarca.openvitals.core.period.PeriodLoadQuery,

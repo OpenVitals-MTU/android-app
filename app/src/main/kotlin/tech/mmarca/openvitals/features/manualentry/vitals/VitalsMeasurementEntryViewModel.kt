@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.model.BpMealContext
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.core.presentation.ScreenError
@@ -52,6 +53,9 @@ data class VitalsMeasurementEntryUiState(
     val type: VitalsMeasurementType = VitalsMeasurementType.BLOOD_PRESSURE,
     val inputText: String = "",
     val secondaryInputText: String = "",
+    val bpMealContext: BpMealContext? = null,
+    val bpBodyPosition: Int? = null,
+    val bpMeasurementLocation: Int? = null,
     val writePermissions: Set<String> = emptySet(),
     val canWrite: Boolean = false,
     val isCheckingPermission: Boolean = true,
@@ -140,6 +144,34 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
         )
     }
 
+    /** Toggles the meal-context chip: tapping the selected one clears it. */
+    fun selectBpMealContext(context: BpMealContext?) {
+        _uiState.value = _uiState.value.copy(
+            bpMealContext = context,
+            saveCompleted = false,
+            entryError = null,
+            writeError = null,
+        )
+    }
+
+    fun selectBpBodyPosition(position: Int?) {
+        _uiState.value = _uiState.value.copy(
+            bpBodyPosition = position,
+            saveCompleted = false,
+            entryError = null,
+            writeError = null,
+        )
+    }
+
+    fun selectBpMeasurementLocation(location: Int?) {
+        _uiState.value = _uiState.value.copy(
+            bpMeasurementLocation = location,
+            saveCompleted = false,
+            entryError = null,
+            writeError = null,
+        )
+    }
+
     fun updateEntryTime(time: Instant) {
         _uiState.value = _uiState.value.copy(
             editTime = time.coerceAtMost(Instant.now()),
@@ -178,6 +210,12 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                     time = current.editTime?.coerceAtMost(Instant.now()) ?: Instant.now(),
                     value = requireNotNull(value),
                     secondaryValue = secondaryValue,
+                    bpMealContext = current.bpMealContext
+                        .takeIf { current.type == VitalsMeasurementType.BLOOD_PRESSURE },
+                    bpBodyPosition = current.bpBodyPosition
+                        .takeIf { current.type == VitalsMeasurementType.BLOOD_PRESSURE },
+                    bpMeasurementLocation = current.bpMeasurementLocation
+                        .takeIf { current.type == VitalsMeasurementType.BLOOD_PRESSURE },
                 )
                 if (current.editRecordId == null) {
                     repository.writeVitalsMeasurementEntry(request)
@@ -223,6 +261,9 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     inputText = entry.value.toDisplayInput(type, unitSystem),
                     secondaryInputText = entry.secondaryValue?.toInputText().orEmpty(),
+                    bpMealContext = entry.bpMealContext,
+                    bpBodyPosition = entry.bpBodyPosition,
+                    bpMeasurementLocation = entry.bpMeasurementLocation,
                     editTime = entry.time.coerceAtMost(Instant.now()),
                     entryError = null,
                     writeError = null,

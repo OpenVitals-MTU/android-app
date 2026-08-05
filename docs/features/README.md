@@ -42,6 +42,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [GPX/KML/KMZ/TCX route import](route-file-import.md): route and indoor activity file import for review before saving.
 - [FIT files import](fit-files-import.md): Settings Data Importers support for FIT activity, course, and workout files.
 - [CSV import](csv-import.md): mapped import of body measurements and vitals from a CSV file.
+- [Health report export](health-report-export.md): PDF report of selected metrics built from Health Connect, to share or save.
 - [Sync with another phone](device-sync.md): copying Health Connect records between two phones over Bluetooth.
 - [Offline maps support](offline-maps-support.md): PMTiles or Mapsforge packs for local activity maps.
 - [Apple Health import](apple-health-import.md): supported Apple Health export records written into Health Connect.

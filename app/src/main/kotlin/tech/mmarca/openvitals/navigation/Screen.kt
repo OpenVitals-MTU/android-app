@@ -170,6 +170,7 @@ sealed class Screen(val route: String) {
     data object SettingsBodyEnergy : Screen("settings/body_energy")
     data object SettingsDataImport : Screen("settings/data_import")
     data object SettingsCsvImport : Screen("settings/data_import/csv")
+    data object SettingsReportExport : Screen("settings/data_import/report")
     data object SettingsDeviceSync : Screen("settings/device_sync")
     data object SettingsHealthConnect : Screen("settings/health_connect")
     data object SettingsPermissions : Screen("settings/permissions")

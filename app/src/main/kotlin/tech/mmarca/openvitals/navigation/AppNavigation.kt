@@ -364,8 +364,9 @@ fun AppNavigation(
         Screen.SettingsRecovery.route,
         Screen.SettingsSleep.route,
         Screen.SettingsBodyEnergy.route -> stringResource(R.string.settings_recovery_group_title)
-        Screen.SettingsDataImport.route -> stringResource(R.string.settings_data_import_group_title)
+        Screen.SettingsDataImport.route -> stringResource(R.string.settings_data_transfer_group_title)
         Screen.SettingsCsvImport.route -> stringResource(R.string.settings_csv_import_screen_title)
+        Screen.SettingsReportExport.route -> stringResource(R.string.report_builder_title)
         Screen.SettingsDeviceSync.route -> stringResource(R.string.settings_device_sync_group_title)
         Screen.SettingsHealthConnect.route,
         Screen.SettingsPermissions.route -> stringResource(R.string.settings_health_connect_group_title)

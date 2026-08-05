@@ -5,6 +5,8 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
+import tech.mmarca.openvitals.domain.model.DailyBloodPressurePoint
+import tech.mmarca.openvitals.domain.model.DailyVitalPoint
 import tech.mmarca.openvitals.domain.model.BodyTempEntry
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
@@ -28,6 +30,23 @@ interface VitalsRepository {
         metric: VitalsPeriodMetric,
         refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): VitalsPeriodData
+
+    /**
+     * One aggregated point per local day for a single vitals metric — the
+     * overview's per-metric read, exposed for range consumers such as the
+     * health report. Served from the daily cache when the sync cursor covers
+     * the range, from a live read otherwise. [metric] must name a concrete
+     * vitals metric: ALL and BLOOD_PRESSURE (whose daily shape carries two
+     * values, see [loadDailyBloodPressure]) are rejected.
+     */
+    suspend fun loadDailyVitals(
+        metric: VitalsPeriodMetric,
+        start: LocalDate,
+        end: LocalDate,
+    ): List<DailyVitalPoint>
+
+    /** Daily systolic/diastolic averages, cache-first like [loadDailyVitals]. */
+    suspend fun loadDailyBloodPressure(start: LocalDate, end: LocalDate): List<DailyBloodPressurePoint>
 
     suspend fun loadBloodPressure(start: LocalDate, end: LocalDate): List<BloodPressureEntry>
 

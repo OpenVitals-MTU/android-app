@@ -28,6 +28,7 @@ enum class HealthConnectFeature {
     MANUAL_ENTRY,
     DATA_IMPORT,
     CSV_IMPORT,
+    HEALTH_REPORT,
     ;
 
     fun requiredReadPermissions(manager: HealthConnectManager): Set<String> = when (this) {
@@ -59,6 +60,10 @@ enum class HealthConnectFeature {
         // permissions are needed is not known until the user has mapped the
         // file's columns, so the confirm step asks for exactly those instead.
         CSV_IMPORT -> emptySet()
+        // Same shape as CSV_IMPORT: the report builder asks for exactly the
+        // selected metrics' read permissions, and builds fine on a partial
+        // grant — ungranted metrics land in the PDF's notice instead.
+        HEALTH_REPORT -> emptySet()
     }
 
     fun missingReadPermissions(

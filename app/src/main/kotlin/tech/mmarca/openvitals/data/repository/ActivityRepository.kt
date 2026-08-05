@@ -215,9 +215,13 @@ class ActivityRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun loadDailySteps(start: LocalDate, end: LocalDate): List<DailySteps> {
+    override suspend fun loadDailySteps(
+        start: LocalDate,
+        end: LocalDate,
+        includeWheelchairPushes: Boolean,
+    ): List<DailySteps> {
         val granted = grantedPermissionsIfAvailable()
-        return loadDailySteps(start, end, granted)
+        return loadDailySteps(start, end, granted, includeWheelchairPushes = includeWheelchairPushes)
     }
 
     private suspend fun loadDailySteps(

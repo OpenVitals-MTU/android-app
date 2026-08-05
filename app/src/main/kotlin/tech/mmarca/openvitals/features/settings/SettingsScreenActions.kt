@@ -18,6 +18,7 @@ internal data class SettingsScreenActions(
     val onImportRouteFiles: () -> Unit,
     val onImportFitFile: () -> Unit,
     val onOpenCsvImport: () -> Unit,
+    val onOpenReportExport: () -> Unit,
     val onImportOfflineMap: () -> Unit,
     val onCopyAppleHealthReport: (String) -> Unit,
     val onCopyAppleHealthError: (String) -> Unit,

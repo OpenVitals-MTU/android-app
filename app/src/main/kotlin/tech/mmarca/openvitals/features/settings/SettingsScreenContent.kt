@@ -366,6 +366,13 @@ internal fun LazyListScope.settingsScreenContent(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
+            item { SettingsCardSpacer() }
+            item {
+                ReportExportCard(
+                    onOpenReportExport = actions.onOpenReportExport,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
         // DEVICE_SYNC routes straight to the bespoke DeviceSyncScreen wizard
         // (see AppNavigationSettingsRoutes), so it never renders card content

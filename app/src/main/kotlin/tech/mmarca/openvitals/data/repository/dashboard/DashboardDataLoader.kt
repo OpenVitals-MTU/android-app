@@ -980,70 +980,7 @@ class DashboardDataLoader @Inject constructor(
     private fun permissionsForMetric(
         metric: DashboardMetric,
         showOpenVitalsCalculatedCalories: Boolean,
-    ): Set<String> =
-        when (metric) {
-            DashboardMetric.STEPS -> setOf(readStepsPermission)
-            DashboardMetric.DISTANCE -> setOf(readDistancePermission)
-            DashboardMetric.CALORIES_OUT -> if (showOpenVitalsCalculatedCalories) {
-                setOf(readCaloriesPermission, readActiveCaloriesPermission, readBmrPermission)
-            } else {
-                setOf(readCaloriesPermission)
-            }
-            DashboardMetric.ACTIVE_CALORIES -> setOf(
-                readActiveCaloriesPermission,
-                readStepsPermission,
-                readDistancePermission,
-            )
-            DashboardMetric.FLOORS -> setOf(readFloorsPermission)
-            DashboardMetric.ELEVATION -> setOf(readElevationPermission)
-            DashboardMetric.WHEELCHAIR_PUSHES -> setOf(readWheelchairPushesPermission)
-            DashboardMetric.WORKOUT -> setOf(readExercisePermission)
-            DashboardMetric.SLEEP -> setOf(readSleepPermission)
-            DashboardMetric.HYDRATION -> setOf(readHydrationPermission)
-            DashboardMetric.CALORIES_IN,
-            DashboardMetric.PROTEIN,
-            DashboardMetric.CARBS,
-            DashboardMetric.FAT,
-            DashboardMetric.CAFFEINE,
-            -> setOf(readNutritionPermission)
-            DashboardMetric.WEIGHT -> setOf(readWeightPermission)
-            DashboardMetric.HEIGHT -> setOf(readHeightPermission)
-            DashboardMetric.BMI -> setOf(readWeightPermission, readHeightPermission)
-            DashboardMetric.FFMI -> setOf(readWeightPermission, readHeightPermission, readBodyFatPermission)
-            DashboardMetric.BODY_FAT -> setOf(readBodyFatPermission)
-            DashboardMetric.LEAN_MASS -> setOf(readLeanMassPermission)
-            DashboardMetric.BMR -> setOf(readBmrPermission)
-            DashboardMetric.BONE_MASS -> setOf(readBoneMassPermission)
-            DashboardMetric.BODY_WATER_MASS -> setOf(readBodyWaterMassPermission)
-            DashboardMetric.AVG_HEART_RATE -> setOf(readHeartRatePermission)
-            DashboardMetric.RESTING_HEART_RATE -> setOf(readRestingHRPermission)
-            DashboardMetric.HRV -> setOf(readHrvPermission)
-            DashboardMetric.BLOOD_PRESSURE -> setOf(readBloodPressurePermission)
-            DashboardMetric.SPO2 -> setOf(readSpO2Permission)
-            DashboardMetric.VO2_MAX -> setOf(readVo2MaxPermission)
-            DashboardMetric.RESPIRATORY_RATE -> setOf(readRespiratoryRatePermission)
-            DashboardMetric.BODY_TEMPERATURE -> setOf(readBodyTemperaturePermission)
-            DashboardMetric.BLOOD_GLUCOSE -> setOf(readBloodGlucosePermission)
-            // Raw permission even where the feature flag is off: the
-            // feature-availability subtraction lives in `managedPermissions`,
-            // which both callers of this mapping intersect against.
-            DashboardMetric.SKIN_TEMPERATURE -> setOf(readSkinTemperaturePermission)
-            DashboardMetric.WEEKLY_CARDIO_LOAD -> setOf(readStepsPermission)
-            DashboardMetric.INTENSITY_MINUTES -> setOf(
-                readHeartRatePermission,
-                readRestingHRPermission,
-                readExercisePermission,
-                readActiveCaloriesPermission,
-                readStepsPermission,
-                readDistancePermission,
-            )
-            DashboardMetric.MINDFULNESS -> setOf(readMindfulnessPermission)
-            DashboardMetric.CYCLE -> setOf(
-                readMenstruationPeriodPermission,
-                readOvulationTestPermission,
-                readBasalBodyTemperaturePermission,
-            )
-        }
+    ): Set<String> = MetricReadPermissions.forMetric(metric, showOpenVitalsCalculatedCalories)
 }
 
 private data class DashboardLoadInputs(

@@ -10,7 +10,31 @@ data class BloodPressureEntry(
     val source: String,
     val id: String = "",
     val isOpenVitalsEntry: Boolean = false,
+    /** Explicit meal context, present only on OpenVitals-written records. */
+    val mealContext: BpMealContext? = null,
+    /** [BpRecordValues] BODY_POSITION_* — native HC field, any app may set it. */
+    val bodyPosition: Int = BpRecordValues.BODY_POSITION_UNKNOWN,
+    /** [BpRecordValues] MEASUREMENT_LOCATION_* — native HC field. */
+    val measurementLocation: Int = BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
 )
+
+/**
+ * Health Connect's BloodPressureRecord position/location constants, mirrored
+ * so the domain stays library-free — pinned against androidx by a test.
+ */
+object BpRecordValues {
+    const val BODY_POSITION_UNKNOWN = 0
+    const val BODY_POSITION_STANDING_UP = 1
+    const val BODY_POSITION_SITTING_DOWN = 2
+    const val BODY_POSITION_LYING_DOWN = 3
+    const val BODY_POSITION_RECLINING = 4
+
+    const val MEASUREMENT_LOCATION_UNKNOWN = 0
+    const val MEASUREMENT_LOCATION_LEFT_WRIST = 1
+    const val MEASUREMENT_LOCATION_RIGHT_WRIST = 2
+    const val MEASUREMENT_LOCATION_LEFT_UPPER_ARM = 3
+    const val MEASUREMENT_LOCATION_RIGHT_UPPER_ARM = 4
+}
 
 data class SpO2Entry(
     val time: Instant,
@@ -76,6 +100,12 @@ data class VitalsMeasurementWriteRequest(
     val time: Instant,
     val value: Double,
     val secondaryValue: Double? = null,
+    /** Blood pressure only: when the reading was taken relative to meals. */
+    val bpMealContext: BpMealContext? = null,
+    /** Blood pressure only: [BpRecordValues] BODY_POSITION_*; null writes UNKNOWN. */
+    val bpBodyPosition: Int? = null,
+    /** Blood pressure only: [BpRecordValues] MEASUREMENT_LOCATION_*; null writes UNKNOWN. */
+    val bpMeasurementLocation: Int? = null,
 )
 
 data class VitalsMeasurementEntry(
@@ -86,6 +116,12 @@ data class VitalsMeasurementEntry(
     val secondaryValue: Double? = null,
     val source: String,
     val isOpenVitalsEntry: Boolean,
+    /** Blood pressure only: the meal context encoded on OpenVitals records. */
+    val bpMealContext: BpMealContext? = null,
+    /** Blood pressure only: BODY_POSITION_* value, null when unknown. */
+    val bpBodyPosition: Int? = null,
+    /** Blood pressure only: MEASUREMENT_LOCATION_* value, null when unknown. */
+    val bpMeasurementLocation: Int? = null,
 )
 
 /**

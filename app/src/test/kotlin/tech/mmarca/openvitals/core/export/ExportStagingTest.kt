@@ -10,7 +10,6 @@ import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.core.diagnostics.DiagnosticsExportCacheDirectory
 import tech.mmarca.openvitals.features.activity.RouteExportCacheDirectory
-import tech.mmarca.openvitals.features.activity.stageRouteExport
 
 /**
  * Ported from the Flutter `test/core/export/export_staging_test.dart`.
@@ -40,7 +39,7 @@ class ExportStagingTest {
     @Test
     fun `a staged file lands under the feature directory, named as asked`() {
         val file = featureDirectory(RouteExportCacheDirectory)
-            .stageRouteExport("morning-run.gpx") { output -> output.write("x".toByteArray()) }
+            .stageExport("morning-run.gpx") { output -> output.write("x".toByteArray()) }
 
         assertTrue(file.path, file.path.endsWith("/$RouteExportCacheDirectory/morning-run.gpx"))
         // The receiving app is handed a path, so it must exist.
@@ -54,9 +53,9 @@ class ExportStagingTest {
         assertNotEquals(DiagnosticsExportCacheDirectory, RouteExportCacheDirectory)
 
         val route = featureDirectory(RouteExportCacheDirectory)
-            .stageRouteExport("export.txt") { output -> output.write("route".toByteArray()) }
+            .stageExport("export.txt") { output -> output.write("route".toByteArray()) }
         val diagnostics = featureDirectory(DiagnosticsExportCacheDirectory)
-            .stageRouteExport("export.txt") { output -> output.write("log".toByteArray()) }
+            .stageExport("export.txt") { output -> output.write("log".toByteArray()) }
 
         assertNotEquals(route.path, diagnostics.path)
         assertEquals("route", route.readText())
@@ -70,7 +69,7 @@ class ExportStagingTest {
         val fresh = File(directory, "fresh.gpx").apply { writeText("x") }
         stale.setLastModified(System.currentTimeMillis() - 25 * 60 * 60 * 1000L)
 
-        directory.stageRouteExport("new.gpx") { output -> output.write("x".toByteArray()) }
+        directory.stageExport("new.gpx") { output -> output.write("x".toByteArray()) }
 
         assertFalse(stale.exists())
         assertTrue(fresh.exists())
@@ -79,8 +78,8 @@ class ExportStagingTest {
     @Test
     fun `re-staging the same name overwrites rather than stacking up`() {
         val directory = featureDirectory(RouteExportCacheDirectory)
-        directory.stageRouteExport("report.txt") { output -> output.write("first".toByteArray()) }
-        directory.stageRouteExport("report.txt") { output -> output.write("second".toByteArray()) }
+        directory.stageExport("report.txt") { output -> output.write("first".toByteArray()) }
+        directory.stageExport("report.txt") { output -> output.write("second".toByteArray()) }
 
         assertEquals(1, directory.listFiles().orEmpty().count { it.isFile })
         assertEquals("second", File(directory, "report.txt").readText())
@@ -95,7 +94,7 @@ class ExportStagingTest {
             setLastModified(System.currentTimeMillis() - 25 * 60 * 60 * 1000L)
         }
 
-        val file = directory.stageRouteExport("report.txt") { output ->
+        val file = directory.stageExport("report.txt") { output ->
             output.write("x".toByteArray())
         }
 

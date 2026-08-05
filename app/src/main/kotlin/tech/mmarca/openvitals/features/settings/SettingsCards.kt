@@ -2237,6 +2237,61 @@ internal fun CsvImportCard(
     }
 }
 
+/** Entry to the PDF health-report builder (see ReportBuilderScreen). */
+@Composable
+internal fun ReportExportCard(
+    onOpenReportExport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .size(20.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .padding(start = 12.dp)
+                        .weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_report_export_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_report_export_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+
+            OpenVitalsOutlinedButton(
+                onClick = onOpenReportExport,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.widthIn(min = 6.dp))
+                Text(stringResource(R.string.settings_report_export_action))
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AppleHealthImportProgressBar(

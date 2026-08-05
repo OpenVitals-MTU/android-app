@@ -135,6 +135,62 @@ class VitalsMeasurementEntryViewModelTest {
         assertFalse(vm.uiState.value.saveCompleted)
     }
 
+    @Test fun `a chosen meal context rides on the blood pressure write`() = runTest {
+        val repo = vitalsRepo()
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.BLOOD_PRESSURE)
+        advanceUntilIdle()
+
+        vm.selectBpMealContext(tech.mmarca.openvitals.domain.model.BpMealContext.BEFORE_BREAKFAST)
+        vm.addEntry(121.0, 78.0)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeVitalsMeasurementEntry(match<VitalsMeasurementWriteRequest> { request ->
+                request.bpMealContext == tech.mmarca.openvitals.domain.model.BpMealContext.BEFORE_BREAKFAST
+            })
+        }
+    }
+
+    @Test fun `position and cuff location ride on the blood pressure write`() = runTest {
+        val repo = vitalsRepo()
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.BLOOD_PRESSURE)
+        advanceUntilIdle()
+
+        vm.selectBpBodyPosition(tech.mmarca.openvitals.domain.model.BpRecordValues.BODY_POSITION_SITTING_DOWN)
+        vm.selectBpMeasurementLocation(
+            tech.mmarca.openvitals.domain.model.BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM,
+        )
+        vm.addEntry(121.0, 78.0)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeVitalsMeasurementEntry(match<VitalsMeasurementWriteRequest> { request ->
+                request.bpBodyPosition ==
+                    tech.mmarca.openvitals.domain.model.BpRecordValues.BODY_POSITION_SITTING_DOWN &&
+                    request.bpMeasurementLocation ==
+                    tech.mmarca.openvitals.domain.model.BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM
+            })
+        }
+    }
+
+    @Test fun `no context selected writes a context-free request`() = runTest {
+        val repo = vitalsRepo()
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.BLOOD_PRESSURE)
+        advanceUntilIdle()
+
+        vm.addEntry(121.0, 78.0)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeVitalsMeasurementEntry(match<VitalsMeasurementWriteRequest> { request ->
+                request.bpMealContext == null
+            })
+        }
+    }
+
     @Test fun `body temperature entry writes celsius value`() = runTest {
         val repo = vitalsRepo()
         val vm = VitalsMeasurementEntryViewModel(repo)

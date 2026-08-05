@@ -235,38 +235,38 @@ class VitalsRepositoryImpl @Inject constructor(
 
         val skinTemperatureAvailable = hc.isSkinTemperatureAvailable()
         val bloodPressureDaily = async {
-            budgeted(VitalsPeriodMetric.BLOOD_PRESSURE, readBloodPressurePermission) { s, e ->
-                cachedDailyBloodPressure(start, end) ?: hc.readDailyBloodPressure(s, e)
+            budgeted(VitalsPeriodMetric.BLOOD_PRESSURE, readBloodPressurePermission) { _, _ ->
+                dailyBloodPressureCore(start, end)
             }
         }
         val spO2Daily = async {
-            budgeted(VitalsPeriodMetric.SPO2, readSpO2Permission) { s, e ->
-                cachedDaily(VitalsCacheKeys.SPO2, start, end) ?: hc.readDailySpO2(s, e)
+            budgeted(VitalsPeriodMetric.SPO2, readSpO2Permission) { _, _ ->
+                dailyVitalsCore(VitalsPeriodMetric.SPO2, start, end)
             }
         }
         val respiratoryRateDaily = async {
-            budgeted(VitalsPeriodMetric.RESPIRATORY_RATE, readRespiratoryRatePermission) { s, e ->
-                cachedDaily(VitalsCacheKeys.RESPIRATORY_RATE, start, end) ?: hc.readDailyRespiratoryRate(s, e)
+            budgeted(VitalsPeriodMetric.RESPIRATORY_RATE, readRespiratoryRatePermission) { _, _ ->
+                dailyVitalsCore(VitalsPeriodMetric.RESPIRATORY_RATE, start, end)
             }
         }
         val bodyTemperatureDaily = async {
-            budgeted(VitalsPeriodMetric.BODY_TEMPERATURE, readBodyTemperaturePermission) { s, e ->
-                cachedDaily(VitalsCacheKeys.BODY_TEMPERATURE, start, end) ?: hc.readDailyBodyTemperature(s, e)
+            budgeted(VitalsPeriodMetric.BODY_TEMPERATURE, readBodyTemperaturePermission) { _, _ ->
+                dailyVitalsCore(VitalsPeriodMetric.BODY_TEMPERATURE, start, end)
             }
         }
         val vo2MaxDaily = async {
-            budgeted(VitalsPeriodMetric.VO2_MAX, readVo2MaxPermission) { s, e ->
-                cachedDaily(VitalsCacheKeys.VO2_MAX, start, end) ?: hc.readDailyVo2Max(s, e)
+            budgeted(VitalsPeriodMetric.VO2_MAX, readVo2MaxPermission) { _, _ ->
+                dailyVitalsCore(VitalsPeriodMetric.VO2_MAX, start, end)
             }
         }
         val bloodGlucoseDaily = async {
-            budgeted(VitalsPeriodMetric.BLOOD_GLUCOSE, readBloodGlucosePermission) { s, e ->
-                cachedDaily(VitalsCacheKeys.BLOOD_GLUCOSE, start, end) ?: hc.readDailyBloodGlucose(s, e)
+            budgeted(VitalsPeriodMetric.BLOOD_GLUCOSE, readBloodGlucosePermission) { _, _ ->
+                dailyVitalsCore(VitalsPeriodMetric.BLOOD_GLUCOSE, start, end)
             }
         }
         val skinTemperatureDaily = async {
-            budgeted(VitalsPeriodMetric.SKIN_TEMPERATURE, readSkinTemperaturePermission, skinTemperatureAvailable) { s, e ->
-                cachedDaily(VitalsCacheKeys.SKIN_TEMPERATURE, start, end) ?: hc.readDailySkinTemperature(s, e)
+            budgeted(VitalsPeriodMetric.SKIN_TEMPERATURE, readSkinTemperaturePermission, skinTemperatureAvailable) { _, _ ->
+                dailyVitalsCore(VitalsPeriodMetric.SKIN_TEMPERATURE, start, end)
             }
         }
         val latestBloodPressure = async { latest(readBloodPressurePermission, read = hc::readLatestBloodPressureInWindow) }
@@ -297,6 +297,81 @@ class VitalsRepositoryImpl @Inject constructor(
             latestSkinTemperature = latestSkinTemperature.await(),
             timedOutMetrics = timedOut.toSet(),
         )
+    }
+
+    /**
+     * The cache-first daily read for one concrete vitals metric — the single
+     * body behind both the overview's budgeted lambdas and the public
+     * [loadDailyVitals] range read.
+     */
+    private suspend fun dailyVitalsCore(
+        metric: VitalsPeriodMetric,
+        start: LocalDate,
+        end: LocalDate,
+    ): List<DailyVitalPoint> {
+        val startInstant = start.toInstant()
+        val endInstant = end.plusDays(1).toInstant()
+        return when (metric) {
+            VitalsPeriodMetric.SPO2 ->
+                cachedDaily(VitalsCacheKeys.SPO2, start, end) ?: hc.readDailySpO2(startInstant, endInstant)
+            VitalsPeriodMetric.RESPIRATORY_RATE ->
+                cachedDaily(VitalsCacheKeys.RESPIRATORY_RATE, start, end)
+                    ?: hc.readDailyRespiratoryRate(startInstant, endInstant)
+            VitalsPeriodMetric.BODY_TEMPERATURE ->
+                cachedDaily(VitalsCacheKeys.BODY_TEMPERATURE, start, end)
+                    ?: hc.readDailyBodyTemperature(startInstant, endInstant)
+            VitalsPeriodMetric.VO2_MAX ->
+                cachedDaily(VitalsCacheKeys.VO2_MAX, start, end) ?: hc.readDailyVo2Max(startInstant, endInstant)
+            VitalsPeriodMetric.BLOOD_GLUCOSE ->
+                cachedDaily(VitalsCacheKeys.BLOOD_GLUCOSE, start, end)
+                    ?: hc.readDailyBloodGlucose(startInstant, endInstant)
+            VitalsPeriodMetric.SKIN_TEMPERATURE ->
+                cachedDaily(VitalsCacheKeys.SKIN_TEMPERATURE, start, end)
+                    ?: hc.readDailySkinTemperature(startInstant, endInstant)
+            VitalsPeriodMetric.ALL,
+            VitalsPeriodMetric.BLOOD_PRESSURE,
+            -> throw IllegalArgumentException("dailyVitalsCore cannot serve $metric")
+        }
+    }
+
+    private suspend fun dailyBloodPressureCore(start: LocalDate, end: LocalDate): List<DailyBloodPressurePoint> =
+        cachedDailyBloodPressure(start, end)
+            ?: hc.readDailyBloodPressure(start.toInstant(), end.plusDays(1).toInstant())
+
+    override suspend fun loadDailyVitals(
+        metric: VitalsPeriodMetric,
+        start: LocalDate,
+        end: LocalDate,
+    ): List<DailyVitalPoint> {
+        require(metric != VitalsPeriodMetric.ALL && metric != VitalsPeriodMetric.BLOOD_PRESSURE) {
+            "loadDailyVitals cannot serve $metric"
+        }
+        val permission = when (metric) {
+            VitalsPeriodMetric.SPO2 -> readSpO2Permission
+            VitalsPeriodMetric.RESPIRATORY_RATE -> readRespiratoryRatePermission
+            VitalsPeriodMetric.BODY_TEMPERATURE -> readBodyTemperaturePermission
+            VitalsPeriodMetric.VO2_MAX -> readVo2MaxPermission
+            VitalsPeriodMetric.BLOOD_GLUCOSE -> readBloodGlucosePermission
+            VitalsPeriodMetric.SKIN_TEMPERATURE -> readSkinTemperaturePermission
+            VitalsPeriodMetric.ALL, VitalsPeriodMetric.BLOOD_PRESSURE -> error("unreachable")
+        }
+        if (permission !in grantedPermissionsIfAvailable()) {
+            Log.w(TAG, "Skipping loadDailyVitals metric=$metric missingCount=1")
+            return emptyList()
+        }
+        if (metric == VitalsPeriodMetric.SKIN_TEMPERATURE && !hc.isSkinTemperatureAvailable()) {
+            Log.w(TAG, "Skipping loadDailyVitals metric=$metric: provider lacks skin temperature")
+            return emptyList()
+        }
+        return dailyVitalsCore(metric, start, end)
+    }
+
+    override suspend fun loadDailyBloodPressure(start: LocalDate, end: LocalDate): List<DailyBloodPressurePoint> {
+        if (readBloodPressurePermission !in grantedPermissionsIfAvailable()) {
+            Log.w(TAG, "Skipping loadDailyBloodPressure missingCount=1")
+            return emptyList()
+        }
+        return dailyBloodPressureCore(start, end)
     }
 
     /**
