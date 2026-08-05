@@ -144,6 +144,7 @@ class OpenVitalsConnectedFlowTest {
                     onOpenMindfulnessEntry = { opened = "mindfulness" },
                     onOpenBodyMeasurementEntry = { opened = it.name },
                     onOpenVitalsMeasurementEntry = { opened = it.name },
+                    onOpenCycleEntry = { opened = "cycle" },
                 )
                 ManualEntryWidgetGrid(
                     visibleIds = visibleIds,

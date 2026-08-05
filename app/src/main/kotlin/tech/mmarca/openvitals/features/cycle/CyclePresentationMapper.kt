@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.cycle
 
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.displayPeriodFor
+import tech.mmarca.openvitals.domain.cycle.CycleStatistics
 import tech.mmarca.openvitals.domain.model.CycleData
 import java.time.LocalDate
 import java.time.ZoneId
@@ -11,6 +12,7 @@ object CyclePresentationMapper {
     fun build(
         query: PeriodLoadQuery,
         data: CycleData,
+        statistics: CycleStatistics? = null,
     ): CycleDisplayState {
         val selectedPeriod = displayPeriodFor(
             range = query.range,
@@ -18,7 +20,12 @@ object CyclePresentationMapper {
             weekPeriodMode = query.weekPeriodMode,
         )
         val zone = ZoneId.systemDefault()
-        val calendarDays = cycleDays(selectedPeriod, data, zone)
+        val calendarDays = cycleDays(
+            period = selectedPeriod,
+            data = data,
+            zone = zone,
+            predictedWindows = statistics?.predictedWindows.orEmpty(),
+        )
         val periodDays = calendarDays.count { day ->
             day.inSelectedPeriod && (day.periodActive || day.flows.isNotEmpty())
         }

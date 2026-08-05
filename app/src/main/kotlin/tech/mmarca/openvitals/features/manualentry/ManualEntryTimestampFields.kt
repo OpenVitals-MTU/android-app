@@ -105,7 +105,7 @@ internal fun ManualEntryTimestampFields(
 }
 
 @Composable
-private fun ManualEntryPickerButton(
+internal fun ManualEntryPickerButton(
     label: String,
     value: String,
     icon: ImageVector,

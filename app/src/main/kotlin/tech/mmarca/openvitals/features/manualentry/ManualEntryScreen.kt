@@ -25,6 +25,7 @@ fun ManualEntryScreen(
     onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
+    onOpenCycleEntry: () -> Unit,
     onEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,6 +59,11 @@ fun ManualEntryScreen(
     ) {
         viewModel.onMindfulnessWritePermissionResult()
     }
+    val requestCycleWritePermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) {
+        viewModel.onCycleWritePermissionResult()
+    }
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
@@ -66,6 +72,7 @@ fun ManualEntryScreen(
         onOpenMindfulnessEntry = viewModel::onMindfulnessWidgetTapped,
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
         onOpenVitalsMeasurementEntry = viewModel::onVitalsMeasurementWidgetTapped,
+        onOpenCycleEntry = viewModel::onCycleWidgetTapped,
     )
     val specsById = specs.associateBy { it.id }
     val visibleIds = state.widgets.filter { it in specsById }
@@ -99,6 +106,12 @@ fun ManualEntryScreen(
         if (state.pendingMindfulnessEntryNavigation) {
             viewModel.onMindfulnessEntryNavigationHandled()
             onOpenMindfulnessEntry()
+        }
+    }
+    LaunchedEffect(state.pendingCycleEntryNavigation) {
+        if (state.pendingCycleEntryNavigation) {
+            viewModel.onCycleEntryNavigationHandled()
+            onOpenCycleEntry()
         }
     }
     LaunchedEffect(state.pendingBodyEntryNavigation) {
@@ -203,6 +216,17 @@ fun ManualEntryScreen(
             onGrant = {
                 viewModel.grantMindfulnessWritePermissionFromPrompt()
                 requestMindfulnessWritePermissions.launch(state.mindfulnessWritePermissions)
+            },
+        )
+    }
+
+    if (state.showCycleWritePermissionPrompt) {
+        CycleWritePermissionPrompt(
+            onDismiss = viewModel::dismissCycleWritePermissionPrompt,
+            onOpenEntry = viewModel::continueCycleEntryFromWritePermissionPrompt,
+            onGrant = {
+                viewModel.grantCycleWritePermissionFromPrompt()
+                requestCycleWritePermissions.launch(state.cycleWritePermissions)
             },
         )
     }

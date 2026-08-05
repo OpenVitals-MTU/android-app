@@ -19,7 +19,9 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
+import tech.mmarca.openvitals.domain.cycle.CycleStatistics
 import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -39,6 +41,7 @@ data class CycleUiState(
     val weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     val data: CycleData = CycleData(),
     val display: CycleDisplayState = CycleDisplayState(),
+    val statistics: CycleStatistics? = null,
     val missingPermissions: Set<String> = emptySet(),
     val error: ScreenError? = null,
 )
@@ -168,6 +171,7 @@ class CycleViewModel(
                     CyclePresentationMapper.build(
                         query = query,
                         data = result.data,
+                        statistics = result.statistics,
                     )
                 }
                 if (!isCurrent) return@load
@@ -176,6 +180,7 @@ class CycleViewModel(
                     selectedDate = date,
                     data = result.data,
                     display = display,
+                    statistics = result.statistics,
                     missingPermissions = result.missingPermissions,
                 )
             }.onFailure { error ->
@@ -189,10 +194,46 @@ class CycleViewModel(
         }
     }
 
+    fun deleteCycleEntry(kind: CycleEntryKind, entryId: String) {
+        if (entryId.isBlank()) return
+        val previous = _uiState.value
+        val prunedData = previous.data.without(kind, entryId) ?: return
+        _uiState.value = previous.copy(data = prunedData)
+        viewModelScope.launch {
+            runCatching {
+                repository.deleteCycleEntry(kind, entryId)
+            }.onSuccess {
+                load(RefreshMode.FORCE)
+            }.onFailure { error ->
+                _uiState.value = previous.copy(error = error.toScreenError())
+            }
+        }
+    }
+
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(
             selectedRange = selection.selectedRange,
             selectedDate = selection.selectedDate,
         )
+    }
+}
+
+private fun CycleData.without(kind: CycleEntryKind, entryId: String): CycleData? {
+    val hasEntry = when (kind) {
+        CycleEntryKind.MENSTRUATION_FLOW -> menstruationFlows.any { it.id == entryId && it.isOpenVitalsEntry }
+        CycleEntryKind.SPOTTING -> intermenstrualBleeding.any { it.id == entryId && it.isOpenVitalsEntry }
+        CycleEntryKind.SEXUAL_ACTIVITY -> sexualActivity.any { it.id == entryId && it.isOpenVitalsEntry }
+        CycleEntryKind.OVULATION_TEST -> ovulationTests.any { it.id == entryId && it.isOpenVitalsEntry }
+        CycleEntryKind.CERVICAL_MUCUS -> cervicalMucus.any { it.id == entryId && it.isOpenVitalsEntry }
+        CycleEntryKind.BASAL_BODY_TEMPERATURE -> basalBodyTemperature.any { it.id == entryId && it.isOpenVitalsEntry }
+    }
+    if (!hasEntry) return null
+    return when (kind) {
+        CycleEntryKind.MENSTRUATION_FLOW -> copy(menstruationFlows = menstruationFlows.filterNot { it.id == entryId })
+        CycleEntryKind.SPOTTING -> copy(intermenstrualBleeding = intermenstrualBleeding.filterNot { it.id == entryId })
+        CycleEntryKind.SEXUAL_ACTIVITY -> copy(sexualActivity = sexualActivity.filterNot { it.id == entryId })
+        CycleEntryKind.OVULATION_TEST -> copy(ovulationTests = ovulationTests.filterNot { it.id == entryId })
+        CycleEntryKind.CERVICAL_MUCUS -> copy(cervicalMucus = cervicalMucus.filterNot { it.id == entryId })
+        CycleEntryKind.BASAL_BODY_TEMPERATURE -> copy(basalBodyTemperature = basalBodyTemperature.filterNot { it.id == entryId })
     }
 }

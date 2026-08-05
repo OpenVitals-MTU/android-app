@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import java.time.Instant
 import java.time.LocalDate
 import org.junit.Rule
 import org.junit.Test
@@ -14,7 +15,10 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.cycle.CycleStatistics
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import androidx.compose.ui.test.onNodeWithContentDescription
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
@@ -46,6 +50,51 @@ class CyclePeriodContentTest {
     }
 
     @Test
+    fun showsThePredictionCardWhenStatisticsCarryAWindow() {
+        setContent(
+            state(
+                hasData = true,
+                statistics = CycleStatistics(
+                    currentCycleDay = 12,
+                    predictedWindows = listOf(ANCHOR.plusDays(10)..ANCHOR.plusDays(12)),
+                ),
+            ),
+        )
+
+        composeRule.onNodeWithText(string(R.string.cycle_prediction_next_period)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_stat_cycle_day)).assertIsDisplayed()
+    }
+
+    @Test
+    fun onlyAnOpenVitalsObservationGetsTheEditPencil() {
+        setContent(
+            state(hasData = true),
+            observations = listOf(
+                CycleObservation(
+                    time = Instant.parse("2026-06-20T10:00:00Z"),
+                    title = "Ours",
+                    value = "Light",
+                    source = "OpenVitals",
+                    id = "uid-1",
+                    kind = CycleEntryKind.MENSTRUATION_FLOW,
+                    isOpenVitalsEntry = true,
+                ),
+                CycleObservation(
+                    time = Instant.parse("2026-06-21T10:00:00Z"),
+                    title = "Theirs",
+                    value = "Medium",
+                    source = "Gadgetbridge",
+                    id = "uid-2",
+                    kind = CycleEntryKind.MENSTRUATION_FLOW,
+                    isOpenVitalsEntry = false,
+                ),
+            ),
+        )
+
+        composeRule.onNodeWithContentDescription(string(R.string.cd_edit_entry)).assertIsDisplayed()
+    }
+
+    @Test
     fun showsTheEmptyPlaceholderWithNoData() {
         setContent(state(hasData = false))
 
@@ -55,10 +104,12 @@ class CyclePeriodContentTest {
     private fun state(
         hasData: Boolean,
         summary: CyclePeriodSummary = CyclePeriodSummary(),
+        statistics: CycleStatistics? = null,
     ) = CycleUiState(
         isLoading = false,
         selectedRange = TimeRange.MONTH,
         selectedDate = ANCHOR,
+        statistics = statistics,
         display = CycleDisplayState(
             selectedPeriod = DatePeriod(ANCHOR.withDayOfMonth(1), ANCHOR),
             hasData = hasData,
@@ -66,7 +117,10 @@ class CyclePeriodContentTest {
         ),
     )
 
-    private fun setContent(state: CycleUiState) {
+    private fun setContent(
+        state: CycleUiState,
+        observations: List<CycleObservation> = emptyList(),
+    ) {
         composeRule.setContent {
             OpenVitalsTheme {
                 LazyColumn {
@@ -75,7 +129,7 @@ class CyclePeriodContentTest {
                         period = state.display.selectedPeriod,
                         unitFormatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC }),
                         dateTimeFormatterProvider = DateTimeFormatterProvider(),
-                        observations = emptyList(),
+                        observations = observations,
                     )
                 }
             }

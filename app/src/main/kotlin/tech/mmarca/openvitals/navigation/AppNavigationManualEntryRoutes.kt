@@ -18,6 +18,8 @@ import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryScreen
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.body.BodyMeasurementEntryScreen
 import tech.mmarca.openvitals.features.manualentry.body.BodyMeasurementEntryViewModel
+import tech.mmarca.openvitals.features.manualentry.cycle.CycleEntryScreen
+import tech.mmarca.openvitals.features.manualentry.cycle.CycleEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryScreen
 import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.mindfulness.MindfulnessEntryScreen
@@ -67,6 +69,9 @@ internal fun NavGraphBuilder.manualEntryRoutes(
                 },
                 onOpenVitalsMeasurementEntry = { type ->
                     navController.navigate(Screen.VitalsMeasurementEntry.createRoute(type.name))
+                },
+                onOpenCycleEntry = {
+                    navController.navigate(Screen.CycleEntry.route)
                 },
                 onEditStateChanged = onManualEntryEditStateChanged,
             )
@@ -184,6 +189,30 @@ internal fun NavGraphBuilder.manualEntryRoutes(
         val mindfulnessEntryViewModel = hiltViewModel<MindfulnessEntryViewModel>()
         MindfulnessEntryScreen(
             viewModel = mindfulnessEntryViewModel,
+            onEntrySaved = onEntrySavedAndPopBack,
+        )
+    }
+
+    composable(Screen.CycleEntry.route) {
+        val cycleEntryViewModel = hiltViewModel<CycleEntryViewModel>()
+        CycleEntryScreen(
+            viewModel = cycleEntryViewModel,
+            unitFormatter = unitFormatter,
+            onEntrySaved = onEntrySaved,
+        )
+    }
+
+    composable(
+        route = Screen.CycleEntryEdit.route,
+        arguments = listOf(
+            navArgument(CYCLE_ENTRY_KIND_ARG) { type = NavType.StringType },
+            navArgument(CYCLE_ENTRY_ID_ARG) { type = NavType.StringType },
+        ),
+    ) {
+        val cycleEntryViewModel = hiltViewModel<CycleEntryViewModel>()
+        CycleEntryScreen(
+            viewModel = cycleEntryViewModel,
+            unitFormatter = unitFormatter,
             onEntrySaved = onEntrySavedAndPopBack,
         )
     }

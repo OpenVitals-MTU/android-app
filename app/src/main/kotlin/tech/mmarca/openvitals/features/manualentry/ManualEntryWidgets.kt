@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -70,6 +71,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.theme.CycleColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
@@ -111,6 +113,29 @@ internal fun MindfulnessWritePermissionPrompt(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.manual_entry_mindfulness_write_permission_title)) },
         text = { Text(stringResource(R.string.mindfulness_entry_permission_needed)) },
+        confirmButton = {
+            OpenVitalsButton(onClick = onGrant) {
+                Text(stringResource(R.string.action_grant))
+            }
+        },
+        dismissButton = {
+            OpenVitalsTextButton(onClick = onOpenEntry) {
+                Text(stringResource(R.string.action_open))
+            }
+        },
+    )
+}
+
+@Composable
+internal fun CycleWritePermissionPrompt(
+    onDismiss: () -> Unit,
+    onOpenEntry: () -> Unit,
+    onGrant: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.manual_entry_cycle_write_permission_title)) },
+        text = { Text(stringResource(R.string.cycle_entry_permission_needed)) },
         confirmButton = {
             OpenVitalsButton(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
@@ -403,11 +428,13 @@ internal fun manualEntryWidgetSpecs(
     onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
+    onOpenCycleEntry: () -> Unit,
 ): List<ManualEntryWidgetSpec> {
     val hydrationClick = if (isEditingWidgets) null else onOpenHydrationEntry
     val carbsClick = if (isEditingWidgets) null else onOpenCarbsEntry
     val activityClick = if (isEditingWidgets) null else onOpenActivityEntry
     val mindfulnessClick = if (isEditingWidgets) null else onOpenMindfulnessEntry
+    val cycleClick = if (isEditingWidgets) null else onOpenCycleEntry
     return listOf(
         ManualEntryWidgetSpec(
             id = ManualEntryWidgetId.HYDRATION,
@@ -502,6 +529,19 @@ internal fun manualEntryWidgetSpecs(
             type = VitalsMeasurementType.BODY_TEMPERATURE,
             isEditingWidgets = isEditingWidgets,
             onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
+        ),
+        ManualEntryWidgetSpec(
+            id = ManualEntryWidgetId.CYCLE,
+            title = stringResource(R.string.metric_cycle),
+            content = { modifier ->
+                ManualEntryMetricTile(
+                    title = stringResource(R.string.metric_cycle),
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = CycleColor,
+                    modifier = modifier,
+                    onClick = cycleClick,
+                )
+            },
         ),
     )
 }

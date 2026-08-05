@@ -233,12 +233,7 @@ internal class HealthConnectPermissionService(
         add(HealthPermission.getWritePermission(BloodGlucoseRecord::class))
         add(HealthPermission.getWritePermission(Vo2MaxRecord::class))
         addAll(mindfulnessWritePermissions)
-        add(HealthPermission.getWritePermission(MenstruationFlowRecord::class))
-        add(HealthPermission.getWritePermission(OvulationTestRecord::class))
-        add(HealthPermission.getWritePermission(CervicalMucusRecord::class))
-        add(HealthPermission.getWritePermission(BasalBodyTemperatureRecord::class))
-        add(HealthPermission.getWritePermission(IntermenstrualBleedingRecord::class))
-        add(HealthPermission.getWritePermission(SexualActivityRecord::class))
+        addAll(cycleWritePermissions)
     }
 
     val cyclePermissions: Set<String> = setOf(
@@ -249,6 +244,18 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class),
         HealthPermission.getReadPermission(IntermenstrualBleedingRecord::class),
         HealthPermission.getReadPermission(SexualActivityRecord::class),
+    )
+
+    // MenstruationPeriodRecord shares WRITE_MENSTRUATION with the flow record,
+    // so the set carries six distinct permission strings for seven record types.
+    val cycleWritePermissions: Set<String> = setOf(
+        HealthPermission.getWritePermission(MenstruationFlowRecord::class),
+        HealthPermission.getWritePermission(MenstruationPeriodRecord::class),
+        HealthPermission.getWritePermission(OvulationTestRecord::class),
+        HealthPermission.getWritePermission(CervicalMucusRecord::class),
+        HealthPermission.getWritePermission(BasalBodyTemperatureRecord::class),
+        HealthPermission.getWritePermission(IntermenstrualBleedingRecord::class),
+        HealthPermission.getWritePermission(SexualActivityRecord::class),
     )
 
     // ── Onboarding categories ────────────────────────────────────────────────
@@ -318,8 +325,9 @@ internal class HealthConnectPermissionService(
         addAll(readWrite(CervicalMucusRecord::class))
         addAll(readWrite(IntermenstrualBleedingRecord::class))
         addAll(readWrite(SexualActivityRecord::class))
-        // Periods are derived by Health Connect; there is no write to declare.
-        add(HealthPermission.getReadPermission(MenstruationPeriodRecord::class))
+        // The period write shares WRITE_MENSTRUATION with the flow record; the
+        // app maintains derived MenstruationPeriodRecords from logged flows.
+        addAll(readWrite(MenstruationPeriodRecord::class))
     }
 
     val onboardingMindfulnessCategoryPermissions: Set<String>
@@ -407,7 +415,8 @@ internal class HealthConnectPermissionService(
             nutritionWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
-            mindfulnessWritePermissions
+            mindfulnessWritePermissions +
+            cycleWritePermissions
 
     val onboardingRequestablePermissions: Set<String>
         get() = requestableAllPermissions +
@@ -433,6 +442,7 @@ internal class HealthConnectPermissionService(
             bodyWritePermissions +
             vitalsWritePermissions +
             mindfulnessWritePermissions +
+            cycleWritePermissions +
             dataImportWritePermissions
 
     val managedPermissions: Set<String> get() =
@@ -445,6 +455,7 @@ internal class HealthConnectPermissionService(
             bodyWritePermissions +
             vitalsWritePermissions +
             mindfulnessWritePermissions +
+            cycleWritePermissions +
             dataImportWritePermissions
 
     fun grantModeFor(permission: String): PermissionGrantMode =
@@ -616,7 +627,7 @@ internal class HealthConnectPermissionService(
 
     companion object {
         /** Bump when requestable/managed permissions change so existing users see the new-permissions prompt. */
-        const val PERMISSION_SET_VERSION = 2
+        const val PERMISSION_SET_VERSION = 3
 
         private const val GrantedPermissionsCacheMillis = 500L
         private const val TAG = "HealthConnectPermissions"

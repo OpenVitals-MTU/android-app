@@ -47,6 +47,8 @@ const val MINDFULNESS_ENTRY_ID_ARG = "mindfulnessEntryId"
 const val CAFFEINE_ENTRY_ID_ARG = "caffeineEntryId"
 const val VITALS_MEASUREMENT_TYPE_ARG = "vitalsMeasurementType"
 const val VITALS_ENTRY_ID_ARG = "vitalsEntryId"
+const val CYCLE_ENTRY_KIND_ARG = "cycleEntryKind"
+const val CYCLE_ENTRY_ID_ARG = "cycleEntryId"
 const val STRESS_DATE_ARG = "stressDate"
 const val BODY_ENERGY_DATE_ARG = "bodyEnergyDate"
 const val TRAINING_READINESS_DATE_ARG = "trainingReadinessDate"
@@ -130,6 +132,12 @@ sealed class Screen(val route: String) {
         Screen("manual_entry/vitals/{$VITALS_MEASUREMENT_TYPE_ARG}/edit/{$VITALS_ENTRY_ID_ARG}") {
         fun createRoute(type: String, entryId: String): String =
             "manual_entry/vitals/${Uri.encode(type)}/edit/${Uri.encode(entryId)}"
+    }
+    data object CycleEntry : Screen("manual_entry/cycle")
+    data object CycleEntryEdit :
+        Screen("manual_entry/cycle/edit/{$CYCLE_ENTRY_KIND_ARG}/{$CYCLE_ENTRY_ID_ARG}") {
+        fun createRoute(kind: String, entryId: String): String =
+            "manual_entry/cycle/edit/${Uri.encode(kind)}/${Uri.encode(entryId)}"
     }
     data object Calories : Screen("calories")
     data object Nutrition : Screen("nutrition")

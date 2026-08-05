@@ -104,6 +104,7 @@ class OpenVitalsVisualRegressionTest {
                     onOpenMindfulnessEntry = {},
                     onOpenBodyMeasurementEntry = {},
                     onOpenVitalsMeasurementEntry = {},
+                onOpenCycleEntry = {},
                 )
                 Column(Modifier.fillMaxSize()) {
                     ManualEntryWidgetGrid(

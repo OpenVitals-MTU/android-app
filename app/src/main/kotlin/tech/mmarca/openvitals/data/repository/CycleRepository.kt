@@ -12,7 +12,12 @@ import androidx.health.connect.client.records.SexualActivityRecord
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.domain.cycle.CycleCalculations
+import tech.mmarca.openvitals.domain.cycle.CycleStatistics
 import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.CycleEntry
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
+import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.CyclePeriodData
@@ -58,9 +63,11 @@ class CycleRepositoryImpl @Inject constructor(
         return coroutineScope {
             val data = async { loadCycleData(query.windows.current.start, query.windows.current.end) }
             val missing = async { missingPermissions() }
+            val statistics = async { loadCycleStatistics() }
             CyclePeriodData(
                 data = data.await(),
                 missingPermissions = missing.await(),
+                statistics = statistics.await(),
             )
         }
     }
@@ -125,4 +132,102 @@ class CycleRepositoryImpl @Inject constructor(
             )
         }
     }
+
+    override fun cycleWritePermissions(kind: CycleEntryKind): Set<String> = setOf(
+        when (kind) {
+            CycleEntryKind.MENSTRUATION_FLOW ->
+                HealthPermission.getWritePermission(MenstruationFlowRecord::class)
+            CycleEntryKind.SPOTTING ->
+                HealthPermission.getWritePermission(IntermenstrualBleedingRecord::class)
+            CycleEntryKind.SEXUAL_ACTIVITY ->
+                HealthPermission.getWritePermission(SexualActivityRecord::class)
+            CycleEntryKind.OVULATION_TEST ->
+                HealthPermission.getWritePermission(OvulationTestRecord::class)
+            CycleEntryKind.CERVICAL_MUCUS ->
+                HealthPermission.getWritePermission(CervicalMucusRecord::class)
+            CycleEntryKind.BASAL_BODY_TEMPERATURE ->
+                HealthPermission.getWritePermission(BasalBodyTemperatureRecord::class)
+        }
+    )
+
+    override suspend fun hasCycleWritePermission(kind: CycleEntryKind): Boolean =
+        cycleWritePermissions(kind).all { it in grantedPermissionsIfAvailable() }
+
+    override suspend fun writeCycleEntry(request: CycleEntryWriteRequest): String {
+        requireWritePermission(request.kind, "writeCycleEntry")
+        val id = hc.writeCycleEntry(request)
+        reconcileAfterFlowMutation(request.kind, setOf(request.time.toLocalDay()))
+        return id
+    }
+
+    override suspend fun loadCycleEntry(kind: CycleEntryKind, id: String): CycleEntry? =
+        hc.readCycleEntry(kind, id)
+
+    override suspend fun updateCycleEntry(id: String, request: CycleEntryWriteRequest) {
+        requireWritePermission(request.kind, "updateCycleEntry")
+        val previousDay = previousDayOf(request.kind, id)
+        hc.updateCycleEntry(id, request)
+        reconcileAfterFlowMutation(request.kind, setOfNotNull(previousDay, request.time.toLocalDay()))
+    }
+
+    override suspend fun deleteCycleEntry(kind: CycleEntryKind, id: String) {
+        requireWritePermission(kind, "deleteCycleEntry")
+        val previousDay = previousDayOf(kind, id)
+        hc.deleteCycleEntry(kind, id)
+        reconcileAfterFlowMutation(kind, setOfNotNull(previousDay))
+    }
+
+    override suspend fun loadCycleStatistics(today: LocalDate): CycleStatistics? {
+        val granted = grantedPermissionsIfAvailable()
+        if (readMenstruationPermission !in granted) {
+            Log.w(TAG, "Skipping loadCycleStatistics missingCount=1")
+            return null
+        }
+        val zone = ZoneId.systemDefault()
+        val startInstant = today.minusMonths(STATISTICS_LOOKBACK_MONTHS).atStartOfDay(zone).toInstant()
+        val endInstant = today.plusDays(1).atStartOfDay(zone).toInstant()
+
+        return coroutineScope {
+            val flows = async { hc.readMenstruationFlowEntries(startInstant, endInstant) }
+            val periods = async { hc.readMenstruationPeriods(startInstant, endInstant) }
+
+            val bleedingDays = buildSet {
+                flows.await().forEach { add(it.time.toLocalDay()) }
+                periods.await().forEach { period ->
+                    var day = period.startTime.toLocalDay()
+                    val last = period.endTime.minusMillis(1).toLocalDay()
+                    while (!day.isAfter(last)) {
+                        add(day)
+                        day = day.plusDays(1)
+                    }
+                }
+            }
+            CycleCalculations.compute(bleedingDays, today)
+        }
+    }
+
+    private suspend fun requireWritePermission(kind: CycleEntryKind, operation: String) {
+        val missingPermissions = cycleWritePermissions(kind) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping $operation kind=$kind missingCount=${missingPermissions.size}")
+            throw SecurityException("Missing Health Connect cycle write permission.")
+        }
+    }
+
+    private suspend fun previousDayOf(kind: CycleEntryKind, id: String): LocalDate? {
+        if (kind != CycleEntryKind.MENSTRUATION_FLOW) return null
+        return hc.readCycleEntry(kind, id)?.time?.toLocalDay()
+    }
+
+    // Derived MenstruationPeriodRecords track the flow days; a failure here is
+    // deferrable (the write already landed, the next flow mutation reconciles).
+    private suspend fun reconcileAfterFlowMutation(kind: CycleEntryKind, days: Set<LocalDate>) {
+        if (kind != CycleEntryKind.MENSTRUATION_FLOW || days.isEmpty()) return
+        runCatching { hc.reconcileMenstruationPeriods(days) }
+            .onFailure { Log.w(TAG, "Deferred period reconcile for $days", it) }
+    }
+
+    private fun java.time.Instant.toLocalDay(): LocalDate = atZone(ZoneId.systemDefault()).toLocalDate()
 }
+
+private const val STATISTICS_LOOKBACK_MONTHS = 12L

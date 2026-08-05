@@ -203,6 +203,8 @@ fun AppNavigation(
             Screen.BodyMeasurementEntryEdit.route,
             Screen.VitalsMeasurementEntry.route,
             Screen.VitalsMeasurementEntryEdit.route,
+            Screen.CycleEntry.route,
+            Screen.CycleEntryEdit.route,
         )
     }
     val settingsRoutes = remember {
@@ -339,6 +341,8 @@ fun AppNavigation(
         Screen.VitalsMeasurementEntryEdit.route -> currentVitalsMeasurementType
             ?.let { stringResource(it.titleRes()) }
             ?: stringResource(R.string.screen_vitals_measurement_entry)
+        Screen.CycleEntry.route,
+        Screen.CycleEntryEdit.route -> stringResource(R.string.screen_cycle_entry)
         Screen.Calories.route -> stringResource(R.string.screen_calories)
         Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
         Screen.Body.route -> stringResource(R.string.screen_body)
@@ -806,6 +810,12 @@ fun AppNavigation(
                     },
                     onEditVitalsMeasurement = { type, entryId ->
                         navController.navigate(Screen.VitalsMeasurementEntryEdit.createRoute(type.name, entryId))
+                    },
+                    onLogCycleEntry = {
+                        navController.navigate(Screen.CycleEntry.route)
+                    },
+                    onEditCycleEntry = { kind, entryId ->
+                        navController.navigate(Screen.CycleEntryEdit.createRoute(kind.name, entryId))
                     },
                     onSectionEditStateChanged = { isEditing, onToggleEdit ->
                         metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)

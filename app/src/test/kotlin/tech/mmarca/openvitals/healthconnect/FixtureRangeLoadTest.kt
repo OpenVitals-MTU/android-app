@@ -96,7 +96,7 @@ class FixtureRangeLoadTest {
         val sleep = SleepHealthReader(support)
         val body = BodyHealthReader(support, APP_PACKAGE)
         val mindfulness = MindfulnessHealthReader(support, APP_PACKAGE)
-        val cycle = CycleHealthReader(support)
+        val cycle = CycleHealthReader(support, APP_PACKAGE)
     }
 
     private val reads = listOf(

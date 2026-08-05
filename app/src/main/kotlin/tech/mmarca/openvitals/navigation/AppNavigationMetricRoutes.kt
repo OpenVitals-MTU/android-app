@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.activity.ActiveCaloriesScreen
 import tech.mmarca.openvitals.features.activity.ActivityMetric
@@ -95,6 +96,8 @@ internal fun MetricRouteContent(
     onEditMindfulnessSession: (String) -> Unit,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onLogCycleEntry: () -> Unit = {},
+    onEditCycleEntry: (CycleEntryKind, String) -> Unit = { _, _ -> },
     onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     when (val destination = metricRouteDestinationFor(metricId)) {
@@ -237,6 +240,8 @@ internal fun MetricRouteContent(
                 viewModel = cycleViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onLogCycleEntry = onLogCycleEntry,
+                onEditCycleEntry = onEditCycleEntry,
             )
         }
         MetricRouteDestination.CardioLoad -> {

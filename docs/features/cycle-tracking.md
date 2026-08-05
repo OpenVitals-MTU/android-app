@@ -34,7 +34,13 @@ Cycle permissions are managed separately from broader activity, body, and vitals
 
 ## Write Behavior
 
-Cycle observations are view-only in the app. They may be imported from Apple Health when compatible Health Connect write permissions are granted, but OpenVitals does not provide a manual cycle entry editor.
+Cycle observations can be logged from the app's manual entry grid ("+ Log" → Cycle) through a single day-log screen: period flow (light/medium/heavy), spotting, sexual activity (protected/unprotected/unknown), ovulation tests, cervical mucus (appearance and amount), and basal body temperature. Saving writes only the filled sections, each as its own Health Connect record; Health Connect remains the only store. Entries created by OpenVitals can be edited (pencil) and deleted (swipe) from the cycle screen's entry list; records from other apps stay read-only.
+
+Menstruation period intervals (`MenstruationPeriodRecord`) are derived, not logged: after every flow-day change the app reconciles consecutive bleeding days (tolerating a single-day gap) into period records it owns, leaving overlapping periods written by other apps untouched.
+
+## Cycle Statistics and Prediction
+
+With the menstruation read permission granted, the cycle screen derives statistics over the last 12 months of flow days and period spans (all sources): current cycle day (blank past 99 days), average cycle length, and — after three completed cycles — up to three predicted period windows (mean length, ±1 day when regular, ±2 when the standard deviation reaches 1.5). The first window renders as a "Next period" card and future predicted days are outlined in the calendar. The rules follow drip's published statistical method; no fertility or ovulation inference is performed.
 
 ## Privacy
 

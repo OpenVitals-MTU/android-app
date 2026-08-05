@@ -21,10 +21,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -64,6 +66,10 @@ data class ManualEntryUiState(
     val isCheckingMindfulnessWritePermission: Boolean = false,
     val showMindfulnessWritePermissionPrompt: Boolean = false,
     val pendingMindfulnessEntryNavigation: Boolean = false,
+    val cycleWritePermissions: Set<String> = emptySet(),
+    val isCheckingCycleWritePermission: Boolean = false,
+    val showCycleWritePermissionPrompt: Boolean = false,
+    val pendingCycleEntryNavigation: Boolean = false,
 )
 
 @HiltViewModel
@@ -74,6 +80,7 @@ class ManualEntryViewModel @Inject constructor(
     private val bodyRepository: BodyRepository,
     private val vitalsRepository: VitalsRepository,
     private val mindfulnessRepository: MindfulnessRepository,
+    private val cycleRepository: CycleRepository,
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
@@ -480,6 +487,67 @@ class ManualEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(pendingMindfulnessEntryNavigation = false)
     }
 
+    fun onCycleWidgetTapped() {
+        if (_uiState.value.isCheckingCycleWritePermission) return
+        viewModelScope.launch {
+            val writePermissions = CycleEntryKind.entries
+                .flatMapTo(mutableSetOf()) { cycleRepository.cycleWritePermissions(it) }
+            _uiState.value = _uiState.value.copy(
+                isCheckingCycleWritePermission = true,
+                cycleWritePermissions = writePermissions,
+                showCycleWritePermissionPrompt = false,
+                pendingCycleEntryNavigation = false,
+            )
+            runCatching {
+                CycleEntryKind.entries.any { cycleRepository.hasCycleWritePermission(it) }
+            }.onSuccess { canWrite ->
+                val unacknowledgedWritePermissions = writePermissions - preferencesRepository.acknowledgedPermissions()
+                val shouldShowPrompt = !canWrite && unacknowledgedWritePermissions.isNotEmpty()
+                _uiState.value = _uiState.value.copy(
+                    isCheckingCycleWritePermission = false,
+                    showCycleWritePermissionPrompt = shouldShowPrompt,
+                    pendingCycleEntryNavigation = !shouldShowPrompt,
+                )
+            }.onFailure {
+                _uiState.value = _uiState.value.copy(
+                    isCheckingCycleWritePermission = false,
+                    pendingCycleEntryNavigation = true,
+                )
+            }
+        }
+    }
+
+    fun continueCycleEntryFromWritePermissionPrompt() {
+        acknowledgeCycleWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(
+            showCycleWritePermissionPrompt = false,
+            pendingCycleEntryNavigation = true,
+        )
+    }
+
+    fun dismissCycleWritePermissionPrompt() {
+        acknowledgeCycleWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(showCycleWritePermissionPrompt = false)
+    }
+
+    fun grantCycleWritePermissionFromPrompt() {
+        acknowledgeCycleWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(showCycleWritePermissionPrompt = false)
+    }
+
+    fun onCycleWritePermissionResult() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isCheckingCycleWritePermission = false,
+                pendingCycleEntryNavigation = true,
+            )
+        }
+    }
+
+    fun onCycleEntryNavigationHandled() {
+        _uiState.value = _uiState.value.copy(pendingCycleEntryNavigation = false)
+    }
+
     fun toggleWidgetEdit() {
         _uiState.value = _uiState.value.copy(isEditingWidgets = !_uiState.value.isEditingWidgets)
     }
@@ -552,6 +620,13 @@ class ManualEntryViewModel @Inject constructor(
 
     private fun acknowledgeMindfulnessWritePermissionPrompt() {
         val writePermissions = _uiState.value.mindfulnessWritePermissions
+        if (writePermissions.isNotEmpty()) {
+            preferencesRepository.acknowledgePermissions(writePermissions)
+        }
+    }
+
+    private fun acknowledgeCycleWritePermissionPrompt() {
+        val writePermissions = _uiState.value.cycleWritePermissions
         if (writePermissions.isNotEmpty()) {
             preferencesRepository.acknowledgePermissions(writePermissions)
         }

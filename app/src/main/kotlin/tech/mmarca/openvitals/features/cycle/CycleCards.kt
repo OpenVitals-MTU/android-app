@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.cycle
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 import tech.mmarca.openvitals.ui.theme.CycleColor
+import tech.mmarca.openvitals.ui.theme.Emphasis
 
 @Composable
 internal fun CycleSummary(
@@ -150,8 +152,18 @@ private fun CycleDayCell(day: CycleDay, modifier: Modifier = Modifier) {
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     }
 
+    val predictedBorder = if (day.predictedPeriod && !hasPeriod) {
+        Modifier.border(
+            width = 1.dp,
+            color = CycleColor.copy(alpha = Emphasis.fill),
+            shape = MaterialTheme.shapes.small,
+        )
+    } else {
+        Modifier
+    }
+
     OpenVitalsSurface(
-        modifier = modifier,
+        modifier = modifier.then(predictedBorder),
         containerColor = if (day.inSelectedPeriod) {
             containerColor
         } else {

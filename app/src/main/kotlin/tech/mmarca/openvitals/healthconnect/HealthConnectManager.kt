@@ -25,6 +25,9 @@ import tech.mmarca.openvitals.domain.model.BmrEntry
 import tech.mmarca.openvitals.domain.model.BoneMassEntry
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
+import tech.mmarca.openvitals.domain.model.CycleEntry
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
+import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.DailyMacros
@@ -112,7 +115,7 @@ class HealthConnectManager @Inject constructor(
     private val bodyReader = BodyHealthReader(readerSupport, context.packageName)
     private val nutritionReader = NutritionHealthReader(readerSupport, context.packageName)
     private val mindfulnessReader = MindfulnessHealthReader(readerSupport, context.packageName)
-    private val cycleReader = CycleHealthReader(readerSupport)
+    private val cycleReader = CycleHealthReader(readerSupport, context.packageName)
     private val vitalsReader = VitalsHealthReader(readerSupport, context.packageName)
     private val changesReader = HealthConnectChangesReader(readerSupport)
     private val syncRecordsReader = SyncRecordsReader(readerSupport)
@@ -135,6 +138,7 @@ class HealthConnectManager @Inject constructor(
     val vitalsWritePermissions: Set<String> get() = permissionService.vitalsWritePermissions
     val dataImportWritePermissions: Set<String> get() = permissionService.dataImportWritePermissions
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
+    val cycleWritePermissions: Set<String> get() = permissionService.cycleWritePermissions
 
     fun onboardingPermissionCatalog(): OnboardingPermissionCatalog =
         permissionService.onboardingPermissionCatalog()
@@ -572,6 +576,21 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readSexualActivityEntries(start: Instant, end: Instant): List<SexualActivityEntry> =
         cycleReader.readSexualActivityEntries(start, end)
+
+    suspend fun writeCycleEntry(request: CycleEntryWriteRequest): String =
+        withSyncEnabled { cycleReader.writeCycleEntry(request) }
+
+    suspend fun readCycleEntry(kind: CycleEntryKind, id: String): CycleEntry? =
+        cycleReader.readCycleEntry(kind, id)
+
+    suspend fun updateCycleEntry(id: String, request: CycleEntryWriteRequest) =
+        withSyncEnabled { cycleReader.updateCycleEntry(id, request) }
+
+    suspend fun deleteCycleEntry(kind: CycleEntryKind, id: String) =
+        withSyncEnabled { cycleReader.deleteCycleEntry(kind, id) }
+
+    suspend fun reconcileMenstruationPeriods(days: Set<LocalDate>) =
+        withSyncEnabled { cycleReader.reconcileMenstruationPeriods(days) }
 
     suspend fun readBloodPressureEntries(start: Instant, end: Instant): List<BloodPressureEntry> =
         vitalsReader.readBloodPressureEntries(start, end)

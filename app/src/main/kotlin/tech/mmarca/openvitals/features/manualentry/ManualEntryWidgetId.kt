@@ -23,6 +23,7 @@ enum class ManualEntryWidgetId {
     SPO2,
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
+    CYCLE,
 }
 
 val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
@@ -37,6 +38,7 @@ val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
     ManualEntryWidgetId.SPO2,
     ManualEntryWidgetId.RESPIRATORY_RATE,
     ManualEntryWidgetId.BODY_TEMPERATURE,
+    ManualEntryWidgetId.CYCLE,
 )
 
 fun customizableManualEntryWidgetIds(widgetIds: List<ManualEntryWidgetId>): List<ManualEntryWidgetId> =

@@ -9,6 +9,8 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
 import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
+import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.domain.model.OvulationTestEntry
@@ -25,6 +27,7 @@ data class CycleDay(
     val flows: List<MenstruationFlowEntry>,
     val ovulationTests: List<OvulationTestEntry>,
     val basalBodyTemperature: BasalBodyTemperatureEntry?,
+    val predictedPeriod: Boolean = false,
 )
 
 internal data class CycleObservation(
@@ -32,9 +35,17 @@ internal data class CycleObservation(
     val title: String,
     val value: String,
     val source: String,
+    val id: String = "",
+    val kind: CycleEntryKind? = null,
+    val isOpenVitalsEntry: Boolean = false,
 )
 
-internal fun cycleDays(period: DatePeriod, data: CycleData, zone: ZoneId): List<CycleDay> {
+internal fun cycleDays(
+    period: DatePeriod,
+    data: CycleData,
+    zone: ZoneId,
+    predictedWindows: List<ClosedRange<LocalDate>> = emptyList(),
+): List<CycleDay> {
     val gridStart = period.start.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     val gridEnd = period.end.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
     val flowsByDate = data.menstruationFlows.groupBy { it.time.atZone(zone).toLocalDate() }
@@ -52,6 +63,8 @@ internal fun cycleDays(period: DatePeriod, data: CycleData, zone: ZoneId): List<
             flows = flowsByDate[date].orEmpty(),
             ovulationTests = ovulationByDate[date].orEmpty(),
             basalBodyTemperature = bbtByDate[date],
+            predictedPeriod = date.isAfter(LocalDate.now()) &&
+                predictedWindows.any { !date.isBefore(it.start) && !date.isAfter(it.endInclusive) },
         )
     }
 }
@@ -83,6 +96,9 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     title = resources.getString(R.string.cycle_observation_menstruation_flow),
                     value = flowLabel(flow.flow, resources),
                     source = flow.source,
+                    id = flow.id,
+                    kind = CycleEntryKind.MENSTRUATION_FLOW,
+                    isOpenVitalsEntry = flow.isOpenVitalsEntry,
                 )
             )
         }
@@ -93,6 +109,9 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     title = resources.getString(R.string.cycle_observation_ovulation_test),
                     value = ovulationResultLabel(test.result, resources),
                     source = test.source,
+                    id = test.id,
+                    kind = CycleEntryKind.OVULATION_TEST,
+                    isOpenVitalsEntry = test.isOpenVitalsEntry,
                 )
             )
         }
@@ -103,6 +122,9 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     title = resources.getString(R.string.cycle_observation_cervical_mucus),
                     value = mucusLabel(mucus, resources),
                     source = mucus.source,
+                    id = mucus.id,
+                    kind = CycleEntryKind.CERVICAL_MUCUS,
+                    isOpenVitalsEntry = mucus.isOpenVitalsEntry,
                 )
             )
         }
@@ -117,6 +139,9 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                         resources.getString(measurementLocationLabelRes(temperature.measurementLocation)),
                     ),
                     source = temperature.source,
+                    id = temperature.id,
+                    kind = CycleEntryKind.BASAL_BODY_TEMPERATURE,
+                    isOpenVitalsEntry = temperature.isOpenVitalsEntry,
                 )
             )
         }
@@ -127,6 +152,9 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     title = resources.getString(R.string.cycle_observation_intermenstrual_bleeding),
                     value = resources.getString(R.string.recording_actively_recorded),
                     source = bleeding.source,
+                    id = bleeding.id,
+                    kind = CycleEntryKind.SPOTTING,
+                    isOpenVitalsEntry = bleeding.isOpenVitalsEntry,
                 )
             )
         }
@@ -137,6 +165,9 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     title = resources.getString(R.string.cycle_observation_sexual_activity),
                     value = sexualActivityProtectionLabel(activity.protectionUsed, resources),
                     source = activity.source,
+                    id = activity.id,
+                    kind = CycleEntryKind.SEXUAL_ACTIVITY,
+                    isOpenVitalsEntry = activity.isOpenVitalsEntry,
                 )
             )
         }
@@ -223,22 +254,22 @@ private fun sexualActivityProtectionLabel(protectionUsed: Int, resources: Resour
     }
 )
 
-internal const val FLOW_UNKNOWN = 0
-internal const val FLOW_LIGHT = 1
-internal const val FLOW_MEDIUM = 2
-internal const val FLOW_HEAVY = 3
+internal const val FLOW_UNKNOWN = CycleRecordValues.FLOW_UNKNOWN
+internal const val FLOW_LIGHT = CycleRecordValues.FLOW_LIGHT
+internal const val FLOW_MEDIUM = CycleRecordValues.FLOW_MEDIUM
+internal const val FLOW_HEAVY = CycleRecordValues.FLOW_HEAVY
 
-private const val OVULATION_POSITIVE = 1
-private const val OVULATION_HIGH = 2
-private const val OVULATION_NEGATIVE = 3
+private const val OVULATION_POSITIVE = CycleRecordValues.OVULATION_POSITIVE
+private const val OVULATION_HIGH = CycleRecordValues.OVULATION_HIGH
+private const val OVULATION_NEGATIVE = CycleRecordValues.OVULATION_NEGATIVE
 
-private const val MUCUS_DRY = 1
-private const val MUCUS_STICKY = 2
-private const val MUCUS_CREAMY = 3
-private const val MUCUS_WATERY = 4
-private const val MUCUS_EGG_WHITE = 5
-private const val MUCUS_UNUSUAL = 6
+private const val MUCUS_DRY = CycleRecordValues.MUCUS_APPEARANCE_DRY
+private const val MUCUS_STICKY = CycleRecordValues.MUCUS_APPEARANCE_STICKY
+private const val MUCUS_CREAMY = CycleRecordValues.MUCUS_APPEARANCE_CREAMY
+private const val MUCUS_WATERY = CycleRecordValues.MUCUS_APPEARANCE_WATERY
+private const val MUCUS_EGG_WHITE = CycleRecordValues.MUCUS_APPEARANCE_EGG_WHITE
+private const val MUCUS_UNUSUAL = CycleRecordValues.MUCUS_APPEARANCE_UNUSUAL
 
-private const val MUCUS_LIGHT = 1
-private const val MUCUS_MEDIUM = 2
-private const val MUCUS_HEAVY = 3
+private const val MUCUS_LIGHT = CycleRecordValues.MUCUS_SENSATION_LIGHT
+private const val MUCUS_MEDIUM = CycleRecordValues.MUCUS_SENSATION_MEDIUM
+private const val MUCUS_HEAVY = CycleRecordValues.MUCUS_SENSATION_HEAVY

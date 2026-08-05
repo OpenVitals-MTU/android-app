@@ -28,6 +28,7 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -48,6 +49,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -62,6 +64,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(
                 storedWidgetOrder = listOf(ManualEntryWidgetId.HYDRATION.name),
             ),
@@ -78,6 +81,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -95,6 +99,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -114,6 +119,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -131,6 +137,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -148,6 +155,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -165,6 +173,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteHydrationPermission)),
         )
 
@@ -182,6 +191,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -199,6 +209,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -217,6 +228,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteNutritionPermission)),
         )
 
@@ -235,6 +247,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -255,6 +268,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -274,6 +288,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -291,6 +306,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -310,6 +326,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -328,6 +345,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(canWrite = false),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -346,6 +364,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(canWrite = false),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteWeightPermission)),
         )
 
@@ -363,6 +382,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(canWrite = false),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -381,6 +401,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(canWrite = false),
             mindfulnessRepository = mindfulnessRepo(),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteBloodPressurePermission)),
         )
 
@@ -398,6 +419,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(canWrite = true),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -415,6 +437,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(canWrite = false),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -432,6 +455,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(canWrite = false),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteMindfulnessPermission)),
         )
 
@@ -452,6 +476,7 @@ class ManualEntryViewModelTest {
                 canWrite = false,
                 writePermissions = emptySet(),
             ),
+            cycleRepository = cycleRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -471,6 +496,7 @@ class ManualEntryViewModelTest {
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(canWrite = false),
+            cycleRepository = cycleRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -533,6 +559,15 @@ class ManualEntryViewModelTest {
             coEvery { repo.hasVitalsWritePermission(any()) } returns canWrite
         }
 
+    private fun cycleRepo(
+        canWrite: Boolean = false,
+        writePermissions: Set<String> = setOf(WriteCyclePermission),
+    ): CycleRepository =
+        mockk<CycleRepository>().also { repo ->
+            every { repo.cycleWritePermissions(any()) } returns writePermissions
+            coEvery { repo.hasCycleWritePermission(any()) } returns canWrite
+        }
+
     private fun mindfulnessRepo(
         canWrite: Boolean = false,
         writePermissions: Set<String> = setOf(WriteMindfulnessPermission),
@@ -546,6 +581,7 @@ class ManualEntryViewModelTest {
         private const val WriteHydrationPermission = "write_hydration"
         private const val WriteNutritionPermission = "write_nutrition"
         private const val WriteMindfulnessPermission = "write_mindfulness"
+        private const val WriteCyclePermission = "write_cycle"
         private const val WriteWeightPermission = "write_weight"
         private const val WriteBloodPressurePermission = "write_blood_pressure"
         private val ActivityWritePermissions = setOf(

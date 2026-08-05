@@ -11,6 +11,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.IntermenstrualBleedingRecord
 import androidx.health.connect.client.records.MenstruationFlowRecord
+import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.PlannedExerciseSessionRecord
@@ -63,12 +64,11 @@ class HealthConnectPermissionServiceTest {
 
     // ── phased permission sets ──────────────────────────────────────────────
 
-    // Dart: 'PERMISSION_SET_VERSION is 3'. Kotlin's constant is 2 — the two apps
-    // bumped it on different schedules — so the value diverges while the intent
-    // (a bump is a deliberate act, not an accident) is the same.
+    // A bump is a deliberate act, not an accident: it re-prompts every existing
+    // user with the new-permissions dialog. 3 = cycle writes became requestable.
     @Test
     fun `PERMISSION_SET_VERSION is pinned`() {
-        assertThat(HealthConnectPermissionService.PERMISSION_SET_VERSION).isEqualTo(2)
+        assertThat(HealthConnectPermissionService.PERMISSION_SET_VERSION).isEqualTo(3)
     }
 
     @Test
@@ -287,6 +287,18 @@ class HealthConnectPermissionServiceTest {
         // onboarding's benefit, not the CSV importer's.
         assertThat(service.dataImportWritePermissions)
             .containsAtLeastElementsIn(CYCLE_WRITE_PERMISSIONS)
+    }
+
+    @Test
+    fun `cycle writes are a named requestable set since manual cycle entry`() {
+        val service = service()
+
+        assertThat(service.cycleWritePermissions).isEqualTo(CYCLE_WRITE_PERMISSIONS)
+        assertThat(service.requestableWritePermissions)
+            .containsAtLeastElementsIn(CYCLE_WRITE_PERMISSIONS)
+        // The derived period record rides the flow write permission.
+        assertThat(service.onboardingCycleCategoryPermissions)
+            .contains(HealthPermission.getWritePermission(MenstruationPeriodRecord::class))
     }
 
     @Test
@@ -538,12 +550,13 @@ class HealthConnectPermissionServiceTest {
             HealthPermission.getReadPermission(SkinTemperatureRecord::class)
 
         /**
-         * Kotlin has no named `cycleWritePermissions` set — the cycle writes live
-         * inline in dataImportWritePermissions — so the Dart set is spelled out
-         * here rather than read back from the code under test.
+         * Spelled out independently of the code under test so a drifted
+         * `cycleWritePermissions` set fails here instead of shifting silently.
+         * The period write string is WRITE_MENSTRUATION, shared with flow.
          */
         val CYCLE_WRITE_PERMISSIONS: Set<String> = setOf(
             HealthPermission.getWritePermission(MenstruationFlowRecord::class),
+            HealthPermission.getWritePermission(MenstruationPeriodRecord::class),
             HealthPermission.getWritePermission(OvulationTestRecord::class),
             HealthPermission.getWritePermission(CervicalMucusRecord::class),
             HealthPermission.getWritePermission(BasalBodyTemperatureRecord::class),
