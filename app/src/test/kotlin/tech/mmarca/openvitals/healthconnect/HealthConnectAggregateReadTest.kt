@@ -6,7 +6,9 @@ import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.Record
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
@@ -401,6 +403,66 @@ class HealthConnectAggregateReadTest {
         // And the stitched series still carries both ends of the range.
         assertThat(series.single { it.date == firstDay }.caloriesBurnedKcal).isWithin(1e-6).of(1_800.0)
         assertThat(series.single { it.date == date }.caloriesBurnedKcal).isWithin(1e-6).of(2_200.0)
+    }
+
+    /**
+     * Same parcel budget, heart-rate flavour: a year of daily BPM buckets with
+     * three metrics each is the widest day-bucketed read the app can issue, so
+     * it must go out tiled — and stitch back into one series.
+     */
+    @Test
+    fun `readDailyHeartRateSummaries chunks a long range and stitches the series back together`() = runTest {
+        val zone = ZoneId.systemDefault()
+        val firstDay = date.minusDays(300)
+        fun hr(day: LocalDate, bpm: Long) = HeartRateRecord(
+            startTime = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600),
+            startZoneOffset = null,
+            endTime = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600 + 60),
+            endZoneOffset = null,
+            samples = listOf(
+                HeartRateRecord.Sample(
+                    time = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600),
+                    beatsPerMinute = bpm,
+                ),
+            ),
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val client = seeded(hr(firstDay, 58L), hr(date, 72L))
+
+        val series = HeartHealthReader(support(client))
+            .readDailyHeartRateSummaries(startDate = firstDay, endDate = date)
+
+        assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
+        client.groupByDurationRequestRanges.forEach { (start, end) ->
+            val days = java.time.Duration.between(start, end).toDays()
+            assertThat(days).isAtMost(DailyAggregateMaxQueryDays)
+        }
+        assertThat(series.single { it.date == firstDay }.avgBpm).isEqualTo(58L)
+        assertThat(series.single { it.date == date }.avgBpm).isEqualTo(72L)
+    }
+
+    @Test
+    fun `readDailyRestingHR chunks a long range and stitches the series back together`() = runTest {
+        val zone = ZoneId.systemDefault()
+        val firstDay = date.minusDays(300)
+        fun resting(day: LocalDate, bpm: Long) = RestingHeartRateRecord(
+            time = day.atStartOfDay(zone).toInstant().plusSeconds(8 * 3_600),
+            zoneOffset = null,
+            beatsPerMinute = bpm,
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val client = seeded(resting(firstDay, 51L), resting(date, 55L))
+
+        val series = HeartHealthReader(support(client))
+            .readDailyRestingHR(startDate = firstDay, endDate = date)
+
+        assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
+        client.groupByDurationRequestRanges.forEach { (start, end) ->
+            val days = java.time.Duration.between(start, end).toDays()
+            assertThat(days).isAtMost(DailyAggregateMaxQueryDays)
+        }
+        assertThat(series.single { it.date == firstDay }.bpm).isEqualTo(51L)
+        assertThat(series.single { it.date == date }.bpm).isEqualTo(55L)
     }
 
     // ── harness ─────────────────────────────────────────────────────────────

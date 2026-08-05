@@ -123,27 +123,32 @@ internal class HeartHealthReader(
         endDate: LocalDate,
     ): List<HeartRateSummary> {
         val zone = ZoneId.systemDefault()
-        val start = startDate.atStartOfDay(zone).toInstant()
-        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
-        return support.withLogging("readDailyHeartRateSummaries[$start..$end]", emptyList()) {
-            support.client().aggregateGroupByDuration(
-                AggregateGroupByDurationRequest(
-                    metrics = setOf(
-                        HeartRateRecord.BPM_AVG,
-                        HeartRateRecord.BPM_MIN,
-                        HeartRateRecord.BPM_MAX,
-                    ),
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    timeRangeSlicer = Duration.ofDays(1),
-                )
-            ).byLocalDate(zone).mapNotNull { day ->
-                val avg = day.weightedAverage { it[HeartRateRecord.BPM_AVG] } ?: return@mapNotNull null
-                HeartRateSummary(
-                    date = day.date,
-                    avgBpm = avg,
-                    minBpm = day.lowest { it[HeartRateRecord.BPM_MIN] } ?: avg,
-                    maxBpm = day.highest { it[HeartRateRecord.BPM_MAX] } ?: avg,
-                )
+        // Chunked like the other day-bucketed aggregates: a year of daily
+        // buckets with three metrics each returns in one Binder parcel and can
+        // blow the shared 1 MB buffer (see DailyAggregateMaxQueryDays).
+        return dailyAggregateDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
+            val start = chunkStart.atStartOfDay(zone).toInstant()
+            val end = chunkEnd.plusDays(1).atStartOfDay(zone).toInstant()
+            support.withLogging("readDailyHeartRateSummaries[$start..$end]", emptyList()) {
+                support.client().aggregateGroupByDuration(
+                    AggregateGroupByDurationRequest(
+                        metrics = setOf(
+                            HeartRateRecord.BPM_AVG,
+                            HeartRateRecord.BPM_MIN,
+                            HeartRateRecord.BPM_MAX,
+                        ),
+                        timeRangeFilter = TimeRangeFilter.between(start, end),
+                        timeRangeSlicer = Duration.ofDays(1),
+                    )
+                ).byLocalDate(zone).mapNotNull { day ->
+                    val avg = day.weightedAverage { it[HeartRateRecord.BPM_AVG] } ?: return@mapNotNull null
+                    HeartRateSummary(
+                        date = day.date,
+                        avgBpm = avg,
+                        minBpm = day.lowest { it[HeartRateRecord.BPM_MIN] } ?: avg,
+                        maxBpm = day.highest { it[HeartRateRecord.BPM_MAX] } ?: avg,
+                    )
+                }
             }
         }
     }
@@ -178,22 +183,24 @@ internal class HeartHealthReader(
 
     suspend fun readDailyRestingHR(startDate: LocalDate, endDate: LocalDate): List<DailyRestingHR> {
         val zone = ZoneId.systemDefault()
-        val start = startDate.atStartOfDay(zone).toInstant()
-        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
-        return support.withLogging("readDailyRestingHR[$start..$end]", emptyList()) {
-            support.client().aggregateGroupByDuration(
-                AggregateGroupByDurationRequest(
-                    metrics = setOf(RestingHeartRateRecord.BPM_AVG),
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    timeRangeSlicer = Duration.ofDays(1),
-                )
-            ).byLocalDate(zone).mapNotNull { day ->
-                val bpm = day.weightedAverage { it[RestingHeartRateRecord.BPM_AVG] }
-                    ?: return@mapNotNull null
-                DailyRestingHR(
-                    date = day.date,
-                    bpm = bpm,
-                )
+        return dailyAggregateDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
+            val start = chunkStart.atStartOfDay(zone).toInstant()
+            val end = chunkEnd.plusDays(1).atStartOfDay(zone).toInstant()
+            support.withLogging("readDailyRestingHR[$start..$end]", emptyList()) {
+                support.client().aggregateGroupByDuration(
+                    AggregateGroupByDurationRequest(
+                        metrics = setOf(RestingHeartRateRecord.BPM_AVG),
+                        timeRangeFilter = TimeRangeFilter.between(start, end),
+                        timeRangeSlicer = Duration.ofDays(1),
+                    )
+                ).byLocalDate(zone).mapNotNull { day ->
+                    val bpm = day.weightedAverage { it[RestingHeartRateRecord.BPM_AVG] }
+                        ?: return@mapNotNull null
+                    DailyRestingHR(
+                        date = day.date,
+                        bpm = bpm,
+                    )
+                }
             }
         }
     }
