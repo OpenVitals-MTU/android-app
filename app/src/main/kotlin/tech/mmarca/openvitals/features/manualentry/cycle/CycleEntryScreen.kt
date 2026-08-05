@@ -9,12 +9,13 @@ import tech.mmarca.openvitals.features.manualentry.hydration.*
 import tech.mmarca.openvitals.features.manualentry.mindfulness.*
 import tech.mmarca.openvitals.features.manualentry.vitals.*
 
-import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,11 +24,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,7 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
@@ -64,15 +64,6 @@ fun CycleEntryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val unitSystem = unitFormatter.unitSystem(UnitQuantity.TEMPERATURE)
-    val view = LocalView.current
-
-    DisposableEffect(view) {
-        val window = (view.context as? android.app.Activity)?.window
-        window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        onDispose {
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        }
-    }
 
     val requestWritePermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
@@ -100,6 +91,7 @@ fun CycleEntryScreen(
                 unitSystem = unitSystem,
                 onDateChanged = viewModel::updateDate,
                 onEntryTimeChanged = viewModel::updateEntryTime,
+                onSelectSection = viewModel::selectSection,
                 onSelectFlow = viewModel::selectFlow,
                 onToggleSpotting = viewModel::toggleSpotting,
                 onSelectSexualActivity = viewModel::selectSexualActivity,
@@ -118,12 +110,14 @@ fun CycleEntryScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun CycleEntryCard(
     state: CycleEntryUiState,
     unitSystem: UnitSystem,
     onDateChanged: (java.time.LocalDate) -> Unit,
     onEntryTimeChanged: (java.time.Instant) -> Unit,
+    onSelectSection: (CycleEntryKind) -> Unit,
     onSelectFlow: (Int?) -> Unit,
     onToggleSpotting: () -> Unit,
     onSelectSexualActivity: (Int?) -> Unit,
@@ -202,7 +196,22 @@ internal fun CycleEntryCard(
                 )
             }
 
-            val sections = state.editKind?.let(::setOf) ?: CycleEntryKind.entries.toSet()
+            if (!state.isEditMode) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    CycleEntryKind.entries.forEach { kind ->
+                        FilterChip(
+                            selected = state.selectedSection == kind,
+                            onClick = { onSelectSection(kind) },
+                            label = { Text(stringResource(kind.categoryLabelRes())) },
+                            enabled = !saving,
+                        )
+                    }
+                }
+            }
+
+            val sections = setOf(state.activeSection)
 
             if (CycleEntryKind.MENSTRUATION_FLOW in sections) {
                 CycleChipSection(
@@ -328,4 +337,13 @@ private fun cycleEntryErrorText(
         R.string.cycle_entry_write_failed,
         writeError.resolve() ?: stringResource(R.string.unknown_error),
     )
+}
+
+private fun CycleEntryKind.categoryLabelRes(): Int = when (this) {
+    CycleEntryKind.MENSTRUATION_FLOW -> R.string.cycle_entry_section_flow
+    CycleEntryKind.SPOTTING -> R.string.cycle_observation_intermenstrual_bleeding
+    CycleEntryKind.SEXUAL_ACTIVITY -> R.string.cycle_observation_sexual_activity
+    CycleEntryKind.OVULATION_TEST -> R.string.cycle_observation_ovulation_test
+    CycleEntryKind.CERVICAL_MUCUS -> R.string.cycle_observation_cervical_mucus
+    CycleEntryKind.BASAL_BODY_TEMPERATURE -> R.string.cycle_observation_basal_body_temperature
 }

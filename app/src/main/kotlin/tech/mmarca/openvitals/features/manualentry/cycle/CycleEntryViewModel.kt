@@ -42,6 +42,7 @@ enum class CycleEntryError {
 @Immutable
 data class CycleEntryUiState(
     val date: LocalDate = LocalDate.now(),
+    val selectedSection: CycleEntryKind = CycleEntryKind.MENSTRUATION_FLOW,
     val flowSelection: Int? = null,
     val spottingLogged: Boolean = false,
     val sexualActivitySelection: Int? = null,
@@ -63,6 +64,10 @@ data class CycleEntryUiState(
 ) {
     val isEditMode: Boolean
         get() = editRecordId != null
+
+    /** The one section on screen: the edited record's kind, or the picked category. */
+    val activeSection: CycleEntryKind
+        get() = editKind ?: selectedSection
 
     val filledKinds: Set<CycleEntryKind>
         get() = buildSet {
@@ -133,6 +138,8 @@ class CycleEntryViewModel @Inject constructor(
         update { copy(date = minOf(date, LocalDate.now())) }
     }
 
+    fun selectSection(section: CycleEntryKind) = update { copy(selectedSection = section) }
+
     fun selectFlow(flow: Int?) = update { copy(flowSelection = flow) }
 
     fun toggleSpotting() = update { copy(spottingLogged = !spottingLogged) }
@@ -155,7 +162,13 @@ class CycleEntryViewModel @Inject constructor(
 
     fun save(unitSystem: UnitSystem = UnitSystem.METRIC) {
         val current = _uiState.value
-        val kinds = if (current.isEditMode) setOfNotNull(current.editKind) else current.filledKinds
+        // One record kind per log: only the section on screen is saved, whatever
+        // else may still be sitting filled behind another category tab.
+        val kinds = if (current.isEditMode) {
+            setOfNotNull(current.editKind)
+        } else {
+            setOf(current.activeSection).intersect(current.filledKinds)
+        }
         if (kinds.isEmpty()) {
             _uiState.value = current.copy(entryError = CycleEntryError.NOTHING_TO_SAVE, writeError = null)
             return

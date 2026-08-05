@@ -78,12 +78,14 @@ class CycleEntryViewModelTest {
         coVerify(exactly = 0) { repo.writeCycleEntry(any()) }
     }
 
-    @Test fun `saving writes exactly the filled sections`() = runTest {
+    @Test fun `saving writes only the section on screen, never a hidden one`() = runTest {
         val repo = cycleRepo()
         val vm = CycleEntryViewModel(repo)
         vm.start()
         advanceUntilIdle()
 
+        // Flow is the selected category; the spotting toggle sits behind
+        // another tab and must not ride along.
         vm.selectFlow(CycleRecordValues.FLOW_MEDIUM)
         vm.toggleSpotting()
         vm.save()
@@ -91,12 +93,43 @@ class CycleEntryViewModelTest {
 
         assertTrue(vm.uiState.value.saveCompleted)
         assertNull(vm.uiState.value.flowSelection)
-        assertFalse(vm.uiState.value.spottingLogged)
+        assertTrue(vm.uiState.value.spottingLogged)
         coVerify(exactly = 1) {
             repo.writeCycleEntry(match { it.kind == CycleEntryKind.MENSTRUATION_FLOW && it.flow == CycleRecordValues.FLOW_MEDIUM })
         }
+        coVerify(exactly = 1) { repo.writeCycleEntry(any()) }
+    }
+
+    @Test fun `switching category switches what save writes`() = runTest {
+        val repo = cycleRepo()
+        val vm = CycleEntryViewModel(repo)
+        vm.start()
+        advanceUntilIdle()
+
+        vm.selectSection(CycleEntryKind.SPOTTING)
+        vm.toggleSpotting()
+        vm.save()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.saveCompleted)
+        assertFalse(vm.uiState.value.spottingLogged)
         coVerify(exactly = 1) { repo.writeCycleEntry(match { it.kind == CycleEntryKind.SPOTTING }) }
-        coVerify(exactly = 2) { repo.writeCycleEntry(any()) }
+        coVerify(exactly = 1) { repo.writeCycleEntry(any()) }
+    }
+
+    @Test fun `an unfilled selected section is NOTHING_TO_SAVE even when another is filled`() = runTest {
+        val repo = cycleRepo()
+        val vm = CycleEntryViewModel(repo)
+        vm.start()
+        advanceUntilIdle()
+
+        vm.toggleSpotting()
+        // Selected category is still Period flow, which is empty.
+        vm.save()
+        advanceUntilIdle()
+
+        assertEquals(CycleEntryError.NOTHING_TO_SAVE, vm.uiState.value.entryError)
+        coVerify(exactly = 0) { repo.writeCycleEntry(any()) }
     }
 
     @Test fun `a backdated entry is stamped at noon of the chosen day`() = runTest {
@@ -107,6 +140,7 @@ class CycleEntryViewModelTest {
 
         val yesterday = LocalDate.now().minusDays(1)
         vm.updateDate(yesterday)
+        vm.selectSection(CycleEntryKind.SPOTTING)
         vm.toggleSpotting()
         vm.save()
         advanceUntilIdle()
@@ -126,6 +160,7 @@ class CycleEntryViewModelTest {
         vm.start()
         advanceUntilIdle()
 
+        vm.selectSection(CycleEntryKind.BASAL_BODY_TEMPERATURE)
         vm.updateBbtInput("34.2")
         vm.save()
         advanceUntilIdle()
@@ -140,6 +175,7 @@ class CycleEntryViewModelTest {
         vm.start()
         advanceUntilIdle()
 
+        vm.selectSection(CycleEntryKind.SPOTTING)
         vm.toggleSpotting()
         vm.save()
         advanceUntilIdle()
@@ -148,25 +184,23 @@ class CycleEntryViewModelTest {
         coVerify(exactly = 0) { repo.writeCycleEntry(any()) }
     }
 
-    @Test fun `a partial failure keeps the failed section filled and surfaces the error`() = runTest {
+    @Test fun `a failed write keeps the section filled and surfaces the error`() = runTest {
         val repo = cycleRepo()
         coEvery {
-            repo.writeCycleEntry(match { it.kind == CycleEntryKind.SPOTTING })
+            repo.writeCycleEntry(match { it.kind == CycleEntryKind.MENSTRUATION_FLOW })
         } throws IllegalStateException("hc down")
         val vm = CycleEntryViewModel(repo)
         vm.start()
         advanceUntilIdle()
 
         vm.selectFlow(CycleRecordValues.FLOW_LIGHT)
-        vm.toggleSpotting()
         vm.save()
         advanceUntilIdle()
 
         val state = vm.uiState.value
         assertEquals(CycleEntryError.WRITE_FAILED, state.entryError)
         assertFalse(state.saveCompleted)
-        assertNull(state.flowSelection)
-        assertTrue(state.spottingLogged)
+        assertEquals(CycleRecordValues.FLOW_LIGHT, state.flowSelection)
         assertTrue(state.writeError is ScreenError)
     }
 
@@ -176,6 +210,7 @@ class CycleEntryViewModelTest {
         vm.start()
         advanceUntilIdle()
 
+        vm.selectSection(CycleEntryKind.SPOTTING)
         vm.toggleSpotting()
         vm.save()
         advanceUntilIdle()
