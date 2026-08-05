@@ -5,7 +5,6 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
@@ -50,7 +49,6 @@ class StepDistanceBackfillCardTest {
         setCard(enabled = false)
 
         composeRule.onNodeWithText(string(R.string.settings_step_distance_stride_label))
-            .performScrollTo()
             .assertIsNotEnabled()
     }
 
@@ -64,12 +62,10 @@ class StepDistanceBackfillCardTest {
         })
 
         composeRule.onNodeWithText(string(R.string.settings_step_distance_stride_label))
-            .performScrollTo()
             .performTextClearance()
         composeRule.onNodeWithText(string(R.string.settings_step_distance_stride_label))
             .performTextInput("75")
         composeRule.onNodeWithText(string(R.string.action_save))
-            .performScrollTo()
             .performClick()
 
         assertTrue(savedEnabled)
