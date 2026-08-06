@@ -535,14 +535,13 @@ internal fun String.toBodyMeasurementTypeOrNull(): BodyMeasurementType? =
 internal fun String.toVitalsMeasurementTypeOrNull(): VitalsMeasurementType? =
     runCatching { VitalsMeasurementType.valueOf(this) }.getOrNull()
 
-internal fun DashboardWidgetId.isHeartVitalsMetric(): Boolean =
-    toHeartMetricOrNull() != null
-
 /**
  * Where a dashboard tile opens. Extracted from the dashboard's `onOpenMetric`
  * lambda so the mapping can be asserted without a NavController: the aggregate
- * screens claim their ids first, the ten heart/vitals ids all land on the one
- * overview, and everything else falls through to `/metric/{id}`.
+ * screens claim their ids first, and everything else — the ten heart/vitals
+ * ids included — lands on its own `/metric/{id}` screen. They used to share
+ * one overview, which made every tap a two-hop trip to the metric the tile
+ * already named.
  *
  * Body Energy is the one destination that takes the day in its PATH; the rest
  * carry [selectedDate] as the optional `?day=` argument, which
@@ -572,11 +571,7 @@ internal fun dashboardTileDestination(
     DashboardWidgetId.BODY_ENERGY -> Screen.BodyEnergyDetails.createRoute(selectedDate.toString())
     DashboardWidgetId.WEEKLY_CARDIO_LOAD,
     DashboardWidgetId.CARDIO_LOAD -> CardioLoadDetailRoute.withSelectedDay(selectedDate)
-    else -> if (metricId.isHeartVitalsMetric()) {
-        Screen.HeartVitals.route.withSelectedDay(selectedDate)
-    } else {
-        Screen.Metric.createRoute(metricId.name).withSelectedDay(selectedDate)
-    }
+    else -> Screen.Metric.createRoute(metricId.name).withSelectedDay(selectedDate)
 }
 
 private fun DashboardWidgetId.isCaloriesDetailMetric(): Boolean =

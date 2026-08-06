@@ -14,9 +14,10 @@ import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
  *
  * That group exists in the Dart suite purely to pin parity WITH this app, so it
  * is the one place worth asserting twice: a tapped tile has to reach the screen
- * that actually shows the metric. The ten heart/vitals ids share one overview
- * rather than each owning a `/metric/{id}` screen, and the three consumption
- * metrics do the opposite — they keep their own detail views.
+ * that actually shows the metric. The ten heart/vitals ids each own their
+ * `/metric/{id}` screen like everything else — they used to share one
+ * overview, which made every tap a two-hop trip to the metric the tile
+ * already named.
  *
  * The day rides along as the optional `?day=` argument (Flutter's locations
  * carry no day at all), so a fixed past date is used rather than today, whose
@@ -32,7 +33,7 @@ class DashboardTileDestinationTest {
     private val selectedDay = LocalDate.of(2026, 3, 14)
 
     @Test
-    fun heartAndVitalsTilesAllOpenTheHeartVitalsOverview() {
+    fun heartAndVitalsTilesEachOpenTheirOwnMetricScreen() {
         listOf(
             DashboardWidgetId.AVG_HEART_RATE,
             DashboardWidgetId.RESTING_HEART_RATE,
@@ -47,7 +48,7 @@ class DashboardTileDestinationTest {
         ).forEach { metricId ->
             assertEquals(
                 metricId.name,
-                "heart_vitals?day=2026-03-14",
+                "metric/${metricId.name}?day=2026-03-14",
                 dashboardTileDestination(metricId, selectedDay),
             )
         }

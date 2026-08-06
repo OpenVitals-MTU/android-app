@@ -52,7 +52,6 @@ import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.HeartViewModel
-import tech.mmarca.openvitals.features.vitals.HeartVitalsOverviewScreen
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -255,7 +254,6 @@ fun AppNavigation(
     val metricSectionRoutes = remember {
         setOf(
             Screen.Metric.route,
-            Screen.HeartVitals.route,
             Screen.Activity.route,
             Screen.Sleep.route,
             Screen.Body.route,
@@ -346,7 +344,6 @@ fun AppNavigation(
         Screen.Calories.route -> stringResource(R.string.screen_calories)
         Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
         Screen.Body.route -> stringResource(R.string.screen_body)
-        Screen.HeartVitals.route -> stringResource(R.string.screen_heart_vitals)
         Screen.Activity.route -> stringResource(R.string.screen_activities)
         Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
         Screen.Sleep.route -> stringResource(R.string.screen_sleep)
@@ -702,24 +699,6 @@ fun AppNavigation(
                 onEntrySavedAndPopBack = ::markDashboardDirtyAndPopBack,
                 onActivityEntrySaved = ::finishActivityEntrySave,
             )
-
-            composable(
-                route = Screen.HeartVitals.route + SELECTED_DAY_QUERY_PATTERN,
-                arguments = listOf(navArgument(SELECTED_DAY_ARG) { type = NavType.StringType; nullable = true; defaultValue = null }),
-            ) {
-                val heartViewModel = hiltViewModel<HeartViewModel>()
-                HeartVitalsOverviewScreen(
-                    viewModel = heartViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onOpenMetric = { metric ->
-                        navController.navigate(Screen.Metric.createRoute(metric.toDashboardWidgetId().name))
-                    },
-                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
-                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
-                    },
-                )
-            }
 
             composable(
                 route = Screen.Metric.route + SELECTED_DAY_QUERY_PATTERN,

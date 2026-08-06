@@ -3,7 +3,7 @@
 > **Status:** Current implemented behavior with a transitional shared loader.
 > **Audience:** Users and contributors.
 > **Implementation:** `features/heart`, `features/vitals`, `features/manualentry/vitals`, `data/repository/HeartRepository.kt`, `data/repository/VitalsRepository.kt`.
-> **Navigation:** `Screen.HeartVitals`, `Screen.Metric`, vitals entry routes; heart and vitals dashboard widgets.
+> **Navigation:** `Screen.Metric`, vitals entry routes; heart and vitals dashboard widgets.
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Statistics](statistics.md).
 
 Heart and vitals are related but distinct feature areas.
@@ -48,7 +48,7 @@ OpenVitals-created vitals entries can be edited or deleted when the app has writ
 
 ## Today Vitals
 
-The vitals overview groups related metrics into heart, cardiovascular, and respiratory/body-temperature sections. It uses the same period shell as other metric details and links into focused metric screens.
+Each heart and vitals dashboard tile opens its own focused metric screen directly - tapping Blood pressure opens the blood pressure detail, not an intermediate overview.
 
 ## Data Boundaries
 

@@ -62,59 +62,6 @@ import java.time.Instant
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HeartVitalsOverviewScreen(
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onOpenMetric: (HeartMetric) -> Unit,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
-    val chartDaySelection = rememberChartDaySelection(
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        key = "heart_vitals_overview",
-    )
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.resumeCurrentPeriod()
-    }
-
-    WithHealthConnectFeatureScreen(
-        feature = HealthConnectFeature.HEART_VITALS,
-        isLoading = state.isLoading,
-        showInlineSyncBanner = false,
-    ) { hcUx ->
-        MetricDetailScaffold(
-            isLoading = state.isLoading,
-            selectedRange = state.selectedRange,
-            selectedDate = state.selectedDate,
-            screenError = state.error,
-            onRefresh = viewModel::load,
-            onSelectRange = viewModel::selectRange,
-            onPreviousPeriod = viewModel::previousPeriod,
-            onNextPeriod = viewModel::nextPeriod,
-            onSelectDate = viewModel::selectDate,
-            onSelectDay = viewModel::selectDay,
-            weekPeriodMode = state.weekPeriodMode,
-            syncPaused = hcUx.syncPaused,
-            sectionListState = sectionContext.listState,
-        ) { period ->
-            VitalsOverviewContent(
-                state = state,
-                period = period,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                chartDaySelection = chartDaySelection,
-                sectionContext = sectionContext,
-                onOpenMetric = onOpenMetric,
-            )
-        }
-    }
-}
-
 fun LazyListScope.VitalsOverviewContent(
     state: HeartUiState,
     period: DatePeriod,
