@@ -44,6 +44,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ route import, FIT activity/course/workout import, offline PMTiles/Mapsforge map packs, and GPS activity recording with review before saving
 - Configurable activity recording dashboard with Focus mode, high-contrast outdoor mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
+- Live CoMaps turn-by-turn guidance while recording GPS activities, with the planned route, turn arrows, and destination drawn on the offline map, and guidance optionally saved with the activity on-device
 - App language support with an in-app language picker for system default, English, Spanish, German, Italian, Estonian, and Portuguese
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
 - Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
