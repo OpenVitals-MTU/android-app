@@ -48,3 +48,7 @@ out/
 Thumbs.db
 debug_files/
 OpenVitals Design System/
+# Claude config stays local, but skills are shared with the repo.
+!.claude/
+.claude/*
+!.claude/skills/
