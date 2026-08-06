@@ -42,6 +42,7 @@ import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -1703,6 +1704,8 @@ class ActivityEntryViewModelTest {
             every { prefs.favoriteActivityExerciseType } returns favoriteActivityExerciseType
             every { prefs.lastActivityExerciseType } returns lastActivityExerciseType
             every { prefs.lastActivityExerciseType = any() } just runs
+            // Integration off: the CoMaps start gate stays out of these tests' way.
+            every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
         }
 
     private fun routePoint(

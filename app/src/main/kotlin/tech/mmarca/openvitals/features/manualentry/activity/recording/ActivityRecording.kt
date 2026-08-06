@@ -298,6 +298,8 @@ class ActivityRecordingController @Inject constructor(
     private var restCompletionJob: Job? = null
     val state: StateFlow<ActivityRecordingState> = _state.asStateFlow()
 
+    private val coMapsPrestartWatchRequested = MutableStateFlow(false)
+
     private val coMapsWatch = CoMapsRecordingWatch(
         repository = coMapsNavigationRepository,
         scope = bleMetricsScope,
@@ -307,6 +309,7 @@ class ActivityRecordingController @Inject constructor(
         isSavingEnabled = {
             preferencesRepository.activityRecordingPreferences().saveCoMapsNavigationContext
         },
+        isPrestartWatchRequested = { coMapsPrestartWatchRequested.value },
     )
 
     /** Live CoMaps guidance, Disabled whenever the watch is not running. */
@@ -322,6 +325,9 @@ class ActivityRecordingController @Inject constructor(
             .launchIn(bleMetricsScope)
         state
             .onEach { recording -> coMapsWatch.sync(recording) }
+            .launchIn(bleMetricsScope)
+        coMapsPrestartWatchRequested
+            .onEach { coMapsWatch.sync(_state.value) }
             .launchIn(bleMetricsScope)
     }
 
@@ -339,6 +345,15 @@ class ActivityRecordingController @Inject constructor(
 
     /** The flavour-specific CoMaps permission to request, null without a CoMaps installed. */
     fun coMapsPermissionName(): String? = coMapsNavigationRepository.permissionName()
+
+    /**
+     * Armed by the pre-start recording screen and only ever by it: while set,
+     * the guidance watch runs for an idle session so a route being set in
+     * CoMaps can auto-start the recording.
+     */
+    fun setCoMapsPrestartWatch(active: Boolean) {
+        coMapsPrestartWatchRequested.value = active
+    }
 
     fun startRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean =
         startRecording(activityType, initialFix, repetitionRestSeconds = 0L)
@@ -1393,7 +1408,7 @@ class ActivityRecordingStore @Inject constructor(
     }
 }
 
-private fun ActivityEntryType.recordingKind(): ActivityRecordingKind =
+internal fun ActivityEntryType.recordingKind(): ActivityRecordingKind =
     when {
         supportsGpsRoute -> ActivityRecordingKind.GPS_ROUTE
         isRepetitionLike -> ActivityRecordingKind.REPETITION

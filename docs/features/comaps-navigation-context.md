@@ -15,6 +15,8 @@ The integration is off by default and switched on in Settings > Activity recordi
 - **Turn strip on the map tab**: a green overlay with a rotated turn arrow (flag on arrival), the distance to the turn, and the next street. It floats over the live map, above the recorded track and the dashed planned route.
 - **Dashboard tile on the stats tab**: `CoMaps guidance` joins the layout editor's field list while the integration is on — the distance to the turn as the value, the street it turns onto as the label.
 - **State card**: when CoMaps is reachable but not guiding, a small card explains why — permission missing (with an allow button), CoMaps not installed, provider not available, or simply not navigating (with a "Plan in CoMaps" button that opens CoMaps on the current position).
+- **Start gate**: with the integration on, Start on the activity setup screen opens the armed recording view instead of recording — the CoMaps card is there to be answered. Set a route up in CoMaps, or dismiss the card to record without guidance; then Start begins the session. Already guiding, dismissed, or integration off: Start starts immediately.
+- **Dismissable**: the overlay and the state card carry a close button. Dismissal is per thing-dismissed — a reroute, a state change or a new session bring the guidance back, and the dashboard tile is untouched.
 
 Distances and times arrive pre-formatted from CoMaps and are shown as sent, so both apps always agree on units.
 

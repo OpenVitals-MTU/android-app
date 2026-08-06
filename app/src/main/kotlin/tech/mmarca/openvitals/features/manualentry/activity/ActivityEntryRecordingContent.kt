@@ -69,6 +69,7 @@ internal fun ActivityEntryRecordingContent(
             viewModel.coMapsPermissionName()?.let(coMapsPermissionLauncher::launch)
         },
         onPlanInCoMaps = viewModel::planInCoMaps,
+        onCoMapsPrestartWatch = viewModel::setCoMapsPrestartWatch,
         modifier = if (isFocusMode || isOutdoorMode) {
             Modifier.fillMaxSize()
         } else {

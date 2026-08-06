@@ -157,6 +157,8 @@ internal fun GpsRecordingTabs(
     coMapsRoute: CoMapsRoutePolyline? = null,
     onRequestCoMapsPermission: () -> Unit = {},
     onPlanInCoMaps: (() -> Unit)? = null,
+    coMapsGuidanceDismissed: Boolean = false,
+    onDismissCoMapsGuidance: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ActivityRecordingTab.STATS) }
     var timeSplitMinutes by rememberSaveable { mutableIntStateOf(DefaultTimeSplitMinutes) }
@@ -210,12 +212,15 @@ internal fun GpsRecordingTabs(
     ) {
         if (coMapsNavigation !is CoMapsNavigationState.Disabled &&
             guidedSnapshot == null &&
+            !coMapsGuidanceDismissed &&
             activeTab in CoMapsGuidanceTabs
         ) {
             CoMapsGuidancePanel(
                 state = coMapsNavigation,
                 onRequestPermission = onRequestCoMapsPermission,
                 onPlanInCoMaps = onPlanInCoMaps,
+                onDismiss = onDismissCoMapsGuidance,
+                startGateHint = state.status == ActivityRecordingStatus.IDLE,
             )
         }
 
@@ -238,9 +243,10 @@ internal fun GpsRecordingTabs(
                     plannedRoute = coMapsRoute,
                     modifier = Modifier.fillMaxSize(),
                 )
-                if (guidedSnapshot != null) {
+                if (guidedSnapshot != null && !coMapsGuidanceDismissed) {
                     CoMapsMapGuidanceOverlay(
                         snapshot = guidedSnapshot,
+                        onDismiss = onDismissCoMapsGuidance,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(12.dp),

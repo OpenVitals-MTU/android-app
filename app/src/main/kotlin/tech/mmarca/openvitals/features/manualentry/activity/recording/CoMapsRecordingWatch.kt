@@ -42,6 +42,12 @@ class CoMapsRecordingWatch(
     private val scope: CoroutineScope,
     private val isEnabled: () -> Boolean,
     private val isSavingEnabled: () -> Boolean,
+    /**
+     * True while the pre-start recording screen is on display: the one moment
+     * an idle session watches CoMaps, so a route being set can start the
+     * recording rather than wait to be noticed.
+     */
+    private val isPrestartWatchRequested: () -> Boolean = { false },
 ) {
     private val _navigation =
         MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
@@ -106,11 +112,9 @@ class CoMapsRecordingWatch(
         // The cheap questions first: there is nothing to poll for a gym
         // session or a stopped one, and no reason to reach for preferences to
         // find that out.
-        if (!recording.isActive ||
-            recording.recordingKind != ActivityRecordingKind.GPS_ROUTE
-        ) {
-            return false
-        }
+        val gpsRecordingRunning = recording.isActive &&
+            recording.recordingKind == ActivityRecordingKind.GPS_ROUTE
+        if (!gpsRecordingRunning && !isPrestartWatchRequested()) return false
         return isEnabled()
     }
 

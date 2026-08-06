@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import tech.mmarca.openvitals.domain.model.coMapsNavigationDirection
 import tech.mmarca.openvitals.domain.model.coMapsReadableDirection
 import tech.mmarca.openvitals.domain.model.coMapsTurnKindForDirection
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.Emphasis
 
@@ -167,6 +169,8 @@ internal fun CoMapsGuidancePanel(
     onRequestPermission: () -> Unit,
     onPlanInCoMaps: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onDismiss: (() -> Unit)? = null,
+    startGateHint: Boolean = false,
 ) {
     when (state) {
         CoMapsNavigationState.Disabled -> Unit
@@ -174,11 +178,17 @@ internal fun CoMapsGuidancePanel(
             // The compact turn strip, not a full breakdown: mid-run the only
             // question is "which way do I turn?". The rest is kept with the
             // activity and read afterwards.
-            CoMapsMapGuidanceOverlay(snapshot = state.snapshot, modifier = modifier)
+            CoMapsMapGuidanceOverlay(
+                snapshot = state.snapshot,
+                onDismiss = onDismiss,
+                modifier = modifier,
+            )
         else -> CoMapsNavigationContextCard(
             state = state,
             onRequestPermission = onRequestPermission,
             onPlanInCoMaps = onPlanInCoMaps,
+            onDismiss = onDismiss,
+            startGateHint = startGateHint,
             modifier = modifier,
         )
     }
@@ -193,6 +203,8 @@ private fun CoMapsNavigationContextCard(
     state: CoMapsNavigationState,
     onRequestPermission: () -> Unit,
     onPlanInCoMaps: (() -> Unit)?,
+    onDismiss: (() -> Unit)?,
+    startGateHint: Boolean,
     modifier: Modifier = Modifier,
 ) {
     // Two of these the user can act on, and each gets its own button: the
@@ -233,14 +245,39 @@ private fun CoMapsNavigationContextCard(
                     text = stringResource(R.string.recording_comaps_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp),
                 )
+                if (onDismiss != null) {
+                    OpenVitalsIconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Close,
+                            contentDescription = stringResource(R.string.action_close),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
             }
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // Start is gated on this card being answered: the hint says what
+            // Start is waiting for, where the user would otherwise wonder why
+            // nothing happened.
+            if (startGateHint) {
+                Text(
+                    text = stringResource(R.string.recording_comaps_start_gate_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             if (state == CoMapsNavigationState.PermissionMissing) {
                 OpenVitalsOutlinedButton(
                     onClick = onRequestPermission,
@@ -276,6 +313,7 @@ private fun CoMapsNavigationContextCard(
 internal fun CoMapsMapGuidanceOverlay(
     snapshot: CoMapsNavigationSnapshot,
     modifier: Modifier = Modifier,
+    onDismiss: (() -> Unit)? = null,
 ) {
     val display = buildCoMapsGuidanceDisplay(snapshot)
 
@@ -310,14 +348,30 @@ internal fun CoMapsMapGuidanceOverlay(
                     .weight(1f)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                Text(
-                    text = display.primaryStreet,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.Top) {
+                    Text(
+                        text = display.primaryStreet,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (onDismiss != null) {
+                        OpenVitalsIconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                }
                 if (display.overlaySecondary.isNotEmpty()) {
                     Text(
                         text = display.overlaySecondary,

@@ -133,6 +133,10 @@ class ActivityEntryViewModel(
 
     fun coMapsPermissionName(): String? = activityRecorder?.coMapsPermissionName()
 
+    fun setCoMapsPrestartWatch(active: Boolean) {
+        activityRecorder?.setCoMapsPrestartWatch(active)
+    }
+
     init {
         refreshPermission()
         activityRecorder?.state
@@ -821,6 +825,28 @@ class ActivityEntryViewModel(
                 detailError = null,
                 validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
             )
+            return
+        }
+
+        // With CoMaps guidance on, the setup screen's Start is a doorway, not
+        // a trigger: arm the recording dashboard so the user can set a route
+        // up in CoMaps — or dismiss the guidance card — and start from there.
+        // The dashboard's own Start lands here too, and passes: by then the
+        // controller is already prepared.
+        if (!withoutGps &&
+            currentState.selectedActivityType.recordingKind() == ActivityRecordingKind.GPS_ROUTE &&
+            recorder.state.value.activityTypeId == null &&
+            preferencesRepository?.activityRecordingPreferences()
+                ?.coMapsNavigationContextEnabled == true
+        ) {
+            recordingDraftStore?.clear()
+            _uiState.value = currentState.copy(
+                mode = ActivityEntryMode.RECORDING,
+                entryError = null,
+                detailError = null,
+                validationErrors = emptySet(),
+            )
+            recorder.prepareRecordingDashboard(currentState.selectedActivityType)
             return
         }
 

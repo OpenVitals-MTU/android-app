@@ -1685,6 +1685,7 @@
     <string name="recording_comaps_not_navigating">O CoMaps não está a navegar. Define uma rota no CoMaps e a orientação aparecerá aqui.</string>
     <string name="recording_comaps_error">Não foi possível ler a navegação do CoMaps.</string>
     <string name="recording_comaps_plan_action">Planear no CoMaps</string>
+    <string name="recording_comaps_start_gate_hint">Define uma rota no CoMaps, ou dispensa este cartão para começar sem orientação.</string>
     <string name="recording_comaps_destination_with_distance">Destino %1$s</string>
     <string name="recording_comaps_next_stop_with_time">Próxima paragem %1$s</string>
     <string name="recording_comaps_route_time_with_duration">Rota %1$s</string>

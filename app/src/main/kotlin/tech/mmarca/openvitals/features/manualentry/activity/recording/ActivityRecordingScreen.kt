@@ -99,6 +99,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -170,6 +172,7 @@ internal fun ActivityRecordingScreen(
     coMapsRoute: CoMapsRoutePolyline? = null,
     onRequestCoMapsPermission: () -> Unit = {},
     onPlanInCoMaps: (() -> Unit)? = null,
+    onCoMapsPrestartWatch: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var now by remember { mutableStateOf(Instant.now()) }
@@ -210,6 +213,38 @@ internal fun ActivityRecordingScreen(
             delay(1_000L)
         }
     }
+    // While the pre-start GPS screen is on display, the guidance watch runs
+    // so the screen can show what CoMaps is doing before anything records.
+    // Armed here and disarmed the moment the screen goes away or the session
+    // starts.
+    val coMapsPrestartArmed = state.recordingKind == ActivityRecordingKind.GPS_ROUTE &&
+        state.status == ActivityRecordingStatus.IDLE
+    val currentOnCoMapsPrestartWatch by rememberUpdatedState(onCoMapsPrestartWatch)
+    DisposableEffect(coMapsPrestartArmed) {
+        currentOnCoMapsPrestartWatch(coMapsPrestartArmed)
+        onDispose { currentOnCoMapsPrestartWatch(false) }
+    }
+    // Guidance dismissal, per thing-dismissed: swatting the overlay away
+    // silences THIS route, swatting a card silences THAT state. A reroute, a
+    // state change or a new session each speak again. Held here rather than
+    // in the tabs because dismissal is also how the start gate below opens.
+    val coMapsGuidanceKey = when (coMapsNavigation) {
+        is CoMapsNavigationState.Active -> "active:${coMapsNavigation.routeRevision ?: -1}"
+        else -> coMapsNavigation::class.simpleName.orEmpty()
+    }
+    var dismissedCoMapsGuidanceKey by rememberSaveable(state.startTime?.toEpochMilli()) {
+        mutableStateOf<String?>(null)
+    }
+    val coMapsGuidanceDismissed = dismissedCoMapsGuidanceKey == coMapsGuidanceKey
+    // The start gate: with the integration on and CoMaps not yet guiding, the
+    // first Start is a question, not a trigger — the session begins once the
+    // user has either set a route up or dismissed the guidance card. Guiding
+    // already, dismissed, or integration off: Start starts, as ever.
+    val coMapsStartGateActive = coMapsPrestartArmed &&
+        coMapsNavigation !is CoMapsNavigationState.Disabled &&
+        coMapsNavigation !is CoMapsNavigationState.Active &&
+        !coMapsGuidanceDismissed
+    val screenContext = LocalContext.current
 
     val movingTime = state.movingDuration(now)
     val totalTime = if (state.recordingKind == ActivityRecordingKind.REPETITION) {
@@ -365,6 +400,8 @@ internal fun ActivityRecordingScreen(
                     coMapsRoute = coMapsRoute,
                     onRequestCoMapsPermission = onRequestCoMapsPermission,
                     onPlanInCoMaps = onPlanInCoMaps,
+                    coMapsGuidanceDismissed = coMapsGuidanceDismissed,
+                    onDismissCoMapsGuidance = { dismissedCoMapsGuidanceKey = coMapsGuidanceKey },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -372,7 +409,17 @@ internal fun ActivityRecordingScreen(
                 GpsRecordingControls(
                     state = state,
                     canStartRecording = idleGpsFixState.latestPreciseFix != null,
-                    onStartRecording = { onStartRecording(idleGpsFixState.latestPreciseFix) },
+                    onStartRecording = {
+                        if (coMapsStartGateActive) {
+                            Toast.makeText(
+                                screenContext,
+                                R.string.recording_comaps_start_gate_hint,
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        } else {
+                            onStartRecording(idleGpsFixState.latestPreciseFix)
+                        }
+                    },
                     onPauseRecording = onPauseRecording,
                     onResumeRecording = onResumeRecording,
                     onEnterFocusMode = { onFocusModeChanged(true) },

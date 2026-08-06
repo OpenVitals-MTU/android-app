@@ -1387,6 +1387,7 @@
     <string name="recording_comaps_not_navigating">CoMaps non sta navigando. Imposta un percorso in CoMaps e la guida apparirà qui.</string>
     <string name="recording_comaps_error">Impossibile leggere la navigazione di CoMaps.</string>
     <string name="recording_comaps_plan_action">Pianifica in CoMaps</string>
+    <string name="recording_comaps_start_gate_hint">Imposta un percorso in CoMaps, oppure chiudi questa scheda per iniziare senza guida.</string>
     <string name="recording_comaps_destination_with_distance">Destinazione %1$s</string>
     <string name="recording_comaps_next_stop_with_time">Prossima fermata %1$s</string>
     <string name="recording_comaps_route_time_with_duration">Percorso %1$s</string>
