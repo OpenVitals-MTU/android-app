@@ -133,6 +133,16 @@
     -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- CoMaps' live-navigation provider is read-protected by a permission the
+         installed CoMaps FLAVOUR declares (`${applicationId}.permission.…`), so
+         every flavour's name must be declared here or the runtime request for
+         it is denied without ever showing the user a prompt. Debug-flavour
+         names live in the debug manifest. -->
+    <uses-permission android:name="app.comaps.permission.READ_NAVIGATION_DATA" />
+    <uses-permission android:name="app.comaps.fdroid.permission.READ_NAVIGATION_DATA" />
+    <uses-permission android:name="app.comaps.google.permission.READ_NAVIGATION_DATA" />
+    <uses-permission android:name="app.comaps.huawei.permission.READ_NAVIGATION_DATA" />
+
     <!-- OpenVitals is offline-only. Do not inherit network permissions from dependencies. -->
     <uses-permission
         android:name="android.permission.INTERNET"
@@ -167,6 +177,30 @@
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
         <package android:name="com.android.vending" />
+        <!-- CoMaps live-navigation provider. From Android 11 a package we do
+             not declare here is invisible: resolveContentProvider() returns
+             null and getPackageInfo() throws, so CoMaps would look uninstalled
+             even when it is running. Both the packages and the authorities are
+             needed: the authority resolve is what tells a CoMaps build that
+             HAS the provider from one that does not. -->
+        <package android:name="app.comaps" />
+        <package android:name="app.comaps.fdroid" />
+        <package android:name="app.comaps.google" />
+        <package android:name="app.comaps.huawei" />
+        <package android:name="app.comaps.test" />
+        <package android:name="app.comaps.debug" />
+        <package android:name="app.comaps.fdroid.debug" />
+        <package android:name="app.comaps.google.debug" />
+        <package android:name="app.comaps.huawei.debug" />
+        <provider android:authorities="app.comaps.provider.navigation" />
+        <provider android:authorities="app.comaps.fdroid.provider.navigation" />
+        <provider android:authorities="app.comaps.google.provider.navigation" />
+        <provider android:authorities="app.comaps.huawei.provider.navigation" />
+        <provider android:authorities="app.comaps.test.provider.navigation" />
+        <provider android:authorities="app.comaps.debug.provider.navigation" />
+        <provider android:authorities="app.comaps.fdroid.debug.provider.navigation" />
+        <provider android:authorities="app.comaps.google.debug.provider.navigation" />
+        <provider android:authorities="app.comaps.huawei.debug.provider.navigation" />
         <intent>
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>

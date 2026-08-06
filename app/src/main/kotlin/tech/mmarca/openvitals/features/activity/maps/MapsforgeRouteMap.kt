@@ -16,6 +16,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +27,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.mapsforge.core.graphics.Cap
 import org.mapsforge.core.graphics.Join
 import org.mapsforge.core.graphics.Paint
@@ -32,10 +36,14 @@ import org.mapsforge.core.graphics.Style
 import org.mapsforge.core.model.BoundingBox
 import org.mapsforge.core.model.Dimension
 import org.mapsforge.core.model.LatLong
+import org.mapsforge.core.model.Point
+import org.mapsforge.core.model.Rotation
+import org.mapsforge.core.util.MercatorProjection
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory
 import org.mapsforge.map.android.util.AndroidUtil
 import org.mapsforge.map.android.view.MapView
 import org.mapsforge.map.datastore.MultiMapDataStore
+import org.mapsforge.map.model.DisplayModel
 import org.mapsforge.map.layer.Layer
 import org.mapsforge.map.layer.overlay.FixedPixelCircle
 import org.mapsforge.map.layer.overlay.Polyline
@@ -43,6 +51,7 @@ import org.mapsforge.map.layer.renderer.TileRendererLayer
 import org.mapsforge.map.reader.MapFile
 import org.mapsforge.map.rendertheme.internal.MapsforgeThemes
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.features.activity.RoutePreview
 
@@ -53,8 +62,26 @@ internal fun MapsforgeRouteMap(
     routeBreakIndexes: List<Int>,
     currentPoint: ExerciseRoutePoint?,
     showRecenterControl: Boolean,
+    plannedRoute: CoMapsRoutePolyline? = null,
     modifier: Modifier = Modifier,
 ) {
+    // Same shift as the MapLibre renderer: the walk over a six-figure point
+    // buffer happens once per route revision on a worker dispatcher, and the
+    // view update only ever receives the finished geometry.
+    val plannedRouteDisplay by produceState<MapsforgePlannedRoute?>(null, plannedRoute) {
+        value = plannedRoute?.takeUnless { it.isEmpty }?.let { route ->
+            withContext(Dispatchers.Default) {
+                MapsforgePlannedRoute(
+                    points = (0 until route.pointCount).map { index ->
+                        LatLong(route.latitudeAt(index), route.longitudeAt(index))
+                    },
+                    arrows = plannedRouteTurnArrows(route),
+                    destination = route.destination?.let { LatLong(it.latitude, it.longitude) },
+                )
+            }
+        }
+    }
+    val headingDegrees by rememberDeviceHeadingDegrees(enabled = currentPoint != null)
     val context = LocalContext.current
     val mapPacksKey = remember(mapPacks) { mapsforgeMapPacksKey(mapPacks) }
     val renderState = remember(mapPacksKey) { MapsforgeRouteMapRenderState() }
@@ -98,6 +125,8 @@ internal fun MapsforgeRouteMap(
                     points = points,
                     routeBreakIndexes = routeBreakIndexes,
                     currentPoint = currentPoint,
+                    plannedRoute = plannedRouteDisplay,
+                    headingDegrees = headingDegrees,
                 )
             },
         )
@@ -125,14 +154,24 @@ private class MapsforgeRouteMapRenderState {
     private var routeLayers: List<Layer> = emptyList()
     private var didFitInitialCamera = false
 
+    /**
+     * The planned route's layers outlive the per-tick track rebuilds, and are
+     * rebuilt only when the producer hands over new geometry — one per route
+     * revision, compared by identity.
+     */
+    private var plannedLayers: List<Layer> = emptyList()
+    private var builtPlannedRoute: MapsforgePlannedRoute? = null
+
     fun render(
         map: MapsforgeMap,
         mapView: MapView,
         points: List<ExerciseRoutePoint>,
         routeBreakIndexes: List<Int>,
         currentPoint: ExerciseRoutePoint?,
+        plannedRoute: MapsforgePlannedRoute? = null,
+        headingDegrees: Float? = null,
     ) {
-        updateRouteLayers(mapView, points, routeBreakIndexes, currentPoint)
+        updateRouteLayers(mapView, points, routeBreakIndexes, currentPoint, plannedRoute, headingDegrees)
         fitInitialCamera(map, points, currentPoint)
     }
 
@@ -150,13 +189,32 @@ private class MapsforgeRouteMapRenderState {
         points: List<ExerciseRoutePoint>,
         routeBreakIndexes: List<Int>,
         currentPoint: ExerciseRoutePoint?,
+        plannedRoute: MapsforgePlannedRoute?,
+        headingDegrees: Float?,
     ) {
         val layers = mapView.getLayerManager().getLayers()
+        if (plannedRoute !== builtPlannedRoute) {
+            plannedLayers.forEach { layer ->
+                layers.remove(layer)
+                layer.onDestroy()
+            }
+            plannedLayers = plannedRoute
+                ?.takeIf { it.points.size >= 2 }
+                ?.let(::buildPlannedRouteLayers)
+                .orEmpty()
+            builtPlannedRoute = plannedRoute
+        }
         routeLayers.forEach { layer ->
             layers.remove(layer)
             layer.onDestroy()
         }
-        routeLayers = buildMapsforgeRouteLayers(points, routeBreakIndexes, currentPoint)
+        // Re-adding the track after the planned layers keeps the record drawn
+        // over the plan it is following.
+        plannedLayers.forEach { layer ->
+            layers.remove(layer)
+            layers.add(layer)
+        }
+        routeLayers = buildMapsforgeRouteLayers(points, routeBreakIndexes, currentPoint, headingDegrees)
         routeLayers.forEach(layers::add)
         mapView.getLayerManager().redrawLayers()
     }
@@ -254,10 +312,224 @@ private fun View.requestAncestorIntercept(disallow: Boolean) {
     }
 }
 
+/** The planned route ready to hand to the layers, built off the UI thread. */
+internal class MapsforgePlannedRoute(
+    val points: List<LatLong>,
+    val arrows: List<PlannedRouteArrow>,
+    val destination: LatLong?,
+)
+
+/**
+ * Every point CoMaps served, drawn the way CoMaps draws its own route: a wide
+ * fill in a darker casing, with white arrows pointing out of every bend.
+ */
+private fun buildPlannedRouteLayers(route: MapsforgePlannedRoute): List<Layer> = buildList {
+    // Widths are density-scaled: mapsforge paints are raw pixels, and a
+    // "wide" line divided by a Pixel's density is a thin one.
+    val scale = DisplayModel.getDeviceScaleFactor()
+    add(
+        Polyline(
+            routePaint(PlannedRouteCasingColor, PlannedCasingWidthPx * scale),
+            AndroidGraphicFactory.INSTANCE,
+        ).apply { setPoints(route.points) },
+    )
+    add(
+        Polyline(
+            routePaint(PlannedRouteColor, PlannedRouteLineWidthPx * scale),
+            AndroidGraphicFactory.INSTANCE,
+        ).apply { setPoints(route.points) },
+    )
+    add(PlannedRouteArrowsLayer(route.arrows))
+    route.destination?.let { add(DestinationFlagLayer(it)) }
+}
+
+/**
+ * The route's bend arrows, one layer for all of them: projected and drawn
+ * only inside the viewport, and only at zooms where a bend is a bend and not
+ * a pixel.
+ */
+private class PlannedRouteArrowsLayer(
+    private val arrows: List<PlannedRouteArrow>,
+) : Layer() {
+    private val shaftPaint =
+        routePaint(TurnArrowFillColor, TurnArrowShaftWidthPx * DisplayModel.getDeviceScaleFactor())
+    private val headPaint = fillPaint(TurnArrowFillColor)
+
+    override fun draw(
+        boundingBox: BoundingBox,
+        zoomLevel: Byte,
+        canvas: org.mapsforge.core.graphics.Canvas,
+        topLeftPoint: Point,
+        rotation: Rotation,
+    ) {
+        if (zoomLevel < MinTurnArrowZoom) return
+        val mapSize = MercatorProjection.getMapSize(zoomLevel, displayModel.tileSize)
+        val headSize = TurnArrowHeadSizePx * displayModel.scaleFactor
+        var lastX = Float.NEGATIVE_INFINITY
+        var lastY = Float.NEGATIVE_INFINITY
+        arrows.forEach { arrow ->
+            val cornerLat = arrow.shaft[2]
+            val cornerLon = arrow.shaft[3]
+            if (cornerLat < boundingBox.minLatitude || cornerLat > boundingBox.maxLatitude ||
+                cornerLon < boundingBox.minLongitude || cornerLon > boundingBox.maxLongitude
+            ) {
+                return@forEach
+            }
+
+            fun pixelX(lon: Double): Float =
+                (MercatorProjection.longitudeToPixelX(lon, mapSize) - topLeftPoint.x).toFloat()
+
+            fun pixelY(lat: Double): Float =
+                (MercatorProjection.latitudeToPixelY(lat, mapSize) - topLeftPoint.y).toFloat()
+
+            val cornerX = pixelX(cornerLon)
+            val cornerY = pixelY(cornerLat)
+            // Poor man's collision detection: two bends of a switchback do
+            // not both need an arrow at this zoom.
+            if (kotlin.math.hypot(cornerX - lastX, cornerY - lastY) < headSize * 2.5f) return@forEach
+            lastX = cornerX
+            lastY = cornerY
+
+            // The shaft, bent along the route through the bend.
+            val shaft = AndroidGraphicFactory.INSTANCE.createPath()
+            shaft.moveTo(pixelX(arrow.shaft[1]), pixelY(arrow.shaft[0]))
+            shaft.lineTo(cornerX, cornerY)
+            shaft.lineTo(pixelX(arrow.shaft[5]), pixelY(arrow.shaft[4]))
+            canvas.drawPath(shaft, shaftPaint)
+            // And the head, at the tip of the exit arm, pointing the way on.
+            drawMapsforgeArrowHead(
+                canvas,
+                pixelX(arrow.headLongitude), pixelY(arrow.headLatitude),
+                arrow.bearingDegrees, headSize, headPaint,
+            )
+        }
+    }
+}
+
+/** CoMaps' destination: a pennant on a pole, its base on the point itself. */
+private class DestinationFlagLayer(private val position: LatLong) : Layer() {
+    private val pole = strokePaint(DestinationPoleColor, 5.0f * DisplayModel.getDeviceScaleFactor())
+    private val pennantFill = fillPaint(DestinationFlagColor)
+    private val pennantStroke = strokePaint("#FFFFFF", 2.5f * DisplayModel.getDeviceScaleFactor())
+
+    override fun draw(
+        boundingBox: BoundingBox,
+        zoomLevel: Byte,
+        canvas: org.mapsforge.core.graphics.Canvas,
+        topLeftPoint: Point,
+        rotation: Rotation,
+    ) {
+        if (!boundingBox.contains(position)) return
+        val mapSize = MercatorProjection.getMapSize(zoomLevel, displayModel.tileSize)
+        val x = (MercatorProjection.longitudeToPixelX(position.longitude, mapSize) - topLeftPoint.x).toFloat()
+        val y = (MercatorProjection.latitudeToPixelY(position.latitude, mapSize) - topLeftPoint.y).toFloat()
+        val height = DestinationFlagHeightPx * displayModel.scaleFactor
+        canvas.drawLine(x.toInt(), y.toInt(), x.toInt(), (y - height).toInt(), pole)
+        val pennant = AndroidGraphicFactory.INSTANCE.createPath()
+        pennant.moveTo(x, y - height)
+        pennant.lineTo(x + height * 0.62f, y - height * 0.81f)
+        pennant.lineTo(x, y - height * 0.62f)
+        pennant.close()
+        canvas.drawPath(pennant, pennantFill)
+        canvas.drawPath(pennant, pennantStroke)
+    }
+}
+
+/** The phone's chevron at the current fix, pointing where the phone points. */
+private class DeviceHeadingLayer(
+    private val position: LatLong,
+    private val bearingDegrees: Float,
+) : Layer() {
+    private val fill = fillPaint(CurrentLocationColor)
+    private val stroke = strokePaint(
+        MarkerStrokeColor,
+        HeadingStrokeWidthPx * DisplayModel.getDeviceScaleFactor(),
+    )
+
+    override fun draw(
+        boundingBox: BoundingBox,
+        zoomLevel: Byte,
+        canvas: org.mapsforge.core.graphics.Canvas,
+        topLeftPoint: Point,
+        rotation: Rotation,
+    ) {
+        if (!boundingBox.contains(position)) return
+        val mapSize = MercatorProjection.getMapSize(zoomLevel, displayModel.tileSize)
+        val x = (MercatorProjection.longitudeToPixelX(position.longitude, mapSize) - topLeftPoint.x).toFloat()
+        val y = (MercatorProjection.latitudeToPixelY(position.latitude, mapSize) - topLeftPoint.y).toFloat()
+        drawMapsforgeChevron(
+            canvas, x, y, bearingDegrees,
+            HeadingArrowSizePx * displayModel.scaleFactor, fill, stroke,
+        )
+    }
+}
+
+/** A solid triangular head centred on (x, y), rotated to a bearing. */
+private fun drawMapsforgeArrowHead(
+    canvas: org.mapsforge.core.graphics.Canvas,
+    centerX: Float,
+    centerY: Float,
+    bearingDegrees: Float,
+    sizePx: Float,
+    fill: Paint,
+) {
+    val theta = Math.toRadians(bearingDegrees.toDouble())
+    val cosTheta = kotlin.math.cos(theta).toFloat()
+    val sinTheta = kotlin.math.sin(theta).toFloat()
+
+    fun rotatedX(x: Float, y: Float): Float = centerX + x * cosTheta - y * sinTheta
+    fun rotatedY(x: Float, y: Float): Float = centerY + x * sinTheta + y * cosTheta
+
+    val tipY = -0.55f * sizePx
+    val baseX = 0.45f * sizePx
+    val baseY = 0.4f * sizePx
+    val path = AndroidGraphicFactory.INSTANCE.createPath()
+    path.moveTo(rotatedX(0f, tipY), rotatedY(0f, tipY))
+    path.lineTo(rotatedX(baseX, baseY), rotatedY(baseX, baseY))
+    path.lineTo(rotatedX(-baseX, baseY), rotatedY(-baseX, baseY))
+    path.close()
+    canvas.drawPath(path, fill)
+}
+
+/**
+ * A chevron centred on (x, y), rotated to a bearing by rotating its model
+ * points — no canvas transform, so nothing else on the frame is disturbed.
+ */
+private fun drawMapsforgeChevron(
+    canvas: org.mapsforge.core.graphics.Canvas,
+    centerX: Float,
+    centerY: Float,
+    bearingDegrees: Float,
+    sizePx: Float,
+    fill: Paint,
+    stroke: Paint,
+) {
+    val theta = Math.toRadians(bearingDegrees.toDouble())
+    val cosTheta = kotlin.math.cos(theta).toFloat()
+    val sinTheta = kotlin.math.sin(theta).toFloat()
+
+    fun rotatedX(x: Float, y: Float): Float = centerX + x * cosTheta - y * sinTheta
+    fun rotatedY(x: Float, y: Float): Float = centerY + x * sinTheta + y * cosTheta
+
+    val tipY = -0.46f * sizePx
+    val wingX = 0.37f * sizePx
+    val wingY = 0.42f * sizePx
+    val notchY = 0.2f * sizePx
+    val path = AndroidGraphicFactory.INSTANCE.createPath()
+    path.moveTo(rotatedX(0f, tipY), rotatedY(0f, tipY))
+    path.lineTo(rotatedX(wingX, wingY), rotatedY(wingX, wingY))
+    path.lineTo(rotatedX(0f, notchY), rotatedY(0f, notchY))
+    path.lineTo(rotatedX(-wingX, wingY), rotatedY(-wingX, wingY))
+    path.close()
+    canvas.drawPath(path, fill)
+    canvas.drawPath(path, stroke)
+}
+
 private fun buildMapsforgeRouteLayers(
     points: List<ExerciseRoutePoint>,
     routeBreakIndexes: List<Int>,
     currentPoint: ExerciseRoutePoint?,
+    headingDegrees: Float? = null,
 ): List<Layer> {
     val validPoints = points.filter { point -> point.hasFiniteCoordinates() }
     val routeLineLayers = routeSegments(points, routeBreakIndexes)
@@ -275,7 +547,13 @@ private fun buildMapsforgeRouteLayers(
             add(markerCircle(point, EndMarkerColor, MarkerRadiusPx))
         }
         currentPoint?.takeIf { point -> point.hasFiniteCoordinates() }?.let { point ->
-            add(markerCircle(point, CurrentLocationColor, CurrentLocationRadiusPx))
+            // A phone that knows which way it faces shows it; one that does
+            // not falls back to the dot.
+            if (headingDegrees != null) {
+                add(DeviceHeadingLayer(point.toLatLong(), headingDegrees))
+            } else {
+                add(markerCircle(point, CurrentLocationColor, CurrentLocationRadiusPx))
+            }
         }
     }
 }
@@ -365,11 +643,27 @@ private fun ExerciseRoutePoint.hasFiniteCoordinates(): Boolean =
     latitude.isFinite() && longitude.isFinite()
 
 private const val RouteLineColor = "#D9462F"
+// Route blue, not guidance green: the green vanished into park and
+// land-use fills. Blue is the one family both base styles reserve for
+// water and little else along a street.
+private const val PlannedRouteColor = "#1E88E5"
+private const val PlannedRouteCasingColor = "#1256A0"
+private const val TurnArrowFillColor = "#FFFFFF"
+private const val DestinationFlagColor = "#D32F2F"
+private const val DestinationPoleColor = "#37474F"
 private const val StartMarkerColor = "#1F9D55"
 private const val EndMarkerColor = "#6B5DD3"
 private const val CurrentLocationColor = "#1D4ED8"
 private const val MarkerStrokeColor = "#FFFFFF"
 private const val RouteLineWidthPx = 8.0f
+private const val PlannedRouteLineWidthPx = 10.0f
+private const val PlannedCasingWidthPx = 14.0f
+private const val TurnArrowShaftWidthPx = 4.0f
+private const val TurnArrowHeadSizePx = 9.0f
+private const val HeadingArrowSizePx = 34.0f
+private const val HeadingStrokeWidthPx = 3.0f
+private const val MinTurnArrowZoom: Byte = 13
+private const val DestinationFlagHeightPx = 34.0f
 private const val MarkerRadiusPx = 7.0f
 private const val CurrentLocationRadiusPx = 8.0f
 private const val MarkerStrokeWidthPx = 3.0f

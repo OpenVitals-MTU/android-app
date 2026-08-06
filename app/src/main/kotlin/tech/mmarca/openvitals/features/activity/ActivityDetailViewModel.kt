@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.domain.insights.ActivitySplits
 import tech.mmarca.openvitals.domain.insights.HeartRateRecoveryReading
@@ -19,6 +20,7 @@ import tech.mmarca.openvitals.domain.insights.calculateHeartRateRecovery
 import tech.mmarca.openvitals.domain.insights.heartRateRecoveryWindowFor
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationSnapshot
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.domain.model.HeartRateSample
@@ -41,6 +43,9 @@ internal data class ActivityDetailUiState(
     val speedSamples: List<SpeedSample> = emptyList(),
     val cadenceSamples: List<ActivityCadenceSample> = emptyList(),
     val markers: List<ActivityRecordingMarker> = emptyList(),
+
+    /** CoMaps guidance saved beside the activity; app-local, empty for most. */
+    val coMapsSamples: List<CoMapsNavigationSnapshot> = emptyList(),
 
     /** Splits cut against the user's split-distance preference. */
     val splits: ActivitySplits = ActivitySplits.none(),
@@ -74,6 +79,7 @@ internal class ActivityDetailViewModel(
     private val heartRepository: HeartRepository? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
     private val preferencesRepository: PreferencesRepository? = null,
+    private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
 ) : ViewModel() {
 
     @Inject
@@ -82,6 +88,7 @@ internal class ActivityDetailViewModel(
         heartRepository: HeartRepository,
         markerRepository: ActivityMarkerRepository,
         preferencesRepository: PreferencesRepository,
+        coMapsNavigationRepository: CoMapsNavigationRepository,
         savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
@@ -89,6 +96,7 @@ internal class ActivityDetailViewModel(
         heartRepository = heartRepository,
         markerRepository = markerRepository,
         preferencesRepository = preferencesRepository,
+        coMapsNavigationRepository = coMapsNavigationRepository,
     )
 
     private val _uiState = MutableStateFlow(ActivityDetailUiState())
@@ -143,6 +151,9 @@ internal class ActivityDetailViewModel(
                     }
                     val markers = workout?.let { runCatching { loadMarkers(it) }.getOrNull() }
                         .orEmpty()
+                    val coMapsSamples = workout
+                        ?.let { runCatching { loadCoMapsSamples(it) }.getOrNull() }
+                        .orEmpty()
                     val heartRateRecovery = workout?.let {
                         runCatching { loadHeartRateRecovery(it) }.getOrNull()
                     }
@@ -159,6 +170,7 @@ internal class ActivityDetailViewModel(
                         speedSamples = speedSamples,
                         cadenceSamples = cadenceSamples,
                         markers = markers,
+                        coMapsSamples = coMapsSamples,
                         elevationSamples = backfilledWorkout
                             ?.let { elevationProfile(it.route) }
                             .orEmpty(),
@@ -202,6 +214,15 @@ internal class ActivityDetailViewModel(
             .ifEmpty {
                 workout.clientRecordId
                     ?.let { markerRepository?.markersForActivity(it) }
+                    .orEmpty()
+            }
+
+    /** The saved CoMaps guidance of [workout], looked up like the markers are. */
+    private fun loadCoMapsSamples(workout: ExerciseData): List<CoMapsNavigationSnapshot> =
+        coMapsNavigationRepository?.loadSamples(workout.id).orEmpty()
+            .ifEmpty {
+                workout.clientRecordId
+                    ?.let { coMapsNavigationRepository?.loadSamples(it) }
                     .orEmpty()
             }
 

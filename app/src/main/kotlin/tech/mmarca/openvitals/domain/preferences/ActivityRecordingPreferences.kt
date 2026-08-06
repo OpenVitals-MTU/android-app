@@ -15,6 +15,8 @@ data class ActivityRecordingPreferences(
     val voiceIdleAnnouncementsEnabled: Boolean = DefaultVoiceIdleAnnouncementsEnabled,
     val voiceLapAnnouncementsEnabled: Boolean = DefaultVoiceLapAnnouncementsEnabled,
     val restTimerBellEnabled: Boolean = DefaultRestTimerBellEnabled,
+    val coMapsNavigationContextEnabled: Boolean = DefaultCoMapsNavigationContextEnabled,
+    val saveCoMapsNavigationContext: Boolean = DefaultSaveCoMapsNavigationContext,
 ) {
     fun normalized(): ActivityRecordingPreferences =
         copy(
@@ -36,6 +38,8 @@ data class ActivityRecordingPreferences(
 
     companion object {
         const val DefaultAutoIdleEnabled = true
+        const val DefaultCoMapsNavigationContextEnabled = false
+        const val DefaultSaveCoMapsNavigationContext = true
         const val DefaultAutoIdleTimeoutSeconds = 10
         const val MinAutoIdleTimeoutSeconds = 5
         const val MaxAutoIdleTimeoutSeconds = 60

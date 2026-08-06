@@ -40,10 +40,13 @@ import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
+import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseBlockData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
@@ -66,6 +69,7 @@ class ActivityEntryViewModel(
     private val recordingDraftStore: ActivityRecordingDraftStore? = null,
     private val preferencesRepository: PreferencesRepository? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
+    private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val editActivityId: String? = null,
     private val launchMode: String? = null,
@@ -82,6 +86,7 @@ class ActivityEntryViewModel(
         recordingDraftStore: ActivityRecordingDraftStore,
         preferencesRepository: PreferencesRepository,
         markerRepository: ActivityMarkerRepository,
+        coMapsNavigationRepository: CoMapsNavigationRepository,
         savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
@@ -91,6 +96,7 @@ class ActivityEntryViewModel(
         recordingDraftStore = recordingDraftStore,
         preferencesRepository = preferencesRepository,
         markerRepository = markerRepository,
+        coMapsNavigationRepository = coMapsNavigationRepository,
         clock = Clock.systemDefaultZone(),
         editActivityId = savedStateHandle[ACTIVITY_ENTRY_ID_ARG],
         launchMode = savedStateHandle[ACTIVITY_ENTRY_MODE_ARG],
@@ -107,6 +113,25 @@ class ActivityEntryViewModel(
     private val fallbackRecordingState = MutableStateFlow(ActivityRecordingState())
     val recordingState: StateFlow<ActivityRecordingState> =
         activityRecorder?.state ?: fallbackRecordingState.asStateFlow()
+
+    private val fallbackCoMapsNavigation =
+        MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+    val coMapsNavigation: StateFlow<CoMapsNavigationState> =
+        activityRecorder?.coMapsNavigation ?: fallbackCoMapsNavigation.asStateFlow()
+
+    private val fallbackCoMapsRoute = MutableStateFlow<CoMapsRoutePolyline?>(null)
+    val coMapsRoute: StateFlow<CoMapsRoutePolyline?> =
+        activityRecorder?.coMapsRoute ?: fallbackCoMapsRoute.asStateFlow()
+
+    fun refreshCoMapsGuidance() {
+        activityRecorder?.refreshCoMapsGuidance()
+    }
+
+    fun planInCoMaps() {
+        activityRecorder?.planInCoMaps()
+    }
+
+    fun coMapsPermissionName(): String? = activityRecorder?.coMapsPermissionName()
 
     init {
         refreshPermission()
@@ -972,6 +997,7 @@ class ActivityEntryViewModel(
                 }?.toString().orEmpty(),
                 isRecordingDraft = true,
                 recordedBleSamples = snapshot.bleSamples,
+                recordedCoMapsSamples = snapshot.coMapsNavigationSamples,
             )
         } else {
             applyRecordingWithoutRoute(snapshot)
@@ -1056,6 +1082,7 @@ class ActivityEntryViewModel(
         val editRecordId = _uiState.value.editRecordId
         val wasRecordingDraft = _uiState.value.isRecordingDraft
         val markersToSave = _uiState.value.recordedMarkers
+        val coMapsSamplesToSave = _uiState.value.recordedCoMapsSamples
             .takeIf { _uiState.value.selectedActivityType.supportsGpsRoute }
             .orEmpty()
         val requestPermissions = repository.activityWritePermissions(request)
@@ -1089,6 +1116,9 @@ class ActivityEntryViewModel(
                 }
             }.onSuccess { savedActivityId ->
                 markerRepository?.setMarkersForActivity(savedActivityId, markersToSave)
+                if (coMapsSamplesToSave.isNotEmpty()) {
+                    coMapsNavigationRepository?.saveSamples(savedActivityId, coMapsSamplesToSave)
+                }
                 recordingDraftStore?.clear()
                 if (wasRecordingDraft) {
                     rememberLastActivityType(request.exerciseType)

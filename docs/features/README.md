@@ -45,6 +45,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Health report export](health-report-export.md): PDF report of selected metrics built from Health Connect, to share or save.
 - [Sync with another phone](device-sync.md): copying Health Connect records between two phones over Bluetooth.
 - [Offline maps support](offline-maps-support.md): PMTiles or Mapsforge packs for local activity maps.
+- [CoMaps navigation context](comaps-navigation-context.md): live CoMaps turn-by-turn guidance while recording GPS activities.
 - [Apple Health import](apple-health-import.md): supported Apple Health export records written into Health Connect.
 - [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md): imported caffeine beverage presets, nutrition families, common serving values, and source links.
 - [Reminders](reminders.md): local hydration and mindfulness reminders with Android notification handling.

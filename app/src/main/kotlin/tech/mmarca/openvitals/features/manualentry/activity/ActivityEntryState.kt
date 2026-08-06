@@ -24,6 +24,7 @@ import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationSnapshot
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.HeartRateSample
@@ -183,6 +184,11 @@ data class ActivityEntryUiState(
     val isRecordingDraft: Boolean = false,
     val saveCompleted: Boolean = false,
     val recordedBleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
+    /**
+     * CoMaps guidance banked during the recording, saved app-locally beside
+     * the activity — never written to Health Connect.
+     */
+    val recordedCoMapsSamples: List<CoMapsNavigationSnapshot> = emptyList(),
     val sessionHeartRateSamples: List<HeartRateSample> = emptyList(),
     /**
      * The instant the effort stopped in a guided heart-rate-recovery test,

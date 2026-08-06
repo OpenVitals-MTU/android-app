@@ -35,6 +35,7 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
 import tech.mmarca.openvitals.data.sync.HistoryLookbackDays
@@ -55,6 +56,7 @@ class ActivityRepositoryImpl @Inject constructor(
     private val markerRepository: ActivityMarkerRepository? = null,
     private val cacheDao: VitalsDailyCacheDao? = null,
     private val caloriesSync: CaloriesHistorySyncService? = null,
+    private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
 ) : ActivityRepository {
 
     companion object {
@@ -675,6 +677,7 @@ class ActivityRepositoryImpl @Inject constructor(
         val day = dayOfActivity(id)
         hc.deleteActivityEntry(id)
         markerRepository?.deleteMarkersForActivity(id)
+        coMapsNavigationRepository?.deleteSamples(id)
         if (day != null) afterActivityWrite(setOf(day))
     }
 }

@@ -121,6 +121,8 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
+import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
@@ -151,6 +153,10 @@ internal fun GpsRecordingTabs(
     isEditingDashboard: Boolean,
     onUpdateDashboardLayout: (ActivityRecordingDashboardLayout) -> Unit,
     modifier: Modifier = Modifier,
+    coMapsNavigation: CoMapsNavigationState = CoMapsNavigationState.Disabled,
+    coMapsRoute: CoMapsRoutePolyline? = null,
+    onRequestCoMapsPermission: () -> Unit = {},
+    onPlanInCoMaps: (() -> Unit)? = null,
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ActivityRecordingTab.STATS) }
     var timeSplitMinutes by rememberSaveable { mutableIntStateOf(DefaultTimeSplitMinutes) }
@@ -161,7 +167,10 @@ internal fun GpsRecordingTabs(
     val activeTab = if (isEditingDashboard) ActivityRecordingTab.STATS else selectedTab
 
     if (isEditingDashboard) {
-        val availableFields = availableRecordingDashboardFields(state)
+        val availableFields = availableRecordingDashboardFields(
+            state = state,
+            coMapsGuidance = coMapsNavigation !is CoMapsNavigationState.Disabled,
+        )
         Column(
             modifier = modifier.verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -179,30 +188,65 @@ internal fun GpsRecordingTabs(
                 unitFormatter = unitFormatter,
                 isEditingDashboard = true,
                 onUpdateDashboardLayout = onUpdateDashboardLayout,
+                coMapsNavigation = coMapsNavigation,
             )
         }
         return
     }
 
+    // Live guidance has a home on each tab that gets one, and takes no room
+    // above them: the map floats the turn strip over the route, and the stats
+    // grid carries it as an ordinary cell the layout editor can hide or move
+    // like any other. What sits above the tab row is only the states that are
+    // NOT guidance — no permission, no route, no CoMaps — because those carry
+    // a button, and a button is not a metric. Only on the two tabs that are
+    // about where the user is right now; the splits tabs are a record of what
+    // already happened.
+    val guidedSnapshot = (coMapsNavigation as? CoMapsNavigationState.Active)?.snapshot
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        if (coMapsNavigation !is CoMapsNavigationState.Disabled &&
+            guidedSnapshot == null &&
+            activeTab in CoMapsGuidanceTabs
+        ) {
+            CoMapsGuidancePanel(
+                state = coMapsNavigation,
+                onRequestPermission = onRequestCoMapsPermission,
+                onPlanInCoMaps = onPlanInCoMaps,
+            )
+        }
+
         ActivityRecordingTabRow(
             selectedTab = selectedTab,
             onSelect = { selectedTab = it },
         )
 
         when (activeTab) {
-            ActivityRecordingTab.MAP -> OfflineRouteMapOrPreview(
-                points = state.points,
-                routeBreakIndexes = state.routeBreakIndexes,
-                currentPoint = state.latestUiPoint ?: preStartPoint,
-                showRecenterControl = true,
+            ActivityRecordingTab.MAP -> Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-            )
+            ) {
+                OfflineRouteMapOrPreview(
+                    points = state.points,
+                    routeBreakIndexes = state.routeBreakIndexes,
+                    currentPoint = state.latestUiPoint ?: preStartPoint,
+                    showRecenterControl = true,
+                    plannedRoute = coMapsRoute,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (guidedSnapshot != null) {
+                    CoMapsMapGuidanceOverlay(
+                        snapshot = guidedSnapshot,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(12.dp),
+                    )
+                }
+            }
             ActivityRecordingTab.STATS -> RecordingStatsTab(
                 state = state,
                 totalTime = totalTime,
@@ -211,6 +255,7 @@ internal fun GpsRecordingTabs(
                 unitFormatter = unitFormatter,
                 isEditingDashboard = isEditingDashboard,
                 onUpdateDashboardLayout = onUpdateDashboardLayout,
+                coMapsNavigation = coMapsNavigation,
             )
             ActivityRecordingTab.INTERVALS -> RecordingSplitsTab(
                 splits = if (state.manualLaps.isNotEmpty()) {
@@ -290,6 +335,12 @@ internal val ActivityRecordingTab.labelRes: Int
 
 internal const val DefaultTimeSplitMinutes = 5
 internal val TimeSplitMinuteOptions = listOf(1, 5, 10)
+
+/** The tabs live CoMaps guidance appears on: the two about where the user is right now. */
+private val CoMapsGuidanceTabs = setOf(
+    ActivityRecordingTab.MAP,
+    ActivityRecordingTab.STATS,
+)
 
 @Composable
 internal fun GpsRecordingOverflowContent(

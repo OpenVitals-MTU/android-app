@@ -104,6 +104,7 @@ class ActivityRecordingControllerTest {
         context = context,
         preferencesRepository = preferencesRepository,
         bleSensorCoordinator = bleSensorCoordinator,
+        coMapsNavigationRepository = mockk(relaxed = true),
         recordingStore = ActivityRecordingStore(context),
     )
 

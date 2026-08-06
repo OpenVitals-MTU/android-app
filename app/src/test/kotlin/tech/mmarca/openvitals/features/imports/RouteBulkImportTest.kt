@@ -475,6 +475,7 @@ class RouteBulkImportTest {
             offlineMapRepository = offlineMapRepository(),
             offlineMapImportWorkController = offlineMapImportController(),
             permissionUxState = mockk<HealthConnectPermissionUxState>(relaxed = true),
+            coMapsNavigationRepository = mockk(relaxed = true),
         )
 
     private fun routeFileImporter(): RouteFileImporter =

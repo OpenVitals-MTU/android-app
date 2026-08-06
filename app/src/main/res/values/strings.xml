@@ -1804,6 +1804,29 @@
     <string name="detail_stages">Stages</string>
     <string name="detail_sleep_session">Sleep session</string>
 
+    <string name="recording_comaps_title">CoMaps guidance</string>
+    <string name="recording_comaps_permission_missing">Allow OpenVitals to read CoMaps navigation to show turn-by-turn guidance while you record.</string>
+    <string name="recording_comaps_permission_action">Allow CoMaps guidance</string>
+    <string name="recording_comaps_app_unavailable">CoMaps is not installed, or its version does not share navigation yet.</string>
+    <string name="recording_comaps_provider_unavailable">This CoMaps version does not share navigation data.</string>
+    <string name="recording_comaps_not_navigating">CoMaps is not navigating. Set a route in CoMaps and guidance will appear here.</string>
+    <string name="recording_comaps_error">Could not read CoMaps navigation.</string>
+    <string name="recording_comaps_plan_action">Plan in CoMaps</string>
+    <string name="recording_comaps_destination_with_distance">Destination %1$s</string>
+    <string name="recording_comaps_next_stop_with_time">Next stop %1$s</string>
+    <string name="recording_comaps_route_time_with_duration">Route %1$s</string>
+    <string name="recording_comaps_completion">%1$d%% complete</string>
+    <string name="recording_comaps_exit">Exit %1$s</string>
+    <string name="recording_comaps_dashboard_label">CoMaps guidance</string>
+    <string name="settings_activity_recording_comaps_title">CoMaps navigation guidance</string>
+    <string name="settings_activity_recording_comaps_body">Show CoMaps turn-by-turn guidance while recording GPS activities. OpenVitals only reads what CoMaps is navigating.</string>
+    <string name="settings_activity_recording_comaps_save_title">Save CoMaps guidance with activity</string>
+    <string name="settings_activity_recording_comaps_save_body">Keep a log of the guidance shown during the recording with the saved activity. Stays on this device, never in Health Connect.</string>
+    <string name="activity_detail_comaps_title">CoMaps navigation</string>
+    <string name="activity_detail_comaps_to_turn">%1$s to turn</string>
+    <string name="activity_detail_comaps_to_destination">%1$s to destination</string>
+    <string name="activity_detail_comaps_to_next_stop">%1$s to next stop</string>
+
     <string name="recording_actively_recorded">Actively recorded</string>
     <string name="recording_automatically_recorded">Automatically recorded</string>
     <string name="recording_manual_entry">Manual entry</string>

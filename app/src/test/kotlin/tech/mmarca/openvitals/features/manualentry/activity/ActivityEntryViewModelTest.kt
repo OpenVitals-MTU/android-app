@@ -40,6 +40,8 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
+import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -931,6 +933,9 @@ class ActivityEntryViewModelTest {
         val recorder = mockk<ActivityRecordingController>()
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
             startTime = start,
@@ -963,6 +968,9 @@ class ActivityEntryViewModelTest {
         val recorder = mockk<ActivityRecordingController>()
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
             startTime = start,
@@ -1004,6 +1012,9 @@ class ActivityEntryViewModelTest {
         val recorder = mockk<ActivityRecordingController>()
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
             activityTypeId = DefaultActivityEntryTypes.first {
@@ -1043,6 +1054,9 @@ class ActivityEntryViewModelTest {
         val recorder = mockk<ActivityRecordingController>()
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
             startTime = start,
@@ -1082,6 +1096,9 @@ class ActivityEntryViewModelTest {
         val recorder = mockk<ActivityRecordingController>()
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
         every { recorder.stopBlePreview() } returns Unit
         every { recorder.clearPreparedRecording() } returns Unit
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
@@ -1501,6 +1518,9 @@ class ActivityEntryViewModelTest {
         state: MutableStateFlow<ActivityRecordingState> = MutableStateFlow(ActivityRecordingState()),
     ) = mockk<ActivityRecordingController>().also { recorder ->
         every { recorder.state } returns state
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
         every { recorder.startRecording(any(), any(), any(), any()) } answers {
             if (startResult) {
                 state.value = ActivityRecordingState(status = ActivityRecordingStatus.RECORDING)

@@ -117,6 +117,7 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
@@ -145,8 +146,13 @@ internal fun RecordingStatsTab(
     unitFormatter: UnitFormatter,
     isEditingDashboard: Boolean,
     onUpdateDashboardLayout: (ActivityRecordingDashboardLayout) -> Unit,
+    coMapsNavigation: CoMapsNavigationState? = null,
 ) {
-    val availableFields = availableRecordingDashboardFields(state)
+    val availableFields = availableRecordingDashboardFields(
+        state = state,
+        coMapsGuidance = coMapsNavigation != null &&
+            coMapsNavigation !is CoMapsNavigationState.Disabled,
+    )
     val layout = state.dashboardLayout.withAvailableFields(availableFields)
     val stats = recordingDashboardStats(
         state = state,
@@ -154,6 +160,7 @@ internal fun RecordingStatsTab(
         movingTime = movingTime,
         now = now,
         unitFormatter = unitFormatter,
+        coMapsNavigation = coMapsNavigation,
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -201,6 +208,7 @@ internal fun recordingDashboardStats(
     movingTime: Duration,
     now: Instant,
     unitFormatter: UnitFormatter,
+    coMapsNavigation: CoMapsNavigationState? = null,
 ): Map<ActivityRecordingDashboardField, RecordingDashboardStat> {
     val waiting = stringResource(R.string.activity_recording_sensors_waiting_short)
     val hasHeartRateSensor = state.bleDeviceStatuses.any {
@@ -219,7 +227,21 @@ internal fun recordingDashboardStats(
     val speed = state.currentSensorSpeedMetersPerSecond
         ?: state.effectiveCurrentSpeedMetersPerSecond(now)
 
+    // The turn as one more metric: how far, labelled with the street it is
+    // onto — a figure and the thing the figure is about, the shape every other
+    // cell has. Nothing to show is shown as the waiting dash every idle sensor
+    // uses, never as a zero to a street that does not exist.
+    val guidance = (coMapsNavigation as? CoMapsNavigationState.Active)?.snapshot
+    val guidanceDistance = guidance?.distanceToTurn.orEmpty()
+    val guidanceStreet = guidance?.nextStreet.orEmpty()
+
     return mapOf(
+        ActivityRecordingDashboardField.CO_MAPS_GUIDANCE to RecordingDashboardStat(
+            value = DisplayValue(guidanceDistance.ifEmpty { waiting }, ""),
+            label = guidanceStreet.ifEmpty {
+                stringResource(R.string.recording_comaps_dashboard_label)
+            },
+        ),
         ActivityRecordingDashboardField.HEART_RATE to RecordingDashboardStat(
             value = heartRate,
             label = stringResource(R.string.activity_recording_live_heart_rate),
@@ -271,8 +293,14 @@ internal fun recordingDashboardStats(
     )
 }
 
+/**
+ * [coMapsGuidance] adds the turn tile. It is gated on the integration actually
+ * being switched on, because an always-empty cell holding a grid slot open for
+ * a feature the user does not use is worse than no cell.
+ */
 internal fun availableRecordingDashboardFields(
     state: ActivityRecordingState,
+    coMapsGuidance: Boolean = false,
 ): List<ActivityRecordingDashboardField> = buildList {
     if (state.recordingKind == ActivityRecordingKind.TIMED) {
         add(ActivityRecordingDashboardField.HEART_RATE)
@@ -293,6 +321,9 @@ internal fun availableRecordingDashboardFields(
         add(ActivityRecordingDashboardField.POWER)
         if (activityEntryTypeById(state.activityTypeId)?.supportsStepCounting == true) {
             add(ActivityRecordingDashboardField.STEPS)
+        }
+        if (coMapsGuidance) {
+            add(ActivityRecordingDashboardField.CO_MAPS_GUIDANCE)
         }
     }
 }
@@ -915,6 +946,7 @@ internal val ActivityRecordingDashboardField.labelRes: Int
         ActivityRecordingDashboardField.ELEVATION_GAIN -> R.string.activity_entry_recording_elevation_gain
         ActivityRecordingDashboardField.POWER -> R.string.activity_recording_live_power
         ActivityRecordingDashboardField.STEPS -> R.string.activity_entry_steps_title
+        ActivityRecordingDashboardField.CO_MAPS_GUIDANCE -> R.string.recording_comaps_dashboard_label
     }
 
 internal fun <T> List<T>.move(fromIndex: Int, toIndex: Int): List<T> {

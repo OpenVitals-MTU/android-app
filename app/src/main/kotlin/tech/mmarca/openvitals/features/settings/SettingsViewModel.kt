@@ -29,6 +29,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateThresholds
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
@@ -198,6 +199,7 @@ class SettingsViewModel @Inject constructor(
     private val offlineMapRepository: OfflineMapRepository,
     private val offlineMapImportWorkController: OfflineMapImportWorkController,
     private val permissionUxState: HealthConnectPermissionUxState,
+    private val coMapsNavigationRepository: CoMapsNavigationRepository,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
@@ -924,6 +926,13 @@ class SettingsViewModel @Inject constructor(
         val normalized = preferences.normalized()
         preferencesRepository.setActivityRecordingPreferences(normalized)
         _uiState.value = _uiState.value.copy(activityRecordingPreferences = normalized)
+    }
+
+    /** The flavour-specific CoMaps permission to request, null without a CoMaps installed. */
+    fun coMapsPermissionName(): String? = coMapsNavigationRepository.permissionName()
+
+    fun onCoMapsPermissionChanged() {
+        coMapsNavigationRepository.onPermissionChanged()
     }
 
     fun setShowOpenVitalsCalculatedCalories(enabled: Boolean) {

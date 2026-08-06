@@ -35,6 +35,7 @@ import tech.mmarca.openvitals.domain.insights.ActivitySplits
 import tech.mmarca.openvitals.domain.insights.HeartRateRecoveryReading
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationSnapshot
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.SpeedSample
@@ -134,6 +135,7 @@ internal fun ActivityDetailScreen(
             speedSamples = state.speedSamples,
             cadenceSamples = state.cadenceSamples,
             markers = state.markers,
+            coMapsSamples = state.coMapsSamples,
             splits = state.splits,
             splitDistanceMeters = state.splitDistanceMeters,
             slowestSplitPaceSeconds = state.slowestSplitPaceSeconds,
@@ -171,6 +173,7 @@ internal fun ActivityDetailContent(
     speedSamples: List<SpeedSample>,
     cadenceSamples: List<ActivityCadenceSample>,
     markers: List<ActivityRecordingMarker>,
+    coMapsSamples: List<CoMapsNavigationSnapshot> = emptyList(),
     splits: ActivitySplits,
     splitDistanceMeters: Double,
     slowestSplitPaceSeconds: Double?,
@@ -365,6 +368,16 @@ internal fun ActivityDetailContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             )
+        }
+        if (coMapsSamples.isNotEmpty()) {
+            item {
+                ActivityCoMapsNavigationCard(
+                    samples = coMapsSamples,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         }
         if (workout.isOpenVitalsEntry && workout.id.isNotBlank()) {
             item {

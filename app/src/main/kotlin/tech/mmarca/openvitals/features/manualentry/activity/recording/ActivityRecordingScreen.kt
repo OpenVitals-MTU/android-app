@@ -121,6 +121,8 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
+import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
@@ -164,6 +166,10 @@ internal fun ActivityRecordingScreen(
     isOutdoorMode: Boolean = false,
     onOutdoorModeChanged: (Boolean) -> Unit = {},
     appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    coMapsNavigation: CoMapsNavigationState = CoMapsNavigationState.Disabled,
+    coMapsRoute: CoMapsRoutePolyline? = null,
+    onRequestCoMapsPermission: () -> Unit = {},
+    onPlanInCoMaps: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var now by remember { mutableStateOf(Instant.now()) }
@@ -355,6 +361,10 @@ internal fun ActivityRecordingScreen(
                     unitFormatter = unitFormatter,
                     isEditingDashboard = isEditingDashboard,
                     onUpdateDashboardLayout = onUpdateDashboardLayout,
+                    coMapsNavigation = coMapsNavigation,
+                    coMapsRoute = coMapsRoute,
+                    onRequestCoMapsPermission = onRequestCoMapsPermission,
+                    onPlanInCoMaps = onPlanInCoMaps,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),

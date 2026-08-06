@@ -3,11 +3,15 @@ package tech.mmarca.openvitals.features.manualentry.activity
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingScreen
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingState
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 
@@ -24,6 +28,15 @@ internal fun ActivityEntryRecordingContent(
     onActivityRecordingEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit,
     appThemeMode: AppThemeMode,
 ) {
+    val coMapsNavigation by viewModel.coMapsNavigation.collectAsStateWithLifecycle()
+    val coMapsRoute by viewModel.coMapsRoute.collectAsStateWithLifecycle()
+    // The CoMaps permission is CoMaps' own runtime permission, named after the
+    // installed flavour — resolved at tap time, not composition time, because
+    // the user may well install CoMaps while this screen is open.
+    val coMapsPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { viewModel.refreshCoMapsGuidance() }
+
     ActivityRecordingScreen(
         state = recordingState,
         unitFormatter = unitFormatter,
@@ -50,6 +63,12 @@ internal fun ActivityEntryRecordingContent(
         isOutdoorMode = isOutdoorMode,
         onOutdoorModeChanged = onOutdoorModeChanged,
         appThemeMode = appThemeMode,
+        coMapsNavigation = coMapsNavigation,
+        coMapsRoute = coMapsRoute,
+        onRequestCoMapsPermission = {
+            viewModel.coMapsPermissionName()?.let(coMapsPermissionLauncher::launch)
+        },
+        onPlanInCoMaps = viewModel::planInCoMaps,
         modifier = if (isFocusMode || isOutdoorMode) {
             Modifier.fillMaxSize()
         } else {

@@ -157,6 +157,8 @@ internal fun LazyListScope.settingsScreenContent(
                     preferences = state.activityRecordingPreferences,
                     onChange = viewModel::updateActivityRecordingPreferences,
                     modifier = Modifier.padding(horizontal = 16.dp),
+                    coMapsPermissionName = viewModel::coMapsPermissionName,
+                    onCoMapsPermissionResult = viewModel::onCoMapsPermissionChanged,
                 )
             }
             item { SettingsCardSpacer() }

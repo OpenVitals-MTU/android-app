@@ -544,6 +544,14 @@ class PreferencesRepository @Inject constructor(
                 KEY_ACTIVITY_RECORDING_REST_TIMER_BELL_ENABLED,
                 ActivityRecordingPreferences.DefaultRestTimerBellEnabled,
             ),
+            coMapsNavigationContextEnabled = prefs.getBoolean(
+                KEY_ACTIVITY_RECORDING_COMAPS_ENABLED,
+                ActivityRecordingPreferences.DefaultCoMapsNavigationContextEnabled,
+            ),
+            saveCoMapsNavigationContext = prefs.getBoolean(
+                KEY_ACTIVITY_RECORDING_COMAPS_SAVE,
+                ActivityRecordingPreferences.DefaultSaveCoMapsNavigationContext,
+            ),
         ).normalized()
 
     fun setActivityRecordingPreferences(preferences: ActivityRecordingPreferences) {
@@ -572,6 +580,8 @@ class PreferencesRepository @Inject constructor(
             putBoolean(KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED, normalized.voiceIdleAnnouncementsEnabled)
             putBoolean(KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED, normalized.voiceLapAnnouncementsEnabled)
             putBoolean(KEY_ACTIVITY_RECORDING_REST_TIMER_BELL_ENABLED, normalized.restTimerBellEnabled)
+            putBoolean(KEY_ACTIVITY_RECORDING_COMAPS_ENABLED, normalized.coMapsNavigationContextEnabled)
+            putBoolean(KEY_ACTIVITY_RECORDING_COMAPS_SAVE, normalized.saveCoMapsNavigationContext)
         }
     }
 
@@ -1207,6 +1217,10 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ACTIVITY_RECORDING_VOICE_DISTANCE_INTERVAL_METERS = "activity_recording_voice_distance_interval_meters"
         private const val KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED = "activity_recording_voice_idle_enabled"
         private const val KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED = "activity_recording_voice_lap_enabled"
+        private const val KEY_ACTIVITY_RECORDING_COMAPS_ENABLED =
+            "activity_recording_comaps_navigation_enabled"
+        private const val KEY_ACTIVITY_RECORDING_COMAPS_SAVE =
+            "activity_recording_comaps_navigation_save"
         private const val KEY_ACTIVITY_RECORDING_REST_TIMER_BELL_ENABLED = "activity_recording_rest_timer_bell_enabled"
         private const val KEY_ACTIVITY_RECORDING_DASHBOARD_LAYOUT_PREFIX = "activity_recording_dashboard_layout_"
         private const val KEY_SHOW_OPENVITALS_CALCULATED_CALORIES = "show_openvitals_calculated_calories"

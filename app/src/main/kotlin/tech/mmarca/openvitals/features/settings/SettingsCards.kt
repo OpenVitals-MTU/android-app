@@ -678,7 +678,17 @@ internal fun ActivityRecordingPreferencesCard(
     preferences: ActivityRecordingPreferences,
     onChange: (ActivityRecordingPreferences) -> Unit,
     modifier: Modifier = Modifier,
+    coMapsPermissionName: () -> String? = { null },
+    onCoMapsPermissionResult: () -> Unit = {},
 ) {
+    // CoMaps' own runtime permission, named after the installed flavour and so
+    // resolved at tap time. Requested the moment the integration is switched
+    // on, because a toggle that silently needs a second grant elsewhere reads
+    // as a toggle that does not work.
+    val coMapsPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { onCoMapsPermissionResult() }
+
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
 
@@ -795,6 +805,26 @@ internal fun ActivityRecordingPreferencesCard(
                 body = stringResource(R.string.settings_activity_recording_voice_lap_body),
                 checked = preferences.voiceLapAnnouncementsEnabled,
                 onCheckedChange = { enabled -> onChange(preferences.copy(voiceLapAnnouncementsEnabled = enabled)) },
+                modifier = Modifier.padding(start = 8.dp),
+            )
+
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_comaps_title),
+                body = stringResource(R.string.settings_activity_recording_comaps_body),
+                checked = preferences.coMapsNavigationContextEnabled,
+                onCheckedChange = { enabled ->
+                    onChange(preferences.copy(coMapsNavigationContextEnabled = enabled))
+                    if (enabled) {
+                        coMapsPermissionName()?.let(coMapsPermissionLauncher::launch)
+                    }
+                },
+            )
+
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_comaps_save_title),
+                body = stringResource(R.string.settings_activity_recording_comaps_save_body),
+                checked = preferences.saveCoMapsNavigationContext,
+                onCheckedChange = { enabled -> onChange(preferences.copy(saveCoMapsNavigationContext = enabled)) },
                 modifier = Modifier.padding(start = 8.dp),
             )
         }

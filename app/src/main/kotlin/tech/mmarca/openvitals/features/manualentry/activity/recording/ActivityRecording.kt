@@ -59,6 +59,10 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationSnapshot
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
+import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
@@ -264,6 +268,12 @@ data class ActivityRecordingSnapshot(
      * tells anyone reading the session back where the recovery began.
      */
     val hrrEffortEndedAt: Instant? = null,
+    /**
+     * The CoMaps guidance banked during the recording, kept in app-local
+     * activity history and never written to Health Connect. Empty unless the
+     * user switched saving on.
+     */
+    val coMapsNavigationSamples: List<CoMapsNavigationSnapshot> = emptyList(),
 )
 
 @Singleton
@@ -271,6 +281,7 @@ class ActivityRecordingController @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val preferencesRepository: PreferencesRepository,
     private val bleSensorCoordinator: BleSensorCoordinator,
+    private val coMapsNavigationRepository: CoMapsNavigationRepository,
     private val recordingStore: ActivityRecordingStore = ActivityRecordingStore(context),
 ) {
     private val persistenceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -287,12 +298,47 @@ class ActivityRecordingController @Inject constructor(
     private var restCompletionJob: Job? = null
     val state: StateFlow<ActivityRecordingState> = _state.asStateFlow()
 
+    private val coMapsWatch = CoMapsRecordingWatch(
+        repository = coMapsNavigationRepository,
+        scope = bleMetricsScope,
+        isEnabled = {
+            preferencesRepository.activityRecordingPreferences().coMapsNavigationContextEnabled
+        },
+        isSavingEnabled = {
+            preferencesRepository.activityRecordingPreferences().saveCoMapsNavigationContext
+        },
+    )
+
+    /** Live CoMaps guidance, Disabled whenever the watch is not running. */
+    val coMapsNavigation: StateFlow<CoMapsNavigationState> = coMapsWatch.navigation
+
+    /** The route CoMaps is guiding along, never persisted. */
+    val coMapsRoute: StateFlow<CoMapsRoutePolyline?> = coMapsWatch.route
+
     init {
         scheduleRestCompletion(_state.value)
         bleSensorCoordinator.metrics
             .onEach { metrics -> acceptBleMetrics(metrics) }
             .launchIn(bleMetricsScope)
+        state
+            .onEach { recording -> coMapsWatch.sync(recording) }
+            .launchIn(bleMetricsScope)
     }
+
+    /** Re-reads guidance after a permission grant; the probe may answer differently now. */
+    fun refreshCoMapsGuidance() {
+        coMapsNavigationRepository.onPermissionChanged()
+        coMapsWatch.refresh()
+    }
+
+    /** Hands the map to CoMaps so the user can plan a route on it. */
+    fun planInCoMaps() {
+        val point = _state.value.points.lastOrNull()
+        coMapsNavigationRepository.launchForPlanning(point?.latitude, point?.longitude)
+    }
+
+    /** The flavour-specific CoMaps permission to request, null without a CoMaps installed. */
+    fun coMapsPermissionName(): String? = coMapsNavigationRepository.permissionName()
 
     fun startRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean =
         startRecording(activityType, initialFix, repetitionRestSeconds = 0L)
@@ -846,6 +892,10 @@ class ActivityRecordingController @Inject constructor(
         val manualLaps = current.closedManualLaps(end)
         val repetitionSets = current.recordedRepetitionSets(end)
         val bleSamples = bleSensorCoordinator.stopRecording()
+        // Taken BEFORE clearing: the moment the recording goes inactive the
+        // watch tears itself down and resets the recorder, and these samples
+        // are the only copy.
+        val coMapsSamples = coMapsWatch.samples()
         val snapshot = ActivityRecordingSnapshot(
             exerciseType = exerciseType,
             recordingKind = current.recordingKind,
@@ -874,6 +924,7 @@ class ActivityRecordingController @Inject constructor(
             } else {
                 current.hrrEffortEndedAt
             },
+            coMapsNavigationSamples = coMapsSamples,
         )
         clearRecording()
         stopRecordingService()

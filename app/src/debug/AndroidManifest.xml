@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug builds also talk to debug CoMaps flavours; their permission
+         names carry the debug suffix. -->
+    <uses-permission android:name="app.comaps.debug.permission.READ_NAVIGATION_DATA" />
+    <uses-permission android:name="app.comaps.fdroid.debug.permission.READ_NAVIGATION_DATA" />
+    <uses-permission android:name="app.comaps.google.debug.permission.READ_NAVIGATION_DATA" />
+    <uses-permission android:name="app.comaps.huawei.debug.permission.READ_NAVIGATION_DATA" />
+    <uses-permission android:name="app.comaps.test.permission.READ_NAVIGATION_DATA" />
+</manifest>

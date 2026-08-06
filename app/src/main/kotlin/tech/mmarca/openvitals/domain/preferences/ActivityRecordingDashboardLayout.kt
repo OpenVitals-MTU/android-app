@@ -151,6 +151,7 @@ enum class ActivityRecordingDashboardField {
     ELEVATION_GAIN,
     POWER,
     STEPS,
+    CO_MAPS_GUIDANCE,
 }
 
 private val RecordingDashboardTemplate = ActivityRecordingDashboardTemplate.LARGE_TOP
