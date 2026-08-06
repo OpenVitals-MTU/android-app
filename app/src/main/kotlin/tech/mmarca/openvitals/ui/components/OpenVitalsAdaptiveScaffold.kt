@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -75,7 +76,12 @@ fun OpenVitalsAdaptiveScaffold(
     val scaffoldContent: @Composable () -> Unit = {
         Scaffold(
             modifier = modifier.fillMaxSize(),
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            // The navigation-bar inset and nothing else: the top bar carries
+            // its own status-bar inset, and screens with the app's bottom
+            // navigation are padded by the bar itself. What this fixes is
+            // every screen WITHOUT that bar - with 3-button navigation the
+            // system bar is opaque and sat on top of their last rows.
+            contentWindowInsets = WindowInsets.navigationBars,
             topBar = {
                 if (showTopBar) {
                     TopAppBar(
