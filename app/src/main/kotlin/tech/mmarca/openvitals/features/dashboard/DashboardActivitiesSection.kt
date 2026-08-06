@@ -142,19 +142,24 @@ internal fun DashboardSwipeToDeleteActivityCard(
             }
         },
         backgroundContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(shape)
-                    .background(MaterialTheme.colorScheme.errorContainer, shape)
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = stringResource(R.string.cd_delete_entry),
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                )
+            // Painted only while the row is actually displaced, for the same
+            // reason as SwipeToDeleteEntryRow: composed at rest, the delete
+            // red bled through any content that is not fully opaque.
+            if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(shape)
+                        .background(MaterialTheme.colorScheme.errorContainer, shape)
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = stringResource(R.string.cd_delete_entry),
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
             }
         },
         modifier = modifier.clip(shape),

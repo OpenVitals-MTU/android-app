@@ -48,19 +48,24 @@ fun SwipeToDeleteEntryRow(
         enableDismissFromStartToEnd = false,
         onDismiss = dismissAction,
         backgroundContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(shape)
-                    .background(MaterialTheme.colorScheme.errorContainer, shape)
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = stringResource(R.string.cd_delete_entry),
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                )
+            // Painted only while the row is actually displaced. The
+            // background is composed at rest too, and any row whose content
+            // is not fully opaque let the delete red bleed straight through.
+            if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(shape)
+                        .background(MaterialTheme.colorScheme.errorContainer, shape)
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = stringResource(R.string.cd_delete_entry),
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
             }
         },
         modifier = modifier.clip(shape),
