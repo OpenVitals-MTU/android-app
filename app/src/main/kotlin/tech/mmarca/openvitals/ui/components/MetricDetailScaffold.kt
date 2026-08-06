@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,13 +89,25 @@ fun MetricDetailScaffold(
         }
     }
 
+    // One reload, one indicator. The spinner belongs to the pull gesture and
+    // answers it; every load the user did not pull for - a resume, a sync, a
+    // period switch - speaks through the inline banner instead. Both at once
+    // was the screen saying the same thing twice.
+    var pullRefreshRequested by remember { mutableStateOf(false) }
+    LaunchedEffect(isLoading) {
+        if (!isLoading) pullRefreshRequested = false
+    }
+
     CompositionLocalProvider(
         LocalMetricDayOpener provides openDay,
         LocalPeriodWeekMode provides weekPeriodMode,
     ) {
     PullToRefreshBox(
-        isRefreshing = isLoading,
-        onRefresh = onRefresh,
+        isRefreshing = pullRefreshRequested && isLoading,
+        onRefresh = {
+            pullRefreshRequested = true
+            onRefresh()
+        },
         enabled = !isSectionDragActive,
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -111,7 +124,7 @@ fun MetricDetailScaffold(
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 headerItems()
-                if (syncPaused || isLoading) {
+                if (syncPaused || (isLoading && !pullRefreshRequested)) {
                     item {
                         HealthConnectSyncStatusBanner(
                             syncPaused = syncPaused,

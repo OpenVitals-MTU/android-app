@@ -501,9 +501,16 @@ class DashboardViewModel @Inject constructor(
         activityWeekMode: ActivityWeekMode,
         goals: DashboardDailyGoals,
     ) {
-        val display = buildDisplay(data, goals, loadingWidgets)
+        // A reload that found nothing new keeps the OLD instances. Every
+        // widget animation is keyed on the data it shows; handing the tiles a
+        // fresh-but-equal object replayed every ring sweep and chart reveal
+        // on every sync that changed nothing.
+        val current = _uiState.value
+        val stableData = if (data == current.data) current.data ?: data else data
+        val builtDisplay = buildDisplay(stableData, goals, loadingWidgets)
+        val display = if (builtDisplay == current.display) current.display else builtDisplay
         _uiState.value = _uiState.value.copy(
-            data = data,
+            data = stableData,
             isLoading = false,
             isRefreshing = false,
             unacknowledgedWidgetPermissions = unacknowledgedWidgetPermissions(data.missingPermissions),

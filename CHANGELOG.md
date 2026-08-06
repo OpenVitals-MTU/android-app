@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.6.1 - 2026-08-06
+
+### English
+
+- **Live CoMaps navigation while recording.** With a CoMaps build that shares navigation, a GPS recording shows its turn-by-turn guidance: the next turn over the live map, the planned route drawn point-for-point on the offline map with turn arrows and a destination flag, and a compass arrow that points where the phone points. With the integration on, Start becomes a doorway - set the route up in CoMaps or dismiss the guidance card, then start. Guidance shown during the ride can be kept with the saved activity - on this device only, never in Health Connect. Off by default under Settings > Activity recording.
+- **One launcher icon.** The release build now ships the artwork the debug build had; debug keeps the shape and differs only in colour.
+- **Fixes:** with 3-button system navigation the bar no longer covers the bottom of screens; heart and vitals tiles open their own metric screens instead of a shared overview; the swipe-to-delete red no longer shows through entry rows at rest.
+
+### Espanol
+
+- **Navegacion de CoMaps en directo durante la grabacion.** Con una version de CoMaps que comparte la navegacion, una grabacion GPS muestra sus indicaciones giro a giro: el proximo giro sobre el mapa en vivo, la ruta planificada dibujada punto por punto en el mapa sin conexion con flechas de giro y bandera de destino, y una flecha de brujula que apunta hacia donde apunta el telefono. Con la integracion activada, Iniciar se convierte en una puerta - configura la ruta en CoMaps o descarta la tarjeta de guia, y luego inicia. La guia mostrada durante el recorrido puede guardarse con la actividad - solo en este dispositivo, nunca en Health Connect. Desactivado por defecto en Ajustes > Grabacion de actividad.
+- **Un solo icono de lanzador.** La version de lanzamiento usa ahora el arte que tenia la de depuracion; la de depuracion mantiene la forma y solo cambia el color.
+- **Correcciones:** con la navegacion de 3 botones la barra del sistema ya no cubre la parte inferior de las pantallas; las tarjetas de corazon y constantes abren su propia pantalla de metrica en vez de un resumen compartido; el rojo de eliminar ya no se transparenta en las entradas en reposo.
+
+### Deutsch
+
+- **Live-Navigation von CoMaps waehrend der Aufzeichnung.** Mit einem CoMaps, das seine Navigation teilt, zeigt eine GPS-Aufzeichnung die Abbiegehinweise: die naechste Abzweigung ueber der Live-Karte, die geplante Route Punkt fuer Punkt auf der Offline-Karte mit Abbiegepfeilen und Zielflagge, und ein Kompasspfeil, der dorthin zeigt, wohin das Telefon zeigt. Mit aktivierter Integration wird Start zur Tuer - Route in CoMaps festlegen oder die Karte schliessen, dann starten. Die waehrend der Fahrt gezeigten Hinweise koennen mit der Aktivitaet gespeichert werden - nur auf diesem Geraet, nie in Health Connect. Standardmaessig aus, unter Einstellungen > Aktivitaetsaufzeichnung.
+- **Ein Launcher-Symbol.** Die Release-Version nutzt jetzt die Grafik der Debug-Version; Debug behaelt die Form und unterscheidet sich nur in der Farbe.
+- **Korrekturen:** bei der 3-Tasten-Navigation verdeckt die Systemleiste nicht mehr den unteren Rand; Herz- und Vitalwerte-Kacheln oeffnen ihre eigene Messwert-Ansicht statt einer gemeinsamen Uebersicht; das Loesch-Rot scheint nicht mehr durch ruhende Eintraege.
+
+### Italiano
+
+- **Navigazione CoMaps dal vivo durante la registrazione.** Con una versione di CoMaps che condivide la navigazione, una registrazione GPS mostra le indicazioni svolta per svolta: la prossima svolta sopra la mappa dal vivo, il percorso pianificato disegnato punto per punto sulla mappa offline con frecce di svolta e bandiera di destinazione, e una freccia bussola che punta dove punta il telefono. Con l'integrazione attiva, Avvia diventa una porta - imposta il percorso in CoMaps o chiudi la scheda guida, poi avvia. La guida mostrata durante il percorso puo essere salvata con l'attivita - solo su questo dispositivo, mai in Health Connect. Disattivata per impostazione predefinita in Impostazioni > Registrazione attivita.
+- **Una sola icona launcher.** La versione di rilascio usa ora la grafica della versione debug; la debug mantiene la forma e cambia solo colore.
+- **Correzioni:** con la navigazione a 3 pulsanti la barra di sistema non copre piu il fondo delle schermate; le tessere cuore e parametri vitali aprono la propria schermata metrica invece di una panoramica condivisa; il rosso di eliminazione non traspare piu dalle voci a riposo.
+
+### Eesti
+
+- **CoMapsi navigeerimine otse salvestuse ajal.** CoMapsi versiooniga, mis jagab navigeerimist, naitab GPS-salvestus poordejuhiseid: jargmine poore otse kaardi kohal, planeeritud marsruut punkt-punktilt offline-kaardil koos poordenoolte ja sihtkoha lipuga, ning kompassinool, mis naitab, kuhu telefon on suunatud. Kui integratsioon on sees, muutub Start ukseks - maara marsruut CoMapsis voi sulge juhiste kaart, seejarel alusta. Soidu ajal naidatud juhised saab salvestada koos tegevusega - ainult selles seadmes, mitte kunagi Health Connectis. Vaikimisi valjas: Seaded > Tegevuse salvestamine.
+- **Uks kaivitaja ikoon.** Valjalaskeversioon kasutab nuud sama kujundust, mis oli silumisversioonil; silumisversioon eristub ainult varvi poolest.
+- **Parandused:** 3 nupuga navigeerimisel ei kata susteemiriba enam ekraanide alaosa; sudame ja eluliste naitajate paanid avavad oma moodikuekraani, mitte jagatud ulevaadet; kustutamise punane ei paista enam puhkeasendis kirjete alt labi.
+
+### Portugues
+
+- **Navegacao do CoMaps em direto durante a gravacao.** Com uma versao do CoMaps que partilha a navegacao, uma gravacao GPS mostra as indicacoes curva a curva: a proxima curva sobre o mapa em direto, a rota planeada desenhada ponto a ponto no mapa offline com setas de curva e bandeira de destino, e uma seta de bussola que aponta para onde o telemovel aponta. Com a integracao ativa, Iniciar torna-se uma porta - define a rota no CoMaps ou dispensa o cartao de orientacao, e depois inicia. A orientacao mostrada durante o percurso pode ficar guardada com a atividade - apenas neste dispositivo, nunca no Health Connect. Desativado por predefinicao em Definicoes > Gravacao de atividade.
+- **Um so icone de arranque.** A versao de lancamento usa agora o grafismo que a versao de depuracao tinha; a de depuracao mantem a forma e muda apenas a cor.
+- **Correcoes:** com a navegacao de 3 botoes a barra do sistema ja nao tapa o fundo dos ecras; os cartoes de coracao e sinais vitais abrem o seu proprio ecra de metrica em vez de uma vista geral partilhada; o vermelho de eliminar ja nao transparece nas entradas em repouso.
+
 ## 2.6.0 - 2026-08-05
 
 ### English

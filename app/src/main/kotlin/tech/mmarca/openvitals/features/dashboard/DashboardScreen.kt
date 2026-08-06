@@ -109,9 +109,19 @@ fun DashboardScreen(
         // with two "Syncing…" banners for a single load.
         showInlineSyncBanner = false,
     ) { hcUx ->
+        // One reload, one indicator: the spinner answers the pull gesture,
+        // and every refresh the user did not pull for speaks through the
+        // banner inside the list instead.
+        var pullRefreshRequested by remember { mutableStateOf(false) }
+        androidx.compose.runtime.LaunchedEffect(state.isRefreshing) {
+            if (!state.isRefreshing) pullRefreshRequested = false
+        }
         PullToRefreshBox(
-            isRefreshing = state.isRefreshing && loadedData != null,
-            onRefresh = viewModel::refresh,
+            isRefreshing = pullRefreshRequested && state.isRefreshing && loadedData != null,
+            onRefresh = {
+                pullRefreshRequested = true
+                viewModel.refresh()
+            },
             modifier = Modifier.fillMaxSize(),
         ) {
             when {
@@ -124,7 +134,7 @@ fun DashboardScreen(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     canGoForward = selectedDate.isBefore(LocalDate.now()),
-                    isRefreshing = state.isRefreshing,
+                    isRefreshing = state.isRefreshing && !pullRefreshRequested,
                     syncPaused = hcUx.syncPaused,
                     dashboardWidgets = state.dashboardWidgets,
                     isEditingDashboard = state.isEditingDashboard,
