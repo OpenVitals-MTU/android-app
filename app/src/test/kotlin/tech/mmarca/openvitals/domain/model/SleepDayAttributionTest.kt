@@ -87,6 +87,46 @@ class SleepDayAttributionTest {
         )
     }
 
+    @Test fun `a same-day window keeps each night on its own date`() {
+        // A 00:00 -> 12:00 window lies wholly within the wake-up date. Anchored
+        // on D-1 it spanned 36 hours, so each date's window swallowed the
+        // neighbouring night too: "today" showed whichever adjacent night was
+        // longer, and the loser was filed as a full-length "nap".
+        val window = SleepWindow(startHour = 0, endHour = 12)
+        val nights = listOf(
+            session("n6", t(6, 2, 8), t(6, 11, 43)),
+            session("n7", t(7, 1, 23), t(7, 11, 0)),
+            session("n8", t(8, 2, 1), t(8, 11, 13)),
+        )
+        for (day in 6..8) {
+            val date = LocalDate.of(2026, 7, day)
+            assertEquals(
+                "night of the ${day}th",
+                "n$day",
+                dailySleepSummary(nights, date, window, zone)?.id,
+            )
+            assertEquals(
+                "no phantom naps on the ${day}th",
+                emptyList<String>(),
+                dailyNaps(nights, date, window, zone).map { it.id },
+            )
+        }
+    }
+
+    @Test fun `a same-day window files an afternoon nap on its own date`() {
+        val window = SleepWindow(startHour = 0, endHour = 12)
+        val night = session("n", t(6, 2, 8), t(6, 11, 43))
+        val nap = session("nap", t(6, 16, 50), t(6, 16, 55))
+        assertEquals(
+            listOf("nap"),
+            dailyNaps(listOf(night, nap), LocalDate.of(2026, 7, 6), window, zone).map { it.id },
+        )
+        assertEquals(
+            emptyList<String>(),
+            dailyNaps(listOf(night, nap), LocalDate.of(2026, 7, 7), window, zone).map { it.id },
+        )
+    }
+
     @Test fun `custom window hours move the night boundary`() {
         // 20:00 -> 09:00. A session begun at 09:30 now falls in the daytime gap.
         val window = SleepWindow(startHour = 20, endHour = 9)

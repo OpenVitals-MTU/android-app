@@ -22,13 +22,23 @@ internal data class SleepRangeWindow(
 )
 
 /**
- * Date D's night runs from D-1 at [SleepWindow.startHour] to D at
- * [SleepWindow.endHour] — a night lands on its WAKE-UP date.
+ * Date D's night ends at D [SleepWindow.endHour] and starts at
+ * [SleepWindow.startHour] — on D-1 when the window spans midnight (the 18:00 →
+ * 10:00 default), on D itself when it does not (00:00 → 12:00) — a night lands
+ * on its WAKE-UP date either way. Anchoring a same-day window's start on D-1
+ * stretched every night to 36 hours: each date's window swallowed the
+ * neighbouring night too, the longer of the two won the night, and the loser
+ * was filed as that date's "nap".
  */
 internal fun sleepRangeStartFor(
     selectedDate: LocalDate,
     sleepWindow: SleepWindow,
-): LocalDateTime = selectedDate.minusDays(1).atTime(sleepWindow.startHour.coerceIn(0, 23), 0)
+): LocalDateTime {
+    val startHour = sleepWindow.startHour.coerceIn(0, 23)
+    val spansMidnight = startHour >= sleepWindow.endHour.coerceIn(0, 23)
+    val anchorDate = if (spansMidnight) selectedDate.minusDays(1) else selectedDate
+    return anchorDate.atTime(startHour, 0)
+}
 
 internal fun sleepRangeEndFor(
     selectedDate: LocalDate,
@@ -127,7 +137,9 @@ internal fun dailyNaps(
         sleepSessionsForRange(sessions, selectedDate, sleepWindow, zone),
     ).naps
     val daytimeStart = selectedDate.atTime(sleepWindow.endHour.coerceIn(0, 23), 0).atZone(zone).toInstant()
-    val daytimeEnd = selectedDate.atTime(sleepWindow.startHour.coerceIn(0, 23), 0).atZone(zone).toInstant()
+    // The gap runs to where the NEXT date's night begins — the same evening for
+    // a midnight-spanning window, the next midnight for a same-day one.
+    val daytimeEnd = sleepRangeStartFor(selectedDate.plusDays(1), sleepWindow).atZone(zone).toInstant()
     val daytimeNaps = sessions.filter { session ->
         !session.startTime.isBefore(daytimeStart) && session.startTime.isBefore(daytimeEnd)
     }
