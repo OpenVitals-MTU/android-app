@@ -16,7 +16,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.flow.map
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -47,19 +46,17 @@ fun DashboardScreen(
     onOpenDeviceStatus: () -> Unit,
     onSensorStatusVisibilityChanged: (Boolean) -> Unit = {},
 ) {
-    val uiState = viewModel.uiState
-    val isLoading by remember(viewModel) { uiState.map { it.isLoading } }
-        .collectAsStateWithLifecycle(initialValue = true)
-    val error by remember(viewModel) { uiState.map { it.error } }
-        .collectAsStateWithLifecycle(initialValue = null)
-    val display by remember(viewModel) { uiState.map { it.display } }
-        .collectAsStateWithLifecycle(initialValue = DashboardDisplayState())
-    val dashboardData by remember(viewModel) { uiState.map { it.data } }
-        .collectAsStateWithLifecycle(initialValue = null)
-    val selectedDate by remember(viewModel) { uiState.map { it.selectedDate } }
-        .collectAsStateWithLifecycle(initialValue = LocalDate.now())
-    val state by uiState.collectAsStateWithLifecycle()
-    val loadedData = dashboardData
+    // One collection, seeded from the flow's CURRENT value: coming back from a
+    // detail screen must render the dashboard on its first frame. Mapped flows
+    // with placeholder initial values put a loading screen there instead, and
+    // that single frame threw away every saveable below it — the carousel page
+    // and the scroll position both snapped back to the top.
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val isLoading = state.isLoading
+    val error = state.error
+    val display = state.display
+    val selectedDate = state.selectedDate
+    val loadedData = state.data
     var showDatePicker by remember { mutableStateOf(false) }
     val showPromo = shouldShowDashboardHealthConnectPromo(
         availability = state.healthConnectAvailability,
