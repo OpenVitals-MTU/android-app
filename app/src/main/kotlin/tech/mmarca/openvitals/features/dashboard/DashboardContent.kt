@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.dashboard
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -186,106 +187,115 @@ internal fun DashboardContent(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        androidx.compose.foundation.lazy.LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 1080.dp),
-            contentPadding = PaddingValues(
-                top = DashboardScrollTopPadding,
-                bottom = DashboardScrollBottomPadding,
-            ),
         ) {
-            // Every item carries an explicit key: the banner comes and goes with
-            // each reload, and unkeyed items are identified by list position, so
-            // its insertion used to re-create every sibling below it — replaying
-            // ring sweeps with stale values on the way in AND out of a load.
-            // A reload that kept the old data on screen announces itself with the
-            // syncing banner instead of blanking anything. This is the ONLY sync
-            // banner the dashboard renders — the screen shell's inline one is
-            // switched off so a single load cannot show up twice.
+            // The banner sits ABOVE the list, not in it. The list's items are all
+            // keyed, so the scroll position follows the key it was already showing:
+            // prepending a keyed banner kept the day row pinned to the top of the
+            // viewport and pushed the banner out of sight above it — all the user
+            // saw was a sliver of card under the top bar. Pinned here it is always
+            // fully visible, and it never disturbs the list's scroll anchor.
+            // This is the ONLY sync banner the dashboard renders — the screen
+            // shell's inline one is switched off so a single load cannot show up
+            // twice.
             if (syncPaused || isRefreshing) {
-                item(key = "sync_banner") {
-                    HealthConnectSyncStatusBanner(
-                        syncPaused = syncPaused,
-                        syncInProgress = isRefreshing && !syncPaused,
+                HealthConnectSyncStatusBanner(
+                    syncPaused = syncPaused,
+                    syncInProgress = isRefreshing && !syncPaused,
+                    modifier = Modifier.padding(
+                        start = DashboardScreenPadding,
+                        end = DashboardScreenPadding,
+                        top = DashboardScrollTopPadding,
+                    ),
+                )
+            }
+
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(
+                    top = DashboardScrollTopPadding,
+                    bottom = DashboardScrollBottomPadding,
+                ),
+            ) {
+                // Every item carries an explicit key: unkeyed items are identified
+                // by list position, so a change above them used to re-create every
+                // sibling below — replaying ring sweeps with stale values.
+                item(key = "day_navigator") {
+                    DayNavigator(
+                        date = selectedDate,
+                        canGoForward = canGoForward,
+                        onPreviousDay = onPreviousDay,
+                        onNextDay = onNextDay,
+                        onOpenCalendar = onOpenCalendar,
                         modifier = Modifier.padding(
                             horizontal = DashboardScreenPadding,
                             vertical = 4.dp,
                         ),
                     )
                 }
-            }
 
-            item(key = "day_navigator") {
-                DayNavigator(
-                    date = selectedDate,
-                    canGoForward = canGoForward,
-                    onPreviousDay = onPreviousDay,
-                    onNextDay = onNextDay,
-                    onOpenCalendar = onOpenCalendar,
-                    modifier = Modifier.padding(
-                        horizontal = DashboardScreenPadding,
-                        vertical = 4.dp,
-                    ),
-                )
-            }
-
-            item(key = "widgets") {
-                // The reveal animations play once per DAY on display: the whole
-                // widget section is keyed on the loaded data's date, so a day
-                // switch sweeps the rings in exactly when the new day's data
-                // lands — and a refresh of the same day never replays them.
-                key(data.date) {
-                    DashboardWidgetCarousel(
-                        visibleIds = visibleIds,
-                        specsById = specsById,
-                        isEditingDashboard = isEditingDashboard,
-                        onMoveWidgetToTarget = onMoveWidgetToTarget,
-                        onRemoveWidget = onRemoveWidget,
-                        actionContent = {
-                            DashboardQuickActions(
-                                isEditingDashboard = isEditingDashboard,
-                                onOpenLog = onOpenLog,
-                                onStartActivity = onStartActivity,
-                                onToggleDashboardEdit = onToggleDashboardEdit,
-                                // 14dp under the rings, nothing below: the divider
-                                // carries its own 16dp of air.
-                                modifier = Modifier.padding(
-                                    start = DashboardScreenPadding,
-                                    end = DashboardScreenPadding,
-                                    top = DashboardQuickActionsTopPadding,
-                                ),
-                            )
-                        },
-                        hiddenContent = {
-                            if (isEditingDashboard) {
-                                DashboardHiddenWidgets(
-                                    hiddenSpecs = hiddenSpecs,
-                                    onAddWidget = onAddWidget,
+                item(key = "widgets") {
+                    // The reveal animations play once per DAY on display: the whole
+                    // widget section is keyed on the loaded data's date, so a day
+                    // switch sweeps the rings in exactly when the new day's data
+                    // lands — and a refresh of the same day never replays them.
+                    key(data.date) {
+                        DashboardWidgetCarousel(
+                            visibleIds = visibleIds,
+                            specsById = specsById,
+                            isEditingDashboard = isEditingDashboard,
+                            onMoveWidgetToTarget = onMoveWidgetToTarget,
+                            onRemoveWidget = onRemoveWidget,
+                            actionContent = {
+                                DashboardQuickActions(
+                                    isEditingDashboard = isEditingDashboard,
+                                    onOpenLog = onOpenLog,
+                                    onStartActivity = onStartActivity,
+                                    onToggleDashboardEdit = onToggleDashboardEdit,
+                                    // 14dp under the rings, nothing below: the divider
+                                    // carries its own 16dp of air.
+                                    modifier = Modifier.padding(
+                                        start = DashboardScreenPadding,
+                                        end = DashboardScreenPadding,
+                                        top = DashboardQuickActionsTopPadding,
+                                    ),
                                 )
-                            }
-                        },
-                    )
+                            },
+                            hiddenContent = {
+                                if (isEditingDashboard) {
+                                    DashboardHiddenWidgets(
+                                        hiddenSpecs = hiddenSpecs,
+                                        onAddWidget = onAddWidget,
+                                    )
+                                }
+                            },
+                        )
+                    }
                 }
+
+                // The sensor-status card is deliberately absent here: the top-bar
+                // battery action is the sensors entry point.
+
+                dashboardActivitiesToday(
+                    // The old day's workouts must not sit under the new day's date.
+                    workouts = if (awaitingSelectedDay) emptyList() else dashboardActivitiesForDay(data),
+                    isLoading = awaitingSelectedDay,
+                    zone = zone,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenActivities = onOpenActivities,
+                    onOpenActivity = onOpenActivity,
+                    onEditActivity = onEditActivity,
+                    onRequestDeleteActivity = { workout -> activityPendingDelete = workout },
+                )
+
+                item(key = "bottom_spacer") { Spacer(Modifier.height(10.dp)) }
             }
-
-            // The sensor-status card is deliberately absent here: the top-bar
-            // battery action is the sensors entry point.
-
-            dashboardActivitiesToday(
-                // The old day's workouts must not sit under the new day's date.
-                workouts = if (awaitingSelectedDay) emptyList() else dashboardActivitiesForDay(data),
-                isLoading = awaitingSelectedDay,
-                zone = zone,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onOpenActivities = onOpenActivities,
-                onOpenActivity = onOpenActivity,
-                onEditActivity = onEditActivity,
-                onRequestDeleteActivity = { workout -> activityPendingDelete = workout },
-            )
-
-            item(key = "bottom_spacer") { Spacer(Modifier.height(10.dp)) }
         }
 
         activityPendingDelete?.let { workout ->
