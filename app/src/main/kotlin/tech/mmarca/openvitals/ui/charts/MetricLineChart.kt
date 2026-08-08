@@ -65,6 +65,12 @@ data class MetricLineSeries(
 data class MetricLinePlotPoint(
     val xFraction: Float,
     val value: Double,
+    /**
+     * A point the line is scaffolded with rather than a recorded sample — the
+     * midnight anchor and the trailing hold of a cumulative day line. It shapes
+     * the line but never gets a dot: a dot says "an entry happened here".
+     */
+    val synthetic: Boolean = false,
 )
 
 /**
@@ -776,12 +782,15 @@ private fun DrawScope.drawMetricLinePlot(
                 )
             }
 
-            // A dot per sample when requested — only the dots the line has
-            // actually reached: a dot ahead of the trace is a sample the chart is
-            // claiming to have drawn and has not. Capped at [MaxDotPoints]: past
-            // that the dots merge into a solid band, so the loop is pure cost.
-            if (pointRadius > 0f && offsets.size <= MaxDotPoints) {
-                offsets.forEach { offset ->
+            // A dot per SAMPLE when requested — never on a synthetic scaffold
+            // point, and only the dots the line has actually reached: a dot
+            // ahead of the trace is a sample the chart is claiming to have
+            // drawn and has not. Capped at [MaxDotPoints]: past that the dots
+            // merge into a solid band, so the loop is pure cost.
+            if (pointRadius > 0f && points.size <= MaxDotPoints) {
+                points.forEach { point ->
+                    if (point.synthetic) return@forEach
+                    val offset = offsetFor(point)
                     if (offset.x <= drawnEnd.x + 0.5f) {
                         drawCircle(color = accentColor, radius = pointRadius, center = offset)
                     }

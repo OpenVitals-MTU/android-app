@@ -310,13 +310,25 @@ class ChartTimeAxesTest {
         )
         assertEquals(
             listOf(
-                MetricLinePlotPoint(0f, 0.0),
+                MetricLinePlotPoint(0f, 0.0, synthetic = true),
                 MetricLinePlotPoint(0.2f, 1.0),
                 MetricLinePlotPoint(0.4f, 3.0),
-                MetricLinePlotPoint(0.55f, 3.0),
+                MetricLinePlotPoint(0.55f, 3.0, synthetic = true),
             ),
             points,
         )
+    }
+
+    @Test
+    fun `only the real entries carry dots — the anchor and hold are synthetic`() {
+        // The dot at the end of the hydration day line read as an entry nobody
+        // made (#250): the trailing hold at "now" and the midnight anchor shape
+        // the line but must not be marked like the drinks are.
+        val points = cumulativeDayPlotPoints(
+            fractions = listOf(0.2f to 1.0, 0.4f to 3.0),
+            endFraction = 0.55f,
+        )
+        assertEquals(listOf(true, false, false, true), points.map { it.synthetic })
     }
 
     @Test

@@ -103,12 +103,21 @@ fun cumulativeDayPlotPoints(
     endFraction: Float,
 ): List<MetricLinePlotPoint> {
     if (fractions.isEmpty()) return emptyList()
+    // The anchor and the hold are scaffolding, not entries — marked synthetic
+    // so the plot draws them as line only. A dot at "now" read as an entry
+    // nobody made.
     return buildList(fractions.size + 2) {
-        add(MetricLinePlotPoint(xFraction = 0f, value = 0.0))
+        add(MetricLinePlotPoint(xFraction = 0f, value = 0.0, synthetic = true))
         fractions.forEach { (fraction, value) ->
             add(MetricLinePlotPoint(xFraction = fraction, value = value))
         }
-        add(MetricLinePlotPoint(xFraction = endFraction, value = fractions.last().second))
+        add(
+            MetricLinePlotPoint(
+                xFraction = endFraction,
+                value = fractions.last().second,
+                synthetic = true,
+            )
+        )
     }
 }
 
