@@ -43,6 +43,7 @@ import java.time.ZoneId
 
 internal fun LazyListScope.dashboardActivitiesToday(
     workouts: List<ExerciseData>,
+    isLoading: Boolean = false,
     zone: ZoneId,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
@@ -51,7 +52,7 @@ internal fun LazyListScope.dashboardActivitiesToday(
     onEditActivity: (String) -> Unit,
     onRequestDeleteActivity: (ExerciseData) -> Unit,
 ) {
-    item {
+    item(key = "activities_header") {
         DashboardActivitiesSectionHeader(onClick = onOpenActivities)
     }
     if (workouts.isNotEmpty()) {
@@ -100,12 +101,14 @@ internal fun LazyListScope.dashboardActivitiesToday(
             }
         }
     } else {
-        item {
+        item(key = "activities_empty") {
             MetricCardPlaceholder(
                 title = stringResource(R.string.section_activities),
                 icon = Icons.AutoMirrored.Outlined.DirectionsRun,
                 accentColor = WorkoutColor,
-                message = stringResource(R.string.message_no_workouts_day),
+                message = stringResource(
+                    if (isLoading) R.string.loading else R.string.message_no_workouts_day,
+                ),
                 modifier = Modifier.padding(
                     horizontal = DashboardScreenPadding,
                     vertical = 6.dp,

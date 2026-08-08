@@ -278,7 +278,11 @@ class DashboardViewModel @Inject constructor(
         retryOnCancellation: Boolean,
     ) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
+        // The date flips before any Health Connect call: the day navigator
+        // answers the tap instantly, and the tiles read "loading" (not the old
+        // day's numbers) for as long as the shown data lags the selection.
         _uiState.value = _uiState.value.copy(
+            selectedDate = clampedDate,
             sortEmptyTilesLast = prefs.dashboardSortEmptyTilesLast,
         )
         val generation = ++loadGeneration
@@ -356,6 +360,10 @@ class DashboardViewModel @Inject constructor(
                 )
             } else {
                 _uiState.value = _uiState.value.copy(
+                    // A load that died leaves the OLD day on screen — the date
+                    // has to point back at it, or the tiles sit on "loading"
+                    // under a day nothing is loading for.
+                    selectedDate = _uiState.value.data?.date ?: clampedDate,
                     isLoading = false,
                     isRefreshing = false,
                     error = null,
@@ -365,6 +373,7 @@ class DashboardViewModel @Inject constructor(
         } catch (error: Throwable) {
             if (!isCurrent) return
             _uiState.value = _uiState.value.copy(
+                selectedDate = _uiState.value.data?.date ?: clampedDate,
                 isLoading = false,
                 isRefreshing = false,
                 error = error.toScreenError("Unknown error"),

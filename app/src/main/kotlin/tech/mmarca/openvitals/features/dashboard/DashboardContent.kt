@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -22,6 +23,7 @@ import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.ui.components.DayNavigator
 import tech.mmarca.openvitals.ui.components.HealthConnectSyncStatusBanner
+import java.time.LocalDate
 import java.time.ZoneId
 
 /**
@@ -86,6 +88,12 @@ private val DashboardQuickActionsTopPadding = 14.dp
 @Composable
 internal fun DashboardContent(
     data: DashboardData,
+    /**
+     * The day the user asked for — ahead of [data]'s date while a switch is
+     * still loading. The date row follows this; tiles show a loading state
+     * until [data] catches up.
+     */
+    selectedDate: LocalDate = data.date,
     display: DashboardDisplayState,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
@@ -124,8 +132,23 @@ internal fun DashboardContent(
             dashboardWidgets
         }
     }
+    // The data on hand still belongs to another day while a switch is loading.
+    // The date row already answers the tap, so the tiles must not show the old
+    // day's numbers under it — they read "loading" until their day arrives.
+    // Ordering below still uses the real display: the demotion partition keeps
+    // the old day's order until the new day lands, instead of jumping twice.
+    val awaitingSelectedDay = data.date != selectedDate
+    val widgetDisplay = remember(display, awaitingSelectedDay) {
+        if (awaitingSelectedDay) {
+            display.copy(
+                widgets = display.widgets.mapValues { (_, model) -> model.copy(isLoading = true) },
+            )
+        } else {
+            display
+        }
+    }
     val specs = dashboardWidgetSpecs(
-        display = display,
+        display = widgetDisplay,
         unitFormatter = unitFormatter,
         widgetIds = specWidgetIds,
         isEditingDashboard = isEditingDashboard,
@@ -172,12 +195,16 @@ internal fun DashboardContent(
                 bottom = DashboardScrollBottomPadding,
             ),
         ) {
+            // Every item carries an explicit key: the banner comes and goes with
+            // each reload, and unkeyed items are identified by list position, so
+            // its insertion used to re-create every sibling below it — replaying
+            // ring sweeps with stale values on the way in AND out of a load.
             // A reload that kept the old data on screen announces itself with the
             // syncing banner instead of blanking anything. This is the ONLY sync
             // banner the dashboard renders — the screen shell's inline one is
             // switched off so a single load cannot show up twice.
             if (syncPaused || isRefreshing) {
-                item {
+                item(key = "sync_banner") {
                     HealthConnectSyncStatusBanner(
                         syncPaused = syncPaused,
                         syncInProgress = isRefreshing && !syncPaused,
@@ -189,9 +216,9 @@ internal fun DashboardContent(
                 }
             }
 
-            item {
+            item(key = "day_navigator") {
                 DayNavigator(
-                    date = data.date,
+                    date = selectedDate,
                     canGoForward = canGoForward,
                     onPreviousDay = onPreviousDay,
                     onNextDay = onNextDay,
@@ -203,44 +230,52 @@ internal fun DashboardContent(
                 )
             }
 
-            item {
-                DashboardWidgetCarousel(
-                    visibleIds = visibleIds,
-                    specsById = specsById,
-                    isEditingDashboard = isEditingDashboard,
-                    onMoveWidgetToTarget = onMoveWidgetToTarget,
-                    onRemoveWidget = onRemoveWidget,
-                    actionContent = {
-                        DashboardQuickActions(
-                            isEditingDashboard = isEditingDashboard,
-                            onOpenLog = onOpenLog,
-                            onStartActivity = onStartActivity,
-                            onToggleDashboardEdit = onToggleDashboardEdit,
-                            // 14dp under the rings, nothing below: the divider
-                            // carries its own 16dp of air.
-                            modifier = Modifier.padding(
-                                start = DashboardScreenPadding,
-                                end = DashboardScreenPadding,
-                                top = DashboardQuickActionsTopPadding,
-                            ),
-                        )
-                    },
-                    hiddenContent = {
-                        if (isEditingDashboard) {
-                            DashboardHiddenWidgets(
-                                hiddenSpecs = hiddenSpecs,
-                                onAddWidget = onAddWidget,
+            item(key = "widgets") {
+                // The reveal animations play once per DAY on display: the whole
+                // widget section is keyed on the loaded data's date, so a day
+                // switch sweeps the rings in exactly when the new day's data
+                // lands — and a refresh of the same day never replays them.
+                key(data.date) {
+                    DashboardWidgetCarousel(
+                        visibleIds = visibleIds,
+                        specsById = specsById,
+                        isEditingDashboard = isEditingDashboard,
+                        onMoveWidgetToTarget = onMoveWidgetToTarget,
+                        onRemoveWidget = onRemoveWidget,
+                        actionContent = {
+                            DashboardQuickActions(
+                                isEditingDashboard = isEditingDashboard,
+                                onOpenLog = onOpenLog,
+                                onStartActivity = onStartActivity,
+                                onToggleDashboardEdit = onToggleDashboardEdit,
+                                // 14dp under the rings, nothing below: the divider
+                                // carries its own 16dp of air.
+                                modifier = Modifier.padding(
+                                    start = DashboardScreenPadding,
+                                    end = DashboardScreenPadding,
+                                    top = DashboardQuickActionsTopPadding,
+                                ),
                             )
-                        }
-                    },
-                )
+                        },
+                        hiddenContent = {
+                            if (isEditingDashboard) {
+                                DashboardHiddenWidgets(
+                                    hiddenSpecs = hiddenSpecs,
+                                    onAddWidget = onAddWidget,
+                                )
+                            }
+                        },
+                    )
+                }
             }
 
             // The sensor-status card is deliberately absent here: the top-bar
             // battery action is the sensors entry point.
 
             dashboardActivitiesToday(
-                workouts = dashboardActivitiesForDay(data),
+                // The old day's workouts must not sit under the new day's date.
+                workouts = if (awaitingSelectedDay) emptyList() else dashboardActivitiesForDay(data),
+                isLoading = awaitingSelectedDay,
                 zone = zone,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -250,7 +285,7 @@ internal fun DashboardContent(
                 onRequestDeleteActivity = { workout -> activityPendingDelete = workout },
             )
 
-            item { Spacer(Modifier.height(10.dp)) }
+            item(key = "bottom_spacer") { Spacer(Modifier.height(10.dp)) }
         }
 
         activityPendingDelete?.let { workout ->

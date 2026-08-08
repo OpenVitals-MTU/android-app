@@ -130,6 +130,7 @@ fun DashboardScreen(
                     ErrorMessage(error?.resolve() ?: stringResource(R.string.unknown_error))
                 loadedData != null -> DashboardContent(
                     data = loadedData,
+                    selectedDate = selectedDate,
                     display = display,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
