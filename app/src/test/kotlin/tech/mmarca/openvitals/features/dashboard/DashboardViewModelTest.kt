@@ -575,6 +575,40 @@ class DashboardViewModelTest {
         assertTrue(queries[1].includeHistoricalBaselines)
     }
 
+    @Test fun `a carousel twin of a quick-loaded metric does not stay loading`() = runTest {
+        val loader = mockDashboardDataLoader()
+        val prefs = prefs()
+        // CARDIO_LOAD lands beyond the quick section, but its metric is the
+        // hero WEEKLY_CARDIO_LOAD's — already loaded by the quick pass. The
+        // background pass never loads that metric, so marking the twin as
+        // loading left it on "Loading" forever.
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.WEEKLY_CARDIO_LOAD.name,
+            DashboardWidgetId.DISTANCE.name,
+            DashboardWidgetId.CALORIES_OUT.name,
+            DashboardWidgetId.ACTIVE_CALORIES.name,
+            DashboardWidgetId.FLOORS.name,
+            DashboardWidgetId.SLEEP.name,
+            DashboardWidgetId.HYDRATION.name,
+            DashboardWidgetId.WEIGHT.name,
+            DashboardWidgetId.AVG_HEART_RATE.name,
+            DashboardWidgetId.CARDIO_LOAD.name,
+        )
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            DashboardData(date = today, loadedMetrics = query.visibleMetrics)
+        }
+
+        val vm = dashboardViewModel(loader, prefs)
+        advanceUntilIdle()
+
+        assertEquals(emptySet<DashboardWidgetId>(), vm.uiState.value.loadingWidgets)
+        assertFalse(
+            vm.uiState.value.display.widgets[DashboardWidgetId.CARDIO_LOAD]?.isLoading ?: true,
+        )
+    }
+
     @Test fun `refresh passes force refresh mode`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()

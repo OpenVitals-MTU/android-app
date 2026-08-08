@@ -388,7 +388,15 @@ class DashboardViewModel @Inject constructor(
         } else {
             data
         }
+        // A carousel widget can share its metric with a hero widget (the two
+        // weekly-cardio tiles): the quick pass already loaded that metric, so
+        // the twin must not be marked loading — the background pass only loads
+        // and clears the metrics the quick pass did NOT cover, and nothing
+        // would ever take the twin off the loading list.
         val backgroundWidgetIds = (_uiState.value.dashboardWidgets - quickWidgetIds.toSet())
+            .filterNot { widgetId ->
+                widgetId.toDashboardMetricOrNull()?.let { it in quickMetrics } == true
+            }
         val loadingWidgets = buildSet {
             addAll(backgroundWidgetIds)
             if (bodyEnergyRepository != null &&
