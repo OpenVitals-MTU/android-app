@@ -429,7 +429,7 @@ class HealthConnectAggregateReadTest {
         )
         val client = seeded(hr(firstDay, 58L), hr(date, 72L))
 
-        val series = HeartHealthReader(support(client))
+        val series = HeartHealthReader(support(client), "tech.mmarca.openvitals")
             .readDailyHeartRateSummaries(startDate = firstDay, endDate = date)
 
         assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
@@ -453,7 +453,7 @@ class HealthConnectAggregateReadTest {
         )
         val client = seeded(resting(firstDay, 51L), resting(date, 55L))
 
-        val series = HeartHealthReader(support(client))
+        val series = HeartHealthReader(support(client), "tech.mmarca.openvitals")
             .readDailyRestingHR(startDate = firstDay, endDate = date)
 
         assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)

@@ -530,6 +530,12 @@ internal fun manualEntryWidgetSpecs(
             isEditingWidgets = isEditingWidgets,
             onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
         ),
+        vitalsMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.HRV,
+            type = VitalsMeasurementType.HRV,
+            isEditingWidgets = isEditingWidgets,
+            onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
+        ),
         ManualEntryWidgetSpec(
             id = ManualEntryWidgetId.CYCLE,
             title = stringResource(R.string.metric_cycle),

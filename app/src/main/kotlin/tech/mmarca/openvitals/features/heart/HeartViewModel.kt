@@ -288,6 +288,9 @@ class HeartViewModel(
             VitalsMeasurementType.BODY_TEMPERATURE -> _uiState.value.bodyTemperature
                 .firstOrNull { it.id == entryId }
                 ?.isOpenVitalsEntry
+            VitalsMeasurementType.HRV -> _uiState.value.dayHrvSamples
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
         } ?: return
         if (!entryIsOpenVitals) return
 
@@ -454,6 +457,10 @@ private fun HeartUiState.withDeletedVitalsMeasurementEntry(
         )
         VitalsMeasurementType.RESPIRATORY_RATE -> copy(
             respiratoryRate = respiratoryRate.filterNot { it.id == entryId },
+            error = null,
+        )
+        VitalsMeasurementType.HRV -> copy(
+            dayHrvSamples = dayHrvSamples.filterNot { it.id == entryId },
             error = null,
         )
         VitalsMeasurementType.BODY_TEMPERATURE -> copy(

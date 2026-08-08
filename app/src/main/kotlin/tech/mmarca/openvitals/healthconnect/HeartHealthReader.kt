@@ -22,6 +22,7 @@ import java.time.ZoneId
 
 internal class HeartHealthReader(
     private val support: HealthConnectReaderSupport,
+    private val appPackageName: String,
 ) {
     companion object {
         private val MinAggregateBucket: Duration = Duration.ofSeconds(30)
@@ -227,6 +228,11 @@ internal class HeartHealthReader(
                     time = record.time,
                     rmssdMs = record.heartRateVariabilityMillis,
                     source = SyncedSourceOverlay.displaySource(record.metadata),
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(
+                        record.metadata.dataOrigin.packageName,
+                        appPackageName,
+                    ),
                 )
             }
         }

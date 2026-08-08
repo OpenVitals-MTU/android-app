@@ -39,6 +39,8 @@ private const val MaxDiastolicMmHg = 180.0
 private const val MaxPercent = 100.0
 private const val MaxRespiratoryRate = 1000.0
 private const val MaxBodyTemperatureCelsius = 100.0
+private const val MinHrvMillis = 1.0
+private const val MaxHrvMillis = 200.0
 private const val FahrenheitFreezingPoint = 32.0
 private const val FahrenheitPerCelsius = 1.8
 
@@ -226,6 +228,9 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     inputText = if (_uiState.value.isEditMode) _uiState.value.inputText else "",
                     secondaryInputText = if (_uiState.value.isEditMode) _uiState.value.secondaryInputText else "",
+                    // A saved add clears the picked time: the NEXT measurement
+                    // defaults to "now" instead of inheriting this one's clock.
+                    editTime = if (_uiState.value.isEditMode) _uiState.value.editTime else null,
                     isSavingEntry = false,
                     saveCompleted = true,
                     entryError = null,
@@ -296,6 +301,8 @@ private fun isValidVitalsValue(
         VitalsMeasurementType.SPO2 -> value > 0.0 && value <= MaxPercent
         VitalsMeasurementType.RESPIRATORY_RATE -> value > 0.0 && value <= MaxRespiratoryRate
         VitalsMeasurementType.BODY_TEMPERATURE -> value > 0.0 && value <= MaxBodyTemperatureCelsius
+        // Health Connect's own validation range for RMSSD.
+        VitalsMeasurementType.HRV -> value >= MinHrvMillis && value <= MaxHrvMillis
     }
 }
 

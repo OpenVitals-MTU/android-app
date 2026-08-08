@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.healthconnect
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -396,6 +397,12 @@ internal class VitalsHealthReader(
                 metadata = metadata,
                 temperature = request.value.celsius,
             )
+            VitalsMeasurementType.HRV -> HeartRateVariabilityRmssdRecord(
+                time = time,
+                zoneOffset = zone.rules.getOffset(time),
+                heartRateVariabilityMillis = request.value,
+                metadata = metadata,
+            )
         }
 
         support.client().insertRecords(listOf(record))
@@ -413,6 +420,8 @@ internal class VitalsHealthReader(
                     support.client().readRecord(RespiratoryRateRecord::class, id).record.toVitalsMeasurementEntry()
                 VitalsMeasurementType.BODY_TEMPERATURE ->
                     support.client().readRecord(BodyTemperatureRecord::class, id).record.toVitalsMeasurementEntry()
+                VitalsMeasurementType.HRV ->
+                    support.client().readRecord(HeartRateVariabilityRmssdRecord::class, id).record.toVitalsMeasurementEntry()
             }
         }
 
@@ -425,6 +434,7 @@ internal class VitalsHealthReader(
                 VitalsMeasurementType.SPO2 -> support.client().readRecord(OxygenSaturationRecord::class, id).record
                 VitalsMeasurementType.RESPIRATORY_RATE -> support.client().readRecord(RespiratoryRateRecord::class, id).record
                 VitalsMeasurementType.BODY_TEMPERATURE -> support.client().readRecord(BodyTemperatureRecord::class, id).record
+                VitalsMeasurementType.HRV -> support.client().readRecord(HeartRateVariabilityRmssdRecord::class, id).record
             }
             existing.requireOpenVitalsOrigin(appPackageName)
 
@@ -500,6 +510,12 @@ internal class VitalsHealthReader(
                     metadata = metadata,
                     temperature = request.value.celsius,
                 )
+                VitalsMeasurementType.HRV -> HeartRateVariabilityRmssdRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    heartRateVariabilityMillis = request.value,
+                    metadata = metadata,
+                )
             }
 
             support.client().updateRecords(listOf(record))
@@ -543,6 +559,15 @@ internal class VitalsHealthReader(
                     clientRecordIdsList = emptyList(),
                 )
             }
+            VitalsMeasurementType.HRV -> {
+                val existing = support.client().readRecord(HeartRateVariabilityRmssdRecord::class, id).record
+                existing.requireOpenVitalsOrigin(appPackageName)
+                support.client().deleteRecords(
+                    recordType = HeartRateVariabilityRmssdRecord::class,
+                    recordIdsList = listOf(existing.metadata.id),
+                    clientRecordIdsList = emptyList(),
+                )
+            }
         }
     }
 
@@ -572,6 +597,12 @@ internal class VitalsHealthReader(
                 request.value > 0.0 && request.value <= MaxBodyTemperatureCelsius
             ) {
                 "Body temperature must be greater than 0 C and no more than ${MaxBodyTemperatureCelsius.toInt()} C."
+            }
+            // Health Connect's own validation range for RMSSD.
+            VitalsMeasurementType.HRV -> require(
+                request.value >= MinHrvMillis && request.value <= MaxHrvMillis
+            ) {
+                "HRV must be between ${MinHrvMillis.toInt()} and ${MaxHrvMillis.toInt()} ms."
             }
         }
     }
@@ -620,6 +651,16 @@ internal class VitalsHealthReader(
             source = SyncedSourceOverlay.displaySource(metadata),
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
+
+    private fun HeartRateVariabilityRmssdRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
+        VitalsMeasurementEntry(
+            id = metadata.id,
+            type = VitalsMeasurementType.HRV,
+            time = time,
+            value = heartRateVariabilityMillis,
+            source = SyncedSourceOverlay.displaySource(metadata),
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
 }
 
 private const val MinSystolicMmHg = 20.0
@@ -629,6 +670,8 @@ private const val MaxDiastolicMmHg = 180.0
 private const val MaxPercent = 100.0
 private const val MaxRespiratoryRate = 1000.0
 private const val MaxBodyTemperatureCelsius = 100.0
+private const val MinHrvMillis = 1.0
+private const val MaxHrvMillis = 200.0
 
 /**
  * Page size for the daily aggregate readers only. The platform maximum: the

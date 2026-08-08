@@ -112,7 +112,7 @@ class HealthConnectManager @Inject constructor(
     private val activityReader = ActivityHealthReader(readerSupport, context.packageName)
     private val hydrationReader = HydrationHealthReader(readerSupport, context.packageName)
     private val sleepReader = SleepHealthReader(readerSupport)
-    private val heartReader = HeartHealthReader(readerSupport)
+    private val heartReader = HeartHealthReader(readerSupport, context.packageName)
     private val bodyReader = BodyHealthReader(readerSupport, context.packageName)
     private val nutritionReader = NutritionHealthReader(readerSupport, context.packageName)
     private val mindfulnessReader = MindfulnessHealthReader(readerSupport, context.packageName)

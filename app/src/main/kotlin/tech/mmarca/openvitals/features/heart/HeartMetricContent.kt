@@ -34,6 +34,7 @@ import tech.mmarca.openvitals.core.stats.averageOrNull
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
+import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.vitals.heartRateSeries
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricLineChart
@@ -613,6 +614,8 @@ internal fun LazyListScope.hrvContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
     sectionContext: MetricDetailSectionContext,
+    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     val display = state.display.metric
     when {
@@ -691,6 +694,9 @@ internal fun LazyListScope.hrvContent(
                             source = { it.source },
                             time = { it.time },
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+                            onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.HRV, it.id) },
+                            onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.HRV, it.id) },
                         )
                     } else {
                         HeartDailyEntryListContent(

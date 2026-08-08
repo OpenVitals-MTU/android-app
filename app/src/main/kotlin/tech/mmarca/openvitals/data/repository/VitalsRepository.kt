@@ -6,6 +6,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
@@ -74,6 +75,8 @@ class VitalsRepositoryImpl @Inject constructor(
     private val writeSpO2Permission = HealthPermission.getWritePermission(OxygenSaturationRecord::class)
     private val writeRespiratoryRatePermission = HealthPermission.getWritePermission(RespiratoryRateRecord::class)
     private val writeBodyTemperaturePermission = HealthPermission.getWritePermission(BodyTemperatureRecord::class)
+    private val readHrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
+    private val writeHrvPermission = HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class)
 
     override fun vitalsWritePermissions(type: VitalsMeasurementType): Set<String> = setOf(
         when (type) {
@@ -81,6 +84,7 @@ class VitalsRepositoryImpl @Inject constructor(
             VitalsMeasurementType.SPO2 -> writeSpO2Permission
             VitalsMeasurementType.RESPIRATORY_RATE -> writeRespiratoryRatePermission
             VitalsMeasurementType.BODY_TEMPERATURE -> writeBodyTemperaturePermission
+            VitalsMeasurementType.HRV -> writeHrvPermission
         }
     )
 
@@ -414,6 +418,9 @@ class VitalsRepositoryImpl @Inject constructor(
         VitalsMeasurementType.SPO2 -> VitalsCacheKeys.SPO2
         VitalsMeasurementType.RESPIRATORY_RATE -> VitalsCacheKeys.RESPIRATORY_RATE
         VitalsMeasurementType.BODY_TEMPERATURE -> VitalsCacheKeys.BODY_TEMPERATURE
+        // HRV has no vitals daily cache (the heart feature reads it straight
+        // from Health Connect); patchDays is a no-op for a spec-less key.
+        VitalsMeasurementType.HRV -> VitalsCacheKeys.HRV
     }
 
     /** The entry's local day, read only when a cache exists to patch. */
@@ -582,6 +589,7 @@ class VitalsRepositoryImpl @Inject constructor(
             VitalsMeasurementType.SPO2 -> readSpO2Permission
             VitalsMeasurementType.RESPIRATORY_RATE -> readRespiratoryRatePermission
             VitalsMeasurementType.BODY_TEMPERATURE -> readBodyTemperaturePermission
+            VitalsMeasurementType.HRV -> readHrvPermission
         }
         val granted = grantedPermissionsIfAvailable()
         if (readPermission !in granted) {

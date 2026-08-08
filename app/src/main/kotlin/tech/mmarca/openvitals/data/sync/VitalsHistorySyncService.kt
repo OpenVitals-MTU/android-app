@@ -209,6 +209,9 @@ object VitalsCacheKeys {
     const val BLOOD_GLUCOSE = "bloodGlucose"
     const val SKIN_TEMPERATURE = "skinTemperature"
 
+    /** No cache spec behind it — HRV reads live; the key only names the metric. */
+    const val HRV = "hrv"
+
     /**
      * The `.v2` suffix is the cache-format version: rows written before the
      * synthesized-basal fix carry Health Connect's BMR baseline as burned days,

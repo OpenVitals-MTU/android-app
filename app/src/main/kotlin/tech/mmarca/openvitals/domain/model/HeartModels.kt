@@ -19,6 +19,8 @@ data class HrvSample(
     val time: Instant,
     val rmssdMs: Double,
     val source: String,
+    val id: String = "",
+    val isOpenVitalsEntry: Boolean = false,
 )
 
 data class HeartRateSummary(

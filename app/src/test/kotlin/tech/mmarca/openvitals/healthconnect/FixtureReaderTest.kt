@@ -71,7 +71,7 @@ class FixtureReaderTest {
         return client
     }
 
-    private fun heart(c: FakeHealthConnectClient) = HeartHealthReader(support(c))
+    private fun heart(c: FakeHealthConnectClient) = HeartHealthReader(support(c), "tech.mmarca.openvitals")
     private fun activity(c: FakeHealthConnectClient) =
         ActivityHealthReader(support(c), "tech.mmarca.openvitals")
 

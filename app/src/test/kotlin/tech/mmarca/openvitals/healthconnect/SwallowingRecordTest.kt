@@ -94,6 +94,7 @@ class SwallowingRecordTest {
                 diagnostics = diagnostics,
                 rateLimitMessage = { "rate limited" },
             ),
+            "tech.mmarca.openvitals",
         )
     }
 

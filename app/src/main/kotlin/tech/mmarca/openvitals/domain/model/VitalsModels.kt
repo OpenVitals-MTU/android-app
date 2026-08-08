@@ -93,6 +93,7 @@ enum class VitalsMeasurementType {
     SPO2,
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
+    HRV,
 }
 
 data class VitalsMeasurementWriteRequest(

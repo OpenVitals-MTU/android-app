@@ -159,6 +159,8 @@ internal fun HeartMetricScreen(
                     dateTimeFormatterProvider,
                     chartDaySelection,
                     sectionContext,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
                 )
                 HeartMetric.BLOOD_PRESSURE -> bloodPressureContent(
                     state,

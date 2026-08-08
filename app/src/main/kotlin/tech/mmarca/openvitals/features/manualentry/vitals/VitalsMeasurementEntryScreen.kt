@@ -262,14 +262,14 @@ private fun VitalsMeasurementEntryCard(
                 )
             }
 
-            if (state.isEditMode) {
-                ManualEntryTimestampFields(
-                    timestamp = state.editTime,
-                    enabled = !state.isSavingEntry,
-                    onTimestampChanged = onEntryTimeChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            // A measurement is not always logged the moment it was taken — the
+            // date and clock are offered on a NEW entry too, defaulting to now.
+            ManualEntryTimestampFields(
+                timestamp = state.editTime,
+                enabled = !state.isSavingEntry,
+                onTimestampChanged = onEntryTimeChanged,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             OpenVitalsButton(
                 onClick = onAddEntry,
@@ -359,6 +359,7 @@ fun VitalsMeasurementType.titleRes(): Int = when (this) {
     VitalsMeasurementType.SPO2 -> R.string.metric_spo2
     VitalsMeasurementType.RESPIRATORY_RATE -> R.string.metric_respiratory_rate
     VitalsMeasurementType.BODY_TEMPERATURE -> R.string.metric_body_temp
+    VitalsMeasurementType.HRV -> R.string.metric_hrv
 }
 
 private fun VitalsMeasurementType.inputUnitLabel(unitSystem: UnitSystem): String = when (this) {
@@ -366,6 +367,7 @@ private fun VitalsMeasurementType.inputUnitLabel(unitSystem: UnitSystem): String
     VitalsMeasurementType.SPO2 -> "%"
     VitalsMeasurementType.RESPIRATORY_RATE -> "br/min"
     VitalsMeasurementType.BODY_TEMPERATURE -> if (unitSystem == UnitSystem.IMPERIAL) "deg F" else "deg C"
+    VitalsMeasurementType.HRV -> "ms"
 }
 
 fun VitalsMeasurementType.icon(): ImageVector = when (this) {
@@ -373,6 +375,7 @@ fun VitalsMeasurementType.icon(): ImageVector = when (this) {
     VitalsMeasurementType.SPO2 -> Icons.Outlined.FavoriteBorder
     VitalsMeasurementType.RESPIRATORY_RATE -> Icons.Outlined.Air
     VitalsMeasurementType.BODY_TEMPERATURE -> Icons.Outlined.DeviceThermostat
+    VitalsMeasurementType.HRV -> Icons.Outlined.FavoriteBorder
 }
 
 fun VitalsMeasurementType.accentColor(): Color = when (this) {
@@ -380,6 +383,7 @@ fun VitalsMeasurementType.accentColor(): Color = when (this) {
     VitalsMeasurementType.SPO2 -> OxygenColor
     VitalsMeasurementType.RESPIRATORY_RATE -> RespiratoryColor
     VitalsMeasurementType.BODY_TEMPERATURE -> TemperatureColor
+    VitalsMeasurementType.HRV -> VitalsColor
 }
 
 private fun UnitFormatter.unitSystemFor(type: VitalsMeasurementType): UnitSystem = when (type) {

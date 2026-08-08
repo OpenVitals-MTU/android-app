@@ -200,7 +200,7 @@ class HealthConnectDstBucketTest {
     private fun hydration(client: HealthConnectClient) =
         HydrationHealthReader(support(client), APP_PACKAGE)
 
-    private fun heart(client: HealthConnectClient) = HeartHealthReader(support(client))
+    private fun heart(client: HealthConnectClient) = HeartHealthReader(support(client), "tech.mmarca.openvitals")
 
     private companion object {
         const val APP_PACKAGE = "tech.mmarca.openvitals"

@@ -90,7 +90,7 @@ class FixtureRangeLoadTest {
 
     private class Readers(support: HealthConnectReaderSupport) {
         val activity = ActivityHealthReader(support, APP_PACKAGE)
-        val heart = HeartHealthReader(support)
+        val heart = HeartHealthReader(support, "tech.mmarca.openvitals")
         val hydration = HydrationHealthReader(support, APP_PACKAGE)
         val nutrition = NutritionHealthReader(support, APP_PACKAGE)
         val sleep = SleepHealthReader(support)
