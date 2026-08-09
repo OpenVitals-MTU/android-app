@@ -12,10 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
-import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
-import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 @Singleton
 class BleDeviceRepository @Inject constructor(
@@ -38,13 +36,6 @@ class BleDeviceRepository @Inject constructor(
     fun resolveCapabilityAssignments(): Map<BleSensorCapability, BleSensorDevice> {
         val assignments = linkedMapOf<BleSensorCapability, BleSensorDevice>()
         enabledDevices.forEach { device ->
-            // A live sensor OR an Edge bike computer that has been given
-            // broadcast capabilities takes part. A stored watch-era WATCH
-            // entry never does — the app no longer talks to watches — so it
-            // is excluded even if it somehow carried capabilities, which
-            // would otherwise have the recording coordinator connect to it
-            // and wait for notifications it never sends.
-            if (!device.isLiveSensorCapable) return@forEach
             device.capabilities.forEach { capability ->
                 assignments.putIfAbsent(capability, device)
             }
@@ -71,13 +62,15 @@ class BleDeviceRepository @Inject constructor(
         val normalizedAddress = address.uppercase()
         val existing = devices.firstOrNull { it.address.equals(normalizedAddress, ignoreCase = true) }
         if (existing != null) {
-            return updateDevice(
-                deviceId = existing.id,
+            val updated = existing.copy(
                 displayName = displayName,
+                bluetoothName = bluetoothName ?: existing.bluetoothName,
                 capabilities = capabilities,
                 enabled = true,
                 wheelCircumferenceMm = wheelCircumferenceMm ?: existing.wheelCircumferenceMm,
-            )
+            ).normalized()
+            persist(devices.map { if (it.id == existing.id) updated else it })
+            return updated
         }
         val device = BleSensorDevice(
             id = UUID.randomUUID().toString(),
@@ -161,22 +154,10 @@ class BleDeviceRepository @Inject constructor(
 }
 
 /**
- * The registry's JSON wire format, shared by the Kotlin build and the JSON the
- * retired Flutter build wrote (phase 5 copies that string over verbatim).
- *
- * Reading is deliberately tolerant:
- * - `kind` / `integration` / `lastSyncedAt` are absent on every device stored
- *   before the (now retired) watch integration existed — those are all
- *   sensors, which is exactly what the [BleDeviceKind.SENSOR] / null
- *   fallbacks say.
- * - Watch-era entries (`"kind": "WATCH"`, a `GARMIN`/`WEAROS` integration, a
- *   `lastSyncedAt` stamp) still decode and re-encode losslessly even though
- *   the app no longer links to watches: migrated Flutter registries contain
- *   them, and dropping or corrupting them on a rewrite would destroy data the
- *   user may still care about. They are simply ignored — `isLiveSensorCapable`
- *   keeps them out of the sensors UI and the recording coordinator.
- * - An unknown enum value (a future build's kind) degrades to the sensor
- *   fallbacks rather than dropping the device or crashing the decode.
+ * The registry's JSON wire format. Older builds (Flutter migration and the
+ * retired watch integration) may still carry `kind` / `integration` /
+ * `lastSyncedAt`. Those fields are ignored on read: `"kind": "WATCH"` entries
+ * are dropped, and everything else is treated as a plain sensor.
  */
 internal object BleDeviceRegistryJson {
 
@@ -203,9 +184,6 @@ internal object BleDeviceRegistryJson {
                         device.batteryUpdatedAt?.toEpochMilli() ?: JSONObject.NULL,
                     )
                     .put("addedAt", device.addedAt.toEpochMilli())
-                    .put("kind", device.kind.storageName)
-                    .put("integration", device.integration?.storageName ?: JSONObject.NULL)
-                    .put("lastSyncedAt", device.lastSyncedAt?.toEpochMilli() ?: JSONObject.NULL)
             },
         ).toString()
 
@@ -215,6 +193,10 @@ internal object BleDeviceRegistryJson {
             buildList {
                 for (index in 0 until array.length()) {
                     val item = array.getJSONObject(index)
+                    // Retired watch-integration leftovers are not sensors.
+                    if (item.optString("kind").equals("WATCH", ignoreCase = true)) {
+                        continue
+                    }
                     val capabilities = buildSet {
                         val caps = item.optJSONArray("capabilities")
                         if (caps != null) {
@@ -243,21 +225,6 @@ internal object BleDeviceRegistryJson {
                                 .takeIf { it != null && it != JSONObject.NULL }
                                 ?.let { Instant.ofEpochMilli((it as Number).toLong()) },
                             addedAt = Instant.ofEpochMilli(item.getLong("addedAt")),
-                            // Absent for every device stored before the
-                            // retired watch integration existed — those are
-                            // all sensors, which is exactly what the fallback
-                            // says. Unknown values degrade the same way
-                            // rather than crashing the decode.
-                            kind = item.optString("kind")
-                                .let { BleDeviceKind.fromStorage(it) }
-                                ?: BleDeviceKind.SENSOR,
-                            // Watch-era metadata, preserved verbatim so a
-                            // stored watch entry survives a rewrite unchanged.
-                            integration = item.optString("integration")
-                                .let { DeviceIntegration.fromStorage(it) },
-                            lastSyncedAt = item.opt("lastSyncedAt")
-                                .takeIf { it != null && it != JSONObject.NULL }
-                                ?.let { Instant.ofEpochMilli((it as Number).toLong()) },
                         ).normalized(),
                     )
                 }

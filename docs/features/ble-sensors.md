@@ -8,7 +8,7 @@
 
 OpenVitals has experimental Bluetooth LE support for activity recording.
 
-Watches are not paired in the app at all: their recorded data arrives through Health Connect (e.g. via Gadgetbridge), and a watch that broadcasts standard Bluetooth LE heart rate can itself be added here as a sensor. See [Watches](watches.md).
+This registry is sensors only. Watches are not paired here: their recorded data arrives through Health Connect (e.g. via Gadgetbridge). A watch that broadcasts standard Bluetooth LE heart rate can still be added as an ordinary sensor. See [Watches](watches.md).
 
 ## Supported Recording Signals
 

@@ -85,7 +85,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/dashboar
 | toDashboardSensorStatus > the persisted battery is the fallback when no live one is reported | PORTED | DashboardSensorStatusTest.kt: `the persisted battery is the fallback when no live one is reported` | live-status-with-null-battery case now covered |
 | toDashboardSensorStatus > the lookup falls back from device id to address | PORTED | DashboardSensorStatusTest.kt: `the lookup falls back from device id to address` | address fallback exists in Kotlin (line 607) but untested |
 | toDashboardSensorStatus > a device with no live status at all reads as disconnected | PORTED | DashboardSensorStatusTest.kt: `a device with no live status at all reads as disconnected` | scenario exercised but DISCONNECTED default never asserted |
-| derived getters > a paired watch alone puts up no icon | PORTED | DashboardSensorStatusTest.kt: `a paired watch alone puts up no icon` | `toDashboardSensorStatus` now keeps only `isLiveSensorCapable` devices |
+| derived getters > a paired watch alone puts up no icon | REMOVED | — | Watch-kind filtering left the BLE registry; leftover WATCH rows are dropped on read instead |
 | derived getters > a watch beside a sensor adds neither counts nor battery | PORTED | DashboardSensorStatusTest.kt: `a watch beside a sensor adds neither counts nor battery` | the watch's lower battery no longer headlines the top-bar action |
 | derived getters > a bike computer still counts: the screen lists it | PORTED | DashboardSensorStatusTest.kt: `a bike computer still counts and the screen lists it` | an Edge broadcasts standard GATT, so it belongs to the screen the icon opens |
 | derived getters > an empty status has no devices and no battery | PORTED | DashboardSensorStatusTest.kt: `an empty status has no devices and no battery` | empty-status defaults untested |
@@ -160,12 +160,11 @@ PORTED: 55, DIVERGED: 9, MISSING: 0, N/A-WIDGET: 19, N/A-FRAMEWORK: 6
 
 ### Missing list
 
-None. The ten cases that were blocked on supported-metrics gating (6) and on
-`BleDeviceKind` filtering in the sensor-status mapping (3, plus the edit-mode
-tray sibling) are ported: the loader now derives
-`DashboardData.supportedMetrics` from `managedPermissions`, the tile mapper
+None for the sensor-status mapping. Watch-kind filtering is gone from the BLE
+registry; leftover `"kind": "WATCH"` rows are dropped on read. The loader derives
+`DashboardData.supportedMetrics` from `managedPermissions`, and the tile mapper
 drops what the provider cannot serve and materialises it for the edit-mode add
-tray, and `toDashboardSensorStatus` keeps only `isLiveSensorCapable` devices.
+tray.
 
 The remaining two are deliberate divergences, decided rather than deferred — the
 user chose to keep Kotlin's behavior:

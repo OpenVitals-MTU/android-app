@@ -689,12 +689,9 @@ class DashboardViewModel @Inject constructor(
 }
 
 /**
- * The dashboard's roll-up of the paired BLE devices the Sensors & devices screen
- * actually lists — [BleSensorDevice.isLiveSensorCapable] ones. The top-bar
- * battery action opens that screen, so its visibility has to mean "there is
- * something behind this tap": a stored watch-era registry entry alone must not
- * put the icon up over an empty list, nor skew the "lowest battery" figure. A
- * bike computer still counts — it broadcasts standard GATT like any sensor.
+ * The dashboard's roll-up of paired BLE sensors for the top-bar battery action.
+ * That action opens Sensors settings, so its visibility means "there is at
+ * least one registered sensor behind this tap".
  */
 internal fun List<BleSensorDevice>.toDashboardSensorStatus(
     connectionStatuses: List<BleDeviceConnectionStatus>,
@@ -702,7 +699,7 @@ internal fun List<BleSensorDevice>.toDashboardSensorStatus(
     val statusesById = connectionStatuses.associateBy { it.deviceId }
     val statusesByAddress = connectionStatuses.associateBy { it.address }
     return DashboardSensorStatus(
-        devices = filter { it.isLiveSensorCapable }.map { device ->
+        devices = map { device ->
             val liveStatus = statusesById[device.id] ?: statusesByAddress[device.address]
             DashboardSensorDeviceStatus(
                 id = device.id,

@@ -294,12 +294,12 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | updateBatteryLevel clamps out-of-range values | PORTED | BleDeviceRepositoryTest: `updateBatteryLevel clamps out-of-range values` | - |
 | an identical battery reading does not re-persist or advance the stamp | PORTED | BleDeviceRepositoryTest.kt `an identical battery reading does not re-persist or advance the stamp` | fixed: updateBatteryLevel early-returns on an unchanged percent, so nothing is written or published |
 | updateBatteryLevel ignores an unknown device id | PORTED | BleDeviceRepositoryTest: `updateBatteryLevel ignores an unknown device id` | - |
-| watches > kind and lastSyncedAt survive a storage round-trip | PORTED | BleDeviceRepositoryTest: `kind and lastSyncedAt survive a storage round-trip` | Now persists through two repository instances over one prefs store and calls `markSynced` |
-| watches > a device stored before watches existed reads back as a sensor | PORTED | BleDeviceRepositoryTest: `registryJson_oldJsonWithoutWatchFieldsRoundTripsAsSensor` | equivalent legacy JSON without `kind`; also `registryJson_decodesFlutterEraWatchJson` covers the Flutter shape |
-| watches > markSynced ignores an unknown device id | PORTED | BleDeviceRepositoryTest: `markSynced ignores an unknown device id` | - |
-| watches > an enabled watch is kept out of capability assignment | PORTED | BleDeviceRepositoryTest: `an enabled watch is kept out of capability assignment` | - |
-| watches > an Edge bike computer with capabilities DOES take part | PORTED | BleDeviceRepositoryTest: `an Edge bike computer with capabilities DOES take part` | - |
-| watches > a bike computer with NO capabilities stays out | PORTED | BleDeviceRepositoryTest: `a bike computer with NO capabilities stays out` | - |
+| watches > kind and lastSyncedAt survive a storage round-trip | REMOVED | — | Watch kinds removed from the BLE registry |
+| watches > a device stored before watches existed reads back as a sensor | PORTED | BleDeviceRepositoryTest: `registryJson_oldJsonWithoutWatchFieldsRoundTripsAsSensor` | - |
+| watches > markSynced ignores an unknown device id | REMOVED | — | `markSynced` / watch sync stamps are gone |
+| watches > an enabled watch is kept out of capability assignment | REMOVED | BleDeviceRepositoryTest: `registryJson_dropsWatchEraEntries` | WATCH rows are dropped on read |
+| watches > an Edge bike computer with capabilities DOES take part | PORTED | BleDeviceRepositoryTest: `registryJson_ignoresLegacyKindFieldsOnSensors` | Edge rows load as plain sensors |
+| watches > a bike computer with NO capabilities stays out | PORTED | BleDeviceRepositoryTest: `a device with no capabilities stays out of assignments` | Capability emptiness, not kind |
 
 ## test/devices/core/registry/device_classification_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/core/DeviceClassificationTest.kt
@@ -316,17 +316,17 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | an unnamed, unremarkable device → sensor | PORTED | DeviceClassificationTest: `an unnamed, unremarkable device → sensor` | - |
 
 ## test/devices/core/registry/device_integration_test.dart
-Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/domain/model/BleDeviceKindTest.kt (plus BleDeviceRepositoryTest.kt for the round-trips)
+Kotlin counterpart: removed — `BleDeviceKind` / `DeviceIntegration` are gone; the BLE registry is sensors only.
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| watch ownership helpers > a null-integration watch reads as Garmin (legacy) | PORTED | BleDeviceKindTest: `a null-integration watch is legacy Garmin` | - |
-| watch ownership helpers > an explicit Garmin watch is a Garmin watch | PORTED | BleDeviceKindTest: `an explicit Garmin watch is a Garmin watch` | Direct helper assertions incl. `isWearosWatch` false, plus the GFDI/live-sensor pair |
-| watch ownership helpers > a WearOS watch is not a Garmin watch (the sync-port ownership fix) | PORTED | BleDeviceKindTest: `a wearos watch is a watch but never on the Garmin sync path` | - |
-| watch ownership helpers > a sensor is neither, whatever the integration | PORTED | BleDeviceKindTest: `a default device is a plain live sensor` | Now asserts `isGarminWatch`/`isWearosWatch`/`isBikeComputer` false, and again for a device stamped GARMIN |
-| watch ownership helpers > an Edge bike computer: GFDI + live-sensor, but never a watch | PORTED | BleDeviceKindTest: `a bike computer syncs over GFDI and can still be a live sensor` | `isWearosWatch` false now asserted too |
-| watch ownership helpers > a watch is GFDI but never live-sensor-capable | PORTED | BleDeviceKindTest: `a null-integration watch is legacy Garmin` | same two assertions folded into the legacy-watch case |
-| a bike computer survives a persistence round-trip | PORTED | BleDeviceRepositoryTest: `a bike computer survives a persistence round-trip` | Same Edge 840 / E0:48:24:D5:F7:20 fixture, reloaded through a second repository |
-| the integration survives a persistence round-trip | PORTED | BleDeviceRepositoryTest: `the integration survives a persistence round-trip` | Same Galaxy Watch8 / WEAROS fixture through two repository instances |
+| watch ownership helpers > a null-integration watch reads as Garmin (legacy) | REMOVED | — | Watch kinds removed |
+| watch ownership helpers > an explicit Garmin watch is a Garmin watch | REMOVED | — | Watch kinds removed |
+| watch ownership helpers > a WearOS watch is not a Garmin watch (the sync-port ownership fix) | REMOVED | — | Watch kinds removed |
+| watch ownership helpers > a sensor is neither, whatever the integration | REMOVED | — | Watch kinds removed |
+| watch ownership helpers > an Edge bike computer: GFDI + live-sensor, but never a watch | REMOVED | — | Watch kinds removed |
+| watch ownership helpers > a watch is GFDI but never live-sensor-capable | REMOVED | — | Watch kinds removed |
+| a bike computer survives a persistence round-trip | REMOVED | — | Bike-computer kind removed; Edge rows load as plain sensors |
+| the integration survives a persistence round-trip | REMOVED | — | DeviceIntegration removed from the BLE registry |
 
 ## test/devices/wearos/onboard_wearos_watch_use_case_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/wearos/OnboardWearOsWatchUseCaseTest.kt

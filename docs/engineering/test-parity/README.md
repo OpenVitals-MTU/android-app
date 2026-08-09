@@ -105,7 +105,7 @@ itself differs from Flutter — they need a product decision, not a test:
 
 - **Dashboard supported-metrics gating** — Kotlin has no device-support
   concept for tiles at all (drives ~9 dashboard MISSING rows).
-- **Dashboard sensor status** — Kotlin's mapping has no `BleDeviceKind`
+- **Dashboard sensor status** — BLE registry is sensors only; no watch-kind filtering
   filtering: a paired watch is counted like a sensor.
 - **Dashboard resume guard** — Kotlin reloads on every resume; Flutter has a
   guard interval.

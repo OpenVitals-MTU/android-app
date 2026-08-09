@@ -2,60 +2,6 @@ package tech.mmarca.openvitals.domain.model
 
 import java.time.Instant
 
-/**
- * What a registered Bluetooth device IS, which decides how the app talks to it.
- *
- * A [SENSOR] streams live values over standard GATT services while a recording
- * runs (heart-rate strap, power meter) and owns [BleSensorCapability]s. A
- * [BIKE_COMPUTER] (Garmin Edge) can broadcast the same live standard-GATT
- * sensor values (heart rate, speed/cadence, power) into a recording, so it is
- * live-capable too.
- *
- * [WATCH] exists only as **parsing tolerance**: the app no longer links to
- * watches (watch data arrives through Health Connect, e.g. via Gadgetbridge),
- * but registries written by the retired watch integration — including the
- * Flutter-era JSON the data migrator copies over verbatim — still contain
- * `"kind": "WATCH"` entries. Those must decode without crashing and are
- * ignored everywhere live sensors are listed or connected (see
- * [BleSensorDevice.isLiveSensorCapable]); they are never created anew.
- */
-enum class BleDeviceKind(
-    /**
-     * Persisted form, so renaming the Kotlin identifier can't orphan stored
-     * devices. The Flutter build wrote these exact strings to the registry.
-     */
-    val storageName: String,
-) {
-    SENSOR("SENSOR"),
-    WATCH("WATCH"),
-    BIKE_COMPUTER("BIKE_COMPUTER"),
-    ;
-
-    companion object {
-        fun fromStorage(value: String): BleDeviceKind? =
-            entries.firstOrNull { it.storageName == value }
-    }
-}
-
-/**
- * Which retired watch integration wrote a stored [BleDeviceKind.WATCH] entry.
- *
- * Parsing tolerance only, like [BleDeviceKind.WATCH] itself: the app no longer
- * drives any watch protocol, but stored registries (and the migrated Flutter
- * JSON) carry these values and must keep decoding losslessly. Null for a plain
- * sensor, and for a Garmin watch stored before this field existed.
- */
-enum class DeviceIntegration(val storageName: String) {
-    GARMIN("GARMIN"),
-    WEAROS("WEAROS"),
-    ;
-
-    companion object {
-        fun fromStorage(value: String): DeviceIntegration? =
-            entries.firstOrNull { it.storageName == value }
-    }
-}
-
 enum class BleSensorCapability {
     HEART_RATE,
     CYCLING_CADENCE,
@@ -71,6 +17,14 @@ enum class BleConnectionStatus {
     RECONNECTING,
 }
 
+/**
+ * A Bluetooth LE sensor registered for live streaming during activity recording
+ * (heart-rate strap, power meter, cadence sensor, and so on).
+ *
+ * Watch pairing is not part of this registry: watch data arrives through Health
+ * Connect. A watch that broadcasts standard BLE heart rate can still be added
+ * here as an ordinary sensor.
+ */
 data class BleSensorDevice(
     val id: String,
     val displayName: String,
@@ -82,35 +36,7 @@ data class BleSensorDevice(
     val batteryPercent: Int? = null,
     val batteryUpdatedAt: Instant? = null,
     val addedAt: Instant,
-    /**
-     * Defaulted rather than required so every existing call site — and every
-     * device already in storage, written before this field existed — keeps
-     * meaning what it meant.
-     */
-    val kind: BleDeviceKind = BleDeviceKind.SENSOR,
-    /**
-     * Which retired watch integration wrote this entry when it is a
-     * [BleDeviceKind.WATCH]. Preserved for lossless storage round-trips only;
-     * null for a sensor.
-     */
-    val integration: DeviceIntegration? = null,
-    /**
-     * When the retired watch integration last pulled this device's recorded
-     * files. Preserved for lossless storage round-trips only; always null for
-     * a [BleDeviceKind.SENSOR].
-     */
-    val lastSyncedAt: Instant? = null,
 ) {
-    /**
-     * Can hold live [BleSensorCapability]s and take part in a recording: a
-     * plain [BleDeviceKind.SENSOR], or a [BleDeviceKind.BIKE_COMPUTER]
-     * broadcasting standard GATT. A stored watch-era [BleDeviceKind.WATCH]
-     * entry cannot — the app no longer talks to watches — so this gates the
-     * Sensors-screen listing and the recording coordinator alike.
-     */
-    val isLiveSensorCapable: Boolean
-        get() = kind == BleDeviceKind.SENSOR || kind == BleDeviceKind.BIKE_COMPUTER
-
     fun normalized(): BleSensorDevice =
         copy(
             displayName = displayName.trim().ifBlank { bluetoothName.orEmpty().ifBlank { address } },

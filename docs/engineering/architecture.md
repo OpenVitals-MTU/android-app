@@ -323,7 +323,7 @@ A second FIT consumer should follow the same split: reuse `FitDecoder`, own its 
 
 The app no longer carries a direct device-integration layer. The former `devices/` tree (the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, WearOS classification, and the notification listener) was removed together with the watch integration: watch data now arrives through Health Connect, written by a companion app such as Gadgetbridge, and the app reads it like any other source.
 
-What remains device-shaped is `sensors/ble` — live BLE sensor streaming during activity recording — and `features/devicesync`, the phone-to-phone sync below. Stored BLE registries can still contain watch-era entries (`kind: WATCH`); `BleDeviceRepository` decodes them losslessly and `isLiveSensorCapable` keeps them out of every sensor surface.
+What remains device-shaped is `sensors/ble` — live BLE sensor streaming during activity recording — and `features/devicesync`, the phone-to-phone sync below. The BLE registry stores sensors only; leftover `"kind": "WATCH"` rows from the retired watch integration are dropped on read.
 
 ## Phone-To-Phone Sync
 

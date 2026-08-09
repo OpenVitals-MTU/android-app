@@ -5,26 +5,21 @@ import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
-import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
-import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 class BleDeviceRepositoryTest {
 
     /**
      * One prefs instance that survives across repository instances, so a
      * second [newRepository] over it IS the storage round-trip: it re-reads
-     * the JSON the first one wrote. Tests can also seed it directly with
-     * registry JSON, which is how watch-era entries (no longer creatable
-     * through the API) get into storage.
+     * the JSON the first one wrote.
      */
     private val prefs = FakeSharedPreferences()
 
@@ -34,37 +29,11 @@ class BleDeviceRepositoryTest {
 
     private fun newRepository() = BleDeviceRepository(context)
 
-    private fun seedRegistry(devices: List<BleSensorDevice>) {
-        prefs.edit().putString("devices", BleDeviceRegistryJson.encode(devices)).commit()
-    }
-
     private fun BleDeviceRepository.addStrap(): BleSensorDevice = addDevice(
         displayName = "Strap",
         address = "AA:BB:CC:DD:EE:FF",
         bluetoothName = "Strap",
         capabilities = setOf(BleSensorCapability.HEART_RATE),
-    )
-
-    private fun storedDevice(
-        id: String,
-        displayName: String,
-        address: String,
-        capabilities: Set<BleSensorCapability>,
-        kind: BleDeviceKind,
-        integration: DeviceIntegration? = null,
-        lastSyncedAt: Instant? = null,
-    ): BleSensorDevice = BleSensorDevice(
-        id = id,
-        displayName = displayName,
-        address = address,
-        bluetoothName = displayName,
-        capabilities = capabilities,
-        enabled = true,
-        wheelCircumferenceMm = null,
-        addedAt = Instant.parse("2026-01-01T00:00:00Z"),
-        kind = kind,
-        integration = integration,
-        lastSyncedAt = lastSyncedAt,
     )
 
     @Test
@@ -144,115 +113,46 @@ class BleDeviceRepositoryTest {
     }
 
     @Test
-    fun `a stored watch-era entry is kept out of capability assignment`() {
-        // Migrated registries can still contain watch entries the retired
-        // watch integration wrote. Defensive: even if such an entry somehow
-        // carried capabilities, it must not be handed to the recording
-        // coordinator, which would connect to it and wait for notifications
-        // it never sends.
-        seedRegistry(
-            listOf(
-                storedDevice(
-                    id = "w",
-                    displayName = "vívoactive 5",
-                    address = "E0:48:24:D5:F7:10",
-                    capabilities = setOf(BleSensorCapability.HEART_RATE),
-                    kind = BleDeviceKind.WATCH,
-                    integration = DeviceIntegration.GARMIN,
-                ),
-            ),
-        )
+    fun `re-adding the same MAC updates the existing sensor`() {
         val repo = newRepository()
-        val sensor = repo.addStrap()
+        val first = repo.addStrap()
 
-        val assignments = repo.resolveCapabilityAssignments()
+        val second = repo.addDevice(
+            displayName = "My strap",
+            address = "aa:bb:cc:dd:ee:ff",
+            bluetoothName = "TICKR",
+            capabilities = setOf(BleSensorCapability.HEART_RATE, BleSensorCapability.CYCLING_CADENCE),
+        )
 
-        assertEquals(sensor.id, assignments[BleSensorCapability.HEART_RATE]?.id)
-        assertFalse(assignments.values.any { it.kind == BleDeviceKind.WATCH })
+        assertEquals(first.id, second.id)
+        assertEquals(1, repo.devices.size)
+        assertEquals("My strap", second.displayName)
+        assertEquals("TICKR", second.bluetoothName)
+        assertEquals(
+            setOf(BleSensorCapability.HEART_RATE, BleSensorCapability.CYCLING_CADENCE),
+            second.capabilities,
+        )
     }
 
     @Test
-    fun `an Edge bike computer with capabilities DOES take part`() {
-        seedRegistry(
-            listOf(
-                storedDevice(
-                    id = "edge",
-                    displayName = "Edge 840",
-                    address = "E0:48:24:D5:F7:20",
-                    capabilities = setOf(BleSensorCapability.CYCLING_POWER),
-                    kind = BleDeviceKind.BIKE_COMPUTER,
-                    integration = DeviceIntegration.GARMIN,
-                ),
-            ),
-        )
+    fun `a device with no capabilities stays out of assignments`() {
         val repo = newRepository()
+        repo.addDevice(
+            displayName = "Empty",
+            address = "AA:BB:CC:DD:EE:03",
+            bluetoothName = null,
+            capabilities = emptySet(),
+        )
         repo.addStrap()
 
         val assignments = repo.resolveCapabilityAssignments()
 
-        // Unlike a watch entry, a bike computer broadcasting standard GATT is
-        // a live source the recording coordinator should connect to.
-        assertEquals("edge", assignments[BleSensorCapability.CYCLING_POWER]?.id)
-    }
-
-    @Test
-    fun `a bike computer with NO capabilities stays out`() {
-        seedRegistry(
-            listOf(
-                storedDevice(
-                    id = "edge",
-                    displayName = "Edge 840",
-                    address = "E0:48:24:D5:F7:20",
-                    capabilities = emptySet(),
-                    kind = BleDeviceKind.BIKE_COMPUTER,
-                    integration = DeviceIntegration.GARMIN,
-                ),
-            ),
-        )
-        val repo = newRepository()
-        repo.addStrap()
-
-        val assignments = repo.resolveCapabilityAssignments()
-
-        assertFalse(assignments.values.any { it.kind == BleDeviceKind.BIKE_COMPUTER })
-    }
-
-    @Test
-    fun `watch-era fields survive a rewrite of the registry`() {
-        // The repository no longer writes watch entries itself, but a rewrite
-        // triggered by an ordinary sensor edit must not corrupt the stored
-        // watch-era metadata riding alongside.
-        val syncedAt = Instant.parse("2026-07-21T09:30:00Z")
-        seedRegistry(
-            listOf(
-                storedDevice(
-                    id = "w",
-                    displayName = "vívoactive 5",
-                    address = "E0:48:24:D5:F7:10",
-                    capabilities = emptySet(),
-                    kind = BleDeviceKind.WATCH,
-                    integration = DeviceIntegration.GARMIN,
-                    lastSyncedAt = syncedAt,
-                ),
-            ),
-        )
-        val repo = newRepository()
-        repo.addStrap() // Forces a full registry rewrite.
-
-        // A second repository over the same prefs IS the round-trip: it
-        // re-reads the JSON the first one wrote.
-        val reloaded = newRepository().devices.first { it.id == "w" }
-
-        assertEquals(BleDeviceKind.WATCH, reloaded.kind)
-        assertEquals(DeviceIntegration.GARMIN, reloaded.integration)
-        assertEquals(syncedAt, reloaded.lastSyncedAt)
-        assertFalse(reloaded.isLiveSensorCapable)
+        assertEquals(1, assignments.size)
+        assertTrue(BleSensorCapability.HEART_RATE in assignments)
     }
 
     @Test
     fun registryJson_oldJsonWithoutWatchFieldsRoundTripsAsSensor() {
-        // The exact shape the Kotlin build wrote before the retired watch
-        // integration existed — no kind, integration or lastSyncedAt keys.
         val oldJson = """
             [{"id":"hr","displayName":"HR Strap","address":"AA:BB:CC:DD:EE:01",
               "bluetoothName":"HRM","capabilities":["HEART_RATE"],"enabled":true,
@@ -264,69 +164,63 @@ class BleDeviceRepositoryTest {
 
         assertEquals(1, decoded.size)
         val device = decoded.single()
-        assertEquals(BleDeviceKind.SENSOR, device.kind)
-        assertNull(device.integration)
-        assertNull(device.lastSyncedAt)
         assertEquals(setOf(BleSensorCapability.HEART_RATE), device.capabilities)
+        assertEquals(80, device.batteryPercent)
 
-        // And it round-trips: re-encoding then re-decoding keeps the device
-        // meaning what it meant.
         assertEquals(decoded, BleDeviceRegistryJson.decode(BleDeviceRegistryJson.encode(decoded)))
     }
 
     @Test
-    fun registryJson_decodesWatchEraJsonWithoutCrashing() {
-        // What the retired watch integration wrote for an onboarded Garmin
-        // watch: storageName strings for kind/integration. Still decodes
-        // losslessly — the entry is ignored by the sensors UI, never dropped.
+    fun registryJson_dropsWatchEraEntries() {
+        // Retired watch-integration leftovers are not sensors: they are skipped
+        // on read so they never reappear in Sensors settings.
         val watchEraJson = """
             [{"id":"ble-1753000000000000","displayName":"vívoactive 5",
               "address":"AA:BB:CC:DD:EE:05","bluetoothName":"vívoactive 5",
               "capabilities":[],"enabled":true,"wheelCircumferenceMm":null,
               "batteryPercent":null,"batteryUpdatedAt":null,
               "addedAt":1753000000000,"kind":"WATCH","integration":"GARMIN",
-              "lastSyncedAt":1753100000000}]
+              "lastSyncedAt":1753100000000},
+             {"id":"hr","displayName":"HR Strap","address":"AA:BB:CC:DD:EE:01",
+              "bluetoothName":"HRM","capabilities":["HEART_RATE"],"enabled":true,
+              "wheelCircumferenceMm":null,"batteryPercent":null,"batteryUpdatedAt":null,
+              "addedAt":1690000000000}]
         """.trimIndent()
 
         val decoded = BleDeviceRegistryJson.decode(watchEraJson)
 
         assertEquals(1, decoded.size)
-        val device = decoded.single()
-        assertEquals(BleDeviceKind.WATCH, device.kind)
-        assertEquals(DeviceIntegration.GARMIN, device.integration)
-        assertEquals(Instant.ofEpochMilli(1_753_100_000_000), device.lastSyncedAt)
-        assertFalse(device.isLiveSensorCapable)
-
-        // And it round-trips unchanged.
-        assertEquals(decoded, BleDeviceRegistryJson.decode(BleDeviceRegistryJson.encode(decoded)))
+        assertEquals("hr", decoded.single().id)
+        assertEquals(setOf(BleSensorCapability.HEART_RATE), decoded.single().capabilities)
     }
 
     @Test
-    fun registryJson_wearosIntegrationStillDecodes() {
-        seedRegistry(
-            listOf(
-                storedDevice(
-                    id = "gw",
-                    displayName = "Galaxy Watch8",
-                    address = "A8:D1:62:BE:3A:3B",
-                    capabilities = setOf(BleSensorCapability.HEART_RATE),
-                    kind = BleDeviceKind.WATCH,
-                    integration = DeviceIntegration.WEAROS,
-                ),
-            ),
-        )
+    fun registryJson_ignoresLegacyKindFieldsOnSensors() {
+        // Bike-computer / sensor rows from older builds still load; kind and
+        // integration are ignored and not written back.
+        val legacyJson = """
+            [{"id":"edge","displayName":"Edge 840","address":"E0:48:24:D5:F7:20",
+              "bluetoothName":"Edge 840","capabilities":["CYCLING_POWER"],"enabled":true,
+              "wheelCircumferenceMm":null,"batteryPercent":null,"batteryUpdatedAt":null,
+              "addedAt":1753000000000,"kind":"BIKE_COMPUTER","integration":"GARMIN",
+              "lastSyncedAt":null}]
+        """.trimIndent()
 
-        val reloaded = newRepository().devices.single()
+        val decoded = BleDeviceRegistryJson.decode(legacyJson)
+        assertEquals(1, decoded.size)
+        assertEquals(setOf(BleSensorCapability.CYCLING_POWER), decoded.single().capabilities)
 
-        assertEquals(DeviceIntegration.WEAROS, reloaded.integration)
-        assertEquals(BleDeviceKind.WATCH, reloaded.kind)
+        val encoded = BleDeviceRegistryJson.encode(decoded)
+        assertTrue("kind" !in encoded)
+        assertTrue("integration" !in encoded)
+        assertTrue("lastSyncedAt" !in encoded)
     }
 
     @Test
-    fun registryJson_unknownKindDegradesToSensorInsteadOfCrashing() {
+    fun registryJson_unknownKindIsTreatedAsSensor() {
         val futureJson = """
             [{"id":"x","displayName":"Future Device","address":"AA:BB:CC:DD:EE:09",
-              "bluetoothName":null,"capabilities":[],"enabled":true,
+              "bluetoothName":null,"capabilities":["HEART_RATE"],"enabled":true,
               "wheelCircumferenceMm":null,"addedAt":1753000000000,
               "kind":"HOLOGRAPH","integration":"NEURALINK"}]
         """.trimIndent()
@@ -334,24 +228,27 @@ class BleDeviceRepositoryTest {
         val decoded = BleDeviceRegistryJson.decode(futureJson)
 
         assertEquals(1, decoded.size)
-        assertEquals(BleDeviceKind.SENSOR, decoded.single().kind)
-        assertNull(decoded.single().integration)
+        assertEquals(setOf(BleSensorCapability.HEART_RATE), decoded.single().capabilities)
     }
 
     @Test
-    fun `a watch-era entry stays out of the assignments even when it is the only device`() {
-        seedRegistry(
-            listOf(
-                storedDevice(
-                    id = "w",
-                    displayName = "vívoactive 5",
-                    address = "E0:48:24:D5:F7:10",
-                    capabilities = setOf(BleSensorCapability.HEART_RATE),
-                    kind = BleDeviceKind.WATCH,
-                ),
-            ),
-        )
+    fun `rewriting the registry does not resurrect dropped watch entries`() {
+        prefs.edit().putString(
+            "devices",
+            """[{"id":"w","displayName":"vívoactive 5","address":"E0:48:24:D5:F7:10",
+              "bluetoothName":"vívoactive 5","capabilities":[],"enabled":true,
+              "wheelCircumferenceMm":null,"batteryPercent":null,"batteryUpdatedAt":null,
+              "addedAt":1753000000000,"kind":"WATCH","integration":"GARMIN",
+              "lastSyncedAt":1753100000000}]""",
+        ).commit()
 
-        assertTrue(newRepository().resolveCapabilityAssignments().isEmpty())
+        val repo = newRepository()
+        assertTrue(repo.devices.isEmpty())
+
+        repo.addStrap()
+
+        val reloaded = newRepository().devices
+        assertEquals(1, reloaded.size)
+        assertEquals("Strap", reloaded.single().displayName)
     }
 }

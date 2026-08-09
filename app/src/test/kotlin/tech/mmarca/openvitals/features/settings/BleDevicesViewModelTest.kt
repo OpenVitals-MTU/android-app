@@ -36,14 +36,16 @@ class BleDevicesViewModelTest {
 
     private lateinit var repo: BleDeviceRepository
     private lateinit var coordinator: BleSensorCoordinator
+    private lateinit var prefs: FakeSharedPreferences
 
     /** What the fake GATT probe answers with. */
     private var discoverResult: Set<BleSensorCapability> = emptySet()
 
     @Before
     fun setUp() {
+        prefs = FakeSharedPreferences()
         val context = mockk<Context>()
-        every { context.getSharedPreferences(any(), any()) } returns FakeSharedPreferences()
+        every { context.getSharedPreferences(any(), any()) } returns prefs
         repo = BleDeviceRepository(context)
         coordinator = mockk<BleSensorCoordinator>().also { fake ->
             every { fake.discoveredDevices } returns MutableStateFlow(emptyList())
@@ -240,5 +242,26 @@ class BleDevicesViewModelTest {
 
         assertEquals(2, vm.uiState.value.devices.size)
         assertEquals(1, vm.uiState.value.enabledDeviceCount)
+    }
+
+    @Test
+    fun `saving a discovered sensor lists it`() = runTest {
+        discoverResult = setOf(BleSensorCapability.HEART_RATE)
+        val vm = viewModel()
+
+        vm.selectDiscoveredDevice(
+            BleDiscoveredDevice(
+                address = "E0:48:24:D5:F7:10",
+                name = "vívoactive 5",
+                rssi = -40,
+                suggestedCapabilities = setOf(BleSensorCapability.HEART_RATE),
+            ),
+        )
+        vm.saveAddedDevice()
+
+        val listed = vm.uiState.value.devices.single()
+        assertEquals("E0:48:24:D5:F7:10", listed.address)
+        assertEquals(setOf(BleSensorCapability.HEART_RATE), listed.capabilities)
+        assertFalse(vm.uiState.value.showAddFlow)
     }
 }
