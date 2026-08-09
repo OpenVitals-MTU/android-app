@@ -4,6 +4,7 @@ import javax.inject.Inject
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.domain.insights.SleepScoreLookbackDays
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.RefreshMode
@@ -34,8 +35,11 @@ class LoadSleepPeriodUseCase @Inject constructor(
         } else {
             sleepRepository.loadSleepPeriod(query, sleepWindow, refreshMode)
         }
+        // Include lookback nights so overnight HRV can form a personal baseline
+        // for the first days of the selected period.
+        val hrvStart = query.windows.current.start.minusDays(SleepScoreLookbackDays - 1)
         val crossDailyHrv = heartRepository
-            ?.loadDailyHRV(query.windows.current.start, query.windows.current.end)
+            ?.loadDailyHRV(hrvStart, query.windows.current.end)
             .orEmpty()
         return SleepPeriodLoadResult(
             sessions = periodData.sessions,

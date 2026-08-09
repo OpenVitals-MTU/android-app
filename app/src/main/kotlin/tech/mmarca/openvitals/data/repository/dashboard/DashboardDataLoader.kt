@@ -45,6 +45,7 @@ import tech.mmarca.openvitals.domain.insights.CardioLoadTimeWindow
 import tech.mmarca.openvitals.domain.insights.IntensityMinutesConfidence
 import tech.mmarca.openvitals.domain.insights.IntensityMinutesEstimate
 import tech.mmarca.openvitals.domain.insights.IntensityWorkoutInput
+import tech.mmarca.openvitals.domain.insights.OvernightHrvInput
 import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
 import tech.mmarca.openvitals.domain.insights.SleepScoreLookbackDays
 import tech.mmarca.openvitals.domain.insights.calculateCardioLoad
@@ -292,6 +293,7 @@ class DashboardDataLoader @Inject constructor(
                 date = date,
                 sleepWindow = sleepWindow,
                 calculateSleepScore = calculateDerivedMetrics,
+                ageYears = preferencesRepository?.bodyProfile()?.ageYears(date),
             )
         }
         val calories = readIfNeeded(wants(DashboardMetric.CALORIES_OUT), readCaloriesPermission, "calories") {
@@ -564,7 +566,25 @@ class DashboardDataLoader @Inject constructor(
             .takeIf { it.isNotEmpty() }
             ?.map { it.rmssdMs }
             ?.average()
+        val dayHrvBaselineRmssd = hrvBaseline?.await()
         val latestBodyFatPercent = bodyFat?.await()
+        val overnightHrv = dayHrvRmssd?.let { rmssd ->
+            dayHrvBaselineRmssd?.takeIf { it > 0.0 }?.let { baseline ->
+                OvernightHrvInput(rmssdMs = rmssd, baselineRmssdMs = baseline)
+            }
+        }
+        val sleepScore = when {
+            !calculateDerivedMetrics -> SleepScoreEstimate.NoData
+            dashboardSleep == null -> SleepScoreEstimate.NoData
+            overnightHrv == null -> dashboardSleep.sleepScore
+            else -> calculateSleepScoreForDate(
+                selectedDate = date,
+                sessions = dashboardSleep.scoreSessions,
+                sleepWindow = sleepWindow,
+                ageYears = preferencesRepository?.bodyProfile()?.ageYears(date),
+                overnightHrv = overnightHrv,
+            )
+        }
 
         val metricSourcePackages = buildMap {
             fun putSource(metric: DashboardMetric, source: String?) {
@@ -613,7 +633,7 @@ class DashboardDataLoader @Inject constructor(
             workout = dayWorkouts.firstOrNull(),
             workouts = dayWorkouts,
             sleep = dashboardSleep?.sleep,
-            sleepScore = dashboardSleep?.sleepScore ?: SleepScoreEstimate.NoData,
+            sleepScore = sleepScore,
             weightKg = latestWeight?.weightKg,
             weightTime = latestWeight?.time,
             heightCm = latestHeight?.heightCm,
@@ -645,7 +665,7 @@ class DashboardDataLoader @Inject constructor(
             restingHeartRateBpm = restingHR?.await() ?: 0,
             restingHeartRateBaselineBpm = restingHRBaseline?.await(),
             hrvRmssdMs = if (calculateDerivedMetrics) dayHrvRmssd else null,
-            hrvBaselineRmssdMs = hrvBaseline?.await(),
+            hrvBaselineRmssdMs = dayHrvBaselineRmssd,
             hrvSampleCount = dayHrvSamples.size,
             hrvSampleStartTime = dayHrvSamples.firstOrNull()?.time,
             hrvSampleEndTime = dayHrvSamples.lastOrNull()?.time,
@@ -714,6 +734,7 @@ class DashboardDataLoader @Inject constructor(
         date: LocalDate,
         sleepWindow: SleepWindow,
         calculateSleepScore: Boolean = true,
+        ageYears: Int? = null,
     ): DashboardSleepData {
         val zone = ZoneId.systemDefault()
         val sleepData = hc.readSleepData(
@@ -745,11 +766,13 @@ class DashboardDataLoader @Inject constructor(
                     sessions = sessions,
                     sleepWindow = sleepWindow,
                     zone = zone,
+                    ageYears = ageYears,
                 )
             } else {
                 SleepScoreEstimate.NoData
             },
             hasRecentSessions = sessions.isNotEmpty(),
+            scoreSessions = sessions,
         )
     }
 
@@ -992,6 +1015,7 @@ private data class DashboardSleepData(
     val sleep: SleepData?,
     val sleepScore: SleepScoreEstimate,
     val hasRecentSessions: Boolean,
+    val scoreSessions: List<SleepData> = emptyList(),
 )
 
 private data class DashboardWeeklyTrainingSignals(

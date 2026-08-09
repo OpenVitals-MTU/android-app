@@ -54,9 +54,14 @@ import tech.mmarca.openvitals.ui.theme.SleepColor
 
 private const val AasmSleepDurationUrl =
     "https://aasm.org/advocacy/position-statements/adult-sleep-duration-health-advisory/"
+private const val NsfSleepDurationUrl =
+    "https://doi.org/10.1016/j.sleh.2015.10.004"
+private const val NsfSleepQualityUrl =
+    "https://doi.org/10.1016/j.sleh.2016.11.006"
+private const val GarminSleepScoreUrl =
+    "https://www.garmin.com/en-US/blog/health/garmin-sleep-score-and-sleep-insights/"
 private const val SleepHealthFrameworkUrl = "https://pubmed.ncbi.nlm.nih.gov/24470692/"
 private const val SleepEfficiencyUrl = "https://www.ncbi.nlm.nih.gov/medgen/1669302"
-private const val SleepRegularityUrl = "https://www.nature.com/articles/s41598-017-03171-4"
 
 @Composable
 fun SleepScoreDetailScreen(
@@ -241,58 +246,137 @@ private fun SleepScoreNumbersCard(
     val estimate = day.sleepScore
     DetailCard(modifier = modifier) {
         DetailMetricGrid(
-            items = listOf(
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_component_duration),
-                    value = DisplayValue(unitFormatter.decimal(estimate.durationPoints, 1), "pts"),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_component_efficiency),
-                    value = DisplayValue(unitFormatter.decimal(estimate.efficiencyPoints, 1), "pts"),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_component_continuity),
-                    value = DisplayValue(unitFormatter.decimal(estimate.continuityPoints, 1), "pts"),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_component_regularity),
-                    value = DisplayValue(unitFormatter.decimal(estimate.regularityPoints, 1), "pts"),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_total_sleep),
-                    value = DisplayValue(unitFormatter.duration((estimate.sleepDurationMinutes * 60_000).roundToLong()), ""),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_time_in_bed),
-                    value = DisplayValue(unitFormatter.duration((estimate.timeInBedMinutes * 60_000).roundToLong()), ""),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_efficiency),
-                    value = unitFormatter.percent(estimate.sleepEfficiencyPercent, 0),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_waso),
-                    value = DisplayValue(unitFormatter.count(estimate.wakeAfterSleepOnsetMinutes.roundToLong()), "min"),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_regularity),
-                    value = estimate.regularityDifferenceMinutes
-                        ?.let { DisplayValue(unitFormatter.count(it.roundToLong()), "min") }
-                        ?: DisplayValue(stringResource(R.string.no_data), ""),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_baseline_nights),
-                    value = DisplayValue(unitFormatter.count(estimate.regularityBaselineNights), ""),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.sleep_score_stage_records),
-                    value = DisplayValue(unitFormatter.count(estimate.sleepStageCount), ""),
-                ),
-                DetailMetric(
-                    title = stringResource(R.string.recovery_sleep_schedule),
-                    value = DisplayValue(sleepScheduleText(day, dateTimeFormatterProvider), ""),
-                ),
-            )
+            items = buildList {
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_component_duration),
+                        value = DisplayValue(unitFormatter.decimal(estimate.durationPoints, 1), "pts"),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_component_quality),
+                        value = DisplayValue(unitFormatter.decimal(estimate.qualityPoints, 1), "pts"),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_component_recovery),
+                        value = DisplayValue(unitFormatter.decimal(estimate.recoveryPoints, 1), "pts"),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_component_efficiency),
+                        value = DisplayValue(unitFormatter.decimal(estimate.efficiencyPoints, 1), "pts"),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_component_continuity),
+                        value = DisplayValue(unitFormatter.decimal(estimate.continuityPoints, 1), "pts"),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_component_stages),
+                        value = DisplayValue(unitFormatter.decimal(estimate.stageBalancePoints, 1), "pts"),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_total_sleep),
+                        value = DisplayValue(unitFormatter.duration((estimate.sleepDurationMinutes * 60_000).roundToLong()), ""),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_time_in_bed),
+                        value = DisplayValue(unitFormatter.duration((estimate.timeInBedMinutes * 60_000).roundToLong()), ""),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_efficiency),
+                        value = unitFormatter.percent(estimate.sleepEfficiencyPercent, 0),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_waso),
+                        value = DisplayValue(unitFormatter.count(estimate.wakeAfterSleepOnsetMinutes.roundToLong()), "min"),
+                    ),
+                )
+                estimate.deepSleepPercentOfSleep?.let { deep ->
+                    add(
+                        DetailMetric(
+                            title = stringResource(R.string.sleep_score_deep_percent),
+                            value = unitFormatter.percent(deep, 0),
+                        ),
+                    )
+                }
+                estimate.remSleepPercentOfSleep?.let { rem ->
+                    add(
+                        DetailMetric(
+                            title = stringResource(R.string.sleep_score_rem_percent),
+                            value = unitFormatter.percent(rem, 0),
+                        ),
+                    )
+                }
+                estimate.overnightHrvRmssdMs?.let { hrv ->
+                    add(
+                        DetailMetric(
+                            title = stringResource(R.string.sleep_score_overnight_hrv),
+                            value = DisplayValue(unitFormatter.decimal(hrv, 1), "ms"),
+                        ),
+                    )
+                }
+                estimate.overnightHrvBaselineRmssdMs?.let { baseline ->
+                    add(
+                        DetailMetric(
+                            title = stringResource(R.string.sleep_score_hrv_baseline),
+                            value = DisplayValue(unitFormatter.decimal(baseline, 1), "ms"),
+                        ),
+                    )
+                }
+                estimate.durationTarget?.let { target ->
+                    add(
+                        DetailMetric(
+                            title = stringResource(R.string.sleep_score_duration_target),
+                            value = DisplayValue(
+                                "${unitFormatter.decimal(target.idealMinHours, 0)}–${unitFormatter.decimal(target.idealMaxHours, 0)}",
+                                "h",
+                            ),
+                        ),
+                    )
+                }
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_regularity),
+                        value = estimate.regularityDifferenceMinutes
+                            ?.let { DisplayValue(unitFormatter.count(it.roundToLong()), "min") }
+                            ?: DisplayValue(stringResource(R.string.no_data), ""),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_baseline_nights),
+                        value = DisplayValue(unitFormatter.count(estimate.regularityBaselineNights), ""),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.sleep_score_stage_records),
+                        value = DisplayValue(unitFormatter.count(estimate.sleepStageCount), ""),
+                    ),
+                )
+                add(
+                    DetailMetric(
+                        title = stringResource(R.string.recovery_sleep_schedule),
+                        value = DisplayValue(sleepScheduleText(day, dateTimeFormatterProvider), ""),
+                    ),
+                )
+            }
         )
         Spacer(Modifier.height(12.dp))
         Text(
@@ -309,8 +393,23 @@ private fun SleepScoreReferencesCard(
 ) {
     DetailCard(modifier = modifier) {
         ReferenceLinkButton(
+            title = stringResource(R.string.reference_garmin_sleep_score),
+            url = GarminSleepScoreUrl,
+            modifier = Modifier.padding(vertical = 4.dp),
+        )
+        ReferenceLinkButton(
+            title = stringResource(R.string.reference_nsf_sleep_duration),
+            url = NsfSleepDurationUrl,
+            modifier = Modifier.padding(vertical = 4.dp),
+        )
+        ReferenceLinkButton(
             title = stringResource(R.string.reference_aasm_sleep_duration),
             url = AasmSleepDurationUrl,
+            modifier = Modifier.padding(vertical = 4.dp),
+        )
+        ReferenceLinkButton(
+            title = stringResource(R.string.reference_nsf_sleep_quality),
+            url = NsfSleepQualityUrl,
             modifier = Modifier.padding(vertical = 4.dp),
         )
         ReferenceLinkButton(
@@ -321,11 +420,6 @@ private fun SleepScoreReferencesCard(
         ReferenceLinkButton(
             title = stringResource(R.string.reference_sleep_efficiency_definition),
             url = SleepEfficiencyUrl,
-            modifier = Modifier.padding(vertical = 4.dp),
-        )
-        ReferenceLinkButton(
-            title = stringResource(R.string.reference_sleep_regularity),
-            url = SleepRegularityUrl,
             modifier = Modifier.padding(vertical = 4.dp),
         )
     }
@@ -410,6 +504,8 @@ private fun sleepScoreConfidenceLabel(confidence: SleepScoreConfidence): String 
 private fun sleepScoreDataQualityLabel(estimate: SleepScoreEstimate): String =
     when {
         estimate.confidence == SleepScoreConfidence.NO_DATA -> stringResource(R.string.sleep_score_quality_no_data)
+        estimate.usesSleepStages && estimate.usesExplicitAwakeStages && estimate.usesOvernightHrv ->
+            stringResource(R.string.sleep_score_quality_stage_awake_hrv)
         estimate.usesSleepStages && estimate.usesExplicitAwakeStages -> stringResource(R.string.sleep_score_quality_stage_awake)
         estimate.usesSleepStages -> stringResource(R.string.sleep_score_quality_stage_only)
         else -> stringResource(R.string.sleep_score_quality_session_only)

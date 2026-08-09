@@ -10,19 +10,51 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import tech.mmarca.openvitals.domain.model.DailyHrv
+import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.model.dailySleepSummary
 import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
 
-private const val DurationWeight = 35.0
-private const val EfficiencyWeight = 30.0
-private const val ContinuityWeight = 20.0
-private const val RegularityWeight = 15.0
+/*
+ * Sleep score — a 0–100 wellness estimate aligned with Garmin's three-pillar
+ * framing (duration, quality, overnight recovery) and the sleep-science
+ * references that framing cites:
+ *
+ * - Duration: NSF age-banded recommendations (Hirshkowitz 2015) and AASM/SRS
+ *   adult consensus that healthy adults need ≥7 h (Watson 2015). Regularly
+ *   sleeping <7 h associates with cardiometabolic risk (Grandner 2014; Liu 2013).
+ * - Quality: NSF sleep-quality recommendations (Ohayon 2017) — efficiency,
+ *   wake after sleep onset / continuity, and restorative stage architecture
+ *   (deep + REM) when consumer staging is available.
+ * - Overnight recovery: autonomic recovery during the night from HRV RMSSD
+ *   relative to the personal baseline — the same recovery science Garmin
+ *   describes for Body Battery / overnight recovery.
+ *
+ * Missing inputs never invent numbers: stage and HRV pillars go neutral and
+ * confidence drops. The score is not a diagnosis.
+ */
+
+/** Duration pillar weight (NSF / AASM quantity). */
+internal const val SleepScoreDurationWeight = 40.0
+
+/** Quality pillar weight (NSF quality: efficiency + continuity + stages). */
+internal const val SleepScoreQualityWeight = 40.0
+
+/** Overnight recovery pillar weight (HRV / ANS). */
+internal const val SleepScoreRecoveryWeight = 20.0
+
+private const val EfficiencyShare = 15.0
+private const val ContinuityShare = 15.0
+private const val StageShare = 10.0
+
 private const val MinimumScoredSleepMinutes = 60.0
-private const val NeutralRegularityRatio = 0.7
+private const val NeutralMissingRatio = 0.7
 private const val MinutesPerDay = 24 * 60
+
+/** Lookback used when scoring a single day (regularity metadata + HRV baseline). */
 internal const val SleepScoreLookbackDays = 7L
 
 enum class SleepScoreConfidence {
@@ -32,25 +64,134 @@ enum class SleepScoreConfidence {
     NO_DATA,
 }
 
+/**
+ * NSF 2015 recommended sleep duration window for an age band, plus soft floors
+ * and ceilings used when scoring outside the ideal range.
+ */
+data class SleepDurationTarget(
+    val idealMinHours: Double,
+    val idealMaxHours: Double,
+    val floorHours: Double,
+    val ceilingHours: Double,
+)
+
 data class SleepScoreEstimate(
     val score: Int = 0,
     val confidence: SleepScoreConfidence = SleepScoreConfidence.NO_DATA,
     val durationPoints: Double = 0.0,
+    val qualityPoints: Double = 0.0,
+    val recoveryPoints: Double = 0.0,
+    /** Breakdown of [qualityPoints] for the detail screen. */
     val efficiencyPoints: Double = 0.0,
     val continuityPoints: Double = 0.0,
-    val regularityPoints: Double = 0.0,
+    val stageBalancePoints: Double = 0.0,
     val sleepDurationMinutes: Double = 0.0,
     val timeInBedMinutes: Double = 0.0,
     val sleepEfficiencyPercent: Double = 0.0,
     val wakeAfterSleepOnsetMinutes: Double = 0.0,
+    val deepSleepPercentOfSleep: Double? = null,
+    val remSleepPercentOfSleep: Double? = null,
+    val overnightHrvRmssdMs: Double? = null,
+    val overnightHrvBaselineRmssdMs: Double? = null,
+    val durationTarget: SleepDurationTarget? = null,
+    val ageYearsUsed: Int? = null,
+    /** Timing difference vs recent nights — context only, not a scored pillar. */
     val regularityDifferenceMinutes: Double? = null,
     val regularityBaselineNights: Int = 0,
     val sleepStageCount: Int = 0,
     val usesSleepStages: Boolean = false,
     val usesExplicitAwakeStages: Boolean = false,
+    val usesOvernightHrv: Boolean = false,
 ) {
     companion object {
         val NoData = SleepScoreEstimate()
+    }
+}
+
+/**
+ * Optional overnight HRV inputs for the recovery pillar. [rmssdMs] should be
+ * measured inside the sleep session window; [baselineRmssdMs] is the personal
+ * recent baseline (e.g. median of prior nights).
+ */
+data class OvernightHrvInput(
+    val rmssdMs: Double,
+    val baselineRmssdMs: Double,
+)
+
+/**
+ * Builds overnight HRV inputs by averaging RMSSD samples inside each night's
+ * main sleep window and using the median of prior nights as baseline.
+ */
+fun overnightHrvInputsByDate(
+    sessions: List<SleepData>,
+    hrvSamples: List<HrvSample>,
+    start: LocalDate,
+    end: LocalDate,
+    zone: ZoneId = ZoneId.systemDefault(),
+): Map<LocalDate, OvernightHrvInput> {
+    if (end.isBefore(start) || hrvSamples.isEmpty()) return emptyMap()
+    val sessionsByDate = sessions.groupBy { it.endTime.atZone(zone).toLocalDate() }
+    val nightRmssd = generateSequence(start) { date ->
+        date.plusDays(1).takeUnless { it.isAfter(end) }
+    }.associateWith { date ->
+        val session = sessionsByDate[date].orEmpty().mainSleepSession() ?: return@associateWith null
+        hrvSamples
+            .asSequence()
+            .filter { sample ->
+                !sample.time.isBefore(session.startTime) && !sample.time.isAfter(session.endTime)
+            }
+            .map { it.rmssdMs }
+            .filter { it > 0.0 }
+            .toList()
+            .takeIf { it.isNotEmpty() }
+            ?.average()
+    }
+    return overnightHrvInputsFromNightRmssd(nightRmssd)
+}
+
+/**
+ * Builds overnight HRV inputs from already-bucketed daily RMSSD values
+ * (for example sleep-screen cross-metric HRV).
+ */
+fun overnightHrvInputsFromDaily(
+    dailyHrv: List<DailyHrv>,
+    start: LocalDate,
+    end: LocalDate,
+): Map<LocalDate, OvernightHrvInput> {
+    if (end.isBefore(start) || dailyHrv.isEmpty()) return emptyMap()
+    val byDate = dailyHrv
+        .filter { it.rmssdMs > 0.0 && !it.date.isBefore(start) && !it.date.isAfter(end) }
+        .associate { it.date to it.rmssdMs }
+    val nightRmssd = generateSequence(start) { date ->
+        date.plusDays(1).takeUnless { it.isAfter(end) }
+    }.associateWith { byDate[it] }
+    return overnightHrvInputsFromNightRmssd(nightRmssd)
+}
+
+private fun overnightHrvInputsFromNightRmssd(
+    nightRmssd: Map<LocalDate, Double?>,
+): Map<LocalDate, OvernightHrvInput> {
+    val ordered = nightRmssd.keys.sorted()
+    return ordered.mapNotNull { date ->
+        val rmssd = nightRmssd[date] ?: return@mapNotNull null
+        val baselineValues = ordered
+            .asSequence()
+            .takeWhile { it.isBefore(date) }
+            .mapNotNull { nightRmssd[it] }
+            .toList()
+        val baseline = baselineValues.medianOrNull() ?: return@mapNotNull null
+        date to OvernightHrvInput(rmssdMs = rmssd, baselineRmssdMs = baseline)
+    }.toMap()
+}
+
+private fun List<Double>.medianOrNull(): Double? {
+    if (isEmpty()) return null
+    val sorted = sorted()
+    val mid = sorted.size / 2
+    return if (sorted.size % 2 == 0) {
+        (sorted[mid - 1] + sorted[mid]) / 2.0
+    } else {
+        sorted[mid]
     }
 }
 
@@ -59,6 +200,8 @@ fun calculateSleepScoresByDate(
     start: LocalDate,
     end: LocalDate,
     zone: ZoneId = ZoneId.systemDefault(),
+    ageYears: Int? = null,
+    overnightHrvByDate: Map<LocalDate, OvernightHrvInput> = emptyMap(),
 ): Map<LocalDate, SleepScoreEstimate> {
     if (end.isBefore(start)) return emptyMap()
 
@@ -76,6 +219,8 @@ fun calculateSleepScoresByDate(
             session = mainSessions[date],
             previousSessions = previousSessions,
             zone = zone,
+            ageYears = ageYears,
+            overnightHrv = overnightHrvByDate[date],
         )
     }.toMap()
 }
@@ -85,6 +230,8 @@ fun calculateSleepScoreForDate(
     sessions: List<SleepData>,
     sleepWindow: SleepWindow,
     zone: ZoneId = ZoneId.systemDefault(),
+    ageYears: Int? = null,
+    overnightHrv: OvernightHrvInput? = null,
 ): SleepScoreEstimate {
     val selectedSleep = dailySleepSummary(
         sessions = sessions,
@@ -108,6 +255,8 @@ fun calculateSleepScoreForDate(
         session = selectedSleep,
         previousSessions = previousSessions,
         zone = zone,
+        ageYears = ageYears,
+        overnightHrv = overnightHrv,
     )
 }
 
@@ -115,6 +264,8 @@ fun calculateSleepScore(
     session: SleepData?,
     previousSessions: List<SleepData>,
     zone: ZoneId = ZoneId.systemDefault(),
+    ageYears: Int? = null,
+    overnightHrv: OvernightHrvInput? = null,
 ): SleepScoreEstimate {
     session ?: return SleepScoreEstimate.NoData
     val timeInBedMs = Duration.between(session.startTime, session.endTime)
@@ -142,60 +293,173 @@ fun calculateSleepScore(
     }
     val hasSleepStages = session.stages.any { it.stageType.isSleepStage() }
     val hasExplicitAwakeStages = session.stages.any { it.stageType.isAwakeStage() }
+    val hasStagedArchitecture = session.stages.any { it.stageType.isDeepOrRemStage() }
 
-    val durationPoints = durationPoints(sleepDurationMinutes / 60.0)
-    val efficiencyPoints = efficiencyPoints(sleepEfficiencyPercent)
-    val continuityPoints = continuityPoints(wakeAfterSleepOnsetMinutes)
-    val regularityPoints = regularityDifference
-        ?.let(::regularityPoints)
-        ?: RegularityWeight * NeutralRegularityRatio
-    val score = (durationPoints + efficiencyPoints + continuityPoints + regularityPoints)
+    val target = sleepDurationTargetForAge(ageYears)
+    val durationPoints = durationPoints(sleepDurationMinutes / 60.0, target)
+
+    val stagePercents = stagePercents(session, sleepDurationMs)
+    val staged = hasStagedArchitecture && stagePercents != null
+    // Without staging, redistribute the stage share into efficiency + continuity
+    // so quality still totals QualityWeight.
+    val efficiencyPts = if (staged) {
+        efficiencyPoints(sleepEfficiencyPercent)
+    } else {
+        (EfficiencyShare + StageShare / 2.0) *
+            ((sleepEfficiencyPercent - 65.0) / 20.0).coerceIn(0.0, 1.0)
+    }
+    val continuityPts = if (staged) {
+        continuityPoints(wakeAfterSleepOnsetMinutes)
+    } else {
+        (ContinuityShare + StageShare / 2.0) *
+            ((90.0 - wakeAfterSleepOnsetMinutes) / 70.0).coerceIn(0.0, 1.0)
+    }
+    val stagePts = if (staged) stageBalancePoints(stagePercents!!) else 0.0
+    val qualityPoints = efficiencyPts + continuityPts + stagePts
+
+    val usesOvernightHrv = overnightHrv != null &&
+        overnightHrv.rmssdMs > 0.0 &&
+        overnightHrv.baselineRmssdMs > 0.0
+    val recoveryPoints = overnightHrv
+        ?.takeIf { usesOvernightHrv }
+        ?.let { recoveryPoints(it.rmssdMs, it.baselineRmssdMs) }
+        ?: (SleepScoreRecoveryWeight * NeutralMissingRatio)
+
+    val score = (durationPoints + qualityPoints + recoveryPoints)
         .roundToInt()
         .coerceIn(0, 100)
 
     return SleepScoreEstimate(
         score = score,
         confidence = when {
-            hasSleepStages && hasExplicitAwakeStages && baselineMidpoints.size >= 3 -> SleepScoreConfidence.HIGH
-            hasSleepStages || baselineMidpoints.size >= 2 -> SleepScoreConfidence.MEDIUM
+            hasSleepStages && hasExplicitAwakeStages && usesOvernightHrv && baselineMidpoints.size >= 2 ->
+                SleepScoreConfidence.HIGH
+            (hasSleepStages || usesOvernightHrv) && baselineMidpoints.isNotEmpty() ->
+                SleepScoreConfidence.MEDIUM
+            hasSleepStages || usesOvernightHrv || baselineMidpoints.isNotEmpty() ->
+                SleepScoreConfidence.MEDIUM
             else -> SleepScoreConfidence.LOW
         },
         durationPoints = durationPoints,
-        efficiencyPoints = efficiencyPoints,
-        continuityPoints = continuityPoints,
-        regularityPoints = regularityPoints,
+        qualityPoints = qualityPoints,
+        recoveryPoints = recoveryPoints,
+        efficiencyPoints = efficiencyPts,
+        continuityPoints = continuityPts,
+        stageBalancePoints = stagePts,
         sleepDurationMinutes = sleepDurationMinutes,
         timeInBedMinutes = timeInBedMinutes,
         sleepEfficiencyPercent = sleepEfficiencyPercent,
         wakeAfterSleepOnsetMinutes = wakeAfterSleepOnsetMinutes,
+        deepSleepPercentOfSleep = stagePercents?.first,
+        remSleepPercentOfSleep = stagePercents?.second,
+        overnightHrvRmssdMs = overnightHrv?.rmssdMs?.takeIf { usesOvernightHrv },
+        overnightHrvBaselineRmssdMs = overnightHrv?.baselineRmssdMs?.takeIf { usesOvernightHrv },
+        durationTarget = target,
+        ageYearsUsed = ageYears,
         regularityDifferenceMinutes = regularityDifference,
         regularityBaselineNights = baselineMidpoints.size,
         sleepStageCount = session.stages.size,
         usesSleepStages = hasSleepStages,
         usesExplicitAwakeStages = hasExplicitAwakeStages,
+        usesOvernightHrv = usesOvernightHrv,
     )
+}
+
+/**
+ * NSF 2015 age-banded recommended sleep duration. Adults default to 7–9 h when
+ * age is unknown (AASM/SRS adult consensus).
+ */
+fun sleepDurationTargetForAge(ageYears: Int?): SleepDurationTarget = when {
+    ageYears == null -> SleepDurationTarget(7.0, 9.0, 4.0, 11.0)
+    ageYears < 14 -> SleepDurationTarget(9.0, 11.0, 6.0, 13.0) // school-aged 6–13
+    ageYears in 14..17 -> SleepDurationTarget(8.0, 10.0, 5.0, 12.0)
+    ageYears in 18..64 -> SleepDurationTarget(7.0, 9.0, 4.0, 11.0)
+    else -> SleepDurationTarget(7.0, 8.0, 4.0, 10.0) // older adults 65+
+}
+
+internal fun durationPoints(hours: Double, target: SleepDurationTarget): Double {
+    val ratio = when {
+        hours in target.idealMinHours..target.idealMaxHours -> 1.0
+        hours < target.idealMinHours -> {
+            val span = (target.idealMinHours - target.floorHours).coerceAtLeast(0.01)
+            ((hours - target.floorHours) / span).coerceIn(0.0, 1.0)
+        }
+        else -> {
+            val span = (target.ceilingHours - target.idealMaxHours).coerceAtLeast(0.01)
+            ((target.ceilingHours - hours) / span).coerceIn(0.0, 1.0)
+        }
+    }
+    return SleepScoreDurationWeight * ratio
+}
+
+/**
+ * NSF quality: sleep efficiency ≥85% is good. Map 65%→0 and 85%→full so the
+ * clinically meaningful threshold earns full credit.
+ */
+internal fun efficiencyPoints(efficiencyPercent: Double): Double =
+    EfficiencyShare * ((efficiencyPercent - 65.0) / 20.0).coerceIn(0.0, 1.0)
+
+/**
+ * NSF quality: WASO ≤20 min is good. Map 90 min→0 and 20 min→full.
+ */
+internal fun continuityPoints(wakeAfterSleepOnsetMinutes: Double): Double =
+    ContinuityShare * ((90.0 - wakeAfterSleepOnsetMinutes) / 70.0).coerceIn(0.0, 1.0)
+
+/**
+ * Restorative stage architecture: deep ~13–23% and REM ~20–25% of total sleep
+ * time are typical adult targets. Soft trapezoid scoring around those bands.
+ */
+internal fun stageBalancePoints(deepAndRemPercent: Pair<Double, Double>): Double {
+    val (deep, rem) = deepAndRemPercent
+    val deepRatio = bandRatio(deep, idealMin = 13.0, idealMax = 23.0, floor = 5.0, ceiling = 35.0)
+    val remRatio = bandRatio(rem, idealMin = 20.0, idealMax = 25.0, floor = 8.0, ceiling = 35.0)
+    return StageShare * ((deepRatio + remRatio) / 2.0)
+}
+
+/**
+ * Overnight recovery from HRV: overnight RMSSD at or above the personal baseline
+ * earns full credit; values materially below baseline reduce the pillar.
+ * The mapping is continuous so progressive impairment always lowers the score.
+ */
+internal fun recoveryPoints(rmssdMs: Double, baselineRmssdMs: Double): Double {
+    val ratio = (rmssdMs / baselineRmssdMs).coerceAtLeast(0.0)
+    val scoreRatio = when {
+        ratio >= 1.0 -> 1.0
+        ratio >= 0.7 -> 0.55 + 0.45 * ((ratio - 0.7) / 0.3)
+        else -> (ratio / 0.7) * 0.55
+    }
+    return SleepScoreRecoveryWeight * scoreRatio
+}
+
+private fun bandRatio(
+    value: Double,
+    idealMin: Double,
+    idealMax: Double,
+    floor: Double,
+    ceiling: Double,
+): Double = when {
+    value in idealMin..idealMax -> 1.0
+    value < idealMin -> ((value - floor) / (idealMin - floor)).coerceIn(0.0, 1.0)
+    else -> ((ceiling - value) / (ceiling - idealMax)).coerceIn(0.0, 1.0)
+}
+
+private fun stagePercents(
+    session: SleepData,
+    sleepDurationMs: Long,
+): Pair<Double, Double>? {
+    if (sleepDurationMs <= 0L) return null
+    val deepMs = session.stages
+        .filter { it.stageType == SleepStage.STAGE_DEEP }
+        .sumOf { it.durationMs.coerceAtLeast(0L) }
+    val remMs = session.stages
+        .filter { it.stageType == SleepStage.STAGE_REM }
+        .sumOf { it.durationMs.coerceAtLeast(0L) }
+    if (deepMs == 0L && remMs == 0L) return null
+    return (deepMs * 100.0 / sleepDurationMs) to (remMs * 100.0 / sleepDurationMs)
 }
 
 private fun List<SleepData>.mainSleepSession(): SleepData? =
     maxByOrNull { sleepDurationMsFromStages(it.stages, it.durationMs) }
-
-private fun durationPoints(hours: Double): Double {
-    val ratio = when {
-        hours in 7.0..9.0 -> 1.0
-        hours < 7.0 -> ((hours - 4.0) / 3.0).coerceIn(0.0, 1.0)
-        else -> ((11.0 - hours) / 2.0).coerceIn(0.0, 1.0)
-    }
-    return DurationWeight * ratio
-}
-
-private fun efficiencyPoints(efficiencyPercent: Double): Double =
-    EfficiencyWeight * ((efficiencyPercent - 65.0) / 20.0).coerceIn(0.0, 1.0)
-
-private fun continuityPoints(wakeAfterSleepOnsetMinutes: Double): Double =
-    ContinuityWeight * ((90.0 - wakeAfterSleepOnsetMinutes) / 70.0).coerceIn(0.0, 1.0)
-
-private fun regularityPoints(regularityDifferenceMinutes: Double): Double =
-    RegularityWeight * ((180.0 - regularityDifferenceMinutes) / 150.0).coerceIn(0.0, 1.0)
 
 private fun SleepData.sleepMidpointMinute(zone: ZoneId): Int {
     val durationMs = Duration.between(startTime, endTime).toMillis().coerceAtLeast(0L)
@@ -247,5 +511,11 @@ private fun Int.isSleepStage(): Boolean = when (this) {
 private fun Int.isAwakeStage(): Boolean = when (this) {
     SleepStage.STAGE_AWAKE,
     SleepStage.STAGE_AWAKE_IN_BED -> true
+    else -> false
+}
+
+private fun Int.isDeepOrRemStage(): Boolean = when (this) {
+    SleepStage.STAGE_DEEP,
+    SleepStage.STAGE_REM -> true
     else -> false
 }

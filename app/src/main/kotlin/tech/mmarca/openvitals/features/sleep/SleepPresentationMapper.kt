@@ -7,7 +7,9 @@ import tech.mmarca.openvitals.core.period.displayPeriodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
 import tech.mmarca.openvitals.domain.insights.CrossMetricValue
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
+import tech.mmarca.openvitals.domain.insights.SleepScoreLookbackDays
 import tech.mmarca.openvitals.domain.insights.calculateSleepScoreForDate
+import tech.mmarca.openvitals.domain.insights.overnightHrvInputsFromDaily
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.AwakeStageTypes
@@ -47,6 +49,7 @@ object SleepPresentationMapper {
         previousDailyDurations: List<DailySleepDuration> = emptyList(),
         baselineDailyDurations: List<DailySleepDuration> = emptyList(),
         crossDailyHrv: List<DailyHrv>,
+        ageYears: Int? = null,
     ): SleepDisplayState {
         val selectedPeriod = displayPeriodFor(
             range = query.range,
@@ -91,6 +94,8 @@ object SleepPresentationMapper {
             dailyDurations = dailyDurations,
             period = selectedPeriod,
             sleepWindow = sleepWindow,
+            crossDailyHrv = crossDailyHrv,
+            ageYears = ageYears,
         )
 
         return SleepDisplayState(
@@ -144,6 +149,8 @@ private fun sleepOverviewDays(
     dailyDurations: List<DailySleepDuration>,
     period: DatePeriod,
     sleepWindow: SleepWindow,
+    crossDailyHrv: List<DailyHrv>,
+    ageYears: Int?,
 ): List<SleepOverviewDay> {
     val zone = ZoneId.systemDefault()
     val dates = datesInPeriod(period)
@@ -156,6 +163,11 @@ private fun sleepOverviewDays(
             zone = zone,
         )
     }
+    val overnightHrvByDate = overnightHrvInputsFromDaily(
+        dailyHrv = crossDailyHrv,
+        start = period.start.minusDays(SleepScoreLookbackDays - 1),
+        end = period.end,
+    )
 
     return dates.map { date ->
         SleepOverviewDay(
@@ -167,6 +179,8 @@ private fun sleepOverviewDays(
                 sessions = scoreSessions,
                 sleepWindow = sleepWindow,
                 zone = zone,
+                ageYears = ageYears,
+                overnightHrv = overnightHrvByDate[date],
             ),
         )
     }

@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.recovery
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import java.time.Duration
 import java.time.LocalDate
@@ -18,6 +19,9 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
@@ -35,6 +39,30 @@ class RecoveryViewModelTest {
             coEvery { repo.loadSleepSessions(any(), any()) } returns sessions
         }
 
+    private fun heartRepo() =
+        mockk<HeartRepository>().also { repo ->
+            coEvery { repo.loadHrvSamples(any(), any()) } returns emptyList()
+        }
+
+    private fun preferencesRepo(ageYears: Int? = null) =
+        mockk<PreferencesRepository>().also { repo ->
+            every { repo.bodyProfile() } returns BodyProfile(
+                birthYear = ageYears?.let { today.year - it },
+            )
+        }
+
+    private fun viewModel(
+        sessions: List<SleepData> = emptyList(),
+        sleepRepository: SleepRepository = sleepRepo(sessions),
+        heartRepository: HeartRepository = heartRepo(),
+        preferencesRepository: PreferencesRepository = preferencesRepo(),
+    ) = RecoveryViewModel(
+        sleepRepository = sleepRepository,
+        heartRepository = heartRepository,
+        preferencesRepository = preferencesRepository,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
+    )
+
     @Test
     fun `load builds seven day recovery overview from sleep sessions`() = runTest {
         val repo = sleepRepo(
@@ -43,7 +71,7 @@ class RecoveryViewModelTest {
             ),
         )
 
-        val vm = RecoveryViewModel(repo, mainDispatcherRule.dispatcherProvider)
+        val vm = viewModel(sleepRepository = repo)
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -53,7 +81,7 @@ class RecoveryViewModelTest {
         assertEquals(hours(1) + minutes(30), state.today.remDurationMs)
         assertEquals(hours(2), state.today.deepDurationMs)
         assertEquals("sleep-$today", state.today.mainSleepSession?.id)
-        assertEquals(93, state.today.sleepScore.score)
+        assertEquals(90, state.today.sleepScore.score)
         assertEquals(SleepScoreConfidence.MEDIUM, state.today.sleepScore.confidence)
         assertEquals(93.75, state.today.sleepScore.sleepEfficiencyPercent, 0.001)
         assertEquals(30.0, state.today.sleepScore.wakeAfterSleepOnsetMinutes, 0.001)
@@ -62,35 +90,32 @@ class RecoveryViewModelTest {
 
     @Test
     fun `main sleep session uses longest session for sleep schedule`() = runTest {
-        val repo = sleepRepo(
+        val vm = viewModel(
             sessions = listOf(
                 sleepSession(today, id = "overnight", durationHours = 8),
                 sleepSession(today, id = "nap", durationHours = 1),
             ),
         )
 
-        val vm = RecoveryViewModel(repo, mainDispatcherRule.dispatcherProvider)
-
         assertEquals("overnight", vm.uiState.value.today.mainSleepSession?.id)
     }
 
     @Test
-    fun `sleep score has high confidence with stages awake stages and regularity baseline`() = runTest {
-        val repo = sleepRepo(
+    fun `sleep score has medium confidence with stages and regularity but no overnight HRV`() = runTest {
+        val vm = viewModel(
             sessions = (0L..3L).map { offset ->
                 sleepSession(today.minusDays(offset))
             },
         )
 
-        val vm = RecoveryViewModel(repo, mainDispatcherRule.dispatcherProvider)
-
-        assertEquals(SleepScoreConfidence.HIGH, vm.uiState.value.today.sleepScore.confidence)
+        assertEquals(SleepScoreConfidence.MEDIUM, vm.uiState.value.today.sleepScore.confidence)
         assertEquals(0.0, vm.uiState.value.today.sleepScore.regularityDifferenceMinutes!!, 0.001)
+        assertFalse(vm.uiState.value.today.sleepScore.usesOvernightHrv)
     }
 
     @Test
     fun `load returns empty days when repository has no sleep data`() = runTest {
-        val vm = RecoveryViewModel(sleepRepo(), mainDispatcherRule.dispatcherProvider)
+        val vm = viewModel()
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -110,10 +135,7 @@ class RecoveryViewModelTest {
         // The seven-day window ends today; a day outside it is not in `days` at
         // all, and `today` has to fall back to a blank day rather than throw.
         val outOfLookback = today.minusDays(30)
-        val vm = RecoveryViewModel(
-            sleepRepo(sessions = listOf(sleepSession(today))),
-            mainDispatcherRule.dispatcherProvider,
-        )
+        val vm = viewModel(sessions = listOf(sleepSession(today)))
 
         val fallback = vm.uiState.value.copy(selectedDate = outOfLookback).today
 
@@ -129,7 +151,7 @@ class RecoveryViewModelTest {
     fun `a failed reload keeps the week already on screen`() = runTest {
         val repo = mockk<SleepRepository>()
         coEvery { repo.loadSleepSessions(any(), any()) } returns listOf(sleepSession(today))
-        val vm = RecoveryViewModel(repo, mainDispatcherRule.dispatcherProvider)
+        val vm = viewModel(sleepRepository = repo)
         assertEquals(7, vm.uiState.value.days.size)
 
         coEvery { repo.loadSleepSessions(any(), any()) } throws RuntimeException("the provider hung up")
@@ -149,7 +171,7 @@ class RecoveryViewModelTest {
         val repo = mockk<SleepRepository>()
         coEvery { repo.loadSleepSessions(any(), any()) } throws SecurityException("sleep read")
 
-        val vm = RecoveryViewModel(repo, mainDispatcherRule.dispatcherProvider)
+        val vm = viewModel(sleepRepository = repo)
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -163,7 +185,7 @@ class RecoveryViewModelTest {
         val repo = mockk<SleepRepository>()
         coEvery { repo.loadSleepSessions(any(), any()) } throws RuntimeException("offline")
 
-        val vm = RecoveryViewModel(repo, mainDispatcherRule.dispatcherProvider)
+        val vm = viewModel(sleepRepository = repo)
 
         assertFalse(vm.uiState.value.isLoading)
         assertEquals(ScreenError.Message("offline"), vm.uiState.value.error)

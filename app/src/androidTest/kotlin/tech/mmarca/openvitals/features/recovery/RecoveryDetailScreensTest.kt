@@ -154,30 +154,35 @@ class RecoveryDetailScreensTest {
         scrollTo(string(R.string.sleep_score_calculation_title))
         scrollTo(string(R.string.action_show_calculation))
 
-        // 3. The day's figures: the four components, then the measurements they
-        //    were derived from.
+        // 3. The day's figures: the scored pillars, quality breakdown, then the
+        //    measurements they were derived from.
         scrollTo(string(R.string.sleep_score_day_numbers_title))
         scrollTo(string(R.string.sleep_score_component_duration))
         scrollTo(FORMATTER.decimal(ESTIMATE.durationPoints, 1))
+        scrollTo(string(R.string.sleep_score_component_quality))
+        scrollTo(FORMATTER.decimal(ESTIMATE.qualityPoints, 1))
+        scrollTo(string(R.string.sleep_score_component_recovery))
+        scrollTo(FORMATTER.decimal(ESTIMATE.recoveryPoints, 1))
         scrollTo(FORMATTER.decimal(ESTIMATE.efficiencyPoints, 1))
         scrollTo(string(R.string.sleep_score_component_continuity))
-        scrollTo(string(R.string.sleep_score_component_regularity))
+        scrollTo(string(R.string.sleep_score_component_stages))
         scrollTo(FORMATTER.duration(SLEEP_MINUTES.minutesAsMillis()))
         scrollTo(FORMATTER.duration(TIME_IN_BED_MINUTES.minutesAsMillis()))
         scrollTo(FORMATTER.percent(ESTIMATE.sleepEfficiencyPercent, 0).value)
         scrollTo(string(R.string.sleep_score_baseline_nights))
         scrollTo(string(R.string.sleep_score_stage_records))
         scrollTo(string(R.string.recovery_sleep_schedule))
-        // Stages AND explicit awake stages: the best of the three quality notes,
-        // and the only one that says the awake time was measured, not inferred.
-        scrollTo(string(R.string.sleep_score_quality_stage_awake))
+        // Stages, awake stages, and overnight HRV: the richest quality note.
+        scrollTo(string(R.string.sleep_score_quality_stage_awake_hrv))
 
-        // 4. The four references behind the score.
+        // 4. Science references behind the score.
         scrollTo(string(R.string.references_backed_links))
+        scrollTo(string(R.string.reference_garmin_sleep_score))
+        scrollTo(string(R.string.reference_nsf_sleep_duration))
         scrollTo(string(R.string.reference_aasm_sleep_duration))
+        scrollTo(string(R.string.reference_nsf_sleep_quality))
         scrollTo(string(R.string.reference_multidimensional_sleep_health))
         scrollTo(string(R.string.reference_sleep_efficiency_definition))
-        scrollTo(string(R.string.reference_sleep_regularity))
     }
 
     @Test
@@ -261,18 +266,25 @@ class RecoveryDetailScreensTest {
             score = 82,
             confidence = SleepScoreConfidence.HIGH,
             durationPoints = 30.0,
-            efficiencyPoints = 25.5,
-            continuityPoints = 15.0,
-            regularityPoints = 11.5,
+            qualityPoints = 36.0,
+            recoveryPoints = 16.0,
+            efficiencyPoints = 15.0,
+            continuityPoints = 12.0,
+            stageBalancePoints = 9.0,
             sleepDurationMinutes = SLEEP_MINUTES,
             timeInBedMinutes = TIME_IN_BED_MINUTES,
             sleepEfficiencyPercent = 93.75,
             wakeAfterSleepOnsetMinutes = 20.0,
+            deepSleepPercentOfSleep = 18.0,
+            remSleepPercentOfSleep = 22.0,
+            overnightHrvRmssdMs = 48.0,
+            overnightHrvBaselineRmssdMs = 45.0,
             regularityDifferenceMinutes = 15.0,
             regularityBaselineNights = 5,
             sleepStageCount = 12,
             usesSleepStages = true,
             usesExplicitAwakeStages = true,
+            usesOvernightHrv = true,
         )
 
         fun Double.minutesAsMillis(): Long = (this * 60_000).roundToLong()

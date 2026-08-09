@@ -65,6 +65,7 @@ class SleepViewModel(
     sleepWindowFlow: Flow<SleepWindow>? = null,
     private val onRangeSelected: (TimeRange) -> Unit = {},
     private val onDailyGoalChanged: (Double) -> Unit = {},
+    private val ageYearsForDate: (LocalDate) -> Int? = { null },
 ) : ViewModel() {
 
     @Inject
@@ -89,6 +90,7 @@ class SleepViewModel(
         onDailyGoalChanged = { goal ->
             preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS, goal)
         },
+        ageYearsForDate = { date -> preferencesRepository.bodyProfile().ageYears(date) },
     )
 
     constructor(
@@ -103,6 +105,7 @@ class SleepViewModel(
         sleepWindowFlow: Flow<SleepWindow>? = null,
         onRangeSelected: (TimeRange) -> Unit = {},
         onDailyGoalChanged: (Double) -> Unit = {},
+        ageYearsForDate: (LocalDate) -> Int? = { null },
     ) : this(
         loadSleepPeriodUseCase = LoadSleepPeriodUseCase(repository, heartRepository),
         dispatchers = dispatchers,
@@ -114,6 +117,7 @@ class SleepViewModel(
         sleepWindowFlow = sleepWindowFlow,
         onRangeSelected = onRangeSelected,
         onDailyGoalChanged = onDailyGoalChanged,
+        ageYearsForDate = ageYearsForDate,
     )
 
     private val goalKey = MetricDailyGoalKey.SLEEP_HOURS
@@ -236,6 +240,7 @@ class SleepViewModel(
                             previousDailyDurations = result.previousDailyDurations,
                             baselineDailyDurations = result.baselineDailyDurations,
                             crossDailyHrv = result.crossDailyHrv,
+                            ageYears = ageYearsForDate(date),
                         )
                     }
                     if (!isCurrent) return@load

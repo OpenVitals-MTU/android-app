@@ -7,20 +7,26 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
 import tech.mmarca.openvitals.domain.insights.calculateSleepScoresByDate
+import tech.mmarca.openvitals.domain.insights.overnightHrvInputsByDate
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 
 private const val RecoveryLookbackDays = 7L
@@ -61,6 +67,8 @@ data class RecoveryUiState(
 @HiltViewModel
 class RecoveryViewModel @Inject constructor(
     private val sleepRepository: SleepRepository,
+    private val heartRepository: HeartRepository,
+    private val preferencesRepository: PreferencesRepository,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) : ViewModel() {
 
@@ -81,11 +89,31 @@ class RecoveryViewModel @Inject constructor(
                 error = null,
             )
             runCatching {
-                sleepRepository.loadSleepSessions(start, today)
-            }.onSuccess { sessions ->
+                coroutineScope {
+                    val sessionsDeferred = async { sleepRepository.loadSleepSessions(start, today) }
+                    val hrvDeferred = async {
+                        val zone = ZoneId.systemDefault()
+                        val windowStart = start.atStartOfDay(zone).toInstant()
+                        val windowEnd = today.plusDays(1).atStartOfDay(zone).toInstant()
+                        runCatching {
+                            heartRepository.loadHrvSamples(windowStart, windowEnd)
+                        }.getOrDefault(emptyList())
+                    }
+                    LoadedRecoveryInputs(
+                        sessions = sessionsDeferred.await(),
+                        hrvSamples = hrvDeferred.await(),
+                        ageYears = preferencesRepository.bodyProfile().ageYears(today),
+                    )
+                }
+            }.onSuccess { inputs ->
                 if (!isCurrent) return@load
                 val days = withContext(dispatchers.default) {
-                    sessions.toRecoveryDays(start, today)
+                    inputs.sessions.toRecoveryDays(
+                        start = start,
+                        end = today,
+                        ageYears = inputs.ageYears,
+                        hrvSamples = inputs.hrvSamples,
+                    )
                 }
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
@@ -105,19 +133,36 @@ class RecoveryViewModel @Inject constructor(
     }
 }
 
+private data class LoadedRecoveryInputs(
+    val sessions: List<SleepData>,
+    val hrvSamples: List<HrvSample>,
+    val ageYears: Int?,
+)
+
 private fun List<SleepData>.toRecoveryDays(
     start: LocalDate,
     end: LocalDate,
+    ageYears: Int?,
+    hrvSamples: List<HrvSample>,
 ): List<RecoveryDay> {
     val zone = ZoneId.systemDefault()
     val sessionsByDate = groupBy { it.endTime.atZone(zone).toLocalDate() }
+    val overnightHrvByDate = overnightHrvInputsByDate(
+        sessions = this,
+        hrvSamples = hrvSamples,
+        start = start,
+        end = end,
+        zone = zone,
+    )
     val sleepScores = calculateSleepScoresByDate(
         sessions = this,
         start = start,
         end = end,
         zone = zone,
+        ageYears = ageYears,
+        overnightHrvByDate = overnightHrvByDate,
     )
-    val days = generateSequence(start) { date ->
+    return generateSequence(start) { date ->
         date.plusDays(1).takeUnless { it.isAfter(end) }
     }.map { date ->
         RecoveryDay(
@@ -126,7 +171,6 @@ private fun List<SleepData>.toRecoveryDays(
             sleepScore = sleepScores[date] ?: SleepScoreEstimate.NoData,
         )
     }.toList()
-    return days
 }
 
 private fun List<SleepData>.stageDurationMs(stageType: Int): Long =
