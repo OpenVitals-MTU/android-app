@@ -174,6 +174,7 @@ class DashboardDataLoaderTest {
         coVerify(exactly = 1) { hc.readAvgHeartRate(date) }
         coVerify(exactly = 0) { hc.readRawHeartRateSamples(any(), any()) }
         coVerify(exactly = 0) { hc.readHeartRateSamples(any(), any()) }
+        coVerify(exactly = 0) { hc.readHeartRateSamplesForInsights(any(), any()) }
     }
 
     @Test fun `dashboard metric cancellation propagates`() = runTest {
@@ -661,7 +662,7 @@ class DashboardDataLoaderTest {
                 distanceMeters = 0.0,
             )
         }
-        coEvery { hc.readHeartRateSamples(any(), any()) } returns emptyList()
+        coEvery { hc.readHeartRateSamplesForInsights(any(), any()) } returns emptyList()
         coEvery { hc.readExerciseSessions(any(), any()) } returns emptyList()
         coEvery { hc.readDailyRestingHR(any(), any()) } returns emptyList()
         dashboardDataLoader(hc).loadDashboard(
@@ -675,7 +676,7 @@ class DashboardDataLoaderTest {
         val expectedStart = heartRateSampleStart.atStartOfDay(zone).toInstant()
         val expectedEnd = date.plusDays(1).atStartOfDay(zone).toInstant()
         coVerify(exactly = 1) {
-            hc.readHeartRateSamples(expectedStart, expectedEnd)
+            hc.readHeartRateSamplesForInsights(expectedStart, expectedEnd)
         }
     }
 
@@ -729,7 +730,7 @@ class DashboardDataLoaderTest {
                 includeElevation = any(),
             )
         } returns emptyList()
-        coEvery { hc.readHeartRateSamples(any(), any()) } returns samples
+        coEvery { hc.readHeartRateSamplesForInsights(any(), any()) } returns samples
         coEvery { hc.readDailyRestingHR(any(), any()) } returns listOf(DailyRestingHR(date, 60L))
         coEvery { hc.readExerciseSessions(any(), any()) } returns listOf(workout)
         val repository = dashboardDataLoader(hc)
