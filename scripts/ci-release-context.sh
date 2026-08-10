@@ -4,6 +4,18 @@ set -eu
 git fetch --tags --force origin
 mkdir -p .woodpecker/tmp
 
+# Cron nightlies with nothing new to publish exit here so we never mint a
+# versionCode or spend a runner-hour on a duplicate APK. Manual runs always
+# build. See scripts/ci-should-skip-nightly.sh.
+if [ "${CI_PIPELINE_EVENT:-}" = "cron" ] && sh scripts/ci-should-skip-nightly.sh; then
+    {
+        printf 'OPENVITALS_SKIP_NIGHTLY=true\n'
+        printf 'OPENVITALS_RELEASE_CHANNEL=nightly\n'
+        printf 'OPENVITALS_RELEASE_TAG=nightly\n'
+    } > .woodpecker/tmp/release-context.env
+    exit 0
+fi
+
 apk_abi_filters="${OPENVITALS_APK_ABI_FILTERS:-armeabi-v7a,arm64-v8a}"
 release_tag="${CI_COMMIT_TAG:-}"
 
@@ -165,6 +177,7 @@ if [ -n "$version_code" ]; then
 fi
 
 {
+    printf 'OPENVITALS_SKIP_NIGHTLY=false\n'
     printf 'OPENVITALS_RELEASE_CHANNEL=%s\n' "$release_channel"
     printf 'OPENVITALS_RELEASE_TAG=%s\n' "$release_tag"
     printf 'OPENVITALS_GRADLE_TASK=%s\n' "$gradle_task"

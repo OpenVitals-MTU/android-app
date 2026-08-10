@@ -161,7 +161,10 @@ promotes the matching Codeberg prerelease to stable.
 Configure the Woodpecker cron named `nightly` to run at `00:00 UTC` on the
 default branch. The cron-triggered release workflow and the manual release
 workflow both build and publish the nightly artifacts directly, then move the
-fixed `nightly` tag to the published commit.
+fixed `nightly` tag to the published commit. Cron only skips the build when
+there is nothing new to publish: either the `nightly` tag already points at
+HEAD, or HEAD has no commits after the latest versioned `vX.Y.Z` release.
+Manual runs always build so an operator can force a refresh.
 
 Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
 edit repository releases and has repository write access so CI can move

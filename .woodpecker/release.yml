@@ -36,7 +36,7 @@ steps:
     commands:
       - set -eu
       - apk add --no-cache curl git python3
-      - chmod +x scripts/ci-release-context.sh scripts/version-code.sh
+      - chmod +x scripts/ci-release-context.sh scripts/version-code.sh scripts/ci-should-skip-nightly.sh scripts/ci-nightly-is-skipped.sh
       - scripts/ci-release-context.sh
 
   # Single prerelease verification pass: verifyCi aggregates verifyCiUnitTest
@@ -49,6 +49,11 @@ steps:
     image: *android_image
     commands:
       - set -eu
+      - |
+        if sh scripts/ci-nightly-is-skipped.sh; then
+          echo "Skipping prerelease verification: cron nightly has nothing new to publish."
+          exit 0
+        fi
       - |
         if [ "$${CI_PIPELINE_EVENT}" = "deployment" ] && [ "$${CI_PIPELINE_DEPLOY_TARGET:-}" = "production" ]; then
           echo "Skipping prerelease verification for production deployment."
@@ -75,6 +80,11 @@ steps:
         from_secret: CODEBERG_RELEASE_API_KEY
     commands:
       - set -eu
+      - |
+        if sh scripts/ci-nightly-is-skipped.sh; then
+          echo "Skipping APK build: cron nightly has nothing new to publish."
+          exit 0
+        fi
       - . .woodpecker/tmp/release-context.env
       - test -n "$${OPENVITALS_RELEASE_KEYSTORE_BASE64}"
       - test -n "$${OPENVITALS_RELEASE_STORE_PASSWORD}"
@@ -143,6 +153,11 @@ steps:
         from_secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64
     commands:
       - set -eu
+      - |
+        if sh scripts/ci-nightly-is-skipped.sh; then
+          echo "Skipping Play open testing upload: cron nightly has nothing new to publish."
+          exit 0
+        fi
       - . .woodpecker/tmp/release-context.env
       - test "$${OPENVITALS_PLAY_TRACK}" = "beta"
       - test -n "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}"
@@ -199,6 +214,11 @@ steps:
         from_secret: CODEBERG_RELEASE_API_KEY
     commands:
       - set -eu
+      - |
+        if sh scripts/ci-nightly-is-skipped.sh; then
+          echo "Skipping Codeberg publish: cron nightly has nothing new to publish."
+          exit 0
+        fi
       - apk add --no-cache bash curl jq
       - . .woodpecker/tmp/release-context.env
       - test -n "$${CODEBERG_RELEASE_API_KEY}"
@@ -243,6 +263,11 @@ steps:
         from_secret: CODEBERG_RELEASE_API_KEY
     commands:
       - set -eu
+      - |
+        if sh scripts/ci-nightly-is-skipped.sh; then
+          echo "Skipping Codeberg prune: cron nightly has nothing new to publish."
+          exit 0
+        fi
       - apk add --no-cache bash curl python3
       - test -n "$${CODEBERG_RELEASE_API_KEY}"
       - chmod +x scripts/prune-codeberg-releases.sh
