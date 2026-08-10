@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.domain.insights.SleepScoreLookbackDays
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
@@ -29,9 +30,10 @@ class LoadSleepPeriodUseCaseTest {
         anchorDate = LocalDate.of(2026, 6, 1),
         weekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     )
+    private val hrvStart = query.windows.current.start.minusDays(SleepScoreLookbackDays - 1)
 
     @Test
-    fun `loads sleep period and daily hrv in parallel windows`() = runTest {
+    fun `loads sleep period and daily hrv with lookback window`() = runTest {
         coEvery {
             sleepRepository.loadSleepPeriod(query, SleepWindow.Default)
         }.returns(
@@ -42,14 +44,14 @@ class LoadSleepPeriodUseCaseTest {
             ),
         )
         coEvery {
-            heartRepository.loadDailyHRV(query.windows.current.start, query.windows.current.end)
+            heartRepository.loadDailyHRV(hrvStart, query.windows.current.end)
         }.returns(listOf(DailyHrv(date = LocalDate.of(2026, 6, 1), rmssdMs = 42.0)))
 
         val result = useCase(query, SleepWindow.Default)
 
         coVerify { sleepRepository.loadSleepPeriod(query, SleepWindow.Default) }
         coVerify {
-            heartRepository.loadDailyHRV(query.windows.current.start, query.windows.current.end)
+            heartRepository.loadDailyHRV(hrvStart, query.windows.current.end)
         }
         assertEquals(42.0, result.crossDailyHrv.single().rmssdMs, 0.0)
     }
@@ -60,7 +62,7 @@ class LoadSleepPeriodUseCaseTest {
             sleepRepository.loadSleepPeriod(query, SleepWindow.Default, RefreshMode.FORCE)
         }.returns(SleepPeriodData())
         coEvery {
-            heartRepository.loadDailyHRV(query.windows.current.start, query.windows.current.end)
+            heartRepository.loadDailyHRV(hrvStart, query.windows.current.end)
         }.returns(emptyList())
 
         useCase(query, SleepWindow.Default, RefreshMode.FORCE)
