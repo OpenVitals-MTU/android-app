@@ -796,7 +796,7 @@ class DashboardDataLoader @Inject constructor(
         return DashboardWeeklyTrainingRawData(
             dailySteps = readDashboardCardioLoadSteps(rangeStart, rangeEnd, granted),
             heartRateSamples = if (readHeartRatePermission in granted) {
-                hc.readHeartRateSamples(heartRateSampleStartInstant, heartRateSampleEndInstant)
+                hc.readHeartRateSamplesForInsights(heartRateSampleStartInstant, heartRateSampleEndInstant)
             } else {
                 emptyList()
             },

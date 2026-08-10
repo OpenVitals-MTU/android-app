@@ -131,6 +131,11 @@ fun calculateCardioLoad(
             score = fallback,
             confidence = CardioLoadConfidence.LOW,
             method = CardioLoadMethod.MOVEMENT_FALLBACK,
+            trimpScore = trimp?.score,
+            coveredMinutes = trimp?.coveredMinutes ?: 0.0,
+            expectedMinutes = activityWindowMinutes.takeIf { it > 0.0 }
+                ?: trimp?.expectedMinutes
+                ?: 0.0,
             restingHeartRateBpm = resting,
             restingHeartRateObserved = restingHeartRate != null,
             maxHeartRateBpm = maxHeartRate?.bpm,

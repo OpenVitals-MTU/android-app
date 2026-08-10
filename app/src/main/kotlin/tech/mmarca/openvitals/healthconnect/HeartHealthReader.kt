@@ -9,6 +9,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateChartBucketDuration
+import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
@@ -51,6 +52,41 @@ internal class HeartHealthReader(
             } else {
                 readRawOrAggregatedFallback(start, end)
             }
+        }
+
+    /**
+     * Heart-rate series dense enough for TRIMP / intensity-minute coverage math.
+     *
+     * Multi-day chart reads use 15-minute buckets and are incompatible with the
+     * five-minute max gap those calculators enforce. Insights load one local day
+     * at a time with [HeartRateInsightBucketDuration] so Binder parcels stay
+     * small while consecutive samples remain usable for coverage.
+     */
+    suspend fun readHeartRateSamplesForInsights(start: Instant, end: Instant): List<HeartRateSample> =
+        support.withLogging("readHeartRateSamplesForInsights[$start..$end]", emptyList()) {
+            if (!end.isAfter(start)) return@withLogging emptyList()
+            val zone = ZoneId.systemDefault()
+            var dayStart = start.atZone(zone).toLocalDate()
+            val lastDay = end.minusMillis(1).atZone(zone).toLocalDate()
+            val samples = mutableListOf<HeartRateSample>()
+            while (!dayStart.isAfter(lastDay)) {
+                val windowStart = maxOf(start, dayStart.atStartOfDay(zone).toInstant())
+                val windowEnd = minOf(end, dayStart.plusDays(1).atStartOfDay(zone).toInstant())
+                if (windowEnd.isAfter(windowStart)) {
+                    val dayRange = Duration.between(windowStart, windowEnd)
+                    samples += if (shouldUseAggregatedHeartRateSamples(dayRange)) {
+                        readAggregatedHeartRateSamples(
+                            windowStart,
+                            windowEnd,
+                            HeartRateInsightBucketDuration,
+                        )
+                    } else {
+                        readRawOrAggregatedFallback(windowStart, windowEnd)
+                    }
+                }
+                dayStart = dayStart.plusDays(1)
+            }
+            samples
         }
 
     /**

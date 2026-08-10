@@ -19,6 +19,12 @@ class HeartRateAggregatedSamplesTest {
     }
 
     @Test
+    fun `insight buckets are denser than chart buckets`() {
+        assertTrue(HeartRateInsightBucketDuration < HeartRateChartBucketDuration)
+        assertTrue(HeartRateInsightBucketDuration.toMinutes() <= 5)
+    }
+
+    @Test
     fun `heartRateSampleFromAggregateBucket maps bucket start and average bpm`() {
         val start = Instant.parse("2026-06-01T08:00:00Z")
 

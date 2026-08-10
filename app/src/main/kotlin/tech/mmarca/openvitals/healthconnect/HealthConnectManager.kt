@@ -426,6 +426,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun readHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
         heartReader.readHeartRateSamples(start, end)
 
+    suspend fun readHeartRateSamplesForInsights(start: Instant, end: Instant): List<HeartRateSample> =
+        heartReader.readHeartRateSamplesForInsights(start, end)
+
     suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
         heartReader.readRawHeartRateSamples(start, end)
 

@@ -314,7 +314,7 @@ class HeartRepositoryImpl @Inject constructor(
         val zone = ZoneId.systemDefault()
         val startInstant = start.atStartOfDay(zone).toInstant()
         val endInstant = end.plusDays(1).atStartOfDay(zone).toInstant()
-        return hc.readHeartRateSamples(startInstant, endInstant)
+        return hc.readHeartRateSamplesForInsights(startInstant, endInstant)
             .groupBy { it.time.atZone(zone).toLocalDate() }
             .flatMap { (_, daySamples) -> daySamples.reducedForChart() }
     }
