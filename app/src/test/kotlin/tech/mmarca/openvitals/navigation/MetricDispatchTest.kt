@@ -3,15 +3,17 @@ package tech.mmarca.openvitals.navigation
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import tech.mmarca.openvitals.features.activity.ActivityMetric
+import tech.mmarca.openvitals.features.body.BodyMetric
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.HeartMetric
 import tech.mmarca.openvitals.features.nutrition.NutritionMetric
 
 /**
  * Ported from the Flutter `test/navigation/metric_dispatch_test.dart`, which
- * pins the `/metric/{metricId}` dispatch to this precedence: the calories and
- * body AGGREGATES intercept their ids before the per-metric activity/body
- * screens can claim them, and `WORKOUT` renders the activities aggregate.
+ * pins the `/metric/{metricId}` dispatch to this precedence: the calories
+ * AGGREGATE intercepts its ids before the per-metric activity screens can claim
+ * them, body/heart/vitals/nutrition each open their focused metric screen, and
+ * `WORKOUT` renders the activities aggregate.
  */
 class MetricDispatchTest {
 
@@ -27,18 +29,22 @@ class MetricDispatchTest {
     }
 
     @Test
-    fun `body ids land on the body aggregate, not a per-metric screen`() {
-        listOf(
-            DashboardWidgetId.WEIGHT,
-            DashboardWidgetId.HEIGHT,
-            DashboardWidgetId.BMI,
-            DashboardWidgetId.FFMI,
-            DashboardWidgetId.BODY_FAT,
-            DashboardWidgetId.LEAN_MASS,
-            DashboardWidgetId.BONE_MASS,
-            DashboardWidgetId.BODY_WATER_MASS,
-        ).forEach { id ->
-            assertEquals(id.name, MetricRouteDestination.Body, metricRouteDestinationFor(id))
+    fun `body ids land on the per-metric body screen`() {
+        mapOf(
+            DashboardWidgetId.WEIGHT to BodyMetric.WEIGHT,
+            DashboardWidgetId.HEIGHT to BodyMetric.HEIGHT,
+            DashboardWidgetId.BMI to BodyMetric.BMI,
+            DashboardWidgetId.FFMI to BodyMetric.BMI,
+            DashboardWidgetId.BODY_FAT to BodyMetric.BODY_FAT,
+            DashboardWidgetId.LEAN_MASS to BodyMetric.LEAN_MASS,
+            DashboardWidgetId.BONE_MASS to BodyMetric.BONE_MASS,
+            DashboardWidgetId.BODY_WATER_MASS to BodyMetric.BODY_WATER_MASS,
+        ).forEach { (id, metric) ->
+            assertEquals(
+                id.name,
+                MetricRouteDestination.BodyDetail(metric),
+                metricRouteDestinationFor(id),
+            )
         }
     }
 

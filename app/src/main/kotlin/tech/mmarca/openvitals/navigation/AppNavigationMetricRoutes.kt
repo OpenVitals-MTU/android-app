@@ -33,7 +33,6 @@ import tech.mmarca.openvitals.features.body.BmiScreen
 import tech.mmarca.openvitals.features.body.BmrScreen
 import tech.mmarca.openvitals.features.body.BodyFatScreen
 import tech.mmarca.openvitals.features.body.BodyMetric
-import tech.mmarca.openvitals.features.body.BodyScreen
 import tech.mmarca.openvitals.features.body.BodyViewModel
 import tech.mmarca.openvitals.features.body.BodyWaterMassScreen
 import tech.mmarca.openvitals.features.body.BoneMassScreen
@@ -118,16 +117,6 @@ internal fun MetricRouteContent(
                 viewModel = nutritionViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onSectionEditStateChanged = onSectionEditStateChanged,
-            )
-        }
-        MetricRouteDestination.Body -> {
-            val bodyViewModel = hiltViewModel<BodyViewModel>()
-            BodyScreen(
-                viewModel = bodyViewModel,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onEditBodyMeasurement = onEditBodyMeasurement,
                 onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
@@ -268,7 +257,6 @@ internal fun MetricRouteContent(
 internal sealed interface MetricRouteDestination {
     data object Calories : MetricRouteDestination
     data class Nutrition(val metric: NutritionMetric) : MetricRouteDestination
-    data object Body : MetricRouteDestination
     data class ActivityDetail(val metric: ActivityMetric) : MetricRouteDestination
     data class HeartDetail(val metric: HeartMetric) : MetricRouteDestination
     data class BodyDetail(val metric: BodyMetric) : MetricRouteDestination
@@ -289,7 +277,6 @@ internal fun metricRouteDestinationFor(metricId: DashboardWidgetId?): MetricRout
     if (metricId.isNutritionDetailMetric()) {
         metricId.toNutritionMetricOrNull()?.let { return MetricRouteDestination.Nutrition(it) }
     }
-    if (metricId.isBodyDetailMetric()) return MetricRouteDestination.Body
     metricId.toActivityMetricOrNull()?.let { return MetricRouteDestination.ActivityDetail(it) }
     metricId.toHeartMetricOrNull()?.let { return MetricRouteDestination.HeartDetail(it) }
     metricId.toBodyMetricOrNull()?.let { return MetricRouteDestination.BodyDetail(it) }
@@ -537,11 +524,11 @@ internal fun String.toVitalsMeasurementTypeOrNull(): VitalsMeasurementType? =
 
 /**
  * Where a dashboard tile opens. Extracted from the dashboard's `onOpenMetric`
- * lambda so the mapping can be asserted without a NavController: the aggregate
- * screens claim their ids first, and everything else — the ten heart/vitals
- * ids included — lands on its own `/metric/{id}` screen. They used to share
- * one overview, which made every tap a two-hop trip to the metric the tile
- * already named.
+ * lambda so the mapping can be asserted without a NavController: the calories
+ * and nutrition aggregates claim their ids first, and everything else — body,
+ * heart, and vitals ids included — lands on its own `/metric/{id}` screen.
+ * Body tiles used to share one overview, which made every tap a two-hop trip
+ * to the metric the tile already named.
  *
  * Body Energy is the one destination that takes the day in its PATH; the rest
  * carry [selectedDate] as the optional `?day=` argument, which
@@ -558,14 +545,6 @@ internal fun dashboardTileDestination(
     DashboardWidgetId.PROTEIN,
     DashboardWidgetId.CARBS,
     DashboardWidgetId.FAT -> Screen.Nutrition.route.withSelectedDay(selectedDate)
-    DashboardWidgetId.WEIGHT,
-    DashboardWidgetId.HEIGHT,
-    DashboardWidgetId.BMI,
-    DashboardWidgetId.FFMI,
-    DashboardWidgetId.BODY_FAT,
-    DashboardWidgetId.LEAN_MASS,
-    DashboardWidgetId.BONE_MASS,
-    DashboardWidgetId.BODY_WATER_MASS -> Screen.Body.route.withSelectedDay(selectedDate)
     DashboardWidgetId.WORKOUT -> Screen.Activity.route.withSelectedDay(selectedDate)
     DashboardWidgetId.SLEEP -> Screen.Sleep.route.withSelectedDay(selectedDate)
     DashboardWidgetId.BODY_ENERGY -> Screen.BodyEnergyDetails.createRoute(selectedDate.toString())
@@ -584,16 +563,6 @@ private fun DashboardWidgetId.isNutritionDetailMetric(): Boolean =
         this == DashboardWidgetId.PROTEIN ||
         this == DashboardWidgetId.CARBS ||
         this == DashboardWidgetId.FAT
-
-private fun DashboardWidgetId.isBodyDetailMetric(): Boolean =
-        this == DashboardWidgetId.WEIGHT ||
-        this == DashboardWidgetId.HEIGHT ||
-        this == DashboardWidgetId.BMI ||
-        this == DashboardWidgetId.FFMI ||
-        this == DashboardWidgetId.BODY_FAT ||
-        this == DashboardWidgetId.LEAN_MASS ||
-        this == DashboardWidgetId.BONE_MASS ||
-        this == DashboardWidgetId.BODY_WATER_MASS
 
 private fun DashboardWidgetId.toActivityMetricOrNull(): ActivityMetric? =
     when (this) {

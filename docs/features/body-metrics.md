@@ -3,10 +3,12 @@
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
 > **Implementation:** `features/body`, `features/manualentry/body`, `data/repository/BodyRepository.kt`.
-> **Navigation:** `Screen.Body`, `Screen.Metric`, body entry routes; widgets `WEIGHT`, `HEIGHT`, `BMI`, `FFMI`, `BODY_FAT`, `LEAN_MASS`, `BMR`, `BONE_MASS`, `BODY_WATER_MASS`.
+> **Navigation:** `Screen.Metric`, body entry routes; widgets `WEIGHT`, `HEIGHT`, `BMI`, `FFMI`, `BODY_FAT`, `LEAN_MASS`, `BMR`, `BONE_MASS`, `BODY_WATER_MASS`.
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Statistics](statistics.md).
 
 The body feature owns period-based detail screens for body measurement and composition metrics read from Health Connect.
+
+Each body dashboard tile opens its own focused metric screen directly - tapping Weight opens the weight detail, not an intermediate Body overview.
 
 ## Implemented Metrics
 

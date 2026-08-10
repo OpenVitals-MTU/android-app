@@ -108,7 +108,8 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/dashboar
 | includeUnsupported > defaults to false: unsupported metrics stay dropped | PORTED | DashboardPresentationMapperTest.kt: `build_includeUnsupported_defaultsToFalseSoUnsupportedMetricsStayDropped` | the ViewModel only passes true while editing |
 | Body Energy tile > renders currentScore and the Start/+/- subtitle when set up | PORTED | DashboardPresentationMapperTest.kt: `build_bodyEnergyWidget_rendersCurrentScoreAndStartChargedDrainedSubtitle` | dashboard tile mapping only; no bodyenergy production file touched |
 | Body Energy tile > shows "Not set up" when the timeline is absent | PORTED | DashboardPresentationMapperTest.kt: `build_bodyEnergyWidget_isNotSetUpUntilCalibrationCompletes` + `build_bodyEnergyWidget_showsNoDataWhenTimelineIsAbsent` | Kotlin gates on the calibration flag rather than timeline presence; both branches pinned |
-| tile destinations match Kotlin > heart and vitals tiles all open the heart_vitals overview | PORTED | DashboardTileDestinationTest: `heartAndVitalsTilesAllOpenTheHeartVitalsOverview` | Compose instrumentation; runs on a device, not in CI |
+| tile destinations match Kotlin > heart and vitals tiles each open their own metric screen | PORTED | DashboardTileDestinationTest: `heartAndVitalsTilesEachOpenTheirOwnMetricScreen` | Compose instrumentation; runs on a device, not in CI |
+| tile destinations match Kotlin > body tiles each open their own metric screen | PORTED | DashboardTileDestinationTest: `bodyTilesEachOpenTheirOwnMetricScreen` | Compose instrumentation; runs on a device, not in CI |
 | tile destinations match Kotlin > hydration, mindfulness and caffeine tiles open their detail views | PORTED | DashboardTileDestinationTest: `hydrationMindfulnessAndCaffeineTilesOpenTheirDetailViews` | Compose instrumentation; runs on a device, not in CI |
 
 ## test/features/dashboard/dashboard_tile_layout_test.dart

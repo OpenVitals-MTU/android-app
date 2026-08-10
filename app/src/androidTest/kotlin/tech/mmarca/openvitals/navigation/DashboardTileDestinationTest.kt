@@ -14,7 +14,7 @@ import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
  *
  * That group exists in the Dart suite purely to pin parity WITH this app, so it
  * is the one place worth asserting twice: a tapped tile has to reach the screen
- * that actually shows the metric. The ten heart/vitals ids each own their
+ * that actually shows the metric. Heart, vitals, and body ids each own their
  * `/metric/{id}` screen like everything else — they used to share one
  * overview, which made every tap a two-hop trip to the metric the tile
  * already named.
@@ -45,6 +45,26 @@ class DashboardTileDestinationTest {
             DashboardWidgetId.BODY_TEMPERATURE,
             DashboardWidgetId.BLOOD_GLUCOSE,
             DashboardWidgetId.SKIN_TEMPERATURE,
+        ).forEach { metricId ->
+            assertEquals(
+                metricId.name,
+                "metric/${metricId.name}?day=2026-03-14",
+                dashboardTileDestination(metricId, selectedDay),
+            )
+        }
+    }
+
+    @Test
+    fun bodyTilesEachOpenTheirOwnMetricScreen() {
+        listOf(
+            DashboardWidgetId.WEIGHT,
+            DashboardWidgetId.HEIGHT,
+            DashboardWidgetId.BMI,
+            DashboardWidgetId.FFMI,
+            DashboardWidgetId.BODY_FAT,
+            DashboardWidgetId.LEAN_MASS,
+            DashboardWidgetId.BONE_MASS,
+            DashboardWidgetId.BODY_WATER_MASS,
         ).forEach { metricId ->
             assertEquals(
                 metricId.name,

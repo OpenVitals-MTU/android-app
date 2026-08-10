@@ -42,8 +42,6 @@ import tech.mmarca.openvitals.features.activity.ActivitiesViewModel
 import tech.mmarca.openvitals.features.activity.CaloriesScreen
 import tech.mmarca.openvitals.features.activity.CaloriesViewModel
 import tech.mmarca.openvitals.features.activity.CardioLoadDetailScreen
-import tech.mmarca.openvitals.features.body.BodyScreen
-import tech.mmarca.openvitals.features.body.BodyViewModel
 import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyDetailsScreen
 import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyViewModel
 import tech.mmarca.openvitals.features.caffeine.CaffeineDrinkScreen
@@ -256,7 +254,6 @@ fun AppNavigation(
             Screen.Metric.route,
             Screen.Activity.route,
             Screen.Sleep.route,
-            Screen.Body.route,
         )
     }
 
@@ -343,7 +340,6 @@ fun AppNavigation(
         Screen.CycleEntryEdit.route -> stringResource(R.string.screen_cycle_entry)
         Screen.Calories.route -> stringResource(R.string.screen_calories)
         Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
-        Screen.Body.route -> stringResource(R.string.screen_body)
         Screen.Activity.route -> stringResource(R.string.screen_activities)
         Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
         Screen.Sleep.route -> stringResource(R.string.screen_sleep)
@@ -727,14 +723,6 @@ fun AppNavigation(
                             DashboardWidgetId.PROTEIN,
                             DashboardWidgetId.CARBS,
                             DashboardWidgetId.FAT -> navController.navigate(Screen.Nutrition.route)
-                            DashboardWidgetId.WEIGHT,
-                            DashboardWidgetId.HEIGHT,
-                            DashboardWidgetId.BMI,
-                            DashboardWidgetId.FFMI,
-                            DashboardWidgetId.BODY_FAT,
-                            DashboardWidgetId.LEAN_MASS,
-                            DashboardWidgetId.BONE_MASS,
-                            DashboardWidgetId.BODY_WATER_MASS -> navController.navigate(Screen.Body.route)
                             DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
                             DashboardWidgetId.BODY_ENERGY -> {
                                 navController.navigate(
@@ -841,24 +829,6 @@ fun AppNavigation(
                     viewModel = nutritionViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
-                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
-                    },
-                )
-            }
-
-            composable(
-                route = Screen.Body.route + SELECTED_DAY_QUERY_PATTERN,
-                arguments = listOf(navArgument(SELECTED_DAY_ARG) { type = NavType.StringType; nullable = true; defaultValue = null }),
-            ) {
-                val bodyViewModel = hiltViewModel<BodyViewModel>()
-                BodyScreen(
-                    viewModel = bodyViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onEditBodyMeasurement = { type, entryId ->
-                        navController.navigate(Screen.BodyMeasurementEntryEdit.createRoute(type.name, entryId))
-                    },
                     onSectionEditStateChanged = { isEditing, onToggleEdit ->
                         metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
                     },
@@ -1028,15 +998,15 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.CARBS -> R.string.metric_carbs
         DashboardWidgetId.FAT -> R.string.metric_fat
         DashboardWidgetId.CAFFEINE -> R.string.metric_caffeine
-        DashboardWidgetId.WEIGHT -> R.string.screen_body
-        DashboardWidgetId.HEIGHT -> R.string.screen_body
-        DashboardWidgetId.BMI -> R.string.screen_body
-        DashboardWidgetId.FFMI -> R.string.screen_body
-        DashboardWidgetId.BODY_FAT -> R.string.screen_body
-        DashboardWidgetId.LEAN_MASS -> R.string.screen_body
+        DashboardWidgetId.WEIGHT -> R.string.metric_weight
+        DashboardWidgetId.HEIGHT -> R.string.metric_height
+        DashboardWidgetId.BMI -> R.string.metric_bmi
+        DashboardWidgetId.FFMI -> R.string.metric_ffmi
+        DashboardWidgetId.BODY_FAT -> R.string.metric_body_fat
+        DashboardWidgetId.LEAN_MASS -> R.string.metric_lean_mass
         DashboardWidgetId.BMR -> R.string.screen_calories
-        DashboardWidgetId.BONE_MASS -> R.string.screen_body
-        DashboardWidgetId.BODY_WATER_MASS -> R.string.screen_body
+        DashboardWidgetId.BONE_MASS -> R.string.metric_bone_mass
+        DashboardWidgetId.BODY_WATER_MASS -> R.string.metric_body_water_mass
         DashboardWidgetId.AVG_HEART_RATE -> R.string.screen_heart_rate
         DashboardWidgetId.RESTING_HEART_RATE -> R.string.metric_resting_heart_rate
         DashboardWidgetId.HRV -> R.string.screen_hrv

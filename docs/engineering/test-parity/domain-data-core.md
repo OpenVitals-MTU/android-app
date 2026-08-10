@@ -1600,7 +1600,7 @@ Kotlin counterpart: none (dispatch lives in app/src/main/kotlin/tech/mmarca/open
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
 | calories ids land on the calories aggregate, not the activity screen | PORTED | MetricDispatchTest.kt: `calories ids land on the calories aggregate, not the activity screen` | seam: the id->destination decision extracted from MetricRouteContent into the pure `metricRouteDestinationFor` |
-| body ids land on the body aggregate, not a per-metric screen | PORTED | MetricDispatchTest.kt: `body ids land on the body aggregate, not a per-metric screen` | — |
+| body ids land on the per-metric body screen | PORTED | MetricDispatchTest.kt: `body ids land on the per-metric body screen` | — |
 | nutrition ids land on the per-metric nutrition screen | PORTED | MetricDispatchTest.kt: `nutrition ids land on the per-metric nutrition screen` | — |
 | movement ids land on the activity metric screen | PORTED | MetricDispatchTest.kt: `movement ids land on the activity metric screen` | — |
 | heart and vitals ids land on the heart metric screen | PORTED | MetricDispatchTest.kt: `heart and vitals ids land on the heart metric screen` | — |
