@@ -18,63 +18,16 @@ private data class DebugLogExportPayload(
     val result: DebugLogExportResult,
 )
 
+/**
+ * Exports this process's logcat for diagnostics builds.
+ *
+ * The export is intentionally raw: no tag allow-list, keyword drops, or
+ * redaction. Diagnostics builds are opt-in troubleshooting artifacts, and
+ * Health Connect / activity troubleshooting needs the unfiltered trail.
+ */
 object PrivacySafeDebugLogExporter {
-    internal const val MaxLines = 2_000
-    private const val Redacted = "[redacted]"
-    private const val UnsanitizedAppleImporterTag = "AppleHealthImporter"
-
-    private val logLinePattern = Regex("""^([VDIWEAF])/([A-Za-z0-9_.-]+)\s*:\s*(.*)$""")
-    private val macAddressPattern = Regex("""\b[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\b""")
-    private val uuidPattern = Regex(
-        """\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"""
-    )
-    private val emailPattern = Regex("""\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b""", RegexOption.IGNORE_CASE)
-    private val phonePattern = Regex("""(?<!\w)\+?[0-9][0-9 .()\-]{7,}[0-9](?!\w)""")
-    private val uriPattern = Regex("""\b(?:content|file|https?)://\S+""", RegexOption.IGNORE_CASE)
-    private val isoInstantPattern = Regex("""\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\b""")
-    private val isoDatePattern = Regex("""\b\d{4}-\d{2}-\d{2}\b""")
-    private val userPathPattern = Regex("""/(?:storage/emulated/\d+|sdcard|data/user/\d+)/\S+""")
-    private val keyValueIdPattern = Regex(
-        """(?i)\b(clientRecordId|recordId|deviceId|widgetId|token|secret|password|api[_-]?key)=\S+"""
-    )
-    private val unsanitizedAppleImporterLevels = setOf("W", "E", "A", "F")
-
-    private val dropKeywords = listOf(
-        " latitude",
-        " longitude",
-        " lat=",
-        " lon=",
-        " lng=",
-        " location",
-        " polyline",
-        " raw ",
-        " payload",
-        " content://",
-        " file://",
-        " /storage/",
-        " /sdcard/",
-        " displayname",
-        " bluetoothname",
-        " devicename",
-        " token",
-        " password",
-        " secret",
-        " api_key",
-        " apikey",
-    )
-
-    private val explicitAllowedTags = setOf(
-        "BleGattConnection",
-        "BodyHealthReader",
-        "HealthConnectManager",
-        "HomeWidget",
-        "HydrationHealthReader",
-        "HydrationReminderAlarmManager",
-        "HydrationReminderController",
-        "MindfulnessReminderAlarmManager",
-        "MindfulnessReminderController",
-        "SettingsViewModel",
-    )
+    /** Keep the most recent lines so a long session still fits a share intent. */
+    internal const val MaxLines = 20_000
 
     suspend fun writeCurrentProcessLogcat(
         context: Context,
@@ -103,72 +56,51 @@ object PrivacySafeDebugLogExporter {
             .getOrElse { throwable ->
                 listOf("E/OpenVitalsDiagnostics: logcat capture failed type=${throwable::class.java.simpleName}")
             }
-        val sanitized = sanitizeLogcat(rawLines)
+        val exported = exportLogcat(rawLines)
         val text = buildString {
             appendLine("OpenVitals diagnostics log export")
             appendLine("package=${context.packageName}")
             appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-            appendLine(
-                "privacy=only app log tags are included; sensitive lines are dropped or redacted; " +
-                    "AppleHealthImporter W/E/A/F lines are unsanitized",
-            )
-            appendLine("writtenLines=${sanitized.writtenLines}")
-            appendLine("droppedLines=${sanitized.droppedLines}")
+            appendLine("privacy=raw process logcat; no tag filtering or redaction")
+            appendLine("writtenLines=${exported.writtenLines}")
+            appendLine("droppedLines=${exported.droppedLines}")
             appendLine()
-            sanitized.lines.forEach(::appendLine)
+            exported.lines.forEach(::appendLine)
         }
         return DebugLogExportPayload(
             text = text,
             result = DebugLogExportResult(
-                writtenLines = sanitized.writtenLines,
-                droppedLines = sanitized.droppedLines,
+                writtenLines = exported.writtenLines,
+                droppedLines = exported.droppedLines,
             ),
         )
     }
 
-    internal fun sanitizeLogcat(lines: List<String>): SanitizedLogcat {
-        var dropped = 0
-        val kept = lines.asSequence()
-            .mapNotNull { line ->
-                val sanitized = sanitizeLogLine(line)
-                if (sanitized == null) dropped += 1
-                sanitized
-            }
-            .toList()
-            .takeLast(MaxLines)
-        return SanitizedLogcat(
+    /**
+     * Keeps raw log lines as-is, truncated to [MaxLines] most recent entries.
+     * [droppedLines] counts only lines trimmed by that cap (never redacted).
+     */
+    internal fun exportLogcat(lines: List<String>): ExportedLogcat {
+        if (lines.size <= MaxLines) {
+            return ExportedLogcat(
+                lines = lines,
+                writtenLines = lines.size,
+                droppedLines = 0,
+            )
+        }
+        val kept = lines.takeLast(MaxLines)
+        return ExportedLogcat(
             lines = kept,
             writtenLines = kept.size,
-            droppedLines = dropped,
+            droppedLines = lines.size - kept.size,
         )
     }
 
-    internal fun sanitizeLogLine(line: String): String? {
-        val match = logLinePattern.matchEntire(line.trim()) ?: return null
-        val level = match.groupValues[1]
-        val tag = match.groupValues[2]
-        val message = match.groupValues[3]
-        if (isUnsanitizedAppleImporterLine(level, tag)) return line.trim()
-        if (!isAllowedTag(tag)) return null
-        if (message.isBlank()) return null
-        if (shouldDrop(message)) return null
+    /** @deprecated Prefer [exportLogcat]; kept for call-site compatibility during the raw-export switch. */
+    internal fun sanitizeLogcat(lines: List<String>): ExportedLogcat = exportLogcat(lines)
 
-        val redacted = message
-            .replace(uriPattern, Redacted)
-            .replace(userPathPattern, Redacted)
-            .replace(emailPattern, Redacted)
-            .replace(phonePattern, Redacted)
-            .replace(macAddressPattern, Redacted)
-            .replace(uuidPattern, Redacted)
-            .replace(keyValueIdPattern) { result ->
-                "${result.groupValues[1]}=$Redacted"
-            }
-            .replace(isoInstantPattern, Redacted)
-            .replace(isoDatePattern, Redacted)
-            .take(800)
-
-        return "$level/$tag: $redacted"
-    }
+    /** @deprecated No longer sanitizes; returns the line unchanged when non-blank. */
+    internal fun sanitizeLogLine(line: String): String? = line.trim().takeIf { it.isNotEmpty() }
 
     private fun readCurrentProcessLogcat(): List<String> {
         val process = ProcessBuilder(
@@ -177,7 +109,7 @@ object PrivacySafeDebugLogExporter {
             "--pid",
             Process.myPid().toString(),
             "-v",
-            "tag",
+            "threadtime",
         )
             .redirectErrorStream(true)
             .start()
@@ -187,25 +119,13 @@ object PrivacySafeDebugLogExporter {
         }
         return process.inputStream.bufferedReader().useLines { it.toList() }
     }
-
-    private fun isAllowedTag(tag: String): Boolean =
-        tag.startsWith("OpenVitals") ||
-            tag.startsWith("HealthConnect") ||
-            tag.endsWith("Repository") ||
-            tag.endsWith("ViewModel") ||
-            tag in explicitAllowedTags
-
-    private fun isUnsanitizedAppleImporterLine(level: String, tag: String): Boolean =
-        tag == UnsanitizedAppleImporterTag && level in unsanitizedAppleImporterLevels
-
-    private fun shouldDrop(message: String): Boolean {
-        val lower = " ${message.lowercase()} "
-        return dropKeywords.any(lower::contains)
-    }
 }
 
-data class SanitizedLogcat(
+data class ExportedLogcat(
     val lines: List<String>,
     val writtenLines: Int,
     val droppedLines: Int,
 )
+
+/** @deprecated Renamed to [ExportedLogcat]. */
+typealias SanitizedLogcat = ExportedLogcat

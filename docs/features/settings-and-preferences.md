@@ -91,4 +91,4 @@ Settings provide Data Importers for Apple Health export import, single or bulk G
 
 The settings area includes app version information, diagnostics/support surfaces, and privacy notes.
 
-In diagnostics builds, the Debug diagnostics section can save or share sanitized logs, post the hydration reminder notification on demand so its layout and actions can be checked, and list the apps that contributed heart-rate and sleep records to Health Connect over the last seven days.
+In diagnostics builds, the Debug diagnostics section can save or share raw process logs, post the hydration reminder notification on demand so its layout and actions can be checked, and list the apps that contributed heart-rate and sleep records to Health Connect over the last seven days.

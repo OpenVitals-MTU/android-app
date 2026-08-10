@@ -463,4 +463,4 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View the read-only dashboard/privacy positioning and health disclaimer.
 - View app version information.
 - The app declares no internet permission. Live BLE sensors and phone-to-phone sync run over Bluetooth.
-- In diagnostics builds, save or share sanitized logs, post a test hydration reminder, and list the apps that contributed heart-rate and sleep records over the last seven days.
+- In diagnostics builds, save or share raw process logs, post a test hydration reminder, and list the apps that contributed heart-rate and sleep records over the last seven days.

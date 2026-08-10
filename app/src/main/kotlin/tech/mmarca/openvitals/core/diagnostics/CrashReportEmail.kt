@@ -81,7 +81,7 @@ internal object CrashReportEmail {
                     appendLine(savedCrashReport.emailSection())
                 }
                 appendLine()
-                appendLine("Current sanitized diagnostics log:")
+                appendLine("Current diagnostics log:")
                 appendLine(diagnosticsLog.ifBlank { "No diagnostics log available." }.emailSection())
             },
         )

@@ -36,7 +36,9 @@ Diagnostics builds add two cards that are useful when data appears to be missing
 - A reminder test, which posts the hydration reminder notification immediately and exactly as a scheduled one would.
 - Health Connect sources, which lists the apps that contributed heart-rate and sleep records over the last seven days. It is the quickest way to tell whether a watch's companion app (e.g. Gadgetbridge) is actually landing data in Health Connect.
 
-Apple Health import reports are explicit user downloads and intentionally include the full importer summary, logs, grouped diagnostics, worker logs, and full exception stacks on failure; the raw per-record diagnostic log is capped per source (see [Apple Health import](apple-health-import.md#reports-and-diagnostics)) so a large repeated import cannot make the report unbounded, but grouped diagnostic counts stay complete. They are not the same as sanitized debug diagnostics logs and should be shared only when the user is comfortable sharing the included export-derived details.
+Apple Health import reports are explicit user downloads and intentionally include the full importer summary, logs, grouped diagnostics, worker logs, and full exception stacks on failure; the raw per-record diagnostic log is capped per source (see [Apple Health import](apple-health-import.md#reports-and-diagnostics)) so a large repeated import cannot make the report unbounded, but grouped diagnostic counts stay complete. They are not the same as the diagnostics log export and should be shared only when the user is comfortable sharing the included export-derived details.
+
+Diagnostics builds export raw process logcat (no tag filtering or redaction) from Settings → Debug diagnostics so Health Connect and sync issues can be diagnosed from the full trail.
 
 ## Support Links
 

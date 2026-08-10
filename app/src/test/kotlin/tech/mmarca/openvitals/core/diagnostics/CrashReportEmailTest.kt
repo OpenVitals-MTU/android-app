@@ -11,7 +11,7 @@ class CrashReportEmailTest {
             appInfo = testAppInfo(),
             reportDetails = testCrashDetails(),
             savedCrashReport = "saved crash stack",
-            diagnosticsLog = "D/OpenVitals: sanitized log",
+            diagnosticsLog = "D/OpenVitals: diagnostics log",
         )
 
         assertEquals("OpenVitals crash report", draft.subject)
@@ -20,7 +20,8 @@ class CrashReportEmailTest {
         assertTrue(draft.body.contains("java.lang.IllegalStateException"))
         assertTrue(draft.body.contains("MainActivity.kt:42"))
         assertTrue(draft.body.contains("saved crash stack"))
-        assertTrue(draft.body.contains("D/OpenVitals: sanitized log"))
+        assertTrue(draft.body.contains("D/OpenVitals: diagnostics log"))
+        assertTrue(draft.body.contains("Current diagnostics log:"))
     }
 
     @Test
