@@ -22,6 +22,7 @@ import java.time.Duration
 import kotlin.math.roundToLong
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.GarminWellnessMetric
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
  * Everything the watch measures that Health Connect has no type for. Port of
@@ -50,7 +51,7 @@ fun WatchDataScreen(viewModel: WatchDataViewModel) {
         state.metrics.isEmpty -> Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(Spacing.xxl),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -86,15 +87,15 @@ private val ExpectedMetrics = listOf(
 private fun WatchDataContent(metrics: WatchMetrics) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         item(key = "intro") {
             Text(
                 text = stringResource(R.string.settings_watch_data_intro),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
         }
         todayItems(metrics)
@@ -305,7 +306,7 @@ private fun MissingFooter(metrics: WatchMetrics) {
         text = stringResource(R.string.settings_watch_data_missing, names),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
     )
 }
 
@@ -342,7 +343,7 @@ private fun SectionTitle(title: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
     )
 }
 

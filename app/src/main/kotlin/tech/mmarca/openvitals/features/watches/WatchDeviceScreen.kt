@@ -140,8 +140,8 @@ fun WatchDeviceScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         StatusCard(
             device = device,
@@ -177,7 +177,7 @@ fun WatchDeviceScreen(
                     } else {
                         MaterialTheme.colorScheme.primary
                     },
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
                 )
             }
             state.sync.errorMessage?.let { message ->
@@ -185,7 +185,7 @@ fun WatchDeviceScreen(
                     text = message,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
                 )
             }
         }
@@ -230,7 +230,7 @@ fun WatchDeviceScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -258,7 +258,7 @@ fun WatchDeviceScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -302,7 +302,7 @@ fun WatchDeviceScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             ) {
                 Text(
                     text = stringResource(R.string.settings_watch_enabled),
@@ -325,7 +325,7 @@ fun WatchDeviceScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showRemoveDialog = true }
-                    .padding(16.dp),
+                    .padding(Spacing.lg),
             )
         }
     }
@@ -397,13 +397,13 @@ private fun StatusCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Spacing.lg),
         ) {
             WatchAvatar(
                 size = 44,
                 icon = if (isBikeComputer) Icons.AutoMirrored.Outlined.DirectionsBike else null,
             )
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(WatchRowIconGap))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (device.enabled) {
@@ -422,7 +422,7 @@ private fun StatusCard(
                 )
             }
             device.batteryPercent?.let { battery ->
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Spacing.md))
                 Text(
                     text = "$battery%",
                     style = MaterialTheme.typography.headlineSmall.copy(
@@ -458,7 +458,7 @@ internal fun ActionsRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = Spacing.lg),
     ) {
         if (!isBikeComputer) {
             WatchAction(
@@ -671,14 +671,14 @@ internal fun OnDeviceSettingsRow(onOpen: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onOpen)
-                .padding(16.dp),
+                .padding(Spacing.lg),
         ) {
             Icon(
                 imageVector = Icons.Outlined.BrightnessMedium,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.lg))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.settings_watch_on_device_settings),
@@ -711,14 +711,14 @@ private fun NotificationsRow(onOpen: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onOpen)
-                .padding(16.dp),
+                .padding(Spacing.lg),
         ) {
             Icon(
                 imageVector = Icons.Outlined.NotificationsActive,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.lg))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.settings_watch_notifications_title),
@@ -751,7 +751,7 @@ internal fun LiveSensorSection(
     onDetect: () -> Unit,
 ) {
     OpenVitalsCard {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
             Text(
                 text = stringResource(R.string.settings_bike_live_sensor_body),
                 style = MaterialTheme.typography.bodySmall,
@@ -759,8 +759,8 @@ internal fun LiveSensorSection(
             )
             if (device.capabilities.isNotEmpty()) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    modifier = Modifier.padding(top = Spacing.md),
                 ) {
                     device.capabilities.forEach { capability ->
                         AssistChip(
@@ -775,24 +775,24 @@ internal fun LiveSensorSection(
                     text = stringResource(R.string.settings_bike_no_broadcast),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = Spacing.sm),
                 )
             }
             OutlinedButton(
                 onClick = onDetect,
                 enabled = !isDetecting,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = Spacing.sm),
             ) {
                 if (isDetecting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(Spacing.lg),
+                        strokeWidth = WatchProgressStroke,
                     )
                 } else {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.BluetoothSearching,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(WatchInlineIconSize),
                     )
                 }
                 Text(
@@ -801,7 +801,7 @@ internal fun LiveSensorSection(
                     } else {
                         stringResource(R.string.settings_bike_detect_sensors)
                     },
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
         }
@@ -814,14 +814,14 @@ private fun SectionHeader(title: String) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(WatchChipGap))
         HorizontalDivider(modifier = Modifier.weight(1f))
     }
 }
@@ -856,3 +856,12 @@ private fun RenameDialog(
         },
     )
 }
+
+/** Gap inside a status chip. */
+private val WatchChipGap = 10.dp
+/** Inline status icons, between bodySmall text sizes. */
+private val WatchInlineIconSize = 18.dp
+/** The small in-row progress spinner's stroke. */
+private val WatchProgressStroke = 2.dp
+/** Gap between a row's leading icon and its text. */
+private val WatchRowIconGap = 14.dp

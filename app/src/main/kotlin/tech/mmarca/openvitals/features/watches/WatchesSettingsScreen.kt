@@ -96,27 +96,27 @@ fun WatchesSettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(vertical = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Text(
             text = stringResource(R.string.settings_watches_intro),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = Spacing.lg),
         )
 
         state.onboardNotice?.let { notice ->
             // Told once, after the sheet closes: the user has already
             // answered the OS dialogs by then. Inline rather than a snackbar
             // — the scaffold here owns no snackbar host.
-            OpenVitalsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            OpenVitalsCard(modifier = Modifier.padding(horizontal = Spacing.lg)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { viewModel.dismissNotice() }
-                        .padding(16.dp),
+                        .padding(Spacing.lg),
                 ) {
                     Text(
                         text = when (notice) {
@@ -134,10 +134,10 @@ fun WatchesSettingsScreen(
         }
 
         if (state.watches.isEmpty()) {
-            OpenVitalsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            OpenVitalsCard(modifier = Modifier.padding(horizontal = Spacing.lg)) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(Spacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_watches_empty_title),
@@ -155,11 +155,11 @@ fun WatchesSettingsScreen(
                         Icon(
                             imageVector = Icons.Outlined.Add,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(WatchPermissionIconSize),
                         )
                         Text(
                             text = stringResource(R.string.settings_watches_add),
-                            modifier = Modifier.padding(start = 8.dp),
+                            modifier = Modifier.padding(start = Spacing.sm),
                         )
                     }
                 }
@@ -169,23 +169,23 @@ fun WatchesSettingsScreen(
                 WatchRow(
                     device = watch,
                     onOpen = { onOpenWatch(watch.id) },
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
                 )
             }
             OpenVitalsOutlinedButton(
                 onClick = viewModel::startAdd,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = Spacing.lg),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Add,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(WatchPermissionIconSize),
                 )
                 Text(
                     text = stringResource(R.string.settings_watches_add),
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
         }
@@ -338,10 +338,10 @@ private fun WatchRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onOpen)
-                .padding(16.dp),
+                .padding(Spacing.lg),
         ) {
             WatchAvatar()
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(WatchRowIconGap))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = device.displayName,
@@ -393,7 +393,7 @@ private fun AddWatchDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Text(
                     text = if (state.isScanning) {
@@ -488,7 +488,7 @@ private fun AddWatchDialog(
  */
 @Composable
 private fun WatchPairSteps(step: GarminOnboardStep?) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(
             text = stringResource(R.string.settings_watch_pair_title),
             style = MaterialTheme.typography.labelLarge,
@@ -498,7 +498,7 @@ private fun WatchPairSteps(step: GarminOnboardStep?) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.padding(top = 4.dp))
+        Spacer(modifier = Modifier.padding(top = Spacing.xs))
         WatchPairStepRow(
             label = stringResource(R.string.settings_watch_step_bonding),
             active = step == GarminOnboardStep.BONDING,
@@ -513,7 +513,7 @@ private fun WatchPairSteps(step: GarminOnboardStep?) {
             text = stringResource(R.string.settings_watch_step_associating_hint),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 32.dp),
+            modifier = Modifier.padding(start = Spacing.xxxl),
         )
         WatchPairStepRow(
             label = stringResource(R.string.settings_watch_step_probing),
@@ -532,25 +532,25 @@ private fun WatchPairStepRow(
     Row(verticalAlignment = Alignment.CenterVertically) {
         when {
             active -> CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
+                modifier = Modifier.size(Spacing.lg),
+                strokeWidth = WatchProgressStroke,
             )
 
             done -> Icon(
                 imageVector = Icons.Outlined.CheckCircle,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(WatchPermissionIconSize),
                 tint = MaterialTheme.colorScheme.primary,
             )
 
             else -> Icon(
                 imageVector = Icons.Outlined.RadioButtonUnchecked,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(WatchPermissionIconSize),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Spacing.sm))
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
@@ -562,3 +562,8 @@ private fun WatchPairStepRow(
         )
     }
 }
+
+/** The small in-row progress spinner's stroke. */
+private val WatchProgressStroke = 2.dp
+/** Gap between a row's leading icon and its text. */
+private val WatchRowIconGap = 14.dp

@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCardStyle
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
  * Watch notification forwarding: the master switch, the two gates, and the
@@ -81,8 +82,8 @@ fun WatchNotificationAppsScreen(viewModel: WatchNotificationAppsViewModel) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         item(key = "master") {
             MasterSwitchCard(
@@ -98,7 +99,7 @@ fun WatchNotificationAppsScreen(viewModel: WatchNotificationAppsViewModel) {
                     text = stringResource(R.string.settings_watch_notifications_apps_intro),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                 )
             }
             when {
@@ -106,7 +107,7 @@ fun WatchNotificationAppsScreen(viewModel: WatchNotificationAppsViewModel) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                            .padding(vertical = Spacing.xxxl),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
@@ -116,7 +117,7 @@ fun WatchNotificationAppsScreen(viewModel: WatchNotificationAppsViewModel) {
                     Text(
                         text = stringResource(R.string.settings_watch_notifications_apps_empty),
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(Spacing.lg),
                     )
                 }
                 else -> items(state.apps, key = { it.packageName }) { app ->
@@ -143,14 +144,14 @@ private fun MasterSwitchCard(
     onOpenAccessSettings: () -> Unit,
 ) {
     OpenVitalsCard {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Outlined.NotificationsActive,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(Spacing.lg))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.settings_watch_notifications_title),
@@ -162,7 +163,7 @@ private fun MasterSwitchCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(Spacing.lg))
                 Switch(
                     checked = state.active,
                     onCheckedChange = if (state.loading) null else onToggle,
@@ -171,7 +172,7 @@ private fun MasterSwitchCard(
             }
 
             if (!state.accessGranted && !state.loading) {
-                Spacer(modifier = Modifier.padding(top = 12.dp))
+                Spacer(modifier = Modifier.padding(top = Spacing.md))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth(),
@@ -181,7 +182,7 @@ private fun MasterSwitchCard(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(Spacing.lg))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.settings_watch_notifications_grant),
@@ -195,7 +196,7 @@ private fun MasterSwitchCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     FilledTonalButton(onClick = onOpenAccessSettings) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
@@ -206,7 +207,7 @@ private fun MasterSwitchCard(
             }
 
             if (state.active) {
-                Spacer(modifier = Modifier.padding(top = 8.dp))
+                Spacer(modifier = Modifier.padding(top = Spacing.sm))
                 Text(
                     text = if (state.blockedCount == 0) {
                         stringResource(R.string.settings_watch_notifications_apps_none)
@@ -235,7 +236,7 @@ private fun AppRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -250,7 +251,7 @@ private fun AppRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.lg))
             Switch(
                 checked = !app.blocked,
                 onCheckedChange = onSendsChanged,

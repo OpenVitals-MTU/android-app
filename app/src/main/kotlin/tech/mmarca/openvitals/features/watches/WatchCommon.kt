@@ -34,6 +34,7 @@ import java.time.format.FormatStyle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
  * The pieces the device view and the watch-data screen both use, so the two
@@ -87,8 +88,8 @@ internal fun WatchAction(
         FilledTonalIconButton(onClick = onClick, enabled = enabled) {
             if (busy) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(Spacing.xl),
+                    strokeWidth = WatchProgressStroke,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             } else {
@@ -98,7 +99,7 @@ internal fun WatchAction(
                 Icon(imageVector = icon, contentDescription = label)
             }
         }
-        Spacer(modifier = Modifier.padding(top = 4.dp))
+        Spacer(modifier = Modifier.padding(top = Spacing.xs))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -123,7 +124,7 @@ internal fun WatchValueRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = label, style = MaterialTheme.typography.bodyLarge)
@@ -135,7 +136,7 @@ internal fun WatchValueRow(
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.lg))
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium.copy(
@@ -236,3 +237,6 @@ internal fun ConfirmRemoveWatchDialog(
         },
     )
 }
+
+/** The small in-row progress spinner's stroke. */
+private val WatchProgressStroke = 2.dp

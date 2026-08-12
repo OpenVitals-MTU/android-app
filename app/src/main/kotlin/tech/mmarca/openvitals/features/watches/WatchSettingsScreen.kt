@@ -52,6 +52,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.devices.garmin.GarminEntryKind
 import tech.mmarca.openvitals.devices.garmin.GarminSettingsEntry
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
  * One screen of the watch's own settings, rendered from what the watch sent.
@@ -117,8 +118,8 @@ fun WatchSettingsScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = 8.dp,
-                    bottom = 24.dp,
+                    top = Spacing.sm,
+                    bottom = Spacing.xxl,
                 ),
             ) {
                 item(key = "header") {
@@ -154,14 +155,14 @@ private fun ScreenHeader(
     hasState: Boolean,
     notice: WatchSettingsNotice?,
 ) {
-    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+    Column(modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.md)) {
         if (!watchTitle.isNullOrBlank()) {
             // The watch's own name for this screen — the top bar carries the
             // app's static title, so the watch's word for it lives here.
             Text(
                 text = watchTitle,
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 4.dp),
+                modifier = Modifier.padding(bottom = Spacing.xs),
             )
         }
         Text(
@@ -174,7 +175,7 @@ private fun ScreenHeader(
                 text = stringResource(R.string.settings_watch_settings_no_state),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier.padding(top = Spacing.md),
             )
         }
         notice?.let {
@@ -188,7 +189,7 @@ private fun ScreenHeader(
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier.padding(top = Spacing.md),
             )
         }
     }
@@ -353,7 +354,7 @@ private fun RowCard(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     OpenVitalsCard(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -362,7 +363,7 @@ private fun RowCard(
                 .let { base ->
                     if (onClick != null && enabled) base.clickable(onClick = onClick) else base
                 }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -379,7 +380,7 @@ private fun RowCard(
                 }
             }
             if (trailing != null) {
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Spacing.md))
                 trailing()
             }
         }
@@ -389,8 +390,8 @@ private fun RowCard(
 @Composable
 private fun RowSpinner() {
     CircularProgressIndicator(
-        modifier = Modifier.size(20.dp),
-        strokeWidth = 2.dp,
+        modifier = Modifier.size(Spacing.xl),
+        strokeWidth = WatchProgressStroke,
     )
 }
 
@@ -421,7 +422,7 @@ private fun OptionsDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onChosen(option.index) }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = WatchSettingRowPadding),
                     ) {
                         // By POSITION, which is what the watch actually
                         // reports. Matching the summary text against the
@@ -434,10 +435,10 @@ private fun OptionsDialog(
                                 Icons.Outlined.RadioButtonUnchecked
                             },
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(Spacing.xl),
                             tint = MaterialTheme.colorScheme.primary,
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(Spacing.md))
                         Text(
                             text = option.title,
                             style = MaterialTheme.typography.bodyLarge,
@@ -491,7 +492,7 @@ private fun EntryTimePickerDialog(
     ) {
         TimePicker(
             state = timePickerState,
-            modifier = Modifier.padding(horizontal = 24.dp),
+            modifier = Modifier.padding(horizontal = Spacing.xxl),
         )
     }
 }
@@ -542,13 +543,13 @@ private fun Message(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(Spacing.xxl),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (busy) {
                 CircularProgressIndicator(
-                    modifier = Modifier.padding(bottom = 16.dp),
+                    modifier = Modifier.padding(bottom = Spacing.lg),
                 )
             }
             Text(
@@ -560,7 +561,7 @@ private fun Message(
             if (onRetry != null) {
                 FilledTonalButton(
                     onClick = onRetry,
-                    modifier = Modifier.padding(top = 12.dp),
+                    modifier = Modifier.padding(top = Spacing.md),
                 ) {
                     Text(retryLabel.orEmpty())
                 }
@@ -568,3 +569,8 @@ private fun Message(
         }
     }
 }
+
+/** The small in-row progress spinner's stroke. */
+private val WatchProgressStroke = 2.dp
+/** Vertical padding of one setting row. */
+private val WatchSettingRowPadding = 10.dp
