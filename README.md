@@ -45,6 +45,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - GPX/KML/KMZ route import, FIT activity/course/workout import, offline PMTiles/Mapsforge map packs, and GPS activity recording with review before saving
 - Configurable activity recording dashboard with Focus mode, high-contrast outdoor mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
 - Live CoMaps turn-by-turn guidance while recording GPS activities, with the planned route, turn arrows, and destination drawn on the offline map, and guidance optionally saved with the activity on-device
+- Experimental Garmin watch support over Bluetooth only: file sync with a dashboard watch tile, notification forwarding, an always-connected companion mode with live heart rate and steps, weather from a phone weather app, calendar on the watch, find-my-phone both ways, GPS ephemeris hand-over, and the watch's own settings tree - no vendor account, no internet permission
 - App language support with an in-app language picker for system default, English, Spanish, German, Italian, Estonian, and Portuguese
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
 - Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
@@ -97,6 +98,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
 - Explicit manual entry logging for beverages with hydration, caffeine, and nutrition defaults, carbohydrates, activities with optional GPX/KML/KMZ route import, FIT activity/course/workout review from Settings, offline PMTiles/Mapsforge maps, GPS recording, high-contrast outdoor recording, or experimental Bluetooth LE sensors, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
+- Experimental Garmin watch integration: user-initiated file sync into Health Connect and local watch-only metrics, a dashboard watch tile with a sync button, an optional always-connected mode with live heart rate and steps, notification forwarding with a per-app blocklist, weather and calendar glances fed from the phone, find-my-phone in both directions, imported GPS ephemeris hand-over, and the watch's own settings tree rendered live
 
 ## Current coverage
 
