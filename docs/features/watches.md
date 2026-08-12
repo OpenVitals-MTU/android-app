@@ -31,6 +31,10 @@ Settings, Watches shows the paired watches, or "No watch paired" with a Pair a w
 3. Android shows its own pairing dialog. The code shown on the watch has to be confirmed.
 4. Android then asks separately whether OpenVitals may access this watch. This step is optional. Allowing it lets Android keep OpenVitals alive while the watch is nearby, so a sync that takes minutes is not interrupted. Declining still pairs the watch, and syncing then works while OpenVitals is open.
 
+The path taken decides what the device becomes. A device added through Settings, Watches is a watch; one added through the Bluetooth LE sensors flow is a live sensor, even when it is physically a smartwatch. The name no longer decides: a Garmin watch added as a sensor behaves exactly like a heart-rate strap.
+
+After pairing, a checklist offers the OS-level permissions a watch benefits from: notification access for forwarding, and exemption from battery optimization so a held link survives the night. Each row explains itself and opens the right system screen; all of them can be declined and granted later.
+
 A watch can be renamed, switched off without unpairing, or removed. Removing it unpairs the watch and forgets which files were already copied, so a future pairing starts fresh. Data already written to Health Connect is kept.
 
 A Garmin Edge bike computer is recognized as a bike computer rather than a watch. It gets a Live sensor section instead of the watch data screen, because broadcast mode is normally only on during a ride.
@@ -42,6 +46,8 @@ Tapping a paired Garmin watch opens its device screen, which has a Sync action. 
 The watch hands over the files it recorded since last time and OpenVitals imports them. Each file is saved on the phone before the watch is told it may archive it, and a file is only marked as synced once its import succeeded, so a run that fails partway re-fetches rather than skipping data that never landed.
 
 The device screen shows whether the watch has ever been synced and when it last was. A link dropped mid-sync is not treated as a failure: whatever arrived is kept.
+
+The dashboard carries a watch tile showing the most recently synced watch with its battery, last sync time, and a sync button, so a sync does not require a trip through Settings. While live readings are streaming (see below), the tile shows the current heart rate and step count instead of the last sync time.
 
 ### Recorded Activities
 
@@ -116,6 +122,44 @@ Dismissing on the watch clears the notification from the phone. Where the postin
 
 While forwarding is on, the link to the watch is held open for as long as the watch is in range, which is how Garmin watches expect a phone to behave. If the watch goes out of range the link is re-established with a backoff, and anything that arrived while it was away is delivered when it returns.
 
+## Staying Connected
+
+Notification forwarding holds the link only while it has work. "Stay connected", on the watch's device screen, holds it always: whenever the watch is in range, the phone keeps the connection open, the way Garmin's own app behaves. Android's companion-device presence wakes OpenVitals when the watch comes back into range, so the link returns promptly rather than on a retry timer.
+
+Off by default. A held link is what the features below ride on.
+
+### Live Readings
+
+With Stay connected on, a second switch streams the watch's live heart rate and step count to the phone. The current value appears on the watch's device screen and on the dashboard watch tile ("86 bpm now"). The values live in memory only and disappear when the link drops. Nothing live is ever stored; the same measurements arrive later through the normal sync, with the watch's own timestamps.
+
+Off by default, because an open stream spends the watch's battery.
+
+## Weather On The Watch
+
+The watch's weather glance asks the phone for weather, and OpenVitals answers from a weather app on the phone, not from the internet. Any app that broadcasts the Gadgetbridge generic-weather format works; [Breezy Weather](https://github.com/breezy-weather/breezy-weather) is the tested one (enable its Gadgetbridge broadcast and add OpenVitals to its recipients). The snapshot is considered fresh for six hours.
+
+The location the watch shows is the weather app's location. OpenVitals also answers the watch's own position asks from the phone's last known location, which is what arms the glance in the first place.
+
+Known limitation: on the model verified against, the glance arms (it stops saying "Reconnect to phone") but does not always fetch. Gadgetbridge is at the same wall with the same watch generation.
+
+## Find My Phone
+
+Works in both directions. The Find action on the device screen makes the watch alert; the watch's own find-my-phone feature makes the phone ring at alarm volume, with a notification to stop it. The phone rings even when silenced, because a phone lost in a couch cushion is the whole point.
+
+## Calendar On The Watch
+
+"Calendar on watch", on the watch's device screen, feeds the watch's calendar glance from the phone's calendar. Off by default; switching it on asks for Android's calendar permission.
+
+The watch asks for a window of events and names its own limits (how many events, how long each field may be), and the phone answers within them. Recurring events arrive as their occurrences, declined and cancelled meetings stay off the wrist, and all-day events land on the wearer's midnight. Events go to the watch over Bluetooth and nowhere else; they are never stored and there is no network to send them over.
+
+If the calendar permission is later revoked in system settings, the row says so, and the watch's asks are answered with an empty calendar rather than ignored.
+
+## GPS Ephemeris
+
+Ephemeris, a few days of predicted satellite orbits, is what turns a minutes-long cold GPS fix into a seconds-long one. Garmin's own app downloads it from Garmin silently; OpenVitals has no internet access and does not grow any for this. Instead, the same arrangement Gadgetbridge offers: the user downloads the file, imports it on the watch's device screen, and the phone hands it over when the watch asks.
+
+The imported file is recognized by its contents (a constellation archive, an rxNetworks blob, or a Sony CPE blob; which one a watch wants is decided by its GPS chipset), and the URL the watch asked for is shown on the screen, since that URL is the only way to know which format to fetch. A stale file is refused rather than served: an out-of-date orbit prediction is worse for the watch than the almanac it already has.
+
 ## Settings On The Watch
 
 A Garmin watch that reports a settings tree gets a "Settings on the watch" row, plus a direct Alarms action.
@@ -147,6 +191,8 @@ Nothing leaves the phone. The watch is read over Bluetooth, the files are parsed
 
 Notification text is read on the device, held in memory only while it is needed, and sent only to the paired watch. It is never written to a file or a database. Turning the feature off, or revoking notification access in Android settings, stops it immediately.
 
+Calendar events follow the same rule: read only while answering a watch that asked, held in memory only, sent only to the watch, never stored. Weather comes from a weather app on the phone and goes only to the watch; OpenVitals itself never talks to a weather service.
+
 See [Privacy](../app/privacy.md) and [Permissions](../app/permissions.md) for the full boundary, including why the companion association is asked for and why it is optional.
 
 ## Known Limitations
@@ -157,4 +203,5 @@ See [Privacy](../app/privacy.md) and [Permissions](../app/permissions.md) for th
 - The Connected and Not connected labels reflect whether the watch is switched on in OpenVitals, not whether a Bluetooth link is open right now.
 - WearOS watches are registered only. Sync, watch data, notification forwarding, watch settings, and find are Garmin-only.
 - Health Snapshot values only exist if a Health Snapshot has been recorded on the watch.
-- Battery level and charging state are not read from a Garmin watch.
+- Battery percentage is read during a sync and shown on the device screen and the dashboard tile; charging state is not read.
+- The weather glance on the verified model arms but does not always fetch; see Weather On The Watch.

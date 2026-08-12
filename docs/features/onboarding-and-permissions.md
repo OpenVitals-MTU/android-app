@@ -14,7 +14,7 @@ For the exact permission reference, see [Permissions](../app/permissions.md). Fo
 
 Onboarding introduces the app, checks Health Connect availability, and helps the user grant useful permission groups. It runs as a short sequence of steps, and a step that does not apply to the device is skipped entirely:
 
-1. Permission categories.
+1. Permission categories. A "Grant all" button requests every category on this screen in one Health Connect dialog; the categories can still be granted one at a time. The button covers only this first screen; mindfulness, cycle tracking, and the additional-access step keep their own explicit choices.
 2. Mindfulness, when the device's Health Connect version supports it.
 3. Cycle tracking, when it is available.
 4. Additional data access, which explains the settings that have to be changed inside Health Connect itself.

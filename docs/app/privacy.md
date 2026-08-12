@@ -42,6 +42,19 @@ If, and only if, the user grants Android notification access, OpenVitals reads i
 - It is sent to nothing but the paired watch, over Bluetooth. The app has no internet permission, so there is no other route out.
 - Individual apps can be blocked from reaching the watch, the feature can be switched off in OpenVitals, and access can be revoked from Android settings at any time.
 
+### Calendar On The Watch
+
+If, and only if, the per-watch "Calendar on watch" toggle is switched on (off by default; enabling it asks for Android's calendar permission), OpenVitals reads the phone's calendar to answer the watch's calendar glance.
+
+- Events are read only while answering a watch that asked, and only within the window the watch named.
+- They are held in memory only; nothing is written to a file, a database, or Health Connect.
+- They are sent to nothing but the paired watch, over Bluetooth. The app has no internet permission, so there is no other route out.
+- Declined and cancelled meetings are not sent.
+
+### Weather And Ephemeris
+
+Weather shown on the watch comes from a weather app on the phone that broadcasts it (such as Breezy Weather); OpenVitals itself never contacts a weather service. GPS ephemeris files are imported by hand and handed to the watch when it asks; nothing is downloaded. Both go to the watch and nowhere else.
+
 ### Phone-To-Phone Sync
 
 Sync copies Health Connect records from one phone to another over a paired, encrypted Bluetooth Classic link. One phone is made discoverable and shows a six-digit code, the other scans for it and types that code in, so the connection is confirmed as the intended device. The user then chooses how far back to sync and which data categories to accept. No server or account is involved at any point.

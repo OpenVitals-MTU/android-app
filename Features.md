@@ -381,8 +381,15 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Dismiss, reply to, and act on a forwarded notification from the watch.
 - Browse and change the watch's own settings tree and alarms, read live from the watch.
 - Make the watch alert so it can be found, and stop the alert.
+- Ring the phone from the watch's find-my-phone feature, even when the phone is silenced.
+- Keep the connection open whenever the watch is in range ("Stay connected"), the way the vendor's app does.
+- Stream the watch's live heart rate and steps to the device screen and the dashboard watch tile, over the held link.
+- Sync from the dashboard: a watch tile shows the last-synced watch with its battery and a sync button.
+- Show weather on the watch from a weather app on the phone that broadcasts it (such as Breezy Weather); no network access.
+- Feed the watch's calendar glance from the phone's calendar, off by default behind its own permission.
+- Hand the watch a GPS ephemeris file the user imported, for fast GPS fixes without any download.
 - Rename, disable, or remove a paired watch.
-- Sync is always user-initiated; there is no background or scheduled watch sync.
+- File syncs are always user-initiated; there is no background or scheduled watch sync.
 
 ### View-Only Or External-Only Data
 

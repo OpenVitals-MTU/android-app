@@ -113,6 +113,7 @@ Declared for explicit save, edit/delete, recording, and supported import workflo
 - `android.permission.HIGH_SAMPLING_RATE_SENSORS`: supports higher-rate sensor access for activity recording on devices that expose it.
 - `android.permission.POST_NOTIFICATIONS`: used for activity recording, Apple Health import progress, watch sync progress, and reminder notifications.
 - `android.permission.RECEIVE_BOOT_COMPLETED`: used to reschedule reminders after reboot or app update.
+- `android.permission.READ_CALENDAR`: used only to feed a paired Garmin watch's calendar glance. Requested when the per-watch "Calendar on watch" toggle (off by default) is switched on, read only while answering a watch that asked, and the events go to the watch over Bluetooth and nowhere else. There is no `INTERNET` permission to send them anywhere further.
 
 ## Bluetooth Permissions
 
@@ -135,7 +136,7 @@ Neither shows a permission prompt of its own. The consent is the system dialog t
 
 The manifest also declares the `android.software.companion_device_setup` feature as not required, so the app stays installable on devices without companion support. `android.permission.REQUEST_COMPANION_USE_DATA_IN_BACKGROUND` is deliberately not declared, because it governs background network use and OpenVitals has no network access at all.
 
-The app declares `.devices.core.pairing.OpenVitalsCompanionDeviceService`, which Android binds while an associated watch is in range. It runs no logic of its own; the binding exists only to raise the app's process priority during a sync.
+The app declares two companion services Android binds while an associated watch is in range. `.devices.core.pairing.OpenVitalsCompanionDeviceService` runs no logic of its own; the binding exists only to raise the app's process priority during a sync. `.devices.garmin.GarminCompanionService` reacts to the watch coming into range, so that with "Stay connected" switched on the held link returns promptly instead of waiting out a retry timer.
 
 ## Notification Access
 
