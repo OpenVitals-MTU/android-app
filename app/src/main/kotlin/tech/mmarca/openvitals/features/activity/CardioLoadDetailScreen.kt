@@ -258,13 +258,28 @@ private fun CardioLoadNumbersCard(
                     value = DisplayValue(unitFormatter.decimal(estimate.expectedMinutes, 1), "min"),
                 ),
                 DetailMetric(
-                    title = stringResource(R.string.cardio_load_resting_hr),
+                    // An estimated figure says so on the tile itself. "Max HR
+                    // 151" with no qualifier reads as "you reached 151 today",
+                    // which the day's own heart-rate graph then contradicts.
+                    title = stringResource(
+                        if (estimate.restingHeartRateObserved) {
+                            R.string.cardio_load_resting_hr
+                        } else {
+                            R.string.cardio_load_resting_hr_estimated
+                        },
+                    ),
                     value = estimate.restingHeartRateBpm
                         ?.let { DisplayValue(unitFormatter.count(it), "bpm") }
                         ?: DisplayValue(stringResource(R.string.no_data), ""),
                 ),
                 DetailMetric(
-                    title = stringResource(R.string.cardio_load_max_hr),
+                    title = stringResource(
+                        if (estimate.maxHeartRateObserved) {
+                            R.string.cardio_load_max_hr
+                        } else {
+                            R.string.cardio_load_max_hr_estimated
+                        },
+                    ),
                     value = estimate.maxHeartRateBpm
                         ?.let { DisplayValue(unitFormatter.count(it), "bpm") }
                         ?: DisplayValue(stringResource(R.string.no_data), ""),

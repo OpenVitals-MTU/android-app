@@ -724,6 +724,8 @@
     <string name="cardio_load_expected_coverage">Expected coverage</string>
     <string name="cardio_load_resting_hr">Resting HR</string>
     <string name="cardio_load_max_hr">Max HR</string>
+    <string name="cardio_load_max_hr_estimated">Max HR (estimated)</string>
+    <string name="cardio_load_resting_hr_estimated">Resting HR (estimated)</string>
     <string name="cardio_load_hr_samples">HR samples</string>
     <string name="cardio_load_activity_windows">Activity windows</string>
     <string name="cardio_load_activity_minutes">Activity minutes</string>

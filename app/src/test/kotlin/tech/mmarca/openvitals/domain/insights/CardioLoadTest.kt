@@ -68,4 +68,88 @@ class CardioLoadTest {
         assertTrue(estimate.coveredMinutes >= 5.0)
         assertTrue(estimate.score > 0)
     }
+
+    @Test
+    fun `without a trustworthy observed max, age sets the ceiling`() {
+        // A quiet fortnight: nothing above 141 anywhere in the loaded range.
+        // The old estimate took 141 + 10 = 151 as this person's maximum, so
+        // a walk at 95 bpm cleared the elevated threshold (87 bpm against a
+        // 151 ceiling) and scored as training. Tanaka for age 30 says ~187,
+        // which puts the threshold at 97 bpm - above the walk.
+        val samples = (0 until 30).map { minute ->
+            HeartRateSample(workoutStart.plusSeconds(minute * 60L), 95, source = "")
+        }
+
+        val withAge = calculateCardioLoad(
+            steps = steps,
+            samples = samples,
+            restingHeartRate = 59L,
+            baselineRestingHeartRate = 59L,
+            observedMaxHeartRate = 141L,
+            activityWindows = emptyList(),
+            ageYears = 30,
+        )
+        val withoutAge = calculateCardioLoad(
+            steps = steps,
+            samples = samples,
+            restingHeartRate = 59L,
+            baselineRestingHeartRate = 59L,
+            observedMaxHeartRate = 141L,
+            activityWindows = emptyList(),
+        )
+
+        assertEquals(187L, withAge.maxHeartRateBpm)
+        assertEquals(false, withAge.maxHeartRateObserved)
+        // Against a 187 ceiling, 95 bpm is below the elevated threshold and
+        // the day falls back to movement - it was never training.
+        assertEquals(CardioLoadMethod.MOVEMENT_FALLBACK, withAge.method)
+        // The unaided estimate still inflates; the point of passing age.
+        assertEquals(151L, withoutAge.maxHeartRateBpm)
+        assertEquals(CardioLoadMethod.TRIMP_ELEVATED_HEART_RATE, withoutAge.method)
+    }
+
+    @Test
+    fun `a genuinely observed max beats the age estimate`() {
+        // 172 seen on the wrist clears the trustworthiness bar (>= 150 and
+        // well above resting): the person demonstrated it, so it wins over
+        // any formula.
+        val samples = (0 until 30).map { minute ->
+            HeartRateSample(workoutStart.plusSeconds(minute * 60L), 150, source = "")
+        }
+
+        val estimate = calculateCardioLoad(
+            steps = steps,
+            samples = samples,
+            restingHeartRate = 59L,
+            baselineRestingHeartRate = 59L,
+            observedMaxHeartRate = 172L,
+            activityWindows = emptyList(),
+            ageYears = 30,
+        )
+
+        assertEquals(172L, estimate.maxHeartRateBpm)
+        assertEquals(true, estimate.maxHeartRateObserved)
+    }
+
+    @Test
+    fun `a profile-stated max outranks the estimates`() {
+        val samples = (0 until 30).map { minute ->
+            HeartRateSample(workoutStart.plusSeconds(minute * 60L), 95, source = "")
+        }
+
+        val estimate = calculateCardioLoad(
+            steps = steps,
+            samples = samples,
+            restingHeartRate = 59L,
+            baselineRestingHeartRate = 59L,
+            observedMaxHeartRate = 141L,
+            activityWindows = emptyList(),
+            ageYears = 30,
+            explicitMaxHeartRate = 195L,
+        )
+
+        // The user stated it; nothing is guessed, so it counts as known.
+        assertEquals(195L, estimate.maxHeartRateBpm)
+        assertEquals(true, estimate.maxHeartRateObserved)
+    }
 }

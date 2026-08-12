@@ -83,9 +83,13 @@ fun calculateIntensityMinutes(
     workouts: List<IntensityWorkoutInput>,
     dailyActiveCaloriesKcal: Double?,
     cardioLoadScore: Int?,
+    ageYears: Int? = null,
+    explicitMaxHeartRate: Long? = null,
 ): IntensityMinutesEstimate {
     val resting = restingHeartRate ?: baselineRestingHeartRate ?: samples.estimatedRestingHeartRate()
-    val maxHeartRate = resting?.let { maxHeartRateContext(observedMaxHeartRate, samples, it) }
+    val maxHeartRate = resting?.let {
+        maxHeartRateContext(observedMaxHeartRate, samples, it, ageYears, explicitMaxHeartRate)
+    }
     if (resting != null && maxHeartRate != null) {
         val heartRateEstimate = calculateHeartRateReserveIntensity(
             samples = samples,
@@ -253,14 +257,25 @@ private fun maxHeartRateContext(
     observedMaxHeartRate: Long?,
     samples: List<HeartRateSample>,
     restingHeartRate: Long,
+    ageYears: Int?,
+    explicitMaxHeartRate: Long? = null,
 ): IntensityMaxHeartRateContext? {
+    // A user-stated maximum outranks everything, as in heart-rate recovery.
+    if (explicitMaxHeartRate != null && explicitMaxHeartRate > restingHeartRate) {
+        return IntensityMaxHeartRateContext(bpm = explicitMaxHeartRate, isObservedAvailable = true)
+    }
     val sampleMax = samples.maxOfOrNull { it.beatsPerMinute }
     val observedMax = listOfNotNull(observedMaxHeartRate, sampleMax).maxOrNull() ?: return null
     val observedAvailable = observedMax >= maxOf(
         ObservedMaxHeartRateMinimumBpm,
         restingHeartRate + ObservedMaxHeartRateRestingDeltaBpm,
     )
+    // Same reasoning as cardio load's estimate: without a trustworthy
+    // observed maximum, the age-based (Tanaka) figure beats guessing from a
+    // quiet fortnight's ceiling, which made walking pace count as moderate
+    // intensity all week.
     val estimatedMax = maxOf(
+        ageYears?.let { tanakaMaxHeartRate(it) } ?: 0L,
         observedMax + 10L,
         restingHeartRate + 70L,
     )

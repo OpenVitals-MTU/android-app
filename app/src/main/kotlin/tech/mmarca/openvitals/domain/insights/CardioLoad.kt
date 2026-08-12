@@ -46,6 +46,13 @@ data class CardioLoadEstimate(
     val activityWindowMinutes: Double = 0.0,
     val movementFallbackScore: Int = 0,
 ) {
+    /** Scored from heart rate, as opposed to the movement fallback's steps. */
+    val usedTrimp: Boolean
+        get() = score > 0 && (
+            method == CardioLoadMethod.TRIMP_ACTIVITY_WINDOWS ||
+                method == CardioLoadMethod.TRIMP_ELEVATED_HEART_RATE
+            )
+
     companion object {
         val NoData = CardioLoadEstimate()
     }
@@ -81,10 +88,14 @@ fun calculateCardioLoad(
     baselineRestingHeartRate: Long?,
     observedMaxHeartRate: Long?,
     activityWindows: List<CardioLoadTimeWindow>,
+    ageYears: Int? = null,
+    explicitMaxHeartRate: Long? = null,
 ): CardioLoadEstimate {
     val fallback = movementFallbackCardioLoad(steps)
     val resting = restingHeartRate ?: baselineRestingHeartRate ?: samples.estimatedRestingHeartRate()
-    val maxHeartRate = resting?.let { maxHeartRateContext(observedMaxHeartRate, samples, it) }
+    val maxHeartRate = resting?.let {
+        maxHeartRateContext(observedMaxHeartRate, samples, it, ageYears, explicitMaxHeartRate)
+    }
     val trimp = if (resting != null && maxHeartRate != null) {
         calculateTrimp(
             samples = samples,
@@ -215,14 +226,28 @@ private fun maxHeartRateContext(
     observedMaxHeartRate: Long?,
     samples: List<HeartRateSample>,
     restingHeartRate: Long,
+    ageYears: Int?,
+    explicitMaxHeartRate: Long? = null,
 ): MaxHeartRateContext? {
+    // A maximum the user stated in their body profile outranks everything,
+    // as it does in heart-rate recovery: they know it, we do not guess it.
+    if (explicitMaxHeartRate != null && explicitMaxHeartRate > restingHeartRate) {
+        return MaxHeartRateContext(bpm = explicitMaxHeartRate, isObservedAvailable = true)
+    }
     val sampleMax = samples.maxOfOrNull { it.beatsPerMinute }
     val observedMax = listOfNotNull(observedMaxHeartRate, sampleMax).maxOrNull() ?: return null
     val observedAvailable = observedMax >= maxOf(
         ObservedMaxHeartRateMinimumBpm,
         restingHeartRate + ObservedMaxHeartRateRestingDeltaBpm,
     )
+    // When nothing trustworthy was observed, prefer the same age-based
+    // estimate the rest of the app uses (Tanaka, as in heart-rate recovery
+    // and Body Energy). The old observed+10 floor made a quiet fortnight's
+    // ceiling stand in for a person's actual maximum, which understated it
+    // by 30-40 bpm and turned everyday heart rate into "training": every
+    // TRIMP reserve was computed against a maximum the wearer never had.
     val estimatedMax = maxOf(
+        ageYears?.let { tanakaMaxHeartRate(it) } ?: 0L,
         observedMax + 10L,
         restingHeartRate + 70L,
     )
@@ -231,6 +256,10 @@ private fun maxHeartRateContext(
         isObservedAvailable = observedAvailable,
     )
 }
+
+/** Tanaka (208 - 0.7*age), matching heart-rate recovery and Body Energy. */
+internal fun tanakaMaxHeartRate(ageYears: Int): Long =
+    (208.0 - 0.7 * ageYears).roundToInt().toLong().coerceAtLeast(1L)
 
 private fun List<HeartRateSample>.estimatedRestingHeartRate(): Long? {
     if (isEmpty()) return null

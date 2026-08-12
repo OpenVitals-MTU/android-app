@@ -853,6 +853,9 @@ class DashboardDataLoader @Inject constructor(
 
             val cardioEstimatesByDate = mutableMapOf<LocalDate, CardioLoadEstimate>()
             val intensityEstimatesByDate = mutableMapOf<LocalDate, IntensityMinutesEstimate>()
+            val bodyProfile = preferencesRepository?.bodyProfile()?.normalized(date)
+            val ageYears = bodyProfile?.ageYears(date)
+            val explicitMaxHeartRate = bodyProfile?.maxHeartRateBpm?.toLong()
             datesInRange(rangeStart, rangeEnd).forEach { day ->
                 val activityWindows = workouts.cardioLoadWindows(day, zone)
                 val cardioLoad = calculateCardioLoad(
@@ -862,6 +865,8 @@ class DashboardDataLoader @Inject constructor(
                     baselineRestingHeartRate = baselineRestingHeartRate,
                     observedMaxHeartRate = observedMaxHeartRate,
                     activityWindows = activityWindows,
+                    ageYears = ageYears,
+                    explicitMaxHeartRate = explicitMaxHeartRate,
                 )
                 val intensityMinutes = calculateIntensityMinutes(
                     samples = heartRateSamplesByDate[day].orEmpty(),
@@ -872,6 +877,8 @@ class DashboardDataLoader @Inject constructor(
                     workouts = workouts.intensityWorkoutInputs(day, zone),
                     dailyActiveCaloriesKcal = stepsByDate[day]?.activeCaloriesKcal,
                     cardioLoadScore = cardioLoad.score,
+                    ageYears = ageYears,
+                    explicitMaxHeartRate = explicitMaxHeartRate,
                 )
                 cardioEstimatesByDate[day] = cardioLoad
                 intensityEstimatesByDate[day] = intensityMinutes
@@ -882,11 +889,17 @@ class DashboardDataLoader @Inject constructor(
                 .toList()
             val currentScore = currentPeriodEstimates.sumOf { it.score }
             val todayScore = cardioEstimatesByDate[date]?.score ?: 0
-            val previousPeriodScores = (1L..DashboardCardioLoadHistoryPeriods).map { periodsAgo ->
-                val periodStart = currentPeriod.start.minusDays(periodsAgo * 7)
-                val periodEnd = periodStart.plusDays(6)
-                datesInRange(periodStart, periodEnd).sumOf { day -> cardioEstimatesByDate[day]?.score ?: 0 }
-            }
+            // Only weeks scored with the current week's yardstick may form
+            // the target baseline - see comparablePreviousWeekScores.
+            val previousPeriodScores = DashboardAggregator.comparablePreviousWeekScores(
+                currentWeek = currentPeriodEstimates,
+                previousWeeks = (1L..DashboardCardioLoadHistoryPeriods).map { periodsAgo ->
+                    val periodStart = currentPeriod.start.minusDays(periodsAgo * 7)
+                    datesInRange(periodStart, periodStart.plusDays(6)).map { day ->
+                        cardioEstimatesByDate[day] ?: CardioLoadEstimate.NoData
+                    }.toList()
+                },
+            )
             val cardioTargetDays = ChronoUnit.DAYS.between(currentPeriod.start, currentPeriod.end).toInt() + 1
             val target = DashboardAggregator.weeklyCardioTarget(
                 currentScore = currentScore,
