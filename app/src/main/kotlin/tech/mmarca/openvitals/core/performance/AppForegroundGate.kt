@@ -8,11 +8,21 @@ import javax.inject.Singleton
 @Singleton
 class AppForegroundGate @Inject constructor() {
 
-    @Volatile
-    private var foreground: Boolean = false
+    private val foregroundState = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    /**
+     * Observable form of [isForeground]. The Garmin companion link tells the
+     * watch when the phone app comes to the foreground — Garmin watches defer
+     * their online-flavoured errands until the companion is active.
+     */
+    val foregroundFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = foregroundState
+
+    private var foreground: Boolean
+        get() = foregroundState.value
+        set(value) { foregroundState.value = value }
 
     val isForeground: Boolean
-        get() = foreground
+        get() = foregroundState.value
 
     fun registerProcessLifecycle(owner: LifecycleOwner) {
         owner.lifecycle.addObserver(

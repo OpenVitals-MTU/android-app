@@ -15,10 +15,10 @@ import org.w3c.dom.Element
  * one way while the paragraph under it reads another is worse than either
  * choice made throughout.
  *
- * The exemption is narrow and load-bearing. Garmin's *Training Readiness*,
- * *Intensity Minutes* and *Stress Level* are that company's product names
- * appearing in our UI, and lowercasing someone else's trademark is not a
- * house-style decision we get to make. This test guards the
+ * The exemption is narrow and load-bearing. Garmin's *Body Battery*, *Sleep
+ * Coach*, *Training Readiness*, *Intensity Minutes* and *Stress Level* are that
+ * company's product names appearing in our UI, and lowercasing someone else's
+ * trademark is not a house-style decision we get to make. This test guards the
  * exemption in both directions: the first-party names must not creep back to
  * title case, and the third-party ones must not be "corrected" into sentence
  * case by a well-meaning sweep.
@@ -88,13 +88,10 @@ class SentenceCaseTest {
             "CSV Importer",
         )
 
-        /**
-         * Garmin's names, in the casing Garmin uses. "Body Battery" and
-         * "Sleep Coach" left the catalogue with the retired watch
-         * integration's screens; the three below still appear in first-party
-         * copy about Garmin-defined concepts.
-         */
+        /** Garmin's names, in the casing Garmin uses. */
         val ThirdPartyProductNames = listOf(
+            "Body Battery",
+            "Sleep Coach",
             "Training Readiness",
             "Intensity Minutes",
             "Stress Level",

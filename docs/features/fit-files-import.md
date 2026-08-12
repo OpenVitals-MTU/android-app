@@ -26,7 +26,7 @@ Imported FIT files are not written immediately. The user reviews detected detail
 
 FIT uses the same activity review screen as route import after the file is selected from Settings. Like TCX, FIT files do not need GPS route points; OpenVitals imports supported activity, course, or workout details and attaches a route only when usable route samples are present.
 
-FIT files exported from a watch or its vendor service go through this same importer. See [Watches](watches.md).
+Files a paired Garmin watch hands over go through this same importer. See [Watches](watches.md).
 
 ## Limits
 

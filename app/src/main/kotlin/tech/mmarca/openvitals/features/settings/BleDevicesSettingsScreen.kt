@@ -372,7 +372,7 @@ private fun BleAddDeviceDialog(
                     }
                     state.errorMessage?.let { message ->
                         Text(
-                            text = message,
+                            text = stringResource(message),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -467,7 +467,7 @@ private fun BleEditDeviceDialog(
                 }
                 state.errorMessage?.let { message ->
                     Text(
-                        text = message,
+                        text = stringResource(message),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )

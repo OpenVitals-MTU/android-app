@@ -92,20 +92,13 @@ object FlutterPrefsKeyTable {
         if (key.startsWith(BODY_ENERGY_BASELINE_CACHE_PREFIX)) {
             return KeyMapping.Drop("derived Flutter-side body-energy cache")
         }
-        if (key.startsWith(GARMIN_KEY_PREFIX) || key.startsWith(BODY_ENERGY_WATCH_KEY_PREFIX)) {
-            // The watch integration is retired; watch data arrives through
-            // Health Connect (e.g. via Gadgetbridge). No Kotlin reader exists
-            // for any of these, so copying them would only strand orphans.
-            return KeyMapping.Drop("retired watch integration state with no reader")
-        }
 
         if (key == BLE_DEVICES_KEY) {
             // Kotlin keeps the same JSON under file "ble_sensor_devices", key
             // "devices" — the one key in the whole migration whose name differs
-            // from its file. Copied VERBATIM, watch entries included: the
-            // Kotlin decoder tolerates the extra `kind`/`integration` fields
-            // and simply ignores watch-era entries (the app no longer links to
-            // watches), so nothing is lost or corrupted in the copy.
+            // from its file. Copied VERBATIM: the Flutter payload carries extra
+            // `kind`/`integration` fields that the current Kotlin decoder
+            // ignores but phase 7 (watches) will want intact.
             if (value !is String || value.isEmpty()) return KeyMapping.Skip("BLE registry is not a string")
             return KeyMapping.Write(TargetWrite(TargetPrefsFile.BLE_DEVICES, "devices", TargetValue.StringValue(value)))
         }
@@ -231,12 +224,12 @@ object FlutterPrefsKeyTable {
      * * `Double` -> Kotlin `Float` (every fractional preference is `getFloat`).
      * * `List<String>` -> Kotlin `StringSet` (`acknowledged_permissions`,
      *   `acknowledged_feature_permissions_*`, `custom_hydration_drinks`,
-     *   `hydration_container_volume_milliliters` are all `getStringSet`).
+     *   `hydration_container_volume_milliliters` are all `getStringSet`; the
+     *   copy-for-future Garmin/watch lists ride along the same way).
      *
-     * Keys with no current Kotlin reader (e.g. `apple_health_import_*`) are
-     * still copied typed under the same name — harmless, and future readers
-     * keep Flutter's key names. Watch-only families are dropped earlier in
-     * [map] instead.
+     * Keys with no current Kotlin reader (e.g. `garmin_notifications_*`,
+     * `apple_health_import_*`) are still copied typed under the same name —
+     * harmless now, and phase 7 keeps Flutter's key names.
      */
     private fun mapTyped(key: String, value: Any): KeyMapping =
         when (value) {
@@ -261,6 +254,7 @@ object FlutterPrefsKeyTable {
     /** The keys the Kotlin repository reads with `getLong`. */
     private val longKeys = setOf(
         "privacy_policy_accepted_at",
+        "body_energy_watch_fit_watermark_millis",
     )
 
     // endregion
@@ -341,8 +335,6 @@ object FlutterPrefsKeyTable {
     private const val BLE_DEVICES_KEY = "ble_sensor_devices"
     private const val ACTIVITY_MARKERS_PREFIX = "activity_markers_"
     private const val BODY_ENERGY_BASELINE_CACHE_PREFIX = "baseline|"
-    private const val GARMIN_KEY_PREFIX = "garmin_"
-    private const val BODY_ENERGY_WATCH_KEY_PREFIX = "body_energy_watch_"
     private const val DART_HRR_RANGE_KEY = "detail_range_hrr"
     private const val KOTLIN_HRR_RANGE_KEY = "detail_range_heart_rate_recovery"
 

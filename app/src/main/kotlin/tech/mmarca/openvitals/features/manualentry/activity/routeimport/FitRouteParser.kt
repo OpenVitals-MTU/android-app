@@ -26,7 +26,8 @@ internal data class FitHrvReading(
 /**
  * Decodes the **activity** data a FIT file carries (route points, session
  * summary, and the per-record HR/speed/cadence series). Built on the generic
- * [FitDecoder], which knows nothing about what any message means.
+ * [FitDecoder]; the Garmin-proprietary wellness interpretation lives in
+ * `devices/garmin/wellness/GarminFitWellness.kt`, consuming the same reader.
  */
 internal object FitRouteParser {
     fun parse(fitBytes: ByteArray, fileName: String? = null): RouteFileImport {
@@ -323,8 +324,9 @@ private class FitActivityDecoder(
 
 /**
  * Interprets one file's decoded [FitMessage]s into the activity raw structs.
- * A wellness file simply yields no points, an empty summary and no samples
- * here (bar the HRV summary, kept for [FitRouteParser.parseWellnessHrv]).
+ * Its switch cases are disjoint from the Garmin wellness interpreter's, so a
+ * wellness file simply yields no points, an empty summary and no samples here
+ * (bar the HRV summary, kept for [FitRouteParser.parseWellnessHrv]).
  */
 private class FitActivityInterpreter {
     private val points = mutableListOf<ExerciseRoutePoint>()

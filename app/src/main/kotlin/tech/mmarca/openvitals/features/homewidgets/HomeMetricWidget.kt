@@ -728,6 +728,9 @@ internal fun DashboardData.toSnapshot(
                 ?: latestBasalBodyTemperatureCelsius?.let(unitFormatter::temperature)
             snapshot(displayValue)
         }
+        // Device state, not a day's reading: the home-screen widgets render a
+        // metric for a date, which a paired watch has nothing to say about.
+        DashboardWidgetId.WATCH -> snapshot(null)
     }
 }
 
@@ -771,6 +774,7 @@ fun DashboardWidgetId.homeMetricTitleRes(): Int = when (this) {
     DashboardWidgetId.CARDIO_LOAD -> R.string.metric_weekly_cardio_load
     DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
     DashboardWidgetId.CYCLE -> R.string.metric_cycle
+    DashboardWidgetId.WATCH -> R.string.metric_watch
 }
 
 fun homeMetricWidgetCatalog(): List<DashboardWidgetId> =

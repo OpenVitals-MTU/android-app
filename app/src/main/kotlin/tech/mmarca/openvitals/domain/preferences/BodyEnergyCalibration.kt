@@ -45,14 +45,17 @@ data class BodyEnergyCalibration(
     val useManualZones: Boolean = false,
     val setupCompleted: Boolean = false,
     // Personal gains: each scales one drain/charge component of the objective
-    // model, clamped to [MinGain, MaxGain] so every adjustment stays one
-    // legible number. 1.0 is the neutral default. The retired watch
-    // integration used to fit these from Body Battery readings; gains it
-    // learned before its removal are preserved and still applied.
+    // model. 1.0 is the neutral default; the watch fit nudges them within
+    // [MinGain, MaxGain] so every adjustment stays one legible number.
     val sleepChargeGain: Double = 1.0,
     val activityDrainGain: Double = 1.0,
     val basalDrainGain: Double = 1.0,
     val stressDrainGain: Double = 1.0,
+    // How many watch readings (Garmin Body Battery) have informed the gains, for
+    // display ("learned from N watch readings"). The only evidence there is: the
+    // manual "How's your energy" check-in was removed, so nothing else
+    // contributes.
+    val watchObservationCount: Int = 0,
 ) {
     private val clampedSleepChargeGain: Double get() = sleepChargeGain.coerceIn(MinGain, MaxGain)
     private val clampedActivityDrainGain: Double get() = activityDrainGain.coerceIn(MinGain, MaxGain)
@@ -69,8 +72,12 @@ data class BodyEnergyCalibration(
             activityDrainGain = clampedActivityDrainGain,
             basalDrainGain = clampedBasalDrainGain,
             stressDrainGain = clampedStressDrainGain,
+            watchObservationCount = watchObservationCount.coerceAtLeast(0),
         )
     }
+
+    /** Whether a watch has contributed to the gains, for the calibration copy. */
+    val hasWatchObservations: Boolean get() = watchObservationCount > 0
 
     /** Whether the gains differ from the neutral defaults. */
     val hasPersonalGains: Boolean
@@ -82,10 +89,12 @@ data class BodyEnergyCalibration(
     /**
      * The half a user sets: whether zones are manual, and what they are.
      *
-     * Split from [gainSignature] because the two can change independently.
-     * This one moves when someone edits a setting; the gains carry whatever
-     * the retired watch fit learned. Anything that only needs to know "is
-     * this still the same person's configuration" wants this half alone.
+     * Split from [gainSignature] because the two change on completely different
+     * timescales. This one moves when someone edits a setting; the gains move on
+     * their own every time the watch teaches the model something. A cache keyed
+     * on both together is invalidated by the learner doing its job, so anything
+     * that only needs to know "is this still the same person's configuration"
+     * wants this half alone.
      */
     fun zoneSignature(): String {
         val normalized = normalized()
@@ -95,7 +104,7 @@ data class BodyEnergyCalibration(
         ).joinToString("|")
     }
 
-    /** The personal-gain half, formatted to three decimals. */
+    /** The half the watch fit moves, in steps far smaller than three decimals. */
     fun gainSignature(): String {
         val normalized = normalized()
         return listOf(

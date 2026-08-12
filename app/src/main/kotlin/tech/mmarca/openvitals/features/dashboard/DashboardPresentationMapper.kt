@@ -41,6 +41,7 @@ object DashboardPresentationMapper {
         loadingWidgets: Set<DashboardWidgetId> = emptySet(),
         bodyEnergySetupCompleted: Boolean = false,
         includeUnsupported: Boolean = false,
+        watch: WatchWidgetDisplay? = null,
     ): DashboardDisplayState {
         val sleepGoalMs = (dailyGoals.sleepHours * 60.0 * 60.0 * 1000.0).toLong()
         val supportedMetrics = data.supportedMetrics
@@ -61,6 +62,7 @@ object DashboardPresentationMapper {
                     sleepGoalMs = sleepGoalMs,
                     isLoading = widgetId in loadingWidgets,
                     bodyEnergySetupCompleted = bodyEnergySetupCompleted,
+                    watch = watch,
                 ) ?: return@forEach
                 if (!isSupported) unsupportedIds += widgetId
                 put(widgetId, widget)
@@ -79,6 +81,7 @@ object DashboardPresentationMapper {
         sleepGoalMs: Long,
         isLoading: Boolean,
         bodyEnergySetupCompleted: Boolean,
+        watch: WatchWidgetDisplay? = null,
     ): DashboardWidgetDisplayModel? = when (widgetId) {
         DashboardWidgetId.STEPS -> metricWidget(
             id = widgetId,
@@ -422,6 +425,11 @@ object DashboardPresentationMapper {
             hasRecentHistory = DashboardMetric.CYCLE in data.recentHistoryMetrics,
             isLoading = isLoading,
         )
+        // No watch paired, no tile: an empty "no data" watch tile would be
+        // noise on every dashboard belonging to someone who owns no watch.
+        DashboardWidgetId.WATCH -> watch?.let {
+            DashboardWidgetDisplayModel(id = widgetId, watch = it, isLoading = isLoading)
+        }
         DashboardWidgetId.WORKOUT -> null
     }
 

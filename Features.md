@@ -205,6 +205,18 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View observation rows with date/time, value, and source.
 - View data confidence and statistics for period days, ovulation tests, basal body temperature readings, and total entries.
 
+### Watch Data
+
+- View measurements that only a paired Garmin watch produces and Health Connect has no record type for.
+- View stress with today's average.
+- View Body Battery with today's highest value.
+- View intensity minutes against the weekly target, counting vigorous minutes double.
+- View the watch's sleep score, time awake, times woken, and sleep need for last night.
+- View recovery time, training readiness, and acute and chronic training load.
+- View which of these a watch did not send, rather than a blank row.
+- View watch pairing state, last sync time, and paired-watch management.
+- Watch-recorded activities, sleep, heart rate, and other supported measures are viewed on the normal metric screens once written to Health Connect.
+
 ### Health Connect And Sources
 
 - View data from Health Connect-compatible sources.
@@ -356,10 +368,21 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Read a report of what was merged, what was already present, and a per-record-type breakdown, and copy or share it.
 - Re-running a sync writes no duplicates.
 
-### Watches
+### Watch Sync
 
-- OpenVitals does not link to watches directly. Watch data arrives through Health Connect, written by a companion app such as Gadgetbridge or the vendor's own app.
-- Watch-recorded activities, sleep, heart rate, and other supported measures are viewed on the normal metric screens once they reach Health Connect.
+- Pair a Garmin watch and copy the activity, sleep, and wellness files it recorded, over Bluetooth only.
+- Register a WearOS or other recognized smartwatch; its data reaches the app through Health Connect.
+- Write watch-recorded activities to Health Connect as exercise sessions with routes and series.
+- Write watch sleep sessions and stages, heart rate, resting heart rate, heart rate variability, respiratory rate, VO2 max, basal metabolic rate, and intraday steps, distance, and active calories to Health Connect.
+- Store watch-only measurements locally where Health Connect has no record type for them.
+- Re-syncing the same day writes no duplicates.
+- Forward phone notifications to a paired watch, after an in-app disclosure and Android's notification access.
+- Silence individual apps so their notifications do not reach the watch.
+- Dismiss, reply to, and act on a forwarded notification from the watch.
+- Browse and change the watch's own settings tree and alarms, read live from the watch.
+- Make the watch alert so it can be found, and stop the alert.
+- Rename, disable, or remove a paired watch.
+- Sync is always user-initiated; there is no background or scheduled watch sync.
 
 ### View-Only Or External-Only Data
 
@@ -397,7 +420,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Set the evening hour a night starts and the morning hour it ends. Sleep outside that window counts as a daytime nap.
 - Set the high heart-rate alert threshold in beats per minute.
 - Set the low heart-rate alert threshold in beats per minute.
-- Adjust Body Energy calibration and reset the personal tuning gains.
+- Adjust Body Energy calibration and reset the tuning learned from a watch.
 
 ### Body Profile Settings
 
@@ -423,6 +446,16 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Bulk import multiple route files directly into Health Connect.
 - Open the CSV importer and map a CSV file's columns to body measurements and vitals.
 - Monitor import progress and read import reports.
+
+### Watch Settings
+
+- Pair a watch, and grant the nearby-device permission it needs.
+- Optionally allow Android to keep OpenVitals running while the watch is nearby, so a long sync is not interrupted.
+- Sync a paired watch, and open its watch-only data screen.
+- Turn notification forwarding on or off, and choose which apps are silenced.
+- Open the watch's own settings tree and its alarms.
+- Find a paired watch.
+- Rename a watch, switch it off without unpairing, or remove it.
 
 ### Sync With Another Phone Settings
 
@@ -459,8 +492,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 ### Privacy And App Information
 
 - View privacy notes explaining that OpenVitals uses no account, no cloud sync, no analytics, and no ads.
-- View that health data is read from and written to Health Connect on device.
+- View that health data is read from and written to Health Connect on device, apart from watch-only measurements Health Connect has no record type for, which stay in the app's local database.
 - View the read-only dashboard/privacy positioning and health disclaimer.
 - View app version information.
-- The app declares no internet permission. Live BLE sensors and phone-to-phone sync run over Bluetooth.
+- The app declares no internet permission. Live BLE sensors, watch sync, notification forwarding, and phone-to-phone sync run over Bluetooth.
 - In diagnostics builds, save or share raw process logs, post a test hydration reminder, and list the apps that contributed heart-rate and sleep records over the last seven days.

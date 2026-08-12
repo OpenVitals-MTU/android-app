@@ -77,20 +77,20 @@ A settings section is five edits, and missing any one of them fails the build or
 1. Add an entry to the `SettingsSection` enum in `features/settings/SettingsSection.kt`, with a `titleRes` and a `summaryRes`.
 2. Add the two strings to `values/strings.xml`. Do not add them to any `values-*/strings.xml`; those are Weblate-owned.
 3. Add an icon branch to `SettingsSection.icon` in `features/settings/SettingsCards.kt`. It is an exhaustive `when`, so this is compulsory.
-4. Add a content branch to the `when` in `features/settings/SettingsScreenContent.kt`. Sections that are a bespoke screen rather than a card list map to `Unit` there (see `DEVICE_SYNC`).
+4. Add a content branch to the `when` in `features/settings/SettingsScreenContent.kt`. Sections that are a bespoke screen rather than a card list map to `Unit` there (see `WATCHES` and `DEVICE_SYNC`).
 5. Add a `Screen` entry in `navigation/Screen.kt`, a `composable` in `navigation/AppNavigationSettingsRoutes.kt`, and the mapping in `settingsSectionRoute`.
 
 Sections hidden outside diagnostics builds are filtered in `SettingsScreenContent` against `BuildConfig.OPENVITALS_DIAGNOSTICS`; follow `DEBUG_DIAGNOSTICS` if the new section is developer-only.
 
 ### Add A Room Entity
 
-The database is at version 6. A new entity means:
+The database is at version 9. A new entity means:
 
 1. Add the `@Entity` and its DAO under `data/local/<area>/`.
-2. Add the entity to the `entities` array in `OpenVitalsDatabase`, add the abstract DAO accessor, and bump `version` to 7.
-3. Add a `MIGRATION_6_7` in the companion object that creates the table, and register it in the `addMigrations(...)` call in `di/AppModule.kt`.
+2. Add the entity to the `entities` array in `OpenVitalsDatabase`, add the abstract DAO accessor, and bump `version` to 10.
+3. Add a `MIGRATION_9_10` in the companion object that creates the table, and register it in the `addMigrations(...)` call in `di/AppModule.kt`.
 4. Give the migration a KDoc saying whether it copies data or only creates the table, and why. Every existing migration does.
-5. Prefer a natural composite primary key that makes a re-import idempotent, as `synced_record_origins` does with `client_record_id`.
+5. Prefer a natural composite primary key that makes a re-import idempotent, as `garmin_wellness_samples` does with `(metric, time_millis)`.
 
 Only add a table for data Health Connect cannot hold, or for a derived summary cache. Do not mirror Health Connect records.
 
@@ -102,14 +102,13 @@ When a repository is a seam that another subsystem writes through, split it:
 2. Put the implementation in `data/repository/` as `<Name>Impl`.
 3. `@Binds` it in `di/RepositoryModule.kt`.
 
-Keep the contract free of windowing, aggregation, and interpretation.
+Keep the contract free of windowing, aggregation, and interpretation, as `GarminWellnessRepository` is.
 
 ### Add A Device Integration
 
-The app deliberately carries no direct watch/device-sync integrations: device
-data arrives through Health Connect (e.g. via Gadgetbridge). Live BLE sensors
-are the one direct-device surface — see `sensors/ble/BleSensorCoordinator`.
-Keep any new protocol code transport-free so it is testable over an in-memory
-pipe, and write imported data through
-`AppleHealthImportRepository.insertImportedRecords` with a deterministic
-`clientRecordId`, so a re-import upserts.
+1. Implement the ports in `devices/core`: `DeviceClassifier` and `DeviceScanClassifier` for discovery, `WatchPairingPort` for bonding, `DeviceSyncPort` for sync.
+2. Register the classifier where the others are constructed, in `sensors/ble/BleSensorCoordinator`.
+3. Take a lease via `withRadioLease(address, RadioLeaseOwner.*)` around every BLE link. Do not invent a fifth owner tag without a reason.
+4. Keep protocol code transport-free so it is testable over an in-memory pipe; only the GATT client should touch `android.bluetooth`.
+5. Bind the new port in `di/DevicesModule.kt`. Do not add a Hilt module inside `devices/`.
+6. Write imported data through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`, so a re-sync upserts.

@@ -41,7 +41,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 
 /**
  * The Body Energy setup gate and settings card: the heart-zone ladder, the birth
- * year automatic zones are derived from, and any personal gain tuning.
+ * year automatic zones are derived from, and the tuning the watch has learned.
  *
  * v11 removed the manual maximum and resting heart rate boxes. Both are measured
  * from the user's own data now, and a typed maximum used to be the ONLY route to
@@ -209,6 +209,7 @@ fun BodyEnergyCalibrationCard(
                             activityDrainGain = calibration.activityDrainGain,
                             basalDrainGain = calibration.basalDrainGain,
                             stressDrainGain = calibration.stressDrainGain,
+                            watchObservationCount = calibration.watchObservationCount,
                         ).normalized(),
                         typedBirthYear.takeIf { showBirthYear },
                     )
@@ -230,23 +231,40 @@ fun BodyEnergyCalibrationCard(
 }
 
 /**
- * The personal gains, as four plain multipliers.
+ * What the watch has taught the model, as four plain multipliers.
  *
- * Shown only when they differ from neutral: the retired watch integration was
- * the sole learner, so an install that never fitted them has nothing to show
- * or reset, while one that did keeps its tuning visible and reversible.
+ * The heading and its line always show; the rows and the Reset only once there
+ * is something to reset. The whole block used to be gated on having learned
+ * something, which made "sync a watch to start personalising these" unreachable
+ * — the one state where that sentence is the only thing worth saying.
  */
 @Composable
 private fun BodyEnergyPersonalTuningSection(
     calibration: BodyEnergyCalibration,
     onReset: () -> Unit,
 ) {
-    if (calibration.hasPersonalGains) {
-        HorizontalDivider()
-        Text(
-            text = stringResource(R.string.body_energy_personalization_title),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+    HorizontalDivider()
+    Text(
+        text = stringResource(R.string.body_energy_personalization_title),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Text(
+        // Zero gets its own string rather than a `zero` plural item: English has
+        // no CLDR zero rule, so Android would resolve 0 to `other` and the card
+        // would say "Learned from 0 watch readings."
+        text = if (calibration.watchObservationCount == 0) {
+            stringResource(R.string.body_energy_personalization_watch_none)
+        } else {
+            pluralStringResource(
+                R.plurals.body_energy_personalization_watch_body,
+                calibration.watchObservationCount,
+                calibration.watchObservationCount,
+            )
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (calibration.hasPersonalGains || calibration.hasWatchObservations) {
         GainRow(
             label = stringResource(R.string.body_energy_gain_activity),
             value = calibration.activityDrainGain,

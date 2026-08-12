@@ -106,6 +106,14 @@
         tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <!--
+        Garmin watch calendar glance (devices/garmin/GarminCalendarSource.kt).
+        Read only while answering a watch that asked, gated behind a per-watch
+        toggle that is off by default; events go to the wrist over BLE and are
+        never stored or sent anywhere else (the app has no INTERNET permission
+        to send them with).
+    -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!--
         Phone-to-phone Health Connect sync (features/devicesync) reuses
         BLUETOOTH_SCAN + BLUETOOTH_CONNECT above and additionally needs
         BLUETOOTH_ADVERTISE (API 31+) for ACTION_REQUEST_DISCOVERABLE, so the
@@ -117,6 +125,28 @@
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADVERTISE"
         tools:targetApi="s" />
+    <!--
+        Garmin watch onboarding (devices/core/pairing/CompanionDevicePairing.kt).
+        The companion association is what lets the OS keep this app's process
+        alive while the watch is in range, so a FIT-file sync that runs for
+        minutes is not killed halfway through. Both are install-time grants with
+        no runtime prompt of their own — the user's consent IS the system
+        "Allow OpenVitals to access <watch>?" dialog. Declining it is supported:
+        the watch is bonded and syncs regardless, just without the priority
+        boost.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+    <!--
+        Required by start/stopObservingDevicePresence, which is what actually
+        makes the OS bind OpenVitalsCompanionDeviceService when the watch comes
+        into range. Without it those calls throw SecurityException and the
+        association exists but buys nothing.
+
+        Deliberately NOT declared: REQUEST_COMPANION_USE_DATA_IN_BACKGROUND. It
+        governs background NETWORK use, and this app ships no INTERNET
+        permission at all, so asking for it would be meaningless.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
@@ -172,6 +202,18 @@
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
+    <!--
+        CompanionDeviceManager (Garmin watch onboarding). NOT optional
+        boilerplate: without this declaration `CompanionDeviceManager.associate`
+        throws "Must declare uses-feature android.software.companion_device_setup
+        in manifest to use this API" from the system service, so the association
+        can never be offered. `required="false"` keeps the app installable on
+        devices that lack companion support, where onboarding degrades to a
+        plain bond that syncs fine without the background priority boost.
+    -->
+    <uses-feature
+        android:name="android.software.companion_device_setup"
+        android:required="false" />
 
     <!-- Query for Health Connect package (needed on Android 11+) -->
     <queries>
@@ -222,6 +264,20 @@
         <intent>
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
+        </intent>
+        <!--
+            Launcher apps, for the watch-notification blocklist picker and for
+            resolving a posting app's display name
+            (devices/notifications/OpenVitalsNotificationListenerService).
+
+            Deliberately NOT `QUERY_ALL_PACKAGES`: that one is a Play-RESTRICTED
+            permission, and its mere presence blocks upload unless a declaration
+            is filed and accepted. A MAIN/LAUNCHER query is unrestricted and
+            covers every app a user could sensibly want to silence.
+        -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
         </intent>
     </queries>
 
@@ -360,6 +416,50 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
 
+        <!-- Bound by the OS while an associated Garmin watch is in range. It
+             runs no logic of its own — the BINDING is the point, because it
+             elevates this process's priority so a multi-minute BLE file sync
+             is not killed by the low-memory killer. `exported` and the
+             BIND_COMPANION_DEVICE_SERVICE permission are both required by the
+             platform contract: the system alone may bind it. API 31+; below
+             that the OS simply never binds it. -->
+        <service
+            android:name=".devices.core.pairing.OpenVitalsCompanionDeviceService"
+            android:exported="true"
+            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE"
+            tools:targetApi="s">
+            <intent-filter>
+                <action android:name="android.companion.CompanionDeviceService" />
+            </intent-filter>
+        </service>
+
+        <!--
+            devices/notifications: reads the phone's notifications so they can
+            be mirrored to a paired Garmin watch.
+
+            `exported="true"` and the BIND_NOTIFICATION_LISTENER_SERVICE
+            permission are both required by the platform contract — the system
+            alone may bind this, and the permission is a SIGNATURE permission
+            held by the system, so it is declared here rather than requested
+            with <uses-permission>. There is no runtime prompt: the user grants
+            notification access from a system settings screen, and the feature
+            stays dormant until they do.
+
+            What it reads never leaves the phone by any route but the watch:
+            the content is held in a bounded in-memory buffer, written to no
+            file and no database, and the manifest removes INTERNET outright
+            (see the offline-only block above).
+        -->
+        <service
+            android:name=".devices.notifications.OpenVitalsNotificationListenerService"
+            android:exported="true"
+            android:label="@string/notification_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".features.hydration.reminders.HydrationReminderReceiver"
             android:exported="false" />
@@ -367,6 +467,39 @@
         <receiver
             android:name=".features.hydration.reminders.HydrationQuickAddReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".devices.garmin.GarminFindPhoneStopReceiver"
+            android:exported="false" />
+
+        <!--
+            Weather from a companion app (Breezy Weather et al.) over
+            Gadgetbridge's generic-weather broadcast contract. Exported because
+            an external app must reach it; the payload is public weather.
+        -->
+        <!--
+            Bound by the OS when the stay-connected watch comes into range
+            (companion-device presence). API 31+; older devices keep companion
+            mode only while the app process lives.
+        -->
+        <service
+            android:name=".devices.garmin.GarminCompanionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE"
+            tools:targetApi="s">
+            <intent-filter>
+                <action android:name="android.companion.CompanionDeviceService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".devices.weather.GenericWeatherReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="nodomain.freeyourgadget.gadgetbridge.ACTION_GENERIC_WEATHER" />
+                <action android:name="tech.mmarca.openvitals.ACTION_GENERIC_WEATHER" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".features.hydration.reminders.HydrationReminderBootReceiver"

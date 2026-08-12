@@ -16,7 +16,7 @@ Start here when you need to understand the app, a feature, or the implementation
 
 Recently added feature pages:
 
-- [Watches](features/watches.md): watch data arrives via Health Connect (e.g. Gadgetbridge); the app does not link to watches directly.
+- [Watches](features/watches.md): experimental Garmin and WearOS support, watch sync, watch-only metrics, notification forwarding, watch settings, and find-my-watch.
 - [Sync with another phone](features/device-sync.md): copying Health Connect records between two phones over Bluetooth.
 - [CSV import](features/csv-import.md): mapped import of body measurements and vitals from a CSV file.
 

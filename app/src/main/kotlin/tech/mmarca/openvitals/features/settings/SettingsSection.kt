@@ -19,6 +19,14 @@ enum class SettingsSection(
         titleRes = R.string.settings_sensors_group_title,
         summaryRes = R.string.settings_sensors_group_body,
     ),
+
+    // Its own section, not a group inside Sensors: a sensor streams while you
+    // record and a watch hands over files afterwards. They shared a screen
+    // only because they share a radio.
+    WATCHES(
+        titleRes = R.string.settings_watches_group_title,
+        summaryRes = R.string.settings_watches_group_body,
+    ),
     NUTRITION(
         titleRes = R.string.settings_nutrition_group_title,
         summaryRes = R.string.settings_nutrition_group_body,

@@ -268,6 +268,8 @@ class FlutterPrefsKeyTableTest {
     fun `keys kotlin reads with getLong stay long`() {
         assertThat(mappedMainValue("privacy_policy_accepted_at", 1_752_000_000_000L))
             .isEqualTo(TargetValue.LongValue(1_752_000_000_000L))
+        assertThat(mappedMainValue("body_energy_watch_fit_watermark_millis", 5L))
+            .isEqualTo(TargetValue.LongValue(5L))
     }
 
     @Test
@@ -312,20 +314,14 @@ class FlutterPrefsKeyTableTest {
     }
 
     @Test
-    fun `retired watch integration keys are dropped`() {
-        // The watch stack is gone; nothing reads these, so copying them would
-        // only strand orphans in the Kotlin prefs.
-        assertThat(FlutterPrefsKeyTable.map("garmin_notifications_enabled", true))
-            .isInstanceOf(KeyMapping.Drop::class.java)
-        assertThat(FlutterPrefsKeyTable.map("garmin_notifications_disclosure_accepted", true))
-            .isInstanceOf(KeyMapping.Drop::class.java)
+    fun `copy for future garmin keys keep their typed values`() {
+        assertThat(mappedMainValue("garmin_notifications_enabled", true))
+            .isEqualTo(TargetValue.BooleanValue(true))
+        assertThat(mappedMainValue("garmin_notifications_disclosure_accepted", true))
+            .isEqualTo(TargetValue.BooleanValue(true))
         assertThat(
-            FlutterPrefsKeyTable.map("garmin_notifications_blocked_packages", listOf("com.spam.app")),
-        ).isInstanceOf(KeyMapping.Drop::class.java)
-        assertThat(FlutterPrefsKeyTable.map("body_energy_watch_fit_watermark_millis", 5L))
-            .isInstanceOf(KeyMapping.Drop::class.java)
-        assertThat(FlutterPrefsKeyTable.map("body_energy_watch_observation_count", 3L))
-            .isInstanceOf(KeyMapping.Drop::class.java)
+            mappedMainValue("garmin_notifications_blocked_packages", listOf("com.spam.app")),
+        ).isEqualTo(TargetValue.StringSetValue(setOf("com.spam.app")))
     }
 
     // endregion

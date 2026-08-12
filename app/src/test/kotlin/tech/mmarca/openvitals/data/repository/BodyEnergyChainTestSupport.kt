@@ -147,6 +147,8 @@ fun inMemoryPreferences(
 ): PreferencesRepository = mockk<PreferencesRepository>().also { prefs ->
     var storedCalibration = calibration.normalized()
     var gainsAlgorithmVersion = 0
+    var watchFitEpoch = 0
+    var watermarkMillis = 0L
     var seedMirror: String? = null
     var permissionSignature: Int? = null
 
@@ -159,6 +161,14 @@ fun inMemoryPreferences(
     every { prefs.bodyEnergyGainsAlgorithmVersion } answers { gainsAlgorithmVersion }
     every { prefs.bodyEnergyGainsAlgorithmVersion = any() } answers {
         gainsAlgorithmVersion = firstArg()
+    }
+
+    every { prefs.bodyEnergyWatchFitEpoch } answers { watchFitEpoch }
+    every { prefs.bodyEnergyWatchFitEpoch = any() } answers { watchFitEpoch = firstArg() }
+
+    every { prefs.bodyEnergyWatchFitWatermarkMillis } answers { watermarkMillis }
+    every { prefs.bodyEnergyWatchFitWatermarkMillis = any() } answers {
+        watermarkMillis = firstArg()
     }
 
     every { prefs.bodyEnergyChainSeedMirror } answers { seedMirror }

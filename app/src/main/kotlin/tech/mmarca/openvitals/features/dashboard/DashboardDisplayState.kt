@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.dashboard
 
 import androidx.compose.runtime.Immutable
+import java.time.Instant
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
@@ -31,6 +32,7 @@ data class DashboardWidgetDisplayModel(
     val sleepScore: SleepScoreDisplay? = null,
     val weeklyCardioLoad: DashboardWeeklyCardioLoad? = null,
     val cycle: CycleWidgetDisplay? = null,
+    val watch: WatchWidgetDisplay? = null,
     val measurementSubtitle: String? = null,
     /** Consumed-today figure shown under the active-caffeine headline. */
     val caffeineConsumedTodayMg: Long? = null,
@@ -61,6 +63,32 @@ enum class SleepScoreRating {
     FAIR,
     POOR,
 }
+
+/**
+ * A paired watch on the dashboard: what it is, how full it is, and when it last
+ * handed anything over. Device state rather than a metric, so it carries no
+ * [DashboardMetric] and is never gated on what Health Connect can serve.
+ */
+@Immutable
+data class WatchWidgetDisplay(
+    /** Which watch the tile's sync button drives. */
+    val deviceId: String,
+    val name: String,
+    val batteryPercent: Int?,
+    val lastSyncedAt: Instant?,
+    /** More watches than the one shown, for a "+2" style suffix. */
+    val additionalCount: Int = 0,
+    /** A sync is running against THIS watch — not merely against some watch. */
+    val isSyncing: Boolean = false,
+    /**
+     * Beats per minute streaming off the wrist right now, over a held link.
+     * Null whenever that is not true — no link, live readings off, or the last
+     * push is old enough to have stopped describing the wearer.
+     */
+    val liveHeartRateBpm: Int? = null,
+    /** Today's step count as the watch counts it, live over the same link. */
+    val liveSteps: Int? = null,
+)
 
 @Immutable
 sealed interface CycleWidgetDisplay {
@@ -125,6 +153,7 @@ internal fun DashboardWidgetDisplayModel.showsNoDataMessage(): Boolean = when {
     isLoading -> false
     isNotSetUp -> true
     id == DashboardWidgetId.CYCLE -> cycle == null
+    id == DashboardWidgetId.WATCH -> watch == null
     id == DashboardWidgetId.WEEKLY_CARDIO_LOAD || id == DashboardWidgetId.CARDIO_LOAD ->
         weeklyCardioLoad == null
     else -> value == null || !hasValue

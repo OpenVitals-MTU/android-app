@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.settings
 
 import android.Manifest
 import android.os.Build
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
@@ -37,7 +39,8 @@ data class BleDevicesUiState(
     val editCapabilities: Set<BleSensorCapability> = emptySet(),
     val editEnabled: Boolean = true,
     val editWheelCircumferenceMm: String = "",
-    val errorMessage: String? = null,
+    /** Resource id rather than text: this copy is translated like the rest. */
+    @StringRes val errorMessage: Int? = null,
     val showAddFlow: Boolean = false,
 ) {
     val enabledDeviceCount: Int
@@ -56,7 +59,10 @@ class BleDevicesViewModel @Inject constructor(
         localState,
     ) { devices, discovered, local ->
         local.copy(
-            devices = devices,
+            // The Sensors screen owns the live-sensor role only. A sync-only
+            // watch belongs to the Watches screen; one that the user also added
+            // here carries capabilities, so it shows up in both — deliberately.
+            devices = devices.filter { it.isLiveSensorCapable },
             discoveredDevices = discovered,
         )
     }.stateInViewModel(initial = BleDevicesUiState())
@@ -175,7 +181,18 @@ class BleDevicesViewModel @Inject constructor(
         val state = localState.value
         val selected = state.selectedDevice ?: return
         if (state.addCapabilities.isEmpty()) {
-            localState.update { it.copy(errorMessage = "Select at least one capability.") }
+            // Finding nothing at all reads differently from unticking
+            // everything: a watch exposes the heart-rate service only while it
+            // is broadcasting, so say that instead of blaming the selection.
+            localState.update {
+                it.copy(
+                    errorMessage = if (state.discoveredCapabilities.isEmpty()) {
+                        R.string.settings_sensors_no_live_data
+                    } else {
+                        R.string.settings_sensors_select_capability
+                    },
+                )
+            }
             return
         }
         val wheelCircumference = if (BleSensorCapability.CYCLING_SPEED_DISTANCE in state.addCapabilities) {
@@ -184,6 +201,9 @@ class BleDevicesViewModel @Inject constructor(
         } else {
             null
         }
+        // No kind: this path decides the device is a sensor, never that it
+        // stops being a watch. Omitting it keeps an already-onboarded watch's
+        // sync role intact while adding the live one on top.
         deviceRepository.addDevice(
             displayName = state.addDisplayName,
             address = selected.address,
@@ -254,7 +274,7 @@ class BleDevicesViewModel @Inject constructor(
         val state = localState.value
         val deviceId = state.editingDeviceId ?: return
         if (state.editCapabilities.isEmpty()) {
-            localState.update { it.copy(errorMessage = "Select at least one capability.") }
+            localState.update { it.copy(errorMessage = R.string.settings_sensors_select_capability) }
             return
         }
         val wheelCircumference = if (BleSensorCapability.CYCLING_SPEED_DISTANCE in state.editCapabilities) {

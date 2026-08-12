@@ -54,8 +54,8 @@ class OpenVitalsDatabaseMigrationTest {
 
         assertEquals(5, OpenVitalsDatabase.MIGRATION_5_6.startVersion)
         assertEquals(6, OpenVitalsDatabase.MIGRATION_5_6.endVersion)
-        // Historical step, kept so upgrades pass through v6 unchanged; the
-        // table it creates is dropped again by MIGRATION_7_8.
+        // Column-identical to the Flutter drift table so phase 5's preserved
+        // drift rows can be imported 1:1.
         verify {
             db.execSQL(
                 match {
@@ -70,31 +70,20 @@ class OpenVitalsDatabaseMigrationTest {
     }
 
     @Test
-    fun `version six migrates to the synced record origins table`() {
+    fun `version eight restores the garmin wellness table`() {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
 
-        OpenVitalsDatabase.MIGRATION_6_7.migrate(db)
+        OpenVitalsDatabase.MIGRATION_8_9.migrate(db)
 
-        assertEquals(6, OpenVitalsDatabase.MIGRATION_6_7.startVersion)
-        assertEquals(7, OpenVitalsDatabase.MIGRATION_6_7.endVersion)
+        assertEquals(8, OpenVitalsDatabase.MIGRATION_8_9.startVersion)
+        assertEquals(9, OpenVitalsDatabase.MIGRATION_8_9.endVersion)
         verify {
-            db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `synced_record_origins`") })
-        }
-    }
-
-    @Test
-    fun `version seven drops the retired garmin wellness table`() {
-        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
-
-        OpenVitalsDatabase.MIGRATION_7_8.migrate(db)
-
-        assertEquals(7, OpenVitalsDatabase.MIGRATION_7_8.startVersion)
-        assertEquals(8, OpenVitalsDatabase.MIGRATION_7_8.endVersion)
-        // The watch integration is gone; the table has no writer or reader
-        // left. IF EXISTS keeps the drop safe on a database that somehow never
-        // saw MIGRATION_5_6.
-        verify {
-            db.execSQL(match { it.contains("DROP TABLE IF EXISTS `garmin_wellness_samples`") })
+            db.execSQL(
+                match {
+                    it.contains("CREATE TABLE IF NOT EXISTS `garmin_wellness_samples`") &&
+                        it.contains("PRIMARY KEY(`metric`, `time_millis`)")
+                },
+            )
         }
     }
 }

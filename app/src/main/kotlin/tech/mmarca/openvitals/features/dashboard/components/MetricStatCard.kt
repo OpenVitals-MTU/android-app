@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.features.dashboard.dashboardDisplayValue
 import tech.mmarca.openvitals.ui.components.AutoResizeText
+import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.theme.accentSurfaceContainerColor
 
@@ -46,6 +47,8 @@ internal fun MetricStatCard(
     subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     showTitle: Boolean = true,
     progressFraction: Float? = null,
+    /** Optional action pinned to the tile's trailing edge (the watch's sync). */
+    trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
     val iconContainerColor = accentSurfaceContainerColor(
@@ -122,6 +125,10 @@ internal fun MetricStatCard(
                             maxLines = 1,
                         )
                     }
+                }
+                if (trailing != null) {
+                    Spacer(Modifier.width(Spacing.xs))
+                    trailing()
                 }
             }
             if (progressFraction != null) {

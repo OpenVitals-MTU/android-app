@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.features.reports.ReportBuilderScreen
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsSection
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
+import tech.mmarca.openvitals.features.watches.WatchesSettingsScreen
 
 internal fun NavGraphBuilder.settingsRoutes(
     navController: NavHostController,
@@ -45,6 +46,20 @@ internal fun NavGraphBuilder.settingsRoutes(
 
     composable(Screen.SettingsSensors.route) {
         SettingsSectionScreen(SettingsSection.SENSORS, onImportRouteFile, onImportFitFile, onRouteFilesImported)
+    }
+
+    // A bespoke screen, not a settings card list (mirrors the Flutter app's
+    // dedicated Watches route): paired-watch rows that open the per-watch
+    // device view, plus the scan → classify → onboard add flow.
+    composable(Screen.SettingsWatches.route) {
+        WatchesSettingsScreen(
+            viewModel = hiltViewModel(),
+            onOpenWatch = { deviceId ->
+                navController.navigate(Screen.WatchDevice.createRoute(deviceId)) {
+                    launchSingleTop = true
+                }
+            },
+        )
     }
 
     composable(Screen.SettingsNutrition.route) {
@@ -128,6 +143,7 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.DISPLAY -> Screen.SettingsDisplay.route
         SettingsSection.ACTIVITIES -> Screen.SettingsActivities.route
         SettingsSection.SENSORS -> Screen.SettingsSensors.route
+        SettingsSection.WATCHES -> Screen.SettingsWatches.route
         SettingsSection.NUTRITION -> Screen.SettingsNutrition.route
         SettingsSection.BODY_PROFILE -> Screen.SettingsBodyProfile.route
         SettingsSection.RECOVERY -> Screen.SettingsRecovery.route

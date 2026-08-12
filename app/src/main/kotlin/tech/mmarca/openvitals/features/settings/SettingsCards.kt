@@ -52,6 +52,7 @@ import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Watch
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -205,6 +206,7 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.DISPLAY -> Icons.Outlined.Settings
         SettingsSection.ACTIVITIES -> Icons.AutoMirrored.Outlined.DirectionsRun
         SettingsSection.SENSORS -> Icons.Outlined.Bluetooth
+        SettingsSection.WATCHES -> Icons.Outlined.Watch
         SettingsSection.NUTRITION -> Icons.Outlined.Restaurant
         SettingsSection.BODY_PROFILE -> Icons.Outlined.Person
         SettingsSection.RECOVERY -> Icons.Outlined.FavoriteBorder

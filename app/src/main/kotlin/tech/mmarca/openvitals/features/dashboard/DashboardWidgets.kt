@@ -514,6 +514,7 @@ internal fun DashboardMetricStatWidget(
     subtitle: String? = null,
     subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     showTitle: Boolean = true,
+    trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
     MetricStatCard(
@@ -543,6 +544,7 @@ internal fun DashboardPillWidget(
     subtitle: String? = null,
     subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     showTitle: Boolean = true,
+    trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
     // The stat-tile look: 28dp accent chip, value with its unit inline, the
@@ -559,6 +561,7 @@ internal fun DashboardPillWidget(
         subtitleColor = subtitleColor,
         showTitle = showTitle,
         progressFraction = if (message == null) progress?.fraction else null,
+        trailing = trailing,
         onClick = onClick,
     )
 }

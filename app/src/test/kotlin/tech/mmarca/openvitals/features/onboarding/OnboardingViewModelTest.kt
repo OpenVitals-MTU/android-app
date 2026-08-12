@@ -408,6 +408,53 @@ class OnboardingViewModelTest {
         assertEquals(setOf("activity_w"), vm.missingRequestableFor(OnboardingCategoryId.ACTIVITY))
     }
 
+    @Test fun `grant all asks for step one's rows, and nothing from later steps`() = runTest {
+        val vm = viewModel(repo = repo(granted = setOf("activity_r", "sleep_r")))
+        advanceUntilIdle()
+
+        // Cycle, mindfulness and additional access have their own steps; step
+        // one's button must not drag them into its dialog.
+        assertEquals(
+            setOf("activity_w", "body_r", "body_w", "nutrition_r", "sleep_w", "vitals_r"),
+            vm.missingRequestableForCategories(),
+        )
+    }
+
+    @Test fun `grant all leaves out a category the device does not support`() = runTest {
+        val base = catalog()
+        val vm = viewModel(
+            repo = repo(
+                catalog = base.copy(
+                    categories = base.categories.map { category ->
+                        if (category.id == OnboardingCategoryId.VITALS) {
+                            category.copy(available = false)
+                        } else {
+                            category
+                        }
+                    },
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertFalse("vitals_r" in vm.missingRequestableForCategories())
+    }
+
+    @Test fun `grant all empties once step one is fully granted`() = runTest {
+        val vm = viewModel(
+            repo = repo(
+                granted = setOf(
+                    "activity_r", "activity_w", "body_r", "body_w",
+                    "nutrition_r", "sleep_r", "sleep_w", "vitals_r",
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        // Drives the button's visibility: nothing outstanding, nothing to show.
+        assertTrue(vm.missingRequestableForCategories().isEmpty())
+    }
+
     @Test fun `mindfulness opt-in persists and updates state`() = runTest {
         val prefs = prefs()
         val vm = viewModel(prefs = prefs)

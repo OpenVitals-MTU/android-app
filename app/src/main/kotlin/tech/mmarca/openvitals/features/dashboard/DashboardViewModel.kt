@@ -1,9 +1,12 @@
 package tech.mmarca.openvitals.features.dashboard
 
+import java.time.Instant
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.devices.garmin.GarminRealtimeState
+import tech.mmarca.openvitals.devices.garmin.GarminRealtimeStore
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -35,6 +38,7 @@ import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.sync.HistorySyncScheduler
 import java.time.LocalDate
+import tech.mmarca.openvitals.features.watches.DeviceSyncController
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import javax.inject.Inject
@@ -44,7 +48,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -77,6 +83,7 @@ data class DashboardUiState(
     val minimumPermissionsGranted: Boolean = true,
     val display: DashboardDisplayState = DashboardDisplayState(),
     val loadingWidgets: Set<DashboardWidgetId> = emptySet(),
+    val watch: WatchWidgetDisplay? = null,
     val sensorStatus: DashboardSensorStatus = DashboardSensorStatus(),
 )
 
@@ -137,13 +144,25 @@ class DashboardViewModel @Inject constructor(
     private val bleDeviceRepository: BleDeviceRepository? = null,
     private val bleSensorCoordinator: BleSensorCoordinator? = null,
     private val historySyncScheduler: HistorySyncScheduler? = null,
+    private val deviceSyncController: DeviceSyncController? = null,
+    private val garminRealtimeStore: GarminRealtimeStore? = null,
 ) : ViewModel() {
 
     val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
 
     private val _uiState = MutableStateFlow(
         DashboardUiState(
-            dashboardWidgets = dashboardWidgetIdsFromStored(prefs.dashboardWidgetOrder()),
+            // Appends widgets added by an app update to a layout saved before
+            // they existed; without it a new tile is invisible to anyone who
+            // has ever edited their dashboard.
+            dashboardWidgets = dashboardWidgetIdsWithNewOnesAppended(
+                storedIds = prefs.dashboardWidgetOrder(),
+                knownIds = prefs.dashboardKnownWidgetIds(),
+                persist = { order, known ->
+                    order?.let(prefs::setDashboardWidgetOrder)
+                    prefs.setDashboardKnownWidgetIds(known)
+                },
+            ),
             placedDashboardWidgets = prefs.dashboardWidgetOrder()
                 ?.let { stored -> dashboardWidgetIdsFromStored(stored).toSet() }
                 .orEmpty(),
@@ -197,6 +216,40 @@ class DashboardViewModel @Inject constructor(
                 _uiState.update { it.copy(sensorStatus = sensorStatus) }
             }
         }
+        // The watch tile is device state, not day data, so nothing else would
+        // ever rebuild it: without this a watch paired while the dashboard is
+        // open stays invisible until the next reload, and the sync it is
+        // running never shows on the tile that started it.
+        val syncStates = deviceSyncController?.state?.map { it.syncingDeviceId } ?: flowOf(null)
+        val liveReadings = garminRealtimeStore?.readings ?: flowOf(GarminRealtimeState())
+        viewModelScope.launch {
+            combine(
+                deviceRepository.devicesFlow,
+                syncStates,
+                liveReadings,
+            ) { devices, syncingDeviceId, live ->
+                devices.toWatchWidgetDisplay(syncingDeviceId = syncingDeviceId, live = live)
+            }
+                .distinctUntilChanged()
+                .collect { watch ->
+                    if (watch != _uiState.value.watch) {
+                        _uiState.update { it.copy(watch = watch) }
+                        rebuildDisplay()
+                    }
+                }
+        }
+    }
+
+    /**
+     * Syncs the watch the tile is showing. A no-op while any sync is running —
+     * the radio is one resource, and the controller refuses a second anyway.
+     */
+    fun syncWatchNow() {
+        val deviceId = _uiState.value.watch?.deviceId ?: return
+        deviceSyncController?.syncDevice(
+            deviceId,
+            listenAfter = DeviceSyncController.MANUAL_SYNC_LINGER,
+        )
     }
 
     fun deleteActivityEntry(entryId: String) {
@@ -397,6 +450,11 @@ class DashboardViewModel @Inject constructor(
             .filterNot { widgetId ->
                 widgetId.toDashboardMetricOrNull()?.let { it in quickMetrics } == true
             }
+            // A widget with no metric behind it is not waiting for one. The
+            // loading list is cleared by the metrics that finish loading, so
+            // anything metric-less put on it stays there for good — a tile
+            // reading "Loading…" forever.
+            .filter { it.toDashboardMetricOrNull() != null }
         val loadingWidgets = buildSet {
             addAll(backgroundWidgetIds)
             if (bodyEnergyRepository != null &&
@@ -681,6 +739,15 @@ class DashboardViewModel @Inject constructor(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             loadingWidgets = loadingWidgets,
             bodyEnergySetupCompleted = prefs.bodyEnergyCalibration().setupCompleted,
+            // Read straight from the registry rather than from ui state: the
+            // two are filled by different coroutines, and a display built
+            // before the device flow's first emission would drop the tile and
+            // never get it back (the rebuild that emission triggers no-ops
+            // while the day's data is still loading).
+            watch = bleDeviceRepository?.devices?.toWatchWidgetDisplay(
+                syncingDeviceId = deviceSyncController?.state?.value?.syncingDeviceId,
+                live = garminRealtimeStore?.readings?.value ?: GarminRealtimeState(),
+            ),
             // Edit mode is the only place an unsupported metric materialises —
             // in the add tray, so it can be placed rather than lost.
             includeUnsupported = _uiState.value.isEditingDashboard,
@@ -689,9 +756,45 @@ class DashboardViewModel @Inject constructor(
 }
 
 /**
- * The dashboard's roll-up of paired BLE sensors for the top-bar battery action.
- * That action opens Sensors settings, so its visibility means "there is at
- * least one registered sensor behind this tap".
+ * The watch tile's content: the most recently synced watch, with the others
+ * behind a count. A bike computer is deliberately not a watch here — it has its
+ * own place among the sensors.
+ */
+internal fun List<BleSensorDevice>.toWatchWidgetDisplay(
+    syncingDeviceId: String? = null,
+    live: GarminRealtimeState = GarminRealtimeState(),
+    now: Instant = Instant.now(),
+): WatchWidgetDisplay? {
+    val watches = filter { it.isWatch }
+    // The watch being synced right now owns the tile, whichever it is —
+    // otherwise the spinner would sit on a watch that is not the one working.
+    // Failing that, the most recently synced, so the tile follows the watch
+    // actually in use; a never-synced one sorts last rather than claiming it.
+    val primary = watches.firstOrNull { it.id == syncingDeviceId }
+        ?: watches.maxByOrNull { it.lastSyncedAt?.toEpochMilli() ?: Long.MIN_VALUE }
+        ?: return null
+    return WatchWidgetDisplay(
+        deviceId = primary.id,
+        name = primary.displayName,
+        batteryPercent = primary.batteryPercent,
+        lastSyncedAt = primary.lastSyncedAt,
+        additionalCount = watches.size - 1,
+        isSyncing = primary.id == syncingDeviceId,
+        // Only one watch can hold a link at a time, and the tile shows the one
+        // in use — so the live values belong to it or to nothing.
+        liveHeartRateBpm = live.freshHeartRate(now),
+        liveSteps = live.freshSteps(now),
+    )
+}
+
+/**
+ * The dashboard's roll-up of the paired BLE devices the Sensors & devices screen
+ * actually lists — [BleSensorDevice.isLiveSensorCapable] ones. The top-bar
+ * battery action opens that screen, so its visibility has to mean "there is
+ * something behind this tap": a paired watch alone used to put the icon up over
+ * an empty list (watches live under Settings > Watches, with their own battery
+ * surface), and its battery skewed the "lowest battery" figure. A bike computer
+ * still counts — it broadcasts standard GATT like any sensor.
  */
 internal fun List<BleSensorDevice>.toDashboardSensorStatus(
     connectionStatuses: List<BleDeviceConnectionStatus>,
@@ -699,7 +802,7 @@ internal fun List<BleSensorDevice>.toDashboardSensorStatus(
     val statusesById = connectionStatuses.associateBy { it.deviceId }
     val statusesByAddress = connectionStatuses.associateBy { it.address }
     return DashboardSensorStatus(
-        devices = map { device ->
+        devices = filter { it.isLiveSensorCapable }.map { device ->
             val liveStatus = statusesById[device.id] ?: statusesByAddress[device.address]
             DashboardSensorDeviceStatus(
                 id = device.id,

@@ -22,6 +22,7 @@ class OpenVitalsApp : Application() {
     @Inject lateinit var appForegroundGate: AppForegroundGate
     @Inject lateinit var reminderRestoreBootstrap: ReminderRestoreBootstrap
     @Inject lateinit var syncedRecordOriginRepository: SyncedRecordOriginRepository
+    @Inject lateinit var garminNotificationBridge: tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
 
     override fun onCreate() {
         // The one-time Flutter->Kotlin data migration is deliberately split
@@ -51,6 +52,10 @@ class OpenVitalsApp : Application() {
         // Hydrates the synced-source display overlay so records received from
         // another phone show their original source app, not OpenVitals.
         syncedRecordOriginRepository.warmOverlay()
+        // Companion mode survives process death only if every start re-arms
+        // it: presence observation plus the held watch link, for whichever
+        // watch has stay-connected on.
+        garminNotificationBridge.onAppStart()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

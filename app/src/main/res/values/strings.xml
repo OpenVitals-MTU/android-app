@@ -493,6 +493,40 @@
     <string name="metric_vo2_max">VO2 max</string>
     <string name="metric_mindfulness">Mindfulness</string>
     <string name="metric_total_mindfulness">Total mindfulness</string>
+    <string name="settings_watch_calendar">Calendar on watch</string>
+    <string name="settings_watch_calendar_body">Show the phone\'s upcoming events in the watch\'s calendar glance. Events go to the watch over Bluetooth and nowhere else.</string>
+    <string name="settings_watch_calendar_no_permission">Calendar access was declined. Grant it in system settings to sync events.</string>
+    <string name="settings_watch_agps">GPS ephemeris</string>
+    <string name="settings_watch_agps_body">Import a satellite prediction file so the watch finds GPS in seconds. Nothing is downloaded: fetch the file yourself and OpenVitals hands it over when the watch asks.</string>
+    <string name="settings_watch_agps_import">Import file</string>
+    <string name="settings_watch_agps_replace">Replace</string>
+    <string name="settings_watch_agps_remove">Remove</string>
+    <string name="settings_watch_agps_imported">Ready to hand over.</string>
+    <string name="settings_watch_agps_not_ephemeris">That file is not GPS ephemeris data.</string>
+    <string name="settings_watch_agps_stale">That file is too old to help. Ephemeris predicts where the satellites will be, so anything past a week is worse than none.</string>
+    <string name="settings_watch_agps_unreadable">That file could not be read.</string>
+    <string name="settings_watch_agps_never_taken">Imported %1$s · the watch has not taken it yet</string>
+    <string name="settings_watch_agps_taken">Imported %1$s · given to the watch %2$s</string>
+    <string name="settings_watch_agps_unusable">The watch refused this file. It may want a different format.</string>
+    <string name="settings_watch_agps_asked_for">Your watch asks for: %1$s</string>
+    <string name="settings_watch_agps_kind_tar">Constellation archive</string>
+    <string name="settings_watch_agps_kind_rx">rxNetworks CPE</string>
+    <string name="settings_watch_agps_kind_sony">Sony CPE</string>
+    <string name="settings_watch_live_readings">Live readings</string>
+    <string name="settings_watch_live_readings_body">Streams heart rate and steps from the watch while it is connected, for the dashboard. Uses more watch battery.</string>
+    <string name="settings_watch_live_now">Now: %1$d bpm</string>
+    <string name="settings_watch_stay_connected">Stay connected</string>
+    <string name="settings_watch_stay_connected_body">Keeps a link to the watch whenever it is in range. The watch can then fetch weather, find this phone, and hand over new recordings the moment they finish — at some cost to watch and phone battery.</string>
+    <string name="garmin_find_phone_channel">Find my phone</string>
+    <string name="garmin_find_phone_title">Your watch is looking for this phone</string>
+    <string name="garmin_find_phone_body">Tap to stop ringing.</string>
+    <string name="garmin_find_phone_stop">Stop</string>
+    <string name="metric_watch">Watch</string>
+    <string name="dashboard_watch_sync">Sync watch</string>
+    <string name="dashboard_watch_live_hr">%1$d bpm now</string>
+    <string name="dashboard_watch_live_steps">%1$d steps</string>
+    <string name="dashboard_watch_battery">%1$d%% battery</string>
+    <string name="dashboard_watch_last_sync">synced %1$s</string>
     <string name="metric_cycle">Cycle</string>
     <string name="metric_cycle_tracking">Cycle tracking</string>
     <string name="metric_period_days">Period days</string>
@@ -1149,6 +1183,20 @@
     <string name="onboarding_routes_step2">Choose Additional access.</string>
     <string name="onboarding_routes_step3">Set Exercise routes to Always allow.</string>
     <string name="onboarding_open_health_permissions">Open Health Connect permissions</string>
+    <string name="watch_permissions_title">Permissions for your watch</string>
+    <string name="watch_permissions_body">Android asks for these separately from Health Connect. Without them a watch cannot be found, and background syncs stop quietly.</string>
+    <string name="watch_permissions_continue">Continue anyway</string>
+    <string name="onboarding_os_bluetooth">Bluetooth</string>
+    <string name="onboarding_os_bluetooth_desc">Find and connect watches, heart rate straps and other sensors.</string>
+    <string name="onboarding_os_notifications">Notifications</string>
+    <string name="onboarding_os_notifications_desc">Sync progress, reminders and workout alerts.</string>
+    <string name="onboarding_os_location">Location</string>
+    <string name="onboarding_os_location_desc">Required to scan for Bluetooth devices on older Android versions.</string>
+    <string name="onboarding_os_battery">Unrestricted battery use</string>
+    <string name="onboarding_os_battery_desc">Lets background syncs finish instead of being paused by battery saving. Opens Android settings.</string>
+    <string name="onboarding_os_notification_forwarding">Notification forwarding</string>
+    <string name="onboarding_os_notification_forwarding_desc">Send phone notifications to a connected watch. Opens Android settings.</string>
+    <string name="onboarding_action_grant_all">Grant all</string>
     <string name="onboarding_action_next">Next</string>
     <string name="onboarding_action_back">Back</string>
     <string name="onboarding_action_skip">Not now</string>
@@ -1185,6 +1233,8 @@
     <string name="settings_sensors_capability_cycling_speed">Cycling speed</string>
     <string name="settings_sensors_capability_running_speed_cadence">Running speed/cadence</string>
     <string name="settings_sensors_capability_conflict">%1$s is already assigned to %2$s</string>
+    <string name="settings_sensors_select_capability">Select at least one capability.</string>
+    <string name="settings_sensors_no_live_data">This device is not broadcasting any live data. On a watch, turn on heart rate broadcast, then scan again.</string>
     <string name="settings_sensors_wheel_circumference">Wheel circumference (mm)</string>
     <string name="activity_recording_sensors_title">Sensors</string>
     <string name="activity_recording_sensors_add_in_settings">Add sensors in Settings</string>
@@ -2268,6 +2318,11 @@
     <string name="body_energy_confidence_medium">Medium</string>
     <string name="body_energy_confidence_low">Low</string>
     <string name="body_energy_confidence_no_data">No data</string>
+    <string name="body_energy_personalization_watch_none">Sync a watch that tracks its own body energy to start personalising these.</string>
+    <plurals name="body_energy_personalization_watch_body">
+        <item quantity="one">Learned from 1 watch reading. Each is a plain multiplier you can see below.</item>
+        <item quantity="other">Learned from %1$d watch readings. Each is a plain multiplier you can see below.</item>
+    </plurals>
 
     <!-- Sync with another phone (features/devicesync) -->
     <string name="settings_device_sync_group_title">Sync with another phone</string>
@@ -2339,4 +2394,117 @@
     <string name="device_sync_notification_channel">Phone-to-phone sync</string>
     <string name="device_sync_notification_title">Syncing with another phone</string>
     <string name="device_sync_notification_text">Keep both phones nearby until the sync finishes.</string>
+
+    <!-- Watch notification forwarding (features/watches) -->
+    <string name="notification_listener_label">Watch notifications</string>
+    <string name="screen_watch_notifications">Watch notifications</string>
+    <string name="settings_watch_notifications_section">Notifications</string>
+    <string name="settings_watch_notifications_title">Send notifications to the watch</string>
+    <string name="settings_watch_notifications_body">Phone notifications appear on your wrist. Read on this device and sent only to this watch.</string>
+    <string name="settings_watch_notifications_grant">Allow notification access</string>
+    <string name="settings_watch_notifications_grant_body">Android asks for this on its own settings screen. OpenVitals cannot request it from here.</string>
+    <string name="settings_watch_notifications_apps">Apps to silence</string>
+    <string name="settings_watch_notifications_apps_none">All apps send to the watch</string>
+    <plurals name="settings_watch_notifications_apps_blocked">
+        <item quantity="one">%1$d app silenced</item>
+        <item quantity="other">%1$d apps silenced</item>
+    </plurals>
+    <string name="settings_watch_notifications_apps_title">Apps</string>
+    <string name="settings_watch_notifications_apps_intro">Turn an app off to stop its notifications reaching the watch. Everything else keeps coming through.</string>
+    <string name="settings_watch_notifications_apps_empty">No apps found.</string>
+    <string name="settings_watch_notifications_disclosure_title">OpenVitals will read your notifications</string>
+    <string name="settings_watch_notifications_disclosure_body">To show notifications on your watch, OpenVitals reads the notifications your phone receives — including their text.\n\nThey are read on this device and sent only to the watch you paired, over Bluetooth. Nothing is saved to a file or a database, and OpenVitals has no internet permission, so notifications cannot be sent anywhere else.\n\nYou can turn this off at any time, and revoke notification access from Android settings.</string>
+    <string name="settings_watch_notifications_disclosure_accept">Continue</string>
+    <string name="settings_watch_notifications_disclosure_decline">Not now</string>
+
+    <!-- Watches settings section + list screen (features/watches) -->
+    <string name="settings_watches_group_title">Watches</string>
+    <string name="settings_watches_group_body">Copy sleep, heart rate and activities recorded on your watch</string>
+    <string name="settings_watches_intro">Copies what your watch recorded into OpenVitals. Nothing is sent to the internet.</string>
+    <string name="settings_watches_empty_title">No watch paired</string>
+    <string name="settings_watches_empty_body">Pairing a watch lets OpenVitals copy what it recorded — sleep stages, resting heart rate, stress and Body Battery — without sending anything to the internet.</string>
+    <string name="settings_watches_add">Pair a watch</string>
+    <string name="settings_watches_scan_empty">No watches found yet. Make sure your watch is awake and close to your phone.</string>
+
+    <!-- Watch onboarding (features/watches) -->
+    <string name="settings_watch_pair_title">Pair this watch</string>
+    <string name="settings_watch_pair_body">OpenVitals will pair with the watch, then copy its recorded activity, sleep and health files. Confirm the code shown on the watch when it appears.</string>
+    <string name="settings_watch_step_bonding">Pairing with the watch</string>
+    <string name="settings_watch_step_associating">Asking Android for access</string>
+    <string name="settings_watch_step_associating_hint">Optional. Allowing this lets syncing continue reliably in the background.</string>
+    <string name="settings_watch_step_probing">Checking what the watch supports</string>
+    <string name="settings_watch_pair_action">Pair</string>
+    <string name="settings_watch_unsupported_notice">Paired, but this watch uses a connection OpenVitals does not support yet, so it cannot sync.</string>
+    <string name="settings_watch_no_companion_notice">Paired, but Android access was not granted. Syncing works while OpenVitals is open.</string>
+
+    <!-- Watch device screen (features/watches) -->
+    <string name="settings_watch_connected">Connected</string>
+    <string name="settings_watch_not_connected">Not connected</string>
+    <string name="settings_watch_never_synced">Never synced</string>
+    <string name="settings_watch_last_synced">Last synced %1$s</string>
+    <plurals name="settings_watch_synced_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <string name="settings_watch_action_data">Data</string>
+    <string name="settings_watch_action_sync">Sync</string>
+    <string name="settings_watch_action_alarms">Alarms</string>
+    <string name="settings_watch_action_find">Find</string>
+    <string name="settings_watch_find_stop">Stop</string>
+    <string name="settings_watch_find_ringing">Listen for your watch</string>
+    <string name="settings_watch_find_failed">The watch did not answer. Bring it closer and try again.</string>
+    <string name="settings_watch_settings_section">Watch settings</string>
+    <string name="settings_watch_on_device_settings">Settings on the watch</string>
+    <string name="settings_watch_on_device_settings_body">Backlight, sounds, watch face…</string>
+    <string name="settings_watch_settings_reading">Reading from the watch…</string>
+    <string name="settings_watch_settings_unreachable">Could not read this from the watch. Bring it closer and try again.</string>
+    <string name="settings_watch_settings_empty">The watch sent nothing for this screen.</string>
+    <string name="settings_watch_settings_refused">The watch would not change that.</string>
+    <string name="settings_watch_settings_unanswered">The watch did not answer. Check the watch to see whether it changed.</string>
+    <string name="settings_watch_settings_retry">Try again</string>
+    <string name="settings_watch_settings_from_watch">Read live from your watch. Changes apply to the watch itself.</string>
+    <string name="settings_watch_settings_no_state">The watch sent this screen but not its current values, so nothing here can be changed yet.</string>
+    <string name="settings_watch_settings_confirm_action">Apply “%1$s”?</string>
+    <string name="settings_watch_settings_confirm_action_body">This runs the action on the watch and cannot be undone from here.</string>
+    <string name="settings_watch_section_device">Device</string>
+    <string name="settings_watch_enabled">Enabled</string>
+    <string name="settings_watch_rename">Rename watch</string>
+    <string name="settings_watch_name_label">Name</string>
+    <string name="settings_watch_remove">Remove watch</string>
+    <string name="settings_device_remove_confirm_title">Remove %1$s?</string>
+    <string name="settings_watch_remove_confirm_body">OpenVitals will unpair the watch and forget which files it has already copied, so a future pairing starts fresh. Data already saved to Health Connect is kept.</string>
+    <string name="action_remove">Remove</string>
+
+    <!-- Bike computer live-sensor role (features/watches) -->
+    <string name="settings_bike_live_sensor_section">Live sensor</string>
+    <string name="settings_bike_live_sensor_body">Broadcast heart rate, speed, cadence or power to record it live during an activity. Turn on broadcasting on the device first.</string>
+    <string name="settings_bike_detect_sensors">Detect broadcast sensors</string>
+    <string name="settings_bike_detecting">Detecting…</string>
+    <string name="settings_bike_no_broadcast">No broadcast sensors found. Turn on broadcasting on the device, then try again.</string>
+
+    <!-- Watch data screen (features/watches) -->
+    <string name="settings_watch_data_title">Watch data</string>
+    <string name="settings_watch_data_intro">Measurements only your watch makes. Health Connect has no place for these, so they stay in OpenVitals.</string>
+    <string name="settings_watch_data_empty">Nothing yet. Sync your watch and whatever it has recorded will appear here.</string>
+    <string name="settings_watch_data_missing">Not sent by this watch: %1$s</string>
+    <string name="settings_watch_data_last_night">Last night</string>
+    <string name="settings_watch_data_training">Training</string>
+    <string name="settings_watch_metric_stress">Stress</string>
+    <string name="settings_watch_metric_body_battery">Body Battery</string>
+    <string name="settings_watch_metric_intensity_minutes">Intensity minutes</string>
+    <string name="settings_watch_metric_intensity_goal">%1$s of %2$s this week</string>
+    <string name="settings_watch_metric_sleep_score">Sleep score</string>
+    <string name="settings_watch_metric_awake">Awake</string>
+    <string name="settings_watch_metric_awakenings">Times woken</string>
+    <string name="settings_watch_metric_sleep_coach">Sleep Coach</string>
+    <string name="settings_watch_metric_sleep_coach_body">%1$s above your usual %2$s</string>
+    <string name="settings_watch_metric_sleep_coach_equal">The same as your usual %1$s</string>
+    <string name="settings_watch_metric_recovery_time">Recovery time</string>
+    <string name="settings_watch_metric_training_readiness">Training readiness</string>
+    <string name="settings_watch_metric_training_load">Training load</string>
+    <string name="settings_watch_average_prefix">%1$s average</string>
+    <plurals name="dashboard_watch_more">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
 </resources>

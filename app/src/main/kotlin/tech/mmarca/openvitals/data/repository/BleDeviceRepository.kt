@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
+import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
+import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 @Singleton
 class BleDeviceRepository @Inject constructor(
@@ -36,6 +38,12 @@ class BleDeviceRepository @Inject constructor(
     fun resolveCapabilityAssignments(): Map<BleSensorCapability, BleSensorDevice> {
         val assignments = linkedMapOf<BleSensorCapability, BleSensorDevice>()
         enabledDevices.forEach { device ->
+            // A live sensor, an Edge bike computer, or a watch the user added
+            // through the Sensors path as well — all three take part once they
+            // carry capabilities. A sync-only watch has none, so it stays out
+            // and the recording coordinator never connects to it to wait for
+            // notifications it does not send.
+            if (!device.isLiveSensorCapable) return@forEach
             device.capabilities.forEach { capability ->
                 assignments.putIfAbsent(capability, device)
             }
@@ -52,25 +60,42 @@ class BleDeviceRepository @Inject constructor(
                 capability in capabilities && device.id != excludingDeviceId
             }
 
+    /**
+     * Registers [address], or folds these fields into the entry that already
+     * holds it.
+     *
+     * The two add flows own different halves of a device: the Sensors screen
+     * owns [capabilities], the watch onboarding owns [kind] and [integration].
+     * So on an update each half leaves the other's alone — a null [kind] keeps
+     * the stored kind, an empty [capabilities] keeps the stored set. That is
+     * what lets one vívoactive be a GFDI sync watch AND a live heart-rate
+     * sensor, instead of whichever flow ran last silently demoting the other.
+     * A new device with no [kind] is a plain [BleDeviceKind.SENSOR].
+     *
+     * Clearing capabilities is the edit sheet's job, through [updateDevice].
+     */
     fun addDevice(
         displayName: String,
         address: String,
         bluetoothName: String?,
         capabilities: Set<BleSensorCapability>,
         wheelCircumferenceMm: Int? = null,
+        kind: BleDeviceKind? = null,
+        integration: DeviceIntegration? = null,
     ): BleSensorDevice {
         val normalizedAddress = address.uppercase()
         val existing = devices.firstOrNull { it.address.equals(normalizedAddress, ignoreCase = true) }
         if (existing != null) {
-            val updated = existing.copy(
+            return updateDevice(
+                deviceId = existing.id,
                 displayName = displayName,
-                bluetoothName = bluetoothName ?: existing.bluetoothName,
-                capabilities = capabilities,
+                bluetoothName = bluetoothName,
+                capabilities = capabilities.takeIf { it.isNotEmpty() },
                 enabled = true,
                 wheelCircumferenceMm = wheelCircumferenceMm ?: existing.wheelCircumferenceMm,
-            ).normalized()
-            persist(devices.map { if (it.id == existing.id) updated else it })
-            return updated
+                kind = kind,
+                integration = integration,
+            )
         }
         val device = BleSensorDevice(
             id = UUID.randomUUID().toString(),
@@ -81,6 +106,8 @@ class BleDeviceRepository @Inject constructor(
             enabled = true,
             wheelCircumferenceMm = wheelCircumferenceMm,
             addedAt = Instant.now(),
+            kind = kind ?: BleDeviceKind.SENSOR,
+            integration = integration,
         ).normalized()
         persist(devices + device)
         return device
@@ -89,23 +116,33 @@ class BleDeviceRepository @Inject constructor(
     fun updateDevice(
         deviceId: String,
         displayName: String? = null,
+        /** The advertised name, which a re-add refreshes; null keeps the stored one. */
+        bluetoothName: String? = null,
         capabilities: Set<BleSensorCapability>? = null,
         enabled: Boolean? = null,
         wheelCircumferenceMm: Int? = null,
+        kind: BleDeviceKind? = null,
+        integration: DeviceIntegration? = null,
     ): BleSensorDevice {
         val current = devices.firstOrNull { it.id == deviceId }
             ?: error("Unknown BLE device: $deviceId")
         val updated = current.copy(
             displayName = displayName ?: current.displayName,
+            bluetoothName = bluetoothName ?: current.bluetoothName,
             capabilities = capabilities ?: current.capabilities,
             enabled = enabled ?: current.enabled,
             wheelCircumferenceMm = wheelCircumferenceMm ?: current.wheelCircumferenceMm,
+            kind = kind ?: current.kind,
+            integration = integration ?: current.integration,
         ).normalized()
         persist(devices.map { if (it.id == deviceId) updated else it })
         return updated
     }
 
     fun removeDevice(deviceId: String) {
+        // A watch's Garmin-specific state (synced-file history + declared
+        // capabilities) is cleared separately, by whoever forgets the watch,
+        // via `GarminDeviceStateStore.clear` — this registry does not hold it.
         persist(devices.filterNot { it.id == deviceId })
     }
 
@@ -135,6 +172,16 @@ class BleDeviceRepository @Inject constructor(
         )
     }
 
+    /** Stamps a watch's last completed file pull. A no-op for an unknown id. */
+    fun markSynced(deviceId: String, at: Instant) {
+        if (devices.none { it.id == deviceId }) return
+        persist(
+            devices.map { device ->
+                if (device.id == deviceId) device.copy(lastSyncedAt = at) else device
+            },
+        )
+    }
+
     private fun persist(nextDevices: List<BleSensorDevice>) {
         prefs.edit {
             putString(KEY_DEVICES, BleDeviceRegistryJson.encode(nextDevices))
@@ -154,10 +201,15 @@ class BleDeviceRepository @Inject constructor(
 }
 
 /**
- * The registry's JSON wire format. Older builds (Flutter migration and the
- * retired watch integration) may still carry `kind` / `integration` /
- * `lastSyncedAt`. Those fields are ignored on read: `"kind": "WATCH"` entries
- * are dropped, and everything else is treated as a plain sensor.
+ * The registry's JSON wire format, shared by the Kotlin build and the JSON the
+ * retired Flutter build wrote (phase 5 copies that string over verbatim).
+ *
+ * Reading is deliberately tolerant:
+ * - `kind` / `integration` / `lastSyncedAt` are absent on every device stored
+ *   before watches existed — those are all sensors, which is exactly what the
+ *   [BleDeviceKind.SENSOR] / null fallbacks say.
+ * - An unknown enum value (a future build's kind) degrades to the same
+ *   fallbacks rather than dropping the device or crashing the decode.
  */
 internal object BleDeviceRegistryJson {
 
@@ -184,6 +236,9 @@ internal object BleDeviceRegistryJson {
                         device.batteryUpdatedAt?.toEpochMilli() ?: JSONObject.NULL,
                     )
                     .put("addedAt", device.addedAt.toEpochMilli())
+                    .put("kind", device.kind.storageName)
+                    .put("integration", device.integration?.storageName ?: JSONObject.NULL)
+                    .put("lastSyncedAt", device.lastSyncedAt?.toEpochMilli() ?: JSONObject.NULL)
             },
         ).toString()
 
@@ -193,10 +248,6 @@ internal object BleDeviceRegistryJson {
             buildList {
                 for (index in 0 until array.length()) {
                     val item = array.getJSONObject(index)
-                    // Retired watch-integration leftovers are not sensors.
-                    if (item.optString("kind").equals("WATCH", ignoreCase = true)) {
-                        continue
-                    }
                     val capabilities = buildSet {
                         val caps = item.optJSONArray("capabilities")
                         if (caps != null) {
@@ -225,6 +276,21 @@ internal object BleDeviceRegistryJson {
                                 .takeIf { it != null && it != JSONObject.NULL }
                                 ?.let { Instant.ofEpochMilli((it as Number).toLong()) },
                             addedAt = Instant.ofEpochMilli(item.getLong("addedAt")),
+                            // Absent for every device stored before watches
+                            // existed — those are all sensors, which is exactly
+                            // what the fallback says. Unknown values degrade
+                            // the same way rather than crashing the decode.
+                            kind = item.optString("kind")
+                                .let { BleDeviceKind.fromStorage(it) }
+                                ?: BleDeviceKind.SENSOR,
+                            // Absent for a sensor and for a Garmin watch stored
+                            // before this field — null reads back as Garmin via
+                            // `isGarminWatch`, so nothing migrates.
+                            integration = item.optString("integration")
+                                .let { DeviceIntegration.fromStorage(it) },
+                            lastSyncedAt = item.opt("lastSyncedAt")
+                                .takeIf { it != null && it != JSONObject.NULL }
+                                ?.let { Instant.ofEpochMilli((it as Number).toLong()) },
                         ).normalized(),
                     )
                 }

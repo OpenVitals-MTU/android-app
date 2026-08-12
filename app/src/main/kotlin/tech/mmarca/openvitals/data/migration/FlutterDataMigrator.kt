@@ -27,11 +27,12 @@ import tech.mmarca.openvitals.data.local.OpenVitalsDatabase
  *   ([FlutterPrefsKeyTable.MIGRATED_FLAG_KEY]) is set at the end REGARDLESS of
  *   per-step failures — a migration that keeps failing must not retry on every
  *   launch.
- * * NEVER deletes a Flutter file. `app_flutter/openvitals.db` is preserved on
- *   disk (historically it was also the import source for the retired watch
- *   integration's `garmin_wellness_samples` table), and
+ * * NEVER deletes a Flutter file. In particular, `app_flutter/openvitals.db`
+ *   is the phase-7 (Garmin watches) import source for its
+ *   `garmin_wellness_samples` table — see [FlutterDatabaseImporter] — and
  *   `FlutterSharedPreferences.xml` stays as the fallback source of truth for
- *   any copied-for-future key.
+ *   any copied-for-future key. Deleting the Flutter files is scheduled for a
+ *   release after phase 7 ships.
  * * Fresh installs no-op on a single file stat (no Flutter prefs file on disk).
  *
  * ## Why two phases (see `OpenVitalsApp.onCreate`)
@@ -85,6 +86,9 @@ class FlutterDataMigrator(
      */
     fun importDatabaseAndFinish(database: OpenVitalsDatabase) {
         step("beverage database") { databaseImporter.importBeverages(database.beverageDao()) }
+        step("garmin wellness samples") {
+            databaseImporter.importGarminWellness(database.garminWellnessDao())
+        }
         step("completion flag") {
             targetPrefs(TargetPrefsFile.MAIN).edit()
                 .putBoolean(FlutterPrefsKeyTable.MIGRATED_FLAG_KEY, true)

@@ -21,14 +21,26 @@ The manifest removes `INTERNET`, `ACCESS_NETWORK_STATE`, and `ACCESS_WIFI_STATE`
 Every device feature is built around keeping that true:
 
 - Phone-to-phone sync uses Bluetooth Classic (RFCOMM), not Wi-Fi. A Wi-Fi or TCP transfer would require `INTERNET`; Bluetooth keeps it a direct link between the two phones.
+- Watch sync and notification forwarding talk to the watch over Bluetooth only.
 - Offline maps are imported as local map packs; nothing is downloaded.
 - Diagnostics and import reports are generated on device and shared only if the user chooses to.
 
 ## Paired Devices
 
-### Watches
+### Garmin Watches
 
-OpenVitals does not link to watches directly and reads no notifications. Watch data arrives through Health Connect, written by a companion app such as Gadgetbridge, and OpenVitals reads it with its ordinary Health Connect permissions. A watch broadcasting standard Bluetooth LE heart rate can be added as a live sensor for activity recording; that connection is local and streams only the sensor values.
+A paired watch's recorded files are read over Bluetooth and imported on the device. Wellness series a watch records but Health Connect has no type for, such as stress and Body Battery, are stored in the app's own local database; the rest is written to Health Connect. Nothing about a watch is sent off the phone.
+
+Pairing uses Android's companion device manager. The association exists so Android keeps OpenVitals running while the watch is in range and a multi-minute sync can finish.
+
+### Notification Forwarding
+
+If, and only if, the user grants Android notification access, OpenVitals reads incoming phone notifications so they can be shown on a paired watch. OpenVitals shows a prominent disclosure explaining this before sending the user to the Android settings screen that grants it.
+
+- The content is used for one purpose: displaying the notification on the paired watch.
+- It is held in a bounded in-memory buffer. It is not written to a file, a database, or Health Connect.
+- It is sent to nothing but the paired watch, over Bluetooth. The app has no internet permission, so there is no other route out.
+- Individual apps can be blocked from reaching the watch, the feature can be switched off in OpenVitals, and access can be revoked from Android settings at any time.
 
 ### Phone-To-Phone Sync
 

@@ -83,6 +83,16 @@ data class OnboardingUiState(
             OnboardingCategoryId.VITALS,
         ).mapNotNull(::row)
 
+    /**
+     * What step one's rows are still missing, as one set. Rows the device does
+     * not support are left out: their permissions cannot be requested at all,
+     * and including them would make Health Connect drop the whole dialog.
+     */
+    val categoriesMissingPermissions: Set<String>
+        get() = categoryRows
+            .filter { it.available }
+            .flatMapTo(mutableSetOf()) { it.permissions } - grantedPermissions
+
     val mindfulnessRow: OnboardingRow? get() = row(OnboardingCategoryId.MINDFULNESS)
     val cycleRow: OnboardingRow? get() = row(OnboardingCategoryId.CYCLE_TRACKING)
     val additionalAccessRow: OnboardingRow? get() = row(OnboardingCategoryId.ADDITIONAL_ACCESS)
@@ -180,6 +190,10 @@ class OnboardingViewModel @Inject constructor(
         val category = state.catalog?.category(id) ?: return emptySet()
         return category.permissions - state.grantedPermissions
     }
+
+    /** Step one's rows in a single ask, for the "Grant all" button. */
+    fun missingRequestableForCategories(): Set<String> =
+        _uiState.value.categoriesMissingPermissions
 
     /** Called just before the screen launches the permission contract. */
     fun beginPermissionRequest(permissions: Set<String>) {

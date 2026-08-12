@@ -182,6 +182,10 @@ internal fun LazyListScope.settingsScreenContent(
                 BleDevicesSettingsSection()
             }
         }
+        // WATCHES routes straight to the bespoke WatchesSettingsScreen (see
+        // AppNavigationSettingsRoutes), so it never renders card content here
+        // — the branch exists only to keep this `when` exhaustive.
+        SettingsSection.WATCHES -> Unit
         SettingsSection.NUTRITION -> {
             item { SectionHeader(stringResource(section.titleRes)) }
             item {

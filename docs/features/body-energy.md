@@ -23,10 +23,32 @@ The detail view can show a summary, timeline, confidence, and context for the se
 
 Body Energy supports calibration during onboarding and in Recovery settings. Calibration helps the local estimate better fit the user, and can be reset when needed.
 
-Earlier releases could additionally learn the calibration gains from a
-directly-synced Garmin watch's Body Battery. That watch integration has been
-removed; gains it already learned are preserved and still applied, and can be
-reset from the calibration card.
+### Learning from a Garmin watch
+
+If a Garmin watch is paired, its own Body Battery is used as evidence. The watch
+measures what this app models, so where the two disagree the difference is
+attributed to whichever gain was driving that moment, and the gain is nudged.
+This happens automatically after a sync — there is nothing to turn on.
+
+Three rules keep it honest:
+
+- **An hour counts once.** The watch emits roughly a sample a minute; at most one
+  per hour is used, and a watermark records how far the evidence has been
+  consumed. Syncing ten times in an hour teaches the model exactly as much as
+  syncing once, because otherwise the learning rate would depend on how often
+  the user tapped Sync rather than on the data.
+- **Nothing is learned from a stale prediction.** The fit runs after the day's
+  timeline has been rebuilt with the newly-synced data. Comparing the watch
+  against a model that has not yet seen the sleep the same sync just delivered
+  would teach it from an artefact of when data arrived.
+- **A day is never skipped silently.** If the timeline for a day is not ready,
+  its readings are kept for the next run rather than discarded. A day that stays
+  unusable for more than two days is given up on, so one permanently-cold day
+  cannot block every day behind it.
+
+A first run looks back at most a week, so installing with months of watch
+history does not try to fit all of it at once. The whole path is best-effort: a
+failure to calibrate never fails the sync that triggered it.
 
 ## Signals
 

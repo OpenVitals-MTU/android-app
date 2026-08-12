@@ -29,8 +29,8 @@ import tech.mmarca.openvitals.domain.insights.bodyEnergyReasonCodeForText
  * Android cannot offer from the in-app dialog — Health Connect serves only ~30
  * days, so the recompute can come back empty and take the stored day with it.
  *
- * Seven days rather than two or three because a watch's companion app is
- * often synced only once a week, and one sync back-fills every day it covers.
+ * Seven days rather than two or three because a Garmin watch is often synced
+ * only once a week, and one sync back-fills every day it covers.
  */
 const val BodyEnergyChainSettlingDays = 7L
 

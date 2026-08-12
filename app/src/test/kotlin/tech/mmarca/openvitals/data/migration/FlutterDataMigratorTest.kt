@@ -87,6 +87,7 @@ class FlutterDataMigratorTest {
     /** A database importer that does nothing — the beverage import is out of scope here. */
     private fun noOpImporter(): FlutterDatabaseImporter = mockk<FlutterDatabaseImporter>().also {
         every { it.importBeverages(any()) } just runs
+        every { it.importGarminWellness(any()) } just runs
     }
 
     private fun database(): OpenVitalsDatabase = mockk<OpenVitalsDatabase>(relaxed = true)
@@ -165,6 +166,7 @@ class FlutterDataMigratorTest {
         }
         val importer = mockk<FlutterDatabaseImporter>().also {
             every { it.importBeverages(any()) } throws IllegalStateException("unreadable")
+            every { it.importGarminWellness(any()) } throws IllegalStateException("unreadable")
         }
 
         assertThat(runMigration(context, importer)).isTrue()

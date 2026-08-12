@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import java.time.Instant
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -250,6 +251,30 @@ class DashboardPresentationMapperTest {
     }
 
     @Test
+    fun build_pairedWatch_materialisesTheWatchTile() {
+        val data = DashboardData(date = LocalDate.now(), steps = 8_000)
+
+        val display = DashboardPresentationMapper.build(
+            data = data,
+            dailyGoals = dailyGoals,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            watch = WatchWidgetDisplay(
+                deviceId = "watch-1",
+                name = "v\u00edvoactive 5",
+                batteryPercent = 62,
+                lastSyncedAt = Instant.parse("2026-08-12T10:26:00Z"),
+            ),
+        )
+
+        val widget = requireNotNull(display.widgets[DashboardWidgetId.WATCH])
+        assertEquals("v\u00edvoactive 5", widget.watch?.name)
+        // It has content, so it must not read as an empty tile and get sorted
+        // to the back of the carousel.
+        assertEquals(false, widget.showsNoDataMessage())
+    }
+
+    @Test
     fun build_fullySupportedDay_mapsBothRingsAndEveryTile() {
         val data = DashboardData(date = LocalDate.now(), steps = 8_000)
 
@@ -260,16 +285,17 @@ class DashboardPresentationMapperTest {
             dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
 
-        // Both hero rings are there, and every widget the dashboard knows about
-        // materialises — WORKOUT is the single deliberate exclusion (its own
-        // activities section renders it).
+        // Both hero rings are there, and every widget the dashboard knows
+        // about materialises. Two deliberate exclusions: WORKOUT (its own
+        // activities section renders it) and WATCH (device state, and no watch
+        // was passed — an empty watch tile would be noise).
         assertEquals(DashboardWidgetStyle.CIRCLE, display.widgets[DashboardWidgetId.STEPS]?.style)
         assertEquals(
             DashboardWidgetStyle.CIRCLE,
             display.widgets[DashboardWidgetId.WEEKLY_CARDIO_LOAD]?.style,
         )
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT,
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH,
             display.widgets.keys.toList(),
         )
         // Including the ones a narrower mapper used to drop entirely.
@@ -294,7 +320,7 @@ class DashboardPresentationMapperTest {
         // No readings at all: the tiles are still there, just empty, and the
         // hero rings never disappear.
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT,
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH,
             display.widgets.keys.toList(),
         )
         assertNotNull(display.widgets[DashboardWidgetId.STEPS])
@@ -531,7 +557,7 @@ class DashboardPresentationMapperTest {
         )
 
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT,
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH,
             display.widgets.keys.toList(),
         )
         assertEquals(display.widgets.keys, display.unsupportedIds)

@@ -32,6 +32,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -57,6 +59,7 @@ import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.InstructionSteps
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsFilledButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
 import tech.mmarca.openvitals.ui.components.StepBar
 import tech.mmarca.openvitals.ui.components.StepHero
@@ -139,6 +142,7 @@ fun OnboardingScreen(
                     state = state,
                     onSelectLanguage = viewModel::selectAppLanguage,
                     onRequest = { id -> launchRequest(viewModel.missingRequestableFor(id)) },
+                    onRequestAll = { launchRequest(viewModel.missingRequestableForCategories()) },
                 )
                 OnboardingStep.MINDFULNESS -> MindfulnessStep(
                     state = state,
@@ -181,6 +185,7 @@ private fun CategoriesStep(
     state: OnboardingUiState,
     onSelectLanguage: (AppLanguage) -> Unit,
     onRequest: (OnboardingCategoryId) -> Unit,
+    onRequestAll: () -> Unit,
 ) {
     OnboardingHeader(state = state, onSelectLanguage = onSelectLanguage)
 
@@ -215,11 +220,39 @@ private fun CategoriesStep(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    Spacer(Modifier.height(Spacing.lg))
-    state.categoryRows.forEach { row ->
-        PermissionCategoryRow(row = row, onRequest = { onRequest(row.id) })
-        Spacer(Modifier.height(Spacing.md))
+    // One dialog for every outstanding category, above the per-row buttons that
+    // stay for granting them one at a time.
+    if (state.categoriesMissingPermissions.isNotEmpty()) {
+        Spacer(Modifier.height(Spacing.lg))
+        OpenVitalsFilledButton(
+            onClick = onRequestAll,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(text = stringResource(R.string.onboarding_action_grant_all))
+        }
     }
+
+    Spacer(Modifier.height(Spacing.lg))
+    // Outstanding rows first, ordered ONCE when the step opens rather than on
+    // every grant: a list that re-sorts live moves the next row out from under
+    // the finger that just tapped one.
+    val rowOrder = remember { mutableStateOf<List<OnboardingCategoryId>>(emptyList()) }
+    if (rowOrder.value.isEmpty() && state.categoryRows.isNotEmpty()) {
+        rowOrder.value = state.categoryRows
+            .sortedBy { row ->
+                when {
+                    !row.available -> 2
+                    row.fullyGranted -> 1
+                    else -> 0
+                }
+            }
+            .map { it.id }
+    }
+    rowOrder.value.mapNotNull { id -> state.categoryRows.firstOrNull { it.id == id } }
+        .forEach { row ->
+            PermissionCategoryRow(row = row, onRequest = { onRequest(row.id) })
+            Spacer(Modifier.height(Spacing.md))
+        }
 
     if (!state.requiredGranted) {
         Spacer(Modifier.height(Spacing.sm))

@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.data.repository.BodyEnergyRepositoryImpl
 import tech.mmarca.openvitals.data.repository.BodyRepositoryImpl
 import tech.mmarca.openvitals.data.repository.CaffeineRepositoryImpl
 import tech.mmarca.openvitals.data.repository.CycleRepositoryImpl
+import tech.mmarca.openvitals.data.repository.GarminWellnessRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HealthRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HeartRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HydrationRepositoryImpl
@@ -24,6 +25,7 @@ import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
+import tech.mmarca.openvitals.data.repository.contract.GarminWellnessRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
@@ -88,4 +90,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindVitalsRepository(impl: VitalsRepositoryImpl): VitalsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindGarminWellnessRepository(impl: GarminWellnessRepositoryImpl): GarminWellnessRepository
 }

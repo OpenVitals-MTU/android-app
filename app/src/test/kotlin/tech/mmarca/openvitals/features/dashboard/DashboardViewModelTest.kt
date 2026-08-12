@@ -82,6 +82,12 @@ class DashboardViewModelTest {
         every { it.dashboardWidgetOrder() } returns null
         every { it.dashboardSortEmptyTilesLast } returns true
         every { it.setDashboardWidgetOrder(any()) } returns Unit
+        // Every id already offered, so the new-widget migration is a no-op
+        // here and a saved order comes back exactly as written. The append
+        // path has its own test in DashboardWidgetOrderMigrationTest.
+        every { it.dashboardKnownWidgetIds() } returns
+            DashboardWidgetId.entries.map { id -> id.name }.toSet()
+        every { it.setDashboardKnownWidgetIds(any()) } returns Unit
         every { it.healthConnectSyncEnabled } returns true
         every { it.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
     }
@@ -191,6 +197,9 @@ class DashboardViewModelTest {
         val metricsFlow = MutableStateFlow(BleRecordingMetrics())
         val deviceRepository = mockk<BleDeviceRepository>()
         every { deviceRepository.devicesFlow } returns devicesFlow
+        // The watch tile reads the registry directly when the display is
+        // built, rather than waiting on the flow's first emission.
+        every { deviceRepository.devices } answers { devicesFlow.value }
         val sensorCoordinator = mockk<BleSensorCoordinator>()
         every { sensorCoordinator.metrics } returns metricsFlow
 

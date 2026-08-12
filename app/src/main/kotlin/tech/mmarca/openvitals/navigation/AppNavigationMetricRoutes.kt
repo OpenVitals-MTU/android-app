@@ -550,6 +550,9 @@ internal fun dashboardTileDestination(
     DashboardWidgetId.BODY_ENERGY -> Screen.BodyEnergyDetails.createRoute(selectedDate.toString())
     DashboardWidgetId.WEEKLY_CARDIO_LOAD,
     DashboardWidgetId.CARDIO_LOAD -> CardioLoadDetailRoute.withSelectedDay(selectedDate)
+    // Device state, so it opens the watches list rather than a metric detail —
+    // and carries no day, since a watch is not a reading for a date.
+    DashboardWidgetId.WATCH -> Screen.SettingsWatches.route
     else -> Screen.Metric.createRoute(metricId.name).withSelectedDay(selectedDate)
 }
 
