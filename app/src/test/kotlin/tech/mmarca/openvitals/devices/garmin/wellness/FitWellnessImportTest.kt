@@ -411,6 +411,70 @@ class FitWellnessImportTest {
     }
 
     @Test
+    fun `a sync resuming inside a bucket does not overlap the record before it`() {
+        // A real day read 889 steps in Health Connect while its own records
+        // summed to 1007: every consecutive pair overlapped, and Health Connect
+        // discards the shared span when it aggregates.
+        //
+        // The cause is here. A record's end follows the DATA — a quarter hour
+        // of counters with a gap in it ends where the gap ends, past later grid
+        // slots — but the next sync resumed at the grid slot CONTAINING that
+        // end, which begins before it.
+        val first = counterImport(
+            stepsCumulative = listOf(
+                local(2024, 1, 18, 9, 31) to 0,
+                local(2024, 1, 18, 10, 59) to 253,
+            ),
+        )
+        val second = counterImport(
+            stepsCumulative = listOf(local(2024, 1, 18, 11, 28) to 354),
+            previous = first.watermarks,
+        )
+
+        // The gap is real: one record from the 09:30 slot to where the counters
+        // next spoke.
+        assertEquals(local(2024, 1, 18, 9, 30), steps(first).single().startTime)
+        assertEquals(local(2024, 1, 18, 10, 59), steps(first).single().endTime)
+
+        // So the next one starts THERE, not at 10:45 where its slot begins.
+        assertEquals(local(2024, 1, 18, 10, 59), steps(second).single().startTime)
+        assertEquals(101L, steps(second).single().count)
+        assertEquals(354, stepsTotal(first) + stepsTotal(second))
+    }
+
+    @Test
+    fun `a re-opened bucket keeps the start it was first written with`() {
+        // The open bucket is re-written in full by the next sync under the same
+        // id. Re-deriving its start from the grid would widen it back over its
+        // predecessor — the same overlap, one sync later.
+        val first = counterImport(
+            stepsCumulative = listOf(
+                local(2024, 1, 18, 9, 31) to 0,
+                local(2024, 1, 18, 10, 46) to 253,
+            ),
+        )
+        val second = counterImport(
+            stepsCumulative = listOf(local(2024, 1, 18, 10, 52) to 300),
+            previous = first.watermarks,
+        )
+        val third = counterImport(
+            stepsCumulative = listOf(local(2024, 1, 18, 10, 58) to 320),
+            previous = second.watermarks,
+        )
+
+        // Second and third write the SAME record — the third recomputes the
+        // bucket in full, so its 67 steps replace the second's 47.
+        assertEquals(steps(second).single().clientRecordId, steps(third).single().clientRecordId)
+        assertEquals(47L, steps(second).single().count)
+        assertEquals(67L, steps(third).single().count)
+
+        // And it still begins where the first sync's record left off.
+        assertEquals(local(2024, 1, 18, 10, 46), steps(second).single().startTime)
+        assertEquals(local(2024, 1, 18, 10, 46), steps(third).single().startTime)
+        assertEquals(320, stepsTotal(first) + stepsTotal(third))
+    }
+
+    @Test
     fun `the day's last movement is written not left for a sync that never comes`() {
         // The still-filling bucket used to be withheld for the next sync to
         // finish — but for the FINAL bucket of a day the next sync's points

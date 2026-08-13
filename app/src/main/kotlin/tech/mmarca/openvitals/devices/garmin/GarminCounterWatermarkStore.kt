@@ -45,6 +45,20 @@ data class FitCounterWatermark(
     val openBucketDistance: Int = 0,
     val openBucketCalories: Int = 0,
     /**
+     * Where the record for that open bucket actually STARTS, which is not
+     * always its grid position: a bucket first entered part-way through — the
+     * one holding the instant a sync resumed from — begins at the resume point,
+     * so that it does not overlap the record the previous sync ended with.
+     *
+     * Persisted because the next sync re-writes that record in full under the
+     * same id, and re-deriving the start from the grid would widen it back over
+     * its predecessor — the overlap Health Connect discards when it aggregates.
+     *
+     * Null on a watermark stored before this existed, and on one whose open
+     * bucket begins exactly on the grid; both mean "the grid position".
+     */
+    val openBucketStart: Instant? = null,
+    /**
      * Whether this day's pre-intraday whole-day record has been superseded —
      * exactly one bucket per day is written under the legacy record id, which
      * overwrites it; this records that it has happened so the next sync does
@@ -94,15 +108,18 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
             // either lose a day's steps or write them twice, and re-importing
             // from the day's start is the safer of the two mistakes.
             //
-            // Five/six/nine fields are the older forms, kept readable rather
-            // than dropped. Five predates [FitCounterWatermark.legacyRetired];
-            // five and six predate the per-type maps, which load as null so
-            // the importer adopts their types silently instead of re-counting
-            // them. Nine predates the open-bucket seed values, which load as
-            // zero — correct, because those versions never wrote the open
-            // bucket.
+            // Five/six/nine/twelve fields are the older forms, kept readable
+            // rather than dropped. Five predates
+            // [FitCounterWatermark.legacyRetired]; five and six predate the
+            // per-type maps, which load as null so the importer adopts their
+            // types silently instead of re-counting them. Nine predates the
+            // open-bucket seed values, which load as zero — correct, because
+            // those versions never wrote the open bucket. Twelve predates
+            // [FitCounterWatermark.openBucketStart], which loads as null: those
+            // versions started every bucket on the grid, which is what null
+            // means.
             val parts = line.split('|')
-            if (parts.size != 5 && parts.size != 6 && parts.size != 9 && parts.size != 12) continue
+            if (parts.size !in READABLE_FIELD_COUNTS) continue
             val timeMs = parts[1].toLongOrNull()
             val steps = parts[2].toIntOrNull()
             val distance = parts[3].toIntOrNull()
@@ -130,10 +147,17 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
             val stepsByType = if (parts.size >= 9) decodeTypes(parts[6]) else null
             val distanceByType = if (parts.size >= 9) decodeTypes(parts[7]) else null
             val caloriesByType = if (parts.size >= 9) decodeTypes(parts[8]) else null
-            val openSteps = if (parts.size == 12) parts[9].toIntOrNull() else 0
-            val openDistance = if (parts.size == 12) parts[10].toIntOrNull() else 0
-            val openCalories = if (parts.size == 12) parts[11].toIntOrNull() else 0
+            val openSteps = if (parts.size >= 12) parts[9].toIntOrNull() else 0
+            val openDistance = if (parts.size >= 12) parts[10].toIntOrNull() else 0
+            val openCalories = if (parts.size >= 12) parts[11].toIntOrNull() else 0
             if (!readable || openSteps == null || openDistance == null || openCalories == null) continue
+            // '-' is "no start of its own", which reads as the grid position.
+            val openStartRaw = if (parts.size >= 13) parts[12] else "-"
+            val openStart = if (openStartRaw == "-") {
+                null
+            } else {
+                openStartRaw.toLongOrNull()?.let { Instant.ofEpochMilli(it) } ?: continue
+            }
 
             marks[parts[0]] = FitCounterWatermark(
                 time = Instant.ofEpochMilli(timeMs),
@@ -146,6 +170,7 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
                 openBucketSteps = openSteps,
                 openBucketDistance = openDistance,
                 openBucketCalories = openCalories,
+                openBucketStart = openStart,
                 legacyRetired = parts.size >= 6 && parts[5] == "1",
             )
         }
@@ -180,7 +205,8 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
                     "|${encodeTypes(mark.caloriesByType)}" +
                     "|${mark.openBucketSteps}" +
                     "|${mark.openBucketDistance}" +
-                    "|${mark.openBucketCalories}"
+                    "|${mark.openBucketCalories}" +
+                    "|${mark.openBucketStart?.toEpochMilli() ?: "-"}"
             },
         )
     }
@@ -212,6 +238,15 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
     companion object {
         const val PREFS_FILE = "garmin_counter_watermarks"
         private const val PREFS_KEY = "garmin_counter_watermarks"
+
+        /**
+         * Every line length this store has ever written, newest last. Older
+         * forms stay readable rather than being dropped — a dropped watermark
+         * re-imports its day from the start — and each missing field has a
+         * defined meaning for the versions that lacked it, documented on
+         * [FitCounterWatermark].
+         */
+        private val READABLE_FIELD_COUNTS = setOf(5, 6, 9, 12, 13)
 
         /**
          * Days kept. Long enough to cover a watch left in a drawer over a

@@ -186,6 +186,33 @@ class GarminCounterWatermarkStoreTest {
     }
 
     @Test
+    fun `the open bucket's own start survives a round trip`() {
+        store.save(
+            mapOf(
+                "2026-07-31" to FitCounterWatermark(
+                    time = Instant.ofEpochMilli(1_785_100_000_000),
+                    openBucketSteps = 120,
+                    openBucketStart = Instant.ofEpochMilli(1_785_099_400_000),
+                ),
+            ),
+        )
+
+        val mark = GarminCounterWatermarkStore(prefs).load().getValue("2026-07-31")
+        assertEquals(Instant.ofEpochMilli(1_785_099_400_000), mark.openBucketStart)
+    }
+
+    @Test
+    fun `a line from before the open-bucket start loads it as null`() {
+        // Correct, not merely tolerated: those versions began every bucket on
+        // the grid, which is exactly what null means to the importer.
+        seedLines("2026-07-30|1753822800000|3400|0|0|1|6:3400|-|-|120|9500|8")
+
+        val mark = store.load().getValue("2026-07-30")
+        assertEquals(120, mark.openBucketSteps)
+        assertNull(mark.openBucketStart)
+    }
+
+    @Test
     fun `a line from before the open-bucket seeds loads them as zero`() {
         // Correct, not merely tolerated: those versions withheld the open
         // bucket, so there is nothing already written for the seed to restate.

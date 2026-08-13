@@ -313,6 +313,13 @@ class FitCounterImport(
  *    midnight.
  *  * Nothing is written for a snapshot at or before the previous watermark:
  *    those minutes are already in Health Connect.
+ *  * Records never OVERLAP, across syncs as well as within one. Health Connect
+ *    discards the overlapping span when it aggregates, so two records that
+ *    share a minute report less between them than either claims — a day read
+ *    889 while its own records summed to 1007. A record's end follows the data
+ *    and can run past later grid slots, so a run that resumes inside one of
+ *    those slots starts its first record at the resume point rather than at the
+ *    slot's edge.
  *  * A zero difference writes no record. Standing still is not an event, and
  *    a night of them would bury the day in empty entries.
  */
@@ -391,7 +398,13 @@ fun fitMonitoringCounterRecords(
         ) {
             val seed = counterBucketStart(mark.time, day.start)
             seededBucket = seed
-            buckets[seed] = CounterDeltas(Instant.ofEpochMilli(seed)).apply {
+            // Re-opened at the instant the record already in Health Connect
+            // claims, not at the grid position: that record may itself have
+            // begun mid-bucket, and re-writing it from the grid would widen it
+            // back over its predecessor.
+            buckets[seed] = CounterDeltas(
+                mark.openBucketStart ?: Instant.ofEpochMilli(seed),
+            ).apply {
                 this.steps = mark.openBucketSteps
                 this.distance = mark.openBucketDistance
                 this.calories = mark.openBucketCalories
@@ -409,7 +422,16 @@ fun fitMonitoringCounterRecords(
             // bucket the interval STARTED in — not the one it ended in, which
             // would push a walk forward by up to a bucket every time.
             val bucket = counterBucketStart(from, day.start)
-            buckets.getOrPut(bucket) { CounterDeltas(Instant.ofEpochMilli(bucket)) }.add(
+            // The grid fixes the record's ID; its START is the later of the
+            // grid position and where this run resumed. Only the first bucket
+            // of a run can differ, and it is exactly the one that must: the
+            // previous sync's last record ran to [start], so beginning this one
+            // at the grid slot CONTAINING [start] would overlap it — and Health
+            // Connect drops the overlap when it aggregates, silently shortening
+            // the day by up to a bucket per sync.
+            buckets.getOrPut(bucket) {
+                CounterDeltas(maxOf(Instant.ofEpochMilli(bucket), start))
+            }.add(
                 steps = instantDelta(stepsAt[at], stepsContext, adoptSilently),
                 distance = instantDelta(distanceAt[at], distanceContext, adoptSilently),
                 calories = instantDelta(caloriesAt[at], caloriesContext, adoptSilently),
@@ -466,6 +488,7 @@ fun fitMonitoringCounterRecords(
             openBucketSteps = open?.steps ?: 0,
             openBucketDistance = open?.distance ?: 0,
             openBucketCalories = open?.calories ?: 0,
+            openBucketStart = open?.start,
             legacyRetired = legacyRetired,
         )
 
