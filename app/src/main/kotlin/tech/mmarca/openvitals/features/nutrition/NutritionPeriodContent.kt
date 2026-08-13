@@ -118,8 +118,11 @@ internal fun LazyListScope.nutritionContent(
         if (state.dailyMacros.isNotEmpty()) {
             section(MetricDetailSectionId.ACTIVITY_SUMMARY, primaryMetricsData.isNotEmpty() || additionalMetricsData.isNotEmpty()) {
                 Column {
-                    NutritionOverviewStatisticsContent(primaryMetricsData)
-                    NutritionAdditionalTotalsContent(additionalMetricsData)
+                    // A single day has no average worth showing: its total
+                    // already IS the day.
+                    val showAverages = period.start != period.end
+                    NutritionOverviewStatisticsContent(primaryMetricsData, showAverages)
+                    NutritionAdditionalTotalsContent(additionalMetricsData, showAverages)
                 }
             }
             section(MetricDetailSectionId.PERIOD_CHART, trackedMetricsData.isNotEmpty()) {
@@ -296,6 +299,7 @@ internal fun LazyListScope.nutritionMetricContent(
 @Composable
 private fun NutritionAdditionalTotalsContent(
     metricsData: List<NutritionSeriesUiModel>,
+    showAverages: Boolean,
 ) {
     NutritionNutrientGroup.entries
         .filter { it != NutritionNutrientGroup.OVERVIEW }
@@ -304,15 +308,7 @@ private fun NutritionAdditionalTotalsContent(
             if (groupMetrics.isNotEmpty()) {
                 SectionHeader(stringResource(group.titleRes()))
                 InsightStatGrid(
-                    stats = groupMetrics.map { metricData ->
-                        InsightStat(
-                            title = stringResource(metricData.titleRes),
-                            value = metricData.total.value,
-                            unit = metricData.total.unit,
-                            icon = Icons.Outlined.Restaurant,
-                            accentColor = metricData.color,
-                        )
-                    },
+                    stats = groupMetrics.map { it.nutrientStat(showAverages) },
                     modifier = metricModifier(),
                 )
             }
@@ -320,23 +316,54 @@ private fun NutritionAdditionalTotalsContent(
 }
 
 @Composable
-private fun NutritionOverviewStatisticsContent(
+internal fun NutritionOverviewStatisticsContent(
     metricsData: List<NutritionSeriesUiModel>,
+    showAverages: Boolean,
 ) {
     if (metricsData.isEmpty()) return
 
     SectionHeader(stringResource(R.string.section_statistics))
     InsightStatGrid(
-        stats = metricsData.map { metricData ->
-            InsightStat(
-                title = stringResource(metricData.titleRes),
-                value = metricData.total.value,
-                unit = metricData.total.unit,
-                icon = Icons.Outlined.Restaurant,
-                accentColor = metricData.color,
-            )
-        },
+        stats = metricsData.map { it.nutrientStat(showAverages) },
         modifier = metricModifier(),
+    )
+}
+
+/**
+ * One nutrient's tile: the DAILY AVERAGE over a multi-day period, with the
+ * period total kept underneath.
+ *
+ * Nobody eats by the month, so a month's total answers a question nobody asked
+ * — the average is the figure that means something across a period, and leading
+ * with it is what issue #259 asked for. The total stays as a caption because it
+ * is still the honest sum of what was logged, and dropping it would leave no
+ * way to see it at all.
+ *
+ * A single-day period has no average (see the mapper) and shows its total
+ * alone: restating one day's food as "1,850 daily average" says the same thing
+ * twice.
+ */
+@Composable
+private fun NutritionSeriesUiModel.nutrientStat(showAverage: Boolean): InsightStat {
+    val name = stringResource(titleRes)
+    if (!showAverage || !hasAverage) {
+        return InsightStat(
+            title = name,
+            value = total.value,
+            unit = total.unit,
+            icon = Icons.Outlined.Restaurant,
+            accentColor = color,
+        )
+    }
+    // The title carries the per-day reading, because the nutrient's NAME is
+    // what tells these tiles apart and cannot be given up for a label.
+    return InsightStat(
+        title = stringResource(R.string.stat_nutrient_per_day, name),
+        value = average.value,
+        unit = average.unit,
+        icon = Icons.Outlined.Restaurant,
+        accentColor = color,
+        caption = stringResource(R.string.stat_caption_period_total, total.value, total.unit),
     )
 }
 
@@ -706,9 +733,12 @@ private fun NutritionStatisticsGrid(
 ) {
     val average = metricData.valueDisplayFormatter(display.averageValue)
     val best = metricData.valueDisplayFormatter(display.bestDayValue)
+    // On one day the total, the average and the best day are all the same
+    // number; only the total earns a tile.
+    val isDay = period.start == period.end
 
     InsightStatGrid(
-        stats = listOf(
+        stats = listOfNotNull(
             InsightStat(
                 title = stringResource(R.string.stat_total),
                 value = metricData.total.value,
@@ -716,13 +746,17 @@ private fun NutritionStatisticsGrid(
                 icon = Icons.Outlined.Restaurant,
                 accentColor = metricData.color,
             ),
-            InsightStat(
-                title = stringResource(R.string.stat_daily_average),
-                value = average.value,
-                unit = average.unit,
-                icon = Icons.Outlined.Star,
-                accentColor = metricData.color,
-            ),
+            if (isDay) {
+                null
+            } else {
+                InsightStat(
+                    title = stringResource(R.string.stat_daily_average),
+                    value = average.value,
+                    unit = average.unit,
+                    icon = Icons.Outlined.Star,
+                    accentColor = metricData.color,
+                )
+            },
             InsightStat(
                 title = stringResource(R.string.stat_best_day),
                 value = best.value,

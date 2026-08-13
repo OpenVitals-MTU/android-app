@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.valueFor
+import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import java.time.LocalDate
 
 private val primaryOverviewNutrients = listOf(
@@ -31,6 +32,8 @@ object NutritionPresentationMapper {
         previousDailyMacros: List<DailyMacros>,
         baselineDailyMacros: List<DailyMacros>,
         entries: List<NutritionEntry>,
+        averageBasis: NutritionAverageBasis = NutritionAverageBasis.LOGGED_DAYS,
+        today: LocalDate = LocalDate.now(),
     ): NutritionDisplayState {
         val selectedPeriod = displayPeriodFor(
             range = query.range,
@@ -40,7 +43,7 @@ object NutritionPresentationMapper {
         val totals = dailyMacros.totals()
         val trackedDates = dailyMacros.filter { it.hasNutritionData() }.map { it.date }
         val overviewNutrients = NutritionNutrient.entries.map { nutrient ->
-            dailyMacros.nutrientSeries(nutrient)
+            dailyMacros.nutrientSeries(nutrient).averagedOver(selectedPeriod, averageBasis, today)
         }
         val metricDisplay = buildMetricDisplay(
             metric = metric,
@@ -49,6 +52,8 @@ object NutritionPresentationMapper {
             dailyMacros = dailyMacros,
             previousDailyMacros = previousDailyMacros,
             baselineDailyMacros = baselineDailyMacros,
+            averageBasis = averageBasis,
+            today = today,
         )
 
         return NutritionDisplayState(
@@ -86,14 +91,19 @@ private fun buildMetricDisplay(
     dailyMacros: List<DailyMacros>,
     previousDailyMacros: List<DailyMacros>,
     baselineDailyMacros: List<DailyMacros>,
+    averageBasis: NutritionAverageBasis,
+    today: LocalDate,
 ): NutritionMetricDisplay {
     val nutrient = metric.nutrient
-    val series = dailyMacros.nutrientSeries(nutrient)
+    val series = dailyMacros.nutrientSeries(nutrient).averagedOver(period, averageBasis, today)
+    // Only the selected period's series is averaged: the previous and baseline
+    // windows are here for their totals and their day values, and an average
+    // taken against THIS period's calendar would describe neither of them.
     val previousSeries = previousDailyMacros.nutrientSeries(nutrient)
     val baselineSeries = baselineDailyMacros.nutrientSeries(nutrient)
     val rawValues = series.values.map { it.value }
     val loggedDays = rawValues.count { it > 0.0 }
-    val averageValue = loggedDays.takeIf { it > 0 }?.let { rawValues.sum() / it } ?: 0.0
+    val averageValue = series.averageValue
     val goalProgress = dailyGoalProgress(
         values = series.values.map { DailyGoalValue(date = it.date, value = it.value) },
         period = period,
@@ -130,6 +140,27 @@ private fun List<DailyMacros>.totals(): NutritionPeriodTotals =
         proteinGrams = sumOf { it.proteinGrams },
         carbsGrams = sumOf { it.carbsGrams },
         fatGrams = sumOf { it.fatGrams },
+    )
+
+/**
+ * The same series with its daily average filled in for [period].
+ *
+ * Computed for every period, a single day included — where it comes to the
+ * day's own total, which is what the baseline insight compares against. Whether
+ * it is worth SHOWING beside that total is the screen's call, not this one's.
+ */
+private fun NutritionNutrientSeries.averagedOver(
+    period: tech.mmarca.openvitals.core.period.DatePeriod,
+    basis: NutritionAverageBasis,
+    today: LocalDate,
+): NutritionNutrientSeries =
+    copy(
+        averageValue = nutritionDailyAverage(
+            values = values.map { it.value },
+            period = period,
+            basis = basis,
+            today = today,
+        ),
     )
 
 private fun List<DailyMacros>.nutrientSeries(nutrient: NutritionNutrient): NutritionNutrientSeries {

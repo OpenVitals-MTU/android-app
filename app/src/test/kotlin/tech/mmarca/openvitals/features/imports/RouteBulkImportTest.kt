@@ -47,6 +47,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
+import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
@@ -592,6 +593,7 @@ class RouteBulkImportTest {
             every { prefs.activitySplitDistanceMeters } returns 1000.0
             every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
             every { prefs.showOpenVitalsCalculatedCalories } returns false
+            every { prefs.nutritionAverageBasis } returns NutritionAverageBasis.LOGGED_DAYS
             every { prefs.favoriteActivityExerciseType } returns null
             every { prefs.lastActivityExerciseType } returns null
             every { prefs.lastActivityExerciseType = any() } just runs

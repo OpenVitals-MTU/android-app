@@ -290,6 +290,59 @@ internal fun CaffeinePreferencesCard(
     }
 }
 
+/** The leading glyph on a settings card. A glyph's size is not a spacing. */
+private val settingsCardIconSize = 20.dp
+
+/**
+ * Which days a nutrition average divides by.
+ *
+ * Phrased as the ON state people asked for — "average logged days only" —
+ * rather than as its inverse, because leaving out the blank days is the
+ * default and the thing most eaters mean.
+ */
+@Composable
+internal fun NutritionAverageBasisCard(
+    loggedDaysOnly: Boolean,
+    onLoggedDaysOnlyChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Restaurant,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(settingsCardIconSize),
+            )
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = Spacing.md)
+                    .weight(1f),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_nutrition_average_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(R.string.settings_nutrition_average_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = Spacing.xs),
+                )
+            }
+            Switch(
+                checked = loggedDaysOnly,
+                onCheckedChange = onLoggedDaysOnlyChange,
+            )
+        }
+    }
+}
+
 @Composable
 internal fun CalorieDataSourceCard(
     enabled: Boolean,

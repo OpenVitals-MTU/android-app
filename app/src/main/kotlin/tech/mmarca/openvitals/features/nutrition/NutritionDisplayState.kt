@@ -40,6 +40,11 @@ data class NutritionDayValue(
 data class NutritionNutrientSeries(
     val nutrient: NutritionNutrient,
     val totalValue: Double = 0.0,
+    /**
+     * The period total spread over its days, on the basis the settings choose.
+     * Zero on a single-day period, where the total already IS the day.
+     */
+    val averageValue: Double = 0.0,
     val values: List<NutritionDayValue> = emptyList(),
     val hasTrackedValues: Boolean = false,
 )

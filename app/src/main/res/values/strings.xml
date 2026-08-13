@@ -801,6 +801,8 @@
     <string name="stat_highest">Highest</string>
     <string name="stat_readings">Readings</string>
     <string name="stat_daily_average">Daily average</string>
+    <string name="stat_nutrient_per_day">%1$s per day</string>
+    <string name="stat_caption_period_total">%1$s %2$s total</string>
     <string name="calories_stat_active_average">Active average</string>
     <string name="calories_stat_bmr_readings">BMR readings</string>
     <string name="stat_average_duration">Average duration</string>
@@ -1522,6 +1524,8 @@
     <string name="settings_dashboard_sort_empty_body">Outside edit mode, tiles with no recent data move behind the ones with some. Turn off to always keep your exact arrangement.</string>
     <string name="settings_calorie_data_title">Total calories data</string>
     <string name="settings_calorie_data_body">Show plain Health Connect total calories by default. Turn on OpenVitals calculations to fill missing totals from active calories and BMR.</string>
+    <string name="settings_nutrition_average_title">Average logged days only</string>
+    <string name="settings_nutrition_average_body">Nutrition averages divide by the days you logged food. Turn off to divide by every day of the week, month or year instead.</string>
     <string name="settings_caffeine_title">Caffeine model</string>
     <string name="settings_caffeine_body">These values personalize caffeine level, bedtime forecast, and safe-sleep insights. Entries remain in Health Connect.</string>
     <string name="settings_sleep_night_start_title">Night starts at</string>

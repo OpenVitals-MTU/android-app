@@ -40,6 +40,7 @@ import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -70,6 +71,7 @@ class PreferencesRepository @Inject constructor(
     private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
     private val _activitySplitDistanceMeters = MutableStateFlow(readActivitySplitDistanceMeters())
     private val _showOpenVitalsCalculatedCalories = MutableStateFlow(readShowOpenVitalsCalculatedCalories())
+    private val _nutritionAverageBasis = MutableStateFlow(readNutritionAverageBasis())
     private val _healthConnectSyncEnabled = MutableStateFlow(readHealthConnectSyncEnabled())
     private val _bodyEnergyCalibration = MutableStateFlow(readBodyEnergyCalibration())
     private val _caffeinePreferences = MutableStateFlow(readCaffeinePreferences())
@@ -94,6 +96,7 @@ class PreferencesRepository @Inject constructor(
     val activitySplitDistanceMetersFlow: StateFlow<Double> = _activitySplitDistanceMeters.asStateFlow()
     val weekPeriodModeFlow = activityWeekModeFlow.map { it.toWeekPeriodMode() }
     val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
+    val nutritionAverageBasisFlow: StateFlow<NutritionAverageBasis> = _nutritionAverageBasis.asStateFlow()
     val healthConnectSyncEnabledFlow: StateFlow<Boolean> = _healthConnectSyncEnabled.asStateFlow()
     val bodyEnergyCalibrationFlow: StateFlow<BodyEnergyCalibration> = _bodyEnergyCalibration.asStateFlow()
     val caffeinePreferencesFlow: StateFlow<CaffeinePreferences> = _caffeinePreferences.asStateFlow()
@@ -238,6 +241,23 @@ class PreferencesRepository @Inject constructor(
         set(value) {
             prefs.edit { putBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, value) }
             _showOpenVitalsCalculatedCalories.value = value
+        }
+
+    /**
+     * What the nutrition screens divide a period total by to get a daily
+     * figure. Defaults to logged days only, which is what someone who logs
+     * some days and not others means by "my daily calories".
+     */
+    var nutritionAverageBasis: NutritionAverageBasis
+        get() = _nutritionAverageBasis.value
+        set(value) {
+            prefs.edit {
+                putBoolean(
+                    KEY_NUTRITION_AVERAGE_LOGGED_DAYS_ONLY,
+                    value == NutritionAverageBasis.LOGGED_DAYS,
+                )
+            }
+            _nutritionAverageBasis.value = value
         }
 
     var dashboardSortEmptyTilesLast: Boolean
@@ -975,6 +995,13 @@ class PreferencesRepository @Inject constructor(
     private fun readShowOpenVitalsCalculatedCalories(): Boolean =
         prefs.getBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, false)
 
+    private fun readNutritionAverageBasis(): NutritionAverageBasis =
+        if (prefs.getBoolean(KEY_NUTRITION_AVERAGE_LOGGED_DAYS_ONLY, true)) {
+            NutritionAverageBasis.LOGGED_DAYS
+        } else {
+            NutritionAverageBasis.EVERY_DAY
+        }
+
     private fun readHealthConnectSyncEnabled(): Boolean =
         prefs.getBoolean(KEY_HEALTH_CONNECT_SYNC_ENABLED, true)
 
@@ -1255,6 +1282,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ACTIVITY_RECORDING_REST_TIMER_BELL_ENABLED = "activity_recording_rest_timer_bell_enabled"
         private const val KEY_ACTIVITY_RECORDING_DASHBOARD_LAYOUT_PREFIX = "activity_recording_dashboard_layout_"
         private const val KEY_SHOW_OPENVITALS_CALCULATED_CALORIES = "show_openvitals_calculated_calories"
+        private const val KEY_NUTRITION_AVERAGE_LOGGED_DAYS_ONLY = "nutrition_average_logged_days_only"
         private const val KEY_HEALTH_CONNECT_SYNC_ENABLED = "health_connect_sync_enabled"
         private const val KEY_HEALTH_CONNECT_PERMISSION_CANCEL_COUNT = "health_connect_permission_cancel_count"
         private const val KEY_ACCEPTED_PRIVACY_POLICY_VERSION = "accepted_privacy_policy_version"

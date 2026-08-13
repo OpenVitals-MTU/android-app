@@ -125,6 +125,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View total fat.
 - View additional nutrient totals when present, including fiber, sugar, energy from fat, mono/poly/saturated/trans/unsaturated fat, cholesterol, vitamins, minerals, and caffeine.
 - View nutrition trends by day, week, month, and year.
+- View a daily average per nutrient over a week, month or year, with the period total kept alongside it.
+- Choose whether nutrition averages divide by logged days only or by every day of the period.
 - View selected-day nutrition entries.
 - View meals with meal type, name, date/time, calories, macros, fiber, sugar, and source.
 - View macro split context.
@@ -421,6 +423,12 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Choose calorie data mode.
 - Use Health Connect calorie totals only.
 - Or allow OpenVitals to calculate total calories from active calories plus BMR when Health Connect totals are missing.
+
+### Nutrition Settings
+
+- Choose what a nutrition daily average divides by.
+- Average over the days food was logged, leaving blank days out.
+- Or average over every elapsed day of the week, month or year.
 
 ### Sleep And Recovery Settings
 

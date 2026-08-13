@@ -20,11 +20,16 @@ internal data class NutritionSeriesUiModel(
     val titleRes: Int,
     val total: DisplayValue,
     val totalValue: Double,
+    val average: DisplayValue,
+    val averageValue: Double,
     val values: List<PeriodChartValue>,
     val color: Color,
     val valueDisplayFormatter: (Double) -> DisplayValue,
 ) {
     val hasTrackedValues: Boolean = values.any { it.value > 0.0 }
+
+    /** Whether anything was logged for this nutrient to average. */
+    val hasAverage: Boolean = averageValue > 0.0
 }
 
 internal fun NutritionNutrientSeries.toUiModel(unitFormatter: UnitFormatter): NutritionSeriesUiModel =
@@ -33,6 +38,8 @@ internal fun NutritionNutrientSeries.toUiModel(unitFormatter: UnitFormatter): Nu
         titleRes = nutrient.titleRes(),
         total = nutrient.displayValue(totalValue, unitFormatter),
         totalValue = totalValue,
+        average = nutrient.displayValue(averageValue, unitFormatter),
+        averageValue = averageValue,
         values = values.map { PeriodChartValue(date = it.date, value = it.value) },
         color = nutrient.color(),
         valueDisplayFormatter = { nutrient.displayValue(it, unitFormatter) },
@@ -44,6 +51,8 @@ internal fun NutritionMetricDisplay.toUiModel(unitFormatter: UnitFormatter): Nut
         titleRes = nutrient.titleRes(),
         total = nutrient.displayValue(totalValue, unitFormatter),
         totalValue = totalValue,
+        average = nutrient.displayValue(averageValue, unitFormatter),
+        averageValue = averageValue,
         values = values.map { PeriodChartValue(date = it.date, value = it.value) },
         color = nutrient.color(),
         valueDisplayFormatter = { nutrient.displayValue(it, unitFormatter) },

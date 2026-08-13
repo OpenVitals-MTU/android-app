@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivitySplitDistance
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
@@ -125,6 +126,7 @@ data class SettingsUiState(
     val activitySplitDistanceMeters: Double = ActivitySplitDistance.defaultMeters,
     val activityRecordingPreferences: ActivityRecordingPreferences = ActivityRecordingPreferences(),
     val showOpenVitalsCalculatedCalories: Boolean = false,
+    val nutritionAverageLoggedDaysOnly: Boolean = true,
     val favoriteActivityExerciseType: Int? = null,
     val healthConnectSyncEnabled: Boolean = true,
     val healthConnectMindfulnessEnabled: Boolean = false,
@@ -263,6 +265,8 @@ class SettingsViewModel @Inject constructor(
                 activitySplitDistanceMeters = preferencesRepository.activitySplitDistanceMeters,
                 activityRecordingPreferences = preferencesRepository.activityRecordingPreferences(),
                 showOpenVitalsCalculatedCalories = preferencesRepository.showOpenVitalsCalculatedCalories,
+                nutritionAverageLoggedDaysOnly =
+                    preferencesRepository.nutritionAverageBasis == NutritionAverageBasis.LOGGED_DAYS,
                 favoriteActivityExerciseType = preferencesRepository.favoriteActivityExerciseType,
                 healthConnectSyncEnabled = preferencesRepository.healthConnectSyncEnabled,
                 healthConnectMindfulnessEnabled = preferencesRepository.healthConnectMindfulnessEnabled,
@@ -938,6 +942,15 @@ class SettingsViewModel @Inject constructor(
     fun setShowOpenVitalsCalculatedCalories(enabled: Boolean) {
         preferencesRepository.showOpenVitalsCalculatedCalories = enabled
         _uiState.value = _uiState.value.copy(showOpenVitalsCalculatedCalories = enabled)
+    }
+
+    fun setNutritionAverageLoggedDaysOnly(enabled: Boolean) {
+        preferencesRepository.nutritionAverageBasis = if (enabled) {
+            NutritionAverageBasis.LOGGED_DAYS
+        } else {
+            NutritionAverageBasis.EVERY_DAY
+        }
+        _uiState.value = _uiState.value.copy(nutritionAverageLoggedDaysOnly = enabled)
     }
 
     fun selectFavoriteActivity(exerciseType: Int?) {

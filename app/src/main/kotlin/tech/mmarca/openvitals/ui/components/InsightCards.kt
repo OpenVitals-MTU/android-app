@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,6 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 data class InsightStat(
     val title: String,
@@ -27,6 +30,12 @@ data class InsightStat(
     val unit: String,
     val icon: ImageVector,
     val accentColor: Color,
+    /**
+     * A quieter second line under the title, for the figure the headline
+     * replaced — nutrition puts the period total here once the tile leads with
+     * the daily average. Omitted when there is nothing to say.
+     */
+    val caption: String? = null,
 )
 
 @Composable
@@ -41,13 +50,20 @@ fun InsightStatGrid(
     ) {
         stats.chunked(columns.coerceAtLeast(1)).forEach { rowStats ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                // Intrinsic height so the cards in a row match: only some of
+                // them carry a caption, and without this the one that does
+                // stands taller than the one beside it.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 rowStats.forEach { stat ->
                     InsightStatCard(
                         stat = stat,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
                     )
                 }
             }
@@ -105,6 +121,15 @@ private fun InsightStatCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+            stat.caption?.let { caption ->
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = caption,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

@@ -197,6 +197,14 @@ internal fun LazyListScope.settingsScreenContent(
             }
             item { SettingsCardSpacer() }
             item {
+                NutritionAverageBasisCard(
+                    loggedDaysOnly = state.nutritionAverageLoggedDaysOnly,
+                    onLoggedDaysOnlyChange = viewModel::setNutritionAverageLoggedDaysOnly,
+                    modifier = Modifier.padding(horizontal = Spacing.lg),
+                )
+            }
+            item { SettingsCardSpacer() }
+            item {
                 HydrationGoalCard(
                     goalLiters = state.hydrationDailyGoalLiters,
                     unitSystem = state.effectiveUnitSystem(UnitQuantity.HYDRATION),

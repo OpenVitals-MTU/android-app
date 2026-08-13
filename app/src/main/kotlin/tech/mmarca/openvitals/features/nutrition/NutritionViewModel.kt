@@ -20,6 +20,7 @@ import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
@@ -59,6 +60,8 @@ class NutritionViewModel(
     private val selectedMetric: NutritionMetric = NutritionMetric.CALORIES_IN,
     initialDailyGoal: Double = selectedMetric.dailyGoalKey.defaultValue,
     private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
+    initialAverageBasis: NutritionAverageBasis = NutritionAverageBasis.LOGGED_DAYS,
+    private val averageBasisChanges: Flow<NutritionAverageBasis> = emptyFlow(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
     private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
@@ -89,9 +92,12 @@ class NutritionViewModel(
             )
         },
         weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
+        initialAverageBasis = preferencesRepository.nutritionAverageBasis,
+        averageBasisChanges = preferencesRepository.nutritionAverageBasisFlow,
     )
 
     private val goalKey = selectedMetric.dailyGoalKey
+    private var averageBasis = initialAverageBasis
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
         initialDate = initialDate ?: java.time.LocalDate.now(),
@@ -110,7 +116,22 @@ class NutritionViewModel(
 
     init {
         observeWeekPeriodMode()
+        observeAverageBasis()
         load()
+    }
+
+    /**
+     * The averaging basis only changes what the loaded days are DIVIDED by, so
+     * a change re-maps what is already in hand rather than re-reading Health
+     * Connect.
+     */
+    private fun observeAverageBasis() {
+        viewModelScope.launch {
+            averageBasisChanges.drop(1).collect { basis ->
+                averageBasis = basis
+                _uiState.value = _uiState.value.withDisplay()
+            }
+        }
     }
 
     private fun observeWeekPeriodMode() {
@@ -227,6 +248,7 @@ class NutritionViewModel(
                         previousDailyMacros = result.previousDailyMacros,
                         baselineDailyMacros = result.baselineDailyMacros,
                         entries = result.entries,
+                        averageBasis = averageBasis,
                     )
                 }
                 if (!isCurrent) return@load
@@ -278,6 +300,7 @@ class NutritionViewModel(
                 previousDailyMacros = previousDailyMacros,
                 baselineDailyMacros = baselineDailyMacros,
                 entries = entries,
+                averageBasis = averageBasis,
             ),
         )
     }

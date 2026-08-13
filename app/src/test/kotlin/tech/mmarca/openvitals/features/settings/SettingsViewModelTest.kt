@@ -34,6 +34,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
+import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
@@ -1003,6 +1004,9 @@ class SettingsViewModelTest {
             every { prefs.activitySplitDistanceMeters } returns 1000.0
             every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
             every { prefs.showOpenVitalsCalculatedCalories } returns false
+            var nutritionAverageBasis = NutritionAverageBasis.LOGGED_DAYS
+            every { prefs.nutritionAverageBasis } answers { nutritionAverageBasis }
+            every { prefs.nutritionAverageBasis = any() } answers { nutritionAverageBasis = firstArg() }
             every { prefs.favoriteActivityExerciseType } returns null
             every { prefs.lastActivityExerciseType } returns null
             every { prefs.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
