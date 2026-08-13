@@ -74,6 +74,32 @@ Kept in OpenVitals' own storage, because Health Connect has no record type for t
 
 Syncing the same day twice does not double anything. Files already imported are not downloaded again, Health Connect records carry a stable identifier so a record that does arrive twice updates in place, and watch-only measurements are keyed on the measurement and its instant.
 
+#### The step, distance and calorie counters
+
+These three are the awkward ones. The watch reports them as running daily
+totals, so a file only says where the counter stood, never what happened. They
+are accumulated across every file of a sync and differenced once at the end
+against a stored watermark, which is what lets an interval record say *when* the
+walking happened rather than drawing the day as one straight ramp from midnight.
+
+Two properties are load-bearing, and both were learned the hard way:
+
+- **Records never overlap** — not within a sync and not across two. A record's
+  end follows the data, so a gap in the counters makes it end where the gap
+  ends, past later slots on the 15-minute grid. A sync resuming inside one of
+  those slots therefore starts its first record at the point it resumed, not at
+  the slot's edge. This matters more than it sounds: Health Connect **discards
+  the overlapping span when it aggregates**, so two records sharing a minute
+  report less between them than either claims. A real day read 889 steps while
+  its own records summed to 1,007.
+- **A day differences from where the day before it ended**, per activity type,
+  not from zero — the watch does not roll its counters over at local midnight.
+
+A gap between the live step count and the synced total is normal and is not
+either of the above: the live reading is the wrist's current number, and the
+minutes since the watch last closed a monitoring file have not been handed over
+yet. They arrive on the next sync.
+
 ## Watch Data Screen
 
 The Data action on a Garmin watch opens the watch-only measurements: the things the watch makes that Health Connect has no place for. Everything else goes to Health Connect and is not repeated here.

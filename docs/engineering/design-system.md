@@ -92,6 +92,28 @@ reports. `OpenVitalsTheme` resolves it once into `LocalReducedMotion`; use
 anything that repeats. Repeating animations are the ones this matters most for —
 they are the kind that never settles.
 
+## The reader's place on the page is theirs to keep
+
+Two rules, both learned from the same complaint: an entries list expanded to
+fifty rows, one row swiped away, and the page ending up somewhere the reader
+never scrolled to.
+
+**`PaginatedEntryList` remembers how far it has been expanded across the list
+changing.** The expansion answers "how much of this do I want to see" and is not
+a property of the current contents; it used to be keyed on the entries
+themselves, so deleting a row reset it to the first page. The count is only ever
+clamped to what exists, never reset — including across a change of period, on the
+grounds that having asked for a longer list once, being given a longer list again
+is the lesser surprise.
+
+**Every metric-detail section carries a stable `item(key = sectionId)`.** That is
+what lets the list anchor its scroll position to the section the reader is inside
+rather than to its index, so an item appearing above the viewport — the syncing
+banner, which every delete raises for the length of its reload — costs nothing.
+Drop those keys and the page lurches down and back on every delete, on every
+metric screen, with no failing assertion anywhere near the change that caused it.
+`MetricDetailScaffoldScrollAnchorTest` exists to make that failure loud.
+
 ## Outstanding
 
 Backlog in the golden's own priority order. None of these is a silent skip; each

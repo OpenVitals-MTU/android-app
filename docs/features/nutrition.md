@@ -29,9 +29,42 @@ Nutrition metrics follow the canonical period-detail pattern:
 - Pull to refresh.
 - Goal progress for supported intake metrics.
 - Period charts, selected-day breakdowns, entries, statistics, comparisons, confidence, and source labels.
+- Over a week, month or year the nutrient tiles lead with a **daily average**; see below.
 - Reorderable detail sections.
 
 Nutrition records remain in Health Connect. OpenVitals writes nutrition records through explicit entry flows such as carbohydrate entry and beverage logging; the nutrition detail screens remain read-oriented.
+
+## Daily Averages Over A Period
+
+Nobody eats by the month. Over a week, month or year each nutrient tile leads
+with the daily average and keeps the period total as a caption underneath, so
+the figure the eye lands on is the one that means something. This covers the
+vitamin and mineral grids too, not only the four macros.
+
+A single day is left alone: its total already *is* the day, and restating it as
+an average says the same thing twice. For the same reason the per-metric
+screen's own "Daily average" tile is hidden on a Day period.
+
+### What the average divides by
+
+Settings, Nutrition holds one switch: **Average logged days only**, on by
+default.
+
+- **On** — the divisor is the days that carried logged food. What someone who
+  logs occasionally means by "my daily calories": the average of the meals they
+  actually recorded, undiluted by the days they did not.
+- **Off** — the divisor is every elapsed day of the period. What someone who
+  logs daily means: a day with nothing recorded is a day they ate little, not a
+  day to leave out.
+
+Either way a period still running divides only by the days that have *happened*.
+Dividing this month's food by 31 on the 13th would report a third of what was
+eaten each day.
+
+The daily values Health Connect returns are sparse — it emits no bucket for a
+day with no records — so the "every day" divisor comes from the period's own
+calendar, never from the length of the value list. See
+`features/nutrition/NutritionAverages.kt`.
 
 ## Related Features
 

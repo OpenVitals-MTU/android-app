@@ -43,10 +43,27 @@ Body metrics follow the canonical period-detail pattern:
 - Previous/next period navigation capped at the current period.
 - Calendar selection and pull to refresh.
 - Period charts, selected-day entries, statistics, comparisons, personal baselines, and data confidence.
+- Week, month and year draw a **trend line over a fitted scale**; only Day uses the intraday chart.
 - Entry lists that allow edit/delete only for OpenVitals-created records.
 - Reorderable metric detail sections.
 
 Manual body entry lives under `features/manualentry/body` and writes explicit user-entered records to Health Connect. The dashboard and body detail screens remain read-oriented.
+
+## Why A Line, Not A Calendar
+
+Month and year used to hand these metrics to the calendar heatmap, which colours
+each day by how big its number is. That reads well for a quantity that can be
+zero and can be huge — steps, minutes — and reads as nothing at all for one that
+spends its life inside a two-kilo band. Forty dots of near-identical colour
+answered "did you weigh yourself on the 14th" while hiding the only thing the
+screen is opened for, which is which way the line is going.
+
+Body measurements are levels, not accumulations, so they now draw the same trend
+line the heart and vitals screens have always drawn for the same shape of data.
+The y axis is fitted to the values rather than anchored at zero, because a
+kilogram of drift is invisible on a scale that starts at nothing.
+
+Day keeps its own intraday chart, where the x axis is hours rather than dates.
 
 ## Data Boundaries
 
