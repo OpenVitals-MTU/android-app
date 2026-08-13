@@ -32,7 +32,6 @@ import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DayTimelineLinePlot
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
-import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
@@ -126,19 +125,14 @@ private fun BodyOverviewMetricChart(
             modifier = metricModifier(),
         )
     } else {
-        MetricBarChart(
-            title = stringResource(metricData.titleRes),
-            values = metricData.values,
+        BodyPeriodMetricChart(
+            metricData = metricData,
             selectedRange = state.selectedRange,
             period = period,
-            accentColor = metricData.color,
-            summaryValue = metricData.latest?.text
-                ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            modifier = metricModifier(),
             selectedDate = selectedDate,
             onDateSelected = onDateSelected,
-            valueFormatter = { metricData.valueDisplayFormatter(it).text },
+            modifier = metricModifier(),
         )
     }
 }

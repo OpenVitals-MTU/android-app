@@ -153,6 +153,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View bone mass.
 - View body water mass.
 - View body metrics across day, week, month, and year ranges.
+- View week, month and year as a trend line over a fitted scale, rather than a calendar of coloured days.
 - View history charts and entry rows with value, source, and time.
 - View latest, average, lowest, highest, reading counts, previous-period comparison, and personal baseline where applicable.
 - View BMI interpretation/context.

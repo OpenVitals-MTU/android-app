@@ -403,6 +403,19 @@ fun MetricLineChart(
     val maxValue = allValues.maxOrNull() ?: return
     val (axisMin, axisMax) = paddedLineAxisRange(minValue, maxValue)
     val axisDates = remember(period) { datesInPeriod(period) }
+    // A year of DAYS gives the axis three hundred and sixty-five slots to fit
+    // twelve month names into, and a label is wider than thirty of them — they
+    // came out as slivers, and once allowed to overflow, as month names printed
+    // on top of each other. The bar chart never had this because a year of bars
+    // IS twelve buckets; the line's axis borrows the same twelve, which is
+    // within a day of where each month truly falls across the year.
+    val labelDates = remember(axisDates, selectedRange, period) {
+        if (selectedRange == TimeRange.YEAR && axisDates.size > MonthsInYear) {
+            monthStartsIn(period)
+        } else {
+            axisDates
+        }
+    }
     val chartHeight = ChartTokens.heightLine
     val zone = ZoneId.systemDefault()
     val dayStart = remember(period, zone) { period.start.atStartOfDay(zone).toInstant() }
@@ -518,7 +531,7 @@ fun MetricLineChart(
                         // never drifts off the days it names.
                         ChartXAxisWithYAxis {
                             PeriodChartXAxis(
-                                dates = axisDates,
+                                dates = labelDates,
                                 selectedRange = selectedRange,
                                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                                 viewport = viewport,

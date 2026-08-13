@@ -40,7 +40,6 @@ import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
-import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -371,19 +370,14 @@ internal fun LazyListScope.weightContent(
                     }
                 },
                 periodChart = {
-                    MetricBarChart(
-                        title = stringResource(metricData.titleRes),
-                        values = metricData.values,
+                    BodyPeriodMetricChart(
+                        metricData = metricData,
                         selectedRange = state.selectedRange,
                         period = period,
-                        accentColor = metricData.color,
-                        summaryValue = metricData.latest?.text
-                            ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = metricModifier(),
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
-                        valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                        modifier = metricModifier(),
                     )
                 },
                 selectedDayEntries = {
@@ -498,19 +492,14 @@ internal fun LazyListScope.bodyFatContent(
                     )
                 },
                 periodChart = {
-                    MetricBarChart(
-                        title = stringResource(metricData.titleRes),
-                        values = metricData.values,
+                    BodyPeriodMetricChart(
+                        metricData = metricData,
                         selectedRange = state.selectedRange,
                         period = period,
-                        accentColor = metricData.color,
-                        summaryValue = metricData.latest?.text
-                            ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = metricModifier(),
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
-                        valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                        modifier = metricModifier(),
                     )
                 },
                 selectedDayEntries = {
@@ -779,19 +768,14 @@ when (metric) {
             baselineValues = state.baselineHeightEntries.map { it.heightBaselineValue() },
             periodChart = if (metricData.hasTrackedValues) {
                 {
-                    MetricBarChart(
-                        title = stringResource(metricData.titleRes),
-                        values = metricData.values,
+                    BodyPeriodMetricChart(
+                        metricData = metricData,
                         selectedRange = state.selectedRange,
                         period = period,
-                        accentColor = metricData.color,
-                        summaryValue = metricData.latest?.text
-                            ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = metricModifier(),
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
-                        valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                        modifier = metricModifier(),
                     )
                 }
             } else {
@@ -886,19 +870,14 @@ when (metric) {
             entryCount = state.weightEntries.size,
             periodChart = if (metricData.hasTrackedValues) {
                 {
-                    MetricBarChart(
-                        title = stringResource(metricData.titleRes),
-                        values = metricData.values,
+                    BodyPeriodMetricChart(
+                        metricData = metricData,
                         selectedRange = state.selectedRange,
                         period = period,
-                        accentColor = metricData.color,
-                        summaryValue = metricData.latest?.text
-                            ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = metricModifier(),
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
-                        valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                        modifier = metricModifier(),
                     )
                 }
             } else {
@@ -1019,19 +998,14 @@ when (metric) {
             baselineValues = state.baselineLeanMassEntries.map { it.leanMassBaselineValue() },
             periodChart = if (metricData.hasTrackedValues) {
                 {
-                    MetricBarChart(
-                        title = stringResource(metricData.titleRes),
-                        values = metricData.values,
+                    BodyPeriodMetricChart(
+                        metricData = metricData,
                         selectedRange = state.selectedRange,
                         period = period,
-                        accentColor = metricData.color,
-                        summaryValue = metricData.latest?.text
-                            ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = metricModifier(),
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
-                        valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                        modifier = metricModifier(),
                     )
                 }
             } else {
@@ -1094,19 +1068,14 @@ when (metric) {
             baselineValues = state.baselineBmrEntries.map { it.bmrBaselineValue() },
             periodChart = if (metricData.hasTrackedValues) {
                 {
-                    MetricBarChart(
-                        title = stringResource(metricData.titleRes),
-                        values = metricData.values,
+                    BodyPeriodMetricChart(
+                        metricData = metricData,
                         selectedRange = state.selectedRange,
                         period = period,
-                        accentColor = metricData.color,
-                        summaryValue = metricData.latest?.text
-                            ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = metricModifier(),
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
-                        valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                        modifier = metricModifier(),
                     )
                 }
             } else {
@@ -1169,19 +1138,14 @@ when (metric) {
             baselineValues = state.baselineBoneMassEntries.map { it.boneMassBaselineValue() },
             periodChart = if (metricData.hasTrackedValues) {
                 {
-                    MetricBarChart(
-                        title = stringResource(metricData.titleRes),
-                        values = metricData.values,
+                    BodyPeriodMetricChart(
+                        metricData = metricData,
                         selectedRange = state.selectedRange,
                         period = period,
-                        accentColor = metricData.color,
-                        summaryValue = metricData.latest?.text
-                            ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = metricModifier(),
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
-                        valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                        modifier = metricModifier(),
                     )
                 }
             } else {
@@ -1244,19 +1208,14 @@ when (metric) {
             baselineValues = state.baselineBodyWaterMassEntries.map { it.bodyWaterMassBaselineValue() },
             periodChart = if (metricData.hasTrackedValues) {
                 {
-                    MetricBarChart(
-                        title = stringResource(metricData.titleRes),
-                        values = metricData.values,
+                    BodyPeriodMetricChart(
+                        metricData = metricData,
                         selectedRange = state.selectedRange,
                         period = period,
-                        accentColor = metricData.color,
-                        summaryValue = metricData.latest?.text
-                            ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = metricModifier(),
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
-                        valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                        modifier = metricModifier(),
                     )
                 }
             } else {

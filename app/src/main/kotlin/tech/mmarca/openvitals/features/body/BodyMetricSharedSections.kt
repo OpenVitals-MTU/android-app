@@ -54,11 +54,14 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.MetricLineChart
+import tech.mmarca.openvitals.ui.components.MetricLinePoint
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
@@ -500,6 +503,49 @@ internal fun LazyListScope.bmiEntries(
         editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
         onEdit = { onEditBodyMeasurement(BodyMeasurementType.WEIGHT, it.id) },
         onDelete = { onDeleteBodyMeasurement(BodyMeasurementType.WEIGHT, it.id) },
+    )
+}
+
+/**
+ * One body metric's history over a week, month or year, as a LINE.
+ *
+ * Weight, body fat and their siblings are levels, not accumulations. The
+ * period chart used to hand month and year to the calendar heatmap, which
+ * colours each day by how big its number is — a reading of a quantity that
+ * spends its life inside a two-kilo band, drawn as forty near-identical dots.
+ * It answered "did you weigh yourself on the 14th" and hid the only thing
+ * anyone opens the screen for, which is which way the line is going.
+ *
+ * A line is what the heart and vitals screens already draw for the same shape
+ * of data; this brings the body screens in with them. The DAY range keeps its
+ * own intraday chart, where the x axis is hours rather than dates.
+ */
+@Composable
+internal fun BodyPeriodMetricChart(
+    metricData: BodyMetricData,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    selectedDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val periodTitle = localizedPeriodTitle(selectedRange, period)
+    val summary = metricData.latest?.text
+        ?: stringResource(R.string.summary_entries, metricData.values.size.toString())
+
+    MetricLineChart(
+        title = stringResource(metricData.titleRes),
+        points = metricData.values.map { MetricLinePoint(date = it.date, value = it.value) },
+        selectedRange = selectedRange,
+        period = period,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        accentColor = metricData.color,
+        summaryText = "$periodTitle · $summary",
+        modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
+        valueFormatter = { metricData.valueDisplayFormatter(it).text },
     )
 }
 

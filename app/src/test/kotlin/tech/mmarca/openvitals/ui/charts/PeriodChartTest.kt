@@ -75,24 +75,58 @@ class PeriodChartTest {
     }
 
     @Test fun `month labels only show stable tick positions`() {
-        assertTrue(isPeriodChartLabelVisible(index = 0, lastIndex = 30, selectedRange = TimeRange.MONTH))
-        assertFalse(isPeriodChartLabelVisible(index = 1, lastIndex = 30, selectedRange = TimeRange.MONTH))
-        assertTrue(isPeriodChartLabelVisible(index = 5, lastIndex = 30, selectedRange = TimeRange.MONTH))
-        assertTrue(isPeriodChartLabelVisible(index = 30, lastIndex = 30, selectedRange = TimeRange.MONTH))
+        val labelled = periodChartLabelIndices(daysFrom(LocalDate.of(2026, 5, 1), 31), TimeRange.MONTH)
+
+        assertTrue(0 in labelled)
+        assertFalse(1 in labelled)
+        assertTrue(5 in labelled)
+        assertTrue(30 in labelled)
+    }
+
+    @Test fun `a short month drops the last label rather than colliding it`() {
+        // February's 28th sits two slots after its 26th. Told that a label needs
+        // three slots — which is what the axis measures a day number to need at
+        // phone width — the last one goes rather than printing over its
+        // neighbour.
+        val february = daysFrom(LocalDate.of(2026, 2, 1), 28)
+
+        val roomy = periodChartLabelIndices(february, TimeRange.MONTH, minimumGap = 1)
+        val cramped = periodChartLabelIndices(february, TimeRange.MONTH, minimumGap = 3)
+
+        assertTrue(27 in roomy)
+        assertTrue(25 in cramped)
+        assertFalse(27 in cramped)
+    }
+
+    @Test fun `a label wider than the gap thins the whole row`() {
+        // What the axis does when twelve month names will not fit: every other
+        // one, rather than twelve overlapping.
+        val months = (0..11).map { LocalDate.of(2026, 1, 1).plusMonths(it.toLong()) }
+
+        val thinned = periodChartLabelIndices(months, TimeRange.YEAR, minimumGap = 2)
+
+        assertEquals(setOf(0, 2, 4, 6, 8, 10), thinned)
     }
 
     @Test fun `year labels show every monthly bucket`() {
-        for (index in 0..11) {
-            assertTrue(isPeriodChartLabelVisible(index = index, lastIndex = 11, selectedRange = TimeRange.YEAR))
-        }
+        val months = (0..11).map { LocalDate.of(2026, 1, 1).plusMonths(it.toLong()) }
+
+        assertEquals((0..11).toSet(), periodChartLabelIndices(months, TimeRange.YEAR))
     }
 
-    @Test fun `year labels thin dense daily series`() {
-        assertTrue(isPeriodChartLabelVisible(index = 0, lastIndex = 364, selectedRange = TimeRange.YEAR))
-        assertFalse(isPeriodChartLabelVisible(index = 1, lastIndex = 364, selectedRange = TimeRange.YEAR))
-        assertTrue(isPeriodChartLabelVisible(index = 30, lastIndex = 364, selectedRange = TimeRange.YEAR))
-        assertTrue(isPeriodChartLabelVisible(index = 364, lastIndex = 364, selectedRange = TimeRange.YEAR))
+    @Test fun `a year of days is labelled by month, not every thirtieth day`() {
+        // Every thirtieth DAY drifts off the calendar: it printed "May" twice
+        // and ran "Dec" into the year's last day.
+        val days = daysFrom(LocalDate.of(2026, 1, 1), 365)
+        val labelled = periodChartLabelIndices(days, TimeRange.YEAR)
+
+        assertEquals(12, labelled.size)
+        assertTrue(labelled.all { days[it].dayOfMonth == 1 })
+        assertFalse(364 in labelled)
     }
+
+    private fun daysFrom(start: LocalDate, count: Int): List<LocalDate> =
+        (0 until count).map { start.plusDays(it.toLong()) }
 
     @Test fun `y axis labels are ordered from high to low`() {
         assertEquals(listOf("10", "5", "0"), chartYAxisLabels(minValue = 0.0, maxValue = 10.0))

@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
@@ -45,6 +47,7 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.period.TimeRange
 import java.time.LocalDate
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -96,13 +99,83 @@ fun periodBarBuckets(
     }.toList()
 }
 
-fun isPeriodChartLabelVisible(index: Int, lastIndex: Int, selectedRange: TimeRange): Boolean =
-    when (selectedRange) {
+/**
+ * Which slots of [dates] get a label on the x axis.
+ *
+ * The axis has a slot per DATE, and how many dates there are depends on what
+ * drew the chart: a year of bars is twelve monthly buckets, a year of line is
+ * three hundred and sixty-five days. Both arrive here, so the rule reads the
+ * dates rather than counting slots.
+ *
+ * Every candidate is then spaced out, because a label is far wider than the
+ * slot it sits over and two that land close together overlap into nonsense —
+ * a year once ended "DDec", a month of 28 days would have collided its 26th
+ * with its 28th.
+ */
+fun periodChartLabelIndices(
+    dates: List<LocalDate>,
+    selectedRange: TimeRange,
+    /**
+     * How many slots apart two labels must be to be drawn side by side. The
+     * axis measures this from the widest label and the width it actually has;
+     * one is the default for callers that only care which slots are CANDIDATES.
+     */
+    minimumGap: Int = 1,
+): Set<Int> {
+    if (dates.isEmpty()) return emptySet()
+    val lastIndex = dates.lastIndex
+    val candidates = when (selectedRange) {
         TimeRange.DAY,
-        TimeRange.WEEK -> true
-        TimeRange.YEAR -> lastIndex <= 11 || index % 30 == 0 || index == lastIndex
-        TimeRange.MONTH -> index % 5 == 0 || index == lastIndex
+        TimeRange.WEEK -> dates.indices.toList()
+
+        // Twelve or fewer is a monthly axis — the bar chart's buckets, or the
+        // month starts a line's year axis borrows — and every one is worth
+        // naming. More than that is a daily axis, where the months are the only
+        // landmarks: naming every thirtieth DAY instead drifted off the
+        // calendar and printed "May" twice.
+        TimeRange.YEAR -> if (dates.size <= MonthsInYear) {
+            dates.indices.toList()
+        } else {
+            dates.indices.filter { it == 0 || dates[it].dayOfMonth == 1 }
+        }
+
+        TimeRange.MONTH -> dates.indices.filter { it % 5 == 0 || it == lastIndex }
     }
+    return spacedOut(candidates, minimumGap.coerceAtLeast(1))
+}
+
+/**
+ * Keeps [candidates] in order, dropping any that sits within [minimumGap] slots
+ * of the one kept before it. Greedy from the left: the run's first label is the
+ * one the reader anchors on, so a crowded end loses its label rather than its
+ * beginning.
+ */
+private fun spacedOut(candidates: List<Int>, minimumGap: Int): Set<Int> {
+    val kept = mutableSetOf<Int>()
+    var previous: Int? = null
+    for (candidate in candidates) {
+        if (previous == null || candidate - previous >= minimumGap) {
+            kept += candidate
+            previous = candidate
+        }
+    }
+    return kept
+}
+
+const val MonthsInYear = 12
+
+/**
+ * The first of each month the period touches — the twelve landmarks a year's
+ * axis labels, whether the chart behind it is drawn a month at a time or a day
+ * at a time.
+ */
+fun monthStartsIn(period: DatePeriod): List<LocalDate> {
+    val lastMonth = period.end.withDayOfMonth(1)
+    return generateSequence(period.start.withDayOfMonth(1)) { month ->
+        month.plusMonths(1).takeUnless { it.isAfter(lastMonth) }
+    }.toList()
+}
+
 
 /**
  * The horizontal geometry of one bar chart: how wide a slot is, and how much of that slot
@@ -529,20 +602,83 @@ fun PeriodChartXAxis(
     /** The slice of the period on show, when the chart above has been pinched. */
     viewport: ChartViewport = ChartViewport.Full,
 ) {
+    // Wrapped so the row's own width is known before its labels are chosen: how
+    // many of them fit is a property of the width, and the same axis draws on a
+    // phone and on a tablet.
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        PeriodChartXAxisRow(
+            dates = dates,
+            selectedRange = selectedRange,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            rowWidth = maxWidth,
+            viewport = viewport,
+        )
+    }
+}
+
+@Composable
+private fun PeriodChartXAxisRow(
+    dates: List<LocalDate>,
+    selectedRange: TimeRange,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    rowWidth: Dp,
+    viewport: ChartViewport,
+) {
+    // Measured, not guessed. How many slots a label needs depends on the label
+    // ("Jan" against "1"), on how many slots the row is divided into, and on how
+    // wide the row ended up — a year's twelve months fit a tablet and collide on
+    // a phone, and the same axis code draws both.
+    val textMeasurer = rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelSmall
+    val density = LocalDensity.current
+    val labelledIndices = remember(
+        dates,
+        selectedRange,
+        rowWidth,
+        labelStyle,
+        density,
+        dateTimeFormatterProvider,
+    ) {
+        val candidates = periodChartLabelIndices(dates, selectedRange)
+        val widest = candidates.maxOfOrNull { index ->
+            textMeasurer.measure(
+                text = periodChartLabel(dates[index], selectedRange, dateTimeFormatterProvider),
+                style = labelStyle,
+                maxLines = 1,
+                softWrap = false,
+            ).size.width
+        } ?: 0
+        val slotWidth = with(density) { rowWidth.toPx() } / dates.size.coerceAtLeast(1)
+        // Measured against the label plus a fixed margin rather than plus a
+        // whole SLOT: a slot is a month on a year's axis and a day on a
+        // month's, so "one more slot" means wildly different amounts of room
+        // and cost a year six labels it had space for.
+        val needed = widest + with(density) { LabelBreathingRoom.toPx() }
+        val gap = if (slotWidth <= 0f) 1 else ceil(needed / slotWidth).toInt()
+        periodChartLabelIndices(dates, selectedRange, minimumGap = gap)
+    }
+
     val label: @Composable (Int) -> Unit = { index ->
-        if (isPeriodChartLabelVisible(index, dates.lastIndex, selectedRange)) {
+        if (index in labelledIndices) {
             Text(
                 text = periodChartLabel(
                     date = dates[index],
                     selectedRange = selectedRange,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                 ),
-                style = MaterialTheme.typography.labelSmall,
+                style = labelStyle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Clip,
+                // A slot is one day (or one month) wide and only some of them
+                // carry a label, so a label measured against its OWN slot is
+                // measured against a width the design never meant it to fit: a
+                // month read "1(" for the 16th. The slots it spills into are the
+                // blank ones either side, and the gap above keeps the next label
+                // clear of them.
+                modifier = Modifier.wrapContentWidth(unbounded = true),
             )
         } else {
             Spacer(Modifier.height(16.dp))
@@ -552,7 +688,7 @@ fun PeriodChartXAxis(
     if (!viewport.isZoomed) {
         // Unzoomed, the slots ARE the row: even weights, exactly as before.
         Row(
-            modifier = modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
         ) {
             dates.indices.forEach { index ->
@@ -570,13 +706,12 @@ fun PeriodChartXAxis(
     // Zoomed, a date has to sit over ITS OWN bar. Evenly spacing whichever labels survive
     // would drift them off the bars they name — and a bar chart whose dates belong to the
     // wrong bars is worse than one that does not zoom.
-    BoxWithConstraints(
-        modifier = modifier
+    Box(
+        modifier = Modifier
             .fillMaxWidth()
             .height(PeriodAxisRowHeight)
             .clipToBounds(),
     ) {
-        val rowWidth = maxWidth
         val slotWidth = rowWidth / (dates.size * viewport.span)
         dates.indices.forEach { index ->
             val left = rowWidth * periodSlotLeftFraction(index, dates.size, viewport)
@@ -594,6 +729,9 @@ fun PeriodChartXAxis(
 }
 
 private val PeriodAxisRowHeight = 16.dp
+
+/** The clear space two neighbouring axis labels keep between them. */
+private val LabelBreathingRoom = 4.dp
 
 private fun dailyBuckets(values: List<PeriodChartValue>, period: DatePeriod): List<PeriodChartBucket> {
     val valuesByDate = values
