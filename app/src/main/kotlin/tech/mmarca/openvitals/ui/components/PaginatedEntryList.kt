@@ -17,6 +17,22 @@ import tech.mmarca.openvitals.R
 
 private const val EntryPageSize = 10
 
+/**
+ * A list that starts at one page and grows as the reader asks for more.
+ *
+ * **How far it has been expanded survives the list changing underneath it.**
+ * The expansion is the reader's answer to "how much of this do I want to see",
+ * not a property of the current contents, and it used to be keyed on the
+ * entries themselves: deleting one row from a list expanded to fifty snapped it
+ * back to ten, which threw everything below up the screen and left the reader
+ * looking at a part of the page they had not scrolled to. Deleting a row is the
+ * moment they are most obviously still reading the list.
+ *
+ * The count is only ever clamped to what exists ([boundedVisibleCount]), never
+ * reset, so it also carries across a change of period. That is deliberate:
+ * having asked for a longer list once, being given a longer list again is the
+ * lesser surprise.
+ */
 @Composable
 fun <T> PaginatedEntryList(
     title: String,
@@ -28,8 +44,8 @@ fun <T> PaginatedEntryList(
     if (entries.isEmpty()) return
 
     val effectivePageSize = pageSize.coerceAtLeast(1)
-    var visibleCount by remember(entries, effectivePageSize) {
-        mutableIntStateOf(entries.size.coerceAtMost(effectivePageSize))
+    var visibleCount by remember(effectivePageSize) {
+        mutableIntStateOf(effectivePageSize)
     }
     val boundedVisibleCount = visibleCount.coerceAtMost(entries.size)
     val visibleEntries = remember(entries, boundedVisibleCount) {
