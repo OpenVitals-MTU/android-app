@@ -36,7 +36,9 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - PDF health report export built fully on-device, with charts, statistics, and clinical sections for blood pressure, glucose, workouts, and sleep
 - Manual cycle logging with derived period days and next-period predictions, stored only in Health Connect
 - Period detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
+- Body measurements charted as a trend line over a fitted scale, and nutrition periods led by a daily average rather than a total nobody eats by
 - Daily Readiness with Body Energy, Training Readiness, physiological stress, HRV status, intensity minutes, adaptive goals, and local explanation screens
+- Body Energy that reads how well a night was slept - efficiency, time awake, deep and REM share - and not only how long it lasted
 - Refreshed UI/UX with clearer Summary-first navigation, metric screens, and entry flows
 - Health Connect permission onboarding with clear data categories and a one-tap full setup option
 - Manual logging for beverages with hydration, caffeine, and nutrition defaults, carbohydrate entries, body measurements, vitals, mindfulness, and activities
