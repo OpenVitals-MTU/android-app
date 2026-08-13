@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
@@ -39,7 +40,7 @@ const val BodyEnergyTimelineBucketMinutes = 5L
  * maximum gets a different ladder and a different score, and the confidence rule
  * changed with it, so every stored day has to be recomputed.
  */
-const val BodyEnergyTimelineAlgorithmVersion = 11
+const val BodyEnergyTimelineAlgorithmVersion = 12
 
 /**
  * The score a day starts on when there is no previous day to carry from — a
@@ -67,6 +68,47 @@ const val BodyEnergyCarryOverFloor = 10
 
 /** Points of Body Energy charged per minute of sleep. */
 private const val SleepPointsPerMinute = 0.10
+
+/**
+ * How far a night's QUALITY may scale its charge, either side of neutral.
+ *
+ * The charge already counted the minutes slept and already read overnight HRV;
+ * what it never read was how well those minutes went. Two nights of the same
+ * length — one unbroken with a full deep/REM share, one shallow and repeatedly
+ * awake — charged within a couple of points of each other, which is not what
+ * the following day feels like.
+ *
+ * ±20%: enough that a good night and a poor one of equal length land ten to
+ * fifteen points apart, and bounded so a single night of broken staging cannot
+ * undo eight hours actually slept. Duration stays the dominant term, which it
+ * should be.
+ */
+private const val SleepQualitySwing = 0.20
+
+/**
+ * The quality fraction an ordinary night scores, and how far either side of it
+ * the pillar realistically travels.
+ *
+ * NOT the pillar's arithmetic midpoint. Half of full marks sounds like the
+ * neutral point and is not: efficiency alone earns its full share above 85%,
+ * which most nights clear, so a genuinely broken night — an hour awake, almost
+ * no deep sleep — still scores about 0.59 and would have been rewarded for it.
+ * Centring on the theoretical middle would have charged nearly every night a
+ * bonus and called it neutral.
+ *
+ * 0.85 is a decent night — good efficiency, little time awake, a reasonable
+ * deep and REM share — and it charges exactly what it charged before this
+ * factor existed. That matters beyond taste: [BodyEnergyCalibration.sleepChargeGain]
+ * is fitted against watch readings, and a factor that sat above neutral on the
+ * ordinary night would inflate every night rather than tell them apart, leaving
+ * the fit to undo it for watch owners and nobody to undo it for everyone else.
+ *
+ * The ±0.35 span reaches full penalty at 0.5 — a night with an hour awake and
+ * almost no deep sleep — while full marks land near +9%, so the best nights
+ * stay distinguishable from the merely good instead of all clamping together.
+ */
+private const val TypicalSleepQualityFraction = 0.85
+private const val SleepQualityFractionSpan = 0.35
 
 /**
  * Points charged per minute of genuinely quiet waking time.
@@ -293,6 +335,48 @@ data class BodyEnergyTimeline(
  * [BodyEnergyTimeline.empty] so a data-less day seeds identically to a computed
  * one.
  */
+/**
+ * How much a night's quality scales its charge: 1.0 for a night of ordinary
+ * quality, up to [SleepQualitySwing] either side of that.
+ *
+ * Reads the sleep score's QUALITY pillar alone — efficiency, continuity and
+ * stage architecture. Not the whole sleep score: its other two pillars are
+ * duration and overnight HRV, and the charge already counts both, so folding
+ * the score in whole would count them twice and make this a duration
+ * multiplier in disguise.
+ *
+ * Neutral (exactly 1.0) for a night this cannot honestly judge: under an hour
+ * slept, or no deep/REM staging. A source that writes only a start and an end
+ * would otherwise score a flawless night by construction — its sleep duration
+ * IS its time in bed, so efficiency reads 100% and wake time zero — and would
+ * be handed the full bonus for recording nothing. Those nights charge exactly
+ * what they charged before this existed, which is the promise made to anyone
+ * not wearing a staging device.
+ */
+internal fun sleepChargeQualityFactor(session: SleepData): Double {
+    val timeInBedMs = Duration.between(session.startTime, session.endTime).toMillis()
+    if (timeInBedMs <= 0L) return 1.0
+    val sleepDurationMs = sleepDurationMsFromStages(session.stages, session.durationMs).coerceAtLeast(0L)
+    if (sleepDurationMs < Duration.ofMinutes(MinimumQualityScoredMinutes).toMillis()) return 1.0
+
+    val efficiencyPercent = (sleepDurationMs / timeInBedMs.toDouble() * 100.0).coerceIn(0.0, 100.0)
+    val wakeMinutes = (session.wakeAfterSleepOnsetMs() ?: (timeInBedMs - sleepDurationMs).coerceAtLeast(0L))
+        .toDouble() / 60_000.0
+    val quality = sleepQualityPillar(
+        session = session,
+        sleepDurationMs = sleepDurationMs,
+        sleepEfficiencyPercent = efficiencyPercent,
+        wakeAfterSleepOnsetMinutes = wakeMinutes,
+    )
+    if (!quality.staged) return 1.0
+    val deviation = ((quality.fraction - TypicalSleepQualityFraction) / SleepQualityFractionSpan)
+        .coerceIn(-1.0, 1.0)
+    return 1.0 + deviation * SleepQualitySwing
+}
+
+/** Below this a night is a nap or a fragment, and its quality says nothing. */
+private const val MinimumQualityScoredMinutes = 60L
+
 fun bodyEnergySeedScore(previousEndScore: Int?): Int =
     previousEndScore?.coerceIn(BodyEnergyCarryOverFloor, 100) ?: BodyEnergyNeutralStartScore
 
@@ -416,6 +500,9 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
     // untouched.
     val gains = inputs.calibration.normalized()
 
+    // One factor per night, computed once rather than per five-minute bucket.
+    val qualityFactors = inputs.sleepSessions.associate { it.id to sleepChargeQualityFactor(it) }
+
     // The day opens where the previous one closed (floored), not at a fixed 50 —
     // see [bodyEnergySeedScore].
     var score = bodyEnergySeedScore(inputs.previousEndScore).toDouble()
@@ -438,6 +525,17 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
 
             val avgHeartRate = heartRateAverages[index]
             val sleepMinutes = inputs.sleepSessions.sumOf { it.overlapMinutes(bucketStart, bucketEnd) }
+            // The night this bucket falls in, so its charge is scaled by the
+            // quality of THAT night. Weighted by overlap for the bucket that
+            // straddles two sessions, which is the nap-then-night case.
+            val sleepQualityFactor = if (sleepMinutes > 0.0) {
+                inputs.sleepSessions.sumOf { session ->
+                    val minutes = session.overlapMinutes(bucketStart, bucketEnd)
+                    if (minutes <= 0.0) 0.0 else minutes * qualityFactors.getValue(session.id)
+                } / sleepMinutes
+            } else {
+                1.0
+            }
             val workoutMinutes = inputs.workouts.sumOf { it.overlapMinutes(bucketStart, bucketEnd) }
             val hrvFactor = hrvRecoveryFactor(
                 baseline = inputs.hrvBaselineRmssdMs,
@@ -574,10 +672,13 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
             // charging through it would both overstate the recovery and, since
             // the rest rate is larger than the debt rate, hide recovery debt as
             // an influence entirely.
+            // Quality scales the sleep charge and nothing else: quiet waking
+            // rest has no night to judge.
             val chargeModifier = hrvFactor.chargeMultiplier / respirationFactor.chargePenalty
             val charge = when {
                 sleepMinutes > 0.0 ->
-                    SleepPointsPerMinute * sleepMinutes * chargeModifier * gains.sleepChargeGain
+                    SleepPointsPerMinute * sleepMinutes * sleepQualityFactor *
+                        chargeModifier * gains.sleepChargeGain
                 quietEnough && awakePresent && recoveryDebtDrain <= 0.0 ->
                     RestPointsPerMinute * bucketMinutes * chargeModifier * gains.sleepChargeGain
                 else -> 0.0

@@ -112,6 +112,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 - View a local Daily Readiness score with confidence context.
 - View Body Energy and Training Readiness scores.
+- Have overnight Body Energy charge reflect how well the night was slept — efficiency, time awake and deep/REM share — not only how long it lasted.
 - View HRV status, intensity minutes, physiological stress level, recommended activity, activity to avoid, alternatives, strain target, and adaptive goal guidance.
 - View detailed Body Energy, Training Readiness, and Stress Tracking explanation screens.
 - View signal breakdowns and caveats that explain how available Health Connect data affected the recommendation.

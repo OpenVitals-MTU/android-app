@@ -299,23 +299,16 @@ fun calculateSleepScore(
     val durationPoints = durationPoints(sleepDurationMinutes / 60.0, target)
 
     val stagePercents = stagePercents(session, sleepDurationMs)
-    val staged = hasStagedArchitecture && stagePercents != null
-    // Without staging, redistribute the stage share into efficiency + continuity
-    // so quality still totals QualityWeight.
-    val efficiencyPts = if (staged) {
-        efficiencyPoints(sleepEfficiencyPercent)
-    } else {
-        (EfficiencyShare + StageShare / 2.0) *
-            ((sleepEfficiencyPercent - 65.0) / 20.0).coerceIn(0.0, 1.0)
-    }
-    val continuityPts = if (staged) {
-        continuityPoints(wakeAfterSleepOnsetMinutes)
-    } else {
-        (ContinuityShare + StageShare / 2.0) *
-            ((90.0 - wakeAfterSleepOnsetMinutes) / 70.0).coerceIn(0.0, 1.0)
-    }
-    val stagePts = if (staged) stageBalancePoints(stagePercents!!) else 0.0
-    val qualityPoints = efficiencyPts + continuityPts + stagePts
+    val quality = sleepQualityPillar(
+        session = session,
+        sleepDurationMs = sleepDurationMs,
+        sleepEfficiencyPercent = sleepEfficiencyPercent,
+        wakeAfterSleepOnsetMinutes = wakeAfterSleepOnsetMinutes,
+    )
+    val efficiencyPts = quality.efficiencyPoints
+    val continuityPts = quality.continuityPoints
+    val stagePts = quality.stageBalancePoints
+    val qualityPoints = quality.total
 
     val usesOvernightHrv = overnightHrv != null &&
         overnightHrv.rmssdMs > 0.0 &&
@@ -390,6 +383,60 @@ internal fun durationPoints(hours: Double, target: SleepDurationTarget): Double 
         }
     }
     return SleepScoreDurationWeight * ratio
+}
+
+/**
+ * The quality pillar of one night: how well it was slept, as distinct from how
+ * long ([durationPoints]) and how the autonomic system answered
+ * ([recoveryPoints]).
+ *
+ * Its own type because Body Energy needs this pillar WITHOUT the other two —
+ * its sleep charge already counts the minutes and already reads overnight HRV,
+ * so the whole sleep score would count both of those twice.
+ */
+data class SleepQualityPillar(
+    val efficiencyPoints: Double,
+    val continuityPoints: Double,
+    val stageBalancePoints: Double,
+    /** Whether the night carried deep/REM staging, or only its bounds. */
+    val staged: Boolean,
+) {
+    val total: Double get() = efficiencyPoints + continuityPoints + stageBalancePoints
+
+    /** [total] as a fraction of the pillar's weight, 0..1. */
+    val fraction: Double get() = (total / SleepScoreQualityWeight).coerceIn(0.0, 1.0)
+}
+
+/**
+ * The quality pillar for [session]. Without staging the stage share is
+ * redistributed into efficiency and continuity, so quality still totals
+ * [SleepScoreQualityWeight] rather than being quietly capped at three quarters
+ * of it.
+ */
+fun sleepQualityPillar(
+    session: SleepData,
+    sleepDurationMs: Long,
+    sleepEfficiencyPercent: Double,
+    wakeAfterSleepOnsetMinutes: Double,
+): SleepQualityPillar {
+    val stagePercents = stagePercents(session, sleepDurationMs)
+    val staged = session.stages.any { it.stageType.isDeepOrRemStage() } && stagePercents != null
+    return SleepQualityPillar(
+        efficiencyPoints = if (staged) {
+            efficiencyPoints(sleepEfficiencyPercent)
+        } else {
+            (EfficiencyShare + StageShare / 2.0) *
+                ((sleepEfficiencyPercent - 65.0) / 20.0).coerceIn(0.0, 1.0)
+        },
+        continuityPoints = if (staged) {
+            continuityPoints(wakeAfterSleepOnsetMinutes)
+        } else {
+            (ContinuityShare + StageShare / 2.0) *
+                ((90.0 - wakeAfterSleepOnsetMinutes) / 70.0).coerceIn(0.0, 1.0)
+        },
+        stageBalancePoints = if (staged) stageBalancePoints(stagePercents!!) else 0.0,
+        staged = staged,
+    )
 }
 
 /**
@@ -480,7 +527,7 @@ private fun circularMinuteDifference(first: Int, second: Int): Int {
     return minOf(difference, MinutesPerDay - difference)
 }
 
-private fun SleepData.wakeAfterSleepOnsetMs(): Long? {
+internal fun SleepData.wakeAfterSleepOnsetMs(): Long? {
     val sleepStages = stages
         .filter { it.stageType.isSleepStage() }
         .sortedBy { it.startTime }
