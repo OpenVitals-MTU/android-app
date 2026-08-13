@@ -36,10 +36,39 @@ class BodyEnergySleepQualityTest {
         // before quality; the spread between them is what the report was about.
         val spread = (good - poor) * SleepPointsPerMinuteForTest * EightHoursOfMinutes
         assertTrue(
-            "a good and a poor night should land about ten to fifteen points " +
-                "apart over eight hours, were $spread",
-            spread > 9.0 && spread < 16.0,
+            "a good and a poor night should land well over ten points apart " +
+                "over eight hours, were $spread",
+            spread > 12.0 && spread < 22.0,
         )
+    }
+
+    @Test fun `a flawless night reads above a merely good one`() {
+        // The scored sleep pillar stops distinguishing nights once they clear
+        // its clinical thresholds — efficiency at 85%, twenty minutes awake —
+        // so a perfect night and a good one both earned full marks and charged
+        // identically. Recovery does not work that way, and the charge reads a
+        // continuous quality instead.
+        val flawless = sleepChargeQualityFactor(goodNight())
+        val merelyGood = sleepChargeQualityFactor(decentNight())
+
+        assertTrue(
+            "a flawless night must out-charge a good one, were $flawless and $merelyGood",
+            flawless > merelyGood,
+        )
+        val gap = (flawless - merelyGood) * SleepPointsPerMinuteForTest * EightHoursOfMinutes
+        assertTrue("the gap should be visible but modest, was $gap", gap > 1.5 && gap < 6.0)
+
+        // And both still sit above an ordinary night, rather than the pair of
+        // them being dragged apart around it.
+        assertTrue("a good night still charges above neutral", merelyGood > 1.0)
+    }
+
+    @Test fun `an ordinary night charges what it always did`() {
+        // The factor has to be neutral on the ordinary night or it inflates
+        // every night instead of telling them apart — see the constant's note.
+        val ordinary = sleepChargeQualityFactor(fairNight())
+
+        assertEquals(1.0, ordinary, 0.05)
     }
 
     @Test fun `the factor is bounded either side of neutral`() {
@@ -106,6 +135,50 @@ class BodyEnergySleepQualityTest {
                 SleepStage(start, deepEnd, SleepStage.STAGE_DEEP),
                 SleepStage(deepEnd, remEnd, SleepStage.STAGE_REM),
                 SleepStage(remEnd, end, SleepStage.STAGE_LIGHT),
+            ),
+        )
+    }
+
+    /** Eight hours, a quarter hour awake, a slightly thin deep and REM share. */
+    private fun decentNight(): SleepData {
+        val start = night.plus(Duration.ofHours(23))
+        val deepEnd = start.plus(Duration.ofMinutes(75))
+        val remEnd = deepEnd.plus(Duration.ofMinutes(95))
+        val awakeEnd = remEnd.plus(Duration.ofMinutes(15))
+        val end = start.plus(Duration.ofHours(8))
+        return SleepData(
+            id = "decent",
+            startTime = start,
+            endTime = end,
+            durationMs = Duration.between(start, end).toMillis(),
+            source = "test",
+            stages = listOf(
+                SleepStage(start, deepEnd, SleepStage.STAGE_DEEP),
+                SleepStage(deepEnd, remEnd, SleepStage.STAGE_REM),
+                SleepStage(remEnd, awakeEnd, SleepStage.STAGE_AWAKE),
+                SleepStage(awakeEnd, end, SleepStage.STAGE_LIGHT),
+            ),
+        )
+    }
+
+    /** The ordinary night the factor is centred on: neither good nor bad. */
+    private fun fairNight(): SleepData {
+        val start = night.plus(Duration.ofHours(23))
+        val deepEnd = start.plus(Duration.ofMinutes(50))
+        val remEnd = deepEnd.plus(Duration.ofMinutes(70))
+        val awakeEnd = remEnd.plus(Duration.ofMinutes(35))
+        val end = start.plus(Duration.ofHours(8))
+        return SleepData(
+            id = "fair",
+            startTime = start,
+            endTime = end,
+            durationMs = Duration.between(start, end).toMillis(),
+            source = "test",
+            stages = listOf(
+                SleepStage(start, deepEnd, SleepStage.STAGE_DEEP),
+                SleepStage(deepEnd, remEnd, SleepStage.STAGE_REM),
+                SleepStage(remEnd, awakeEnd, SleepStage.STAGE_AWAKE),
+                SleepStage(awakeEnd, end, SleepStage.STAGE_LIGHT),
             ),
         )
     }

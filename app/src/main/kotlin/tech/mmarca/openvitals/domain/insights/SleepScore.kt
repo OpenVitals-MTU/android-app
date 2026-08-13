@@ -400,6 +400,23 @@ data class SleepQualityPillar(
     val stageBalancePoints: Double,
     /** Whether the night carried deep/REM staging, or only its bounds. */
     val staged: Boolean,
+    /**
+     * The same night read as a CONTINUOUS 0..1, for models that ask how much it
+     * restored rather than whether it was healthy.
+     *
+     * The scored points answer a clinical question and answer it with
+     * thresholds: efficiency at or above 85% is good, time awake at or under
+     * twenty minutes is good, and both earn full marks the moment they clear.
+     * That is the right shape for a score citing NSF and AASM, and the wrong
+     * shape for recovery — it makes a flawless night and a merely good one
+     * identical, when the following day is not.
+     *
+     * So this ramp keeps going where the score stops: efficiency all the way to
+     * 100%, time awake all the way to none. Stage architecture is NOT stretched
+     * the same way, because more deep sleep past the healthy band is not more
+     * recovery — a band is genuinely what that one is.
+     */
+    val continuousFraction: Double,
 ) {
     val total: Double get() = efficiencyPoints + continuityPoints + stageBalancePoints
 
@@ -421,6 +438,23 @@ fun sleepQualityPillar(
 ): SleepQualityPillar {
     val stagePercents = stagePercents(session, sleepDurationMs)
     val staged = session.stages.any { it.stageType.isDeepOrRemStage() } && stagePercents != null
+    // The continuous read. Weighted like the scored pillar so the two stay
+    // recognisably the same measure, with the stage share redistributed the
+    // same way when a night has no staging to judge.
+    val continuousEfficiency = ((sleepEfficiencyPercent - 65.0) / 35.0).coerceIn(0.0, 1.0)
+    val continuousContinuity = ((90.0 - wakeAfterSleepOnsetMinutes) / 90.0).coerceIn(0.0, 1.0)
+    val continuousStages = stagePercents
+        ?.takeIf { staged }
+        ?.let { stageBalancePoints(it) / StageShare }
+    val continuousFraction = if (continuousStages == null) {
+        (continuousEfficiency * (EfficiencyShare + StageShare / 2.0) +
+            continuousContinuity * (ContinuityShare + StageShare / 2.0)) / SleepScoreQualityWeight
+    } else {
+        (continuousEfficiency * EfficiencyShare +
+            continuousContinuity * ContinuityShare +
+            continuousStages * StageShare) / SleepScoreQualityWeight
+    }
+
     return SleepQualityPillar(
         efficiencyPoints = if (staged) {
             efficiencyPoints(sleepEfficiencyPercent)
@@ -436,6 +470,7 @@ fun sleepQualityPillar(
         },
         stageBalancePoints = if (staged) stageBalancePoints(stagePercents!!) else 0.0,
         staged = staged,
+        continuousFraction = continuousFraction.coerceIn(0.0, 1.0),
     )
 }
 

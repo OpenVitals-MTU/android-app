@@ -96,19 +96,20 @@ private const val SleepQualitySwing = 0.20
  * Centring on the theoretical middle would have charged nearly every night a
  * bonus and called it neutral.
  *
- * 0.85 is a decent night — good efficiency, little time awake, a reasonable
- * deep and REM share — and it charges exactly what it charged before this
- * factor existed. That matters beyond taste: [BodyEnergyCalibration.sleepChargeGain]
+ * 0.72 is a decent night on the continuous read — good efficiency, a little
+ * time awake, a reasonable deep and REM share — and it charges exactly what it
+ * charged before this factor existed. That matters beyond taste: [BodyEnergyCalibration.sleepChargeGain]
  * is fitted against watch readings, and a factor that sat above neutral on the
  * ordinary night would inflate every night rather than tell them apart, leaving
  * the fit to undo it for watch owners and nobody to undo it for everyone else.
  *
- * The ±0.35 span reaches full penalty at 0.5 — a night with an hour awake and
- * almost no deep sleep — while full marks land near +9%, so the best nights
- * stay distinguishable from the merely good instead of all clamping together.
+ * The ±0.32 span reaches full penalty at 0.40 — an hour awake with almost no
+ * deep sleep — and full marks land near +18%, short of the clamp, so a flawless
+ * night still reads above a merely good one instead of the two meeting at a
+ * ceiling.
  */
-private const val TypicalSleepQualityFraction = 0.85
-private const val SleepQualityFractionSpan = 0.35
+private const val TypicalSleepQualityFraction = 0.72
+private const val SleepQualityFractionSpan = 0.32
 
 /**
  * Points charged per minute of genuinely quiet waking time.
@@ -369,7 +370,10 @@ internal fun sleepChargeQualityFactor(session: SleepData): Double {
         wakeAfterSleepOnsetMinutes = wakeMinutes,
     )
     if (!quality.staged) return 1.0
-    val deviation = ((quality.fraction - TypicalSleepQualityFraction) / SleepQualityFractionSpan)
+    // The CONTINUOUS read, not the scored points: the score stops distinguishing
+    // nights once they clear its clinical thresholds, and a flawless night and a
+    // merely good one are exactly the pair this is here to tell apart.
+    val deviation = ((quality.continuousFraction - TypicalSleepQualityFraction) / SleepQualityFractionSpan)
         .coerceIn(-1.0, 1.0)
     return 1.0 + deviation * SleepQualitySwing
 }
