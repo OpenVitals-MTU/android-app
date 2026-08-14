@@ -47,28 +47,22 @@ greater-than-70% coverage per locale, placeholder safety, plural shape, and
 `translatable="false"` handling. `verifyCi` includes it, so Weblate pull requests
 must keep locale files more than 70% translated and placeholders intact.
 
-Current state: `./gradlew verifyCi` fails on `verifyTranslations` alone, on two
-Weblate-managed files that no source change in this repo caused:
+Current state: `verifyTranslations` passes. `values-gl` is still far below the
+gate, but a locale under the threshold only prints a note now — the coverage
+floor decides whether a language is *offered* in the picker, not whether its
+file may exist, so a translator's first commit does not break CI:
 
 ```text
-- app/src/main/res/values-es/strings.xml: activity_type_stats_activity_count has extra plural quantity many
-- app/src/main/res/values-gl/strings.xml: translation coverage is 3.8%; must be greater than 70%
+note: app/src/main/res/values-gl/strings.xml is at 3.4% coverage and is not offered in the language picker until it passes 70%.
 ```
 
-Both are translation-side, not code-side:
+What still fails the build for every locale file, offered or not, is placeholder
+and plural-shape safety. A locale may carry *more* CLDR plural categories than
+the English base (Czech and Spanish need `few`/`many`); those extra branches are
+checked against the base `other` branch so they cannot drop an argument.
 
-- `values-es` gained a `many` plural quantity that the English base string does
-  not define. It has to be removed on the Weblate side, or the base string has to
-  grow the quantity.
-- `values-gl` is a newly started language that is still far below the 70% gate.
-  Under the shipping policy in [Translations](translations.md) a new locale file
-  is only merged above that threshold, so it either keeps translating or the file
-  is held back.
-
-Do not "fix" these by editing `values-*/strings.xml` by hand; they are owned by
-Weblate. When verifying unrelated work locally, run `./gradlew verifyCiUnitTest`
-plus `:app:lintCi` and `:app:assembleCi` and treat the two lines above as the
-known baseline failure.
+Do not "fix" locale files by editing `values-*/strings.xml` by hand; they are
+owned by Weblate.
 
 For Apple Health importer work, there is also a desktop JVM smoke test that can exercise the Kotlin importer against a real local export without building or installing the app:
 

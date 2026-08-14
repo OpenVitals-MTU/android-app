@@ -34,10 +34,10 @@ community translation.
 
 ## Shipping Policy
 
-Shipping app languages are English, Spanish, German, Italian, and Estonian.
-Galician (`values-gl`) has been merged from Codeberg Translate but is still
-below the shipping threshold, so it does not appear in the in-app language
-picker yet.
+Shipping app languages are English, Czech, Spanish, German, Italian, Estonian,
+and Portuguese. Galician (`values-gl`) has been merged from Codeberg Translate
+but is still below the shipping threshold, so it does not appear in the in-app
+language picker yet.
 
 New languages can be collected in Codeberg Translate before they are ready to
 ship. A new `values-<lang>/strings.xml` file can be merged once it is more than
