@@ -53,6 +53,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.ChartTokens
 import tech.mmarca.openvitals.ui.components.DetailSectionCard
+import tech.mmarca.openvitals.ui.theme.SleepColor
 import tech.mmarca.openvitals.domain.model.SleepStage
 import java.time.Duration
 import java.time.Instant
@@ -250,21 +251,37 @@ internal fun SleepStagesLaneChart(
                     endY = gradientEndY,
                 )
 
+                // Two paths, because out-of-bed is the one stretch that is NOT a sleep stage:
+                // it is painted flat in its own colour while everything else takes the lane
+                // gradient, which would otherwise hand it the Awake pink for sitting on the
+                // Awake lane. Both share the same geometry and the same connectors, so the
+                // hypnogram keeps its shape and only the gap changes colour.
+                val outOfBedColor = stageColor(SleepStage.STAGE_OUT_OF_BED)
                 val sleepPath = Path()
+                val gapPath = Path()
                 visibleStages.forEachIndexed { index, stage ->
                     val left = timeX(stage.start)
                     val right = timeX(stage.end)
                     val width = right - left
                     if (width > 0f) {
                         val centerY = laneCenterY(stage.laneIndex)
+                        val path = if (stage.stageType == SleepStage.STAGE_OUT_OF_BED) {
+                            gapPath
+                        } else {
+                            sleepPath
+                        }
                         val previous = visibleStages.getOrNull(index - 1)
                         if (previous != null && previous.end == stage.start) {
-                            sleepPath.lineTo(left, centerY)
+                            // Each path carries its own current point now, so the transition
+                            // is anchored explicitly at the previous stage's right edge rather
+                            // than inherited from whatever was appended last.
+                            path.moveTo(timeX(previous.end), laneCenterY(previous.laneIndex))
+                            path.lineTo(left, centerY)
                         } else {
-                            sleepPath.moveTo(left, centerY)
+                            path.moveTo(left, centerY)
                         }
                         val radius = minOf(trackRadius, width / 2f)
-                        sleepPath.addRoundRect(
+                        path.addRoundRect(
                             RoundRect(
                                 rect = Rect(
                                     offset = Offset(left, centerY - trackHeightPx / 2f),
@@ -273,21 +290,19 @@ internal fun SleepStagesLaneChart(
                                 cornerRadius = CornerRadius(radius, radius),
                             ),
                         )
-                        sleepPath.moveTo(right, centerY)
                     }
                 }
 
-                drawPath(path = sleepPath, brush = stageBrush)
-                drawPath(
-                    path = sleepPath,
-                    brush = stageBrush,
-                    style = Stroke(
-                        width = transitionStrokePx,
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round,
-                        pathEffect = PathEffect.cornerPathEffect(transitionStrokePx),
-                    ),
+                val transitionStroke = Stroke(
+                    width = transitionStrokePx,
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                    pathEffect = PathEffect.cornerPathEffect(transitionStrokePx),
                 )
+                drawPath(path = gapPath, color = outOfBedColor)
+                drawPath(path = gapPath, color = outOfBedColor, style = transitionStroke)
+                drawPath(path = sleepPath, brush = stageBrush)
+                drawPath(path = sleepPath, brush = stageBrush, style = transitionStroke)
             }
 
             Column(modifier = Modifier.fillMaxSize()) {
@@ -557,6 +572,14 @@ internal fun SleepStageLegend(stages: List<SleepStage>, unitFormatter: UnitForma
     }
 }
 
+/**
+ * The in-bed span itself, under everything the night recorded. Where a stage covers it
+ * the stage wins; where nothing does, this is what shows, and it means "in bed, nothing
+ * recorded here" — NOT "out of bed". Keeping it translucent [SleepColor] is what makes a
+ * bar read as sleep at a glance.
+ */
+internal val SleepInBedBaseColor: Color = SleepColor.copy(alpha = 0.5f)
+
 internal fun stageColor(stageType: Int): Color = when (stageType) {
     SleepStage.STAGE_AWAKE -> Color(0xFFF48FB1)
     SleepStage.STAGE_LIGHT -> Color(0xFF8AB4F8)
@@ -564,7 +587,14 @@ internal fun stageColor(stageType: Int): Color = when (stageType) {
     SleepStage.STAGE_REM -> Color(0xFFB3E5FC)
     SleepStage.STAGE_AWAKE_IN_BED -> Color(0xFFF8A6C6)
     SleepStage.STAGE_SLEEPING -> Color(0xFF7EA7F5)
-    SleepStage.STAGE_OUT_OF_BED -> Color(0xFFEF9A9A)
+    // Out of bed is the one entry here that is not a sleep stage, and it is coloured to
+    // say so. Every stage above is cool — violet, two blues, a cyan — or pink; a
+    // desaturated warm neutral sits outside that family altogether, so it cannot be
+    // misread as one of them. Measured worst case across the light, dark and AMOLED
+    // surfaces it is 31 CIEDE2000 from Deep and 27 from its nearest neighbour of any
+    // kind. Translucent SleepColor, which this stretch used to take from the base block
+    // behind it, was 15.8 from Deep — close enough to read as deep sleep in a thumbnail.
+    SleepStage.STAGE_OUT_OF_BED -> Color(0xFF8D7F76)
     else -> Color(0xFF90A4AE)
 }
 

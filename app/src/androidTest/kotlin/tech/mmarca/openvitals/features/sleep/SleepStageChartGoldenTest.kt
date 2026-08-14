@@ -98,6 +98,32 @@ class SleepStageChartGoldenTest {
         composeRule.assertVisualRootMatchesGolden("sleep_stage_chart_sleeping_only")
     }
 
+    @Test
+    fun aSplitNight_theStretchOutOfBed() {
+        // Two sessions of one night with a get-up between them. The week chart has always
+        // drawn that stretch in translucent SleepColor, because it paints the in-bed span
+        // as a base block and only overlays the stages it has; the day view painted the
+        // same stretch in the Awake pink, because the gap was handed to it typed
+        // STAGE_AWAKE and every segment took its colour from the lane gradient. This is
+        // the picture of the two views finally agreeing — and the gap is the one segment
+        // in the chart that does NOT come from the gradient, which is worth a photograph.
+        composeRule.setContent {
+            OpenVitalsVisualTestSurface(width = 360.dp, height = 340.dp) {
+                SleepStagesLaneChart(
+                    stages = splitNight(),
+                    unitFormatter = FORMATTER,
+                    timeFormatter = TIME_FORMATTER,
+                    timelineStart = BEDTIME,
+                    timelineEnd = WAKE_UP,
+                    showInlineLabels = false,
+                    modifier = CHART,
+                )
+            }
+        }
+
+        composeRule.assertVisualRootMatchesGolden("sleep_stage_chart_split_night")
+    }
+
     private companion object {
         val FORMATTER = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
 
@@ -141,6 +167,25 @@ class SleepStageChartGoldenTest {
             stage(SleepStage.STAGE_LIGHT, 363, 410),
             stage(SleepStage.STAGE_REM, 410, 450),
             stage(SleepStage.STAGE_LIGHT, 450, 470),
+        )
+
+        /**
+         * The same night, but slept in two goes with 90 minutes up in between — the shape
+         * `combineNightStages` produces once it bridges two sessions less than three hours
+         * apart. Contiguous like [night], so the connectors into and out of the gap are in
+         * the picture too: they are the only ones that cross between the two paths the
+         * chart now draws.
+         */
+        fun splitNight(): List<SleepStage> = listOf(
+            stage(SleepStage.STAGE_LIGHT, 0, 40),
+            stage(SleepStage.STAGE_DEEP, 40, 95),
+            stage(SleepStage.STAGE_LIGHT, 95, 140),
+            stage(SleepStage.STAGE_REM, 140, 175),
+            stage(SleepStage.STAGE_LIGHT, 175, 235),
+            stage(SleepStage.STAGE_OUT_OF_BED, 235, 325),
+            stage(SleepStage.STAGE_LIGHT, 325, 375),
+            stage(SleepStage.STAGE_REM, 375, 425),
+            stage(SleepStage.STAGE_LIGHT, 425, 470),
         )
     }
 }

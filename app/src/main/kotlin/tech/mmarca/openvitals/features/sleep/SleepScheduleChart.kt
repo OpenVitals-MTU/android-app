@@ -87,7 +87,7 @@ internal fun SleepScheduleStageChart(
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     val selectionColor = SleepColor.copy(alpha = 0.16f)
-    val baseBarColor = SleepColor.copy(alpha = 0.5f)
+    val baseBarColor = SleepInBedBaseColor
     val averageLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
     val averageLabelStyle = MaterialTheme.typography.labelSmall
 

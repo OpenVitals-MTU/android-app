@@ -14,7 +14,7 @@ import org.junit.Test
 /**
  * A night split by a wake between 60 min and 3 h (the screenshot's 01:22-05:18
  * | 07:34-09:38) is one night whose segments must combine into a continuous
- * stage timeline — the gap filled as Awake — or the day view hides the
+ * stage timeline — the gap filled as out-of-bed — or the day view hides the
  * hypnogram ("only partly staged") and the week/month bar shows a hole.
  */
 class SleepSplitNightTest {
@@ -71,13 +71,13 @@ class SleepSplitNightTest {
         listOf(stage(SleepStage.STAGE_LIGHT, segment2Start, segment2End)),
     )
 
-    @Test fun `combineNightStages fills the wake gap with Awake`() {
+    @Test fun `combineNightStages fills the wake gap with out-of-bed`() {
         val stages = combineNightStages(listOf(segment1, segment2), maxGap = SleepNapGap)
 
-        val awake = stages.filter { it.stageType == SleepStage.STAGE_AWAKE }
-        assertEquals(1, awake.size)
-        assertEquals(segment1End, awake.single().startTime)
-        assertEquals(segment2Start, awake.single().endTime)
+        val gap = stages.filter { it.stageType == SleepStage.STAGE_OUT_OF_BED }
+        assertEquals(1, gap.size)
+        assertEquals(segment1End, gap.single().startTime)
+        assertEquals(segment2Start, gap.single().endTime)
         // The combined stages now span the whole night, gap included.
         assertEquals(segment1Start, stages.first().startTime)
         assertEquals(segment2End, stages.last().endTime)
@@ -91,8 +91,19 @@ class SleepSplitNightTest {
             listOf(stage(SleepStage.STAGE_LIGHT, t(19, 14, 0), t(19, 14, 40))),
         )
         val stages = combineNightStages(listOf(segment1, nap), maxGap = SleepNapGap)
-        // Only the night's own stages — no Awake spanning the >3h gap to the nap.
-        assertFalse(stages.any { it.stageType == SleepStage.STAGE_AWAKE })
+        // Only the night's own stages — nothing spanning the >3h gap to the nap.
+        assertFalse(stages.any { it.stageType == SleepStage.STAGE_OUT_OF_BED })
+    }
+
+    /**
+     * The gap is time out of bed, so it must not land in the Awake row of "Share of
+     * time in bed", nor in the score's wake-after-sleep-onset. Typing it STAGE_AWAKE
+     * put the whole 2h16 there and reported it as restless time in bed.
+     */
+    @Test fun `the wake gap is not counted as awake time`() {
+        val stages = combineNightStages(listOf(segment1, segment2), maxGap = SleepNapGap)
+
+        assertEquals(0L, stages.durationMsForTypes(AwakeStageTypes))
     }
 
     @Test fun `the split night is reliable once its gap is filled`() {
@@ -107,6 +118,6 @@ class SleepSplitNightTest {
             "gap-filled stages cover the span",
             sleepSessionHasReliableStages(summary),
         )
-        assertTrue(summary.stages.any { it.stageType == SleepStage.STAGE_AWAKE })
+        assertTrue(summary.stages.any { it.stageType == SleepStage.STAGE_OUT_OF_BED })
     }
 }

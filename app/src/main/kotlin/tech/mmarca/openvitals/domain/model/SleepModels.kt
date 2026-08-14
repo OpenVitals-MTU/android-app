@@ -110,10 +110,16 @@ fun combineNightStages(
         }
     }
     if (stages.isEmpty()) return emptyList()
+    // A gap between two sessions is time OUT of bed, not time awake in it. Typing it
+    // STAGE_AWAKE made a 90-minute get-up read as wake-after-sleep-onset: it inflated the
+    // Awake row, and through it sleep efficiency and the score's WASO term. STAGE_OUT_OF_BED
+    // is excluded from AwakeStageTypes and from SleepScore.isAwakeStage, so the gap still
+    // shows on the timeline without being counted as restless time in bed. Its overlap rank
+    // is the lowest of any real stage, so a recorded stage always wins the disputed region.
     val gapStages = orderedSessions.zipWithNext().mapNotNull { (previous, next) ->
         val gap = java.time.Duration.between(previous.endTime, next.startTime)
         if (!gap.isNegative && gap > java.time.Duration.ZERO && gap <= maxGap) {
-            SleepStage(previous.endTime, next.startTime, SleepStage.STAGE_AWAKE)
+            SleepStage(previous.endTime, next.startTime, SleepStage.STAGE_OUT_OF_BED)
         } else {
             null
         }
