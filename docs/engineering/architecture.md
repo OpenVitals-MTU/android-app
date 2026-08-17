@@ -19,7 +19,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
 - Room is at schema version 9. It holds derived summary caches plus the one table Health Connect cannot represent (`garmin_wellness_samples`); Health Connect remains the source of truth for everything it has a record type for
-- WorkManager is used for user-started Apple Health imports, offline map imports, and lightweight metric summary warmup
+- WorkManager is used for user-started Apple Health imports, offline map imports, lightweight metric summary warmup, and the opt-in periodic watch sync
 - Device integration lives under [`devices`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices): the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding
 - Phone-to-phone Health Connect sync lives under [`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync) and runs over Bluetooth Classic RFCOMM
 - A one-time Flutter-to-Kotlin data migrator lives under [`data/migration`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/migration) and runs from `OpenVitalsApp.onCreate()`
@@ -509,6 +509,8 @@ The app treats the Android foreground slot as effectively single. Activity recor
 
 The contention is resolved by refusing, not by queueing: the sync wizard reports `RECORDING_ACTIVE` and `GarminWatchSyncService.sync` refuses outright while a recording is live. A new long-running workflow must either reuse one of these or state which one it excludes. A Garmin watch sync deliberately runs with **no** foreground service of its own; its process-priority story is the companion-device association instead.
 
+The scheduled watch sync inherits that decision rather than escaping it. `WatchAutoSyncWorker` is a plain `CoroutineWorker`, never an expedited or foreground one: work the user did not start must not be able to take the single slot, and it has no business posting a notification about itself. It gets WorkManager's ordinary ten-minute window, which is ample for a watch that syncs every half hour, and it refuses on the same `GarminWatchSyncService.sync` recording gate everything else does.
+
 ### 2. One BLE radio, leased per address
 
 Every subsystem that opens a BLE link to a device goes through `RadioLeases`. The four owners are `SYNC`, `FIND`, `SETTINGS`, and `NOTIFICATIONS`, and on a given address they mutually exclude: a file sync, a find-my-watch ring, an open settings link, and the notification forwarder cannot hold the same watch at once.
@@ -693,8 +695,9 @@ The first cached surface is dashboard-style daily summaries, which also powers d
 The one non-cache table, `garmin_wellness_samples`, exists only because Health Connect has no record type for those series; it is not a precedent for mirroring records Health Connect can already hold.
 
 WorkManager is used for the Apple Health import worker and the offline map import worker because those workflows can be long-running and user-visible.
-It is also used for small metric summary warmup jobs after app open. Long-running device work does **not** use WorkManager: a watch sync and a phone-to-phone sync are both foreground, user-initiated, and hold their own coroutine scope. Do not design new features as if a
-general background-sync layer or raw-record database already exists.
+It is also used for small metric summary warmup jobs after app open, and for the one scheduled job in the app: [`WatchAutoSyncWorker`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/watches/WatchAutoSyncWorker.kt), the per-watch automatic sync a user opts into on the watch's device screen. That worker schedules the sync; it does not implement one. It resolves `DeviceSyncController` and runs exactly the sequence a tap runs, so there is still only one watch-sync path.
+
+Everything else about device work is unchanged: a watch sync and a phone-to-phone sync hold their own coroutine scope, the phone-to-phone one is foreground and user-initiated, and neither has a background variant. `WatchAutoSyncWorker` runs with no foreground service at all, deliberately (see the foreground-slot rule). Do not read it as a general background-sync layer, and do not design new features as if one or a raw-record database already exists.
 
 ### 5. Do not over-correct into a universal framework
 

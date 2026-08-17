@@ -6,6 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
+import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 
 class GarminDeviceStateStoreTest {
 
@@ -110,5 +111,42 @@ class GarminDeviceStateStoreTest {
         val reloaded = GarminDeviceStateStore(prefs)
         assertTrue(reloaded.syncedFileKeys(deviceId).isEmpty())
         assertTrue(reloaded.capabilities(deviceId).isEmpty())
+    }
+
+    @Test
+    fun `automatic sync is off until it is chosen, and survives a restart`() {
+        assertEquals(AutoSyncInterval.OFF, store.autoSyncInterval(deviceId))
+
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.HOURLY)
+
+        assertEquals(
+            AutoSyncInterval.HOURLY,
+            GarminDeviceStateStore(prefs).autoSyncInterval(deviceId),
+        )
+    }
+
+    @Test
+    fun `automatic sync is scoped per device`() {
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_30_MINUTES)
+
+        assertEquals(AutoSyncInterval.OFF, store.autoSyncInterval("ble-watch-2"))
+    }
+
+    @Test
+    fun `automatic sync is stored as minutes, not as an ordinal`() {
+        // The stored value has to mean the same thing to a build that adds or
+        // drops an interval, which an enum position would not.
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_2_HOURS)
+
+        assertEquals(120, prefs.getInt("garmin_auto_sync_minutes_$deviceId", 0))
+    }
+
+    @Test
+    fun `clear drops the automatic sync schedule too`() {
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_2_HOURS)
+
+        store.clear(deviceId)
+
+        assertEquals(AutoSyncInterval.OFF, GarminDeviceStateStore(prefs).autoSyncInterval(deviceId))
     }
 }

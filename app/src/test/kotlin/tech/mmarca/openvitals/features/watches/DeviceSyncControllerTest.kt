@@ -51,6 +51,9 @@ class DeviceSyncControllerTest {
         /** Left incomplete by a test to hold a sync mid-flight. */
         var gate: CompletableDeferred<Unit>? = null
 
+        /** Set by the test that breaks the never-throws contract on purpose. */
+        var thrown: Exception? = null
+
         override fun canSync(device: BleSensorDevice): Boolean = device.isGarminGfdi
 
         override suspend fun sync(
@@ -63,6 +66,7 @@ class DeviceSyncControllerTest {
             seenListenAfter = listenAfter
             progressToReport?.let { onProgress?.invoke(it) }
             gate?.await()
+            thrown?.let { throw it }
             return result
         }
     }
@@ -219,6 +223,60 @@ class DeviceSyncControllerTest {
         assertTrue(controller.state.value.isSyncing)
         port.gate!!.complete(Unit)
         job.join()
+    }
+
+    @Test
+    fun `a port that throws still leaves the radio free`() = runTest {
+        val watch = addWatch()
+        port.thrown = IllegalStateException("the port broke its contract")
+        val controller = controller()
+
+        controller.syncDevice(watch.id)!!.join()
+
+        // The contract says a sync never throws. If one does, the radio must
+        // not read busy for the rest of the process's life, silently refusing
+        // every later sync.
+        assertFalse(controller.state.value.isSyncing)
+        assertEquals("the port broke its contract", controller.state.value.errorMessage)
+        assertNotNull(controller.syncDevice(watch.id))
+    }
+
+    @Test
+    fun `a silent failure ends idle without a banner`() = runTest {
+        val watch = addWatch()
+        port.result = DeviceSyncResult.Failed("Could not connect: timeout")
+        val controller = controller()
+
+        // The scheduled sync nobody asked for: a watch out of range at 3am
+        // must not leave a red message on a screen the user opens later.
+        controller.syncDevice(watch.id, silent = true)!!.join()
+
+        assertFalse(controller.state.value.isSyncing)
+        assertNull(controller.state.value.errorMessage)
+    }
+
+    @Test
+    fun `a silent success still reports the files it took`() = runTest {
+        val watch = addWatch()
+        port.result = DeviceSyncResult.Succeeded(4)
+        val controller = controller()
+
+        controller.syncDevice(watch.id, silent = true)!!.join()
+
+        assertEquals(4, controller.state.value.lastFileCount)
+    }
+
+    @Test
+    fun `the outcome comes back to the caller that awaits it`() = runTest {
+        val watch = addWatch()
+        port.result = DeviceSyncResult.Failed("The watch is busy (notifications)")
+        val controller = controller()
+
+        // What the scheduled run reads to decide between a retry and waiting
+        // for its next period.
+        val result = controller.syncDevice(watch.id, silent = true)!!.await()
+
+        assertEquals(DeviceSyncResult.Failed("The watch is busy (notifications)"), result)
     }
 
     @Test

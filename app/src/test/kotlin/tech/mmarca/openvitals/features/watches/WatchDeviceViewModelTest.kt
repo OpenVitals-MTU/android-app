@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -17,6 +18,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.devices.core.pairing.WatchBondResult
+import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 import tech.mmarca.openvitals.devices.core.pairing.WatchPairingPort
 import tech.mmarca.openvitals.devices.garmin.GarminCapability
 import tech.mmarca.openvitals.devices.garmin.GarminDeviceStateStore
@@ -80,6 +82,14 @@ class WatchDeviceViewModelTest {
     private lateinit var stateStore: GarminDeviceStateStore
     private lateinit var pairing: FakePairing
 
+    /**
+     * The scheduler owns both the stored interval and the `WorkManager` side,
+     * so it is stubbed as one thing that remembers what it was told. The
+     * view-model's whole job is to hand the choice over and read it back.
+     */
+    private lateinit var autoSyncScheduler: WatchAutoSyncScheduler
+    private val autoSyncIntervals = mutableMapOf<String, AutoSyncInterval>()
+
     @Before
     fun setUp() {
         val context = mockk<Context>()
@@ -87,6 +97,14 @@ class WatchDeviceViewModelTest {
         repo = BleDeviceRepository(context)
         stateStore = GarminDeviceStateStore(FakeSharedPreferences())
         pairing = FakePairing()
+        autoSyncIntervals.clear()
+        autoSyncScheduler = mockk(relaxed = true)
+        every { autoSyncScheduler.interval(any()) } answers {
+            autoSyncIntervals[firstArg()] ?: AutoSyncInterval.OFF
+        }
+        every { autoSyncScheduler.setInterval(any(), any()) } answers {
+            autoSyncIntervals[firstArg()] = secondArg()
+        }
     }
 
     private fun addWatch(): BleSensorDevice = repo.addDevice(
@@ -120,6 +138,7 @@ class WatchDeviceViewModelTest {
             every { it.agps } returns MutableStateFlow(GarminAgpsState())
         },
         onboardWearOsWatch = mockk<OnboardWearOsWatchUseCase>(relaxed = true),
+        autoSyncScheduler = autoSyncScheduler,
     )
 
     /**
@@ -209,5 +228,35 @@ class WatchDeviceViewModelTest {
 
         assertTrue(repo.devices.isEmpty())
         assertTrue(pairing.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `automatic sync starts off and shows the interval that was picked`() = runTest {
+        val watch = addWatch()
+        val vm = viewModel(watch.id)
+
+        assertEquals(AutoSyncInterval.OFF, vm.uiState.value.autoSync)
+
+        vm.setAutoSync(AutoSyncInterval.HOURLY)
+
+        // Read back through the scheduler, not held in the screen: the stored
+        // choice and the periodic work are the same fact, and the row must
+        // show the one that is actually scheduled.
+        assertEquals(AutoSyncInterval.HOURLY, vm.uiState.value.autoSync)
+        verify { autoSyncScheduler.setInterval(watch.id, AutoSyncInterval.HOURLY) }
+    }
+
+    @Test
+    fun `forgetting a watch stops its automatic sync`() = runTest {
+        val watch = addWatch()
+        val vm = viewModel(watch.id)
+        vm.setAutoSync(AutoSyncInterval.EVERY_30_MINUTES)
+
+        vm.removeDevice()
+        awaitPairingCalls(expected = 2)
+
+        // A schedule outliving the watch would wake the radio to talk to
+        // something the registry no longer knows about.
+        verify { autoSyncScheduler.forget(watch.id) }
     }
 }

@@ -4,15 +4,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
@@ -76,14 +77,6 @@ class DeviceSyncController(
     private val _state = MutableStateFlow(DeviceSyncUiState())
     val state: StateFlow<DeviceSyncUiState> = _state.asStateFlow()
 
-    /**
-     * Syncs [deviceId], one sync at a time — the radio is a single resource,
-     * and two sessions against one watch would fight over its handles.
-     *
-     * A device no [DeviceSyncPort.canSync] claims (a live sensor, an unknown
-     * id) is a no-op. Returns the running job, or null when nothing started.
-     * [listenAfter] is the diagnostic listen window held open after the sync.
-     */
     companion object {
         /**
          * How long a MANUAL sync lingers after the files are pulled.
@@ -98,7 +91,31 @@ class DeviceSyncController(
         val MANUAL_SYNC_LINGER: Duration = 20.seconds
     }
 
-    fun syncDevice(deviceId: String, listenAfter: Duration = Duration.ZERO): Job? {
+    /**
+     * Syncs [deviceId], one sync at a time — the radio is a single resource,
+     * and two sessions against one watch would fight over its handles.
+     *
+     * A device no [DeviceSyncPort.canSync] claims (a live sensor, an unknown
+     * id) is a no-op. Returns the running sync, or null when nothing started.
+     * [listenAfter] is the diagnostic listen window held open after the sync.
+     *
+     * [silent] is for a sync nobody asked for (the automatic schedule): the
+     * run drives the same progress state, so the screens still show the radio
+     * as busy and a second sync cannot start, but a failure ends idle instead
+     * of throwing a red banner onto a screen the user never touched. A watch
+     * out of range at 3am is not an error to report; the last-sync time says
+     * everything there is to say.
+     *
+     * The result comes back through a [Deferred] rather than a bare [Job] so a
+     * background caller can act on the outcome. Nothing has to await it —
+     * [DeviceSyncPort.sync] never throws, so an ignored one cannot swallow a
+     * failure that mattered.
+     */
+    fun syncDevice(
+        deviceId: String,
+        listenAfter: Duration = Duration.ZERO,
+        silent: Boolean = false,
+    ): Deferred<DeviceSyncResult>? {
         if (_state.value.isSyncing) return null
         val device = deviceRepository.devices.firstOrNull { it.id == deviceId } ?: return null
         if (!syncPort.canSync(device)) return null
@@ -109,36 +126,53 @@ class DeviceSyncController(
             syncingDeviceId = deviceId,
             phase = DeviceSyncPhase.HANDSHAKE,
         )
-        return scope.launch {
+        return scope.async {
             // The port owns the pull → import → store → stamp sequence; this
             // controller only drives the row's state off its progress/outcome.
-            val result = syncPort.sync(
-                device,
-                listenAfter = listenAfter,
-                onProgress = { progress ->
-                    _state.update { current ->
-                        if (current.syncingDeviceId != deviceId) {
-                            current
-                        } else {
-                            current.copy(
-                                phase = progress.phase,
-                                filesTotal = progress.filesTotal,
-                                filesDone = progress.filesDone,
-                            )
+            //
+            // The catch is defensive, not expected: the seam's contract is
+            // that a sync never throws. It matters because `async` holds an
+            // uncaught exception until somebody awaits it, so a port that
+            // broke the contract would otherwise leave the radio reading busy
+            // for the rest of the process's life and silently refuse every
+            // later sync.
+            val result = try {
+                syncPort.sync(
+                    device,
+                    listenAfter = listenAfter,
+                    onProgress = { progress ->
+                        _state.update { current ->
+                            if (current.syncingDeviceId != deviceId) {
+                                current
+                            } else {
+                                current.copy(
+                                    phase = progress.phase,
+                                    filesTotal = progress.filesTotal,
+                                    filesDone = progress.filesDone,
+                                )
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            } catch (error: CancellationException) {
+                _state.value = DeviceSyncUiState()
+                throw error
+            } catch (error: Exception) {
+                DeviceSyncResult.Failed(error.message ?: error.toString())
+            }
             _state.value = when (result) {
                 is DeviceSyncResult.Succeeded -> DeviceSyncUiState(
                     phase = DeviceSyncPhase.COMPLETE,
                     lastFileCount = result.fileCount,
                 )
 
-                is DeviceSyncResult.Failed -> DeviceSyncUiState(
-                    errorMessage = result.message,
-                )
+                is DeviceSyncResult.Failed -> if (silent) {
+                    DeviceSyncUiState()
+                } else {
+                    DeviceSyncUiState(errorMessage = result.message)
+                }
             }
+            result
         }
     }
 

@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsImport
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsKind
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsState
@@ -51,6 +52,8 @@ data class WatchDeviceUiState(
     val isDetectingSensors: Boolean = false,
     /** Companion mode: hold the link whenever the watch is in range. */
     val stayConnected: Boolean = false,
+    /** How often the watch syncs on its own, or OFF for by-hand only. */
+    val autoSync: AutoSyncInterval = AutoSyncInterval.OFF,
     /** Live readings streamed over that link. */
     val liveReadings: Boolean = false,
     /** The watch may read the phone's calendar. Off by default. */
@@ -86,6 +89,7 @@ class WatchDeviceViewModel @Inject constructor(
     private val deviceRepository: BleDeviceRepository,
     private val stateStore: GarminDeviceStateStore,
     private val syncController: DeviceSyncController,
+    private val autoSyncScheduler: WatchAutoSyncScheduler,
     private val actionsController: GarminWatchActionsController,
     private val sensorCoordinator: BleSensorCoordinator,
     private val onboardGarminWatch: OnboardGarminWatchUseCase,
@@ -125,6 +129,7 @@ class WatchDeviceViewModel @Inject constructor(
             sync = sync,
             find = find,
             stayConnected = stateStore.stayConnected(deviceId),
+            autoSync = autoSyncScheduler.interval(deviceId),
             liveReadings = stateStore.liveReadings(deviceId),
             calendarSync = stateStore.calendarSync(deviceId),
             calendarPermissionMissing = stateStore.calendarSync(deviceId) &&
@@ -193,6 +198,16 @@ class WatchDeviceViewModel @Inject constructor(
         localState.update { it.copy(stayConnected = enabled) }
     }
 
+    /**
+     * Picks how often the watch syncs on its own. The scheduler owns both
+     * halves — the stored choice and the periodic work — so this cannot leave
+     * one saying something the other does not.
+     */
+    fun setAutoSync(interval: AutoSyncInterval) {
+        autoSyncScheduler.setInterval(deviceId, interval)
+        localState.update { it.copy(autoSync = interval) }
+    }
+
     fun syncNow() {
         syncController.syncDevice(deviceId, listenAfter = DeviceSyncController.MANUAL_SYNC_LINGER)
     }
@@ -248,6 +263,9 @@ class WatchDeviceViewModel @Inject constructor(
         // its address, which the registry is about to stop holding.
         val device = deviceRepository.devices.firstOrNull { it.id == deviceId }
         deviceRepository.removeDevice(deviceId)
+        // Before the early return: a schedule left running against a watch the
+        // registry no longer knows would wake the radio for nothing.
+        autoSyncScheduler.forget(deviceId)
         if (device == null) return
         if (device.isGarminGfdi) {
             stateStore.clear(deviceId)

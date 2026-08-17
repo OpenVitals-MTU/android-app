@@ -515,6 +515,12 @@
     <string name="settings_watch_live_readings">Live readings</string>
     <string name="settings_watch_live_readings_body">Streams heart rate and steps from the watch while it is connected, for the dashboard. Uses more watch battery.</string>
     <string name="settings_watch_live_now">Now: %1$d bpm</string>
+    <string name="settings_watch_auto_sync">Automatic sync</string>
+    <string name="settings_watch_auto_sync_body">Syncs the watch on its own, so sleep and activity arrive without opening the app. The watch has to be in range, and Android decides the exact moment, so a run can be a little late. Off means the watch is only synced when you ask.</string>
+    <string name="settings_watch_auto_sync_off">Off</string>
+    <string name="settings_watch_auto_sync_30m">30 min</string>
+    <string name="settings_watch_auto_sync_1h">1 h</string>
+    <string name="settings_watch_auto_sync_2h">2 h</string>
     <string name="settings_watch_stay_connected">Stay connected</string>
     <string name="settings_watch_stay_connected_body">Keeps a link to the watch whenever it is in range. The watch can then fetch weather, find this phone, and hand over new recordings the moment they finish — at some cost to watch and phone battery.</string>
     <string name="garmin_find_phone_channel">Find my phone</string>

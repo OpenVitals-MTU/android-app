@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import org.json.JSONArray
+import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 
 /**
  * Garmin's own per-device state, kept out of the generic `BleDeviceRepository`
@@ -132,6 +133,22 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(stayConnectedPrefsKey(deviceId), enabled) }
     }
 
+    /**
+     * How often this watch is synced on its own. Off by default: a sync wakes
+     * both radios and spends the wearer's battery, so it stays something they
+     * asked for.
+     *
+     * Stored as MINUTES rather than an ordinal, so an interval this build
+     * offers and a later one drops degrades to off instead of silently
+     * becoming a different schedule.
+     */
+    fun autoSyncInterval(deviceId: String): AutoSyncInterval =
+        AutoSyncInterval.fromMinutes(prefs.getInt(autoSyncPrefsKey(deviceId), 0))
+
+    fun setAutoSyncInterval(deviceId: String, interval: AutoSyncInterval) {
+        prefs.edit { putInt(autoSyncPrefsKey(deviceId), interval.minutes) }
+    }
+
     fun clear(deviceId: String) {
         clearSyncedFileKeys(deviceId)
         prefs.edit {
@@ -140,6 +157,7 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
             remove(setupWizardPrefsKey(deviceId))
             remove(liveReadingsPrefsKey(deviceId))
             remove(calendarSyncPrefsKey(deviceId))
+            remove(autoSyncPrefsKey(deviceId))
         }
     }
 
@@ -154,6 +172,8 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     private fun liveReadingsPrefsKey(deviceId: String) = "garmin_live_readings_$deviceId"
 
     private fun calendarSyncPrefsKey(deviceId: String) = "garmin_calendar_sync_$deviceId"
+
+    private fun autoSyncPrefsKey(deviceId: String) = "garmin_auto_sync_minutes_$deviceId"
 
     companion object {
         const val PREFS_FILE = "garmin_device_state"

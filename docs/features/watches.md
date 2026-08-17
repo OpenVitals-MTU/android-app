@@ -20,7 +20,7 @@ Watch support is developed and verified against a single Garmin model. It is off
 - The protocol is not model-specific, and OpenVitals asks each watch what it can do rather than assuming. A watch that does not report find-my-watch gets no Find button; one without a settings tree gets no settings row.
 - **Watches using the older single-link Garmin transport are not supported.** Pairing probes the watch and warns when it cannot recognize the connection at all. A watch that pairs but turns out to use the older transport reports an error the first time it is asked to sync.
 - A file type OpenVitals does not understand is skipped rather than failing the sync.
-- Sync is always something the user asked for. There is no background or scheduled sync.
+- Sync happens by hand, or on a schedule the user chose per watch. Nothing syncs until one of those two says so.
 
 ## Pairing A Watch
 
@@ -48,6 +48,24 @@ The watch hands over the files it recorded since last time and OpenVitals import
 The device screen shows whether the watch has ever been synced and when it last was. A link dropped mid-sync is not treated as a failure: whatever arrived is kept.
 
 The dashboard carries a watch tile showing the most recently synced watch with its battery, last sync time, and a sync button, so a sync does not require a trip through Settings. While live readings are streaming (see below), the tile shows the current heart rate and step count instead of the last sync time.
+
+### Automatic Sync
+
+"Automatic sync", on the watch's device screen, syncs the watch on its own every 30 minutes, hour, or two hours. Off by default, and set per watch, so two paired watches can be on different schedules or only one of them on a schedule at all.
+
+A scheduled run does exactly what tapping Sync does, with three differences:
+
+- It is quiet. A run that could not reach the watch leaves no error on screen; the last sync time on the device screen and the watches list is what says whether the schedule is working. A watch out of range at 3am is not a fault to report.
+- It does not linger on the link afterwards. A manual sync holds the connection open a few extra seconds so the watch can run its own errands, notably fetching weather; a scheduled one hangs up as soon as the files are in, because that time costs radio on both sides.
+- It refuses rather than queues. If the radio is busy, an activity recording is in progress, or a sync is already running, the run steps aside and waits for the next one. It retries a couple of times on a short backoff first, since a watch that just walked out of range is usually back within minutes.
+
+The exact moment is Android's to choose, not the app's. The schedule is a floor, not an alarm: a run can arrive late, and the phone being in Doze, below its low-battery mark, or out of range of the watch all delay it. Granting the battery-optimization exemption the pairing checklist offers is what keeps overnight runs close to their schedule. The schedule survives a reboot and an app update without being re-armed.
+
+One thing does wait for the app to be opened. Body Energy is recomputed from Health Connect after a sync, and reading Health Connect in the background needs its own grant, so on a phone where that grant is missing a scheduled sync lands the data and leaves the recomputation to the next time the app is open. Nothing is lost either way.
+
+Nothing about this changes what is written or where. The same importer runs, the same watermarks apply, and syncing the same day twice still does not double anything.
+
+If "Stay connected" is also on, the held link is given up for the duration of the run and re-established afterwards, the same handover a manual sync uses.
 
 ### Recorded Activities
 

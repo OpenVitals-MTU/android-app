@@ -37,6 +37,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsFileState
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsKind
 import tech.mmarca.openvitals.devices.garmin.GarminCapability
@@ -226,6 +230,12 @@ fun WatchDeviceScreen(
 
         SectionHeader(stringResource(R.string.settings_watch_section_device))
         if (isGarmin) {
+            // First in the section: the schedule is what decides whether the
+            // rest of this screen ever has to be visited again.
+            AutoSyncCard(
+                selected = state.autoSync,
+                onSelect = viewModel::setAutoSync,
+            )
             OpenVitalsCard {
                 Column(
                     modifier = Modifier
@@ -501,6 +511,72 @@ internal fun ActionsRow(
                 enabled = !busy,
                 onClick = onToggleFind,
             )
+        }
+    }
+}
+
+/**
+ * How often the watch syncs on its own.
+ *
+ * A segmented row rather than a switch plus a dropdown: there are four
+ * choices, off is one of them, and the whole point is seeing at a glance which
+ * one is in force. The body says the two things a schedule cannot promise (the
+ * watch has to be in range, and Android decides the exact moment), because a
+ * user who expects a sync at 09:00 sharp would otherwise read a normal
+ * fifteen-minute drift as the feature being broken.
+ */
+@Composable
+private fun AutoSyncCard(
+    selected: AutoSyncInterval,
+    onSelect: (AutoSyncInterval) -> Unit,
+) {
+    OpenVitalsCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_watch_auto_sync),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = stringResource(R.string.settings_watch_auto_sync_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.sm),
+            ) {
+                AutoSyncInterval.entries.forEachIndexed { index, interval ->
+                    SegmentedButton(
+                        selected = selected == interval,
+                        onClick = { onSelect(interval) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = AutoSyncInterval.entries.size,
+                        ),
+                        label = {
+                            Text(
+                                text = stringResource(
+                                    when (interval) {
+                                        AutoSyncInterval.OFF ->
+                                            R.string.settings_watch_auto_sync_off
+                                        AutoSyncInterval.EVERY_30_MINUTES ->
+                                            R.string.settings_watch_auto_sync_30m
+                                        AutoSyncInterval.HOURLY ->
+                                            R.string.settings_watch_auto_sync_1h
+                                        AutoSyncInterval.EVERY_2_HOURS ->
+                                            R.string.settings_watch_auto_sync_2h
+                                    },
+                                ),
+                            )
+                        },
+                    )
+                }
+            }
         }
     }
 }

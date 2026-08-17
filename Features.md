@@ -380,6 +380,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Write watch sleep sessions and stages, heart rate, resting heart rate, heart rate variability, respiratory rate, VO2 max, basal metabolic rate, and intraday steps, distance, and active calories to Health Connect.
 - Store watch-only measurements locally where Health Connect has no record type for them.
 - Re-syncing the same day writes no duplicates.
+- Sync a Garmin watch automatically every 30 minutes, hour, or two hours, chosen per watch and off by default.
 - Forward phone notifications to a paired watch, after an in-app disclosure and Android's notification access.
 - Silence individual apps so their notifications do not reach the watch.
 - Dismiss, reply to, and act on a forwarded notification from the watch.

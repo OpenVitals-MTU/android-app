@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.data.migration.FlutterDataMigrator
 import tech.mmarca.openvitals.data.migration.FlutterMigrationEntryPoint
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
+import tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -23,6 +24,7 @@ class OpenVitalsApp : Application() {
     @Inject lateinit var reminderRestoreBootstrap: ReminderRestoreBootstrap
     @Inject lateinit var syncedRecordOriginRepository: SyncedRecordOriginRepository
     @Inject lateinit var garminNotificationBridge: tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
+    @Inject lateinit var watchAutoSyncScheduler: WatchAutoSyncScheduler
 
     override fun onCreate() {
         // The one-time Flutter->Kotlin data migration is deliberately split
@@ -56,6 +58,11 @@ class OpenVitalsApp : Application() {
         // it: presence observation plus the held watch link, for whichever
         // watch has stay-connected on.
         garminNotificationBridge.onAppStart()
+        // WorkManager keeps the automatic sync schedules across reboots and
+        // updates by itself; this re-plans them after the cases it does not
+        // cover (a force-stop, a restore onto another phone) and keeps any
+        // live schedule where it is.
+        watchAutoSyncScheduler.restoreAll()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
