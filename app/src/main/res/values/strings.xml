@@ -2332,7 +2332,7 @@
     <string name="body_energy_confidence_no_data">No data</string>
     <string name="body_energy_personalization_watch_none">Sync a watch that tracks its own body energy to start personalising these.</string>
     <plurals name="body_energy_personalization_watch_body">
-        <item quantity="one">Learned from 1 watch reading. Each is a plain multiplier you can see below.</item>
+        <item quantity="one">Learned from %1$d watch reading. Each is a plain multiplier you can see below.</item>
         <item quantity="other">Learned from %1$d watch readings. Each is a plain multiplier you can see below.</item>
     </plurals>
 

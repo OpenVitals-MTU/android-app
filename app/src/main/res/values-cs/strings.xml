@@ -509,6 +509,12 @@
     <string name="settings_watch_live_readings">Živá měření</string>
     <string name="settings_watch_live_readings_body">Přenáší z hodinek srdeční tep a kroky, dokud jsou připojené, pro přehled. Spotřebuje víc baterie hodinek.</string>
     <string name="settings_watch_live_now">Nyní: %1$d tepů/min</string>
+    <string name="settings_watch_auto_sync">Automatická synchronizace</string>
+    <string name="settings_watch_auto_sync_body">Synchronizuje hodinky samo, takže spánek a aktivita dorazí i bez otevření aplikace. Hodinky musí být v dosahu a přesný okamžik určuje Android, takže se běh může trochu opozdit. Vypnuto znamená, že se hodinky synchronizují jen na vyžádání.</string>
+    <string name="settings_watch_auto_sync_off">Vypnuto</string>
+    <string name="settings_watch_auto_sync_30m">30 min</string>
+    <string name="settings_watch_auto_sync_1h">1 h</string>
+    <string name="settings_watch_auto_sync_2h">2 h</string>
     <string name="settings_watch_stay_connected">Zůstat připojeno</string>
     <string name="settings_watch_stay_connected_body">Udržuje spojení s hodinkami, kdykoli jsou v dosahu. Hodinky pak mohou stahovat počasí, najít tento telefon a předat nové záznamy hned, jak skončí — za cenu vyšší spotřeby baterie hodinek i telefonu.</string>
     <string name="garmin_find_phone_channel">Najít můj telefon</string>
@@ -2296,7 +2302,7 @@
     <string name="body_energy_confidence_no_data">Žádná data</string>
     <string name="body_energy_personalization_watch_none">Synchronizujte hodinky, které samy sledují tělesnou energii, a začněte si to přizpůsobovat.</string>
     <plurals name="body_energy_personalization_watch_body">
-        <item quantity="one">Naučeno z 1 měření z hodinek. Každé je prostý násobitel, který vidíte níže.</item>
+        <item quantity="one">Naučeno z %1$d měření z hodinek. Každé je prostý násobitel, který vidíte níže.</item>
         <item quantity="few">Naučeno z %1$d měření z hodinek. Každé je prostý násobitel, který vidíte níže.</item>
         <item quantity="many">Naučeno z %1$d měření z hodinek. Každé je prostý násobitel, který vidíte níže.</item>
         <item quantity="other">Naučeno z %1$d měření z hodinek. Každé je prostý násobitel, který vidíte níže.</item>
