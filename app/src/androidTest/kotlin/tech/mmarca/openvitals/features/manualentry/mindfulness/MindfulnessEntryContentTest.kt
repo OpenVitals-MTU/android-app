@@ -45,11 +45,13 @@ class MindfulnessEntryContentTest {
                         onResumeTimer = {},
                         onSaveTimerSession = {},
                         onDiscardTimer = {},
+                        onNotesChanged = {},
                         onRequestWritePermission = {},
                     )
                     MindfulnessManualEntryCard(
                         state = STATE,
                         onMinutesChanged = {},
+                        onNotesChanged = {},
                         onEntryStartTimeChanged = {},
                         onAddEntry = {},
                         onRequestWritePermission = {},

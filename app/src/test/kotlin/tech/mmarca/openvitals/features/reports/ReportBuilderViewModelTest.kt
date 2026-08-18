@@ -10,6 +10,7 @@ import io.mockk.slot
 import io.mockk.unmockkStatic
 import java.io.File
 import java.time.LocalDate
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -26,6 +27,7 @@ import tech.mmarca.openvitals.domain.model.ReportGranularity
 import tech.mmarca.openvitals.domain.model.ReportMetric
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ReportBuilderViewModelTest {
 
     @get:Rule
