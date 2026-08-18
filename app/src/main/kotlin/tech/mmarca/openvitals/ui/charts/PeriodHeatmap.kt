@@ -1,10 +1,12 @@
 package tech.mmarca.openvitals.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +23,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -81,26 +88,59 @@ fun periodMonthHeatmapCells(
         List(trailingEmptyCells) { emptyHeatmapCell() }
 }
 
+/**
+ * The year grid cells, Monday-aligned with leading/trailing fillers so they chunk
+ * into whole week columns.
+ *
+ * [rolling] chooses the span, exactly as it does for [periodMonthHeatmapCells]. A
+ * calendar year (the default) draws the whole year of [DatePeriod.start]. A
+ * rolling window ("last 365 days") straddles two calendar years, so it draws
+ * exactly `[period.start, period.end]` — drawing the start's calendar year
+ * dropped every day of the second year, which for a window ending today is
+ * almost all of the data.
+ */
 fun periodYearHeatmapCells(
     values: List<PeriodChartValue>,
     period: DatePeriod,
+    rolling: Boolean = false,
 ): List<PeriodHeatmapCell> {
-    val firstDay = period.start.withDayOfYear(1)
-    val lastDay = firstDay.withDayOfYear(firstDay.lengthOfYear())
+    val firstDay = if (rolling) period.start else period.start.withDayOfYear(1)
+    val lastDay = if (rolling) period.end else firstDay.withDayOfYear(firstDay.lengthOfYear())
     val valuesByDate = values
         .groupBy { it.date }
         .mapValues { (_, dayValues) -> dayValues.sumOf { it.value } }
 
-    return generateSequence(firstDay) { date ->
+    val leadingEmptyCells = firstDay.dayOfWeek.value - DayOfWeek.MONDAY.value
+    val dayCells = generateSequence(firstDay) { date ->
         date.plusDays(1).takeUnless { it.isAfter(lastDay) }
     }.map { date ->
         PeriodHeatmapCell(
             date = date,
             value = valuesByDate[date] ?: 0.0,
-            isWithinLoadedPeriod = !date.isAfter(period.end),
+            isWithinLoadedPeriod = !date.isBefore(period.start) && !date.isAfter(period.end),
         )
     }.toList()
+
+    val totalCellsBeforeTrailing = leadingEmptyCells + dayCells.size
+    val trailingEmptyCells = (7 - totalCellsBeforeTrailing % 7).takeUnless { it == 7 } ?: 0
+
+    return List(leadingEmptyCells) { emptyHeatmapCell() } +
+        dayCells +
+        List(trailingEmptyCells) { emptyHeatmapCell() }
 }
+
+/**
+ * The week columns that begin a month: column index to the month's first day.
+ * These carry the grid's labels — the twelve landmarks that make a year of dots
+ * navigable.
+ */
+internal fun yearHeatmapMonthStartColumns(
+    weeks: List<List<PeriodHeatmapCell>>,
+): List<Pair<Int, LocalDate>> =
+    weeks.mapIndexedNotNull { index, week ->
+        week.firstNotNullOfOrNull { cell -> cell.date?.takeIf { it.dayOfMonth == 1 } }
+            ?.let { monthStart -> index to monthStart }
+    }
 
 @Composable
 fun PeriodMonthHeatmap(
@@ -219,9 +259,12 @@ fun PeriodYearHeatmap(
     period: DatePeriod,
     accentColor: Color,
     summaryText: String,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val cells = remember(values, period) { periodYearHeatmapCells(values, period) }
+    val rolling = LocalPeriodWeekMode.current.usesRollingDates()
+    val cells = remember(values, period, rolling) { periodYearHeatmapCells(values, period, rolling) }
+    val weeks = remember(cells) { cells.chunked(DaysPerWeek) }
     val minPositiveValue = cells.map { it.value }.filter { it > 0.0 }.minOrNull() ?: 0.0
     val maxValue = cells.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
 
@@ -236,38 +279,104 @@ fun PeriodYearHeatmap(
         Column(modifier = Modifier.padding(16.dp)) {
             PeriodHeatmapHeader(title, summaryText)
             Spacer(Modifier.height(16.dp))
-            cells.chunked(20).forEach { rowCells ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    rowCells.forEach { cell ->
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(
-                                    color = heatmapCellColor(
-                                        value = cell.value,
-                                        minPositiveValue = minPositiveValue,
-                                        maxValue = maxValue,
-                                        isWithinLoadedPeriod = cell.isWithinLoadedPeriod,
-                                        accentColor = accentColor,
-                                    ),
-                                    shape = CircleShape,
-                                ),
-                        )
-                    }
-                    if (rowCells.size < 20) {
-                        Spacer(Modifier.weight(1f))
-                    }
-                }
-                Spacer(Modifier.height(4.dp))
-            }
+            YearHeatmapGrid(
+                weeks = weeks,
+                minPositiveValue = minPositiveValue,
+                maxValue = maxValue,
+                accentColor = accentColor,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
             Spacer(Modifier.height(8.dp))
             HeatmapLegend(accentColor = accentColor, minPositiveValue = minPositiveValue, maxValue = maxValue)
         }
     }
 }
+
+/**
+ * The year as a week-per-column calendar: Monday at the top of each column, month
+ * names over the columns that start them. Rows of an arbitrary twenty days had no
+ * calendar meaning — the reader could not find April, or see that only weekends
+ * were practiced, which are the two questions a year of dots exists to answer.
+ */
+@Composable
+private fun YearHeatmapGrid(
+    weeks: List<List<PeriodHeatmapCell>>,
+    minPositiveValue: Double,
+    maxValue: Double,
+    accentColor: Color,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    val emptyDayColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f)
+    val outsidePeriodColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f)
+    val labelStyle = MaterialTheme.typography.labelSmall.copy(
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    val textMeasurer = rememberTextMeasurer()
+    val monthFormatter = remember(dateTimeFormatterProvider) { dateTimeFormatterProvider.chartMonth() }
+    val monthColumns = remember(weeks) { yearHeatmapMonthStartColumns(weeks) }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val weekCount = weeks.size.coerceAtLeast(1)
+        val cell = (maxWidth - YearHeatmapCellGap * (weekCount - 1)) / weekCount
+        val gridHeight = YearHeatmapLabelHeight +
+            cell * DaysPerWeek +
+            YearHeatmapCellGap * (DaysPerWeek - 1)
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(gridHeight),
+        ) {
+            val cellPx = cell.toPx()
+            val gapPx = YearHeatmapCellGap.toPx()
+            val gridTop = YearHeatmapLabelHeight.toPx()
+            val cornerRadius = CornerRadius(cellPx * 0.3f, cellPx * 0.3f)
+
+            // Greedy from the left, like the bar charts' axis: a label that would
+            // sit on a labelled neighbour (or run off the plot) is dropped rather
+            // than drawn into it.
+            var previousLabelEnd = Float.NEGATIVE_INFINITY
+            monthColumns.forEach { (weekIndex, monthStart) ->
+                val left = weekIndex * (cellPx + gapPx)
+                val layout = textMeasurer.measure(
+                    text = monthFormatter.format(monthStart),
+                    style = labelStyle,
+                    maxLines = 1,
+                )
+                if (left >= previousLabelEnd && left + layout.size.width <= size.width) {
+                    drawText(layout, topLeft = Offset(left, 0f))
+                    previousLabelEnd = left + layout.size.width + 4.dp.toPx()
+                }
+            }
+
+            weeks.forEachIndexed { weekIndex, week ->
+                val left = weekIndex * (cellPx + gapPx)
+                week.forEachIndexed { dayIndex, dayCell ->
+                    // Fillers keep the columns Monday-aligned; there is no day
+                    // there, so nothing is drawn.
+                    if (dayCell.date == null) return@forEachIndexed
+                    drawRoundRect(
+                        color = heatmapCellColor(
+                            value = dayCell.value,
+                            minPositiveValue = minPositiveValue,
+                            maxValue = maxValue,
+                            isWithinLoadedPeriod = dayCell.isWithinLoadedPeriod,
+                            accentColor = accentColor,
+                            emptyDayColor = emptyDayColor,
+                            outsidePeriodColor = outsidePeriodColor,
+                        ),
+                        topLeft = Offset(left, gridTop + dayIndex * (cellPx + gapPx)),
+                        size = Size(cellPx, cellPx),
+                        cornerRadius = cornerRadius,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val DaysPerWeek = 7
+private val YearHeatmapCellGap = 1.5.dp
+private val YearHeatmapLabelHeight = 18.dp
 
 @Composable
 fun PeriodHistoryChart(
@@ -302,6 +411,7 @@ fun PeriodHistoryChart(
             period = period,
             accentColor = accentColor,
             summaryText = summaryText,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
             modifier = modifier,
         )
         TimeRange.DAY,
@@ -396,20 +506,45 @@ private fun heatmapCellColor(
     maxValue: Double,
     isWithinLoadedPeriod: Boolean,
     accentColor: Color,
+): Color = heatmapCellColor(
+    value = value,
+    minPositiveValue = minPositiveValue,
+    maxValue = maxValue,
+    isWithinLoadedPeriod = isWithinLoadedPeriod,
+    accentColor = accentColor,
+    emptyDayColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f),
+    outsidePeriodColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f),
+)
+
+private fun heatmapCellColor(
+    value: Double,
+    minPositiveValue: Double,
+    maxValue: Double,
+    isWithinLoadedPeriod: Boolean,
+    accentColor: Color,
+    emptyDayColor: Color,
+    outsidePeriodColor: Color,
 ): Color {
     if (!isWithinLoadedPeriod) {
-        return MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f)
+        return outsidePeriodColor
     }
     if (value <= 0.0) {
-        return MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f)
+        return emptyDayColor
     }
     val fraction = if (maxValue <= minPositiveValue) {
         1f
     } else {
         ((value - minPositiveValue) / (maxValue - minPositiveValue)).toFloat().coerceIn(0f, 1f)
     }
-    return accentColor.copy(alpha = 0.25f + 0.75f * fraction)
+    return accentColor.copy(alpha = HeatmapMinCellAlpha + (1f - HeatmapMinCellAlpha) * fraction)
 }
+
+/**
+ * The faintest a tracked day may be drawn. The year grid's cells are a few dp
+ * across; at a 0.25 floor the lightest of them was indistinguishable from the
+ * untracked grey, and a day you practiced must never read as one you did not.
+ */
+private const val HeatmapMinCellAlpha = 0.4f
 
 private fun emptyHeatmapCell(): PeriodHeatmapCell =
     PeriodHeatmapCell(

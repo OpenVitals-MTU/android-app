@@ -52,8 +52,12 @@ class PeriodHeatmapTest {
             period = period,
         )
 
-        assertEquals(365, cells.size)
-        assertEquals(3.0, cells.first().value, 0.0)
+        assertEquals(365, cells.count { it.date != null })
+        assertEquals(0, cells.size % 7)
+        // 2026-01-01 is a Thursday: three fillers keep the columns Monday-aligned.
+        assertNull(cells[0].date)
+        assertEquals(LocalDate.of(2026, 1, 1), cells[3].date)
+        assertEquals(3.0, cells[3].value, 0.0)
         assertFalse(cells.single { it.date == LocalDate.of(2026, 3, 2) }.isWithinLoadedPeriod)
     }
 
@@ -65,7 +69,45 @@ class PeriodHeatmapTest {
 
         val cells = periodYearHeatmapCells(emptyList(), period)
 
-        assertEquals(366, cells.size)
+        assertEquals(366, cells.count { it.date != null })
+        assertEquals(0, cells.size % 7)
         assertTrue(cells.any { it.date == LocalDate.of(2024, 2, 29) })
+    }
+
+    @Test fun `rolling year heatmap spans the loaded window across both calendar years`() {
+        val period = DatePeriod(
+            start = LocalDate.of(2025, 8, 19),
+            end = LocalDate.of(2026, 8, 18),
+        )
+
+        val cells = periodYearHeatmapCells(
+            values = listOf(PeriodChartValue(LocalDate.of(2026, 8, 10), 5.0)),
+            period = period,
+            rolling = true,
+        )
+        val dates = cells.mapNotNull { it.date }
+
+        assertEquals(365, dates.size)
+        assertEquals(LocalDate.of(2025, 8, 19), dates.first())
+        assertEquals(LocalDate.of(2026, 8, 18), dates.last())
+        val sessionDay = cells.single { it.date == LocalDate.of(2026, 8, 10) }
+        assertEquals(5.0, sessionDay.value, 0.0)
+        assertTrue(sessionDay.isWithinLoadedPeriod)
+    }
+
+    @Test fun `year heatmap month labels sit on the columns containing each month's first day`() {
+        val period = DatePeriod(
+            start = LocalDate.of(2026, 1, 1),
+            end = LocalDate.of(2026, 12, 31),
+        )
+
+        val weeks = periodYearHeatmapCells(emptyList(), period).chunked(7)
+        val labels = yearHeatmapMonthStartColumns(weeks)
+
+        assertEquals(12, labels.size)
+        assertEquals(0 to LocalDate.of(2026, 1, 1), labels.first())
+        assertTrue(labels.all { (column, monthStart) ->
+            monthStart.dayOfMonth == 1 && weeks[column].any { it.date == monthStart }
+        })
     }
 }
