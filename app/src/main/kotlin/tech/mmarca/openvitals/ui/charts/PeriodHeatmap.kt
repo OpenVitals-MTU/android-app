@@ -306,8 +306,8 @@ private fun YearHeatmapGrid(
     accentColor: Color,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    val emptyDayColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f)
-    val outsidePeriodColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f)
+    val emptyDayColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = HeatmapEmptyDayAlpha)
+    val outsidePeriodColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = HeatmapOutsidePeriodAlpha)
     val labelStyle = MaterialTheme.typography.labelSmall.copy(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -344,7 +344,7 @@ private fun YearHeatmapGrid(
                 )
                 if (left >= previousLabelEnd && left + layout.size.width <= size.width) {
                     drawText(layout, topLeft = Offset(left, 0f))
-                    previousLabelEnd = left + layout.size.width + 4.dp.toPx()
+                    previousLabelEnd = left + layout.size.width + YearHeatmapLabelGap.toPx()
                 }
             }
 
@@ -377,6 +377,9 @@ private fun YearHeatmapGrid(
 private const val DaysPerWeek = 7
 private val YearHeatmapCellGap = 1.5.dp
 private val YearHeatmapLabelHeight = 18.dp
+
+/** The clear space two neighbouring month labels keep between them. */
+private val YearHeatmapLabelGap = 4.dp
 
 @Composable
 fun PeriodHistoryChart(
@@ -512,8 +515,8 @@ private fun heatmapCellColor(
     maxValue = maxValue,
     isWithinLoadedPeriod = isWithinLoadedPeriod,
     accentColor = accentColor,
-    emptyDayColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f),
-    outsidePeriodColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f),
+    emptyDayColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = HeatmapEmptyDayAlpha),
+    outsidePeriodColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = HeatmapOutsidePeriodAlpha),
 )
 
 private fun heatmapCellColor(
@@ -545,6 +548,12 @@ private fun heatmapCellColor(
  * untracked grey, and a day you practiced must never read as one you did not.
  */
 private const val HeatmapMinCellAlpha = 0.4f
+
+/** A day inside the period with nothing tracked: visibly a slot, visibly empty. */
+private const val HeatmapEmptyDayAlpha = 0.65f
+
+/** A day the grid draws but the loaded period does not cover — future, or before a rolling window. */
+private const val HeatmapOutsidePeriodAlpha = 0.35f
 
 private fun emptyHeatmapCell(): PeriodHeatmapCell =
     PeriodHeatmapCell(
