@@ -2347,8 +2347,8 @@
     <string name="settings_bike_no_broadcast">No se encontraron sensores emisores. Activa la difusión en el dispositivo e inténtalo de nuevo.</string>
     <string name="settings_watch_data_title">Datos del reloj</string>
     <string name="settings_watch_data_intro">Medidas que solo hace tu reloj. Health Connect no tiene sitio para ellas, así que se quedan en OpenVitals.</string>
-    <string name="settings_watch_data_empty">Todavía nada. Sincroniza tu reloj y aparecerá aquí lo que haya grabado.</string>
-    <string name="settings_watch_data_missing">No enviado por este reloj: %1$s</string>
+    <string name="settings_watch_data_empty">Aún no hay datos. Sincroniza tu reloj para ver los registros aquí.</string>
+    <string name="settings_watch_data_missing">No proviene de este reloj: %1$s</string>
     <string name="settings_watch_data_last_night">Anoche</string>
     <string name="settings_watch_data_training">Entrenamiento</string>
     <string name="settings_watch_metric_stress">Estrés</string>
@@ -2357,16 +2357,17 @@
     <string name="settings_watch_metric_intensity_goal">%1$s de %2$s esta semana</string>
     <string name="settings_watch_metric_sleep_score">Puntuación de sueño</string>
     <string name="settings_watch_metric_awake">Despierto</string>
-    <string name="settings_watch_metric_awakenings">Veces despertado</string>
+    <string name="settings_watch_metric_awakenings">Despertares</string>
     <string name="settings_watch_metric_sleep_coach">Sleep Coach</string>
     <string name="settings_watch_metric_sleep_coach_body">%1$s más que tus %2$s habituales</string>
-    <string name="settings_watch_metric_sleep_coach_equal">Lo mismo que tus %1$s habituales</string>
+    <string name="settings_watch_metric_sleep_coach_equal">Igual que tu %1$s habitual</string>
     <string name="settings_watch_metric_recovery_time">Tiempo de recuperación</string>
     <string name="settings_watch_metric_training_readiness">Preparación para entrenar</string>
     <string name="settings_watch_metric_training_load">Carga de entrenamiento</string>
     <string name="settings_watch_average_prefix">Media de %1$s</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d más</item>
+        <item quantity="many">+%1$d más</item>
         <item quantity="other">+%1$d más</item>
     </plurals>
     <string name="settings_data_transfer_group_title">Importar y exportar</string>
