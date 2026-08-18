@@ -281,6 +281,47 @@ class MindfulnessEntryViewModelTest {
         assertFalse(vm.uiState.value.saveCompleted)
     }
 
+    @Test fun `manual entry writes trimmed notes and clears the field on save`() = runTest {
+        val repository = repo(canWrite = true)
+        val vm = MindfulnessEntryViewModel(
+            repository = repository,
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        vm.updateManualMinutes("12")
+        vm.updateNotes("  calm morning sit  ")
+        vm.addManualEntry()
+        advanceUntilIdle()
+
+        coVerify {
+            repository.writeMindfulnessSessionEntry(match<MindfulnessSessionWriteRequest> { request ->
+                request.notes == "calm morning sit"
+            })
+        }
+        assertEquals("", vm.uiState.value.notesText)
+    }
+
+    @Test fun `blank notes are written as null`() = runTest {
+        val repository = repo(canWrite = true)
+        val vm = MindfulnessEntryViewModel(
+            repository = repository,
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        vm.updateManualMinutes("12")
+        vm.updateNotes("   ")
+        vm.addManualEntry()
+        advanceUntilIdle()
+
+        coVerify {
+            repository.writeMindfulnessSessionEntry(match<MindfulnessSessionWriteRequest> { request ->
+                request.notes == null
+            })
+        }
+    }
+
     @Test fun `invalid manual entry does not write`() = runTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Schedule
@@ -306,48 +307,77 @@ private fun MindfulnessSessionRowContent(
     val start = session.startTime.atZone(zone)
     val dateFormatter = dateTimeFormatterProvider.mediumDate()
     val timeFormatter = dateTimeFormatterProvider.shortTime()
+    val notes = session.notes?.takeIf { it.isNotBlank() }
+    // Notes are the most personal text in the record, so the list never prints
+    // them unasked: they stay behind a deliberate tap, and fold away again.
+    // Keyed to the row's session so a recycled slot never shows another
+    // session's notes as revealed.
+    var notesRevealed by remember(session.id) { mutableStateOf(false) }
 
     OpenVitalsCard(
         modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.SelfImprovement,
-                contentDescription = null,
-                tint = MindfulnessColor,
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = session.title ?: stringResource(R.string.metric_mindfulness),
-                    style = MaterialTheme.typography.titleSmall,
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.SelfImprovement,
+                    contentDescription = null,
+                    tint = MindfulnessColor,
                 )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = session.title ?: stringResource(R.string.metric_mindfulness),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = "${dateFormatter.format(start)}  ·  ${timeFormatter.format(start)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = unitFormatter.duration(session.durationMs),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    SourceChip(source = session.source)
+                }
+                if (notes != null) {
+                    Spacer(Modifier.width(8.dp))
+                    OpenVitalsIconButton(onClick = { notesRevealed = !notesRevealed }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Notes,
+                            contentDescription = stringResource(R.string.cd_toggle_session_notes),
+                            tint = if (notesRevealed) {
+                                MindfulnessColor
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                }
+                if (onEdit != null) {
+                    Spacer(Modifier.width(8.dp))
+                    OpenVitalsIconButton(onClick = onEdit) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = stringResource(R.string.cd_edit_entry),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            if (notes != null && notesRevealed) {
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "${dateFormatter.format(start)}  ·  ${timeFormatter.format(start)}",
+                    text = notes,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = unitFormatter.duration(session.durationMs),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                Spacer(Modifier.height(4.dp))
-                SourceChip(source = session.source)
-            }
-            if (onEdit != null) {
-                Spacer(Modifier.width(8.dp))
-                OpenVitalsIconButton(onClick = onEdit) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = stringResource(R.string.cd_edit_entry),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         }
     }

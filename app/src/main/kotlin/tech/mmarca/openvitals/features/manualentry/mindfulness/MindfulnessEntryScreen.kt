@@ -60,6 +60,7 @@ fun MindfulnessEntryScreen(
                     onResumeTimer = viewModel::resumeTimer,
                     onSaveTimerSession = viewModel::saveTimerSession,
                     onDiscardTimer = viewModel::discardTimer,
+                    onNotesChanged = viewModel::updateNotes,
                     onRequestWritePermission = {
                         requestWritePermissions.launch(state.writePermissions)
                     },
@@ -71,6 +72,7 @@ fun MindfulnessEntryScreen(
             MindfulnessManualEntryCard(
                 state = state,
                 onMinutesChanged = viewModel::updateManualMinutes,
+                onNotesChanged = viewModel::updateNotes,
                 onEntryStartTimeChanged = viewModel::updateEntryStartTime,
                 onAddEntry = viewModel::addManualEntry,
                 onRequestWritePermission = {

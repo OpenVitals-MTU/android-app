@@ -159,6 +159,7 @@ internal fun SleepSessionRecord.toSleepData(): SleepData {
 internal fun MindfulnessSessionRecord.toMindfulnessSession(appPackageName: String? = null) = MindfulnessSession(
     id = metadata.id,
     title = title,
+    notes = notes,
     startTime = startTime,
     endTime = endTime,
     durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),

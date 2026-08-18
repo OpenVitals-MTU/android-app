@@ -32,6 +32,7 @@
     <string name="cd_recenter_map">Volver a centrar el mapa</string>
     <string name="cd_delete_entry">Eliminar entrada</string>
     <string name="cd_edit_entry">Editar entrada</string>
+    <string name="cd_toggle_session_notes">Mostrar u ocultar las notas de la sesión</string>
     <string name="cd_previous_day">Día anterior</string>
     <string name="cd_next_day">Día siguiente</string>
     <string name="cd_previous_period">Periodo anterior</string>
@@ -362,6 +363,8 @@
     <string name="mindfulness_entry_discard_timer">Descartar</string>
     <string name="mindfulness_entry_save_session">Guardar sesión</string>
     <string name="mindfulness_entry_minutes">Minutos</string>
+    <string name="mindfulness_entry_notes">Notas (opcional)</string>
+    <string name="mindfulness_entry_notes_privacy">Las notas se guardan en Health Connect y son visibles para las apps a las que permitas leer mindfulness.</string>
     <string name="mindfulness_entry_add_minutes">Añadir minutos</string>
     <string name="mindfulness_entry_invalid_timer">Introduce una duración e intervalo válidos.</string>
     <string name="mindfulness_entry_invalid_manual">Introduce minutos de mindfulness válidos.</string>

@@ -10,6 +10,7 @@ data class MindfulnessSession(
     val durationMs: Long,
     val source: String,
     val isOpenVitalsEntry: Boolean = false,
+    val notes: String? = null,
 ) {
     val durationMinutes: Long get() = durationMs / 60_000
 }
@@ -41,4 +42,5 @@ data class MindfulnessSessionWriteRequest(
     val title: String,
     val startTime: Instant,
     val endTime: Instant,
+    val notes: String? = null,
 )

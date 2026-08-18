@@ -83,6 +83,7 @@ data class MindfulnessEntryUiState(
     val remainingSeconds: Int = 0,
     val totalSeconds: Int = 0,
     val manualMinutesText: String = "",
+    val notesText: String = "",
     val editRecordId: String? = null,
     val editStartTime: Instant? = null,
     val saveCompleted: Boolean = false,
@@ -224,6 +225,15 @@ class MindfulnessEntryViewModel @Inject constructor(
         )
     }
 
+    fun updateNotes(text: String) {
+        _uiState.value = _uiState.value.copy(
+            notesText = text,
+            saveCompleted = false,
+            entryError = null,
+            writeError = null,
+        )
+    }
+
     fun updateEntryStartTime(time: Instant) {
         val minutes = _uiState.value.manualMinutesText.toPositiveIntOrNull()
         _uiState.value = _uiState.value.copy(
@@ -351,6 +361,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                     timerCompleted = false,
                     remainingSeconds = duration * 60,
                     totalSeconds = duration * 60,
+                    notesText = "",
                     saveCompleted = true,
                     entryError = null,
                     writeError = null,
@@ -382,6 +393,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     manualMinutesText = if (_uiState.value.isEditMode) _uiState.value.manualMinutesText else "",
+                    notesText = if (_uiState.value.isEditMode) _uiState.value.notesText else "",
                     saveCompleted = true,
                     entryError = null,
                     writeError = null,
@@ -459,6 +471,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             runCatching {
                 val request = MindfulnessSessionWriteRequest(
                     title = title,
+                    notes = current.notesText.trim().takeIf { it.isNotEmpty() },
                     startTime = start,
                     endTime = end,
                 )
@@ -498,6 +511,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                     .coerceAtMost(MaxSessionMinutes.toLong())
                 _uiState.value = _uiState.value.copy(
                     manualMinutesText = minutes.toString(),
+                    notesText = session.notes.orEmpty(),
                     editStartTime = session.startTime.coerceAtLatestSessionStart(minutes.toInt()),
                     entryError = null,
                     writeError = null,

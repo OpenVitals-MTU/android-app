@@ -83,6 +83,7 @@ internal fun MindfulnessTimerCard(
     onResumeTimer: () -> Unit,
     onSaveTimerSession: () -> Unit,
     onDiscardTimer: () -> Unit,
+    onNotesChanged: (String) -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -135,6 +136,7 @@ internal fun MindfulnessTimerCard(
                 onResumeTimer = onResumeTimer,
                 onSaveTimerSession = onSaveTimerSession,
                 onDiscardTimer = onDiscardTimer,
+                onNotesChanged = onNotesChanged,
             )
 
             state.entryError?.let { entryError ->
@@ -453,6 +455,7 @@ internal fun TimerActions(
     onResumeTimer: () -> Unit,
     onSaveTimerSession: () -> Unit,
     onDiscardTimer: () -> Unit,
+    onNotesChanged: (String) -> Unit,
 ) {
     when {
         state.isTimerRunning -> {
@@ -471,6 +474,11 @@ internal fun TimerActions(
             ) {
                 Text(stringResource(R.string.mindfulness_entry_resume_timer))
             }
+            MindfulnessNotesField(
+                notesText = state.notesText,
+                enabled = !state.isSavingEntry,
+                onNotesChanged = onNotesChanged,
+            )
             OpenVitalsButton(
                 onClick = onSaveTimerSession,
                 enabled = state.canWrite && !state.isSavingEntry,
@@ -493,6 +501,11 @@ internal fun TimerActions(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
+            )
+            MindfulnessNotesField(
+                notesText = state.notesText,
+                enabled = !state.isSavingEntry,
+                onNotesChanged = onNotesChanged,
             )
             OpenVitalsButton(
                 onClick = onSaveTimerSession,
@@ -525,6 +538,7 @@ internal fun TimerActions(
 internal fun MindfulnessManualEntryCard(
     state: MindfulnessEntryUiState,
     onMinutesChanged: (String) -> Unit,
+    onNotesChanged: (String) -> Unit,
     onEntryStartTimeChanged: (java.time.Instant) -> Unit,
     onAddEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
@@ -568,6 +582,11 @@ internal fun MindfulnessManualEntryCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+            MindfulnessNotesField(
+                notesText = state.notesText,
+                enabled = !state.isSavingEntry,
+                onNotesChanged = onNotesChanged,
+            )
             OpenVitalsButton(
                 onClick = onAddEntry,
                 enabled = enabled,
@@ -594,6 +613,34 @@ internal fun MindfulnessManualEntryCard(
             }
         }
     }
+}
+
+/**
+ * One notes field for every place a session is saved from — the timer's save
+ * moment and the manual form. The supporting text is the privacy contract: notes
+ * live in Health Connect, not in OpenVitals, so any app the user granted
+ * mindfulness read access can see them, and the field says so where the note is
+ * written rather than in a settings page nobody reads.
+ */
+@Composable
+private fun MindfulnessNotesField(
+    notesText: String,
+    enabled: Boolean,
+    onNotesChanged: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = notesText,
+        onValueChange = onNotesChanged,
+        enabled = enabled,
+        label = { Text(stringResource(R.string.mindfulness_entry_notes)) },
+        supportingText = {
+            Text(stringResource(R.string.mindfulness_entry_notes_privacy))
+        },
+        minLines = 2,
+        maxLines = 4,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

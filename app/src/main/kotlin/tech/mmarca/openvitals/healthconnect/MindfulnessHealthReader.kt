@@ -60,6 +60,7 @@ internal class MindfulnessHealthReader(
             metadata = Metadata.manualEntry(clientRecordId = clientRecordId),
             mindfulnessSessionType = MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION,
             title = request.title,
+            notes = request.notes,
         )
 
         support.client().insertRecords(listOf(record))
@@ -82,7 +83,9 @@ internal class MindfulnessHealthReader(
                 metadata = Metadata.manualEntryWithId(id = id, device = existing.metadata.device),
                 mindfulnessSessionType = existing.mindfulnessSessionType,
                 title = request.title,
-                notes = existing.notes,
+                // The edit form prefills its notes field from the record, so the
+                // request's notes ARE the user's decision — including clearing them.
+                notes = request.notes,
             )
 
             support.client().updateRecords(listOf(record))
