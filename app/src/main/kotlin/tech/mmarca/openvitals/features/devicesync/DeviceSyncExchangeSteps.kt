@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncPhase
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /** Step 4 — how far back to sync. */
 @Composable
@@ -238,7 +239,38 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
                             ?: stringResource(R.string.device_sync_aborted),
                         textAlign = TextAlign.Center,
                     )
+                    // The abort reason is a technical artifact (English by
+                    // design, like the report file) but it is the ONE line that
+                    // tells a bug report apart from a shrug — show it.
+                    report?.abortReason?.let { reason ->
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Text(
+                            text = stringResource(R.string.device_sync_abort_reason, reason),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
+            }
+            // Partial progress: how far it got before dying is itself
+            // diagnostic ("12,000 records then stopped" vs "nothing at all").
+            if (report != null) {
+                item {
+                    DeviceSyncStatRow(stringResource(R.string.device_sync_sent), report.itemsSent)
+                }
+                item {
+                    DeviceSyncStatRow(
+                        stringResource(R.string.device_sync_received),
+                        report.itemsReceived,
+                    )
+                }
+                item {
+                    DeviceSyncStatRow(stringResource(R.string.device_sync_imported), report.imported)
+                }
+            }
+            if (state.reportText.isNotEmpty()) {
+                item { DeviceSyncReportActions(state.reportText) }
             }
             item {
                 DeviceSyncBottomButton(
@@ -250,9 +282,6 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
         return
     }
 
-    val context = LocalContext.current
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
     LazyColumn {
         item {
             Column(
@@ -304,59 +333,69 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
             }
         }
         if (state.reportText.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    OpenVitalsOutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                clipboard.setClipEntry(
-                                    ClipData.newPlainText("OpenVitals", state.reportText)
-                                        .toClipEntry(),
-                                )
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.ContentCopy,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 6.dp),
-                        )
-                        Text(stringResource(R.string.device_sync_copy_report))
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    // Resolved in composition, not in the click: reading a
-                    // resource off the Context inside the lambda misses a
-                    // locale change until the screen is rebuilt.
-                    val chooserTitle = stringResource(R.string.device_sync_share_report_chooser_title)
-                    OpenVitalsOutlinedButton(
-                        onClick = {
-                            val send = Intent(Intent.ACTION_SEND)
-                                .setType("text/plain")
-                                .putExtra(Intent.EXTRA_TEXT, state.reportText)
-                            context.startActivity(Intent.createChooser(send, chooserTitle))
-                        },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Share,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 6.dp),
-                        )
-                        Text(stringResource(R.string.device_sync_share_report))
-                    }
-                }
-            }
+            item { DeviceSyncReportActions(state.reportText) }
         }
         item {
             DeviceSyncBottomButton(
                 label = stringResource(R.string.device_sync_done),
                 onClick = onDone,
             )
+        }
+    }
+}
+
+/**
+ * Copy/Share for a sync report's text. Shared by the success report, the
+ * failure screen (a partial report is exactly what a bug report needs), and
+ * the role step's "last sync report" affordance.
+ */
+@Composable
+internal fun DeviceSyncReportActions(reportText: String) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+    ) {
+        OpenVitalsOutlinedButton(
+            onClick = {
+                scope.launch {
+                    clipboard.setClipEntry(
+                        ClipData.newPlainText("OpenVitals", reportText).toClipEntry(),
+                    )
+                }
+            },
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ContentCopy,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 6.dp),
+            )
+            Text(stringResource(R.string.device_sync_copy_report))
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        // Resolved in composition, not in the click: reading a
+        // resource off the Context inside the lambda misses a
+        // locale change until the screen is rebuilt.
+        val chooserTitle = stringResource(R.string.device_sync_share_report_chooser_title)
+        OpenVitalsOutlinedButton(
+            onClick = {
+                val send = Intent(Intent.ACTION_SEND)
+                    .setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, reportText)
+                context.startActivity(Intent.createChooser(send, chooserTitle))
+            },
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Share,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 6.dp),
+            )
+            Text(stringResource(R.string.device_sync_share_report))
         }
     }
 }

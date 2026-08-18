@@ -39,6 +39,7 @@ import tech.mmarca.openvitals.features.devicesync.protocol.PAIRING_CODE_DIGITS
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsFilledButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /** Step 1 — choose a role: make this phone discoverable, or find a phone. */
 @Composable
@@ -92,6 +93,16 @@ internal fun DeviceSyncRoleStep(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+        if (state.lastReportText.isNotEmpty()) {
+            item {
+                Text(
+                    text = stringResource(R.string.device_sync_last_report),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                )
+            }
+            item { DeviceSyncReportActions(state.lastReportText) }
         }
     }
 }

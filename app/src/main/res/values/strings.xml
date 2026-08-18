@@ -2373,6 +2373,8 @@
     <string name="device_sync_error_discoverable">This phone needs to be discoverable to sync. Try again and allow the request.</string>
     <string name="device_sync_error_recording">An activity recording is running. Finish or discard it before syncing with another phone.</string>
     <string name="device_sync_aborted">The sync ended before it finished.</string>
+    <string name="device_sync_abort_reason">Technical reason: %1$s</string>
+    <string name="device_sync_last_report">Last sync report</string>
     <string name="device_sync_range_heading">How far back to sync</string>
     <string name="device_sync_range_body">Older data takes longer to read and send. You can always run it again for more.</string>
     <string name="device_sync_range_30">Last 30 days</string>

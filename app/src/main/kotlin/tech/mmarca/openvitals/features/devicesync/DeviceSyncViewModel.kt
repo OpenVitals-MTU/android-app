@@ -76,6 +76,7 @@ class DeviceSyncViewModel @Inject constructor(
 
     init {
         refreshHealthPermissions()
+        loadStoredReport()
     }
 
     // ── Permission plumbing (driven by the screen's launchers) ───────────────
@@ -392,10 +393,19 @@ class DeviceSyncViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.w(TAG, "session threw: ${e.message}")
                 if (gen != generation) return@launch
+                // Even an ugly death gets a report: the last progress counters
+                // plus the exception are what a bug report needs, and without
+                // them "sync failed" is indistinguishable from "did nothing".
+                val partial = partialReport(e)
+                persistReport(partial)
                 // Move OFF the syncing step so the UI leaves the progress
                 // spinner and can render the failure.
                 _uiState.update {
-                    it.copy(step = DeviceSyncStep.REPORT, error = DeviceSyncError.SYNC_FAILED)
+                    it.copy(
+                        step = DeviceSyncStep.REPORT,
+                        report = partial,
+                        error = DeviceSyncError.SYNC_FAILED,
+                    )
                 }
             } finally {
                 progressJob.cancel()
@@ -408,6 +418,35 @@ class DeviceSyncViewModel @Inject constructor(
         val text = buildSyncReportText(report, generatedAt = Instant.now())
         _uiState.update { it.copy(reportText = text) }
         reportStore.writeReport(text)
+    }
+
+    /**
+     * A best-effort report for a session that died with an exception instead of
+     * a clean abort: the progress counters the UI last saw, plus the error. The
+     * peer name and per-type tallies live inside the dead session and are lost.
+     */
+    private fun partialReport(cause: Exception): SyncReport {
+        val progress = _uiState.value.progress
+        return SyncReport(
+            completed = false,
+            peerDeviceName = "unknown",
+            negotiatedTypes = emptyList(),
+            itemsSent = progress?.itemsSent ?: 0,
+            itemsReceived = progress?.itemsReceived ?: 0,
+            imported = progress?.itemsWritten ?: 0,
+            duplicateSkipped = 0,
+            typeSummaries = emptyList(),
+            abortReason = "unexpected error: ${cause.message ?: cause.javaClass.simpleName}",
+        )
+    }
+
+    private fun loadStoredReport() {
+        viewModelScope.launch {
+            val stored = reportStore.readReport()
+            if (stored.isNotEmpty()) {
+                _uiState.update { it.copy(lastReportText = stored) }
+            }
+        }
     }
 
     // ── Reset / teardown ─────────────────────────────────────────────────────
@@ -425,6 +464,7 @@ class DeviceSyncViewModel @Inject constructor(
         teardown()
         _uiState.value = DeviceSyncState()
         refreshHealthPermissions()
+        loadStoredReport()
     }
 
     override fun onCleared() {

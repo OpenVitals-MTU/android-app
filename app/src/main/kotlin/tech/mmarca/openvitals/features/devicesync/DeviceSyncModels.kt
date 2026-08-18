@@ -187,6 +187,13 @@ data class DeviceSyncState(
     val report: SyncReport? = null,
     /** The shareable report text (for Copy/Share), set when a report is produced. */
     val reportText: String = "",
+    /**
+     * The persisted report of the LAST sync (this run or an earlier one), read
+     * back from [tech.mmarca.openvitals.features.devicesync.store.DeviceSyncReportStore]
+     * so the role step can offer it — the user who hit a failure yesterday can
+     * still send us the evidence today.
+     */
+    val lastReportText: String = "",
     val error: DeviceSyncError? = null,
     val bluetoothUnavailable: Boolean = false,
     /** True while a discovery scan window is open (guest scanning step). */

@@ -2234,6 +2234,8 @@
     <string name="device_sync_error_discoverable">Este teléfono debe estar visible para sincronizar. Inténtalo de nuevo y acepta la solicitud.</string>
     <string name="device_sync_error_recording">Hay una grabación de actividad en curso. Termínala o descártala antes de sincronizar con otro teléfono.</string>
     <string name="device_sync_aborted">La sincronización terminó antes de completarse.</string>
+    <string name="device_sync_abort_reason">Motivo técnico: %1$s</string>
+    <string name="device_sync_last_report">Último informe de sincronización</string>
     <string name="device_sync_range_heading">Cuánto historial sincronizar</string>
     <string name="device_sync_range_body">Los datos antiguos tardan más en leerse y enviarse. Siempre puedes repetirlo para traer más.</string>
     <string name="device_sync_range_30">Últimos 30 días</string>
