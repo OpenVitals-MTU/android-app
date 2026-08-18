@@ -30,7 +30,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
@@ -554,7 +554,7 @@ class HydrationEntryViewModelTest {
                 id = "coffee",
                 name = "Coffee",
                 volumeMilliliters = 150.0,
-                category = CaffeineSourceCategory.COFFEE,
+                category = BeverageCategory.COFFEE,
                 nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 10.0),
             )
         )
@@ -571,7 +571,7 @@ class HydrationEntryViewModelTest {
             CustomHydrationDrinkInput(
                 name = "Latte",
                 volumeMilliliters = 200.0,
-                category = CaffeineSourceCategory.TEA,
+                category = BeverageCategory.TEA,
                 nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 20.0),
             ),
             "coffee",
@@ -582,7 +582,7 @@ class HydrationEntryViewModelTest {
                 drink.id == "coffee" &&
                     drink.name == "Latte" &&
                     drink.volumeMilliliters == 200.0 &&
-                    drink.category == CaffeineSourceCategory.TEA &&
+                    drink.category == BeverageCategory.TEA &&
                     drink.nutrientValues[NutritionNutrient.CAFFEINE] == 20.0
             })
         }
@@ -841,7 +841,7 @@ class HydrationEntryViewModelTest {
         every { repo.customHydrationDrinks() } answers { savedDrinks }
         every { repo.moveCustomHydrationDrinkToCategory(any(), any()) } answers {
             val drinkId = firstArg<String>()
-            val category = secondArg<CaffeineSourceCategory?>()
+            val category = secondArg<BeverageCategory?>()
             savedDrinks = savedDrinks.map { drink ->
                 if (drink.id == drinkId) drink.copy(category = category) else drink
             }
@@ -849,12 +849,12 @@ class HydrationEntryViewModelTest {
         val vm = HydrationEntryViewModel(repo)
         advanceUntilIdle()
 
-        vm.moveCustomDrinkToCategory("d1", CaffeineSourceCategory.SODA)
+        vm.moveCustomDrinkToCategory("d1", BeverageCategory.SODA)
         advanceUntilIdle()
 
-        verify { repo.moveCustomHydrationDrinkToCategory("d1", CaffeineSourceCategory.SODA) }
+        verify { repo.moveCustomHydrationDrinkToCategory("d1", BeverageCategory.SODA) }
         assertEquals(
-            CaffeineSourceCategory.SODA,
+            BeverageCategory.SODA,
             vm.uiState.value.customDrinkOptions.single().category,
         )
     }

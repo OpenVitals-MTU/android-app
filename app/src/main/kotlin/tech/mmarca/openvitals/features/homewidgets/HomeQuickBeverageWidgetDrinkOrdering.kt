@@ -2,7 +2,7 @@ package tech.mmarca.openvitals.features.homewidgets
 
 import java.util.Locale
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.features.manualentry.hydration.hydrationAmountLabel
 
@@ -44,16 +44,17 @@ private val QuickBeverageDrinkComparator = compareBy<CustomHydrationDrink>(
     { drink -> drink.id },
 )
 
-private fun CaffeineSourceCategory?.quickBeverageCategoryOrder(): Int =
+private fun BeverageCategory?.quickBeverageCategoryOrder(): Int =
     when (this) {
-        CaffeineSourceCategory.WATER -> 0
-        CaffeineSourceCategory.COFFEE -> 1
-        CaffeineSourceCategory.ENERGY_DRINK -> 2
-        CaffeineSourceCategory.TEA -> 3
-        CaffeineSourceCategory.CHOCOLATE -> 4
-        CaffeineSourceCategory.SODA -> 5
-        CaffeineSourceCategory.SUPPLEMENT,
-        CaffeineSourceCategory.OTHER,
+        BeverageCategory.WATER -> 0
+        BeverageCategory.COFFEE -> 1
+        BeverageCategory.ENERGY_DRINK -> 2
+        BeverageCategory.TEA -> 3
+        BeverageCategory.CHOCOLATE -> 4
+        BeverageCategory.SODA -> 5
+        BeverageCategory.BEER -> 6
+        BeverageCategory.SUPPLEMENT,
+        BeverageCategory.OTHER,
         null,
-        -> 6
+        -> 7
     }

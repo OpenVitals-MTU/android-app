@@ -8,7 +8,7 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.local.beverage.BeverageStore
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
@@ -80,7 +80,7 @@ class HydrationRepositoryImpl @Inject constructor(
 
     override fun moveCustomHydrationDrinkToCategory(
         drinkId: String,
-        category: CaffeineSourceCategory?,
+        category: BeverageCategory?,
     ) {
         beverageStore?.moveToCategory(drinkId, category)
     }

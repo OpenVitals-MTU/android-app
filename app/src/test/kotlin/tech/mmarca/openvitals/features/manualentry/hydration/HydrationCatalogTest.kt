@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 
 class HydrationCatalogTest {
@@ -22,8 +22,8 @@ class HydrationCatalogTest {
     fun `a drink is filed under its category section`() {
         val grouped = group(
             savedDrinks = listOf(
-                drink("c", category = CaffeineSourceCategory.COFFEE),
-                drink("s", category = CaffeineSourceCategory.SODA),
+                drink("c", category = BeverageCategory.COFFEE),
+                drink("s", category = BeverageCategory.SODA),
             ),
         )
 
@@ -38,13 +38,13 @@ class HydrationCatalogTest {
     @Test
     fun `supplement collapses into the other section`() {
         val grouped = group(
-            savedDrinks = listOf(drink("x", category = CaffeineSourceCategory.SUPPLEMENT)),
+            savedDrinks = listOf(drink("x", category = BeverageCategory.SUPPLEMENT)),
         )
 
         assertEquals(listOf("x"), rowIds(grouped.section(HydrationCatalogSectionKey.OTHER)))
         // …but dropping a drink into "other" writes back the `OTHER` category.
         assertEquals(
-            CaffeineSourceCategory.OTHER,
+            BeverageCategory.OTHER,
             sectionCategory(HydrationCatalogSectionKey.OTHER),
         )
     }
@@ -52,7 +52,7 @@ class HydrationCatalogTest {
     @Test
     fun `a session category override beats the drink's persisted category`() {
         val grouped = group(
-            savedDrinks = listOf(drink("c", category = CaffeineSourceCategory.COFFEE)),
+            savedDrinks = listOf(drink("c", category = BeverageCategory.COFFEE)),
             savedDrinkCategories = mapOf("c" to HydrationCatalogSectionKey.TEA),
         )
 
@@ -62,9 +62,9 @@ class HydrationCatalogTest {
 
     @Test
     fun `a frequent drink is not repeated in its section`() {
-        val coffee = drink("c", category = CaffeineSourceCategory.COFFEE)
+        val coffee = drink("c", category = BeverageCategory.COFFEE)
         val grouped = group(
-            savedDrinks = listOf(coffee, drink("t", category = CaffeineSourceCategory.TEA)),
+            savedDrinks = listOf(coffee, drink("t", category = BeverageCategory.TEA)),
             frequentDrinks = listOf(coffee),
         )
 
@@ -137,11 +137,11 @@ class HydrationCatalogTest {
 
     @Test
     fun `every category maps to a section and back`() {
-        CaffeineSourceCategory.entries.forEach { category ->
+        BeverageCategory.entries.forEach { category ->
             val key = category.toHydrationCatalogSectionKey()
             // SUPPLEMENT is the one lossy case, collapsing into `OTHER`.
-            if (category == CaffeineSourceCategory.SUPPLEMENT) {
-                assertEquals(CaffeineSourceCategory.OTHER, sectionCategory(key))
+            if (category == BeverageCategory.SUPPLEMENT) {
+                assertEquals(BeverageCategory.OTHER, sectionCategory(key))
             } else {
                 assertEquals(category, sectionCategory(key))
             }
@@ -151,7 +151,7 @@ class HydrationCatalogTest {
     private fun drink(
         id: String,
         name: String? = null,
-        category: CaffeineSourceCategory? = null,
+        category: BeverageCategory? = null,
     ): CustomHydrationDrink =
         CustomHydrationDrink(
             id = id,
@@ -191,6 +191,6 @@ class HydrationCatalogTest {
             unassignedSavedRows.isEmpty() &&
             sections.all { it.rows.isEmpty() }
 
-    private fun sectionCategory(key: HydrationCatalogSectionKey): CaffeineSourceCategory? =
+    private fun sectionCategory(key: HydrationCatalogSectionKey): BeverageCategory? =
         HydrationCatalogSections.first { it.key == key }.category
 }

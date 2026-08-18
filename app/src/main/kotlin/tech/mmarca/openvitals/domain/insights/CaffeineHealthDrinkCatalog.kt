@@ -8,13 +8,14 @@ import tech.mmarca.openvitals.domain.model.CaffeineCatalogMatchConfidence
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
+import tech.mmarca.openvitals.domain.model.toBeverageCategory
 
 /**
  * Static matching metadata derived from CaffeineHealth GPL-3.0 consumable_items.json.
  * OpenVitals uses it as seed/matching metadata for beverages; Health Connect remains
  * the source of truth for logged nutrition records.
  */
-object CaffeineHealthDrinkCatalog {
+object CaffeineHealthDrinkCatalog : HydrationDrinkCatalog {
     private const val BeveragePresetIdPrefix = "caffeinehealth-"
     private val CombiningMarks = Regex("\\p{Mn}+")
     private val NonAlphaNumeric = Regex("[^a-z0-9]+")
@@ -1620,7 +1621,7 @@ object CaffeineHealthDrinkCatalog {
         items.associateBy { it.id }
     }
 
-    fun beveragePresets(): List<CustomHydrationDrink> =
+    override fun beveragePresets(): List<CustomHydrationDrink> =
         items.asSequence()
             .filter { item -> item.defaultServingMilliliters != null }
             .filterNot { item -> item.category == CaffeineSourceCategory.SUPPLEMENT }
@@ -1631,7 +1632,7 @@ object CaffeineHealthDrinkCatalog {
                     volumeMilliliters = item.defaultServingMilliliters ?: 240.0,
                     hydrationMultiplier = 1.0,
                     nutrientValues = BeverageNutritionDefaults.nutrientValuesFor(item),
-                    category = item.category,
+                    category = item.category.toBeverageCategory(),
                     isPreloaded = true,
                 )
             }

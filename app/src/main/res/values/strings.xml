@@ -967,6 +967,7 @@
     <string name="hydration_catalog_section_teas">Teas</string>
     <string name="hydration_catalog_section_chocolate_drinks">Chocolate drinks</string>
     <string name="hydration_catalog_section_carbonated_soft_drinks">Carbonated soft drinks</string>
+    <string name="hydration_catalog_section_beers">Beers</string>
     <string name="hydration_catalog_section_other_drinks">Other drinks</string>
     <string name="hydration_catalog_section_count">%1$d drinks</string>
     <string name="hydration_new_drink_action">New drink</string>

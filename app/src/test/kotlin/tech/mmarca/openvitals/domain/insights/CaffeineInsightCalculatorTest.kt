@@ -9,6 +9,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
@@ -108,7 +109,7 @@ class CaffeineInsightCalculatorTest {
             .first { it.id == "caffeinehealth-drip-coffee" }
         assertEquals(240.0, coffeePreset.volumeMilliliters, 0.001)
         assertEquals(true, coffeePreset.isPreloaded)
-        assertEquals(CaffeineSourceCategory.COFFEE, coffeePreset.category)
+        assertEquals(BeverageCategory.COFFEE, coffeePreset.category)
         assertEquals(2.0, coffeePreset.nutrientValues[NutritionNutrient.ENERGY] ?: 0.0, 0.001)
         assertEquals(0.095, coffeePreset.nutrientValues[NutritionNutrient.CAFFEINE] ?: 0.0, 0.001)
 

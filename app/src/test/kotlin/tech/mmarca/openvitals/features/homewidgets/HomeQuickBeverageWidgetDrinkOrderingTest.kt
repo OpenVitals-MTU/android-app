@@ -2,7 +2,7 @@ package tech.mmarca.openvitals.features.homewidgets
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 
 class HomeQuickBeverageWidgetDrinkOrderingTest {
@@ -11,53 +11,53 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
         val cola = drink(
             id = "cola",
             name = "Cola",
-            category = CaffeineSourceCategory.SODA,
+            category = BeverageCategory.SODA,
             isPreloaded = true,
         )
         val stillWater = drink(
             id = "still-water",
             name = "Still water",
-            category = CaffeineSourceCategory.WATER,
+            category = BeverageCategory.WATER,
             isPreloaded = true,
         )
         val sparklingWater = drink(
             id = "sparkling-water",
             name = "Sparkling water",
-            category = CaffeineSourceCategory.WATER,
+            category = BeverageCategory.WATER,
             isPreloaded = true,
         )
         val latte = drink(
             id = "latte",
             name = "Latte",
-            category = CaffeineSourceCategory.COFFEE,
+            category = BeverageCategory.COFFEE,
             isPreloaded = true,
         )
         val espresso = drink(
             id = "espresso",
             name = "Espresso",
-            category = CaffeineSourceCategory.COFFEE,
+            category = BeverageCategory.COFFEE,
             isPreloaded = true,
         )
         val customCoffee = drink(
             id = "custom-coffee",
             name = "Aeropress",
-            category = CaffeineSourceCategory.COFFEE,
+            category = BeverageCategory.COFFEE,
         )
         val customTea = drink(
             id = "custom-tea",
             name = "Assam tea",
-            category = CaffeineSourceCategory.TEA,
+            category = BeverageCategory.TEA,
         )
         val clubSoda = drink(
             id = "club-soda",
             name = "Club soda",
-            category = CaffeineSourceCategory.SODA,
+            category = BeverageCategory.SODA,
             isPreloaded = true,
         )
         val otherDrink = drink(
             id = "other",
             name = "Cider",
-            category = CaffeineSourceCategory.OTHER,
+            category = BeverageCategory.OTHER,
             isPreloaded = true,
         )
 
@@ -94,7 +94,7 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
 
     @Test
     fun `a frequent drink that is no longer in the catalog is dropped`() {
-        val water = drink(id = "water", name = "water", category = CaffeineSourceCategory.WATER)
+        val water = drink(id = "water", name = "water", category = BeverageCategory.WATER)
 
         val orderedDrinks = quickBeverageWidgetDrinkOptions(
             drinks = listOf(water),
@@ -109,7 +109,7 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
         val preloadedWater = drink(
             id = "preloaded_water",
             name = "preloaded_water",
-            category = CaffeineSourceCategory.WATER,
+            category = BeverageCategory.WATER,
             isPreloaded = true,
         )
         // A user drink in the *last* category still outranks a preloaded one in
@@ -117,7 +117,7 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
         val userOther = drink(
             id = "user_other",
             name = "user_other",
-            category = CaffeineSourceCategory.OTHER,
+            category = BeverageCategory.OTHER,
         )
 
         val orderedDrinks = quickBeverageWidgetDrinkOptions(
@@ -134,14 +134,14 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
     @Test
     fun `sorts each group by category, then name, then id`() {
         val drinks = listOf(
-            drink(id = "z_soda", name = "Soda", category = CaffeineSourceCategory.SODA),
-            drink(id = "b_coffee", name = "beta", category = CaffeineSourceCategory.COFFEE),
-            drink(id = "a_coffee", name = "Alpha", category = CaffeineSourceCategory.COFFEE),
-            drink(id = "tea", name = "Tea", category = CaffeineSourceCategory.TEA),
-            drink(id = "energy", name = "Energy", category = CaffeineSourceCategory.ENERGY_DRINK),
-            drink(id = "water", name = "Water", category = CaffeineSourceCategory.WATER),
-            drink(id = "choc", name = "Choc", category = CaffeineSourceCategory.CHOCOLATE),
-            drink(id = "supp", name = "Supp", category = CaffeineSourceCategory.SUPPLEMENT),
+            drink(id = "z_soda", name = "Soda", category = BeverageCategory.SODA),
+            drink(id = "b_coffee", name = "beta", category = BeverageCategory.COFFEE),
+            drink(id = "a_coffee", name = "Alpha", category = BeverageCategory.COFFEE),
+            drink(id = "tea", name = "Tea", category = BeverageCategory.TEA),
+            drink(id = "energy", name = "Energy", category = BeverageCategory.ENERGY_DRINK),
+            drink(id = "water", name = "Water", category = BeverageCategory.WATER),
+            drink(id = "choc", name = "Choc", category = BeverageCategory.CHOCOLATE),
+            drink(id = "supp", name = "Supp", category = BeverageCategory.SUPPLEMENT),
             drink(id = "none", name = "None", category = null),
         )
 
@@ -173,8 +173,8 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
     fun `breaks a same-name tie on the id`() {
         val orderedDrinks = quickBeverageWidgetDrinkOptions(
             drinks = listOf(
-                drink(id = "b", name = "Coffee", category = CaffeineSourceCategory.COFFEE),
-                drink(id = "a", name = "coffee", category = CaffeineSourceCategory.COFFEE),
+                drink(id = "b", name = "Coffee", category = BeverageCategory.COFFEE),
+                drink(id = "a", name = "coffee", category = BeverageCategory.COFFEE),
             ),
             frequentDrinks = emptyList(),
         )
@@ -186,7 +186,7 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
     fun `an empty catalog yields no options`() {
         val orderedDrinks = quickBeverageWidgetDrinkOptions(
             drinks = emptyList(),
-            frequentDrinks = listOf(drink(id = "water", name = "water", category = CaffeineSourceCategory.WATER)),
+            frequentDrinks = listOf(drink(id = "water", name = "water", category = BeverageCategory.WATER)),
         )
 
         assertEquals(emptyList<CustomHydrationDrink>(), orderedDrinks)
@@ -198,13 +198,13 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
             id = "espresso",
             name = "Espresso",
             volumeMilliliters = 30.0,
-            category = CaffeineSourceCategory.COFFEE,
+            category = BeverageCategory.COFFEE,
         )
         val bottle = CustomHydrationDrink(
             id = "bottle",
             name = "Water bottle",
             volumeMilliliters = 1_500.0,
-            category = CaffeineSourceCategory.WATER,
+            category = BeverageCategory.WATER,
         )
 
         val orderedDrinks = quickBeverageWidgetDrinkOptions(
@@ -229,7 +229,7 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
     private fun drink(
         id: String,
         name: String,
-        category: CaffeineSourceCategory?,
+        category: BeverageCategory?,
         isPreloaded: Boolean = false,
     ): CustomHydrationDrink =
         CustomHydrationDrink(

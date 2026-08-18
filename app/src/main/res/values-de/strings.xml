@@ -892,6 +892,7 @@
     <string name="hydration_catalog_section_teas">Tees</string>
     <string name="hydration_catalog_section_chocolate_drinks">Schokoladengetränke</string>
     <string name="hydration_catalog_section_carbonated_soft_drinks">Kohlensäurehaltige Softdrinks</string>
+    <string name="hydration_catalog_section_beers">Biere</string>
     <string name="hydration_catalog_section_other_drinks">Andere Getränke</string>
     <string name="hydration_catalog_section_count">%1$d Getränke</string>
     <string name="hydration_new_drink_action">Neues Getränk</string>

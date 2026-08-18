@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 
 class BeverageEntityTest {
     @Test
@@ -18,7 +18,7 @@ class BeverageEntityTest {
         waters.forEach { water ->
             assertEquals(100.0, water.volumeMilliliters, 0.001)
             assertEquals(1.0, water.hydrationMultiplier, 0.001)
-            assertEquals(CaffeineSourceCategory.WATER, water.category)
+            assertEquals(BeverageCategory.WATER, water.category)
             assertEquals(true, water.isPreloaded)
             assertTrue(water.nutrientValues.isEmpty())
         }

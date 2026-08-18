@@ -16,7 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
@@ -127,7 +127,7 @@ class BeverageStoreTest {
             volumeMilliliters = 350.0,
             hydrationMultiplier = 0.8,
             nutrientValues = mapOf(NutritionNutrient.ENERGY to 180.0),
-            category = CaffeineSourceCategory.OTHER,
+            category = BeverageCategory.OTHER,
         )
 
         store.save(drink)
@@ -137,7 +137,7 @@ class BeverageStoreTest {
         assertEquals("Smoothie", saved.name)
         assertEquals(350.0, saved.volumeMilliliters, 0.001)
         assertEquals(0.8, saved.hydrationMultiplier, 0.001)
-        assertEquals(CaffeineSourceCategory.OTHER, saved.category)
+        assertEquals(BeverageCategory.OTHER, saved.category)
         assertEquals(180.0, saved.nutrientValues.getValue(NutritionNutrient.ENERGY), 0.001)
         // The next free sort order, i.e. after the whole preloaded catalog.
         assertEquals(BeverageEntity.preloadedDefaults().size, dao.rows.getValue("my-smoothie").sortOrder)
@@ -159,9 +159,9 @@ class BeverageStoreTest {
     @Test
     fun `moveToCategory updates the persisted category`() {
         store.beverages()
-        store.moveToCategory("openvitals-still-water", CaffeineSourceCategory.TEA)
+        store.moveToCategory("openvitals-still-water", BeverageCategory.TEA)
 
-        assertEquals(CaffeineSourceCategory.TEA.name, dao.rows.getValue("openvitals-still-water").category)
+        assertEquals(BeverageCategory.TEA.name, dao.rows.getValue("openvitals-still-water").category)
     }
 
     @Test

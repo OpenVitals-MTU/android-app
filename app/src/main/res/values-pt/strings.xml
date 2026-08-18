@@ -957,6 +957,7 @@
     <string name="hydration_catalog_section_teas">Chás</string>
     <string name="hydration_catalog_section_chocolate_drinks">Bebidas de chocolate</string>
     <string name="hydration_catalog_section_carbonated_soft_drinks">Refrigerantes com gás</string>
+    <string name="hydration_catalog_section_beers">Cervejas</string>
     <string name="hydration_catalog_section_other_drinks">Outras bebidas</string>
     <string name="hydration_catalog_section_count">%1$d bebidas</string>
     <string name="hydration_new_drink_action">Nova bebida</string>

@@ -959,6 +959,7 @@
     <string name="hydration_catalog_section_teas">Čaje</string>
     <string name="hydration_catalog_section_chocolate_drinks">Čokoládové nápoje</string>
     <string name="hydration_catalog_section_carbonated_soft_drinks">Sycené limonády</string>
+    <string name="hydration_catalog_section_beers">Piva</string>
     <string name="hydration_catalog_section_other_drinks">Ostatní nápoje</string>
     <string name="hydration_catalog_section_count">%1$d nápojů</string>
     <string name="hydration_new_drink_action">Nový nápoj</string>

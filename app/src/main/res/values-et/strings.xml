@@ -894,6 +894,7 @@
     <string name="hydration_catalog_section_teas">Teed</string>
     <string name="hydration_catalog_section_chocolate_drinks">Kakaojoogid</string>
     <string name="hydration_catalog_section_carbonated_soft_drinks">Karboniseeritud karastusjoogid</string>
+    <string name="hydration_catalog_section_beers">Õlled</string>
     <string name="hydration_catalog_section_other_drinks">Muud joogid</string>
     <string name="hydration_catalog_section_count">%1$d jooki</string>
     <string name="hydration_new_drink_action">Uus jook</string>

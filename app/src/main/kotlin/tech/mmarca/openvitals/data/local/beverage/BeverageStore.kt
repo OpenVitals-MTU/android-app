@@ -5,7 +5,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 
 @Singleton
@@ -35,7 +35,7 @@ class BeverageStore @Inject constructor(
         dao.softDelete(drinkId)
     }
 
-    fun moveToCategory(drinkId: String, category: CaffeineSourceCategory?) = withDatabase {
+    fun moveToCategory(drinkId: String, category: BeverageCategory?) = withDatabase {
         dao.updateCategory(drinkId, category?.name)
     }
 

@@ -3,10 +3,10 @@ package tech.mmarca.openvitals.data.local.beverage
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import tech.mmarca.openvitals.domain.insights.BeverageNutritionDefaults
+import tech.mmarca.openvitals.domain.insights.AlcoholHealthDrinkCatalog
 import tech.mmarca.openvitals.domain.insights.CaffeineHealthDrinkCatalog
-import tech.mmarca.openvitals.domain.model.CaffeineCatalogItem
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.insights.HydrationDrinkCatalog
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
@@ -39,7 +39,7 @@ data class BeverageEntity(
             volumeMilliliters = volumeMilliliters,
             hydrationMultiplier = hydrationMultiplier,
             nutrientValues = nutrientValues(),
-            category = category?.let { runCatching { CaffeineSourceCategory.valueOf(it) }.getOrNull() },
+            category = category?.let { runCatching { BeverageCategory.valueOf(it) }.getOrNull() },
             isPreloaded = isPreloaded,
         )
 
@@ -68,12 +68,9 @@ data class BeverageEntity(
 
     companion object {
         fun preloadedDefaults(): List<BeverageEntity> =
-            waterDefaults() + CaffeineHealthDrinkCatalog.items
-                .asSequence()
-                .filter { item -> item.defaultServingMilliliters != null }
-                .filterNot { item -> item.category == CaffeineSourceCategory.SUPPLEMENT }
-                .mapIndexed { index, item -> item.toPreloadedEntity(index + 2) }
-                .toList()
+            waterDefaults() + PresetCatalogs
+                .flatMap(HydrationDrinkCatalog::beveragePresets)
+                .mapIndexed { index, drink -> fromDomain(drink, sortOrder = index + 2) }
 
         private fun waterDefaults(): List<BeverageEntity> =
             listOf(
@@ -101,19 +98,19 @@ data class BeverageEntity(
                     volumeMilliliters = 100.0,
                     hydrationMultiplier = 1.0,
                     nutrientValues = emptyMap(),
-                    category = CaffeineSourceCategory.WATER,
+                    category = BeverageCategory.WATER,
                     isPreloaded = true,
                 ),
                 sortOrder = sortOrder,
                 isPreloaded = true,
-                category = CaffeineSourceCategory.WATER,
+                category = BeverageCategory.WATER,
             )
 
         fun fromDomain(
             drink: CustomHydrationDrink,
             sortOrder: Int,
             isPreloaded: Boolean = drink.isPreloaded,
-            category: CaffeineSourceCategory? = drink.category,
+            category: BeverageCategory? = drink.category,
         ): BeverageEntity =
             BeverageEntity(
                 id = drink.id,
@@ -136,22 +133,7 @@ data class BeverageEntity(
                 caffeineGrams = drink.nutrientValues[NutritionNutrient.CAFFEINE],
             )
 
-        private fun CaffeineCatalogItem.toPreloadedEntity(sortOrder: Int): BeverageEntity =
-            fromDomain(
-                drink = CustomHydrationDrink(
-                    id = "$BeveragePresetIdPrefix$id",
-                    name = name,
-                    volumeMilliliters = defaultServingMilliliters ?: 240.0,
-                    hydrationMultiplier = 1.0,
-                    nutrientValues = BeverageNutritionDefaults.nutrientValuesFor(this),
-                    category = category,
-                    isPreloaded = true,
-                ),
-                sortOrder = sortOrder,
-                isPreloaded = true,
-                category = category,
-            )
-
-        private const val BeveragePresetIdPrefix = "caffeinehealth-"
+        private val PresetCatalogs: List<HydrationDrinkCatalog> =
+            listOf(CaffeineHealthDrinkCatalog, AlcoholHealthDrinkCatalog)
     }
 }

@@ -18,7 +18,7 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
@@ -61,7 +61,7 @@ data class CustomHydrationDrinkInput(
     val name: String,
     val volumeMilliliters: Double,
     val hydrationMultiplier: Double = 1.0,
-    val category: CaffeineSourceCategory? = null,
+    val category: BeverageCategory? = null,
     val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
 )
 
@@ -351,7 +351,7 @@ class HydrationEntryViewModel @Inject constructor(
 
     fun moveCustomDrinkToCategory(
         drinkId: String,
-        category: CaffeineSourceCategory?,
+        category: BeverageCategory?,
     ) {
         repository.moveCustomHydrationDrinkToCategory(drinkId, category)
         refreshDrinkOptions {

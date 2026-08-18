@@ -55,13 +55,37 @@ data class HydrationWriteRequest(
     val drinkId: String? = null,
 )
 
+enum class BeverageCategory {
+    WATER,
+    COFFEE,
+    TEA,
+    ENERGY_DRINK,
+    SODA,
+    CHOCOLATE,
+    BEER,
+    SUPPLEMENT,
+    OTHER,
+}
+
+fun CaffeineSourceCategory.toBeverageCategory(): BeverageCategory =
+    when (this) {
+        CaffeineSourceCategory.WATER -> BeverageCategory.WATER
+        CaffeineSourceCategory.COFFEE -> BeverageCategory.COFFEE
+        CaffeineSourceCategory.TEA -> BeverageCategory.TEA
+        CaffeineSourceCategory.ENERGY_DRINK -> BeverageCategory.ENERGY_DRINK
+        CaffeineSourceCategory.SODA -> BeverageCategory.SODA
+        CaffeineSourceCategory.CHOCOLATE -> BeverageCategory.CHOCOLATE
+        CaffeineSourceCategory.SUPPLEMENT -> BeverageCategory.SUPPLEMENT
+        CaffeineSourceCategory.OTHER -> BeverageCategory.OTHER
+    }
+
 data class CustomHydrationDrink(
     val id: String,
     val name: String,
     val volumeMilliliters: Double,
     val hydrationMultiplier: Double = 1.0,
     val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
-    val category: CaffeineSourceCategory? = null,
+    val category: BeverageCategory? = null,
     val isPreloaded: Boolean = false,
 ) {
     val volumeLiters: Double

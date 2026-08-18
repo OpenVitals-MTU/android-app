@@ -893,6 +893,7 @@
     <string name="hydration_catalog_section_teas">Tè</string>
     <string name="hydration_catalog_section_chocolate_drinks">Bevande al cioccolato</string>
     <string name="hydration_catalog_section_carbonated_soft_drinks">Bibite gassate</string>
+    <string name="hydration_catalog_section_beers">Birre</string>
     <string name="hydration_catalog_section_other_drinks">Altre bevande</string>
     <string name="hydration_catalog_section_count">%1$d bevande</string>
     <string name="hydration_new_drink_action">Nuova bevanda</string>

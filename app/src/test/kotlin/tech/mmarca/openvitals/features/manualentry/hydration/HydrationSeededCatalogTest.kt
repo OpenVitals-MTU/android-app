@@ -24,6 +24,7 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.insights.CaffeineHealthDrinkCatalog
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -144,9 +145,9 @@ class HydrationSeededCatalogTest {
             ),
         )
 
-        store.moveToCategory("mine", CaffeineSourceCategory.OTHER)
+        store.moveToCategory("mine", BeverageCategory.OTHER)
         assertEquals(
-            CaffeineSourceCategory.OTHER,
+            BeverageCategory.OTHER,
             store.beverages().single { it.id == "mine" }.category,
         )
 

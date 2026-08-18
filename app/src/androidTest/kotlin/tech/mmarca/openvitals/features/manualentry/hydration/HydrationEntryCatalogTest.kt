@@ -16,7 +16,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
@@ -163,14 +163,14 @@ class HydrationEntryCatalogTest {
         id = ESPRESSO_ID,
         name = ESPRESSO,
         volumeMilliliters = 30.0,
-        category = CaffeineSourceCategory.COFFEE,
+        category = BeverageCategory.COFFEE,
     )
 
     private fun greenTea() = CustomHydrationDrink(
         id = "green-tea",
         name = GREEN_TEA,
         volumeMilliliters = 250.0,
-        category = CaffeineSourceCategory.TEA,
+        category = BeverageCategory.TEA,
     )
 
     /** A drink with no category sits outside every section, always visible. */

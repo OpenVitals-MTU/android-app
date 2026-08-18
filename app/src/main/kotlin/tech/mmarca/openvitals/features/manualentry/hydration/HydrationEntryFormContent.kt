@@ -100,7 +100,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.resolve
-import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
+import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
@@ -132,37 +132,42 @@ private const val HydrationCatalogPresetRowPrefix = "preset:"
 internal val HydrationCatalogSections = listOf(
     HydrationCatalogSectionSpec(
         key = HydrationCatalogSectionKey.WATER,
-        category = CaffeineSourceCategory.WATER,
+        category = BeverageCategory.WATER,
         titleRes = R.string.hydration_catalog_section_water,
     ),
     HydrationCatalogSectionSpec(
         key = HydrationCatalogSectionKey.COFFEE,
-        category = CaffeineSourceCategory.COFFEE,
+        category = BeverageCategory.COFFEE,
         titleRes = R.string.hydration_catalog_section_coffees,
     ),
     HydrationCatalogSectionSpec(
         key = HydrationCatalogSectionKey.ENERGY_DRINK,
-        category = CaffeineSourceCategory.ENERGY_DRINK,
+        category = BeverageCategory.ENERGY_DRINK,
         titleRes = R.string.hydration_catalog_section_energy_drinks,
     ),
     HydrationCatalogSectionSpec(
         key = HydrationCatalogSectionKey.TEA,
-        category = CaffeineSourceCategory.TEA,
+        category = BeverageCategory.TEA,
         titleRes = R.string.hydration_catalog_section_teas,
     ),
     HydrationCatalogSectionSpec(
         key = HydrationCatalogSectionKey.CHOCOLATE,
-        category = CaffeineSourceCategory.CHOCOLATE,
+        category = BeverageCategory.CHOCOLATE,
         titleRes = R.string.hydration_catalog_section_chocolate_drinks,
     ),
     HydrationCatalogSectionSpec(
         key = HydrationCatalogSectionKey.CARBONATED_SOFT_DRINK,
-        category = CaffeineSourceCategory.SODA,
+        category = BeverageCategory.SODA,
         titleRes = R.string.hydration_catalog_section_carbonated_soft_drinks,
     ),
     HydrationCatalogSectionSpec(
+        key = HydrationCatalogSectionKey.BEER,
+        category = BeverageCategory.BEER,
+        titleRes = R.string.hydration_catalog_section_beers,
+    ),
+    HydrationCatalogSectionSpec(
         key = HydrationCatalogSectionKey.OTHER,
-        category = CaffeineSourceCategory.OTHER,
+        category = BeverageCategory.OTHER,
         titleRes = R.string.hydration_catalog_section_other_drinks,
     ),
 )
@@ -174,17 +179,18 @@ internal enum class HydrationCatalogSectionKey {
     TEA,
     CHOCOLATE,
     CARBONATED_SOFT_DRINK,
+    BEER,
     OTHER,
 }
 
 internal data class HydrationCatalogSectionSpec(
     val key: HydrationCatalogSectionKey,
-    val category: CaffeineSourceCategory?,
+    val category: BeverageCategory?,
     @param:StringRes val titleRes: Int,
 )
 
 private data class HydrationDrinkCategoryOption(
-    val category: CaffeineSourceCategory?,
+    val category: BeverageCategory?,
     @param:StringRes val titleRes: Int,
 )
 
@@ -228,7 +234,7 @@ internal fun HydrationTrackerCard(
     onAddSavedCustomDrinkEntry: (CustomHydrationDrink, Double, Instant) -> Unit,
     onDeleteCustomDrink: (CustomHydrationDrink) -> Unit,
     onMoveCustomDrinkToTarget: (String, String) -> Unit,
-    onMoveCustomDrinkToCategory: (String, CaffeineSourceCategory?) -> Unit,
+    onMoveCustomDrinkToCategory: (String, BeverageCategory?) -> Unit,
     onEntryTimeChanged: (java.time.Instant) -> Unit,
     onRequestWritePermission: () -> Unit,
     initialLogDrinkId: String? = null,
@@ -544,7 +550,7 @@ private fun HydrationCatalogDrinkCarousel(
     onEditCatalogDrink: (CustomHydrationDrink) -> Unit,
     onDeleteCatalogDrink: (CustomHydrationDrink) -> Unit,
     onMoveSavedDrinkToTarget: (String, String) -> Unit,
-    onMoveSavedDrinkToCategory: (String, CaffeineSourceCategory?) -> Unit,
+    onMoveSavedDrinkToCategory: (String, BeverageCategory?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (catalogDrinks.isEmpty() && savedDrinks.isEmpty() && frequentDrinks.isEmpty()) return
@@ -1194,16 +1200,17 @@ private fun List<HydrationCatalogRowItem>.orderedByCatalogSectionOrder(
     return orderedRows + filterNot { it.rowKey in orderedKeys }
 }
 
-internal fun CaffeineSourceCategory.toHydrationCatalogSectionKey(): HydrationCatalogSectionKey =
+internal fun BeverageCategory.toHydrationCatalogSectionKey(): HydrationCatalogSectionKey =
     when (this) {
-        CaffeineSourceCategory.WATER -> HydrationCatalogSectionKey.WATER
-        CaffeineSourceCategory.COFFEE -> HydrationCatalogSectionKey.COFFEE
-        CaffeineSourceCategory.ENERGY_DRINK -> HydrationCatalogSectionKey.ENERGY_DRINK
-        CaffeineSourceCategory.TEA -> HydrationCatalogSectionKey.TEA
-        CaffeineSourceCategory.CHOCOLATE -> HydrationCatalogSectionKey.CHOCOLATE
-        CaffeineSourceCategory.SODA -> HydrationCatalogSectionKey.CARBONATED_SOFT_DRINK
-        CaffeineSourceCategory.SUPPLEMENT,
-        CaffeineSourceCategory.OTHER,
+        BeverageCategory.WATER -> HydrationCatalogSectionKey.WATER
+        BeverageCategory.COFFEE -> HydrationCatalogSectionKey.COFFEE
+        BeverageCategory.ENERGY_DRINK -> HydrationCatalogSectionKey.ENERGY_DRINK
+        BeverageCategory.TEA -> HydrationCatalogSectionKey.TEA
+        BeverageCategory.CHOCOLATE -> HydrationCatalogSectionKey.CHOCOLATE
+        BeverageCategory.SODA -> HydrationCatalogSectionKey.CARBONATED_SOFT_DRINK
+        BeverageCategory.BEER -> HydrationCatalogSectionKey.BEER
+        BeverageCategory.SUPPLEMENT,
+        BeverageCategory.OTHER,
         -> HydrationCatalogSectionKey.OTHER
     }
 
@@ -1583,7 +1590,7 @@ internal fun HydrationCustomDrinkDialog(
     initialName: String,
     initialMilliliters: Double?,
     initialHydrationMultiplier: Double = FullHydrationImpactMultiplier,
-    initialCategory: CaffeineSourceCategory? = null,
+    initialCategory: BeverageCategory? = null,
     initialNutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
     onDismiss: () -> Unit,
     onSave: (CustomHydrationDrinkInput) -> Unit,
@@ -1784,8 +1791,8 @@ internal fun HydrationCustomDrinkDialog(
 
 @Composable
 private fun HydrationDrinkCategorySelector(
-    selectedCategory: CaffeineSourceCategory?,
-    onCategorySelected: (CaffeineSourceCategory?) -> Unit,
+    selectedCategory: BeverageCategory?,
+    onCategorySelected: (BeverageCategory?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
