@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cd_settings">Paramètres</string>
+    <string name="cd_move_widget_up">Déplacer le widget vers le haut</string>
+    <string name="cd_move_widget_down">Déplacer le widget vers le bas</string>
+    <string name="cd_move_section_up">Déplacer la section vers le haut</string>
+    <string name="cd_move_section_down">Déplacer la section vers le bas</string>
+    <string name="cd_remove_widget">Supprimer le widget</string>
+    <string name="cd_edit_drink">Modifier la boisson</string>
+    <string name="cd_delete_drink">Supprimer la boisson</string>
+    <string name="cd_edit_saved_drinks">Modifier les boissons sauvegardées</string>
+    <string name="cd_delete_entry">Supprimer l\'entrée</string>
+    <string name="cd_decrease_daily_goal">Diminuer l\'objectif quotidien</string>
+    <string name="cd_done_editing_saved_drinks">Terminer l\'édition des boissons sauvegardées</string>
+    <string name="cd_open_calendar">Ouvrir le calendrier</string>
+    <string name="action_edit">Modifier</string>
+    <string name="action_save">Sauvegarder</string>
+    <string name="action_close">Fermer</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="action_details">Détails</string>
+    <string name="action_enable">Activer</string>
+    <string name="action_get_started">Commencer</string>
+    <string name="action_grant">Accorder</string>
+    <string name="action_grant_permission">Accorder l\'autorisation</string>
+    <string name="action_load_more_entries">Charger 10 de plus</string>
+    <string name="action_show_calculation">Afficher le calcul</string>
+    <string name="action_select">Sélectionner</string>
+    <string name="unknown_error">Erreur inconnue</string>
+    <string name="screen_error_not_found">L\'élément demandé n\'a pas été trouvé.</string>
+    <string name="screen_error_health_connect_unavailable">Santé Connect n\'est pas disponible sur cet appareil.</string>
+</resources>
