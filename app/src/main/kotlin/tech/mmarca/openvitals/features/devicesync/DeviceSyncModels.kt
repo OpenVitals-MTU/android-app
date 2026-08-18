@@ -46,7 +46,7 @@ enum class DeviceSyncError {
 /**
  * Every record type the sync can move, mapped to its Health Connect permission
  * suffix (`READ_<suffix>` / `WRITE_<suffix>`). The generic read/write path
- * (`readRecordsForSync` / `insertImportedRecords`) covers all of these; the
+ * (`forEachSyncRecordPage` / `insertImportedRecords`) covers all of these; the
  * per-device permission gate then hides any a given provider/manifest doesn't
  * grant.
  */

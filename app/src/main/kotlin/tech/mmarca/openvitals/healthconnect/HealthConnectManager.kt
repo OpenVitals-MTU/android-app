@@ -713,11 +713,12 @@ class HealthConnectManager @Inject constructor(
      * phone-to-phone sync feature. Type-agnostic by design — sync moves all
      * negotiated record types through one paged read path.
      */
-    suspend fun readRecordsForSync(
+    suspend fun forEachSyncRecordPage(
         recordType: KClass<out Record>,
         start: Instant,
         end: Instant,
-    ): List<Record> = syncRecordsReader.readAllRecords(recordType, start, end)
+        action: suspend (List<Record>) -> Unit,
+    ) = syncRecordsReader.forEachRecordPage(recordType, start, end, action)
 
     @Suppress("UNCHECKED_CAST")
     suspend fun findMatchingImportedClientRecordIds(

@@ -13,6 +13,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import java.time.Instant
 import kotlin.reflect.KClass
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -43,6 +44,14 @@ import tech.mmarca.openvitals.healthconnect.SyncedSourceOverlay
  */
 class HealthConnectSyncStoreTest {
 
+    /**
+     * The old materializing read, rebuilt over the streaming contract: these
+     * tests assert on read CONTENT (keys, payloads, origins), which the chunked
+     * flow delivers identically.
+     */
+    private suspend fun HealthConnectSyncStore.readItems(types: Set<String>): List<SyncItem> =
+        readItemChunks(types, chunkSize = 500).toList().flatten()
+
     /** Models Health Connect's import surface in memory. */
     private class FakeHealthConnect {
         private val byClientId = linkedMapOf<String, Record>()
@@ -59,9 +68,11 @@ class HealthConnectSyncStoreTest {
         }
 
         val manager: HealthConnectManager = mockk<HealthConnectManager>().also { hc ->
-            coEvery { hc.readRecordsForSync(any(), any(), any()) } answers {
+            coEvery { hc.forEachSyncRecordPage(any(), any(), any(), any()) } coAnswers {
                 val recordClass = firstArg<KClass<out Record>>()
-                byClientId.values.filter { recordClass.isInstance(it) }
+                val action = arg<suspend (List<Record>) -> Unit>(3)
+                val records = byClientId.values.filter { recordClass.isInstance(it) }
+                if (records.isNotEmpty()) action(records)
             }
         }
 

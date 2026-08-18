@@ -6,6 +6,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,13 +46,23 @@ class SyncAborted(val reason: String) : Exception(reason)
  */
 interface SyncRecordStore {
     /**
-     * Reads this phone's records for the negotiated [types] in the session's
-     * window, each already carrying its dedup [SyncItem.key]. These same keys
-     * are the session's dedup baseline: an incoming peer record is a duplicate
-     * iff we already hold a record with the same content fingerprint, i.e. its
-     * key is among the ones this returns.
+     * Streams the dedup key of every local record for [types] in the session's
+     * window. These keys are the session's dedup baseline: an incoming peer
+     * record is a duplicate iff we already hold a record with the same content
+     * fingerprint. Keys only — the session hashes and discards each one, so
+     * the baseline never holds the records themselves.
      */
-    suspend fun readItems(types: Set<String>): List<SyncItem>
+    fun readKeys(types: Set<String>): Flow<String>
+
+    /**
+     * Streams this phone's records for [types] in the window as chunks of at
+     * most [chunkSize] items, each carrying its dedup [SyncItem.key]. A cold
+     * flow read lazily: the session sends each chunk and drops it before the
+     * next is produced, so the whole window is never in memory at once — a
+     * data-dense year materialized up front used to GC-thrash small heaps
+     * until the link timed out.
+     */
+    fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>>
 
     /**
      * Writes [items] to Health Connect (post-dedup) and returns the
@@ -91,7 +102,13 @@ class SyncSession(
     private val nonce: ByteArray = config.nonce ?: generateSyncNonce(random)
 
     private val report = SyncReportBuilder()
-    private val seenKeys = HashSet<String>()
+
+    // Hashed, not the key strings themselves: the baseline covers every local
+    // record in the window, and 16 bytes an entry is the difference between a
+    // large sync fitting a small heap or not. Confinement per [SyncKeyHasher]:
+    // seeded before the exchange loops start, then touched only by the receiver.
+    private val seenKeys = HashSet<SyncKeyHash>()
+    private val keyHasher = SyncKeyHasher()
 
     private val _progress = MutableStateFlow(SyncProgress(phase = SyncPhase.HANDSHAKE))
 
@@ -215,33 +232,39 @@ class SyncSession(
 
     private suspend fun exchange(negotiated: List<String>) {
         emit(phase = SyncPhase.EXCHANGING)
-        val localItems = store.readItems(negotiated.toSet())
-        report.itemsSent = localItems.size
-        // Seed the dedup baseline from the records we just read. A peer record
-        // is a duplicate iff we already hold one with the same content
-        // fingerprint, so our own item keys ARE that set — dedup is then an
+        val types = negotiated.toSet()
+        // Seed the dedup baseline from a keys-only pass over our own records.
+        // A peer record is a duplicate iff we already hold one with the same
+        // content fingerprint, so our own keys ARE that set — dedup is then an
         // in-memory lookup instead of a per-batch Health Connect re-read. It is
         // also stricter: it catches records we hold natively (no
         // clientRecordId), which a clientRecordId-only check would miss and
-        // re-import.
-        localItems.forEach { seenKeys += it.key }
+        // re-import. The baseline must be COMPLETE before the receiver writes
+        // its first incoming batch, which is why this pass runs before the
+        // loops rather than folding into the sender's stream.
+        store.readKeys(types).collect { key -> seenKeys += keyHasher.hash(key) }
         // Sender and receiver run concurrently over the one full-duplex link.
         coroutineScope {
-            launch { runSender(localItems) }
+            launch { runSender(types) }
             launch { runReceiver() }
         }
     }
 
-    private suspend fun runSender(items: List<SyncItem>) {
+    private suspend fun runSender(types: Set<String>) {
         var seq = 0
         var sent = 0
-        for (chunk in items.chunked(config.batchSize)) {
+        // Stop-and-wait per chunk, and the chunk is dropped before the store
+        // produces the next one — peak sender memory is one batch, not the
+        // window.
+        store.readItemChunks(types, config.batchSize).collect { chunk ->
+            if (chunk.isEmpty()) return@collect
             seq += 1
             val ack = CompletableDeferred<Int>()
             pendingAck = ack
             send(SyncFrameType.BATCH, SyncBatch(seq, chunk).encode())
             await(ack, config.batchTimeoutMillis, "timed out waiting for ack")
             sent += chunk.size
+            report.itemsSent = sent
             emit(itemsSent = sent)
         }
         send(SyncFrameType.SEND_DONE, ByteArray(0))
@@ -267,14 +290,15 @@ class SyncSession(
             val fresh = mutableListOf<SyncItem>()
             for (item in batch.items) {
                 // seenKeys holds every record we already had (seeded from
-                // readItems) plus everything written earlier this session, so
+                // readKeys) plus everything written earlier this session, so
                 // this one lookup covers both cross-device and within-session
                 // dedup.
-                if (item.key in seenKeys) {
+                val keyHash = keyHasher.hash(item.key)
+                if (keyHash in seenKeys) {
                     report.recordReceived(item.recordType, duplicate = true)
                 } else {
                     fresh += item
-                    seenKeys += item.key
+                    seenKeys += keyHash
                 }
             }
             // Count `imported` from what actually landed, not from what we

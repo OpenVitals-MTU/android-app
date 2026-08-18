@@ -2,6 +2,9 @@ package tech.mmarca.openvitals.features.devicesync.protocol
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,9 +19,10 @@ import org.junit.Test
 class SyncSessionTest {
 
     /**
-     * In-memory stand-in for Health Connect: a keyed set of records.
-     * `readItems` snapshots current contents (the session's dedup baseline);
-     * `writeItems` upserts.
+     * In-memory stand-in for Health Connect: a keyed set of records. The read
+     * flows snapshot current contents at collection (the session collects keys
+     * as its dedup baseline, then streams chunks to send); `writeItems`
+     * upserts.
      */
     private class FakeRecordStore(initial: Iterable<SyncItem> = emptyList()) : SyncRecordStore {
         private val byKey = linkedMapOf<String, SyncItem>()
@@ -29,8 +33,16 @@ class SyncSessionTest {
 
         val keys: Set<String> get() = byKey.keys.toSet()
 
-        override suspend fun readItems(types: Set<String>): List<SyncItem> =
-            byKey.values.filter { it.recordType in types }
+        override fun readKeys(types: Set<String>): Flow<String> = flow {
+            byKey.values.filter { it.recordType in types }.forEach { emit(it.key) }
+        }
+
+        override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> =
+            flow {
+                byKey.values.filter { it.recordType in types }
+                    .chunked(chunkSize)
+                    .forEach { emit(it) }
+            }
 
         override suspend fun writeItems(items: List<SyncItem>): Set<String> {
             items.forEach { byKey[it.key] = it }
@@ -40,14 +52,24 @@ class SyncSessionTest {
 
     /** A store whose reads yield a caller-specified key list (allows dup keys). */
     private class DupReadingStore(private val keys: List<String>) : SyncRecordStore {
-        override suspend fun readItems(types: Set<String>): List<SyncItem> = keys.map { item(it) }
+        override fun readKeys(types: Set<String>): Flow<String> = flow {
+            keys.forEach { emit(it) }
+        }
+
+        override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> =
+            flow {
+                keys.map { item(it) }.chunked(chunkSize).forEach { emit(it) }
+            }
+
         override suspend fun writeItems(items: List<SyncItem>): Set<String> =
             items.map { it.key }.toSet()
     }
 
     /** A store that reads nothing and fails every write (returns no written keys). */
     private class WriteFailingStore : SyncRecordStore {
-        override suspend fun readItems(types: Set<String>): List<SyncItem> = emptyList()
+        override fun readKeys(types: Set<String>): Flow<String> = emptyFlow()
+        override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> =
+            emptyFlow()
         override suspend fun writeItems(items: List<SyncItem>): Set<String> = emptySet()
     }
 

@@ -281,11 +281,16 @@
         </intent>
     </queries>
 
+    <!-- largeHeap: headroom for the phone-to-phone sync of data-dense datasets.
+         The sync path streams and should stay within a normal heap; this is the
+         safety margin for devices whose default cap is small, not a license to
+         hold whole datasets in memory. -->
     <application
         android:name=".OpenVitalsApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:largeHeap="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.OpenVitals">

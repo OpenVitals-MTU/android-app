@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.health.connect.client.records.Record
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
@@ -43,31 +45,52 @@ class HealthConnectSyncStore(
     private val windowEnd: Instant,
 ) : SyncRecordStore {
 
-    override suspend fun readItems(types: Set<String>): List<SyncItem> {
-        val preservedOrigins = originRepository.preservedOrigins()
-        val items = mutableListOf<SyncItem>()
+    override fun readKeys(types: Set<String>): Flow<String> = flow {
+        // Keys only, no payload encode and no origin lookup: this pass exists
+        // so the session can hold a complete dedup baseline WITHOUT holding
+        // the records, so it must itself stay record-light.
         for (type in types) {
             val recordClass = syncRecordClassFor(type) ?: continue
-            val records = healthConnectManager.readRecordsForSync(recordClass, windowStart, windowEnd)
-            for (record in records) {
-                // A record the codec cannot express (future provider fields,
-                // an unexpected shape) is skipped rather than sinking the read.
-                val item = runCatching {
-                    SyncItem(
-                        key = syncFingerprint(record),
-                        recordType = type,
-                        payload = encodeSyncRecordPayload(record),
-                        originPackage = resolveOriginalSource(
-                            clientRecordId = record.metadata.clientRecordId,
-                            dataOriginPackage = record.metadata.dataOrigin.packageName,
-                            preservedOrigins = preservedOrigins,
-                        ),
-                    )
-                }.getOrNull() ?: continue
-                items += item
+            healthConnectManager.forEachSyncRecordPage(recordClass, windowStart, windowEnd) { page ->
+                for (record in page) {
+                    val key = runCatching { syncFingerprint(record) }.getOrNull() ?: continue
+                    emit(key)
+                }
             }
         }
-        return items
+    }
+
+    override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> = flow {
+        val preservedOrigins = originRepository.preservedOrigins()
+        val chunk = mutableListOf<SyncItem>()
+        for (type in types) {
+            val recordClass = syncRecordClassFor(type) ?: continue
+            healthConnectManager.forEachSyncRecordPage(recordClass, windowStart, windowEnd) { page ->
+                for (record in page) {
+                    // A record the codec cannot express (future provider
+                    // fields, an unexpected shape) is skipped rather than
+                    // sinking the read.
+                    val item = runCatching {
+                        SyncItem(
+                            key = syncFingerprint(record),
+                            recordType = type,
+                            payload = encodeSyncRecordPayload(record),
+                            originPackage = resolveOriginalSource(
+                                clientRecordId = record.metadata.clientRecordId,
+                                dataOriginPackage = record.metadata.dataOrigin.packageName,
+                                preservedOrigins = preservedOrigins,
+                            ),
+                        )
+                    }.getOrNull() ?: continue
+                    chunk += item
+                    if (chunk.size >= chunkSize) {
+                        emit(chunk.toList())
+                        chunk.clear()
+                    }
+                }
+            }
+        }
+        if (chunk.isNotEmpty()) emit(chunk.toList())
     }
 
     override suspend fun writeItems(items: List<SyncItem>): Set<String> {
