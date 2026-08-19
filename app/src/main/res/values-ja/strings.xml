@@ -1,3 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    </resources>
+    <string name="app_name">OpenVitals</string>
+    <string name="cd_back">戻る</string>
+    <string name="cd_settings">設定</string>
+    <string name="cd_achievements">実績</string>
+    <string name="cd_sensor_battery_status">センサーのバッテリー状態</string>
+    <string name="cd_edit_dashboard">概要を編集</string>
+    <string name="cd_finish_dashboard_editing">概要の編集を終了する</string>
+</resources>
