@@ -349,11 +349,13 @@ class DeviceSyncViewModel @Inject constructor(
                     selectedTypes = state.selectedTypes.toList(),
                     // Real datasets can be large (a CGM alone is ~100k
                     // readings/year). Bigger batches cut the number of
-                    // stop-and-wait round-trips, and a generous ack timeout
-                    // tolerates the slow side writing a big batch to Health
-                    // Connect.
+                    // stop-and-wait round-trips; the store additionally caps a
+                    // batch by payload BYTES so its transfer stays well inside
+                    // the ack timeout. The timeout itself is generous enough
+                    // to ride out a Health Connect rate-limit pause (60s wait
+                    // + retry) on the slow side.
                     batchSize = 500,
-                    batchTimeoutMillis = 180_000,
+                    batchTimeoutMillis = 300_000,
                 ),
             )
             val progressJob = launch {

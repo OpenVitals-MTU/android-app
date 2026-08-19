@@ -26,6 +26,7 @@ import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
 import tech.mmarca.openvitals.data.repository.TestDispatcherProvider
+import tech.mmarca.openvitals.features.devicesync.protocol.SyncAborted
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
 import tech.mmarca.openvitals.features.devicesync.store.HealthConnectSyncStore
 import tech.mmarca.openvitals.features.devicesync.store.encodeSyncRecordPayload
@@ -110,6 +111,7 @@ class HealthConnectSyncStoreTest {
     private fun storeOver(
         fake: FakeHealthConnect,
         originDao: FakeOriginDao = FakeOriginDao(),
+        chunkPayloadByteCap: Int = Int.MAX_VALUE,
     ) = HealthConnectSyncStore(
         healthConnectManager = fake.manager,
         importRepository = fake.repository,
@@ -117,6 +119,7 @@ class HealthConnectSyncStoreTest {
         localPackageName = "tech.mmarca.openvitals",
         windowStart = windowStart,
         windowEnd = windowEnd,
+        chunkPayloadByteCap = chunkPayloadByteCap,
     )
 
     private fun weight(
@@ -158,6 +161,35 @@ class HealthConnectSyncStoreTest {
             assertTrue(item.key.startsWith("sync_"))
             assertEquals("WeightRecord", item.recordType)
         }
+    }
+
+    @Test
+    fun `chunks flush when the payload byte cap is reached`() = runTest {
+        hc.seed(weight(1, 70.0))
+        hc.seed(weight(2, 71.0))
+        hc.seed(weight(3, 72.0))
+
+        // A 1-byte cap forces a flush after every item even though the count
+        // cap (500) is never near.
+        val chunks = storeOver(hc, chunkPayloadByteCap = 1)
+            .readItemChunks(setOf("WeightRecord"), chunkSize = 500)
+            .toList()
+
+        assertEquals(3, chunks.size)
+        assertTrue(chunks.all { it.size == 1 })
+    }
+
+    @Test
+    fun `a failing read aborts the stream instead of silently truncating`() = runTest {
+        coEvery {
+            hc.manager.forEachSyncRecordPage(any(), any(), any(), any())
+        } throws IllegalStateException("quota has been exceeded")
+
+        val result = runCatching { store.readItemChunks(setOf("WeightRecord"), 500).toList() }
+
+        val error = result.exceptionOrNull()
+        assertTrue(error is SyncAborted)
+        assertTrue(error!!.message.orEmpty().contains("WeightRecord"))
     }
 
     @Test

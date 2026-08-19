@@ -269,6 +269,34 @@ class SyncSessionTest {
         assertEquals(setOf("c"), guestStore.keys)
     }
 
+    // ── read failure mid-stream ──────────────────────────────────────────────
+
+    @Test
+    fun `a store read failure aborts both sides with the reason`() = runTest {
+        // The host's stream dies after one chunk — the store's mapping of a
+        // rate-limited Health Connect read. The session must abort with the
+        // reason (and tell the peer) rather than finish and claim a complete
+        // transfer.
+        val hostStore = object : SyncRecordStore {
+            override fun readKeys(types: Set<String>): Flow<String> = emptyFlow()
+            override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> =
+                flow {
+                    emit(listOf(item("a")))
+                    throw SyncAborted("reading StepsRecord from Health Connect failed: rate limited")
+                }
+            override suspend fun writeItems(items: List<SyncItem>): Set<String> =
+                items.map { it.key }.toSet()
+        }
+        val guestStore = FakeRecordStore()
+
+        val (hostReport, guestReport) = runPair(hostStore, guestStore)
+
+        assertFalse(hostReport.completed)
+        assertTrue(hostReport.abortReason.orEmpty().contains("rate limited"))
+        assertFalse(guestReport.completed)
+        assertTrue(guestReport.abortReason.orEmpty().contains("rate limited"))
+    }
+
     // ── type negotiation ─────────────────────────────────────────────────────
 
     @Test

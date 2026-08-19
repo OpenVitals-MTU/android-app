@@ -16,11 +16,12 @@ import kotlin.reflect.KClass
  * list — a data-dense year is easily a hundred thousand records — pinned small
  * heaps at their limit and GC-thrashed the session until its timeouts fired.
  *
- * A page read failure (including an exhausted rate-limit retry) ends the
- * type's stream with the pages already delivered, matching the other readers'
- * degrade-to-empty discipline. The [action] itself runs OUTSIDE the logging
- * envelope so a failure in the caller — the sync link dying mid-send —
- * propagates instead of being swallowed as a read failure.
+ * A page read failure (including an exhausted rate-limit retry) THROWS rather
+ * than degrading to empty: sync is the one reader whose silence lies — a
+ * truncated stream let the session finish and report a complete transfer that
+ * wasn't. The [action] itself runs OUTSIDE the logging envelope so a failure
+ * in the caller — the sync link dying mid-send — propagates as its own error
+ * rather than being logged as a read failure.
  */
 internal class SyncRecordsReader(private val support: HealthConnectReaderSupport) {
 
@@ -34,7 +35,7 @@ internal class SyncRecordsReader(private val support: HealthConnectReaderSupport
         val filter = TimeRangeFilter.between(start, end)
         var pageToken: String? = null
         do {
-            val response = support.withNullableLogging(
+            val response = support.withLoggingOrThrow(
                 "readSyncRecordPage[${recordType.simpleName}]",
             ) {
                 support.client().readRecords(
@@ -45,7 +46,7 @@ internal class SyncRecordsReader(private val support: HealthConnectReaderSupport
                         pageToken = pageToken,
                     ),
                 )
-            } ?: return
+            }
             if (response.records.isNotEmpty()) action(response.records)
             pageToken = response.pageToken
         } while (pageToken != null)

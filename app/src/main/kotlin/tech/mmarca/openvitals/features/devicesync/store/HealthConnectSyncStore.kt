@@ -3,11 +3,13 @@ package tech.mmarca.openvitals.features.devicesync.store
 import android.util.Log
 import androidx.health.connect.client.records.Record
 import java.time.Instant
+import kotlin.reflect.KClass
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
+import tech.mmarca.openvitals.features.devicesync.protocol.SyncAborted
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRecordStore
 import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
@@ -43,6 +45,8 @@ class HealthConnectSyncStore(
     /** The inclusive sync window the user chose ("how far back"). */
     private val windowStart: Instant,
     private val windowEnd: Instant,
+    /** Overridable so a test can exercise the byte cap without megabyte fixtures. */
+    private val chunkPayloadByteCap: Int = ChunkPayloadByteCap,
 ) : SyncRecordStore {
 
     override fun readKeys(types: Set<String>): Flow<String> = flow {
@@ -51,7 +55,7 @@ class HealthConnectSyncStore(
         // the records, so it must itself stay record-light.
         for (type in types) {
             val recordClass = syncRecordClassFor(type) ?: continue
-            healthConnectManager.forEachSyncRecordPage(recordClass, windowStart, windowEnd) { page ->
+            forEachRecordPageOrAbort(recordClass, type) { page ->
                 for (record in page) {
                     val key = runCatching { syncFingerprint(record) }.getOrNull() ?: continue
                     emit(key)
@@ -60,12 +64,36 @@ class HealthConnectSyncStore(
         }
     }
 
+    /**
+     * Streams pages for [recordClass], turning a Health Connect read failure
+     * into a clean session abort with a reason. A rate-limited stream that
+     * quietly ENDED instead let the session finish and report "completed" for
+     * a transfer that wasn't. Aborts raised by the downstream collector (the
+     * sender's ack timeout arriving through `emit`) pass through untouched.
+     */
+    private suspend fun forEachRecordPageOrAbort(
+        recordClass: KClass<out Record>,
+        type: String,
+        action: suspend (List<Record>) -> Unit,
+    ) {
+        try {
+            healthConnectManager.forEachSyncRecordPage(recordClass, windowStart, windowEnd, action)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SyncAborted) {
+            throw e
+        } catch (e: Exception) {
+            throw SyncAborted("reading $type from Health Connect failed: ${e.message}")
+        }
+    }
+
     override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> = flow {
         val preservedOrigins = originRepository.preservedOrigins()
         val chunk = mutableListOf<SyncItem>()
+        var chunkPayloadBytes = 0
         for (type in types) {
             val recordClass = syncRecordClassFor(type) ?: continue
-            healthConnectManager.forEachSyncRecordPage(recordClass, windowStart, windowEnd) { page ->
+            forEachRecordPageOrAbort(recordClass, type) { page ->
                 for (record in page) {
                     // A record the codec cannot express (future provider
                     // fields, an unexpected shape) is skipped rather than
@@ -83,9 +111,16 @@ class HealthConnectSyncStore(
                         )
                     }.getOrNull() ?: continue
                     chunk += item
-                    if (chunk.size >= chunkSize) {
+                    chunkPayloadBytes += item.payload.size
+                    // Capped by BYTES as well as count: a chunk is one wire
+                    // batch, acked only once it has fully crossed the link.
+                    // 500 series records (a heart-rate record carries every
+                    // sample) made multi-megabyte batches whose RFCOMM
+                    // transfer alone outlived the peer's ack timeout.
+                    if (chunk.size >= chunkSize || chunkPayloadBytes >= chunkPayloadByteCap) {
                         emit(chunk.toList())
                         chunk.clear()
+                        chunkPayloadBytes = 0
                     }
                 }
             }
@@ -241,3 +276,11 @@ internal fun resolveOriginalSource(
  */
 internal fun persistableOrigin(originPackage: String?, localPackageName: String): String? =
     originPackage?.takeIf { it.isNotBlank() && it != localPackageName }
+
+/**
+ * The payload-byte ceiling for one outgoing chunk (one wire batch). Sized so a
+ * batch crosses even a slow RFCOMM link in seconds — comfortably inside the
+ * ack timeout — where a count-only cap let 500 series records form a
+ * multi-megabyte batch whose transfer alone outlived it.
+ */
+private const val ChunkPayloadByteCap = 256 * 1024

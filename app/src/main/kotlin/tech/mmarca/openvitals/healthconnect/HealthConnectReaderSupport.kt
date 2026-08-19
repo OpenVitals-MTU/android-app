@@ -38,6 +38,46 @@ internal class HealthConnectReaderSupport(
         block: suspend () -> T?,
     ): T? = withRateLimitRetry(operation, null, block)
 
+    /**
+     * Like [withLogging] but a failure that survives the rate-limit retry is
+     * RETHROWN instead of degraded to a fallback. For callers whose silence
+     * would lie — a sync stream that quietly truncated on rate limiting let
+     * the session report "completed" for a transfer that wasn't.
+     */
+    suspend fun <T> withLoggingOrThrow(
+        operation: String,
+        block: suspend () -> T,
+    ): T {
+        val safeOperation = operation.privacySafeOperationName()
+        var hasRetriedRateLimit = false
+        while (true) {
+            check(syncEnabled()) { "Health Connect access is paused" }
+            waitForActiveRateLimit(safeOperation)
+            Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
+            try {
+                return readSemaphore.withPermit {
+                    withContext(Dispatchers.IO) {
+                        block().also { Log.d(TAG, "Finished $safeOperation successfully") }
+                    }
+                }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+                    val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
+                    Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
+                    if (!hasRetriedRateLimit) {
+                        hasRetriedRateLimit = true
+                        delay(rateLimit.retryAfterMillis)
+                        continue
+                    }
+                    throw rateLimit
+                }
+                Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)
+                throw t
+            }
+        }
+    }
+
     private suspend fun <T> withRateLimitRetry(
         operation: String,
         fallback: T,
