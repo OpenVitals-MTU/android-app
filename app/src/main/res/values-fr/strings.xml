@@ -28,4 +28,16 @@
     <string name="unknown_error">Erreur inconnue</string>
     <string name="screen_error_not_found">L\'élément demandé n\'a pas été trouvé.</string>
     <string name="screen_error_health_connect_unavailable">Santé Connect n\'est pas disponible sur cet appareil.</string>
+    <string name="app_name">OpenVitals</string>
+    <string name="cd_achievements">Accomplissements</string>
+    <string name="action_start">Début</string>
+    <string name="action_discard">Abandonner</string>
+    <string name="cd_move_drink_category">Déplacer le type de boisson</string>
+    <string name="action_continue">Continuer</string>
+    <string name="cd_exit_recording_focus_mode">Quitter le mode focus</string>
+    <string name="action_finish">Terminer</string>
+    <string name="cd_back">Retour</string>
+    <string name="action_hide_calculation">Masquer le calcul</string>
+    <string name="screen_error_missing_argument">Informations obligatoires manquantes.</string>
+    <string name="screen_error_permission_denied">Une permission est nécessaire pour charger ces données.</string>
 </resources>
