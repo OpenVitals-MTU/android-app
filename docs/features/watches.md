@@ -170,7 +170,7 @@ While forwarding is on, the link to the watch is held open for as long as the wa
 
 Notification forwarding holds the link only while it has work. "Stay connected", on the watch's device screen, holds it always: whenever the watch is in range, the phone keeps the connection open, the way Garmin's own app behaves. Android's companion-device presence wakes OpenVitals when the watch comes back into range, so the link returns promptly rather than on a retry timer.
 
-Off by default. A held link is what the features below ride on.
+On by default — a held link is what the features below ride on, and a watch that behaves as its own app would is the expected thing rather than the surprising one. It costs battery on both sides, so the switch is there; turning it off is remembered, and a later version's default will not undo that.
 
 ### Live Readings
 

@@ -138,8 +138,21 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(navigationOnWatchPrefsKey(deviceId), enabled) }
     }
 
+    /**
+     * Whether the link to this watch is held open whenever it is in range.
+     *
+     * **On by default**, unlike everything else here, because it is what a
+     * Garmin watch expects a companion phone to do: weather, find-my-phone,
+     * live readings and guidance on the wrist all ride a held link, and a
+     * wearer who pairs a watch and finds none of it working has no way to
+     * guess that one switch was the reason. It costs battery on both sides,
+     * which is why the card says so and the switch is there to turn off.
+     *
+     * A wearer who does turn it off has that written down, so this default
+     * never reaches them again.
+     */
     fun stayConnected(deviceId: String): Boolean =
-        prefs.getBoolean(stayConnectedPrefsKey(deviceId), false)
+        prefs.getBoolean(stayConnectedPrefsKey(deviceId), true)
 
     fun setStayConnected(deviceId: String, enabled: Boolean) {
         prefs.edit { putBoolean(stayConnectedPrefsKey(deviceId), enabled) }

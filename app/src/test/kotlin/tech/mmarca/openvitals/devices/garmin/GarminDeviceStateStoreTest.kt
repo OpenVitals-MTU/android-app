@@ -142,6 +142,27 @@ class GarminDeviceStateStoreTest {
     }
 
     @Test
+    fun `stay connected is on until the wearer says otherwise`() {
+        assertTrue(store.stayConnected(deviceId))
+
+        store.setStayConnected(deviceId, false)
+
+        // The point of the default is that it loses to a choice: a wearer who
+        // turned the link off must not have it handed back by a later build.
+        assertFalse(GarminDeviceStateStore(prefs).stayConnected(deviceId))
+    }
+
+    @Test
+    fun `forgetting a watch takes its stay-connected choice with it`() {
+        store.setStayConnected(deviceId, false)
+
+        store.clear(deviceId)
+
+        // Re-pairing is a fresh watch, and a fresh watch gets the default.
+        assertTrue(GarminDeviceStateStore(prefs).stayConnected(deviceId))
+    }
+
+    @Test
     fun `clear drops the automatic sync schedule too`() {
         store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_2_HOURS)
 
