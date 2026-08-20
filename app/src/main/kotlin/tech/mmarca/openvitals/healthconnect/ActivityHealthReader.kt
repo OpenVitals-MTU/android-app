@@ -990,9 +990,7 @@ internal class ActivityHealthReader(
                 "segments=${exerciseSegments.size} laps=${exerciseLaps.size} " +
                 "extras=${extraRecords.size} ${support.diagnosticsSummary()}",
         )
-        support.client()
-            .insertRecords(listOf(session) + extraRecords)
-            .recordIdsList
+        insertShrinkingRoutes(listOf(session) + extraRecords)
             .firstOrNull()
             ?: sessionClientRecordId
     }
@@ -1030,7 +1028,7 @@ internal class ActivityHealthReader(
             "Writing ${requests.size} activity entries in one call " +
                 "records=${records.size} ${support.diagnosticsSummary()}",
         )
-        support.client().insertRecords(records)
+        insertShrinkingRoutes(records)
         clientRecordIds
     }
 
@@ -1060,7 +1058,7 @@ internal class ActivityHealthReader(
                 "segments=${exerciseSegments.size} laps=${exerciseLaps.size} " +
                 "extras=${extraRecords.size} ${support.diagnosticsSummary()}",
         )
-        support.client().updateRecords(listOf(session))
+        updateShrinkingRoutes(listOf(session))
         deleteManualActivityMetricRecords(existing.startTime, existing.endTime)
         if (extraRecords.isNotEmpty()) {
             support.client().insertRecords(extraRecords)
@@ -1078,6 +1076,43 @@ internal class ActivityHealthReader(
             recordIdsList = listOf(existing.metadata.id),
             clientRecordIdsList = emptyList(),
         )
+    }
+
+    /**
+     * `insertRecords`, retried with a smaller GPS route when the platform
+     * rejects a record for its size. See [OversizedRouteShrinker]; anything
+     * else, or a list with nothing left to shrink, fails as it did.
+     */
+    private suspend fun insertShrinkingRoutes(records: List<Record>): List<String> =
+        withShrunkRoutes(records) { support.client().insertRecords(it).recordIdsList }
+
+    private suspend fun updateShrinkingRoutes(records: List<Record>) {
+        withShrunkRoutes(records) { support.client().updateRecords(it) }
+    }
+
+    private suspend fun <T> withShrunkRoutes(
+        records: List<Record>,
+        write: suspend (List<Record>) -> T,
+    ): T {
+        var current = records
+        var attempts = 0
+        while (true) {
+            try {
+                return write(current)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                val (limit, was) = OversizedRouteShrinker.recordSizeOverrun(e) ?: throw e
+                val shrunk = OversizedRouteShrinker.shrink(current, limit, was) ?: throw e
+                attempts += 1
+                if (attempts > MaxRouteShrinkAttempts) throw e
+                Log.w(
+                    TAG,
+                    "Exercise route over the record size limit ($was > $limit bytes); " +
+                        "decimating and retrying (attempt $attempts)",
+                )
+                current = shrunk
+            }
+        }
     }
 
     private fun ActivityWriteRequest.toExerciseSessionRecord(
@@ -1406,6 +1441,7 @@ internal class ActivityHealthReader(
         private const val TAG = "HealthConnectManager"
         private const val IntradayAggregateTimeoutMillis = 12_000L
         private const val MinRoutePointCount = 2
+        private const val MaxRouteShrinkAttempts = 3
         private const val MaxActivityDistanceMeters = 1_000_000.0
         private const val MaxActivityElevationMeters = 1_000_000.0
         private const val MaxActivityCaloriesKcal = 1_000_000.0

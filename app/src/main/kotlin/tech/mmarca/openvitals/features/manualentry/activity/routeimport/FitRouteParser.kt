@@ -335,6 +335,14 @@ private class FitActivityInterpreter {
     private val cadenceSamples = mutableListOf<Pair<Instant, Int>>()
     private var fileType: Int? = null
     private var metadataName: String? = null
+    /**
+     * The name carried by the `activity` message, when the watch wrote one.
+     * It is the title the wearer sees on the wrist and wins over the workout
+     * name: a scheduled "Tempo run" workout executed as "Evening Run" should
+     * import under the latter, which is the order Gadgetbridge settled on too
+     * (activity > workout > session > sport).
+     */
+    private var activityName: String? = null
     private var sport: Int? = null
     private var subSport: Int? = null
     private var firstRecordTime: Instant? = null
@@ -370,6 +378,7 @@ private class FitActivityInterpreter {
             FitCourseMessageNumber -> addCourseMetadata(values, strings)
             FitWorkoutMessageNumber -> addWorkoutMetadata(values, strings)
             FitWorkoutStepMessageNumber -> addWorkoutStep(values)
+            FitActivityMessageNumber -> addActivityName(strings)
             FitRecordMessageNumber -> {
                 if (fileType == FitFileTypeCourse) {
                     addCourseRecordPoint(values, messageTimestamp)
@@ -428,6 +437,11 @@ private class FitActivityInterpreter {
             ?.takeUnless { it == FitSportGeneric }
     }
 
+    private fun addActivityName(strings: Map<Int, String>) {
+        if (activityName != null) return
+        activityName = strings[FitActivityNameFieldNumber]?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
     private fun addWorkoutMetadata(values: Map<Int, Long>, strings: Map<Int, String>) {
         metadataName = metadataName ?: strings[FitWorkoutNameFieldNumber]
         sport = sport ?: values[FitWorkoutSportFieldNumber]
@@ -477,7 +491,7 @@ private class FitActivityInterpreter {
             .withFallback(
                 FitActivitySummary(
                     fileType = fileType,
-                    name = metadataName,
+                    name = activityName ?: metadataName,
                     durationSeconds = workoutDurationSeconds,
                     sport = sport,
                     subSport = subSport,
@@ -715,6 +729,14 @@ private const val FitWorkoutMessageNumber = 26
 private const val FitWorkoutSportFieldNumber = 4
 private const val FitWorkoutNameFieldNumber = 8
 private const val FitWorkoutStepMessageNumber = 27
+
+/**
+ * FIT `activity` message. Its `name` (field 8) is absent from Garmin's public
+ * profile but present in `fit_profile.json` and written by watches that let
+ * the wearer title an activity.
+ */
+private const val FitActivityMessageNumber = 34
+private const val FitActivityNameFieldNumber = 8
 private const val FitWorkoutStepDurationTypeFieldNumber = 1
 private const val FitWorkoutStepDurationValueFieldNumber = 2
 private const val FitStartTimeFieldNumber = 2

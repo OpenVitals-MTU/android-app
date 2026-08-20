@@ -305,6 +305,7 @@ class FitWellnessImportTest {
         typedStepsCumulative: List<Triple<Instant, Int, Int>> = emptyList(),
         caloriesCumulative: List<Pair<Instant, Int>> = emptyList(),
         previous: Map<String, FitCounterWatermark> = emptyMap(),
+        zone: ZoneId = this.zone,
     ): FitCounterImport {
         val monitoring = parseGarminWellness(
             fitMonitoringSeriesBytes(
@@ -318,6 +319,58 @@ class FitWellnessImportTest {
             previous = previous,
             zone = zone,
         )
+    }
+
+    @Test
+    fun `a time zone change between syncs does not double steps`() {
+        // The phone flies Madrid -> Tokyo (+7h) overnight. The evening's last
+        // readings were imported under Madrid's day; after landing the next
+        // sync runs under Tokyo, where the same wall-clock instants fall on
+        // the FOLLOWING local day. Gadgetbridge hit a midnight over-count
+        // here because its day boundary follows the current zone. Here the
+        // watch's reset is read from the counter itself, so the day keys may
+        // move but the differences must not.
+        val madrid = zone
+        val tokyo = ZoneId.of("Asia/Tokyo")
+        val evening = counterImport(
+            stepsCumulative = listOf(
+                local(2024, 1, 18, 20, 0) to 5_000,
+                local(2024, 1, 18, 23, 30) to 6_000,
+            ),
+            zone = madrid,
+        )
+        // A first-ever sync has no yesterday to difference from, so the
+        // opening reading counts as the day's accrual so far.
+        assertEquals(6_000, stepsTotal(evening))
+
+        val afterLanding = counterImport(
+            stepsCumulative = listOf(
+                // The very reading the watermark was left at, delivered again
+                // — now on Tokyo's Jan 19, a day with no watermark of its own.
+                local(2024, 1, 18, 23, 30) to 6_000,
+                local(2024, 1, 18, 23, 45) to 6_100,
+                // The watch closes its monitoring day after its own midnight
+                // and the counter restarts.
+                local(2024, 1, 19, 0, 30) to 50,
+                local(2024, 1, 19, 1, 0) to 250,
+            ),
+            previous = evening.watermarks,
+            zone = tokyo,
+        )
+
+        // 6000 -> 6100 is 100. The reset now falls INSIDE Tokyo's day, where
+        // a drop is a rollover and not a walk backwards, so the 50 steps taken
+        // between the reset and the first reading after it are not claimed
+        // (the watch closes its day overnight, so those are normally none);
+        // 50 -> 250 is 200. What must never happen is the 6000 being counted
+        // again.
+        assertEquals(100 + 200, stepsTotal(afterLanding))
+        // And nothing written after landing begins before the evening's
+        // watermark, so Health Connect sees no overlapping span.
+        val watermarkAt = local(2024, 1, 18, 23, 30)
+        steps(afterLanding).forEach { record ->
+            assertTrue(record.clientRecordId, !record.startTime.isBefore(watermarkAt))
+        }
     }
 
     private fun steps(import: FitCounterImport): List<StepsRecord> =
