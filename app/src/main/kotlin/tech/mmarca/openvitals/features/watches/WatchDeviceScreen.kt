@@ -301,6 +301,10 @@ fun WatchDeviceScreen(
                     }
                 },
             )
+            NavigationOnWatchCard(
+                state = state,
+                onToggle = viewModel::setNavigationOnWatch,
+            )
             EphemerisCard(
                 state = state,
                 onImport = { ephemerisPicker.launch(arrayOf("*/*")) },
@@ -617,6 +621,51 @@ private fun CalendarSyncCard(
             if (state.calendarPermissionMissing) {
                 Text(
                     text = stringResource(R.string.settings_watch_calendar_no_permission),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * CoMaps guidance on the wrist. Garmin offers no turn-by-turn channel, so it
+ * rides the notification link: one notification, updated in place as the
+ * route unfolds, gone when it ends. Off by default, and pointless until the
+ * CoMaps integration itself is on, which the card says rather than leaving
+ * a switch that does nothing.
+ */
+@Composable
+private fun NavigationOnWatchCard(
+    state: WatchDeviceUiState,
+    onToggle: (Boolean) -> Unit,
+) {
+    OpenVitalsCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.settings_watch_navigation),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = state.navigationOnWatch,
+                    onCheckedChange = onToggle,
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_watch_navigation_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (state.navigationOnWatch && state.coMapsIntegrationOff) {
+                Text(
+                    text = stringResource(R.string.settings_watch_navigation_integration_off),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

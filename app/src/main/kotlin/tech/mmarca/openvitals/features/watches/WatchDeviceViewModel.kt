@@ -60,6 +60,10 @@ data class WatchDeviceUiState(
     val calendarSync: Boolean = false,
     /** Calendar sync is on but the OS permission has been revoked. */
     val calendarPermissionMissing: Boolean = false,
+    /** CoMaps guidance followed during a recording is shown on the watch. */
+    val navigationOnWatch: Boolean = false,
+    /** The CoMaps integration itself is off, so the watch toggle can do nothing yet. */
+    val coMapsIntegrationOff: Boolean = false,
     /** The most recent live heart rate, while one is arriving. */
     val liveHeartRateBpm: Int? = null,
     /** The last detection connected and found nothing broadcasting. */
@@ -98,6 +102,8 @@ class WatchDeviceViewModel @Inject constructor(
     private val realtimeStore: tech.mmarca.openvitals.devices.garmin.GarminRealtimeStore,
     private val agpsStore: GarminAgpsStore,
     private val calendarSource: tech.mmarca.openvitals.devices.garmin.GarminCalendarSource,
+    private val navigationRelay: tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay,
+    private val preferencesRepository: tech.mmarca.openvitals.data.repository.PreferencesRepository,
 ) : ViewModel() {
 
     val deviceId: String = savedStateHandle.get<String>(WATCH_DEVICE_ID_ARG).orEmpty()
@@ -134,6 +140,9 @@ class WatchDeviceViewModel @Inject constructor(
             calendarSync = stateStore.calendarSync(deviceId),
             calendarPermissionMissing = stateStore.calendarSync(deviceId) &&
                 !calendarSource.hasPermission(),
+            navigationOnWatch = stateStore.navigationOnWatch(deviceId),
+            coMapsIntegrationOff = !preferencesRepository.activityRecordingPreferences()
+                .coMapsNavigationContextEnabled,
             liveHeartRateBpm = live.freshHeartRate(),
         )
     }
@@ -183,6 +192,12 @@ class WatchDeviceViewModel @Inject constructor(
     fun setCalendarSync(enabled: Boolean) {
         stateStore.setCalendarSync(deviceId, enabled)
         localState.update { it.copy(calendarSync = enabled) }
+    }
+
+    /** Shows or stops showing CoMaps guidance on the watch during recordings. */
+    fun setNavigationOnWatch(enabled: Boolean) {
+        navigationRelay.onEnabledChanged(deviceId, enabled)
+        localState.update { it.copy(navigationOnWatch = enabled) }
     }
 
     /** Re-checks the OS grant after the permission dialog closes. */

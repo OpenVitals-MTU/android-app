@@ -126,6 +126,18 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(calendarSyncPrefsKey(deviceId), enabled) }
     }
 
+    /**
+     * Whether CoMaps guidance followed during a recording is shown on the
+     * watch. Off by default: it is a notification the wrist keeps receiving
+     * for the length of a route, and that is the wearer's to ask for.
+     */
+    fun navigationOnWatch(deviceId: String): Boolean =
+        prefs.getBoolean(navigationOnWatchPrefsKey(deviceId), false)
+
+    fun setNavigationOnWatch(deviceId: String, enabled: Boolean) {
+        prefs.edit { putBoolean(navigationOnWatchPrefsKey(deviceId), enabled) }
+    }
+
     fun stayConnected(deviceId: String): Boolean =
         prefs.getBoolean(stayConnectedPrefsKey(deviceId), false)
 
@@ -172,6 +184,8 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     private fun liveReadingsPrefsKey(deviceId: String) = "garmin_live_readings_$deviceId"
 
     private fun calendarSyncPrefsKey(deviceId: String) = "garmin_calendar_sync_$deviceId"
+
+    private fun navigationOnWatchPrefsKey(deviceId: String) = "garmin_navigation_on_watch_$deviceId"
 
     private fun autoSyncPrefsKey(deviceId: String) = "garmin_auto_sync_minutes_$deviceId"
 

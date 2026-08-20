@@ -190,6 +190,14 @@ Known limitation: on the model verified against, the glance arms (it stops sayin
 
 Works in both directions. The Find action on the device screen makes the watch alert; the watch's own find-my-phone feature makes the phone ring at alarm volume, with a notification to stop it. The phone rings even when silenced, because a phone lost in a couch cushion is the whole point.
 
+## CoMaps Guidance On The Watch
+
+"CoMaps guidance on watch", on the watch's device screen, puts the turn-by-turn guidance a GPS recording is following (see [CoMaps navigation context](comaps-navigation-context.md)) on the wrist. Off by default, and it does nothing until the CoMaps integration itself is on in Settings, Activity recording; the card says so when the two disagree.
+
+Garmin watches have no turn-by-turn channel a phone can drive, and Gadgetbridge's Garmin support has none either, so the guidance travels as a notification: the next manoeuvre as the title ("Turn left", "Roundabout, exit 3", "Arrive at destination"), the distance to it as the subtitle, and the street, the distance left and the time left as the body. One notification is added when guidance starts and updated in place from then on, so the watch does not buzz at every fix; it is withdrawn the moment guidance stops, including when the recording ends, so a finished route never lingers on the wrist.
+
+A new manoeuvre or street reaches the watch at once. A countdown that merely ticked down is refreshed at most every five seconds, and a reading that says nothing new is not sent at all. Distances and times are shown as CoMaps formatted them, so the wrist and the phone always agree on units. The notification rides the same link forwarded phone notifications use and needs nothing more than a paired Garmin watch: no notification access, no Stay connected.
+
 ## Calendar On The Watch
 
 "Calendar on watch", on the watch's device screen, feeds the watch's calendar glance from the phone's calendar. Off by default; switching it on asks for Android's calendar permission.

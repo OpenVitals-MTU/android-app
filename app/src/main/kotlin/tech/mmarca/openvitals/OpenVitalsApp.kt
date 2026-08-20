@@ -24,6 +24,7 @@ class OpenVitalsApp : Application() {
     @Inject lateinit var reminderRestoreBootstrap: ReminderRestoreBootstrap
     @Inject lateinit var syncedRecordOriginRepository: SyncedRecordOriginRepository
     @Inject lateinit var garminNotificationBridge: tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
+    @Inject lateinit var garminNavigationRelay: tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay
     @Inject lateinit var watchAutoSyncScheduler: WatchAutoSyncScheduler
 
     override fun onCreate() {
@@ -58,6 +59,7 @@ class OpenVitalsApp : Application() {
         // it: presence observation plus the held watch link, for whichever
         // watch has stay-connected on.
         garminNotificationBridge.onAppStart()
+        garminNavigationRelay.start()
         // WorkManager keeps the automatic sync schedules across reboots and
         // updates by itself; this re-plans them after the cases it does not
         // cover (a force-stop, a restore onto another phone) and keeps any

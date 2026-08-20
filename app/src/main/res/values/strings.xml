@@ -499,6 +499,9 @@
     <string name="settings_watch_calendar">Calendar on watch</string>
     <string name="settings_watch_calendar_body">Show the phone\'s upcoming events in the watch\'s calendar glance. Events go to the watch over Bluetooth and nowhere else.</string>
     <string name="settings_watch_calendar_no_permission">Calendar access was declined. Grant it in system settings to sync events.</string>
+    <string name="settings_watch_navigation">CoMaps guidance on watch</string>
+    <string name="settings_watch_navigation_body">While recording a GPS activity with CoMaps navigating, show the next turn, the distance to it and the street on the watch as a notification that updates in place.</string>
+    <string name="settings_watch_navigation_integration_off">CoMaps guidance is off in Settings › Activity recording. Turn it on there for the watch to receive it.</string>
     <string name="settings_watch_agps">GPS ephemeris</string>
     <string name="settings_watch_agps_body">Import a satellite prediction file so the watch finds GPS in seconds. Nothing is downloaded: fetch the file yourself and OpenVitals hands it over when the watch asks.</string>
     <string name="settings_watch_agps_import">Import file</string>

@@ -133,6 +133,29 @@ class GarminNotificationBridge @Inject constructor(
     }
 
     /**
+     * Puts a notification of the app's own making on the watch — CoMaps
+     * guidance during a recording. Same forwarder, same link as forwarded
+     * phone notifications; a stable id makes each repost a MODIFY.
+     */
+    fun postNavigation(notification: GarminNotification) {
+        scope.launch {
+            val target = forwarderFor(pairedWatchAddress()) ?: run {
+                GarminLog.log("[GARMIN-NAV] no Garmin watch paired; nothing to show guidance on")
+                return@launch
+            }
+            target.post(notification)
+        }
+    }
+
+    fun withdrawNavigation(notificationId: Long) {
+        scope.launch {
+            // Only a forwarder that exists can have announced it; building one
+            // to withdraw nothing would open a link for no reason.
+            forwarder?.withdraw(notificationId)
+        }
+    }
+
+    /**
      * The address of the paired Garmin watch, or null.
      *
      * Read through the same registry the app uses — one source of truth, no
