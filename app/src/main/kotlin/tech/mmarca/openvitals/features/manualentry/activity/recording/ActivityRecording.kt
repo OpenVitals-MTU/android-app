@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.Locale
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.comaps.CoMapsGuidanceFeed
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationSnapshot
@@ -282,6 +283,7 @@ class ActivityRecordingController @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     private val bleSensorCoordinator: BleSensorCoordinator,
     private val coMapsNavigationRepository: CoMapsNavigationRepository,
+    private val coMapsGuidanceFeed: CoMapsGuidanceFeed,
     private val recordingStore: ActivityRecordingStore = ActivityRecordingStore(context),
 ) {
     private val persistenceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -302,6 +304,7 @@ class ActivityRecordingController @Inject constructor(
 
     private val coMapsWatch = CoMapsRecordingWatch(
         repository = coMapsNavigationRepository,
+        feed = coMapsGuidanceFeed,
         scope = bleMetricsScope,
         isEnabled = {
             preferencesRepository.activityRecordingPreferences().coMapsNavigationContextEnabled
@@ -333,7 +336,6 @@ class ActivityRecordingController @Inject constructor(
 
     /** Re-reads guidance after a permission grant; the probe may answer differently now. */
     fun refreshCoMapsGuidance() {
-        coMapsNavigationRepository.onPermissionChanged()
         coMapsWatch.refresh()
     }
 

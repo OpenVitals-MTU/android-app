@@ -60,10 +60,10 @@ data class WatchDeviceUiState(
     val calendarSync: Boolean = false,
     /** Calendar sync is on but the OS permission has been revoked. */
     val calendarPermissionMissing: Boolean = false,
-    /** CoMaps guidance followed during a recording is shown on the watch. */
+    /** Live CoMaps guidance is shown on the watch, recording or not. */
     val navigationOnWatch: Boolean = false,
-    /** The CoMaps integration itself is off, so the watch toggle can do nothing yet. */
-    val coMapsIntegrationOff: Boolean = false,
+    /** Guidance on the watch is on but CoMaps' own permission has been declined. */
+    val coMapsPermissionMissing: Boolean = false,
     /** The most recent live heart rate, while one is arriving. */
     val liveHeartRateBpm: Int? = null,
     /** The last detection connected and found nothing broadcasting. */
@@ -103,7 +103,9 @@ class WatchDeviceViewModel @Inject constructor(
     private val agpsStore: GarminAgpsStore,
     private val calendarSource: tech.mmarca.openvitals.devices.garmin.GarminCalendarSource,
     private val navigationRelay: tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay,
-    private val preferencesRepository: tech.mmarca.openvitals.data.repository.PreferencesRepository,
+    private val coMapsNavigationRepository:
+        tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository,
+    private val coMapsGuidanceFeed: tech.mmarca.openvitals.comaps.CoMapsGuidanceFeed,
 ) : ViewModel() {
 
     val deviceId: String = savedStateHandle.get<String>(WATCH_DEVICE_ID_ARG).orEmpty()
@@ -141,8 +143,8 @@ class WatchDeviceViewModel @Inject constructor(
             calendarPermissionMissing = stateStore.calendarSync(deviceId) &&
                 !calendarSource.hasPermission(),
             navigationOnWatch = stateStore.navigationOnWatch(deviceId),
-            coMapsIntegrationOff = !preferencesRepository.activityRecordingPreferences()
-                .coMapsNavigationContextEnabled,
+            coMapsPermissionMissing = stateStore.navigationOnWatch(deviceId) &&
+                !coMapsNavigationRepository.hasPermission(),
             liveHeartRateBpm = live.freshHeartRate(),
         )
     }
@@ -194,10 +196,37 @@ class WatchDeviceViewModel @Inject constructor(
         localState.update { it.copy(calendarSync = enabled) }
     }
 
-    /** Shows or stops showing CoMaps guidance on the watch during recordings. */
+    /**
+     * Shows or stops showing live CoMaps guidance on the watch. Nothing here
+     * asks about activity recording: this switch is the whole of the feature,
+     * and it works whether or not a session is running.
+     */
     fun setNavigationOnWatch(enabled: Boolean) {
         navigationRelay.onEnabledChanged(deviceId, enabled)
-        localState.update { it.copy(navigationOnWatch = enabled) }
+        localState.update {
+            it.copy(
+                navigationOnWatch = enabled,
+                coMapsPermissionMissing = enabled && !coMapsNavigationRepository.hasPermission(),
+            )
+        }
+    }
+
+    /** The flavour-specific CoMaps permission to request, null without a CoMaps installed. */
+    fun coMapsPermissionName(): String? = coMapsNavigationRepository.permissionName()
+
+    /**
+     * Re-checks CoMaps' grant after its dialog closes, and re-opens the feed
+     * with it: the observer registered before the grant was refused, and stays
+     * refused.
+     */
+    fun refreshCoMapsPermission() {
+        coMapsGuidanceFeed.refresh()
+        localState.update {
+            it.copy(
+                coMapsPermissionMissing = stateStore.navigationOnWatch(deviceId) &&
+                    !coMapsNavigationRepository.hasPermission(),
+            )
+        }
     }
 
     /** Re-checks the OS grant after the permission dialog closes. */

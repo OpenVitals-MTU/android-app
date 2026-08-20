@@ -123,6 +123,14 @@ fun WatchDeviceScreen(
         if (!granted) viewModel.refreshCalendarPermission()
     }
 
+    // CoMaps' own runtime permission, named after the installed flavour and so
+    // resolved at tap time. Asked for here rather than borrowed from the
+    // recording screen: guidance on the wrist stands on its own, and a wearer
+    // who never records would otherwise have no way to grant it.
+    val coMapsPermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { viewModel.refreshCoMapsPermission() }
+
     val ephemerisPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(viewModel::importAgps) }
@@ -303,7 +311,12 @@ fun WatchDeviceScreen(
             )
             NavigationOnWatchCard(
                 state = state,
-                onToggle = viewModel::setNavigationOnWatch,
+                onToggle = { enabled ->
+                    viewModel.setNavigationOnWatch(enabled)
+                    // The toggle sticks either way; without the grant the card
+                    // says what is missing rather than showing nothing forever.
+                    if (enabled) viewModel.coMapsPermissionName()?.let(coMapsPermission::launch)
+                },
             )
             EphemerisCard(
                 state = state,
@@ -632,9 +645,9 @@ private fun CalendarSyncCard(
 /**
  * CoMaps guidance on the wrist. Garmin offers no turn-by-turn channel, so it
  * rides the notification link: one notification, updated in place as the
- * route unfolds, gone when it ends. Off by default, and pointless until the
- * CoMaps integration itself is on, which the card says rather than leaving
- * a switch that does nothing.
+ * route unfolds, gone when it ends. Off by default, and complete in itself —
+ * this switch asks for CoMaps' permission and needs nothing set elsewhere, no
+ * recording started, no activity-recording integration on.
  */
 @Composable
 private fun NavigationOnWatchCard(
@@ -663,9 +676,9 @@ private fun NavigationOnWatchCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (state.navigationOnWatch && state.coMapsIntegrationOff) {
+            if (state.coMapsPermissionMissing) {
                 Text(
-                    text = stringResource(R.string.settings_watch_navigation_integration_off),
+                    text = stringResource(R.string.settings_watch_navigation_no_permission),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

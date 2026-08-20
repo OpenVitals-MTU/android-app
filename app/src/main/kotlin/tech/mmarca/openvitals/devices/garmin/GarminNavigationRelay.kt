@@ -11,23 +11,32 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
+import tech.mmarca.openvitals.comaps.CoMapsGuidanceFeed
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
-import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 
 /**
- * Puts the CoMaps guidance a recording is following onto the paired Garmin
- * watch, as one notification updated in place.
+ * Puts CoMaps guidance onto a paired Garmin watch, as one notification updated
+ * in place.
  *
- * Follows the recording controller's live guidance, the same state the
- * phone's turn strip draws, so the wrist and the screen never disagree. Nothing here
- * reads CoMaps itself: the recording decides when guidance is watched at all
- * (integration on, GPS recording running), and this only decides whether the
- * watch should hear it — the per-watch "CoMaps guidance on watch" toggle,
- * off by default, and a Garmin watch actually paired.
+ * A feature in its own right, and nothing to do with activity recording: the
+ * wearer who wants the next turn on their wrist has not necessarily started a
+ * session, and often does not want to. So this asks [CoMapsGuidanceFeed] for
+ * guidance on its own behalf — whenever the per-watch "CoMaps guidance on
+ * watch" toggle is on and a Garmin watch is actually paired — and follows what
+ * comes back. A recording may be asking for the same feed for its own reasons;
+ * neither can switch the other off, and while both are on, the wrist and the
+ * phone's turn strip are reading the same state and cannot disagree.
  *
- * The notification is withdrawn the moment guidance stops, including when
- * the recording ends, so a finished route never lingers on the wrist.
+ * The Garmin-specific half is what happens next: Garmin has no turn-by-turn
+ * channel a phone can drive, so guidance goes out as a notification. Another
+ * vendor would put it somewhere else entirely, and would be another class at
+ * this layer asking the same feed the same way — it needs nothing from here
+ * and nothing from recording.
+ *
+ * The notification is withdrawn the moment guidance stops — the route ended,
+ * the toggle went off, the watch was forgotten — so a finished route never
+ * lingers on the wrist.
  */
 @Singleton
 class GarminNavigationRelay @Inject constructor(
@@ -35,7 +44,7 @@ class GarminNavigationRelay @Inject constructor(
     private val bridge: GarminNotificationBridge,
     private val deviceRepository: BleDeviceRepository,
     private val stateStore: GarminDeviceStateStore,
-    private val recordingController: ActivityRecordingController,
+    private val guidanceFeed: CoMapsGuidanceFeed,
 ) {
     private val scope = CoroutineScope(
         SupervisorJob() + Dispatchers.Default.limitedParallelism(1),
@@ -44,22 +53,39 @@ class GarminNavigationRelay @Inject constructor(
     private var started = false
 
     /**
-     * Starts following the recording's guidance. Called once from the app's
-     * `onCreate`; Disabled is in the stream too, and is what takes the
-     * notification down when the recording ends.
+     * Starts following the guidance feed, and asking for it. Called once from
+     * the app's `onCreate`; Disabled is in the stream too, and is what takes
+     * the notification down when a route ends.
      */
     fun start() {
         if (started) return
         started = true
         scope.launch {
-            recordingController.coMapsNavigation.collect { relay(it) }
+            guidanceFeed.guidance.collect { relay(it) }
+        }
+        // The paired watches are half the answer to "does anyone want this on
+        // a wrist", so pairing or forgetting one changes it as much as the
+        // toggle does. The flow replays its current value, which is also the
+        // first ask.
+        scope.launch {
+            deviceRepository.devicesFlow.collect { syncGuidanceRequest() }
         }
     }
 
     /** Called when the toggle changes, so switching it off clears the wrist. */
     fun onEnabledChanged(deviceId: String, enabled: Boolean) {
         stateStore.setNavigationOnWatch(deviceId, enabled)
+        syncGuidanceRequest()
         if (!enabled) scope.launch { relay(CoMapsNavigationState.Disabled) }
+    }
+
+    /**
+     * Tells the guidance feed whether the wrist needs it up. This is what makes
+     * the wrist independent of a recording: the feed runs because a watch is
+     * waiting for it, not because a session is.
+     */
+    private fun syncGuidanceRequest() {
+        guidanceFeed.request(CoMapsGuidanceFeed.Reason.WATCH, wantsGuidanceOnWatch())
     }
 
     private fun relay(state: CoMapsNavigationState) {

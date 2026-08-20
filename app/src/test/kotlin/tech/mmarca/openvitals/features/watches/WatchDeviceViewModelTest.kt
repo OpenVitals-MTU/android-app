@@ -135,10 +135,8 @@ class WatchDeviceViewModelTest {
         realtimeStore = GarminRealtimeStore(),
         calendarSource = mockk(relaxed = true),
         navigationRelay = mockk(relaxed = true),
-        preferencesRepository = mockk<tech.mmarca.openvitals.data.repository.PreferencesRepository>(relaxed = true).also {
-            every { it.activityRecordingPreferences() } returns
-                tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences()
-        },
+        coMapsNavigationRepository = mockk(relaxed = true),
+        coMapsGuidanceFeed = tech.mmarca.openvitals.comaps.CoMapsGuidanceFeed(mockk(relaxed = true)),
         agpsStore = mockk<GarminAgpsStore>(relaxed = true).also {
             every { it.agps } returns MutableStateFlow(GarminAgpsState())
         },

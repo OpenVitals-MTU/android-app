@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `comaps`, `data/repository`, `domain/model`, `features/manualentry/activity/recording`, `features/activity`, `features/settings`.
-> **Navigation:** GPS activity recording screen; activity detail; Settings > Activity recording.
+> **Implementation:** `comaps`, `data/repository`, `domain/model`, `features/manualentry/activity/recording`, `features/activity`, `features/settings`, `devices/garmin`.
+> **Navigation:** GPS activity recording screen; activity detail; Settings > Activity recording; watch device screen.
 > **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Offline maps support](offline-maps-support.md), [Watches](watches.md).
 
 While recording a GPS activity, OpenVitals can show the turn-by-turn guidance CoMaps is giving at that moment: the next street, the distance to the turn, route progress, and the planned route drawn under the recorded track. CoMaps plans and navigates; OpenVitals records. The integration reads what CoMaps is already doing and cannot start, stop, or steer a route.
@@ -26,12 +26,25 @@ CoMaps (upstream PR #4588) exposes a navigation `ContentProvider` at `<package>.
 
 The feed is observed, not polled: CoMaps notifies the provider URI on every location fix while it guides, so a phone that is navigating nowhere is never queried. Two subtleties keep the state honest:
 
-- Querying the provider starts the CoMaps process if it is not running, so nothing is queried unless a GPS recording is active and the integration is on.
+- Querying the provider starts the CoMaps process if it is not running, so nothing is queried unless somebody is waiting for guidance: a GPS recording with the integration on, or a paired watch with guidance on the wrist switched on.
 - CoMaps serves its last route from a cache it never clears, so a row only counts as guidance while change notifications are fresh (a 15-second liveness window backed by a 10-second safety poll that runs only while a route is being followed). Without this, a finished route would haunt the next recording.
 
 ## On A Garmin Watch
 
 With "CoMaps guidance on watch" switched on for a paired Garmin watch, the same live guidance is shown on the wrist as a notification updated in place. See [Watches](watches.md#comaps-guidance-on-the-watch).
+
+That switch is a feature of its own, not a part of recording: it works with nothing being recorded and with the integration on this page switched off, and it asks for the CoMaps permission itself.
+
+The two are separate all the way down, in four layers:
+
+| Layer | What it does |
+| --- | --- |
+| Guidance | Reads CoMaps. One observer, shared, running while anyone is asking. |
+| Activity recording | Turn strip, dashboard tile, route line, saved guidance — under the switch on this page. |
+| Guidance on a watch | Puts guidance on a wrist — under the per-watch switch. |
+| The watch's vendor | How that wrist is actually reached. Today Garmin, as a notification. |
+
+So: guidance on the watch alone shows on the watch; the recording integration alone shows in the recording; both on shows in both. Neither can switch the other off, neither sees the other's switch, and only a recording banks samples. They share the feed because the liveness window below is a clock two separate observers would reset under each other — never to couple the features. A Samsung or Wear OS watch would arrive as another vendor at the bottom layer, asking the same feed the same way.
 
 ## Saved Guidance
 

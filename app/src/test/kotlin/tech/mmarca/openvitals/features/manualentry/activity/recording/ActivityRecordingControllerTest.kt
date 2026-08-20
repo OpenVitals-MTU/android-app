@@ -105,6 +105,7 @@ class ActivityRecordingControllerTest {
         preferencesRepository = preferencesRepository,
         bleSensorCoordinator = bleSensorCoordinator,
         coMapsNavigationRepository = mockk(relaxed = true),
+        coMapsGuidanceFeed = tech.mmarca.openvitals.comaps.CoMapsGuidanceFeed(mockk(relaxed = true)),
         recordingStore = ActivityRecordingStore(context),
     )
 
