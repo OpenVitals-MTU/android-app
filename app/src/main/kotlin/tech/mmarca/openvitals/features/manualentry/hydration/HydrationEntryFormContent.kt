@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,6 +54,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -231,7 +234,7 @@ internal fun HydrationTrackerCard(
     unitFormatter: UnitFormatter,
     onAddSelectedEntry: () -> Unit,
     onSaveCustomDrink: (CustomHydrationDrinkInput, String?) -> Unit,
-    onAddSavedCustomDrinkEntry: (CustomHydrationDrink, Double, Instant) -> Unit,
+    onAddSavedCustomDrinkEntry: (CustomHydrationDrink, Double, Instant, Int?) -> Unit,
     onDeleteCustomDrink: (CustomHydrationDrink) -> Unit,
     onMoveCustomDrinkToTarget: (String, String) -> Unit,
     onMoveCustomDrinkToCategory: (String, BeverageCategory?) -> Unit,
@@ -425,9 +428,9 @@ internal fun HydrationTrackerCard(
                     unitFormatter = unitFormatter,
                     enabled = !state.isSavingEntry,
                     onDismiss = { loggingSavedDrink = null },
-                    onSave = { amountMilliliters, entryTime ->
+                    onSave = { amountMilliliters, entryTime, durationMinutes ->
                         loggingSavedDrink = null
-                        onAddSavedCustomDrinkEntry(drink, amountMilliliters, entryTime)
+                        onAddSavedCustomDrinkEntry(drink, amountMilliliters, entryTime, durationMinutes)
                     },
                 )
             }
@@ -1497,7 +1500,7 @@ private fun HydrationSavedDrinkEntryDialog(
     unitFormatter: UnitFormatter,
     enabled: Boolean,
     onDismiss: () -> Unit,
-    onSave: (Double, Instant) -> Unit,
+    onSave: (Double, Instant, Int?) -> Unit,
 ) {
     // The preset amount arrives focused and fully selected, so the first
     // keystroke replaces it rather than appending to it.
@@ -1511,6 +1514,10 @@ private fun HydrationSavedDrinkEntryDialog(
     }
     val amountText = amountValue.text
     var entryTime by remember(drink.id) { mutableStateOf(Instant.now()) }
+    // Only caffeine is modeled over time, so only caffeinated drinks ask how long they
+    // took — for everything else the duration would be stored and never read.
+    val asksDuration = drink.nutrientValues[NutritionNutrient.CAFFEINE]?.let { it > 0.0 } == true
+    var consumptionDurationMinutes by remember(drink.id) { mutableStateOf<Int?>(null) }
     val amountMilliliters = hydrationInputMilliliters(amountText, unitFormatter.unitSystem(UnitQuantity.HYDRATION))
     val isAmountValid = amountMilliliters?.let(::isValidHydrationContainerMilliliters) == true
     val isFormValid = amountText.isNotBlank() && isAmountValid
@@ -1561,13 +1568,20 @@ private fun HydrationSavedDrinkEntryDialog(
                     onTimestampChanged = { entryTime = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (asksDuration) {
+                    HydrationConsumptionDurationSelector(
+                        selectedMinutes = consumptionDurationMinutes,
+                        enabled = enabled,
+                        onSelect = { consumptionDurationMinutes = it },
+                    )
+                }
             }
         },
         confirmButton = {
             OpenVitalsTextButton(
                 onClick = {
                     amountMilliliters?.takeIf(::isValidHydrationContainerMilliliters)?.let { milliliters ->
-                        onSave(milliliters, entryTime)
+                        onSave(milliliters, entryTime, consumptionDurationMinutes.takeIf { asksDuration })
                     }
                 },
                 enabled = enabled && isFormValid,
@@ -1581,6 +1595,55 @@ private fun HydrationSavedDrinkEntryDialog(
             }
         },
     )
+}
+
+/**
+ * "Drank over" choices for a caffeinated drink. The timestamp is when the drink was
+ * started; the duration spreads its caffeine evenly up to the end, so a Monster nursed
+ * over two hours ramps up gently instead of spiking at the first sip.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun HydrationConsumptionDurationSelector(
+    selectedMinutes: Int?,
+    enabled: Boolean,
+    onSelect: (Int?) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = stringResource(R.string.hydration_drink_duration_label),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            HydrationConsumptionDurationOptions.forEach { minutes ->
+                FilterChip(
+                    selected = selectedMinutes == minutes,
+                    onClick = { onSelect(minutes) },
+                    label = { Text(hydrationConsumptionDurationLabel(minutes)) },
+                    enabled = enabled,
+                    modifier = Modifier.testTag("hydration_drink_duration_${minutes ?: 0}"),
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.hydration_drink_duration_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Null is "at once"; the rest are minutes. */
+private val HydrationConsumptionDurationOptions: List<Int?> = listOf(null, 15, 30, 60, 120, 180)
+
+@Composable
+private fun hydrationConsumptionDurationLabel(minutes: Int?): String = when {
+    minutes == null -> stringResource(R.string.hydration_drink_duration_at_once)
+    minutes < 60 -> stringResource(R.string.hydration_drink_duration_minutes, minutes)
+    else -> stringResource(R.string.hydration_drink_duration_hours, minutes / 60)
 }
 
 @Composable

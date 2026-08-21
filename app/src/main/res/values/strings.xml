@@ -1006,6 +1006,11 @@
     <string name="hydration_custom_drink_invalid">Enter a drink name, amount, and positive nutrient amounts.</string>
     <string name="hydration_invalid_amount">Enter an amount greater than zero and no more than 100 L.</string>
     <string name="hydration_drink_amount_label">Amount (%1$s)</string>
+    <string name="hydration_drink_duration_label">Drank over</string>
+    <string name="hydration_drink_duration_hint">Spreads the caffeine from the start time across this period.</string>
+    <string name="hydration_drink_duration_at_once">At once</string>
+    <string name="hydration_drink_duration_minutes">%1$d min</string>
+    <string name="hydration_drink_duration_hours">%1$d h</string>
     <string name="hydration_drink_invalid_amount_range">Enter an amount from %1$s to %2$s.</string>
     <string name="hydration_write_failed">Could not save hydration entry: %1$s</string>
     <string name="cd_decrease_hydration_goal">Decrease hydration goal</string>

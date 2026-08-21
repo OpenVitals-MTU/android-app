@@ -45,8 +45,8 @@ fun HydrationEntryScreen(
                 unitFormatter = unitFormatter,
                 onAddSelectedEntry = viewModel::addSelectedHydrationEntry,
                 onSaveCustomDrink = viewModel::saveCustomDrink,
-                onAddSavedCustomDrinkEntry = { drink, amountMilliliters, entryTime ->
-                    viewModel.addSavedCustomDrinkEntry(drink, amountMilliliters, entryTime)
+                onAddSavedCustomDrinkEntry = { drink, amountMilliliters, entryTime, durationMinutes ->
+                    viewModel.addSavedCustomDrinkEntry(drink, amountMilliliters, entryTime, durationMinutes)
                 },
                 onDeleteCustomDrink = viewModel::deleteCustomDrink,
                 onMoveCustomDrinkToTarget = viewModel::moveCustomDrinkToTarget,

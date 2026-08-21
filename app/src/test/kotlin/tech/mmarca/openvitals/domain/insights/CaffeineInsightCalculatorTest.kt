@@ -50,6 +50,31 @@ class CaffeineInsightCalculatorTest {
     }
 
     @Test
+    fun `a drink sipped over two hours peaks later and lower than one taken at once`() {
+        // The same 160 mg Monster, downed at once vs nursed over two hours: the record's
+        // interval is what spreads the dose, so the slow one must not spike at the first sip.
+        val atOnce = entry.copy(
+            caffeineMg = 160.0,
+            endTime = entry.startTime.plusSeconds(60),
+        )
+        val slow = entry.copy(
+            caffeineMg = 160.0,
+            endTime = entry.startTime.plusSeconds(2 * 60 * 60),
+        )
+
+        val atOncePeak = CaffeineInsightCalculator.peakContribution(atOnce, preferences)
+        val slowPeak = CaffeineInsightCalculator.peakContribution(slow, preferences)
+
+        assertTrue(slowPeak.time.isAfter(atOncePeak.time))
+        assertTrue(slowPeak.valueMg < atOncePeak.valueMg)
+        // Half an hour in, only a quarter of the slow drink has even been swallowed.
+        val halfHour = entry.startTime.plusSeconds(30 * 60)
+        val atOnceHalfHour = CaffeineInsightCalculator.contributionMg(atOnce, halfHour, preferences)
+        val slowHalfHour = CaffeineInsightCalculator.contributionMg(slow, halfHour, preferences)
+        assertTrue(slowHalfHour < atOnceHalfHour / 2)
+    }
+
+    @Test
     fun `active caffeine decays over time`() {
         val early = CaffeineInsightCalculator.activeCaffeineMg(
             entries = listOf(entry),

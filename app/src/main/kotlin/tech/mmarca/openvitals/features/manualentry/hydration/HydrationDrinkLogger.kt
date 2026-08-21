@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.hydration
 
+import java.time.Duration
 import java.time.Instant
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
@@ -27,6 +28,7 @@ internal suspend fun logCustomHydrationDrinkEntry(
     drink: CustomHydrationDrink,
     amountMilliliters: Double = drink.volumeMilliliters,
     requestedEntryTime: Instant? = null,
+    consumptionDurationMinutes: Int? = null,
     canWriteHydration: Boolean? = null,
     canWriteNutrition: Boolean? = null,
 ): HydrationDrinkLogOutcome {
@@ -46,6 +48,7 @@ internal suspend fun logCustomHydrationDrinkEntry(
         nutritionName = drink.name,
         nutrientValues = drink.nutrientValues.mapValues { (_, value) -> value * portionMultiplier },
         requestedEntryTime = requestedEntryTime,
+        consumptionDurationMinutes = consumptionDurationMinutes,
         canWriteHydration = canWriteHydration ?: repository.hasHydrationWritePermission(),
         canWriteNutrition = canWriteNutrition ?: nutritionRepository.hasNutritionWritePermission(),
     )
@@ -61,6 +64,11 @@ internal suspend fun writeHydrationAndNutritionEntry(
     nutrientValues: Map<NutritionNutrient, Double>,
     requestedEntryTime: Instant? = null,
     fallbackEntryTime: Instant? = null,
+    /**
+     * How long the drink took to finish, or null for "at once". Only the nutrition half
+     * carries it: the caffeine model reads the record's interval to spread the dose.
+     */
+    consumptionDurationMinutes: Int? = null,
     editRecordId: String? = null,
     canWriteHydration: Boolean? = null,
     canWriteNutrition: Boolean? = null,
@@ -114,6 +122,9 @@ internal suspend fun writeHydrationAndNutritionEntry(
                         nutrientValues = nutrientValues,
                         name = nutritionName,
                         associatedHydrationClientRecordId = hydrationClientRecordId,
+                        endTime = consumptionDurationMinutes
+                            ?.takeIf { it > 0 }
+                            ?.let { entryTime.plus(Duration.ofMinutes(it.toLong())) },
                     )
                 )
             } catch (error: Throwable) {

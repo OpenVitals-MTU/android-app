@@ -234,7 +234,11 @@ internal class NutritionHealthReader(
         }
 
         val startTime = request.time
-        val endTime = startTime.plusSeconds(1)
+        // Health Connect needs a strictly positive interval, so an instantaneous intake
+        // is a one-second record.
+        val endTime = request.endTime
+            ?.takeIf { it.isAfter(startTime) }
+            ?: startTime.plusSeconds(1)
         val zone = ZoneId.systemDefault()
         val clientRecordId = request.associatedHydrationClientRecordId
             ?.takeIf { it.isNotBlank() }

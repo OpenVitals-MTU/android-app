@@ -118,6 +118,12 @@ data class NutritionWriteRequest(
     val nutrientValues: Map<NutritionNutrient, Double>,
     val name: String? = null,
     val associatedHydrationClientRecordId: String? = null,
+    /**
+     * When the intake was spread over time (a coffee sipped across an hour), the instant it
+     * finished. Null means "consumed at once". The caffeine model spreads the dose evenly
+     * across `[time, endTime]`, so this is what makes a slow drink's curve rise slowly.
+     */
+    val endTime: Instant? = null,
 ) {
     constructor(time: Instant, carbsGrams: Double) : this(
         time = time,

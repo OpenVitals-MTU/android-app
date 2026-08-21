@@ -368,11 +368,13 @@ class HydrationEntryViewModel @Inject constructor(
         drink: CustomHydrationDrink,
         amountMilliliters: Double = drink.volumeMilliliters,
         entryTime: Instant? = null,
+        consumptionDurationMinutes: Int? = null,
     ) {
         logCustomDrinkEntry(
             drink = drink,
             amountMilliliters = amountMilliliters,
             entryTime = entryTime,
+            consumptionDurationMinutes = consumptionDurationMinutes,
         )
     }
 
@@ -384,6 +386,7 @@ class HydrationEntryViewModel @Inject constructor(
         drink: CustomHydrationDrink,
         amountMilliliters: Double,
         entryTime: Instant?,
+        consumptionDurationMinutes: Int? = null,
     ) {
         if (!drink.isValidCustomHydrationDrink()) {
             _uiState.value = _uiState.value.copy(
@@ -418,6 +421,7 @@ class HydrationEntryViewModel @Inject constructor(
             nutritionName = drink.name,
             nutrientValues = scaledNutrientValues,
             requestedEntryTime = entryTime,
+            consumptionDurationMinutes = consumptionDurationMinutes,
         )
     }
 
@@ -501,6 +505,7 @@ class HydrationEntryViewModel @Inject constructor(
         nutritionName: String? = null,
         nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
         requestedEntryTime: Instant? = null,
+        consumptionDurationMinutes: Int? = null,
     ) {
         val current = _uiState.value
         viewModelScope.launch {
@@ -521,6 +526,7 @@ class HydrationEntryViewModel @Inject constructor(
                     nutritionName = nutritionName,
                     nutrientValues = nutrientValues,
                     requestedEntryTime = requestedEntryTime,
+                    consumptionDurationMinutes = consumptionDurationMinutes,
                     fallbackEntryTime = current.editTime,
                     editRecordId = current.editRecordId,
                     canWriteHydration = current.canWriteHydration,

@@ -29,7 +29,7 @@ class HydrationEntryFormTest {
                     unitFormatter = unitFormatter,
                     onAddSelectedEntry = {},
                     onSaveCustomDrink = { _, _ -> },
-                    onAddSavedCustomDrinkEntry = { _, _, _ -> },
+                    onAddSavedCustomDrinkEntry = { _, _, _, _ -> },
                     onDeleteCustomDrink = {},
                     onMoveCustomDrinkToTarget = { _, _ -> },
                     onMoveCustomDrinkToCategory = { _, _ -> },
