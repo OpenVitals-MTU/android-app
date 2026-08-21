@@ -2481,4 +2481,7 @@
     <string name="bp_guide_equipment">Usa un tensiómetro automático de brazo, no de muñeca. Coloca el manguito 2 cm por encima del pliegue del codo.</string>
     <string name="bp_guide_technique">Haz 3 mediciones separadas 30 segundos: descarta la primera y registra la media de la segunda y la tercera.</string>
     <string name="bp_guide_target">Objetivo en casa: por debajo de 135/85 mmHg.</string>
+    <string name="settings_watch_navigation">Orientación de CoMaps en el reloj</string>
+    <string name="settings_watch_navigation_body">Al navegar con CoMaps, el reloj muestra el próximo giro, la distancia y la calle con una notificación que se actualiza sola. No necesitas grabar nada; funciona igual.</string>
+    <string name="settings_watch_navigation_no_permission">Acceso a CoMaps denegado: no hay información para enviar. Autoriza la aplicación en los ajustes del sistema o instálala.</string>
 </resources>
