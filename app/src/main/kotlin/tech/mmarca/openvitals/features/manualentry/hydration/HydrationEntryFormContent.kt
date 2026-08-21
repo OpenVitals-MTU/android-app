@@ -118,6 +118,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 private const val MillilitersPerFluidOunce = 29.5735295625
 private const val FullHydrationImpactMultiplier = 1.0
@@ -1609,13 +1610,13 @@ private fun HydrationConsumptionDurationSelector(
     enabled: Boolean,
     onSelect: (Int?) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(
             text = stringResource(R.string.hydration_drink_duration_label),
             style = MaterialTheme.typography.labelLarge,
         )
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             modifier = Modifier.fillMaxWidth(),
         ) {
             HydrationConsumptionDurationOptions.forEach { minutes ->
