@@ -2484,4 +2484,9 @@
     <string name="settings_watch_navigation">Orientación de CoMaps en el reloj</string>
     <string name="settings_watch_navigation_body">Al navegar con CoMaps, el reloj muestra el próximo giro, la distancia y la calle con una notificación que se actualiza sola. No necesitas grabar nada; funciona igual.</string>
     <string name="settings_watch_navigation_no_permission">Acceso a CoMaps denegado: no hay información para enviar. Autoriza la aplicación en los ajustes del sistema o instálala.</string>
+    <string name="hydration_drink_duration_label">Bebió más de</string>
+    <string name="hydration_drink_duration_hint">Libera la cafeína de manera gradual a partir de la hora de inicio y durante este intervalo.</string>
+    <string name="hydration_drink_duration_at_once">De golpe</string>
+    <string name="hydration_drink_duration_minutes">%1$d min</string>
+    <string name="hydration_drink_duration_hours">%1$d h</string>
 </resources>
