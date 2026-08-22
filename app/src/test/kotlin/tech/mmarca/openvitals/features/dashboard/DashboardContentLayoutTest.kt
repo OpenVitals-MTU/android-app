@@ -148,6 +148,28 @@ class DashboardContentLayoutTest {
     }
 
     @Test
+    fun `no tile is demoted while any tile is still loading`() {
+        // Metrics land one at a time, so demoting on a half-filled dashboard
+        // reshuffles the grid on every arrival — and promotes each tile back
+        // the moment its own data shows up. SLEEP has data and HYDRATION does
+        // not, and neither moves while anything is still reading.
+        assertEquals(savedOrder, visibleIds(display = display(loading = setOf(DashboardWidgetId.SLEEP))))
+
+        // The demotion still happens, once the last tile has spoken.
+        assertEquals(
+            listOf(
+                DashboardWidgetId.STEPS,
+                DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+                DashboardWidgetId.DISTANCE,
+                DashboardWidgetId.SLEEP,
+                DashboardWidgetId.CALORIES_OUT,
+                DashboardWidgetId.HYDRATION,
+            ),
+            visibleIds(),
+        )
+    }
+
+    @Test
     fun `a saved order that leads with an empty tile still sinks it`() {
         // The user's own order puts an empty tile first in the carousel; the
         // partition still applies, and the empty tile is not dropped.

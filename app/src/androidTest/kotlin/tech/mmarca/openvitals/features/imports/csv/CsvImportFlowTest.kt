@@ -325,6 +325,8 @@ class CsvImportFlowTest {
     private object NothingGrantedHealthRepository : HealthRepository {
         override fun availability() = error("unused")
 
+        override fun rateLimitRetryAfterMillis(): Long = error("unused")
+
         override fun permissionContract() = error("unused")
 
         override val phase1Permissions: Set<String> = emptySet()

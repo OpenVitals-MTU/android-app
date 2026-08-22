@@ -8,6 +8,13 @@ import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 interface HealthRepository {
     fun availability(): HealthConnectAvailability
 
+    /**
+     * Milliseconds left on Health Connect's rate-limit backoff, or 0 when reads
+     * are flowing. A screen whose reads came back empty asks this to tell the
+     * difference between "no data" and "not allowed to look right now".
+     */
+    fun rateLimitRetryAfterMillis(): Long
+
     fun permissionContract(): ActivityResultContract<Set<String>, Set<String>>
 
     val phase1Permissions: Set<String>

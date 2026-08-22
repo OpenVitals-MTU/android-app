@@ -90,6 +90,18 @@ fun DashboardScreen(
             viewModel.clearError()
         }
     }
+    // Health Connect refusing reads is not "no data", and a read no longer sits
+    // on the backoff waiting for it to lift — so the tiles that gave up need
+    // something to say. Keyed on the minute count so one throttled load speaks
+    // once, not once per tile that lands after it.
+    val rateLimitedMessage = state.rateLimitedRetryAfterMinutes?.let { minutes ->
+        stringResource(R.string.message_health_connect_rate_limited, minutes)
+    }
+    androidx.compose.runtime.LaunchedEffect(rateLimitedMessage) {
+        if (rateLimitedMessage != null) {
+            Toast.makeText(context, rateLimitedMessage, Toast.LENGTH_LONG).show()
+        }
+    }
     androidx.compose.runtime.LaunchedEffect(state.sensorStatus.hasDevices) {
         onSensorStatusVisibilityChanged(state.sensorStatus.hasDevices)
     }

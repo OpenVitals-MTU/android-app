@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateChartBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.model.heartRateSampleFromAggregateBucket
@@ -58,36 +59,73 @@ internal class HeartHealthReader(
      * Heart-rate series dense enough for TRIMP / intensity-minute coverage math.
      *
      * Multi-day chart reads use 15-minute buckets and are incompatible with the
-     * five-minute max gap those calculators enforce. Insights load one local day
-     * at a time with [HeartRateInsightBucketDuration] so Binder parcels stay
-     * small while consecutive samples remain usable for coverage.
+     * five-minute max gap those calculators enforce. Insights slice at
+     * [HeartRateInsightBucketDuration] instead, one local day at a time and at
+     * most [MaxInsightAggregateBuckets] buckets per request, so consecutive
+     * samples stay usable for coverage while every Binder parcel stays inside
+     * the budget one response may occupy.
      */
-    suspend fun readHeartRateSamplesForInsights(start: Instant, end: Instant): List<HeartRateSample> =
-        support.withLogging("readHeartRateSamplesForInsights[$start..$end]", emptyList()) {
-            if (!end.isAfter(start)) return@withLogging emptyList()
-            val zone = ZoneId.systemDefault()
-            var dayStart = start.atZone(zone).toLocalDate()
-            val lastDay = end.minusMillis(1).atZone(zone).toLocalDate()
-            val samples = mutableListOf<HeartRateSample>()
-            while (!dayStart.isAfter(lastDay)) {
-                val windowStart = maxOf(start, dayStart.atStartOfDay(zone).toInstant())
-                val windowEnd = minOf(end, dayStart.plusDays(1).atStartOfDay(zone).toInstant())
-                if (windowEnd.isAfter(windowStart)) {
-                    val dayRange = Duration.between(windowStart, windowEnd)
-                    samples += if (shouldUseAggregatedHeartRateSamples(dayRange)) {
-                        readAggregatedHeartRateSamples(
-                            windowStart,
-                            windowEnd,
-                            HeartRateInsightBucketDuration,
-                        )
-                    } else {
+    suspend fun readHeartRateSamplesForInsights(start: Instant, end: Instant): List<HeartRateSample> {
+        if (!end.isAfter(start)) return emptyList()
+        val zone = ZoneId.systemDefault()
+        var day = start.atZone(zone).toLocalDate()
+        val lastDay = end.minusMillis(1).atZone(zone).toLocalDate()
+        val samples = mutableListOf<HeartRateSample>()
+        while (!day.isAfter(lastDay)) {
+            val windowStart = maxOf(start, day.atStartOfDay(zone).toInstant())
+            val windowEnd = minOf(end, day.plusDays(1).atStartOfDay(zone).toInstant())
+            if (windowEnd.isAfter(windowStart)) {
+                val dayRange = Duration.between(windowStart, windowEnd)
+                if (shouldUseAggregatedHeartRateSamples(dayRange)) {
+                    insightAggregateWindows(windowStart, windowEnd).forEach { (chunkStart, chunkEnd) ->
+                        samples += support.withLogging(
+                            "readHeartRateSamplesForInsights[$chunkStart..$chunkEnd]",
+                            emptyList(),
+                        ) {
+                            readAggregatedHeartRateSamples(
+                                chunkStart,
+                                chunkEnd,
+                                HeartRateInsightBucketDuration,
+                            )
+                        }
+                    }
+                } else {
+                    samples += support.withLogging(
+                        "readHeartRateSamplesForInsights[$windowStart..$windowEnd]",
+                        emptyList(),
+                    ) {
                         readRawOrAggregatedFallback(windowStart, windowEnd)
                     }
                 }
-                dayStart = dayStart.plusDays(1)
             }
-            samples
+            day = day.plusDays(1)
         }
+        return samples
+    }
+
+    /**
+     * Splits one day into requests of at most [MaxInsightAggregateBuckets]
+     * buckets, on bucket boundaries so the slicing is identical to what a
+     * single request over the whole day would have produced.
+     *
+     * The split is also what makes the rate-limit retry affordable. The whole
+     * fourteen-day walk used to sit inside ONE [HealthConnectReaderSupport.withLogging],
+     * so a throttle on the last day waited out the backoff and then re-issued
+     * every request that had already succeeded — spending more quota on a retry
+     * than the first attempt cost, which is how a throttled dashboard stayed
+     * throttled. A retry now replays half of one day.
+     */
+    private fun insightAggregateWindows(start: Instant, end: Instant): List<Pair<Instant, Instant>> {
+        val span = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
+        val windows = mutableListOf<Pair<Instant, Instant>>()
+        var windowStart = start
+        while (windowStart.isBefore(end)) {
+            val windowEnd = minOf(end, windowStart.plus(span))
+            windows += windowStart to windowEnd
+            windowStart = windowEnd
+        }
+        return windows
+    }
 
     /**
      * Every heart-rate sample in `[start, end)`, however the writer grouped it.

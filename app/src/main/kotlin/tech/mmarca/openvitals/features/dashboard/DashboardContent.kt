@@ -53,6 +53,12 @@ internal fun dashboardVisibleWidgetIds(
         // Once they place it from the tray it stays, exactly like any other.
         .filterNot { isEditingDashboard && it in display.unsupportedIds && it !in placedWidgetIds }
     if (isEditingDashboard || !sortEmptyTilesLast) return ordered
+    // A tile that has not answered yet is not an empty tile. Metrics now land
+    // one at a time, so demoting on a half-filled dashboard would reshuffle the
+    // grid under the user's finger on every arrival — and promote each tile
+    // back the moment its own data showed up. The saved order holds until the
+    // last tile has spoken.
+    if (display.widgets.values.any { it.isLoading }) return ordered
     val fixed = dashboardWidgetIdsThatFitRows(ordered, DashboardFixedWidgetRows).toSet()
     val rest = ordered.filterNot { it in fixed }
     // A tile with nothing behind it today goes to the back; a tile offering to

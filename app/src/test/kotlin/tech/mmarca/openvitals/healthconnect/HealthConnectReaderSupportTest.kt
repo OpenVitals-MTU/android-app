@@ -13,11 +13,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 
+/** Matches HealthConnectRateLimitBackoff's own backoff, which is not public. */
+private const val DEFAULT_BACKOFF_MILLIS = 60_000L
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class HealthConnectReaderSupportTest {
 
     @Before
@@ -36,11 +41,49 @@ class HealthConnectReaderSupportTest {
         HealthConnectRateLimitBackoff.resetForTest()
     }
 
-    @Test fun `withLogging waits and retries once after rate limit`() = runTest {
+    @Test fun `withLogging gives up on a rate limit instead of waiting it out`() = runTest {
+        val support = support()
+        var attempts = 0
+        val startedAt = testScheduler.currentTime
+
+        val result = support.withLogging("read", fallback = 7) {
+            attempts += 1
+            throw RuntimeException("Request rejected. Rate limited request quota has been exceeded.")
+        }
+
+        assertEquals(7, result)
+        assertEquals(1, attempts)
+        // The backoff is armed for a minute. Riding it out here, once per read
+        // and before the concurrency permit, is what let a single throttled
+        // call hold a whole screen for minutes.
+        assertTrue(testScheduler.currentTime - startedAt < DEFAULT_BACKOFF_MILLIS)
+    }
+
+    @Test fun `withLogging does not attempt a read while the backoff is armed`() = runTest {
+        val support = support()
+        support.withLogging("first", fallback = 0) {
+            throw RuntimeException("Request rejected. Rate limited request quota has been exceeded.")
+        }
+
+        var attempted = false
+        val startedAt = testScheduler.currentTime
+        val result = support.withLogging("second", fallback = 7) {
+            attempted = true
+            42
+        }
+
+        assertEquals(7, result)
+        assertFalse(attempted)
+        assertEquals(0L, testScheduler.currentTime - startedAt)
+    }
+
+    @Test fun `withLoggingOrThrow waits the backoff out rather than giving up`() = runTest {
         val support = support()
         var attempts = 0
 
-        val result = support.withLogging("read", fallback = 0) {
+        // The sync path has no screen behind it, so resuming after a minute
+        // beats restarting a half-finished transfer.
+        val result = support.withLoggingOrThrow("sync") {
             attempts += 1
             if (attempts == 1) {
                 throw RuntimeException("Request rejected. Rate limited request quota has been exceeded.")
@@ -50,16 +93,6 @@ class HealthConnectReaderSupportTest {
 
         assertEquals(42, result)
         assertEquals(2, attempts)
-    }
-
-    @Test fun `withLogging returns fallback when retry is rate limited again`() = runTest {
-        val support = support()
-
-        val result = support.withLogging("read", fallback = 7) {
-            throw RuntimeException("Request rejected. Rate limited request quota has been exceeded.")
-        }
-
-        assertEquals(7, result)
     }
 
     @Test fun `withLogging rethrows cancellation`() = runTest {

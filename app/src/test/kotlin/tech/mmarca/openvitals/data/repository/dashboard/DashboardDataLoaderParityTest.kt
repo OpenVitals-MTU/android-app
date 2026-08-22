@@ -220,7 +220,41 @@ class DashboardDataLoaderParityTest {
         assertEquals(4_321L, data.steps)
     }
 
-    @Test fun `mergeLoaded carries activeCaffeineMg across the two-pass load`() {
+    @Test fun `mergeLoaded takes recent history from the pass that loaded the metric`() {
+        val date = LocalDate.of(2026, 7, 24)
+        val first = DashboardData(
+            date = date,
+            loadedMetrics = setOf(DashboardMetric.STEPS),
+            recentHistoryMetrics = setOf(DashboardMetric.STEPS),
+        )
+        val second = DashboardData(
+            date = date,
+            loadedMetrics = setOf(DashboardMetric.SLEEP),
+            recentHistoryMetrics = setOf(DashboardMetric.SLEEP),
+        )
+
+        // Metrics load a pass each, so a later pass's answer used to be dropped
+        // entirely — and an empty-today tile whose metric HAS recent history
+        // demoted to the back of the grid as though it never had any.
+        assertEquals(
+            setOf(DashboardMetric.STEPS, DashboardMetric.SLEEP),
+            first.mergeLoaded(second).recentHistoryMetrics,
+        )
+    }
+
+    @Test fun `mergeLoaded lets a reloaded metric drop its recent history`() {
+        val date = LocalDate.of(2026, 7, 24)
+        val stale = DashboardData(
+            date = date,
+            loadedMetrics = setOf(DashboardMetric.SLEEP),
+            recentHistoryMetrics = setOf(DashboardMetric.SLEEP),
+        )
+        val fresh = DashboardData(date = date, loadedMetrics = setOf(DashboardMetric.SLEEP))
+
+        assertEquals(emptySet<DashboardMetric>(), stale.mergeLoaded(fresh).recentHistoryMetrics)
+    }
+
+    @Test fun `mergeLoaded carries activeCaffeineMg across passes`() {
         val date = LocalDate.of(2026, 7, 24)
         val first = DashboardData(date = date, loadedMetrics = setOf(DashboardMetric.STEPS))
         val second = DashboardData(

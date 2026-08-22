@@ -54,6 +54,8 @@ import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.domain.model.OnboardingCategoryId
 import tech.mmarca.openvitals.domain.model.OnboardingPermissionCatalog
@@ -73,6 +75,17 @@ internal class HealthConnectPermissionService(
 
     @Volatile
     private var grantedPermissionsCache: GrantedPermissionsCache? = null
+
+    /**
+     * Serialises the cache MISS, so callers that arrive together pay for one
+     * sweep between them.
+     *
+     * The dashboard loads a pass per metric and they all start in the same
+     * instant, so on a cold cache every one of them used to walk the whole
+     * managed-permission list against the package manager — the same answer,
+     * recomputed a couple of dozen times, before a single record was read.
+     */
+    private val grantedPermissionsMutex = Mutex()
 
     val corePermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
@@ -545,14 +558,30 @@ internal class HealthConnectPermissionService(
     }
 
     suspend fun grantedPermissions(): Set<String> {
-        val nowMs = SystemClock.elapsedRealtime()
-        grantedPermissionsCache
-            ?.takeIf { nowMs - it.loadedAtMs <= GrantedPermissionsCacheMillis }
-            ?.let { cached ->
-                Log.d(TAG, "grantedPermissions(cache) count=${cached.permissions.size} ${diagnostics.summary()}")
-                return cached.permissions
-            }
+        freshGrantedPermissions()?.let { cached ->
+            Log.d(TAG, "grantedPermissions(cache) count=${cached.size} ${diagnostics.summary()}")
+            return cached
+        }
 
+        return grantedPermissionsMutex.withLock {
+            // Whoever held the lock may have just filled the cache; the sweep
+            // this call queued for is that same sweep.
+            freshGrantedPermissions()?.let { cached ->
+                Log.d(TAG, "grantedPermissions(cache) count=${cached.size} ${diagnostics.summary()}")
+                return@withLock cached
+            }
+            loadGrantedPermissions()
+        }
+    }
+
+    private fun freshGrantedPermissions(): Set<String>? {
+        val nowMs = SystemClock.elapsedRealtime()
+        return grantedPermissionsCache
+            ?.takeIf { nowMs - it.loadedAtMs <= GrantedPermissionsCacheMillis }
+            ?.permissions
+    }
+
+    private suspend fun loadGrantedPermissions(): Set<String> {
         val granted = withContext(Dispatchers.IO) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 managedPermissions.filterTo(mutableSetOf()) { permission ->
@@ -574,6 +603,7 @@ internal class HealthConnectPermissionService(
         )
         return granted
     }
+
 
     private fun featureStatusCached(feature: Int, logName: String): Int {
         synchronized(featureStatusCacheLock) {

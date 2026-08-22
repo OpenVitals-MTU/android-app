@@ -13,6 +13,8 @@ class HealthRepositoryImpl @Inject constructor(
 
     override fun availability(): HealthConnectAvailability = hc.availability()
 
+    override fun rateLimitRetryAfterMillis(): Long = hc.rateLimitRetryAfterMillis()
+
     override fun permissionContract() = hc.permissionContract()
 
     override val phase1Permissions get() = hc.phase1Permissions

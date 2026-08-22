@@ -163,6 +163,15 @@ class HealthConnectManager @Inject constructor(
     fun availability(): HealthConnectAvailability =
         availabilityService.availability()
 
+    /**
+     * How much longer Health Connect is refusing this app's reads, or 0.
+     *
+     * Reads no longer sit out a long backoff (see [HealthConnectReaderSupport]),
+     * so a screen that came back thin needs this to say why.
+     */
+    fun rateLimitRetryAfterMillis(): Long =
+        HealthConnectRateLimitBackoff.remainingMillis()
+
     fun isMindfulnessSessionAvailable(): Boolean =
         permissionService.isMindfulnessSessionAvailable()
 

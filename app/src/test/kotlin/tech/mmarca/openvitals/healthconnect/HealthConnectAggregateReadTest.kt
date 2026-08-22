@@ -17,6 +17,8 @@ import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.testing.FakeHealthConnectClient
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Length
+import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
+import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
@@ -463,6 +465,47 @@ class HealthConnectAggregateReadTest {
         }
         assertThat(series.single { it.date == firstDay }.bpm).isEqualTo(51L)
         assertThat(series.single { it.date == date }.bpm).isEqualTo(55L)
+    }
+
+    @Test
+    fun `readHeartRateSamplesForInsights splits every day into budgeted requests`() = runTest {
+        val zone = ZoneId.systemDefault()
+        val firstDay = date.minusDays(1)
+        fun hr(day: LocalDate, hour: Long, bpm: Long) = HeartRateRecord(
+            startTime = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600),
+            startZoneOffset = null,
+            endTime = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600 + 60),
+            endZoneOffset = null,
+            samples = listOf(
+                HeartRateRecord.Sample(
+                    time = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600),
+                    beatsPerMinute = bpm,
+                ),
+            ),
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val client = seeded(hr(firstDay, 9, 61L), hr(date, 15, 88L))
+
+        val samples = HeartHealthReader(support(client), APP_PACKAGE)
+            .readHeartRateSamplesForInsights(
+                firstDay.atStartOfDay(zone).toInstant(),
+                date.plusDays(1).atStartOfDay(zone).toInstant(),
+            )
+
+        // A grouped-duration response is one Binder parcel. This read used to
+        // ask for a whole local day of one-minute buckets in a single request —
+        // 1440 of them — which on a watch that records heart rate continuously
+        // came back as TransactionTooLargeException, and was degraded to an
+        // empty list. Weekly cardio load then fell back to step estimates on
+        // exactly the phones with the best data.
+        val budget = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
+        assertThat(client.groupByDurationRequestRanges).isNotEmpty()
+        client.groupByDurationRequestRanges.forEach { (start, end) ->
+            assertThat(java.time.Duration.between(start, end)).isAtMost(budget)
+        }
+        // Two days, more than one request each.
+        assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(2)
+        assertThat(samples.map { it.beatsPerMinute }).containsExactly(61L, 88L).inOrder()
     }
 
     // ── harness ─────────────────────────────────────────────────────────────

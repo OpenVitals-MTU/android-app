@@ -31,18 +31,24 @@ internal class HealthConnectReaderSupport(
         operation: String,
         fallback: T,
         block: suspend () -> T,
-    ): T = withRateLimitRetry(operation, fallback, block)
+    ): T = withRateLimitGuard(operation, fallback, block)
 
     suspend fun <T> withNullableLogging(
         operation: String,
         block: suspend () -> T?,
-    ): T? = withRateLimitRetry(operation, null, block)
+    ): T? = withRateLimitGuard(operation, null, block)
 
     /**
      * Like [withLogging] but a failure that survives the rate-limit retry is
-     * RETHROWN instead of degraded to a fallback. For callers whose silence
-     * would lie — a sync stream that quietly truncated on rate limiting let
-     * the session report "completed" for a transfer that wasn't.
+     * RETHROWN instead of degraded to a fallback, and a backoff is WAITED OUT
+     * rather than declined. For callers whose silence would lie — a sync stream
+     * that quietly truncated on rate limiting let the session report
+     * "completed" for a transfer that wasn't.
+     *
+     * The waiting is the difference from [withLogging] and it is deliberate:
+     * this path is a long background transfer with no screen behind it, so a
+     * minute spent riding out a throttle costs nothing anyone is watching, and
+     * resuming beats restarting the transfer.
      */
     suspend fun <T> withLoggingOrThrow(
         operation: String,
@@ -52,7 +58,11 @@ internal class HealthConnectReaderSupport(
         var hasRetriedRateLimit = false
         while (true) {
             check(syncEnabled()) { "Health Connect access is paused" }
-            waitForActiveRateLimit(safeOperation)
+            val backoffMillis = HealthConnectRateLimitBackoff.remainingMillis()
+            if (backoffMillis > 0L) {
+                Log.w(TAG, "Waiting to retry $safeOperation after Health Connect rate limit")
+                delay(backoffMillis)
+            }
             Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
             try {
                 return readSemaphore.withPermit {
@@ -78,57 +88,60 @@ internal class HealthConnectReaderSupport(
         }
     }
 
-    private suspend fun <T> withRateLimitRetry(
+    /**
+     * One attempt, with a hard bound on how long it may spend not making it.
+     *
+     * Everything on a screen comes through here, and the rate-limit backoff is
+     * process-global and armed a minute at a time — so one throttled call is
+     * seen by every read the screen fans out. Sitting that minute out per read
+     * is what turned a throttle into a dashboard that showed a spinner for
+     * several minutes and then came up blank anyway: the wait happened before
+     * [readSemaphore] so it did not even serialise, the retry waited a second
+     * minute, and a re-arm from any concurrent read pushed the deadline out
+     * again underneath all of them.
+     *
+     * So a read that would have to wait longer than [MaxRateLimitWaitMillis]
+     * returns its caller's fallback instead. The data is no worse than it would
+     * have been after the wait — the quota is spent either way — and the screen
+     * gets to say so while it is still true, rather than holding the UI hostage
+     * to a number the user is never shown.
+     */
+    private suspend fun <T> withRateLimitGuard(
         operation: String,
         fallback: T,
         block: suspend () -> T,
     ): T {
         val safeOperation = operation.privacySafeOperationName()
-        var hasRetriedRateLimit = false
-        var result: Result<T>? = null
-
-        while (result == null) {
-            if (!syncEnabled()) {
-                Log.d(TAG, "Skipping $safeOperation - Health Connect sync paused")
-                return fallback
-            }
-            waitForActiveRateLimit(safeOperation)
-            Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
-
-            try {
-                result = readSemaphore.withPermit {
-                    withContext(Dispatchers.IO) {
-                        Result.success(block().also {
-                            Log.d(TAG, "Finished $safeOperation successfully")
-                        })
-                    }
-                }
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
-                    val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
-                    Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
-                    if (!hasRetriedRateLimit) {
-                        hasRetriedRateLimit = true
-                        delay(rateLimit.retryAfterMillis)
-                        continue
-                    }
-                } else {
-                    Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)
-                }
-                result = Result.success(fallback)
-            }
+        if (!syncEnabled()) {
+            Log.d(TAG, "Skipping $safeOperation - Health Connect sync paused")
+            return fallback
         }
+        val backoffMillis = HealthConnectRateLimitBackoff.remainingMillis()
+        if (backoffMillis > MaxRateLimitWaitMillis) {
+            Log.w(TAG, "Skipping $safeOperation - Health Connect rate limited for ${backoffMillis}ms more")
+            return fallback
+        }
+        if (backoffMillis > 0L) {
+            Log.w(TAG, "Waiting to retry $safeOperation after Health Connect rate limit")
+            delay(backoffMillis)
+        }
+        Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
 
-        return result.getOrThrow()
-    }
-
-    private suspend fun waitForActiveRateLimit(operation: String) {
-        try {
-            HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage)
-        } catch (rateLimit: HealthConnectRateLimitException) {
-            Log.w(TAG, "Waiting to retry $operation after Health Connect rate limit")
-            delay(rateLimit.retryAfterMillis)
+        return try {
+            readSemaphore.withPermit {
+                withContext(Dispatchers.IO) {
+                    block().also { Log.d(TAG, "Finished $safeOperation successfully") }
+                }
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+                HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
+                Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
+            } else {
+                Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)
+            }
+            fallback
         }
     }
 
@@ -146,6 +159,15 @@ internal class HealthConnectReaderSupport(
     private companion object {
         private const val TAG = "HealthConnectManager"
         private const val MaxConcurrentReads = 2
+
+        /**
+         * The longest a single read may sit on the rate-limit backoff.
+         *
+         * Short enough that a whole screen's fan-out still settles inside one
+         * frame budget's worth of patience rather than the minute the backoff
+         * is armed for.
+         */
+        private const val MaxRateLimitWaitMillis = 2_000L
     }
 }
 

@@ -70,7 +70,14 @@ internal object HealthConnectRateLimitBackoff {
         retryAfterEpochMillis = 0L
     }
 
-    private fun remainingMillis(nowMillis: Long): Long =
+    /**
+     * How much longer the backoff has to run, or 0 when it is not active.
+     *
+     * Public because the wait is no longer something a read can simply sit out
+     * (see [HealthConnectReaderSupport]): callers decide whether to wait, and
+     * the dashboard tells the user how long is left rather than spinning for it.
+     */
+    fun remainingMillis(nowMillis: Long = System.currentTimeMillis()): Long =
         (retryAfterEpochMillis - nowMillis).coerceAtLeast(0L)
 }
 

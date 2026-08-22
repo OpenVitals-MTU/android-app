@@ -157,13 +157,18 @@ class DashboardViewModelTest {
 
     @Test fun `transient load cancellation retries without surfacing dashboard error`() = runTest {
         val loader = mockDashboardDataLoader()
-        var loadCalls = 0
+        var stepsPasses = 0
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            loadCalls += 1
-            if (loadCalls == 1) {
-                throw CancellationException("Job was cancelled")
+            val query = firstArg<DashboardQuery>()
+            // Only the steps pass is made to fail: an identical in-flight load
+            // is coalesced onto one of them, so a live pass can be handed the
+            // cancellation of the one it was sharing. It must retry, and it
+            // must not take the other twenty-six passes down with it.
+            if (query.visibleMetrics == setOf(DashboardMetric.STEPS)) {
+                stepsPasses += 1
+                if (stepsPasses == 1) throw CancellationException("Job was cancelled")
             }
-            DashboardData(date = today, steps = 7_200)
+            DashboardData(date = today, steps = 7_200, loadedMetrics = query.visibleMetrics)
         }
 
         val vm = dashboardViewModel(loader, prefs())
@@ -172,7 +177,7 @@ class DashboardViewModelTest {
         assertFalse(state.isLoading)
         assertEquals(7_200L, state.data?.steps)
         assertNull(state.error)
-        coVerify(exactly = 2) { loader.loadDashboard(any<DashboardQuery>()) }
+        assertEquals(2, stepsPasses)
     }
 
     @Test fun `sensor status includes saved battery and live connection status`() = runTest {
@@ -276,7 +281,9 @@ class DashboardViewModelTest {
 
         assertEquals(today, vm.uiState.value.selectedDate)
         // load called once by init, not again by blocked nextDay
-        coVerify(exactly = 1) { loader.loadDashboard(any<DashboardQuery>()) }
+        coVerify(exactly = 1) {
+            loader.loadDashboard(match<DashboardQuery> { it.visibleMetrics == setOf(DashboardMetric.STEPS) })
+        }
     }
 
     @Test fun `nextDay advances from yesterday to today`() = runTest {
@@ -315,7 +322,9 @@ class DashboardViewModelTest {
         // silently: a pinned past day is never yanked forward, and Kotlin does
         // not refresh it in place either — the resume adds no read of its own
         // (init loaded today, selectDate loaded yesterday, and that is all).
-        coVerify(exactly = 2) { loader.loadDashboard(any<DashboardQuery>()) }
+        coVerify(exactly = 2) {
+            loader.loadDashboard(match<DashboardQuery> { it.visibleMetrics == setOf(DashboardMetric.STEPS) })
+        }
     }
 
     @Test fun `selectDate on a past day pins it and selecting today clears the pin`() = runTest {
@@ -374,7 +383,7 @@ class DashboardViewModelTest {
     @Test fun `floorsClimbed is exposed through state when present`() = runTest {
         val data = DashboardData(date = today, floorsClimbed = 12)
         val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
+        loader.answersEveryPassWith(data)
 
         val vm = dashboardViewModel(loader, prefs())
 
@@ -394,7 +403,7 @@ class DashboardViewModelTest {
     @Test fun `elevationGainedMeters is exposed through state when present`() = runTest {
         val data = DashboardData(date = today, elevationGainedMeters = 85.0)
         val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
+        loader.answersEveryPassWith(data)
 
         val vm = dashboardViewModel(loader, prefs())
 
@@ -414,7 +423,7 @@ class DashboardViewModelTest {
     @Test fun `floorsClimbed zero is non-null — permission granted no stair data`() = runTest {
         val data = DashboardData(date = today, floorsClimbed = 0)
         val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
+        loader.answersEveryPassWith(data)
 
         val vm = dashboardViewModel(loader, prefs())
 
@@ -424,7 +433,7 @@ class DashboardViewModelTest {
     @Test fun `caloriesInKcal is exposed through state when present`() = runTest {
         val data = DashboardData(date = today, caloriesInKcal = 1_850.0)
         val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
+        loader.answersEveryPassWith(data)
 
         val vm = dashboardViewModel(loader, prefs())
 
@@ -440,7 +449,7 @@ class DashboardViewModelTest {
             latestVo2Max = 42.1,
         )
         val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
+        loader.answersEveryPassWith(data)
 
         val vm = dashboardViewModel(loader, prefs())
 
@@ -450,7 +459,105 @@ class DashboardViewModelTest {
         assertEquals(42.1, vm.uiState.value.data?.latestVo2Max!!, 0.01)
     }
 
+    // ─── Streaming ────────────────────────────────────────────────────────────
+
+    @Test fun `the dashboard renders before any metric has answered`() = runTest {
+        val loader = mockDashboardDataLoader()
+        val gate = CompletableDeferred<Unit>()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            gate.await()
+            DashboardData(date = today)
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.DISTANCE.name,
+        )
+
+        val vm = dashboardViewModel(loader, prefs)
+
+        // Not one read has come back, and the screen is already up with its
+        // tiles reading "loading". The full-screen spinner this replaced was
+        // gated on a batch of reads finishing, which on a throttled Health
+        // Connect meant minutes of nothing.
+        val state = vm.uiState.value
+        assertFalse(state.isLoading)
+        assertNotNull(state.data)
+        assertEquals(
+            setOf(DashboardWidgetId.STEPS, DashboardWidgetId.DISTANCE),
+            state.loadingWidgets,
+        )
+        assertTrue(state.display.widgets[DashboardWidgetId.STEPS]?.isLoading ?: false)
+        gate.complete(Unit)
+    }
+
+    @Test fun `a slow metric does not hold up the tiles beside it`() = runTest {
+        val loader = mockDashboardDataLoader()
+        val stepsGate = CompletableDeferred<Unit>()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            if (query.visibleMetrics == setOf(DashboardMetric.STEPS)) stepsGate.await()
+            DashboardData(
+                date = today,
+                steps = 9_000,
+                distanceMeters = 4_200.0,
+                loadedMetrics = query.visibleMetrics,
+            )
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.DISTANCE.name,
+        )
+
+        val vm = dashboardViewModel(loader, prefs)
+
+        val midLoad = vm.uiState.value
+        assertEquals(4_200.0, midLoad.data?.distanceMeters ?: 0.0, 0.01)
+        assertEquals(setOf(DashboardWidgetId.STEPS), midLoad.loadingWidgets)
+        assertTrue(midLoad.isRefreshing)
+
+        stepsGate.complete(Unit)
+        advanceUntilIdle()
+
+        val settled = vm.uiState.value
+        assertEquals(9_000L, settled.data?.steps)
+        assertEquals(emptySet<DashboardWidgetId>(), settled.loadingWidgets)
+        assertFalse(settled.isRefreshing)
+    }
+
+    @Test fun `one metric failing leaves the rest of the dashboard alone`() = runTest {
+        val loader = mockDashboardDataLoader()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            if (query.visibleMetrics == setOf(DashboardMetric.STEPS)) {
+                throw RuntimeException("steps read failed")
+            }
+            DashboardData(date = today, distanceMeters = 4_200.0, loadedMetrics = query.visibleMetrics)
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.DISTANCE.name,
+        )
+
+        val vm = dashboardViewModel(loader, prefs)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        // One tile's problem is that tile's to show, by coming up empty. The
+        // whole screen only speaks up when EVERY metric failed.
+        assertNull(state.error)
+        assertEquals(4_200.0, state.data?.distanceMeters ?: 0.0, 0.01)
+        assertEquals(emptySet<DashboardWidgetId>(), state.loadingWidgets)
+    }
+
     // ─── Refresh ──────────────────────────────────────────────────────────────
+
+    // Counting LOADS, below, means counting one metric's passes rather than
+    // every call. A load is now one pass per metric group, so the raw call
+    // count measures the length of the widget list; STEPS is its own group and
+    // is on every dashboard, so it appears exactly once per load.
 
     @Test fun `refresh reloads current date`() = runTest {
         val loader = mockDashboardDataLoader()
@@ -459,8 +566,16 @@ class DashboardViewModelTest {
         val vm = dashboardViewModel(loader, prefs())
         vm.refresh()
 
-        // init + refresh = 2 calls
-        coVerify(exactly = 2) { loader.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepWindow == SleepWindow.Default }) }
+        // init + refresh = 2 loads
+        coVerify(exactly = 2) {
+            loader.loadDashboard(
+                match<DashboardQuery> {
+                    it.date == today &&
+                        it.sleepWindow == SleepWindow.Default &&
+                        it.visibleMetrics == setOf(DashboardMetric.STEPS)
+                }
+            )
+        }
     }
 
     @Test fun `load passes sleep range mode from preferences`() = runTest {
@@ -487,7 +602,7 @@ class DashboardViewModelTest {
         }
     }
 
-    @Test fun `load requests visible dashboard widgets first`() = runTest {
+    @Test fun `load requests metrics in the order their widgets appear`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -505,17 +620,19 @@ class DashboardViewModelTest {
 
         dashboardViewModel(loader, prefs)
 
+        // Dispatch order is the only priority signal there is: Health Connect
+        // serves a couple of reads at a time, so the pass asked for first is
+        // the tile that fills in first.
         assertEquals(
-            setOf(
-                DashboardMetric.SLEEP,
-                DashboardMetric.STEPS,
-                DashboardMetric.HYDRATION,
-                DashboardMetric.DISTANCE,
-                DashboardMetric.WEIGHT,
+            listOf(
+                setOf(DashboardMetric.SLEEP),
+                setOf(DashboardMetric.STEPS),
+                setOf(DashboardMetric.HYDRATION),
+                setOf(DashboardMetric.DISTANCE),
+                setOf(DashboardMetric.WEIGHT),
             ),
-            queries.first().visibleMetrics,
+            queries.map { it.visibleMetrics },
         )
-        assertFalse(queries.first().includeHistoricalBaselines)
     }
 
     @Test fun `dashboard widget order scopes first dashboard query`() = runTest {
@@ -535,7 +652,7 @@ class DashboardViewModelTest {
         assertEquals(1, queries.size)
     }
 
-    @Test fun `background dashboard query loads remaining configured widget metrics`() = runTest {
+    @Test fun `every configured widget metric gets its own load pass`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         val prefs = prefs()
@@ -560,37 +677,40 @@ class DashboardViewModelTest {
         dashboardViewModel(loader, prefs)
         advanceUntilIdle()
 
-        assertEquals(2, queries.size)
+        // One pass per metric, off the screen's critical path — no tile waits
+        // on another tile's read. Only the weekly-cardio pass pays for the
+        // fourteen-day heart-rate walk that turns it on.
         assertEquals(
-            setOf(
-                DashboardMetric.STEPS,
-                DashboardMetric.WEEKLY_CARDIO_LOAD,
-                DashboardMetric.DISTANCE,
-                DashboardMetric.CALORIES_OUT,
-                DashboardMetric.ACTIVE_CALORIES,
-                DashboardMetric.FLOORS,
-                DashboardMetric.SLEEP,
-                DashboardMetric.HYDRATION,
+            listOf(
+                setOf(DashboardMetric.STEPS),
+                setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+                setOf(DashboardMetric.DISTANCE),
+                setOf(DashboardMetric.CALORIES_OUT),
+                setOf(DashboardMetric.ACTIVE_CALORIES),
+                setOf(DashboardMetric.FLOORS),
+                setOf(DashboardMetric.SLEEP),
+                setOf(DashboardMetric.HYDRATION),
+                setOf(DashboardMetric.WEIGHT),
+                setOf(DashboardMetric.AVG_HEART_RATE),
             ),
-            queries.first().visibleMetrics,
+            queries.map { it.visibleMetrics },
         )
         assertEquals(
-            setOf(
-                DashboardMetric.WEIGHT,
-                DashboardMetric.AVG_HEART_RATE,
-            ),
-            queries[1].visibleMetrics,
+            listOf(setOf(DashboardMetric.WEEKLY_CARDIO_LOAD)),
+            queries.filter { it.includeWeeklyTrainingSignals }.map { it.visibleMetrics },
         )
-        assertTrue(queries[1].includeHistoricalBaselines)
+        // Every pass now affords the historical baselines: nothing is gated on
+        // one finishing, so no tile has to fill in twice to become right.
+        assertTrue(queries.all { it.includeHistoricalBaselines })
     }
 
-    @Test fun `a carousel twin of a quick-loaded metric does not stay loading`() = runTest {
+    @Test fun `both widgets sharing one metric stop loading together`() = runTest {
         val loader = mockDashboardDataLoader()
         val prefs = prefs()
-        // CARDIO_LOAD lands beyond the quick section, but its metric is the
-        // hero WEEKLY_CARDIO_LOAD's — already loaded by the quick pass. The
-        // background pass never loads that metric, so marking the twin as
-        // loading left it on "Loading" forever.
+        // CARDIO_LOAD and the hero WEEKLY_CARDIO_LOAD are two widgets over one
+        // metric, so one pass answers both. A pass that took only its own
+        // widget off the loading list would leave the twin on "Loading" for
+        // good — there is no second pass coming for a metric already loaded.
         every { prefs.dashboardWidgetOrder() } returns listOf(
             DashboardWidgetId.STEPS.name,
             DashboardWidgetId.WEEKLY_CARDIO_LOAD.name,
@@ -660,9 +780,10 @@ class DashboardViewModelTest {
         val gate = CompletableDeferred<Unit>()
         var loads = 0
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            loads += 1
+            val query = firstArg<DashboardQuery>()
+            if (query.visibleMetrics == setOf(DashboardMetric.STEPS)) loads += 1
             gate.await()
-            DashboardData(date = today, steps = 8_000)
+            DashboardData(date = today, steps = 8_000, loadedMetrics = query.visibleMetrics)
         }
 
         val vm = dashboardViewModel(loader, prefs())
@@ -681,7 +802,7 @@ class DashboardViewModelTest {
         val loader = mockDashboardDataLoader()
         var loads = 0
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            loads += 1
+            if (firstArg<DashboardQuery>().visibleMetrics == setOf(DashboardMetric.STEPS)) loads += 1
             DashboardData(date = today)
         }
 
@@ -702,7 +823,8 @@ class DashboardViewModelTest {
         val gate = CompletableDeferred<Unit>()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            queries += firstArg<DashboardQuery>()
+            val query = firstArg<DashboardQuery>()
+            if (query.visibleMetrics == setOf(DashboardMetric.STEPS)) queries += query
             gate.await()
             DashboardData(date = today)
         }
@@ -767,7 +889,9 @@ class DashboardViewModelTest {
         vm.refreshPreferences()
 
         assertTrue(vm.uiState.value.showOpenVitalsCalculatedCalories)
-        coVerify(exactly = 2) { loader.loadDashboard(any<DashboardQuery>()) }
+        coVerify(exactly = 2) {
+            loader.loadDashboard(match<DashboardQuery> { it.visibleMetrics == setOf(DashboardMetric.STEPS) })
+        }
     }
 
     @Test fun `dashboard widgets default to full widget set`() = runTest {
@@ -1297,17 +1421,16 @@ class DashboardViewModelTest {
         val workout = dashboardWorkout(id = "activity-1", isOpenVitalsEntry = true)
         val loader = mockDashboardDataLoader()
         val activityRepo = mockk<ActivityRepository>()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(
-            date = today,
-            workouts = listOf(workout),
-        )
+        loader.answersEveryPassWith(DashboardData(date = today, workouts = listOf(workout)))
         coEvery { activityRepo.deleteActivityEntry("activity-1") } returns Unit
         val vm = dashboardViewModel(loader, prefs(), activityRepo)
 
         vm.deleteActivityEntry("activity-1")
 
         coVerify(exactly = 1) { activityRepo.deleteActivityEntry("activity-1") }
-        coVerify(exactly = 2) { loader.loadDashboard(any<DashboardQuery>()) }
+        coVerify(exactly = 2) {
+            loader.loadDashboard(match<DashboardQuery> { it.visibleMetrics == setOf(DashboardMetric.STEPS) })
+        }
     }
 
     private fun dashboardWorkout(id: String, isOpenVitalsEntry: Boolean) = ExerciseData(
@@ -1348,9 +1471,21 @@ class DashboardViewModelTest {
     private fun mockDashboardDataLoader(configure: DashboardDataLoader.() -> Unit = {}): DashboardDataLoader =
         mockk<DashboardDataLoader>().also(configure)
 
+    /**
+     * Stubs the loader the way the real one answers: a pass reports the metrics
+     * it was asked for, because that is what [mergeLoaded] keys on. A fixture
+     * that claims to have loaded nothing merges as nothing.
+     */
+    private fun DashboardDataLoader.answersEveryPassWith(data: DashboardData) {
+        coEvery { loadDashboard(any<DashboardQuery>()) } answers {
+            data.copy(loadedMetrics = firstArg<DashboardQuery>().visibleMetrics)
+        }
+    }
+
     private fun mockHealthRepository(configure: HealthRepository.() -> Unit = {}): HealthRepository =
         mockk<HealthRepository>().also { repo ->
             every { repo.availability() } returns HealthConnectAvailability.AVAILABLE
+            every { repo.rateLimitRetryAfterMillis() } returns 0L
             every { repo.minimumOnboardingPermissions } returns emptySet()
             coEvery { repo.grantedPermissions() } returns emptySet()
             configure(repo)

@@ -29,6 +29,7 @@ import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
+import tech.mmarca.openvitals.domain.model.dashboardMetricLoadGroups
 import tech.mmarca.openvitals.domain.model.mergeLoaded
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
@@ -43,7 +44,6 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,8 +52,16 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.math.ceil
 
 @Immutable
 data class DashboardUiState(
@@ -83,6 +91,13 @@ data class DashboardUiState(
     val minimumPermissionsGranted: Boolean = true,
     val display: DashboardDisplayState = DashboardDisplayState(),
     val loadingWidgets: Set<DashboardWidgetId> = emptySet(),
+    /**
+     * Minutes until Health Connect will serve this app again, when the last
+     * load ran into its rate limit. Reads no longer sit out that backoff, so
+     * without this the tiles they gave up on would be indistinguishable from
+     * tiles that genuinely have no data.
+     */
+    val rateLimitedRetryAfterMinutes: Long? = null,
     val watch: WatchWidgetDisplay? = null,
     val sensorStatus: DashboardSensorStatus = DashboardSensorStatus(),
 )
@@ -176,9 +191,15 @@ class DashboardViewModel @Inject constructor(
     private val loadCoordinator = LoadCoordinator()
     private var userPinnedPastDay = false
     private var permissionPromptDismissedForLoad = false
-    private var backgroundMetricsJob: Job? = null
-    private var bodyEnergyJob: Job? = null
     private var loadGeneration = 0L
+
+    /**
+     * Serialises publishing. Every metric group finishes on its own and merges
+     * itself into the state, and a merge is a read-modify-write of a value that
+     * all of them are writing — unguarded, the tiles that landed together drop
+     * each other's results.
+     */
+    private val publishMutex = Mutex()
 
     /**
      * The day the current coordinator job is loading, or null once it settles.
@@ -305,7 +326,7 @@ class DashboardViewModel @Inject constructor(
         if (sleepRangeChanged || activityWeekModeChanged || calorieModeChanged) {
             // Bypasses the in-flight dedupe on purpose: a load already running
             // read the old preferences, so it has to be restarted, not absorbed.
-            load(current.selectedDate, RefreshMode.NORMAL, retryOnCancellation = true)
+            forceLoad(current.selectedDate, RefreshMode.NORMAL)
         }
     }
 
@@ -322,13 +343,12 @@ class DashboardViewModel @Inject constructor(
     fun load(date: LocalDate, refreshMode: RefreshMode = RefreshMode.NORMAL) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
         if (refreshMode == RefreshMode.NORMAL && clampedDate == inFlightLoadDate) return
-        load(date = clampedDate, refreshMode = refreshMode, retryOnCancellation = true)
+        forceLoad(date = clampedDate, refreshMode = refreshMode)
     }
 
-    private fun load(
+    private fun forceLoad(
         date: LocalDate,
         refreshMode: RefreshMode,
-        retryOnCancellation: Boolean,
     ) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
         // The date flips before any Health Connect call: the day navigator
@@ -339,15 +359,12 @@ class DashboardViewModel @Inject constructor(
             sortEmptyTilesLast = prefs.dashboardSortEmptyTilesLast,
         )
         val generation = ++loadGeneration
-        backgroundMetricsJob?.cancel()
-        bodyEnergyJob?.cancel()
         inFlightLoadDate = clampedDate
         loadCoordinator.launch(viewModelScope) load@{
             try {
                 runLoadPass(
                     clampedDate = clampedDate,
                     refreshMode = refreshMode,
-                    retryOnCancellation = retryOnCancellation,
                     generation = generation,
                 )
             } finally {
@@ -360,7 +377,6 @@ class DashboardViewModel @Inject constructor(
     private suspend fun LoadCoordinator.LoadScope.runLoadPass(
         clampedDate: LocalDate,
         refreshMode: RefreshMode,
-        retryOnCancellation: Boolean,
         generation: Long,
     ) {
         val sleepWindow = prefs.sleepWindow
@@ -375,10 +391,8 @@ class DashboardViewModel @Inject constructor(
         } else {
             emptySet()
         }
-        val keepCurrentDataVisible = refreshMode == RefreshMode.FORCE && current.data != null
         _uiState.value = current.copy(
             selectedDate = clampedDate,
-            isLoading = !keepCurrentDataVisible,
             isRefreshing = true,
             error = null,
             sleepWindow = sleepWindow,
@@ -390,100 +404,82 @@ class DashboardViewModel @Inject constructor(
             minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
             loadingWidgets = emptySet(),
         )
-        val quickWidgetIds = firstVisibleDashboardWidgetIds(_uiState.value.dashboardWidgets)
-        val quickMetrics = quickWidgetIds.toDashboardMetrics()
-        val dashboardQuery = DashboardQuery(
-            date = clampedDate,
+        val widgets = _uiState.value.dashboardWidgets
+        // Widget order IS load order: the tiles on the first screen ask for
+        // their reads first, and Health Connect serves a couple at a time.
+        val orderedMetrics = widgets.mapNotNull { it.toDashboardMetricOrNull() }.distinct()
+        val groups = dashboardMetricLoadGroups(orderedMetrics)
+        val metricWidgetIds = widgets.filter { it.toDashboardMetricOrNull() != null }.toSet()
+        val wantsBodyEnergy = bodyEnergyRepository != null &&
+            DashboardWidgetId.BODY_ENERGY in widgets
+
+        // The dashboard is on screen before a single read has been issued,
+        // every tile on it reading "loading". Nothing here is allowed to await
+        // a metric: the full-screen spinner this replaced was gated on the
+        // slowest read in the batch, which on a data-dense phone with a
+        // throttled Health Connect meant minutes of a blank screen.
+        val existingData = current.data?.takeIf { it.date == clampedDate }
+        val hadExistingData = existingData != null
+        val seed = (existingData ?: DashboardData(date = clampedDate))
+            // A reload re-establishes these from scratch. Carried over, a
+            // permission the user granted since the last load would keep being
+            // reported as missing, because the merge can only add to the set.
+            .copy(missingPermissions = emptySet())
+        publishDashboardData(
+            data = seed,
+            loadingWidgets = metricWidgetIds + listOfNotNull(
+                DashboardWidgetId.BODY_ENERGY.takeIf { wantsBodyEnergy },
+            ),
             sleepWindow = sleepWindow,
             activityWeekMode = activityWeekMode,
-            visibleMetrics = quickMetrics,
-            refreshMode = refreshMode,
-            includeHistoricalBaselines = false,
-            includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in quickMetrics,
+            goals = dailyGoals,
         )
-        val data = try {
-            loadDashboardDayUseCase(dashboardQuery)
-        } catch (error: CancellationException) {
-            if (!isCurrent) return
-            if (retryOnCancellation) {
-                load(
-                    date = clampedDate,
-                    refreshMode = refreshMode,
-                    retryOnCancellation = false,
-                )
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    // A load that died leaves the OLD day on screen — the date
-                    // has to point back at it, or the tiles sit on "loading"
-                    // under a day nothing is loading for.
-                    selectedDate = _uiState.value.data?.date ?: clampedDate,
-                    isLoading = false,
-                    isRefreshing = false,
-                    error = null,
-                )
+
+        // Children of the coordinator's job, so the next load cancels them the
+        // same way it cancels this one — the reason the two hand-held Job
+        // fields this replaced existed.
+        val failures = coroutineScope {
+            val metricPasses = groups.map { group ->
+                async {
+                    loadMetricGroup(
+                        metrics = group,
+                        date = clampedDate,
+                        refreshMode = refreshMode,
+                        sleepWindow = sleepWindow,
+                        activityWeekMode = activityWeekMode,
+                        generation = generation,
+                    )
+                }
             }
-            return
-        } catch (error: Throwable) {
-            if (!isCurrent) return
-            _uiState.value = _uiState.value.copy(
-                selectedDate = _uiState.value.data?.date ?: clampedDate,
-                isLoading = false,
-                isRefreshing = false,
-                error = error.toScreenError("Unknown error"),
-            )
-            return
+            if (wantsBodyEnergy) {
+                launch {
+                    loadBodyEnergy(
+                        date = clampedDate,
+                        refreshMode = refreshMode,
+                        generation = generation,
+                    )
+                }
+            }
+            metricPasses.awaitAll()
         }
 
         if (!isCurrent) return
-        val currentData = _uiState.value.data
-        val mergedData = if (currentData?.date == clampedDate) {
-            currentData.mergeLoaded(data)
-        } else {
-            data
-        }
-        // A carousel widget can share its metric with a hero widget (the two
-        // weekly-cardio tiles): the quick pass already loaded that metric, so
-        // the twin must not be marked loading — the background pass only loads
-        // and clears the metrics the quick pass did NOT cover, and nothing
-        // would ever take the twin off the loading list.
-        val backgroundWidgetIds = (_uiState.value.dashboardWidgets - quickWidgetIds.toSet())
-            .filterNot { widgetId ->
-                widgetId.toDashboardMetricOrNull()?.let { it in quickMetrics } == true
-            }
-            // A widget with no metric behind it is not waiting for one. The
-            // loading list is cleared by the metrics that finish loading, so
-            // anything metric-less put on it stays there for good — a tile
-            // reading "Loading…" forever.
-            .filter { it.toDashboardMetricOrNull() != null }
-        val loadingWidgets = buildSet {
-            addAll(backgroundWidgetIds)
-            if (bodyEnergyRepository != null &&
-                DashboardWidgetId.BODY_ENERGY in _uiState.value.dashboardWidgets &&
-                mergedData.bodyEnergyTimeline == null
-            ) {
-                add(DashboardWidgetId.BODY_ENERGY)
-            }
-        }
-        publishDashboardData(
-            data = mergedData,
-            loadingWidgets = loadingWidgets,
-            sleepWindow = sleepWindow,
-            activityWeekMode = activityWeekMode,
-            goals = prefs.dashboardDailyGoals(),
-        )
-        if (data.loadedMetrics.isNotEmpty() || quickMetrics.isEmpty()) {
-            launchBackgroundMetricLoad(
-                date = clampedDate,
-                refreshMode = refreshMode,
-                quickMetrics = quickMetrics,
-                generation = generation,
+        // One metric failing is that tile's problem and it says so by coming up
+        // empty. Every metric failing is the SCREEN's problem — Health Connect
+        // is gone, or paused, or refusing — and staying quiet about it would
+        // leave a full grid of tiles claiming the day holds no data at all.
+        val firstFailure = failures.filterNotNull().firstOrNull()
+        if (firstFailure != null && failures.size == groups.size && failures.none { it == null }) {
+            _uiState.value = _uiState.value.copy(
+                error = firstFailure.toScreenError("Unknown error"),
+                // With nothing to show and nothing shown before, the error is
+                // the whole screen. A reload that still has yesterday's answers
+                // on it keeps them and speaks through a toast instead.
+                data = if (hadExistingData) _uiState.value.data else null,
+                isLoading = false,
+                isRefreshing = false,
             )
         }
-        launchBodyEnergyLoad(
-            date = clampedDate,
-            refreshMode = refreshMode,
-            generation = generation,
-        )
         // Once per app open, after the dashboard's own load has settled:
         // drain the daily-aggregate caches' changes tokens. Incremental
         // only — a cache that never full-synced stays untouched until its
@@ -495,76 +491,115 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun launchBackgroundMetricLoad(
+    /**
+     * Loads one group of metrics and merges it into whatever is already on
+     * screen, clearing only the tiles it covers.
+     *
+     * A group that fails is not an error state. The rest of the dashboard is
+     * already showing, so its tiles simply stop loading and say what they know;
+     * [rateLimitedRetryAfterMinutes] is what separates "no data" from "Health
+     * Connect will not answer for another minute".
+     */
+    private suspend fun loadMetricGroup(
+        metrics: Set<DashboardMetric>,
         date: LocalDate,
         refreshMode: RefreshMode,
-        quickMetrics: Set<DashboardMetric>,
+        sleepWindow: SleepWindow,
+        activityWeekMode: ActivityWeekMode,
         generation: Long,
-    ) {
-        val allWidgetMetrics = _uiState.value.dashboardWidgets.toDashboardMetrics()
-        val backgroundMetrics = allWidgetMetrics - quickMetrics
-        if (backgroundMetrics.isEmpty()) return
-
-        backgroundMetricsJob = viewModelScope.launch {
-            val sleepWindow = prefs.sleepWindow
-            val activityWeekMode = prefs.activityWeekMode
-            val data = runCatching {
-                loadDashboardDayUseCase(
-                    DashboardQuery(
-                        date = date,
-                        sleepWindow = sleepWindow,
-                        activityWeekMode = activityWeekMode,
-                        visibleMetrics = backgroundMetrics,
-                        refreshMode = refreshMode,
-                        includeHistoricalBaselines = true,
-                        includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in backgroundMetrics,
-                    )
-                )
-            }.getOrNull() ?: return@launch
-            if (generation != loadGeneration || _uiState.value.selectedDate != date) return@launch
-            val currentData = _uiState.value.data ?: return@launch
-            if (currentData.date != date) return@launch
-            val mergedData = currentData.mergeLoaded(data)
-            val loadedWidgetIds = _uiState.value.dashboardWidgets.filter { widgetId ->
-                widgetId.toDashboardMetricOrNull()?.let { it in backgroundMetrics } == true
-            }.toSet()
-            publishDashboardData(
-                data = mergedData,
-                loadingWidgets = _uiState.value.loadingWidgets - loadedWidgetIds,
-                sleepWindow = prefs.sleepWindow,
-                activityWeekMode = prefs.activityWeekMode,
-                goals = prefs.dashboardDailyGoals(),
-            )
+    ): Throwable? {
+        val widgetIds = _uiState.value.dashboardWidgets
+            .filter { it.toDashboardMetricOrNull() in metrics }
+            .toSet()
+        val query = DashboardQuery(
+            date = date,
+            sleepWindow = sleepWindow,
+            activityWeekMode = activityWeekMode,
+            visibleMetrics = metrics,
+            refreshMode = refreshMode,
+            // Both were skipped on the pass that used to gate the screen, to
+            // keep it short. Nothing is gated on a pass any more, so the tile
+            // can afford the reads that make it right the first time it fills
+            // in instead of the second.
+            includeHistoricalBaselines = true,
+            includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in metrics,
+        )
+        var failure: Throwable? = null
+        var data: DashboardData? = null
+        // Two attempts, for one specific case: identical in-flight loads are
+        // coalesced onto one of them, so a caller that is perfectly alive can
+        // be handed the CANCELLATION of the pass it was sharing. That is not
+        // this pass being cancelled, and the check below is what tells them
+        // apart — a real cancellation rethrows and takes the load down with it.
+        repeat(2) {
+            if (data != null) return@repeat
+            try {
+                data = loadDashboardDayUseCase(query)
+                failure = null
+            } catch (error: CancellationException) {
+                if (!currentCoroutineContext().isActive) throw error
+                failure = error
+            } catch (error: Throwable) {
+                failure = error
+            }
         }
+        val loaded = data
+        publishMerged(generation = generation, date = date, clearing = widgetIds) { current ->
+            if (loaded == null) current else current.mergeLoaded(loaded)
+        }
+        return failure
     }
 
-    private fun launchBodyEnergyLoad(
+    private suspend fun loadBodyEnergy(
         date: LocalDate,
         refreshMode: RefreshMode,
         generation: Long,
     ) {
         val repository = bodyEnergyRepository ?: return
-        if (DashboardWidgetId.BODY_ENERGY !in _uiState.value.dashboardWidgets) return
+        val timeline = try {
+            repository.loadTimeline(
+                BodyEnergyTimelineQuery(
+                    period = DatePeriod(date, date),
+                    range = TimeRange.DAY,
+                    refreshMode = refreshMode,
+                )
+            ).latestDay
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            null
+        }
+        publishMerged(
+            generation = generation,
+            date = date,
+            clearing = setOf(DashboardWidgetId.BODY_ENERGY),
+        ) { current ->
+            if (timeline == null) current else current.copy(bodyEnergyTimeline = timeline)
+        }
+    }
 
-        bodyEnergyJob = viewModelScope.launch {
-            val timeline = runCatching {
-                repository.loadTimeline(
-                    BodyEnergyTimelineQuery(
-                        period = DatePeriod(date, date),
-                        range = TimeRange.DAY,
-                        refreshMode = refreshMode,
-                    )
-                ).latestDay
-            }.getOrNull() ?: return@launch
-            if (generation != loadGeneration || _uiState.value.selectedDate != date) return@launch
-            val currentData = _uiState.value.data ?: return@launch
-            if (currentData.date != date) return@launch
+    /**
+     * Merges one finished pass into the state and takes its tiles off the
+     * loading list, under [publishMutex] so concurrent passes cannot clobber
+     * one another.
+     */
+    private suspend fun publishMerged(
+        generation: Long,
+        date: LocalDate,
+        clearing: Set<DashboardWidgetId>,
+        merge: (DashboardData) -> DashboardData,
+    ) {
+        publishMutex.withLock {
+            if (generation != loadGeneration) return
+            val state = _uiState.value
+            if (state.selectedDate != date) return
+            val currentData = state.data?.takeIf { it.date == date } ?: return
             publishDashboardData(
-                data = currentData.copy(bodyEnergyTimeline = timeline),
-                loadingWidgets = _uiState.value.loadingWidgets - DashboardWidgetId.BODY_ENERGY,
-                sleepWindow = prefs.sleepWindow,
-                activityWeekMode = prefs.activityWeekMode,
-                goals = prefs.dashboardDailyGoals(),
+                data = merge(currentData),
+                loadingWidgets = state.loadingWidgets - clearing,
+                sleepWindow = state.sleepWindow,
+                activityWeekMode = state.activityWeekMode,
+                goals = state.dailyGoals,
             )
         }
     }
@@ -587,7 +622,10 @@ class DashboardViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             data = stableData,
             isLoading = false,
-            isRefreshing = false,
+            // The load is done when the last tile stops loading, not when any
+            // one pass returns: the pull-to-refresh indicator tracks the whole
+            // dashboard, and the tiles track themselves.
+            isRefreshing = loadingWidgets.isNotEmpty(),
             unacknowledgedWidgetPermissions = unacknowledgedWidgetPermissions(data.missingPermissions),
             sleepWindow = sleepWindow,
             activityWeekMode = activityWeekMode,
@@ -595,24 +633,18 @@ class DashboardViewModel @Inject constructor(
             dailyGoals = goals,
             display = display,
             loadingWidgets = loadingWidgets,
+            rateLimitedRetryAfterMinutes = rateLimitedRetryAfterMinutes(),
         )
     }
 
-    private fun firstVisibleDashboardWidgetIds(widgetIds: List<DashboardWidgetId>): List<DashboardWidgetId> {
-        val fixedIds = dashboardWidgetIdsThatFitRows(
-            widgetIds = widgetIds,
-            rows = DashboardFixedWidgetRows,
-        )
-        val fixedIdSet = fixedIds.toSet()
-        val firstCarouselPage = dashboardWidgetIdsInGridPages(
-            widgetIds = widgetIds.filterNot { it in fixedIdSet },
-            rows = DashboardCarouselWidgetRows,
-        ).firstOrNull().orEmpty()
-        return fixedIds + firstCarouselPage
-    }
-
-    private fun Collection<DashboardWidgetId>.toDashboardMetrics(): Set<DashboardMetric> =
-        mapNotNull { it.toDashboardMetricOrNull() }.toSet()
+    /**
+     * Whether Health Connect is currently refusing this app's reads, in whole
+     * minutes, or null when it is not.
+     */
+    private fun rateLimitedRetryAfterMinutes(): Long? =
+        repository.rateLimitRetryAfterMillis()
+            .takeIf { it > 0L }
+            ?.let { millis -> ceil(millis / 60_000.0).toLong().coerceAtLeast(1L) }
 
     fun previousDay() {
         val date = _uiState.value.selectedDate.minusDays(1)

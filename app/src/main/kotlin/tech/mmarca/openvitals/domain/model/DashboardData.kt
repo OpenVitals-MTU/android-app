@@ -279,6 +279,12 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
             latestBasalBodyTemperatureCelsius
         },
         bodyEnergyTimeline = other.bodyEnergyTimeline ?: bodyEnergyTimeline,
+        // Answered by whoever loaded the metric, like every value above it. It
+        // used to be left on the base entirely, so only the FIRST pass of a
+        // load could mark a metric as having recent history — every later pass
+        // silently dropped its answer, and the tiles it covered demoted as
+        // though the user had never recorded one.
+        recentHistoryMetrics = (recentHistoryMetrics - other.loadedMetrics) + other.recentHistoryMetrics,
         missingPermissions = missingPermissions + other.missingPermissions,
         loadedMetrics = loadedMetrics + other.loadedMetrics,
         // Device support is a property of the provider, not of the pass: the
