@@ -41,14 +41,15 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Body Energy that reads how well a night was slept - efficiency, time awake, deep and REM share - and not only how long it lasted
 - Refreshed UI/UX with clearer Summary-first navigation, metric screens, and entry flows
 - Health Connect permission onboarding with clear data categories and a one-tap full setup option
-- Manual logging for beverages with hydration, caffeine, and nutrition defaults, carbohydrate entries, body measurements, vitals, mindfulness sessions with notes, and activities
+- Manual logging for beverages with hydration, caffeine, and nutrition defaults, an optional period a caffeinated drink was drunk over, carbohydrate entries, body measurements, vitals, mindfulness sessions with notes, and activities
 - Opt-in hydration reminders with active hours, daily-goal pause logic, and automatic hiding after saved hydration entries
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ route import, FIT activity/course/workout import, offline PMTiles/Mapsforge map packs, and GPS activity recording with review before saving
 - Configurable activity recording dashboard with Focus mode, high-contrast outdoor mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
 - Live CoMaps turn-by-turn guidance while recording GPS activities, with the planned route, turn arrows, and destination drawn on the offline map, and guidance optionally saved with the activity on-device
+- CoMaps guidance on a Garmin watch whenever CoMaps is navigating, on its own per-watch switch and independent of activity recording
 - Experimental Garmin watch support over Bluetooth only: file sync with a dashboard watch tile, scheduled automatic sync chosen per watch, notification forwarding, an always-connected companion mode with live heart rate and steps, weather from a phone weather app, calendar on the watch, find-my-phone both ways, GPS ephemeris hand-over, and the watch's own settings tree - no vendor account, no internet permission
-- App language support with an in-app language picker for system default, English, Czech, Spanish, German, Italian, Estonian, and Portuguese
+- App language support with an in-app language picker for system default, English, Czech, Spanish, French, German, Italian, Estonian, and Portuguese
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
 - Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
 - Wheelchair activity and wheelchair push tracking when Health Connect data is available

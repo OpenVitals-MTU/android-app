@@ -1,5 +1,55 @@
 # Changelog
 
+## 2.6.6 - 2026-08-22
+
+### English
+
+- **CoMaps guidance reaches the watch on its own.** The next turn, the distance to it and the street now appear on a Garmin watch whenever CoMaps is navigating - no GPS recording needed, and no starting one just to get directions on your wrist. It has its own switch per watch, and the recording integration is now a separate feature: either one alone works, both together show in both places.
+- **A drink can be logged over the time it took.** The Log drink dialog asks how long a caffeinated drink took - at once, 15 or 30 minutes, 1, 2 or 3 hours - so a coffee nursed over two hours spreads its caffeine across those hours instead of spiking at the first sip.
+- **The app speaks French.** A full translation, offered by the in-app language picker.
+- **New watches stay connected.** Stay connected is now on by default - on a newly paired watch, and on an existing one whose switch was never touched. Weather, find-my-phone, live heart rate and steps, a recording handed over the moment it ends, and guidance on the wrist all need the link, and a watch with none of it working gave no hint that one switch was the reason. It costs battery on both sides, which is what the switch and the card beside it are for; turning it off is remembered.
+- **Fixes:** an activity synced from a Garmin watch now keeps the title given on the wrist; and a multi-hour ride no longer fails to import - its GPS route could exceed the size Health Connect accepts for one record, and took the whole sync down with it.
+
+### Espanol
+
+- **La guia de CoMaps llega al reloj por si sola.** El siguiente giro, la distancia hasta el y la calle aparecen ahora en un reloj Garmin siempre que CoMaps este navegando - sin necesidad de grabar una actividad, ni de iniciar una solo para tener indicaciones en la muneca. Tiene su propio interruptor por reloj, y la integracion con la grabacion es ahora una funcion aparte: cualquiera de las dos por separado funciona, y ambas a la vez se ven en los dos sitios.
+- **Una bebida se puede registrar durante el tiempo que llevo.** El dialogo Registrar bebida pregunta cuanto duro una bebida con cafeina - de una vez, 15 o 30 minutos, 1, 2 o 3 horas - asi que un cafe tomado a lo largo de dos horas reparte su cafeina por esas horas en vez de dispararse al primer sorbo.
+- **La app habla frances.** Traduccion completa, disponible en el selector de idioma de la app.
+- **Los relojes nuevos se mantienen conectados.** Mantener conexion viene ahora activado - en un reloj recien emparejado y en uno ya existente cuyo interruptor nunca se toco. El tiempo, encontrar mi telefono, la frecuencia cardiaca y los pasos en vivo, una grabacion entregada nada mas terminar y la guia en la muneca dependen todos del enlace, y un reloj sin nada de eso funcionando no daba ninguna pista de que un solo interruptor fuera la razon. Consume bateria en ambos lados, y para eso estan el interruptor y la tarjeta que lo acompana; si se desactiva, se recuerda.
+- **Correcciones:** una actividad sincronizada desde un reloj Garmin conserva ahora el titulo puesto en la muneca; y una salida de varias horas ya no falla al importarse - su ruta GPS podia superar el tamano que Health Connect acepta en un registro, y se llevaba por delante toda la sincronizacion.
+
+### Deutsch
+
+- **Die CoMaps-Fuehrung erreicht die Uhr von allein.** Die naechste Abbiegung, die Entfernung dorthin und die Strasse erscheinen jetzt auf einer Garmin-Uhr, sobald CoMaps navigiert - ohne GPS-Aufzeichnung, und ohne eine zu starten, nur um Richtungsangaben am Handgelenk zu bekommen. Sie hat ihren eigenen Schalter pro Uhr, und die Aufzeichnungs-Integration ist jetzt eine eigene Funktion: jede allein funktioniert, beide zusammen zeigen sich an beiden Stellen.
+- **Ein Getraenk laesst sich ueber die Zeit erfassen, die es gedauert hat.** Der Dialog Getraenk erfassen fragt, wie lange ein koffeinhaltiges Getraenk gedauert hat - auf einmal, 15 oder 30 Minuten, 1, 2 oder 3 Stunden - sodass ein ueber zwei Stunden getrunkener Kaffee sein Koffein ueber diese Stunden verteilt, statt beim ersten Schluck auszuschlagen.
+- **Die App spricht Franzoesisch.** Eine vollstaendige Uebersetzung, verfuegbar im Sprachwaehler der App.
+- **Neue Uhren bleiben verbunden.** Verbunden bleiben ist jetzt standardmaessig an - bei einer neu gekoppelten Uhr und bei einer vorhandenen, deren Schalter nie beruehrt wurde. Wetter, Telefon finden, Live-Herzfrequenz und -Schritte, eine Aufzeichnung, die direkt nach dem Ende uebergeben wird, und die Fuehrung am Handgelenk brauchen alle die Verbindung, und eine Uhr, bei der nichts davon lief, gab keinen Hinweis darauf, dass ein einziger Schalter der Grund war. Es kostet auf beiden Seiten Akku, dafuer sind der Schalter und die Karte daneben da; wer ihn ausschaltet, dem bleibt das erhalten.
+- **Korrekturen:** eine von einer Garmin-Uhr synchronisierte Aktivitaet traegt jetzt den am Handgelenk vergebenen Titel; und eine mehrstuendige Tour scheitert nicht mehr beim Import - ihre GPS-Route konnte die Groesse ueberschreiten, die Health Connect fuer einen Datensatz akzeptiert, und riss die ganze Synchronisierung mit.
+
+### Italiano
+
+- **La guida di CoMaps arriva all'orologio da sola.** La prossima svolta, la distanza e la via compaiono ora su un orologio Garmin ogni volta che CoMaps sta navigando - senza registrare un'attivita, e senza doverne iniziare una solo per avere le indicazioni al polso. Ha un suo interruttore per orologio, e l'integrazione con la registrazione e ora una funzione a se: ognuna da sola funziona, entrambe insieme si vedono in tutti e due i posti.
+- **Una bevanda si puo registrare per il tempo che ha richiesto.** La finestra Registra bevanda chiede quanto e durata una bevanda con caffeina - in una volta, 15 o 30 minuti, 1, 2 o 3 ore - cosi un caffe bevuto nell'arco di due ore distribuisce la caffeina su quelle ore invece di impennarsi al primo sorso.
+- **L'app parla francese.** Traduzione completa, disponibile nel selettore di lingua dell'app.
+- **I nuovi orologi restano connessi.** Resta connesso ora e attivo di default - su un orologio appena abbinato e su uno gia presente il cui interruttore non e mai stato toccato. Meteo, trova il telefono, frequenza cardiaca e passi in diretta, una registrazione consegnata appena finisce e la guida al polso dipendono tutti dal collegamento, e un orologio con nulla di tutto cio funzionante non dava alcun indizio che un solo interruttore fosse il motivo. Consuma batteria da entrambe le parti, ed e per questo che ci sono l'interruttore e la scheda accanto; se lo si disattiva, viene ricordato.
+- **Correzioni:** un'attivita sincronizzata da un orologio Garmin conserva ora il titolo dato al polso; e un'uscita di piu ore non fallisce piu all'importazione - la sua traccia GPS poteva superare la dimensione che Health Connect accetta per un record, trascinandosi dietro l'intera sincronizzazione.
+
+### Eesti
+
+- **CoMapsi juhised jouavad kella ise.** Jargmine poore, kaugus selleni ja tanav ilmuvad nuud Garmini kellal alati, kui CoMaps navigeerib - GPS-salvestust pole vaja ega ka selle alustamist ainult selleks, et randmel juhiseid saada. Sellel on oma lulit kella kohta ja salvestuse sidumine on nuud omaette funktsioon: kumbki uksi tootab, molemad koos naitavad molemas kohas.
+- **Jooki saab kirja panna aja jooksul, mille see votis.** Dialoog Lisa jook kusib, kui kaua kofeiiniga jook kestis - korraga, 15 voi 30 minutit, 1, 2 voi 3 tundi - nii et kahe tunni jooksul joodud kohv jaotab oma kofeiini nendele tundidele, selle asemel et esimese lonksuga hupata.
+- **Rakendus raagib prantsuse keelt.** Taielik tolge, saadaval rakenduse keelevalijas.
+- **Uued kellad jaavad uhendatuks.** Pusi uhenduses on nuud vaikimisi sees - vastselt paaristatud kellal ja ka olemasoleval, mille lulitit pole kunagi puudutatud. Ilm, telefoni leidmine, otsepulss ja -sammud, salvestus, mis antakse ule kohe parast lopetamist, ning juhised randmel vajavad koik seda uhendust, ja kell, millel ei tootanud neist ukski, ei andnud vihjet, et pohjuseks on uksainus lulit. See kulutab akut molemal pool, milleks lulit ja selle korval olev kaart ongi; kui selle valja lulitad, jaetakse see meelde.
+- **Parandused:** Garmini kellast sunkroonitud tegevus kannab nuud randmel antud pealkirja; ja mitmetunnine soit ei kuku enam importimisel labi - selle GPS-rada vois uletada suuruse, mida Health Connect uhe kirje kohta lubab, ja vottis kogu sunkroonimise endaga kaasa.
+
+### Portugues
+
+- **A orientacao do CoMaps chega ao relogio sozinha.** A proxima curva, a distancia ate ela e a rua aparecem agora num relogio Garmin sempre que o CoMaps estiver a navegar - sem precisar de gravar uma atividade, nem de iniciar uma so para ter indicacoes no pulso. Tem o seu proprio interruptor por relogio, e a integracao com a gravacao e agora uma funcao separada: qualquer uma sozinha funciona, ambas juntas aparecem nos dois lados.
+- **Uma bebida pode ser registada ao longo do tempo que demorou.** A janela Registar bebida pergunta quanto tempo demorou uma bebida com cafeina - de uma vez, 15 ou 30 minutos, 1, 2 ou 3 horas - por isso um cafe bebido ao longo de duas horas distribui a cafeina por essas horas em vez de disparar ao primeiro gole.
+- **A app fala frances.** Traducao completa, disponivel no seletor de idioma da app.
+- **Os relogios novos ficam ligados.** Manter ligado esta agora ativo por defeito - num relogio acabado de emparelhar e num ja existente cujo interruptor nunca foi tocado. Meteorologia, encontrar o meu telefone, frequencia cardiaca e passos em direto, uma gravacao entregue assim que termina e a orientacao no pulso dependem todos da ligacao, e um relogio sem nada disto a funcionar nao dava qualquer pista de que um unico interruptor era a razao. Consome bateria dos dois lados, e para isso servem o interruptor e o cartao ao lado; se for desativado, fica registado.
+- **Correcoes:** uma atividade sincronizada de um relogio Garmin passa a manter o titulo dado no pulso; e um passeio de varias horas ja nao falha na importacao - o seu trajeto GPS podia exceder o tamanho que o Health Connect aceita num registo, levando atras toda a sincronizacao.
+
 ## 2.6.5 - 2026-08-19
 
 ### English
