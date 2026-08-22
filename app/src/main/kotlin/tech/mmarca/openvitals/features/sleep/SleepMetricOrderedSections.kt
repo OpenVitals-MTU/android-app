@@ -124,6 +124,7 @@ internal fun LazyListScope.renderSleepDayOrderedContent(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenSleepScore = onOpenSleepScore,
                 onOpenSleepEfficiency = onOpenSleepEfficiency,
+                showKeyMetrics = false,
             )
         }
         section(MetricDetailSectionId.DAILY_GOAL) {

@@ -226,6 +226,43 @@ class SleepScreenSectionsTest {
             .assertIsDisplayed()
     }
 
+    @Test
+    fun theDayViewDropsTheKeyMetricsListButKeepsTheOverviewCards() {
+        // On a single night the four key metrics are all restatements: the schedule is
+        // the timeline chart's own axis, REM and deep sleep are measured bars in the
+        // share-of-time-in-bed card, and sleep efficiency was superseded by the sleep
+        // score that feeds the recharge battery. The overview cards above them are not
+        // redundant, so hiding the list must not take those with it.
+        setSleepContent { sectionContext ->
+            sleepDayContent(
+                state = dayState(),
+                display = dayDisplay(),
+                period = DatePeriod(ANCHOR, ANCHOR),
+                unitFormatter = FORMATTER,
+                dateTimeFormatterProvider = DateTimeFormatterProvider(),
+                sectionContext = sectionContext,
+                onOpenSleepSession = {},
+                onOpenSleepScore = null,
+                onOpenSleepEfficiency = null,
+                onDecreaseGoal = {},
+                onIncreaseGoal = {},
+            )
+        }
+
+        // The whole overview is one lazy item, so scrolling to it composes the key
+        // metrics too if they are still there to compose.
+        composeRule
+            .onNode(hasScrollAction())
+            .performScrollToNode(hasText(string(R.string.recovery_sleep_score)))
+        composeRule.onNodeWithText(string(R.string.recovery_sleep_score)).assertIsDisplayed()
+
+        composeRule.onNodeWithText(string(R.string.activities_key_metrics)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.recovery_sleep_schedule)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.recovery_rem_sleep)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.recovery_deep_sleep)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.recovery_sleep_efficiency)).assertDoesNotExist()
+    }
+
     private fun setSleepContent(content: LazyListScope.(MetricDetailSectionContext) -> Unit) {
         composeRule.setContent {
             OpenVitalsTheme {
