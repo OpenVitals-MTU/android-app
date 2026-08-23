@@ -4,6 +4,7 @@ import java.time.Instant
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -97,7 +98,7 @@ class GarminMessagesTest {
         assertEquals(7, e.fileNumber)
         assertEquals(2048L, e.fileSize)
         assertEquals(Instant.parse("2026-07-20T03:00:00Z"), e.fileDate)
-        assertEquals("128/49/7", e.dedupKey)
+        assertEquals("128/49/7/1784516400/2048", e.dedupKey)
     }
 
     @Test
@@ -124,16 +125,44 @@ class GarminMessagesTest {
         // every future sleep file look already-synced — silent, permanent data
         // loss.
         val entries = GarminDirectory.parse(
-            entry(index = 113, dataType = 128, subType = 49, number = 0xFFFF) +
-                entry(index = 116, dataType = 128, subType = 49, number = 0xFFFF) +
-                entry(index = 121, dataType = 128, subType = 32, number = 136),
+            entry(index = 113, dataType = 128, subType = 49, number = 0xFFFF, timestamp = 1000) +
+                entry(index = 116, dataType = 128, subType = 49, number = 0xFFFF, timestamp = 1000) +
+                entry(index = 121, dataType = 128, subType = 32, number = 136, timestamp = 1000),
         )
 
         assertEquals(3, entries.size)
         assertNull(entries[0].dedupKey)
         assertNull(entries[1].dedupKey)
         // A real file number still keys normally.
-        assertEquals("128/32/136", entries[2].dedupKey)
+        assertEquals("128/32/136/${GarminTime.GARMIN_EPOCH_SECONDS + 1000}/100", entries[2].dedupKey)
+    }
+
+    @Test
+    fun `an undated file yields NO dedup key`() {
+        // Without the date the key is type + number, and a watch cycles its
+        // monitoring file numbers: that key once made a new day's file look
+        // synced weeks earlier, so it was skipped and archived unread.
+        val entry = GarminDirectory.parse(
+            entry(index = 5, dataType = 128, subType = 32, number = 7, timestamp = 0),
+        ).single()
+
+        assertNull(entry.dedupKey)
+    }
+
+    @Test
+    fun `a reused file number with a different date or size is a different key`() {
+        val first = GarminDirectory.parse(
+            entry(index = 5, dataType = 128, subType = 32, number = 7, size = 100, timestamp = 1000),
+        ).single()
+        val laterDay = GarminDirectory.parse(
+            entry(index = 9, dataType = 128, subType = 32, number = 7, size = 100, timestamp = 90_000),
+        ).single()
+        val grown = GarminDirectory.parse(
+            entry(index = 5, dataType = 128, subType = 32, number = 7, size = 250, timestamp = 1000),
+        ).single()
+
+        assertNotEquals(first.dedupKey, laterDay.dedupKey)
+        assertNotEquals(first.dedupKey, grown.dedupKey)
     }
 
     @Test

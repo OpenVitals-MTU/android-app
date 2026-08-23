@@ -34,13 +34,25 @@ data class GarminDirectoryEntry(
     }
 
     /**
-     * A stable key for cross-sync dedup: type + file number identify the same
-     * recording across re-syncs, independent of the volatile file index.
+     * A stable key for cross-sync dedup: type, file number, the watch's date
+     * for the file and its size identify the same recording across re-syncs,
+     * independent of the volatile file index.
      *
-     * **Null when the file number is [UNSET_FILE_NUMBER]**, because then it
-     * identifies nothing: a real watch returned two distinct sleep files both
-     * numbered 65535, which collapsed to one key and would have made every
-     * future sleep file look already-synced — silent, permanent data loss.
+     * The date and size are in the key because the file number alone is NOT
+     * stable: a watch cycles its monitoring file numbers, and a key that was
+     * only `type/number` made a brand-new day's monitoring file look like one
+     * synced weeks earlier. Every sync then skipped it — and, worse, sent the
+     * archive flag for it, which told the watch the file was safe to drop. A
+     * day and a half of heart rate and steps went that way before the watch
+     * was forgotten and re-paired. A reused number carries a different date,
+     * and a file the watch is still writing to carries a growing size, so
+     * neither collides with what was synced before.
+     *
+     * **Null when the file number is [UNSET_FILE_NUMBER] or the date is the
+     * watch's zero sentinel**, because then the key identifies nothing: a real
+     * watch returned two distinct sleep files both numbered 65535, which
+     * collapsed to one key and would have made every future sleep file look
+     * already-synced — silent, permanent data loss.
      *
      * Declining to dedup those is safe in a way that guessing is not. The
      * archive flag set on the watch is the PRIMARY mechanism and still
@@ -50,10 +62,10 @@ data class GarminDirectoryEntry(
      * index the watch later reuses would skip a genuinely new file.
      */
     val dedupKey: String?
-        get() = if (fileNumber == UNSET_FILE_NUMBER) {
-            null
-        } else {
-            "${type.dataType}/${type.subType}/$fileNumber"
+        get() {
+            val date = fileDate
+            if (fileNumber == UNSET_FILE_NUMBER || date == null) return null
+            return "${type.dataType}/${type.subType}/$fileNumber/${date.epochSecond}/$fileSize"
         }
 }
 

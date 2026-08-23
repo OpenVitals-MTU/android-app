@@ -240,10 +240,17 @@ class GarminSessionTest {
                 .writeByte(0)
                 .writeByte(0)
                 .writeInt(64)
-                .writeInt(0)
+                .writeInt(DIRECTORY_FILE_TIMESTAMP)
         }
         return w.toBytes()
     }
+
+    /** Every listed file carries this date; a key needs one to exist at all. */
+    private val DIRECTORY_FILE_TIMESTAMP = 1000L
+
+    /** The dedup key [directory] gives a listed file of 64 bytes dated [DIRECTORY_FILE_TIMESTAMP]. */
+    private fun key(dataType: Int, subType: Int, number: Int): String =
+        "$dataType/$subType/$number/${GarminTime.GARMIN_EPOCH_SECONDS + DIRECTORY_FILE_TIMESTAMP}/64"
 
     private fun session(
         scope: CoroutineScope,
@@ -461,7 +468,7 @@ class GarminSessionTest {
         // Even with a key that WOULD match if one existed, an unkeyed file
         // must still be fetched — the alternative is losing every future
         // sleep file.
-        val files = runSync(watch, alreadySynced = setOf("128/49/65535"))
+        val files = runSync(watch, alreadySynced = setOf(key(128, 49, 65535)))
 
         assertEquals(1, files.size)
     }
@@ -475,7 +482,7 @@ class GarminSessionTest {
             ),
         )
 
-        val files = runSync(watch, alreadySynced = setOf("128/49/1"))
+        val files = runSync(watch, alreadySynced = setOf(key(128, 49, 1)))
 
         assertTrue(files.isEmpty())
         // Still a clean, bracketed sync.
@@ -491,7 +498,7 @@ class GarminSessionTest {
     }
 
     @Test
-    fun `a held file the watch still offers is archived again`() = runTest {
+    fun `a held file the watch still offers is NOT archived unread`() = runTest {
         val watch = FakeWatch(
             files = mapOf(
                 0 to directory(intArrayOf(5, 128, 49, 1)),
@@ -499,17 +506,16 @@ class GarminSessionTest {
             ),
         )
 
-        runSync(watch, alreadySynced = setOf("128/49/1"))
+        runSync(watch, alreadySynced = setOf(key(128, 49, 1)))
 
-        // The copy is already stored, so the watch still offering it means the
-        // archive flag never stuck. No later sync downloads it again, so this
-        // is its only chance to be released — skipping would strand it there.
+        // "Held" is a key in a list, not a copy on disk — and a key collision
+        // once turned this into telling the watch to drop a day and a half of
+        // monitoring nobody had downloaded. The archive flag follows a
+        // download in this session or it is not sent.
         val archived = watch.received
             .filter { it.messageType == GarminMessageId.SET_FILE_FLAGS }
             .map { payloadShort(it) }
-        assertEquals(listOf(5), archived)
-        // Re-flagged without re-downloading: the point is to free the watch,
-        // not to spend the bandwidth again.
+        assertTrue(archived.isEmpty())
         val requested = watch.received
             .filter { it.messageType == GarminMessageId.DOWNLOAD_REQUEST }
             .map { payloadShort(it) }
@@ -520,7 +526,7 @@ class GarminSessionTest {
     fun `the directory listing itself is never archived`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory(intArrayOf(0, 0, 0, 1))))
 
-        runSync(watch, alreadySynced = setOf("0/0/1"))
+        runSync(watch, alreadySynced = setOf(key(0, 0, 1)))
 
         // Archiving the directory would cost the listing every sync depends on.
         val archived = watch.received
@@ -601,14 +607,14 @@ class GarminSessionTest {
                 9 to b(4, 5, 6),
             ),
         )
-        val session = session(this, watch, alreadySynced = setOf("128/32/7"))
+        val session = session(this, watch, alreadySynced = setOf("128/32/7/${GarminTime.GARMIN_EPOCH_SECONDS + 1000}/3"))
         pump(watch, session)
         watch.outbox.add(
             GarminGfdiFrame.build(
                 GarminMessageId.FILE_AVAILABLE,
                 GarminByteWriter()
                     .writeShort(9).writeByte(128).writeByte(32).writeShort(7)
-                    .writeByte(0).writeByte(0).writeInt(3L).writeInt(0L)
+                    .writeByte(0).writeByte(0).writeInt(3L).writeInt(1000L)
                     .toBytes(),
             ),
         )

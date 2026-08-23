@@ -679,27 +679,18 @@ class GarminSession(
             // A null dedup key means the file cannot be identified across
             // syncs, so it is always fetched rather than guessed at — see
             // [GarminDirectoryEntry.dedupKey].
-            val (fresh, alreadyHeld) = listing.entries.partition { entry ->
+            //
+            // Skipped is ALL a held file gets. This used to also re-send the
+            // archive flag for it, on the theory that a watch still offering
+            // a held file had missed the flag the first time. But "held" only
+            // means its key is in a list; the copy is long pruned, and a key
+            // collision — which the old key had — turned that into telling
+            // the watch to drop a file nobody had downloaded. The archive
+            // flag follows a download in THIS session or it is not sent.
+            val fresh = listing.entries.filter { entry ->
                 val key = entry.dedupKey
                 key == null || key !in alreadySynced
             }
-            // A file we already hold that the watch STILL offers never took the
-            // archive flag — the link dropped between saving and flagging, or
-            // the watch refused it. Re-flag it here, because no later sync will
-            // download it again, so this is the only chance it gets: skipping
-            // quietly would leave it on the watch for good, filling the space
-            // the archive was supposed to release.
-            //
-            // Safe for the same reason the download path is: everything in
-            // `alreadySynced` is a file whose copy is already stored here.
-            alreadyHeld.filter { it.type != GarminFileType.DIRECTORY }
-                .forEach { entry ->
-                    GarminLog.log(
-                        "[GARMIN-SYNC] re-archiving held ${entry.type.label} " +
-                            "index=${entry.fileIndex}",
-                    )
-                    send(buildSetFileFlags(entry.fileIndex, GarminFileFlag.ARCHIVE))
-                }
             queue.clear()
             queue.addAll(fresh)
             filesTotal = fresh.size
