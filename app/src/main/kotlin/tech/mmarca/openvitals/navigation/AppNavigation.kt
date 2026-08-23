@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.navigation
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -21,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavType
@@ -51,6 +53,7 @@ import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.HeartViewModel
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.isDarkTheme
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.manualentry.body.titleRes
@@ -233,6 +236,13 @@ fun AppNavigation(
         currentRoute == Screen.ActivityEntry.route ||
             currentRoute == Screen.ActivityEntryEdit.route
     val isActivityRecordingFocusRoute = isActivityEntryRoute && isActivityRecordingFocusMode
+    // Outdoor mode repaints the recording body pure black (or pure white in a light theme) for
+    // readability in direct sun. It only ever reached the body, so the app bar above it and the
+    // gesture-bar inset below it stayed the ordinary theme surface -- the framed-slab look that
+    // defeats the point of the mode. The chrome takes the same ground while it is on.
+    val activityRecordingOutdoorBackground = activityRecordingOutdoorTopBarState
+        ?.takeIf { isActivityEntryRoute && it.enabled }
+        ?.let { if (appThemeMode.isDarkTheme(isSystemInDarkTheme())) Color.Black else Color.White }
     val showTopBar = currentRoute != null &&
         currentRoute != Screen.Onboarding.route &&
         !isActivityRecordingFocusRoute
@@ -398,6 +408,7 @@ fun AppNavigation(
         navigationIcon = Icons.AutoMirrored.Outlined.ArrowBack,
         navigationContentDescription = stringResource(R.string.cd_back),
         action = addEntryAction,
+        containerColor = activityRecordingOutdoorBackground,
         topBarActions = {
             // The hydration screen's app-bar add-drink shortcut, as shipped in
             // Flutter (its only app-bar action on that screen).

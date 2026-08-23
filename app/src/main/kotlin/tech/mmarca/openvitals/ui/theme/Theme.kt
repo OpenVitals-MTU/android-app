@@ -158,16 +158,25 @@ private fun ColorScheme.toAmoledColorScheme(): ColorScheme =
         outlineVariant = Color(0xFF3A3A3A),
     )
 
+/**
+ * Whether the running scheme is the AMOLED one, told from its defining property rather than from
+ * the preference: the point of that theme is that a black pixel is an unlit pixel, so anything
+ * painting screen furniture has to be able to ask.
+ */
+@Composable
+fun isAmoledColorScheme(): Boolean {
+    val colorScheme = MaterialTheme.colorScheme
+    return colorScheme.background == Color.Black && colorScheme.surface == Color.Black
+}
+
 @Composable
 fun accentSurfaceContainerColor(
     accentColor: Color,
     amoledAlpha: Float = 0.10f,
     fallback: Color? = null,
-): Color {
-    val colorScheme = MaterialTheme.colorScheme
-    return if (colorScheme.background == Color.Black && colorScheme.surface == Color.Black) {
+): Color =
+    if (isAmoledColorScheme()) {
         accentColor.copy(alpha = amoledAlpha).compositeOver(Color.Black)
     } else {
-        fallback ?: colorScheme.surfaceContainer
+        fallback ?: MaterialTheme.colorScheme.surfaceContainer
     }
-}

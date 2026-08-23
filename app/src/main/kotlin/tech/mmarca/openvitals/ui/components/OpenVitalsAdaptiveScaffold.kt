@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.ui.theme.isAmoledColorScheme
 
 data class OpenVitalsNavigationDestination(
     val route: String,
@@ -70,12 +71,18 @@ fun OpenVitalsAdaptiveScaffold(
     navigationContentDescription: String,
     action: MetricAction?,
     modifier: Modifier = Modifier,
+    containerColor: Color? = null,
     topBarActions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val scaffoldContent: @Composable () -> Unit = {
         Scaffold(
             modifier = modifier.fillMaxSize(),
+            // The scaffold's own ground shows through the transparent top bar and in the
+            // navigation-bar inset below the content, so a screen painting a background of its
+            // own has to be able to say what surrounds it -- or it reads as a slab of one colour
+            // framed by bands of another.
+            containerColor = containerColor ?: MaterialTheme.colorScheme.background,
             // The navigation-bar inset and nothing else: the top bar carries
             // its own status-bar inset, and screens with the app's bottom
             // navigation are padded by the bar itself. What this fixes is
@@ -129,7 +136,15 @@ fun OpenVitalsAdaptiveScaffold(
             bottomBar = {
                 if (showNavigation) {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        // surfaceContainer is a near-black 0xFF080808 under the AMOLED scheme,
+                        // which is a lit pixel: the bar reads as a grey band along the bottom of a
+                        // screen whose whole point is that black is off. There it takes the same
+                        // pure black as the body it sits under.
+                        containerColor = if (isAmoledColorScheme()) {
+                            MaterialTheme.colorScheme.surface
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        },
                         contentColor = MaterialTheme.colorScheme.onSurface,
                         tonalElevation = 0.dp,
                     ) {
