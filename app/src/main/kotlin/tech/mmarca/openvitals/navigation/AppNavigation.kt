@@ -197,8 +197,8 @@ fun AppNavigation(
             Screen.HydrationEntryEdit.route,
             Screen.HydrationEntryLogDrink.route,
             Screen.CarbsEntry.route,
-            Screen.ActivityEntry.route,
-            Screen.ActivityEntryEdit.route,
+            Screen.ActivityEntry.basePath,
+            Screen.ActivityEntryEdit.basePath,
             Screen.MindfulnessEntry.route,
             Screen.MindfulnessEntryEdit.route,
             Screen.BodyMeasurementEntry.route,
@@ -233,8 +233,8 @@ fun AppNavigation(
     }
 
     val isActivityEntryRoute =
-        currentRoute == Screen.ActivityEntry.route ||
-            currentRoute == Screen.ActivityEntryEdit.route
+        currentRoute == Screen.ActivityEntry.basePath ||
+            currentRoute == Screen.ActivityEntryEdit.basePath
     val isActivityRecordingFocusRoute = isActivityEntryRoute && isActivityRecordingFocusMode
     // Outdoor mode repaints the recording body pure black (or pure white in a light theme) for
     // readability in direct sun. It only ever reached the body, so the app bar above it and the
@@ -333,10 +333,10 @@ fun AppNavigation(
         Screen.HydrationEntryEdit.route -> stringResource(R.string.screen_hydration_entry)
         Screen.HydrationEntryLogDrink.route -> stringResource(R.string.screen_hydration_entry)
         Screen.CarbsEntry.route -> stringResource(R.string.screen_carbs_entry)
-        Screen.ActivityEntry.route -> activityEntryTopBarTitleRes
+        Screen.ActivityEntry.basePath -> activityEntryTopBarTitleRes
             ?.let { stringResource(it) }
             ?: stringResource(R.string.screen_activity_entry)
-        Screen.ActivityEntryEdit.route -> activityEntryTopBarTitleRes
+        Screen.ActivityEntryEdit.basePath -> activityEntryTopBarTitleRes
             ?.let { stringResource(it) }
             ?: stringResource(R.string.screen_activity_entry)
         Screen.MindfulnessEntry.route -> stringResource(R.string.screen_mindfulness_entry)
@@ -428,13 +428,13 @@ fun AppNavigation(
             val topBarEditState = when (currentRoute) {
                 Screen.ManualEntry.route -> manualEntryTopBarState
                 in metricSectionRoutes -> metricSectionTopBarState
-                Screen.ActivityEntry.route,
-                Screen.ActivityEntryEdit.route -> activityEntryTopBarEditState
+                Screen.ActivityEntry.basePath,
+                Screen.ActivityEntryEdit.basePath -> activityEntryTopBarEditState
                 else -> null
             }
             val isActivityRecordingRoute =
-                currentRoute == Screen.ActivityEntry.route ||
-                    currentRoute == Screen.ActivityEntryEdit.route
+                currentRoute == Screen.ActivityEntry.basePath ||
+                    currentRoute == Screen.ActivityEntryEdit.basePath
             if (isActivityRecordingRoute) {
                 activityRecordingOutdoorTopBarState?.let { outdoorState ->
                     ActivityRecordingOutdoorModeToggle(

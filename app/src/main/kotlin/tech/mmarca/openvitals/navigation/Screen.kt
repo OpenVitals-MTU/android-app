@@ -56,6 +56,18 @@ const val BODY_ENERGY_DATE_ARG = "bodyEnergyDate"
 const val TRAINING_READINESS_DATE_ARG = "trainingReadinessDate"
 
 sealed class Screen(val route: String) {
+    /**
+     * The route without its optional query parameters.
+     *
+     * `AppNavigation` matches the live destination with `route.substringBefore('?')`, because a
+     * destination registered with optional arguments reports them as part of its pattern. Most
+     * routes carry their arguments in the path and are their own base path; [ActivityEntry] bakes
+     * `?mode=...&planId=...&activityTypeId=...` into its pattern, so comparing the stripped live
+     * route against the full [route] never matched and every app-bar decision keyed on that screen
+     * silently fell through. Match on this, not on [route].
+     */
+    val basePath: String get() = route.substringBefore('?')
+
     data object Onboarding : Screen("onboarding")
     data object Dashboard : Screen("dashboard")
     data object StressDetails : Screen("daily_readiness/stress/{$STRESS_DATE_ARG}") {
