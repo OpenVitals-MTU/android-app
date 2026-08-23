@@ -272,6 +272,78 @@ class ActivityRecordingScreenTest {
      * case here is about a session that has already started, which is what
      * keeps these tests off the real GPS.
      */
+    @Test
+    fun aPausedRecordingOffersTheDashboardLayoutButtonByName() {
+        // The port left this control in the app bar only, as an unlabelled
+        // pencil beside the outdoor-mode toggle, and the string Flutter put on
+        // it went unreferenced. A user looking for "dashboard layout" reads
+        // words, not icons, so the named button belongs back above the grid it
+        // rearranges — and it has to actually enter edit mode, not just look
+        // like it does.
+        composeRule.setContent {
+            OpenVitalsTheme {
+                ActivityRecordingScreen(
+                    state = gpsState(ActivityRecordingStatus.PAUSED),
+                    unitFormatter = testUnitFormatter(),
+                    onStartRecording = {},
+                    onPauseRecording = {},
+                    onResumeRecording = {},
+                    onAddLap = {},
+                    onAddMarker = {},
+                    onUpdateMarker = {},
+                    onDeleteMarker = {},
+                    onUpdateDashboardLayout = {},
+                    onChooseSource = {},
+                    onAdjustRepetitionCount = {},
+                    onEndRepetitionSet = {},
+                    onStartNextRepetitionSet = {},
+                    onFinishRecording = {},
+                )
+            }
+        }
+
+        val layoutButton = string(R.string.activity_entry_recording_dashboard_layout)
+        val addField = string(R.string.activity_entry_recording_dashboard_add_field)
+        composeRule.onNodeWithText(layoutButton).assertIsDisplayed()
+        composeRule.onNodeWithText(addField).assertDoesNotExist()
+
+        composeRule.onNodeWithText(layoutButton).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(addField).assertExists()
+    }
+
+    @Test
+    fun theDashboardLayoutButtonStaysAwayWhileTheSessionRuns() {
+        // The same rule the app-bar toggle follows: a grid that reshuffles
+        // under a thumb meant to be on the handlebars is worse than no editor.
+        composeRule.setContent {
+            OpenVitalsTheme {
+                ActivityRecordingScreen(
+                    state = gpsState(ActivityRecordingStatus.RECORDING),
+                    unitFormatter = testUnitFormatter(),
+                    onStartRecording = {},
+                    onPauseRecording = {},
+                    onResumeRecording = {},
+                    onAddLap = {},
+                    onAddMarker = {},
+                    onUpdateMarker = {},
+                    onDeleteMarker = {},
+                    onUpdateDashboardLayout = {},
+                    onChooseSource = {},
+                    onAdjustRepetitionCount = {},
+                    onEndRepetitionSet = {},
+                    onStartNextRepetitionSet = {},
+                    onFinishRecording = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText(string(R.string.activity_entry_recording_dashboard_layout))
+            .assertDoesNotExist()
+    }
+
     private fun gpsState(status: ActivityRecordingStatus) = ActivityRecordingState(
         recordingKind = ActivityRecordingKind.GPS_ROUTE,
         activityTypeId = "running",

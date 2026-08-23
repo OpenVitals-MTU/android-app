@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,6 +49,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -142,6 +144,11 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
+import tech.mmarca.openvitals.ui.theme.Spacing
+
+/** The label's leading glyph: an icon size, not a spacing step. */
+private val DashboardLayoutButtonIconSize = 18.dp
 
 @Composable
 internal fun ActivityRecordingScreen(
@@ -319,6 +326,34 @@ internal fun ActivityRecordingScreen(
                     now = now,
                     onEndEffort = onEndHeartRateRecoveryEffort,
                 )
+            }
+            // Named, and directly above the grid it rearranges. The app bar
+            // carries the same toggle, but an unlabelled pencil among the
+            // other actions is not what a user hunting for "dashboard layout"
+            // is looking for — Flutter said it in words, here.
+            if (canEditDashboard) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    OpenVitalsTextButton(onClick = { isEditingDashboard = !isEditingDashboard }) {
+                        Icon(
+                            imageVector = if (isEditingDashboard) {
+                                Icons.Outlined.Check
+                            } else {
+                                Icons.Outlined.Edit
+                            },
+                            contentDescription = null,
+                            modifier = Modifier.size(DashboardLayoutButtonIconSize),
+                        )
+                        Spacer(Modifier.width(Spacing.sm))
+                        Text(
+                            text = stringResource(
+                                R.string.activity_entry_recording_dashboard_layout,
+                            ),
+                        )
+                    }
+                }
             }
             when (state.recordingKind) {
             ActivityRecordingKind.REPETITION -> {
