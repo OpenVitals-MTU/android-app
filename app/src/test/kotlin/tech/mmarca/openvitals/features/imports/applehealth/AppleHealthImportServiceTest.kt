@@ -1784,6 +1784,135 @@ class AppleHealthImportServiceTest {
         coVerify(exactly = 0) { repository.insertImportedRecords(any()) }
     }
 
+    @Test
+    fun `additive records are settled during the parse instead of held to the end`() = runTest {
+        // Steps, distance and active energy are cross-source deduplicated against each other,
+        // which used to mean buffering every one of them until the parse finished -- the single
+        // biggest thing on the heap, and what killed large imports at Android's 256MB cap.
+        // Records that cannot overlap in time cannot dedup against each other, so they must be
+        // converted and released as the parse runs.
+        val start = Instant.parse("2023-01-01T00:00:00Z")
+        val recordCount = 30_000
+        val xml = buildString {
+            append("<HealthData>")
+            repeat(recordCount) { index ->
+                val from = start.plusSeconds(index * 3_600L)
+                val to = from.plusSeconds(600L)
+                append(
+                    """<Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone" """ +
+                        """startDate="${appleTimestamp(from)}" endDate="${appleTimestamp(to)}" """ +
+                        """unit="count" value="100" />""",
+                )
+            }
+            append("</HealthData>")
+        }
+        val uri = mockk<Uri>()
+        val resolver = mockk<ContentResolver>()
+        val context = mockk<Context>()
+        val repository = mockk<AppleHealthImportRepository>()
+
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
+        every { repository.isMindfulnessAvailable() } returns true
+        coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } returns emptySet()
+        coEvery { repository.insertImportedRecords(any()) } just runs
+
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(uri)
+
+        // Nothing overlaps and there is a single source, so windowing must not cost a record.
+        assertEquals(recordCount, result.parsedRecords)
+        assertEquals(recordCount, result.importedRecords)
+        assertTrue(
+            "expected the additive buffer to be released mid-parse, report was:\n${result.shareableReportText}",
+            result.shareableReportText.contains("Additive overlap window flushed"),
+        )
+        // Whatever is left at the end is the carry, not the whole export.
+        val finalBuffer = Regex("""Converting final buffered groups bufferedRecords=\d+ overlapDedupRecords=(\d+)""")
+            .find(result.shareableReportText)
+            ?.groupValues
+            ?.get(1)
+            ?.toInt()
+        assertTrue(
+            "expected a bounded carry at the end, got $finalBuffer of $recordCount",
+            finalBuffer != null && finalBuffer < recordCount,
+        )
+    }
+
+    @Test
+    fun `windowed conversion still drops a sample another source already covered`() {
+        // The dedup that the buffering exists for, run the way the streaming import now runs it.
+        // Records that overlap always land in the same window -- the carry window is days wide and
+        // an overlapping pair is minutes apart -- so windowing must not weaken this.
+        val parsed = parseXml(
+            """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Alesia's iPhone"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000"
+                    unit="count" value="100" />
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Health CoPilot"
+                    startDate="2026-01-01 08:01:00 +0000" endDate="2026-01-01 08:09:00 +0000"
+                    unit="count" value="95" />
+            </HealthData>
+            """.trimIndent(),
+        )
+        val converter = AppleHealthImportConverter(mindfulnessAvailable = true)
+
+        val converted = mutableListOf<ConvertedAppleRecord>()
+        converter.convertAdditiveOverlapWindow(parsed.records, converted::add)
+
+        assertEquals(1, converted.size)
+        assertEquals("StepsRecord", converted.single().targetType)
+        assertEquals(1, converter.typeStats.getValue("HKQuantityTypeIdentifierStepCount").skipped)
+        assertEquals("overlap_cross_source", converter.diagnosticsSnapshot().single().reasonCode)
+    }
+
+    @Test
+    fun `time-separated windows convert the same records as one pass over all of them`() {
+        // The windowing rule in one assertion: two sets of records far enough apart in time that
+        // no member of one can overlap a member of the other convert identically whether they are
+        // handed over together or a window at a time.
+        val xml =
+            """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000"
+                    unit="count" value="100" />
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Watch"
+                    startDate="2026-01-01 08:01:00 +0000" endDate="2026-01-01 08:09:00 +0000"
+                    unit="count" value="95" />
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone"
+                    startDate="2026-06-01 08:00:00 +0000" endDate="2026-06-01 08:10:00 +0000"
+                    unit="count" value="70" />
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Watch"
+                    startDate="2026-06-01 08:01:00 +0000" endDate="2026-06-01 08:09:00 +0000"
+                    unit="count" value="65" />
+            </HealthData>
+            """.trimIndent()
+        val january = parseXml(xml).records.filter { it.startDate!!.instant.isBefore(Instant.parse("2026-03-01T00:00:00Z")) }
+        val june = parseXml(xml).records.filterNot { it.startDate!!.instant.isBefore(Instant.parse("2026-03-01T00:00:00Z")) }
+
+        val wholeConverted = mutableListOf<ConvertedAppleRecord>()
+        AppleHealthImportConverter(mindfulnessAvailable = true)
+            .convertAdditiveOverlapWindow(parseXml(xml).records, wholeConverted::add)
+
+        val windowedConverter = AppleHealthImportConverter(mindfulnessAvailable = true)
+        val windowedConverted = mutableListOf<ConvertedAppleRecord>()
+        windowedConverter.convertAdditiveOverlapWindow(january, windowedConverted::add)
+        windowedConverter.convertAdditiveOverlapWindow(june, windowedConverted::add)
+
+        assertEquals(
+            wholeConverted.map { it.fingerprint },
+            windowedConverted.map { it.fingerprint },
+        )
+        assertEquals(2, windowedConverted.size)
+    }
+
+    private fun appleTimestamp(instant: Instant): String =
+        java.time.format.DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss Z")
+            .withZone(ZoneOffset.UTC)
+            .format(instant)
+
     private fun parseXml(xml: String): AppleParsedExport =
         AppleHealthImportParser.parse(BufferedInputStream(ByteArrayInputStream(xml.toByteArray())))
 

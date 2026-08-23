@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.InputStream
+import java.time.Duration
 import java.time.Instant
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
@@ -521,6 +522,18 @@ class AppleHealthImportService
         ) : StreamingAppleHealthProgressState {
             private val bufferedRecords = mutableListOf<AppleRecord>()
             private val overlapDedupRecords = mutableListOf<AppleRecord>()
+
+            // Additive records (steps, distance, active energy) are cross-source deduplicated
+            // against each other, which needs them sorted together -- historically the whole
+            // export's worth, held to the end of the parse. On a step-dense export that is the
+            // single largest thing on the heap and what made large imports die at the 256MB cap.
+            // Records that cannot overlap in time cannot dedup against each other, so anything
+            // ending before the latest start seen (less a carry window for out-of-order exports)
+            // is settled and released as the parse runs.
+            private var maxAdditiveStart: Instant? = null
+            private var nextAdditiveFlushSize = AdditiveOverlapFlushInterval
+            private var additiveWindowFlushes = 0
+            private var forcedAdditiveWindowRecords = 0
             private val bufferedWorkouts = mutableListOf<AppleWorkout>()
             private val convertedBatch = mutableListOf<ConvertedAppleRecord>()
             private val categoryStats = linkedMapOf<AppleHealthImportCategory, MutableAppleHealthImportCategorySummary>()
@@ -583,7 +596,7 @@ class AppleHealthImportService
                 parsedRecords += 1
                 converter.noteWorkoutOverlap(record)
                 when {
-                    converter.shouldBufferForOverlapDedup(record) -> overlapDedupRecords += record
+                    converter.shouldBufferForOverlapDedup(record) -> bufferForOverlapDedup(record)
                     converter.shouldBufferRecord(record) -> {
                         bufferedRecords += record
                         if (bufferedRecords.size >= BufferedRecordBatchSize) {
@@ -618,6 +631,58 @@ class AppleHealthImportService
                 maybeReportProgress()
             }
 
+            private fun bufferForOverlapDedup(record: AppleRecord) {
+                overlapDedupRecords += record
+                record.overlapStartOrNull()?.let { start ->
+                    if (maxAdditiveStart?.isBefore(start) != false) maxAdditiveStart = start
+                }
+                if (overlapDedupRecords.size >= nextAdditiveFlushSize) {
+                    flushAdditiveOverlapWindow()
+                    nextAdditiveFlushSize = overlapDedupRecords.size + AdditiveOverlapFlushInterval
+                }
+            }
+
+            /**
+             * Settles every buffered record that can no longer overlap anything still to come and
+             * keeps the rest. A record with no usable date never participates in dedup at all, so
+             * it settles immediately.
+             *
+             * An export whose records are badly out of order can leave the carry above
+             * [MaxCarriedAdditiveRecords] -- there the oldest are settled anyway, which is a bound
+             * on memory bought with a little dedup accuracy, and is reported as such.
+             */
+            private fun flushAdditiveOverlapWindow() {
+                val watermark = maxAdditiveStart?.minus(AdditiveOverlapCarryWindow)
+                val ready = mutableListOf<AppleRecord>()
+                val carry = mutableListOf<AppleRecord>()
+                overlapDedupRecords.forEach { record ->
+                    val end = record.overlapEndOrNull()
+                    if (watermark == null || end == null || end.isBefore(watermark)) {
+                        ready += record
+                    } else {
+                        carry += record
+                    }
+                }
+                if (carry.size > MaxCarriedAdditiveRecords) {
+                    carry.sortBy { it.overlapStartOrNull() ?: Instant.EPOCH }
+                    val forced = carry.size - MaxCarriedAdditiveRecords
+                    val oldest = carry.subList(0, forced)
+                    ready += oldest
+                    oldest.clear()
+                    forcedAdditiveWindowRecords += forced
+                }
+                overlapDedupRecords.clear()
+                overlapDedupRecords += carry
+                if (ready.isEmpty()) return
+
+                additiveWindowFlushes += 1
+                converter.convertAdditiveOverlapWindow(ready, ::acceptConverted)
+                log(
+                    "Additive overlap window flushed settled=${ready.size} carried=${carry.size} " +
+                        "windows=$additiveWindowFlushes forcedTotal=$forcedAdditiveWindowRecords",
+                )
+            }
+
             fun finishBufferedGroups() {
                 val convertedBefore = convertedRecords
                 publishProgress(AppleHealthImportPhase.CONVERTING)
@@ -625,7 +690,8 @@ class AppleHealthImportService
                     "Stage started: Converting final buffered groups bufferedRecords=${bufferedRecords.size} " +
                         "overlapDedupRecords=${overlapDedupRecords.size} workouts=${bufferedWorkouts.size} " +
                         "activitySummaries=$parsedActivitySummaries " +
-                        "earlySkippedUnselectedRecords=$earlySkippedUnselectedRecords",
+                        "earlySkippedUnselectedRecords=$earlySkippedUnselectedRecords " +
+                        "additiveWindows=$additiveWindowFlushes forcedAdditiveRecords=$forcedAdditiveWindowRecords",
                 )
                 flushBufferedRecords()
                 // Emit-based conversion: converted records flow straight into the batch pipeline
@@ -1354,9 +1420,26 @@ private const val MaxRawDiagnostics = 1_000
 private const val BatchChannelCapacity = 2
 private const val MaxConcurrentDuplicateCheckQueries = 4
 private const val BufferedGroupHeartbeatInterval = 10_000
+
+/** How many additive records may pile up before the settled ones are released. */
+private const val AdditiveOverlapFlushInterval = 25_000
+
+/**
+ * Records ending within this much of the newest start seen are carried rather than settled: Apple
+ * writes export.xml in roughly chronological order, and this is the slack for "roughly".
+ */
+private val AdditiveOverlapCarryWindow: Duration = Duration.ofDays(2)
+
+/** The hard ceiling on the carry, so a badly ordered export still cannot grow it without limit. */
+private const val MaxCarriedAdditiveRecords = 100_000
 internal const val ProgressReportElementInterval = 5_000
 private const val MaxDuplicateCheckSpanSeconds = 6L * 60L * 60L
 private const val ImportInputBufferSize = 256 * 1024
+
+private fun AppleRecord.overlapStartOrNull(): Instant? = startDate?.instant
+
+/** A record with a start but no end occupies the instant it started. */
+private fun AppleRecord.overlapEndOrNull(): Instant? = endDate?.instant ?: startDate?.instant
 
 private fun List<ConvertedAppleRecord>.chunkForDuplicateCheck(maxSpanSeconds: Long): List<List<ConvertedAppleRecord>> {
     if (isEmpty()) return emptyList()

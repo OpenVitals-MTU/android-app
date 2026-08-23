@@ -156,7 +156,7 @@ internal class AppleHealthImportConverter(
         convertSleep(records, trackConsumedRecords = false).forEach(emit)
         convertNutrition(records, trackConsumedRecords = false).forEach(emit)
         convertWorkouts(workouts, workoutOverlapCandidates, workoutOverlapCandidatesLimitReached).forEach(emit)
-        convertAdditiveOverlapSensitiveRecords(records, emit)
+        convertAdditiveOverlapSensitiveRecords(records, emit, trackConsumedRecords = false)
         correlations
             .filterNot { it.type == AppleBloodPressureCorrelation }
             .forEach { correlation ->
@@ -175,9 +175,22 @@ internal class AppleHealthImportConverter(
         }
     }
 
+    /**
+     * Converts one time window of buffered additive records during a streaming import.
+     *
+     * Dedup only ever relates records that overlap in time, so a window whose records all end
+     * before anything still to come can be settled and released instead of being held until the
+     * parse ends. The caller owns the windowing; this is the same pass [convert] runs, minus the
+     * fingerprint bookkeeping that only the whole-export path reads back.
+     */
+    fun convertAdditiveOverlapWindow(records: List<AppleRecord>, emit: (ConvertedAppleRecord) -> Unit) {
+        convertAdditiveOverlapSensitiveRecords(records, emit, trackConsumedRecords = false)
+    }
+
     private fun convertAdditiveOverlapSensitiveRecords(
         records: List<AppleRecord>,
         emit: (ConvertedAppleRecord) -> Unit,
+        trackConsumedRecords: Boolean = true,
     ) {
         val additiveRecords = records.filter { it.type in AppleAdditiveOverlapSensitiveTypes }
         if (additiveRecords.isEmpty()) return
@@ -189,7 +202,7 @@ internal class AppleHealthImportConverter(
         additiveRecords.forEach { record ->
             val candidate = record.toAdditiveOverlapCandidate()
             if (candidate == null) {
-                consumedRecordFingerprints += record.sourceFingerprint
+                if (trackConsumedRecords) consumedRecordFingerprints += record.sourceFingerprint
                 convertSingleRecord(record)?.let(emit)
             } else {
                 candidates += candidate
@@ -203,7 +216,7 @@ internal class AppleHealthImportConverter(
         )
         val accepted = AppleAdditiveOverlapIndex()
         candidates.forEach { candidate ->
-            consumedRecordFingerprints += candidate.record.sourceFingerprint
+            if (trackConsumedRecords) consumedRecordFingerprints += candidate.record.sourceFingerprint
             if (accepted.isMostlyCovered(candidate)) {
                 skippedNull(
                     candidate.record,

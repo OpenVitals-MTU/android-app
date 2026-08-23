@@ -229,6 +229,7 @@ private class AppleHealthXmlHandler(
     private val routeFiles: Map<String, AppleWorkoutRouteFile>,
     private val parseRecordDetails: Boolean,
 ) : DefaultHandler() {
+    private val attributePool = AppleAttributePool()
     private val stack = ArrayDeque<MutableAppleElement>()
     private val records = mutableListOf<AppleRecord>()
     private val workouts = mutableListOf<AppleWorkout>()
@@ -255,7 +256,7 @@ private class AppleHealthXmlHandler(
                 val shouldMaterialize = parentCorrelation != null || consumer?.shouldMaterializeRecord(type) != false
                 stack.addLast(
                     if (shouldMaterialize) {
-                        MutableAppleRecord(attributes, parentCorrelation, parseRecordDetails)
+                        MutableAppleRecord(attributes, parentCorrelation, parseRecordDetails, attributePool)
                     } else {
                         consumer?.onRecordSkipped(type)
                         SkippedAppleRecord
@@ -397,17 +398,41 @@ private class MutableAppleWorkoutRoute : MutableAppleElement {
     val paths = mutableListOf<String>()
 }
 
+/**
+ * Deduplicates the handful of attribute values that repeat across every record in an export, so a
+ * buffered record costs its own data rather than another copy of its device and source names.
+ *
+ * Capped because a pool is only ever a win for low-cardinality values: if an export turns out to
+ * carry a distinct value per record, the pool stops growing rather than becoming the leak it was
+ * added to prevent.
+ */
+private class AppleAttributePool(private val maxEntries: Int = 4_096) {
+    private val pool = HashMap<String, String>()
+
+    fun shared(value: String?): String? {
+        if (value == null) return null
+        pool[value]?.let { return it }
+        if (pool.size >= maxEntries) return value
+        pool[value] = value
+        return value
+    }
+}
+
 private class MutableAppleRecord(
     attributes: Attributes,
     private val parentCorrelation: MutableAppleCorrelation?,
     private val parseDetails: Boolean,
+    pool: AppleAttributePool,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
-    private val type = attributes.value("type") ?: "Record"
-    private val sourceName = attributes.value("sourceName")
-    private val sourceVersion = attributes.value("sourceVersion")
-    private val device = attributes.value("device")
-    private val unit = attributes.value("unit")
+    // Pooled: SAX hands back a fresh String per attribute per element, and these five repeat across
+    // the whole export -- one phone writes one `device` blob of ~120 characters for every one of a
+    // million step samples. `value` and the dates are not pooled; they are genuinely per-record.
+    private val type = pool.shared(attributes.value("type")) ?: "Record"
+    private val sourceName = pool.shared(attributes.value("sourceName"))
+    private val sourceVersion = pool.shared(attributes.value("sourceVersion"))
+    private val device = pool.shared(attributes.value("device"))
+    private val unit = pool.shared(attributes.value("unit"))
     private val creationDate = attributes.appleDate("creationDate", parseDetails)
     private val startDate = attributes.appleDate("startDate", parseDetails)
     private val endDate = attributes.appleDate("endDate", parseDetails)
