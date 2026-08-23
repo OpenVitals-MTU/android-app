@@ -159,7 +159,6 @@ internal fun GpsRecordingTabs(
     onPlanInCoMaps: (() -> Unit)? = null,
     coMapsGuidanceDismissed: Boolean = false,
     onDismissCoMapsGuidance: () -> Unit = {},
-    header: @Composable () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ActivityRecordingTab.STATS) }
     var timeSplitMinutes by rememberSaveable { mutableIntStateOf(DefaultTimeSplitMinutes) }
@@ -178,7 +177,6 @@ internal fun GpsRecordingTabs(
             modifier = modifier.verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            header()
             RecordingDashboardEditor(
                 layout = state.dashboardLayout.withAvailableFields(availableFields),
                 availableFields = availableFields,
@@ -219,8 +217,6 @@ internal fun GpsRecordingTabs(
             selectedTab = selectedTab,
             onSelect = { selectedTab = it },
         )
-
-        header()
 
         if (coMapsNavigation !is CoMapsNavigationState.Disabled &&
             guidedSnapshot == null &&
