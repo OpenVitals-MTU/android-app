@@ -206,6 +206,7 @@ class ActivityMetricSectionsTest {
         listOf(
             R.string.daily_goal,
             R.string.stat_goals_met,
+            R.string.stat_goal_balance,
             R.string.stat_total,
             R.string.stat_active_days,
             R.string.data_confidence_title,

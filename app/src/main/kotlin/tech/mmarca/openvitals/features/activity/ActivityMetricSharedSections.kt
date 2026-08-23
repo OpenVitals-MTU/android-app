@@ -49,6 +49,7 @@ import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.ChartSkeleton
 import tech.mmarca.openvitals.ui.components.ChartSkeletonShape
 import tech.mmarca.openvitals.ui.components.ChartTokens
+import tech.mmarca.openvitals.ui.components.DailyGoalBalanceDisplay
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
@@ -159,6 +160,7 @@ internal fun ActivityDailyGoalCard(
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
     modifier: Modifier = Modifier,
+    balance: DailyGoalBalanceDisplay? = null,
 ) {
     DailyGoalCard(
         goal = goal,
@@ -168,6 +170,7 @@ internal fun ActivityDailyGoalCard(
         onDecreaseGoal = onDecreaseGoal,
         onIncreaseGoal = onIncreaseGoal,
         modifier = modifier.then(activityMetricModifier()),
+        balance = balance,
     )
 }
 
@@ -180,6 +183,7 @@ internal fun ActivityGoalStatisticsContent(
     accentColor: Color,
     modifier: Modifier = Modifier,
     includeHeader: Boolean = true,
+    balance: DailyGoalBalanceDisplay? = null,
 ) {
     if (includeHeader) {
         SectionHeader(stringResource(R.string.section_statistics))
@@ -191,6 +195,7 @@ internal fun ActivityGoalStatisticsContent(
         icon = icon,
         accentColor = accentColor,
         modifier = modifier.then(activityMetricModifier()),
+        balance = balance,
     )
 }
 

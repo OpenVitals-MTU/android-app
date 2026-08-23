@@ -10,8 +10,11 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.insights.DailyGoalProgress
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
+import tech.mmarca.openvitals.ui.components.DailyGoalBalanceDisplay
+import tech.mmarca.openvitals.ui.components.dailyGoalBalanceDisplay
 import tech.mmarca.openvitals.ui.components.MetricDetailSectionBuilder
 import tech.mmarca.openvitals.ui.components.renderOrderedMetricDetailSections
 import java.time.LocalDate
@@ -50,6 +53,16 @@ internal data class ActivityMetricOrderedContentSpec(
     val statisticsBest: @Composable () -> DisplayValue,
 )
 
+@Composable
+private fun ActivityMetricOrderedContentSpec.goalBalanceDisplay(
+    goalProgress: DailyGoalProgress,
+): DailyGoalBalanceDisplay? =
+    dailyGoalBalanceDisplay(
+        balance = goalProgress.goalBalance(),
+        direction = metric.dailyGoalKey.direction,
+        formatter = goalFormatter,
+    )
+
 internal fun LazyListScope.renderActivityMetricOrderedContent(
     spec: ActivityMetricOrderedContentSpec,
 ) {
@@ -75,6 +88,7 @@ internal fun LazyListScope.renderActivityMetricOrderedContent(
                 accentColor = spec.accentColor,
                 onDecreaseGoal = spec.onDecreaseGoal,
                 onIncreaseGoal = spec.onIncreaseGoal,
+                balance = spec.goalBalanceDisplay(goalProgress),
             )
         }
         section(MetricDetailSectionId.STATISTICS) {
@@ -85,6 +99,7 @@ internal fun LazyListScope.renderActivityMetricOrderedContent(
                     unitFormatter = spec.unitFormatter,
                     icon = spec.goalIcon,
                     accentColor = spec.accentColor,
+                    balance = spec.goalBalanceDisplay(goalProgress),
                 )
                 ActivityPeriodStatisticsGrid(
                     unitFormatter = spec.unitFormatter,

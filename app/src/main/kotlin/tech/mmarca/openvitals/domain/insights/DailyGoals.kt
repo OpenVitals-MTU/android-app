@@ -48,6 +48,22 @@ data class DailyGoalDay(
     val isMet: Boolean,
 )
 
+/**
+ * @property balance signed amount in the user's favour: positive means ahead of
+ *   (or, for an at-most goal, under) goal × elapsed days; negative means behind
+ *   (over).
+ * @property remainingDays days of the period still to act on, today included.
+ * @property catchUpPerDay what each remaining day needs to average for the whole
+ *   period to land on goal; null when fewer than two days remain (it would just
+ *   repeat the balance) or when there is nothing to catch up.
+ */
+data class DailyGoalBalance(
+    val balance: Double,
+    val elapsedDays: Int,
+    val remainingDays: Int,
+    val catchUpPerDay: Double?,
+)
+
 data class DailyGoalProgress(
     val target: Double,
     val direction: DailyGoalDirection,
@@ -91,6 +107,46 @@ data class DailyGoalProgress(
             }
             return longest
         }
+    /**
+     * The cumulative standing against the goal over the part of the period
+     * that has already happened. Per-day stats say *how many* days were met;
+     * this says how far the running total sits from goal × elapsed days —
+     * the number someone needs when a bad day has to be made up over the
+     * rest of the week.
+     *
+     * Every calendar day up to and including [today] counts as expected,
+     * tracked or not: a day with nothing logged contributes 0. Days after
+     * [today] are not expected yet. Null when no day of the period has
+     * happened yet.
+     */
+    fun goalBalance(today: LocalDate = LocalDate.now()): DailyGoalBalance? {
+        val elapsed = days.filter { !it.date.isAfter(today) }
+        if (elapsed.isEmpty()) return null
+        // Today is still in progress, so it counts as a day left to act on.
+        val todayInPeriod = days.any { it.date == today }
+        val remainingDays = days.count { it.date.isAfter(today) } + if (todayInPeriod) 1 else 0
+        val elapsedTotal = elapsed.sumOf { it.value }
+        val expected = target * elapsed.size
+        val balance = when (direction) {
+            DailyGoalDirection.AT_LEAST -> elapsedTotal - expected
+            DailyGoalDirection.AT_MOST -> expected - elapsedTotal
+        }
+        val catchUpPerDay = if (remainingDays >= 2) {
+            val leftForPeriod = target * days.size - days.sumOf { it.value }
+            when (direction) {
+                DailyGoalDirection.AT_LEAST -> leftForPeriod.takeIf { it > 0.0 }
+                DailyGoalDirection.AT_MOST -> leftForPeriod.coerceAtLeast(0.0)
+            }?.let { it / remainingDays }
+        } else {
+            null
+        }
+        return DailyGoalBalance(
+            balance = balance,
+            elapsedDays = elapsed.size,
+            remainingDays = remainingDays,
+            catchUpPerDay = catchUpPerDay,
+        )
+    }
     val averageGapToGoal: Double
         get() {
             val gaps = days
