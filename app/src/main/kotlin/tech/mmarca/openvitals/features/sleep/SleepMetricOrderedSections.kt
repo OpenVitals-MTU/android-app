@@ -392,10 +392,16 @@ private fun SleepStatisticsSectionContent(
     unitFormatter: UnitFormatter,
     goalProgress: tech.mmarca.openvitals.domain.insights.DailyGoalProgress,
 ) {
+    val isDay = period.start == period.end
     Column(modifier = Modifier.fillMaxWidth()) {
         DailyGoalStatistics(
             progress = goalProgress,
-            averageGap = sleepHoursDisplay(goalProgress.averageGapToGoal, unitFormatter),
+            // One night is its own gap to the target, not an average of anything.
+            averageGap = if (isDay) {
+                null
+            } else {
+                sleepHoursDisplay(goalProgress.averageGapToGoal, unitFormatter)
+            },
             unitFormatter = unitFormatter,
             icon = Icons.Outlined.Bed,
             accentColor = SleepColor,
@@ -407,7 +413,6 @@ private fun SleepStatisticsSectionContent(
         val longestHours = totals.longestHours
         val previousNights = display.previousDurationPoints.filter { it.hours > 0.0 }
         val previousAverageHours = previousNights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: 0.0
-        val isDay = period.start == period.end
         InsightStatGrid(
             stats = listOfNotNull(
                 InsightStat(
@@ -486,8 +491,12 @@ private fun SleepTargetContextSectionContent(
     targetHours: Double,
     unitFormatter: UnitFormatter,
 ) {
+    // Two nights minimum: every line of this card reads "average sleep is...", and the
+    // mean of a single night is just that night wearing a word it has not earned. The day
+    // view answers the same question honestly through the daily goal card above.
     val nights = durationPoints.filter { it.hours > 0.0 }
-    val averageHours = nights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: return
+    if (nights.size < 2) return
+    val averageHours = nights.map { it.hours }.average()
     val interpretation = sleepTargetInterpretation(
         averageHours = averageHours,
         targetHours = targetHours,

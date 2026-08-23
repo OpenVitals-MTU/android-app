@@ -106,17 +106,22 @@ fun DailyGoalCard(
     }
 }
 
+/**
+ * @param averageGap the mean distance from the goal over the period, or null to leave the stat
+ *   out. A period one day long has no mean to take — the gap IS the day — so a day view passes
+ *   null rather than labelling one night's shortfall an average.
+ */
 @Composable
 fun DailyGoalStatistics(
     progress: DailyGoalProgress,
-    averageGap: DisplayValue,
+    averageGap: DisplayValue?,
     unitFormatter: UnitFormatter,
     icon: ImageVector,
     accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     InsightStatGrid(
-        stats = listOf(
+        stats = listOfNotNull(
             InsightStat(
                 title = stringResource(R.string.stat_goals_met),
                 value = unitFormatter.count(progress.goalMetDays),
@@ -145,13 +150,15 @@ fun DailyGoalStatistics(
                 icon = Icons.Outlined.CalendarMonth,
                 accentColor = accentColor,
             ),
-            InsightStat(
-                title = stringResource(R.string.stat_average_gap),
-                value = averageGap.value,
-                unit = averageGap.unit,
-                icon = icon,
-                accentColor = accentColor,
-            ),
+            averageGap?.let { gap ->
+                InsightStat(
+                    title = stringResource(R.string.stat_average_gap),
+                    value = gap.value,
+                    unit = gap.unit,
+                    icon = icon,
+                    accentColor = accentColor,
+                )
+            },
         ),
         modifier = modifier,
     )

@@ -263,6 +263,68 @@ class SleepScreenSectionsTest {
         composeRule.onNodeWithText(string(R.string.recovery_sleep_efficiency)).assertDoesNotExist()
     }
 
+    @Test
+    fun theDayViewTakesNoAveragesOverASingleNight() {
+        // "Avg gap" and "Average sleep is 1h below your target" both describe a mean,
+        // and the mean of one night is that night with a word in front of it. The
+        // daily goal card above already says how that night stood against the target.
+        setSleepContent { sectionContext ->
+            sleepDayContent(
+                state = dayState(),
+                display = dayDisplay(),
+                period = DatePeriod(ANCHOR, ANCHOR),
+                unitFormatter = FORMATTER,
+                dateTimeFormatterProvider = DateTimeFormatterProvider(),
+                sectionContext = sectionContext,
+                onOpenSleepSession = {},
+                onOpenSleepScore = null,
+                onOpenSleepEfficiency = null,
+                onDecreaseGoal = {},
+                onIncreaseGoal = {},
+            )
+        }
+
+        // Statistics is one lazy item, so reaching it composes every stat in it.
+        composeRule
+            .onNode(hasScrollAction())
+            .performScrollToNode(hasText(string(R.string.stat_total)))
+
+        composeRule.onNodeWithText(string(R.string.stat_average_gap)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.interpretation_sleep_title)).assertDoesNotExist()
+    }
+
+    @Test
+    fun aWeekOfNightsStillAveragesAgainstTheTarget() {
+        // The other half of the rule: once there is more than one night to average,
+        // both must come back, or the day-view fix has quietly emptied the period view.
+        setSleepContent { sectionContext ->
+            sleepPeriodContent(
+                state = weekState(),
+                display = weekDisplay(),
+                period = DatePeriod(ANCHOR.minusDays(6), ANCHOR),
+                chartDaySelection = ChartDaySelection(selectedDate = null, onDateSelected = {}),
+                unitFormatter = FORMATTER,
+                dateTimeFormatterProvider = DateTimeFormatterProvider(),
+                sectionContext = sectionContext,
+                onOpenSleepSession = {},
+                onOpenSleepScore = null,
+                onOpenSleepEfficiency = null,
+                onDecreaseGoal = {},
+                onIncreaseGoal = {},
+            )
+        }
+
+        composeRule
+            .onNode(hasScrollAction())
+            .performScrollToNode(hasText(string(R.string.stat_average_gap)))
+        composeRule.onNodeWithText(string(R.string.stat_average_gap)).assertIsDisplayed()
+
+        composeRule
+            .onNode(hasScrollAction())
+            .performScrollToNode(hasText(string(R.string.interpretation_sleep_title)))
+        composeRule.onNodeWithText(string(R.string.interpretation_sleep_title)).assertIsDisplayed()
+    }
+
     private fun setSleepContent(content: LazyListScope.(MetricDetailSectionContext) -> Unit) {
         composeRule.setContent {
             OpenVitalsTheme {
