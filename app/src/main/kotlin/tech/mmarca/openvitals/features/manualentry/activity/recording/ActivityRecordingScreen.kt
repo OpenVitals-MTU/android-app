@@ -66,6 +66,7 @@ import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -101,8 +102,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -239,19 +238,26 @@ internal fun ActivityRecordingScreen(
         is CoMapsNavigationState.Active -> "active:${coMapsNavigation.routeRevision ?: -1}"
         else -> coMapsNavigation::class.simpleName.orEmpty()
     }
-    var dismissedCoMapsGuidanceKey by rememberSaveable(state.startTime?.toEpochMilli()) {
+    // Keyed on the activity, NOT on startTime: startTime changes the instant Start is
+    // pressed, so a card dismissed while setting the ride up came straight back and had
+    // to be dismissed a second time. Setting a ride up and riding it is one continuous
+    // act. A genuinely new session drops this screen from the composition and takes the
+    // dismissal with it, and a reroute or a change of guidance state re-arms it through
+    // the key below.
+    var dismissedCoMapsGuidanceKey by rememberSaveable(state.activityTypeId) {
         mutableStateOf<String?>(null)
     }
     val coMapsGuidanceDismissed = dismissedCoMapsGuidanceKey == coMapsGuidanceKey
-    // The start gate: with the integration on and CoMaps not yet guiding, the
-    // first Start is a question, not a trigger — the session begins once the
-    // user has either set a route up or dismissed the guidance card. Guiding
-    // already, dismissed, or integration off: Start starts, as ever.
+    // The start gate: with the integration on and CoMaps not yet guiding, the first Start is
+    // a question, not a trigger. It asks in a dialog the user can answer on the spot, rather
+    // than refusing and pointing at a card to dismiss — that card only lives on the map tab,
+    // so from anywhere else the instruction was unfollowable. Guiding already, answered once,
+    // or integration off: Start starts, as ever.
     val coMapsStartGateActive = coMapsPrestartArmed &&
         coMapsNavigation !is CoMapsNavigationState.Disabled &&
         coMapsNavigation !is CoMapsNavigationState.Active &&
         !coMapsGuidanceDismissed
-    val screenContext = LocalContext.current
+    var askBeforeStartingWithoutRoute by rememberSaveable { mutableStateOf(false) }
 
     val movingTime = state.movingDuration(now)
     val totalTime = if (state.recordingKind == ActivityRecordingKind.REPETITION) {
@@ -282,6 +288,46 @@ internal fun ActivityRecordingScreen(
     ) {
         val outdoorUsesLightScheme = isOutdoorMode &&
             !appThemeMode.isDarkTheme(isSystemInDarkTheme())
+        if (askBeforeStartingWithoutRoute) {
+            AlertDialog(
+                onDismissRequest = { askBeforeStartingWithoutRoute = false },
+                title = { Text(stringResource(R.string.recording_comaps_no_route_title)) },
+                text = { Text(stringResource(R.string.recording_comaps_no_route_body)) },
+                confirmButton = {
+                    OpenVitalsButton(
+                        onClick = {
+                            askBeforeStartingWithoutRoute = false
+                            // Answered for this guidance state, so Start is a trigger from here
+                            // on. A reroute or a change of state re-arms the question.
+                            dismissedCoMapsGuidanceKey = coMapsGuidanceKey
+                            onStartRecording(idleGpsFixState.latestPreciseFix)
+                        },
+                    ) {
+                        Text(stringResource(R.string.recording_comaps_no_route_confirm))
+                    }
+                },
+                dismissButton = {
+                    // Not "Cancel": the reason to say no here is to go and set a route, so the
+                    // way out is the thing the user would do next.
+                    OpenVitalsTextButton(
+                        onClick = {
+                            askBeforeStartingWithoutRoute = false
+                            onPlanInCoMaps?.invoke()
+                        },
+                    ) {
+                        Text(
+                            stringResource(
+                                if (onPlanInCoMaps != null) {
+                                    R.string.recording_comaps_no_route_plan
+                                } else {
+                                    R.string.action_cancel
+                                },
+                            ),
+                        )
+                    }
+                },
+            )
+        }
         ActivityRecordingSystemBars(
             hideSystemBars = isFocusMode && canUseFocusMode,
             outdoorModeEnabled = isOutdoorMode,
@@ -326,34 +372,6 @@ internal fun ActivityRecordingScreen(
                     now = now,
                     onEndEffort = onEndHeartRateRecoveryEffort,
                 )
-            }
-            // Named, and directly above the grid it rearranges. The app bar
-            // carries the same toggle, but an unlabelled pencil among the
-            // other actions is not what a user hunting for "dashboard layout"
-            // is looking for — Flutter said it in words, here.
-            if (canEditDashboard) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    OpenVitalsTextButton(onClick = { isEditingDashboard = !isEditingDashboard }) {
-                        Icon(
-                            imageVector = if (isEditingDashboard) {
-                                Icons.Outlined.Check
-                            } else {
-                                Icons.Outlined.Edit
-                            },
-                            contentDescription = null,
-                            modifier = Modifier.size(DashboardLayoutButtonIconSize),
-                        )
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text(
-                            text = stringResource(
-                                R.string.activity_entry_recording_dashboard_layout,
-                            ),
-                        )
-                    }
-                }
             }
             when (state.recordingKind) {
             ActivityRecordingKind.REPETITION -> {
@@ -440,17 +458,46 @@ internal fun ActivityRecordingScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
+                    header = {
+                        // Named, and under the tab row rather than above it: the tabs are the
+                        // way around this screen and nothing should push them down the page.
+                        // The app bar carries the same toggle, but an unlabelled pencil among
+                        // the other actions is not what a user hunting for "dashboard layout"
+                        // is looking for — Flutter said it in words, here.
+                        if (canEditDashboard) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                            ) {
+                                OpenVitalsTextButton(
+                                    onClick = { isEditingDashboard = !isEditingDashboard },
+                                ) {
+                                    Icon(
+                                        imageVector = if (isEditingDashboard) {
+                                            Icons.Outlined.Check
+                                        } else {
+                                            Icons.Outlined.Edit
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(DashboardLayoutButtonIconSize),
+                                    )
+                                    Spacer(Modifier.width(Spacing.sm))
+                                    Text(
+                                        text = stringResource(
+                                            R.string.activity_entry_recording_dashboard_layout,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    },
                 )
                 GpsRecordingControls(
                     state = state,
                     canStartRecording = idleGpsFixState.latestPreciseFix != null,
                     onStartRecording = {
                         if (coMapsStartGateActive) {
-                            Toast.makeText(
-                                screenContext,
-                                R.string.recording_comaps_start_gate_hint,
-                                Toast.LENGTH_LONG,
-                            ).show()
+                            askBeforeStartingWithoutRoute = true
                         } else {
                             onStartRecording(idleGpsFixState.latestPreciseFix)
                         }

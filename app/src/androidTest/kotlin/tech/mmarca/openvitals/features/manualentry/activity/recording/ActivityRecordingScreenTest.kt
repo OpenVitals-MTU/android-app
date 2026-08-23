@@ -17,6 +17,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.testing.testUnitFormatter
+import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
@@ -342,6 +343,167 @@ class ActivityRecordingScreenTest {
         composeRule
             .onNodeWithText(string(R.string.activity_entry_recording_dashboard_layout))
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun `dismissing the CoMaps card before starting keeps it dismissed once riding`() {
+        // Setting a ride up and riding it is one continuous act. The dismissal used to be
+        // keyed on the recording's start time, so pressing Start reset it and the card the
+        // user had just swatted away came straight back, needing a second dismissal with
+        // the ride already running.
+        val status = mutableStateOf(ActivityRecordingStatus.IDLE)
+        composeRule.setContent {
+            OpenVitalsTheme {
+                ActivityRecordingScreen(
+                    state = gpsState(status.value),
+                    unitFormatter = testUnitFormatter(),
+                    onStartRecording = {},
+                    onPauseRecording = {},
+                    onResumeRecording = {},
+                    onAddLap = {},
+                    onAddMarker = {},
+                    onUpdateMarker = {},
+                    onDeleteMarker = {},
+                    onUpdateDashboardLayout = {},
+                    onChooseSource = {},
+                    onAdjustRepetitionCount = {},
+                    onEndRepetitionSet = {},
+                    onStartNextRepetitionSet = {},
+                    onFinishRecording = {},
+                    coMapsNavigation = CoMapsNavigationState.NotNavigating,
+                )
+            }
+        }
+
+        val guidanceTitle = string(R.string.recording_comaps_title)
+        composeRule.onNodeWithText(guidanceTitle).assertIsDisplayed()
+
+        composeRule.onNodeWithContentDescription(string(R.string.action_close)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(guidanceTitle).assertDoesNotExist()
+
+        composeRule.runOnIdle { status.value = ActivityRecordingStatus.RECORDING }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(guidanceTitle).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the tab row is the first thing on the screen, above any guidance card`() {
+        // The guidance card is about one tab's content and can run tall; above the tabs it
+        // pushed the way between them down the screen.
+        composeRule.setContent {
+            OpenVitalsTheme {
+                ActivityRecordingScreen(
+                    state = gpsState(ActivityRecordingStatus.IDLE),
+                    unitFormatter = testUnitFormatter(),
+                    onStartRecording = {},
+                    onPauseRecording = {},
+                    onResumeRecording = {},
+                    onAddLap = {},
+                    onAddMarker = {},
+                    onUpdateMarker = {},
+                    onDeleteMarker = {},
+                    onUpdateDashboardLayout = {},
+                    onChooseSource = {},
+                    onAdjustRepetitionCount = {},
+                    onEndRepetitionSet = {},
+                    onStartNextRepetitionSet = {},
+                    onFinishRecording = {},
+                    coMapsNavigation = CoMapsNavigationState.NotNavigating,
+                )
+            }
+        }
+
+        val tabTop = composeRule
+            .onNodeWithText(string(R.string.activity_entry_recording_tab_stats))
+            .fetchSemanticsNode()
+            .positionInRoot
+            .y
+        val guidanceTop = composeRule
+            .onNodeWithText(string(R.string.recording_comaps_title))
+            .fetchSemanticsNode()
+            .positionInRoot
+            .y
+
+        assertTrue("tabs at $tabTop must sit above the guidance card at $guidanceTop", tabTop < guidanceTop)
+    }
+
+    @Test
+    fun `starting with no route set asks before it starts, and starts when answered`() {
+        // Start is a question here, not a refusal. It used to raise a toast telling the user to
+        // dismiss the guidance card -- an instruction they could not follow from any tab but the
+        // map, since that is the only place the card lives.
+        var started = 0
+        composeRule.setContent {
+            OpenVitalsTheme {
+                ActivityRecordingScreen(
+                    state = gpsState(ActivityRecordingStatus.IDLE),
+                    unitFormatter = testUnitFormatter(),
+                    onStartRecording = { started += 1 },
+                    onPauseRecording = {},
+                    onResumeRecording = {},
+                    onAddLap = {},
+                    onAddMarker = {},
+                    onUpdateMarker = {},
+                    onDeleteMarker = {},
+                    onUpdateDashboardLayout = {},
+                    onChooseSource = {},
+                    onAdjustRepetitionCount = {},
+                    onEndRepetitionSet = {},
+                    onStartNextRepetitionSet = {},
+                    onFinishRecording = {},
+                    coMapsNavigation = CoMapsNavigationState.NotNavigating,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.action_start)).performClick()
+        composeRule.waitForIdle()
+
+        // The question, and nothing recording behind it.
+        composeRule.onNodeWithText(string(R.string.recording_comaps_no_route_title)).assertIsDisplayed()
+        assertEquals(0, started)
+
+        composeRule.onNodeWithText(string(R.string.recording_comaps_no_route_confirm)).performClick()
+        composeRule.waitForIdle()
+
+        assertEquals(1, started)
+        composeRule.onNodeWithText(string(R.string.recording_comaps_no_route_title)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a route already being followed starts on the first press`() {
+        // The gate is about the absence of a route. With CoMaps guiding there is nothing to ask.
+        var started = 0
+        composeRule.setContent {
+            OpenVitalsTheme {
+                ActivityRecordingScreen(
+                    state = gpsState(ActivityRecordingStatus.IDLE),
+                    unitFormatter = testUnitFormatter(),
+                    onStartRecording = { started += 1 },
+                    onPauseRecording = {},
+                    onResumeRecording = {},
+                    onAddLap = {},
+                    onAddMarker = {},
+                    onUpdateMarker = {},
+                    onDeleteMarker = {},
+                    onUpdateDashboardLayout = {},
+                    onChooseSource = {},
+                    onAdjustRepetitionCount = {},
+                    onEndRepetitionSet = {},
+                    onStartNextRepetitionSet = {},
+                    onFinishRecording = {},
+                    coMapsNavigation = CoMapsNavigationState.Disabled,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.action_start)).performClick()
+        composeRule.waitForIdle()
+
+        assertEquals(1, started)
+        composeRule.onNodeWithText(string(R.string.recording_comaps_no_route_title)).assertDoesNotExist()
     }
 
     private fun gpsState(status: ActivityRecordingStatus) = ActivityRecordingState(

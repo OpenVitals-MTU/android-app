@@ -159,6 +159,7 @@ internal fun GpsRecordingTabs(
     onPlanInCoMaps: (() -> Unit)? = null,
     coMapsGuidanceDismissed: Boolean = false,
     onDismissCoMapsGuidance: () -> Unit = {},
+    header: @Composable () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ActivityRecordingTab.STATS) }
     var timeSplitMinutes by rememberSaveable { mutableIntStateOf(DefaultTimeSplitMinutes) }
@@ -177,6 +178,7 @@ internal fun GpsRecordingTabs(
             modifier = modifier.verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            header()
             RecordingDashboardEditor(
                 layout = state.dashboardLayout.withAvailableFields(availableFields),
                 availableFields = availableFields,
@@ -196,20 +198,30 @@ internal fun GpsRecordingTabs(
         return
     }
 
-    // Live guidance has a home on each tab that gets one, and takes no room
-    // above them: the map floats the turn strip over the route, and the stats
-    // grid carries it as an ordinary cell the layout editor can hide or move
-    // like any other. What sits above the tab row is only the states that are
-    // NOT guidance — no permission, no route, no CoMaps — because those carry
-    // a button, and a button is not a metric. Only on the two tabs that are
-    // about where the user is right now; the splits tabs are a record of what
-    // already happened.
+    // Live guidance has a home on each tab that gets one: the map floats the turn
+    // strip over the route, and the stats grid carries it as an ordinary cell the
+    // layout editor can hide or move like any other. What gets a panel of its own
+    // is only the states that are NOT guidance — no permission, no route, no
+    // CoMaps — because those carry a button, and a button is not a metric. Only on
+    // the two tabs that are about where the user is right now; the splits tabs are
+    // a record of what already happened.
+    //
+    // The tab row stays the first thing on the screen. The panel is a card about
+    // one tab's content, sometimes tall, and above the tabs it pushed the way
+    // between them down the screen — so it sits under the row it belongs to.
     val guidedSnapshot = (coMapsNavigation as? CoMapsNavigationState.Active)?.snapshot
 
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        ActivityRecordingTabRow(
+            selectedTab = selectedTab,
+            onSelect = { selectedTab = it },
+        )
+
+        header()
+
         if (coMapsNavigation !is CoMapsNavigationState.Disabled &&
             guidedSnapshot == null &&
             !coMapsGuidanceDismissed &&
@@ -223,11 +235,6 @@ internal fun GpsRecordingTabs(
                 startGateHint = state.status == ActivityRecordingStatus.IDLE,
             )
         }
-
-        ActivityRecordingTabRow(
-            selectedTab = selectedTab,
-            onSelect = { selectedTab = it },
-        )
 
         when (activeTab) {
             ActivityRecordingTab.MAP -> Box(
@@ -342,11 +349,12 @@ internal val ActivityRecordingTab.labelRes: Int
 internal const val DefaultTimeSplitMinutes = 5
 internal val TimeSplitMinuteOptions = listOf(1, 5, 10)
 
-/** The tabs live CoMaps guidance appears on: the two about where the user is right now. */
-private val CoMapsGuidanceTabs = setOf(
-    ActivityRecordingTab.MAP,
-    ActivityRecordingTab.STATS,
-)
+/**
+ * The tab the guidance panel appears on. Guidance is about the route, so it belongs with the
+ * route; on the stats grid it was a card sitting on top of the numbers, and the grid already
+ * carries guidance as a cell of its own that the layout editor can place like any other.
+ */
+private val CoMapsGuidanceTabs = setOf(ActivityRecordingTab.MAP)
 
 @Composable
 internal fun GpsRecordingOverflowContent(

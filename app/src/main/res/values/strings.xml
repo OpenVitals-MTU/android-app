@@ -1902,6 +1902,10 @@
     <string name="recording_comaps_error">Could not read CoMaps navigation.</string>
     <string name="recording_comaps_plan_action">Plan in CoMaps</string>
     <string name="recording_comaps_start_gate_hint">Set a route in CoMaps, or dismiss this card to start without guidance.</string>
+    <string name="recording_comaps_no_route_title">Start without a route?</string>
+    <string name="recording_comaps_no_route_body">CoMaps is not navigating, so there will be no turn-by-turn guidance during this activity. Everything else records as usual.</string>
+    <string name="recording_comaps_no_route_confirm">Start anyway</string>
+    <string name="recording_comaps_no_route_plan">Set a route</string>
     <string name="recording_comaps_destination_with_distance">Destination %1$s</string>
     <string name="recording_comaps_next_stop_with_time">Next stop %1$s</string>
     <string name="recording_comaps_route_time_with_duration">Route %1$s</string>
