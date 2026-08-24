@@ -54,6 +54,7 @@ import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.gestures.MoveGestureDetector
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
@@ -181,9 +182,20 @@ private fun MapLibreRouteMap(
             disallowAncestorInterceptDuringTouch()
             onCreate(Bundle())
             getMapAsync { map ->
-                map.uiSettings.isCompassEnabled = false
+                // The compass doubles as the rotation reset: it appears once the
+                // map is turned off north and a tap turns it back.
+                map.uiSettings.isCompassEnabled = true
+                map.uiSettings.isRotateGesturesEnabled = true
                 map.uiSettings.isLogoEnabled = false
                 map.uiSettings.isAttributionEnabled = true
+                // A pan is the user taking the wheel: the camera stops chasing
+                // the fix until the recenter button hands it back. Zoom and
+                // rotate gestures are not moves, so they leave following alone.
+                map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
+                    override fun onMoveBegin(detector: MoveGestureDetector) = renderState.onUserPan()
+                    override fun onMove(detector: MoveGestureDetector) = Unit
+                    override fun onMoveEnd(detector: MoveGestureDetector) = Unit
+                })
                 mapLibreMap = map
                 renderState.render(
                     context = context,
@@ -297,6 +309,16 @@ private class OfflineRouteMapRenderState {
     private var didFitInitialCamera = false
 
     /**
+     * Whether the camera tracks the live fix. On from the first frame — a map
+     * with a current point is a recording in progress, and a recording map's
+     * job is to keep the user in the middle of it — and off the moment the
+     * user pans away, until the recenter button re-engages it. Maps without a
+     * live fix (a recorded activity's route) never enter the follow path.
+     */
+    private var followCurrentPoint = true
+    private var followedPoint: LatLng? = null
+
+    /**
      * The planned-route display last written into the style, compared by
      * identity: the producer emits one new object per route revision, and
      * updateStyle runs on every recomposition tick.
@@ -321,14 +343,18 @@ private class OfflineRouteMapRenderState {
             writtenPlannedRouteDisplay = null
             map.setStyle(Style.Builder().fromJson(styleJson)) { style ->
                 updateStyle(style, points, routeBreakIndexes, currentPoint, plannedRouteDisplay, headingDegrees)
-                fitInitialCamera(map, points, currentPoint)
+                updateCamera(map, points, currentPoint)
             }
         } else {
             map.getStyle { style ->
                 updateStyle(style, points, routeBreakIndexes, currentPoint, plannedRouteDisplay, headingDegrees)
-                fitInitialCamera(map, points, currentPoint)
+                updateCamera(map, points, currentPoint)
             }
         }
+    }
+
+    fun onUserPan() {
+        followCurrentPoint = false
     }
 
     fun recenter(
@@ -336,7 +362,14 @@ private class OfflineRouteMapRenderState {
         points: List<ExerciseRoutePoint>,
         currentPoint: ExerciseRoutePoint?,
     ) {
-        fitCamera(map, points, currentPoint)
+        val livePoint = currentPoint?.takeIf { it.hasFiniteCoordinates() }
+        if (livePoint != null) {
+            followCurrentPoint = true
+            followedPoint = null
+            followCamera(map, livePoint)
+        } else {
+            fitCamera(map, points, currentPoint)
+        }
         didFitInitialCamera = true
     }
 
@@ -383,6 +416,35 @@ private class OfflineRouteMapRenderState {
         )
     }
 
+    private fun updateCamera(
+        map: MapLibreMap,
+        points: List<ExerciseRoutePoint>,
+        currentPoint: ExerciseRoutePoint?,
+    ) {
+        val livePoint = currentPoint?.takeIf { it.hasFiniteCoordinates() }
+        if (livePoint != null && followCurrentPoint) {
+            followCamera(map, livePoint)
+        } else {
+            fitInitialCamera(map, points, currentPoint)
+        }
+    }
+
+    /**
+     * Keeps the live fix in the middle of the viewport. Only the target moves:
+     * the zoom and bearing the user chose ride along untouched.
+     */
+    private fun followCamera(map: MapLibreMap, livePoint: ExerciseRoutePoint) {
+        val target = LatLng(livePoint.latitude, livePoint.longitude)
+        if (target == followedPoint) return
+        followedPoint = target
+        if (didFitInitialCamera) {
+            map.easeCamera(CameraUpdateFactory.newLatLng(target))
+        } else {
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(target, SinglePointZoom))
+            didFitInitialCamera = true
+        }
+    }
+
     private fun fitInitialCamera(
         map: MapLibreMap,
         points: List<ExerciseRoutePoint>,
@@ -394,6 +456,9 @@ private class OfflineRouteMapRenderState {
         didFitInitialCamera = true
     }
 }
+
+private fun ExerciseRoutePoint.hasFiniteCoordinates(): Boolean =
+    latitude.isFinite() && longitude.isFinite()
 
 private fun ensureRouteSources(style: Style) {
     if (style.getSource(PlannedRouteSourceId) == null) {

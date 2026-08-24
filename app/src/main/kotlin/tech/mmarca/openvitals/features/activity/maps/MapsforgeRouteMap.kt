@@ -10,15 +10,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -27,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import java.io.File
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.mapsforge.core.graphics.Cap
@@ -44,6 +49,7 @@ import org.mapsforge.map.android.util.AndroidUtil
 import org.mapsforge.map.android.view.MapView
 import org.mapsforge.map.datastore.MultiMapDataStore
 import org.mapsforge.map.model.DisplayModel
+import org.mapsforge.map.model.common.Observer
 import org.mapsforge.map.layer.Layer
 import org.mapsforge.map.layer.overlay.FixedPixelCircle
 import org.mapsforge.map.layer.overlay.Polyline
@@ -86,7 +92,7 @@ internal fun MapsforgeRouteMap(
     val mapPacksKey = remember(mapPacks) { mapsforgeMapPacksKey(mapPacks) }
     val renderState = remember(mapPacksKey) { MapsforgeRouteMapRenderState() }
     val mapResult = remember(context, mapPacksKey) {
-        runCatching { createMapsforgeMap(context, mapPacks) }
+        runCatching { createMapsforgeMap(context, mapPacks, onUserPan = renderState::onUserPan) }
     }
     val map = mapResult.getOrNull()
     val mapView = map?.view
@@ -101,6 +107,21 @@ internal fun MapsforgeRouteMap(
     }
 
     val recenterDescription = stringResource(R.string.cd_recenter_map)
+    val resetRotationDescription = stringResource(R.string.cd_reset_map_rotation)
+
+    // Mapsforge has no compass widget of its own, so the reset control is
+    // hand-rolled: watch the position model (rotation lives there and every
+    // change notifies) and surface a button whenever the map is off north.
+    var mapRotationDegrees by remember(mapView) { mutableFloatStateOf(mapView.mapRotation.degrees) }
+    DisposableEffect(mapView) {
+        val observer = Observer {
+            val degrees = mapView.mapRotation.degrees
+            // Observers can fire from mapsforge's animator thread.
+            mapView.post { mapRotationDegrees = degrees }
+        }
+        mapView.getModel().mapViewPosition.addObserver(observer)
+        onDispose { mapView.getModel().mapViewPosition.removeObserver(observer) }
+    }
 
     DisposableEffect(mapView) {
         onDispose {
@@ -131,6 +152,26 @@ internal fun MapsforgeRouteMap(
             },
         )
 
+        if (abs(mapRotationDegrees) > NorthUpToleranceDegrees) {
+            SmallFloatingActionButton(
+                onClick = {
+                    mapView.rotate(Rotation.NULL_ROTATION)
+                    mapView.getLayerManager().redrawLayers()
+                },
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Explore,
+                    contentDescription = resetRotationDescription,
+                )
+            }
+        }
+
         if (showRecenterControl) {
             FloatingActionButton(
                 onClick = { renderState.recenter(map, points, currentPoint) },
@@ -155,6 +196,16 @@ private class MapsforgeRouteMapRenderState {
     private var didFitInitialCamera = false
 
     /**
+     * Whether the camera tracks the live fix. On from the first frame — a map
+     * with a current point is a recording in progress, and a recording map's
+     * job is to keep the user in the middle of it — and off the moment the
+     * user pans away, until the recenter button re-engages it. Maps without a
+     * live fix (a recorded activity's route) never enter the follow path.
+     */
+    private var followCurrentPoint = true
+    private var followedPoint: LatLong? = null
+
+    /**
      * The planned route's layers outlive the per-tick track rebuilds, and are
      * rebuilt only when the producer hands over new geometry — one per route
      * revision, compared by identity.
@@ -172,7 +223,11 @@ private class MapsforgeRouteMapRenderState {
         headingDegrees: Float? = null,
     ) {
         updateRouteLayers(mapView, points, routeBreakIndexes, currentPoint, plannedRoute, headingDegrees)
-        fitInitialCamera(map, points, currentPoint)
+        updateCamera(map, points, currentPoint)
+    }
+
+    fun onUserPan() {
+        followCurrentPoint = false
     }
 
     fun recenter(
@@ -180,7 +235,14 @@ private class MapsforgeRouteMapRenderState {
         points: List<ExerciseRoutePoint>,
         currentPoint: ExerciseRoutePoint?,
     ) {
-        fitMapsforgeCamera(map, points, currentPoint)
+        val livePoint = currentPoint?.takeIf { it.hasFiniteCoordinates() }
+        if (livePoint != null) {
+            followCurrentPoint = true
+            followedPoint = null
+            followCamera(map, livePoint)
+        } else {
+            fitMapsforgeCamera(map, points, currentPoint)
+        }
         didFitInitialCamera = true
     }
 
@@ -219,6 +281,36 @@ private class MapsforgeRouteMapRenderState {
         mapView.getLayerManager().redrawLayers()
     }
 
+    private fun updateCamera(
+        map: MapsforgeMap,
+        points: List<ExerciseRoutePoint>,
+        currentPoint: ExerciseRoutePoint?,
+    ) {
+        val livePoint = currentPoint?.takeIf { it.hasFiniteCoordinates() }
+        if (livePoint != null && followCurrentPoint) {
+            followCamera(map, livePoint)
+        } else {
+            fitInitialCamera(map, points, currentPoint)
+        }
+    }
+
+    /**
+     * Keeps the live fix in the middle of the viewport. Only the centre moves:
+     * the zoom and rotation the user chose ride along untouched.
+     */
+    private fun followCamera(map: MapsforgeMap, livePoint: ExerciseRoutePoint) {
+        val target = livePoint.toLatLong()
+        if (target == followedPoint) return
+        followedPoint = target
+        if (didFitInitialCamera) {
+            map.view.getModel().mapViewPosition.animateTo(target)
+        } else {
+            map.view.setCenter(target)
+            map.view.setZoomLevel(map.zoomRange.clamp(FollowZoom))
+            didFitInitialCamera = true
+        }
+    }
+
     private fun fitInitialCamera(
         map: MapsforgeMap,
         points: List<ExerciseRoutePoint>,
@@ -240,6 +332,7 @@ private class MapsforgeMap(
 private fun createMapsforgeMap(
     context: Context,
     mapPacks: List<OfflineMapPack>,
+    onUserPan: () -> Unit,
 ): MapsforgeMap {
     require(mapPacks.isNotEmpty()) { "At least one Mapsforge map pack is required." }
     val application = context.applicationContext as? Application
@@ -247,7 +340,8 @@ private fun createMapsforgeMap(
     ensureMapsforgeGraphicsFactory(application)
 
     val mapView = MapView(context)
-    mapView.disallowAncestorInterceptDuringTouch()
+    mapView.disallowAncestorInterceptDuringTouch(onUserPan)
+    mapView.touchGestureHandler.isRotationEnabled = true
     mapView.getMapScaleBar().setVisible(true)
     mapView.setBuiltInZoomControls(false)
 
@@ -290,13 +384,33 @@ private fun createMapsforgeMap(
     return MapsforgeMap(view = mapView, zoomRange = zoomRange)
 }
 
+/**
+ * Besides keeping scrolling ancestors from stealing the map's touches, this is
+ * where a pan is recognised: mapsforge has no gesture callbacks of its own, so
+ * a single finger travelling past the touch slop is the signal. Two-finger
+ * gestures — pinch and rotate — deliberately do not count as panning.
+ */
 @SuppressLint("ClickableViewAccessibility")
-private fun View.disallowAncestorInterceptDuringTouch() {
+private fun View.disallowAncestorInterceptDuringTouch(onUserPan: () -> Unit = {}) {
+    val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+    var downX = 0f
+    var downY = 0f
     setOnTouchListener { view, event ->
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN,
-            MotionEvent.ACTION_MOVE,
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                view.requestAncestorIntercept(disallow = true)
+            }
             MotionEvent.ACTION_POINTER_DOWN -> view.requestAncestorIntercept(disallow = true)
+            MotionEvent.ACTION_MOVE -> {
+                view.requestAncestorIntercept(disallow = true)
+                if (event.pointerCount == 1 &&
+                    kotlin.math.hypot(event.x - downX, event.y - downY) > touchSlop
+                ) {
+                    onUserPan()
+                }
+            }
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_CANCEL -> view.requestAncestorIntercept(disallow = false)
         }
@@ -424,6 +538,12 @@ private class DestinationFlagLayer(private val position: LatLong) : Layer() {
         val x = (MercatorProjection.longitudeToPixelX(position.longitude, mapSize) - topLeftPoint.x).toFloat()
         val y = (MercatorProjection.latitudeToPixelY(position.latitude, mapSize) - topLeftPoint.y).toFloat()
         val height = DestinationFlagHeightPx * displayModel.scaleFactor
+        // A billboard, the way mapsforge's own Marker does it: the flag stays
+        // upright on a rotated map by counter-rotating the canvas around its
+        // base for the duration of the drawing.
+        if (!Rotation.noRotation(rotation)) {
+            canvas.rotate(Rotation(-rotation.degrees, x, y))
+        }
         canvas.drawLine(x.toInt(), y.toInt(), x.toInt(), (y - height).toInt(), pole)
         val pennant = AndroidGraphicFactory.INSTANCE.createPath()
         pennant.moveTo(x, y - height)
@@ -432,6 +552,9 @@ private class DestinationFlagLayer(private val position: LatLong) : Layer() {
         pennant.close()
         canvas.drawPath(pennant, pennantFill)
         canvas.drawPath(pennant, pennantStroke)
+        if (!Rotation.noRotation(rotation)) {
+            canvas.rotate(Rotation(rotation.degrees, x, y))
+        }
     }
 }
 
@@ -668,3 +791,9 @@ private const val MarkerRadiusPx = 7.0f
 private const val CurrentLocationRadiusPx = 8.0f
 private const val MarkerStrokeWidthPx = 3.0f
 private const val DefaultMapsforgeZoom: Byte = 12
+
+/** The first follow frame's zoom: street level, clamped to what the pack holds. */
+private const val FollowZoom: Byte = 16
+
+/** Below this the map counts as facing north and the reset control hides. */
+private const val NorthUpToleranceDegrees = 0.5f

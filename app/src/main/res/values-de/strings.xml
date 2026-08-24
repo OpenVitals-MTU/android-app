@@ -30,6 +30,7 @@
     <string name="cd_exit_recording_focus_mode">Fokusmodus verlassen</string>
     <string name="cd_toggle_recording_outdoor_mode">Outdoor-Lesbarkeitsmodus umschalten</string>
     <string name="cd_recenter_map">Karte neu zentrieren</string>
+    <string name="cd_reset_map_rotation">Karte nach Norden ausrichten</string>
     <string name="cd_delete_entry">Eintrag löschen</string>
     <string name="cd_edit_entry">Eintrag bearbeiten</string>
     <string name="cd_previous_day">Vorheriger Tag</string>

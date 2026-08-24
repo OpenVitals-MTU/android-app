@@ -30,6 +30,7 @@
     <string name="cd_exit_recording_focus_mode">Salir del modo de concentración</string>
     <string name="cd_toggle_recording_outdoor_mode">Activar/desactivar modo exteriores</string>
     <string name="cd_recenter_map">Volver a centrar el mapa</string>
+    <string name="cd_reset_map_rotation">Orientar el mapa al norte</string>
     <string name="cd_delete_entry">Eliminar entrada</string>
     <string name="cd_edit_entry">Editar entrada</string>
     <string name="cd_toggle_session_notes">Mostrar u ocultar las notas de la sesión</string>

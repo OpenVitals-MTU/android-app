@@ -30,6 +30,7 @@
     <string name="cd_exit_recording_focus_mode">Saír do modo de foco</string>
     <string name="cd_toggle_recording_outdoor_mode">Activación do modo de lexibilidade exterior</string>
     <string name="cd_recenter_map">Volver a centrar o mapa</string>
+    <string name="cd_reset_map_rotation">Orientar o mapa ao norte</string>
     <string name="cd_delete_entry">Eliminar entrada</string>
     <string name="cd_edit_entry">Editar entrada</string>
     <string name="cd_previous_day">Día anterior</string>

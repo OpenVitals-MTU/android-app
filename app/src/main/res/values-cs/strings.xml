@@ -30,6 +30,7 @@
     <string name="cd_exit_recording_focus_mode">Ukončit režim soustředění</string>
     <string name="cd_toggle_recording_outdoor_mode">Přepnout režim čitelnosti venku</string>
     <string name="cd_recenter_map">Vycentrovat mapu</string>
+    <string name="cd_reset_map_rotation">Otočit mapu na sever</string>
     <string name="cd_delete_entry">Smazat záznam</string>
     <string name="cd_edit_entry">Upravit záznam</string>
     <string name="cd_previous_day">Předchozí den</string>

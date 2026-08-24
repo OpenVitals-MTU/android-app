@@ -30,6 +30,7 @@
     <string name="cd_exit_recording_focus_mode">Välju fookusrežiimist</string>
     <string name="cd_toggle_recording_outdoor_mode">Lülita välitingimuste loetavusrežiim sisse või välja</string>
     <string name="cd_recenter_map">Keskenda kaart uuesti</string>
+    <string name="cd_reset_map_rotation">Pööra kaart põhja suunas</string>
     <string name="cd_delete_entry">Kustuta kirje</string>
     <string name="cd_edit_entry">Muuda kirjet</string>
     <string name="cd_previous_day">Eelmine päev</string>

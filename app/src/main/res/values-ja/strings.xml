@@ -30,6 +30,7 @@
     <string name="cd_exit_recording_focus_mode">集中モードを終了</string>
     <string name="cd_toggle_recording_outdoor_mode">屋外見やすさモードを切り替え</string>
     <string name="cd_recenter_map">マップを元の位置に戻す</string>
+    <string name="cd_reset_map_rotation">地図を北向きに戻す</string>
     <string name="cd_delete_entry">項目を削除</string>
     <string name="cd_edit_entry">項目を編集</string>
     <string name="cd_toggle_session_notes">セッションメモを表示または非表示にする</string>

@@ -30,6 +30,7 @@
     <string name="cd_exit_recording_focus_mode">Quitter le mode focus</string>
     <string name="cd_toggle_recording_outdoor_mode">Activer/désactiver le mode lisibilité extérieure</string>
     <string name="cd_recenter_map">Recentrer la carte</string>
+    <string name="cd_reset_map_rotation">Orienter la carte vers le nord</string>
     <string name="cd_delete_entry">Supprimer l\'entrée</string>
     <string name="cd_edit_entry">Modifier l\'entrée</string>
     <string name="cd_toggle_session_notes">Afficher ou masquer les notes de session</string>
