@@ -2494,4 +2494,15 @@
     <string name="recording_comaps_no_route_body">CoMaps no está activado, por lo que no habrá indicaciones paso a paso durante esta actividad. Todo lo demás se registra como de costumbre.</string>
     <string name="recording_comaps_no_route_confirm">Empieza de todos modos</string>
     <string name="recording_comaps_no_route_plan">Establecer una ruta</string>
+    <string name="stat_goal_balance">Progreso del objetivo</string>
+    <string name="goal_balance_ahead">Superado en un %1$s</string>
+    <string name="goal_balance_behind">Faltan %1$s</string>
+    <string name="goal_balance_under">Restan %1$s</string>
+    <string name="goal_balance_over">Lo supera %1$s</string>
+    <string name="goal_balance_on_track">Buen ritmo</string>
+    <plurals name="goal_catch_up_per_day">
+        <item quantity="one">≈ %1$s para el último día</item>
+        <item quantity="many">≈ %1$s para los últimos %2$d días</item>
+        <item quantity="other">≈ %1$s para los últimos %2$d días</item>
+    </plurals>
 </resources>
