@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import java.io.File
 import kotlin.math.abs
@@ -60,6 +59,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.features.activity.RoutePreview
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 @Composable
 internal fun MapsforgeRouteMap(
@@ -163,7 +163,7 @@ internal fun MapsforgeRouteMap(
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(12.dp),
+                    .padding(Spacing.md),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Explore,
@@ -180,7 +180,7 @@ internal fun MapsforgeRouteMap(
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(12.dp),
+                    .padding(Spacing.md),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.MyLocation,
