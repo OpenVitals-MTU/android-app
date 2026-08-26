@@ -1,5 +1,61 @@
 # Changelog
 
+## 2.7.0 - 2026-08-26
+
+### English
+
+- **Goal balance and per-day catch-up.** The daily goal card on the activity screens now says how far ahead or behind the week is - not just how many days hit the goal - and what each remaining day needs to average for it to land on goal, today included. The statistics grid gets a Goal balance tile. Days with nothing logged count as zero, and the sign stays in your favour whichever way the goal points.
+- **Maps rotate and follow the recording.** Both offline renderers take two-finger rotation, with a compass to reset north whenever the map is off it. While recording, the camera keeps the live fix centred; panning hands control to you, and the recenter button hands it back.
+- **The summary opens at once.** The dashboard no longer waits on a batch of Health Connect reads before drawing anything - it renders with every tile loading and fills each one as its own read lands. A throttled Health Connect shows a fallback and says how long to wait instead of holding a spinner for minutes.
+- **The app speaks Simplified Chinese.** A full translation, offered by the in-app language picker.
+- **The recording screen leads with its tabs,** CoMaps guidance lives on the map tab, and Start asks before starting without a route instead of refusing with a toast. The sleep day view drops the averages of a single night and the key-metric cards that restated the chart.
+- **Fixes:** a Garmin sync never tells the watch to drop a file it did not download, which was costing a day and a half of heart rate and steps; the recording screen's app bar - title, dashboard editor, outdoor toggle - is back, and focus and outdoor mode reach the whole screen; the bottom bar is pure black under AMOLED; and large Apple Health exports no longer run out of memory.
+
+### Espanol
+
+- **Balance del objetivo y recuperacion por dia.** La tarjeta del objetivo diario en las pantallas de actividad dice ahora cuanto va por delante o por detras la semana - no solo cuantos dias cumplieron el objetivo - y cuanto necesita cada dia restante de media para que la semana termine en objetivo, hoy incluido. La cuadricula de estadisticas gana una casilla de Balance del objetivo. Los dias sin registros cuentan como cero, y el signo queda a tu favor apunte el objetivo hacia donde apunte.
+- **Los mapas giran y siguen la grabacion.** Los dos renderizadores sin conexion aceptan rotacion con dos dedos, con una brujula para volver al norte siempre que el mapa se aparte de el. Durante la grabacion la camara mantiene centrada la posicion en vivo; al desplazar tomas el control, y el boton de recentrar lo devuelve.
+- **El resumen se abre al instante.** El panel ya no espera a un lote de lecturas de Health Connect antes de dibujar nada - se muestra con todas las casillas cargando y rellena cada una cuando llega su propia lectura. Un Health Connect saturado muestra un valor de reserva y dice cuanto esperar en vez de dejar un indicador girando durante minutos.
+- **La app habla chino simplificado.** Traduccion completa, disponible en el selector de idioma de la app.
+- **La pantalla de grabacion empieza por sus pestanas,** la guia de CoMaps vive en la pestana del mapa, e Iniciar pregunta antes de empezar sin ruta en vez de negarse con un aviso. La vista diaria de sueno deja de mostrar medias de una sola noche y las tarjetas de metricas clave que repetian el grafico.
+- **Correcciones:** una sincronizacion Garmin ya no le dice al reloj que borre un archivo que no descargo, lo que costaba un dia y medio de frecuencia cardiaca y pasos; la barra superior de la pantalla de grabacion - titulo, editor del panel, modo exterior - ha vuelto, y los modos concentracion y exterior cubren toda la pantalla; la barra inferior es negro puro con AMOLED; y las exportaciones grandes de Apple Health ya no se quedan sin memoria.
+
+### Deutsch
+
+- **Zielbilanz und Aufholbedarf pro Tag.** Die Tagesziel-Karte auf den Aktivitaetsseiten sagt jetzt, wie weit die Woche vorn oder zurueck liegt - nicht nur, an wie vielen Tagen das Ziel erreicht wurde - und was jeder verbleibende Tag im Schnitt braucht, damit die Woche das Ziel trifft, den heutigen eingeschlossen. Das Statistikraster bekommt eine Kachel Zielbilanz. Tage ohne Eintrag zaehlen als null, und das Vorzeichen bleibt zu deinen Gunsten, in welche Richtung das Ziel auch zeigt.
+- **Karten drehen sich und folgen der Aufzeichnung.** Beide Offline-Renderer nehmen Zwei-Finger-Drehung an, mit einem Kompass, der nach Norden zurueckstellt, sobald die Karte davon abweicht. Waehrend der Aufzeichnung haelt die Kamera die Live-Position zentriert; Verschieben gibt dir die Kontrolle, der Zentrieren-Knopf gibt sie zurueck.
+- **Die Uebersicht oeffnet sofort.** Das Dashboard wartet nicht mehr auf einen Stapel Health-Connect-Abfragen, bevor es etwas zeichnet - es erscheint mit allen Kacheln im Ladezustand und fuellt jede, sobald ihre eigene Abfrage antwortet. Ein gedrosseltes Health Connect zeigt einen Ersatzwert und sagt, wie lange zu warten ist, statt minutenlang einen Spinner zu halten.
+- **Die App spricht vereinfachtes Chinesisch.** Eine vollstaendige Uebersetzung, verfuegbar im Sprachwaehler der App.
+- **Der Aufzeichnungsbildschirm beginnt mit seinen Tabs,** die CoMaps-Fuehrung wohnt im Karten-Tab, und Start fragt nach, bevor ohne Route gestartet wird, statt mit einem Hinweis abzulehnen. Die Schlaf-Tagesansicht laesst die Mittelwerte einer einzelnen Nacht und die Kennzahlkarten weg, die das Diagramm wiederholten.
+- **Korrekturen:** eine Garmin-Synchronisierung sagt der Uhr nie mehr, eine Datei zu verwerfen, die sie nicht heruntergeladen hat, was anderthalb Tage Herzfrequenz und Schritte kostete; die Leiste des Aufzeichnungsbildschirms - Titel, Dashboard-Editor, Aussenmodus - ist zurueck, und Fokus- und Aussenmodus erreichen den ganzen Bildschirm; die untere Leiste ist unter AMOLED reines Schwarz; und grosse Apple-Health-Exporte gehen nicht mehr der Speicher aus.
+
+### Italiano
+
+- **Bilancio dell'obiettivo e recupero per giorno.** La scheda dell'obiettivo giornaliero nelle schermate di attivita dice ora quanto la settimana e avanti o indietro - non solo quanti giorni hanno raggiunto l'obiettivo - e quanto serve in media a ogni giorno rimasto perche la settimana arrivi all'obiettivo, oggi incluso. La griglia delle statistiche guadagna un riquadro Bilancio obiettivo. I giorni senza registrazioni contano come zero, e il segno resta a tuo favore in qualunque direzione punti l'obiettivo.
+- **Le mappe ruotano e seguono la registrazione.** Entrambi i renderer offline accettano la rotazione a due dita, con una bussola per tornare a nord ogni volta che la mappa se ne discosta. Durante la registrazione la fotocamera tiene centrata la posizione in diretta; trascinando prendi tu il controllo, e il pulsante di ricentratura lo restituisce.
+- **Il riepilogo si apre subito.** La dashboard non aspetta piu un blocco di letture di Health Connect prima di disegnare qualcosa - compare con tutti i riquadri in caricamento e riempie ciascuno quando arriva la sua lettura. Un Health Connect rallentato mostra un valore di riserva e dice quanto aspettare invece di tenere un indicatore che gira per minuti.
+- **L'app parla cinese semplificato.** Traduzione completa, disponibile nel selettore di lingua dell'app.
+- **La schermata di registrazione inizia dalle sue schede,** la guida di CoMaps vive nella scheda mappa, e Avvia chiede prima di partire senza percorso invece di rifiutare con un avviso. La vista giornaliera del sonno toglie le medie di una sola notte e le schede delle metriche chiave che ripetevano il grafico.
+- **Correzioni:** una sincronizzazione Garmin non dice piu all'orologio di scartare un file che non ha scaricato, cosa che costava un giorno e mezzo di frequenza cardiaca e passi; la barra della schermata di registrazione - titolo, editor della dashboard, modalita esterna - e tornata, e le modalita concentrazione ed esterna coprono tutto lo schermo; la barra inferiore e nero puro con AMOLED; e le esportazioni grandi di Apple Health non esauriscono piu la memoria.
+
+### Eesti
+
+- **Eesmargi saldo ja paevane jareleaitamine.** Paevaeesmargi kaart tegevuse ekraanidel utleb nuud, kui palju nadal ees voi taga on - mitte ainult, mitu paeva eesmargi taitis - ja kui palju iga jaanud paev keskmiselt vajab, et nadal eesmargile jouaks, tanane kaasa arvatud. Statistika ruudustik saab Eesmargi saldo plaadi. Ilma kirjeteta paevad loevad nullina ja mark jaab sinu kasuks, kummale poole eesmark ka ei osutaks.
+- **Kaardid poorlevad ja jalgivad salvestust.** Molemad vorguta renderdajad votavad vastu kahe sormega poorde, kompassiga, mis viib tagasi pohja, kui kaart sellest korvale kaldub. Salvestuse ajal hoiab kaamera otseasukoha keskel; lohistamine annab juhtimise sulle ja keskele viimise nupp annab selle tagasi.
+- **Ulevaade avaneb kohe.** Toolaud ei oota enam Health Connecti lugemiste kogumit, enne kui midagi joonistab - see ilmub koigi plaatidega laadimisel ja taidab igauhe, kui selle enda lugemine saabub. Piiratud Health Connect naitab varuvaartust ja utleb, kui kaua oodata, selle asemel et minuteid keerlevat naidikut hoida.
+- **Rakendus raagib lihtsustatud hiina keelt.** Taielik tolge, saadaval rakenduse keelevalijas.
+- **Salvestusekraan algab oma vahekaartidest,** CoMapsi juhised elavad kaardi vahekaardil ja Alusta kusib enne ilma marsruudita alustamist, selle asemel et teatega keelduda. Une paevavaade jatab valja uhe oo keskmised ja votmenaitajate kaardid, mis kordasid diagrammi.
+- **Parandused:** Garmini sunkroonimine ei utle kellale enam kunagi, et see kustutaks faili, mida see alla ei laadinud, mis maksis poolteist paeva pulssi ja samme; salvestusekraani riba - pealkiri, toolaua redaktor, valisreziim - on tagasi ning fookus- ja valisreziim ulatuvad kogu ekraanini; alumine riba on AMOLED-i all puhas must; ja suured Apple Healthi ekspordid ei jaa enam malust ilma.
+
+### Portugues
+
+- **Saldo do objetivo e recuperacao por dia.** O cartao do objetivo diario nos ecras de atividade diz agora quanto a semana esta adiantada ou atrasada - nao apenas quantos dias atingiram o objetivo - e quanto cada dia restante precisa em media para que a semana chegue ao objetivo, hoje incluido. A grelha de estatisticas ganha um mosaico Saldo do objetivo. Dias sem registos contam como zero, e o sinal fica a teu favor para qualquer lado que o objetivo aponte.
+- **Os mapas rodam e seguem a gravacao.** Ambos os renderizadores offline aceitam rotacao com dois dedos, com uma bussola para voltar ao norte sempre que o mapa se afasta dele. Durante a gravacao a camara mantem a posicao em direto centrada; arrastar entrega-te o controlo, e o botao de recentrar devolve-o.
+- **O resumo abre de imediato.** O painel ja nao espera por um lote de leituras do Health Connect antes de desenhar algo - aparece com todos os mosaicos a carregar e preenche cada um quando a sua propria leitura chega. Um Health Connect limitado mostra um valor de reserva e diz quanto tempo esperar em vez de segurar um indicador a rodar durante minutos.
+- **A app fala chines simplificado.** Traducao completa, disponivel no seletor de idioma da app.
+- **O ecra de gravacao comeca pelos separadores,** a orientacao do CoMaps vive no separador do mapa, e Iniciar pergunta antes de comecar sem rota em vez de recusar com um aviso. A vista diaria do sono deixa de mostrar medias de uma so noite e os cartoes de metricas-chave que repetiam o grafico.
+- **Correcoes:** uma sincronizacao Garmin nunca mais diz ao relogio para descartar um ficheiro que nao descarregou, o que custava um dia e meio de frequencia cardiaca e passos; a barra do ecra de gravacao - titulo, editor do painel, modo exterior - esta de volta, e os modos foco e exterior chegam a todo o ecra; a barra inferior e preto puro em AMOLED; e as exportacoes grandes do Apple Health ja nao ficam sem memoria.
+
 ## 2.6.6 - 2026-08-22
 
 ### English
