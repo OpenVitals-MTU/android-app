@@ -211,10 +211,10 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 Kotlin counterpart: none (no Compose UI test for the activity entry screen; nearest logic coverage is /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/features/manualentry/activity/ActivityEntryViewModelTest.kt)
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| source card > offers the three Kotlin sources; route import is not here | PORTED | ActivityEntrySourceCardTest: `offersTheThreeSourcesAndKeepsFileImportOutOfThem` | Compose instrumentation; runs on a device, not in CI |
-| source card > shows the permission explainer and a Grant action when the write permission is missing | PORTED | ActivityEntrySourceCardTest: `aMissingWritePermissionSaysSoAndOffersTheGrant` | Compose instrumentation; runs on a device, not in CI |
-| source card > a source action requests the write permission first | N/A-WIDGET | — | UI wiring of permission request on tap; write refusal itself covered by ActivityEntryViewModelTest `missing activity write permission prevents write` |
-| source card > Grant does not itself open a form | PORTED | ActivityEntrySourceCardTest: `theGrantActionOnlyAsksForPermissionAndOpensNothing` | Compose instrumentation; runs on a device, not in CI |
+| start hub > offers plans, record and manual logging; route import is not here | PORTED | ActivityStartHubTest: `offersPlansRecordAndManualLoggingAndKeepsFileImportOut` | Compose instrumentation; runs on a device, not in CI |
+| start hub > shows the permission explainer and a Grant action when the write permission is missing | PORTED | ActivityStartHubTest: `noPlansSaysSoAndAMissingPermissionOffersTheGrant` | Compose instrumentation; runs on a device, not in CI |
+| start hub > a source action requests the write permission first | N/A-WIDGET | — | UI wiring of permission request on tap; write refusal itself covered by ActivityEntryViewModelTest `missing activity write permission prevents write` |
+| start hub > Grant does not itself open a form | PORTED | ActivityStartHubTest: `noPlansSaysSoAndAMissingPermissionOffersTheGrant` | Compose instrumentation; runs on a device, not in CI |
 | entry card > renders the Kotlin sections in order | PORTED | ActivityEntryCardTest: `rendersEverySectionAWorkoutNeedsToBeDescribed` | Compose instrumentation; runs on a device, not in CI |
 | entry card > the feeling chips are the four emoji, and toggle off | PORTED | ActivityEntryCardTest: `theFeelingChipsAreTheFourEmojiAndTapAgainClearsTheChoice` | Compose instrumentation; runs on a device, not in CI |
 | entry card > distance and elevation follow the unit system | PORTED | ActivityEntryCardTest: `distanceAndElevationFollowTheUnitSystem` | Compose instrumentation; runs on a device, not in CI |
@@ -223,8 +223,8 @@ Kotlin counterpart: none (no Compose UI test for the activity entry screen; near
 | repetitions > a step-counted type gets a single total field, no mode switch | PORTED | ActivityRepetitionInputsTest: `aStepCountedTypeGetsOneTotalAndNoModeSwitch` | Compose instrumentation; runs on a device, not in CI |
 | repetitions > a rep-counted type switches between Total and Sets | PORTED | ActivityRepetitionInputsTest: `aRepetitionCountedTypeOffersTotalAndSets` | Compose instrumentation; runs on a device, not in CI |
 | repetitions > typing in one set does not bleed into another | PORTED | ActivityRepetitionInputsTest: `typingInOneSetDoesNotBleedIntoAnother` | Compose instrumentation; runs on a device, not in CI |
-| repetitions > the training plan section only shows for rep-counted types | PORTED | ActivityEntryCardTest: `theTrainingPlanSectionOnlyShowsForRepetitionCountedTypes` | Compose instrumentation; runs on a device, not in CI |
-| plan pickers > an empty plan list still offers a way back | PORTED | ActivityEntrySourceCardTest: `anEmptyPlanListStillOffersAWayBack` | Compose instrumentation; runs on a device, not in CI |
+| repetitions > Save as plan only shows for rep-counted types | PORTED | ActivityEntryCardTest: `saveAsPlanOnlyShowsForRepetitionCountedTypes` | Compose instrumentation; runs on a device, not in CI |
+| start hub > an empty plan list explains where to build one | PORTED | ActivityStartHubTest: `anEmptyPlanListExplainsWhereToBuildOne` | Compose instrumentation; runs on a device, not in CI |
 | the live recording dashboard > fills the body instead of a fraction of the screen | N/A-WIDGET | — | Flutter layout regression (Expanded inside Scrollable); no Kotlin analogue |
 | the live recording dashboard > focus mode takes the whole screen, app bar and all | N/A-WIDGET | — | Flutter layout/app-bar behavior; Kotlin focus mode exists (ActivityRecordingControls.kt) but is untested in UI |
 | the live recording dashboard > is not inside the form scroll view | N/A-WIDGET | — | Flutter widget-tree structural assertion |
@@ -275,7 +275,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | finished recording draft is restored by a new activity entry view model | PORTED | ActivityEntryViewModelTest.kt `finished recording draft is restored by a new activity entry view model` | |
 | finished walking route recording keeps recorded steps | PORTED | ActivityEntryViewModelTest.kt `finished walking route recording keeps recorded steps` | |
 | saving a restored recording draft clears it | PORTED | ActivityEntryViewModelTest.kt `saving a restored recording draft clears it` | |
-| discarding a finished recording draft clears it and returns to source choice | PORTED | ActivityEntryViewModelTest.kt `discarding a finished recording draft clears it and returns to source choice` | |
+| discarding a finished recording draft clears it and returns to the start hub | PORTED | ActivityEntryViewModelTest.kt `discarding a finished recording draft clears it and returns to the start hub` | |
 | activity entry keeps full write permissions when optional fields change | PORTED | ActivityEntryViewModelTest.kt `activity entry keeps full write permissions when optional fields change` | |
 | route import fills distance and elevation fields in current unit system | PORTED | ActivityEntryViewModelTest.kt `route import fills distance and elevation fields in current unit system` | |
 | FIT import without route fills manual activity fields | PORTED | ActivityEntryViewModelTest.kt `FIT import without route fills manual activity fields` | |
@@ -540,7 +540,7 @@ Kotlin counterpart: partial — /home/manu/Documentos/repos/openvitals-android/a
 | stop > stopping hands back the recorded snapshot | DIVERGED | ActivityEntryViewModelTest.kt `recorded activity without enough route points estimates calories`, `finished walking route recording keeps recorded steps` | exercises finishGpsRecording consuming the snapshot into form fields, but asserts form prefill rather than a snapshot/command result surface |
 | stop > the snapshot is consumed exactly once | DIVERGED | ActivityEntryViewModelTest.kt `saving a restored recording draft clears it` | Kotlin's one-shot semantic is draft clearing on save; no command-state reset equivalent asserted |
 | stop > stopping with nothing recording fails loudly, not silently | PORTED | ActivityEntryViewModelTest.kt: `stopping with nothing recording fails loudly, not silently` | — |
-| discard > discarding clears the session and both commands | PORTED | ActivityEntryViewModelTest.kt: `discarding clears the session and returns to source choice` | — |
+| discard > discarding clears the session and both commands | PORTED | ActivityEntryViewModelTest.kt: `discarding clears the session and returns to the start hub` | — |
 | focus mode > focus mode needs a session that can actually use it | PORTED | ActivityEntryViewModelTest.kt: `focus mode needs a session that can actually use it` | seam: `ActivityRecordingState.canUseFocusMode` extracted |
 | elapsed time > a repetition session counts its rests, a route does not | DIVERGED | ActivityRecordingStateTest.kt `repetition movingDuration excludes recorded and open rest time` | underlying moving/rest math covered at state level; the screen-surface totalTime vs movingTime split is not |
 

@@ -160,6 +160,9 @@ internal fun ActivityRecordingScreen(
     onEndRepetitionSet: () -> Unit,
     onStartNextRepetitionSet: () -> Unit,
     onFinishRecording: () -> Unit,
+    onCompletePlanStep: () -> Unit = {},
+    onSkipPlanStep: () -> Unit = {},
+    onUndoPlanStep: () -> Unit = {},
     onEndHeartRateRecoveryEffort: () -> Unit = {},
     onActivityRecordingTitleChanged: (Int?) -> Unit = {},
     onDashboardEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
@@ -376,13 +379,32 @@ internal fun ActivityRecordingScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    RepetitionRecordingStats(
-                        state = state,
-                        totalTime = totalTime,
-                        movingTime = movingTime,
-                        unitFormatter = unitFormatter,
-                        onAdjustRepetitionCount = onAdjustRepetitionCount,
-                    )
+                    if (state.isPlanRun) {
+                        ActivityPlanStepBanner(state = state, now = now, unitFormatter = unitFormatter)
+                        val step = state.currentPlanStep
+                        if (step != null && step.goalKind == ActivityPlanGoalKind.REPS &&
+                            state.status != ActivityRecordingStatus.RESTING && !state.isPlanComplete
+                        ) {
+                            RepetitionCountAdjustRow(
+                                state = state,
+                                countLabel = step.displayLabel(),
+                                unitFormatter = unitFormatter,
+                                onAdjustRepetitionCount = onAdjustRepetitionCount,
+                            )
+                        }
+                        RepetitionRecordingTotals(state = state, totalTime = totalTime, movingTime = movingTime)
+                        if (state.bleDeviceStatuses.isNotEmpty()) {
+                            ActivityRecordingLiveSensorStats(state = state, unitFormatter = unitFormatter)
+                        }
+                    } else {
+                        RepetitionRecordingStats(
+                            state = state,
+                            totalTime = totalTime,
+                            movingTime = movingTime,
+                            unitFormatter = unitFormatter,
+                            onAdjustRepetitionCount = onAdjustRepetitionCount,
+                        )
+                    }
 
                     state.errorMessage?.let { errorMessage ->
                         Text(
@@ -392,12 +414,23 @@ internal fun ActivityRecordingScreen(
                         )
                     }
                 }
-                RepetitionRecordingControls(
-                    state = state,
-                    onEndRepetitionSet = onEndRepetitionSet,
-                    onStartNextRepetitionSet = onStartNextRepetitionSet,
-                    onFinishRecording = onFinishRecording,
-                )
+                if (state.isPlanRun) {
+                    PlanRunControls(
+                        state = state,
+                        onCompleteStep = onCompletePlanStep,
+                        onSkipStep = onSkipPlanStep,
+                        onStartNextStep = onStartNextRepetitionSet,
+                        onFinishRecording = onFinishRecording,
+                        onUndoStep = onUndoPlanStep,
+                    )
+                } else {
+                    RepetitionRecordingControls(
+                        state = state,
+                        onEndRepetitionSet = onEndRepetitionSet,
+                        onStartNextRepetitionSet = onStartNextRepetitionSet,
+                        onFinishRecording = onFinishRecording,
+                    )
+                }
             }
             ActivityRecordingKind.TIMED -> {
                 Column(

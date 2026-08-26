@@ -40,12 +40,11 @@ enum class ActivityEntryError {
     ACTIVITY_RECOGNITION_PERMISSION_NEEDED,
     RECORDING_FAILED,
     WRITE_FAILED,
+    PLAN_NOT_FOUND,
 }
 
 enum class ActivityEntryMode {
-    CHOOSE_SOURCE,
-    PLAN_ACTIVITY_PICKER,
-    PLAN_PICKER,
+    START_HUB,
     MANUAL,
     ROUTE_IMPORT,
     RECORDING,
@@ -68,7 +67,6 @@ enum class ActivityEntryValidationError(
     val field: ActivityEntryField,
 ) {
     ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE(ActivityEntryField.ACTIVITY_TYPE),
-    TRAINING_PLAN_TITLE_REQUIRED(ActivityEntryField.TITLE),
     START_DATE_INVALID(ActivityEntryField.START_DATE),
     START_TIME_INVALID(ActivityEntryField.START_TIME),
     START_TIME_AFTER_ROUTE_START(ActivityEntryField.START_TIME),
@@ -88,17 +86,17 @@ enum class ActivityRepetitionEntryMode {
     SETS,
 }
 
-data class ActivityPlannedWorkoutBaseline(
-    val planId: String,
-    val activityTypeId: String,
-    val titleText: String,
-    val notesText: String,
-    val startDateText: String,
-    val startTimeText: String,
-    val durationMinutesText: String,
-    val repetitionMode: ActivityRepetitionEntryMode,
-    val repetitionTotalText: String,
-    val repetitionSets: List<ActivityRepetitionSetInput>,
+/** A plan about to be run step by step: resolved type and the flattened steps. */
+data class ActivityGuidedPlan(
+    val plan: PlannedExerciseData,
+    val activityType: ActivityEntryType,
+    val steps: List<ActivityPlanRunStep>,
+)
+
+/** The plan a session is logged against; the title is null when only the id is known. */
+data class ActivityLinkedPlan(
+    val id: String,
+    val title: String?,
 )
 
 /**
@@ -139,14 +137,26 @@ enum class ActivityEntryFeeling(
     ),
 }
 
+/**
+ * One set of the session. A set is normally "N reps of the activity's own
+ * exercise", but a plan can put a different exercise (a plank inside a push-up
+ * session) or a timed hold in the sequence, so a set may carry its own segment
+ * type and a duration goal instead of a rep count.
+ */
 data class ActivityRepetitionSetInput(
+    /** The rep count, or the seconds when [isDuration]. */
     val repetitionsText: String = "",
     val restMinutesText: String = "",
+    /** Segment type for this set when it differs from the activity type's own; null means the activity's. */
+    val segmentType: Int? = null,
+    /** A stored step label ("Push-ups"); null falls back to the segment type's name. */
+    val label: String? = null,
+    val isDuration: Boolean = false,
 )
 
 @Immutable
 data class ActivityEntryUiState(
-    val mode: ActivityEntryMode = ActivityEntryMode.CHOOSE_SOURCE,
+    val mode: ActivityEntryMode = ActivityEntryMode.START_HUB,
     val activityTypes: List<ActivityEntryType> = DefaultActivityEntryTypes,
     val selectedActivityType: ActivityEntryType = DefaultActivityEntryTypes.first(),
     val titleText: String = "",
@@ -162,12 +172,20 @@ data class ActivityEntryUiState(
     val repetitionMode: ActivityRepetitionEntryMode = ActivityRepetitionEntryMode.TOTAL,
     val repetitionTotalText: String = "",
     val repetitionSets: List<ActivityRepetitionSetInput> = listOf(ActivityRepetitionSetInput()),
-    val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
-    val selectedPlannedWorkoutId: String? = null,
-    val selectedPlannedWorkoutBaseline: ActivityPlannedWorkoutBaseline? = null,
-    val selectedPlannedWorkoutActivityTypeId: String? = null,
-    val isLoadingPlannedWorkouts: Boolean = false,
-    val isSavingPlannedWorkout: Boolean = false,
+    val linkedPlan: ActivityLinkedPlan? = null,
+    /** Set while the recording setup is showing a plan to run; cleared with the rest of the form. */
+    val guidedPlan: ActivityGuidedPlan? = null,
+    /** Uncompleted plans for today and later, by start time; the start hub's list. */
+    val hubPlans: List<PlannedExerciseData> = emptyList(),
+    /** Recently completed plans, newest first, one per title: what "Repeat" offers. */
+    val recentPlans: List<PlannedExerciseData> = emptyList(),
+    val isLoadingHubPlans: Boolean = false,
+    val hubPlansError: ScreenError? = null,
+    /** False when this device's Health Connect has no planned-exercise feature at all. */
+    val hubPlansAvailable: Boolean = true,
+    val isSavingAsPlan: Boolean = false,
+    /** One-shot request for the screen to open the builder on this plan. */
+    val pendingBuilderPlanId: String? = null,
     val importedRoute: RouteFileImport? = null,
     val recordedPauseIntervals: List<ActivityPauseInterval> = emptyList(),
     val recordedLaps: List<ExerciseLapData> = emptyList(),
@@ -202,30 +220,4 @@ data class ActivityEntryUiState(
 
     val isEditMode: Boolean
         get() = editRecordId != null
-
-    val hasSelectedPlannedWorkoutChanges: Boolean
-        get() {
-            val planId = selectedPlannedWorkoutId ?: return false
-            val baseline = selectedPlannedWorkoutBaseline?.takeIf { it.planId == planId } ?: return false
-            return plannedWorkoutBaseline(planId) != baseline
-        }
 }
-
-internal fun ActivityEntryUiState.plannedWorkoutBaseline(planId: String): ActivityPlannedWorkoutBaseline =
-    ActivityPlannedWorkoutBaseline(
-        planId = planId,
-        activityTypeId = selectedActivityType.id,
-        titleText = titleText.trim(),
-        notesText = activitySaveNotes().orEmpty(),
-        startDateText = startDateText.trim(),
-        startTimeText = startTimeText.trim(),
-        durationMinutesText = durationMinutesText.trim(),
-        repetitionMode = repetitionMode,
-        repetitionTotalText = repetitionTotalText.trim(),
-        repetitionSets = repetitionSets.map { set ->
-            set.copy(
-                repetitionsText = set.repetitionsText.trim(),
-                restMinutesText = set.restMinutesText.trim(),
-            )
-        },
-    )

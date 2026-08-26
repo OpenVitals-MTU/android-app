@@ -139,9 +139,9 @@ class ActivityEntryCardTest {
     }
 
     @Test
-    fun theTrainingPlanSectionOnlyShowsForRepetitionCountedTypes() {
-        // A plan is a list of sets. Offering "Save plan" on a run would save a
-        // plan with nothing in it for the user to ever start from.
+    fun saveAsPlanOnlyShowsForRepetitionCountedTypes() {
+        // A plan is a list of steps. Offering "Save as plan" on a run would save
+        // a plan with nothing in it for the user to ever start from.
         setContent {
             TestActivityEntryCard(
                 state = ActivityEntryUiState(
@@ -152,12 +152,11 @@ class ActivityEntryCardTest {
             )
         }
 
-        composeRule.onNodeWithText(string(R.string.activity_entry_save_training_plan)).assertDoesNotExist()
-        composeRule.onNodeWithText(string(R.string.activity_entry_training_plan_label)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.activity_entry_save_as_plan)).assertDoesNotExist()
     }
 
     @Test
-    fun aRepetitionCountedTypeGetsTheTrainingPlanSection() {
+    fun aRepetitionCountedTypeGetsSaveAsPlan() {
         setContent {
             TestActivityEntryCard(
                 state = ActivityEntryUiState(
@@ -168,8 +167,30 @@ class ActivityEntryCardTest {
             )
         }
 
-        scrollTo(string(R.string.activity_entry_training_plan_label)).assertIsDisplayed()
-        scrollTo(string(R.string.activity_entry_save_training_plan)).assertIsDisplayed()
+        scrollTo(string(R.string.activity_entry_save_as_plan)).assertIsDisplayed()
+    }
+
+    @Test
+    fun aLinkedPlanShowsTheChipWithChangeEditAndRemoveInsteadOfSaveAsPlan() {
+        var edited: String? = null
+        setContent {
+            TestActivityEntryCard(
+                state = ActivityEntryUiState(
+                    canWrite = true,
+                    isCheckingPermission = false,
+                    selectedActivityType = pushUpsEntryType,
+                    linkedPlan = ActivityLinkedPlan(id = "plan-1", title = "Push-up pyramid"),
+                ),
+                onEditPlan = { edited = it },
+            )
+        }
+
+        scrollTo(string(R.string.activity_entry_linked_plan, "Push-up pyramid")).assertIsDisplayed()
+        scrollTo(string(R.string.activity_entry_linked_plan_change)).assertIsDisplayed()
+        scrollTo(string(R.string.action_remove)).assertIsDisplayed()
+        scrollTo(string(R.string.action_edit)).performClick()
+        composeRule.onNodeWithText(string(R.string.activity_entry_save_as_plan)).assertDoesNotExist()
+        org.junit.Assert.assertEquals("plan-1", edited)
     }
 
     private fun scrollTo(text: String) = composeRule.onNodeWithText(text).performScrollTo()

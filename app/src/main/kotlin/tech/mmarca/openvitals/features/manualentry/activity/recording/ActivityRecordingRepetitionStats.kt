@@ -89,10 +89,36 @@ internal fun RepetitionRecordingStats(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        RepetitionCountAdjustRow(
+            state = state,
+            countLabel = countLabel,
+            unitFormatter = unitFormatter,
+            onAdjustRepetitionCount = onAdjustRepetitionCount,
+        )
+        RepetitionRecordingTotals(state = state, totalTime = totalTime, movingTime = movingTime)
+
+        if (state.bleDeviceStatuses.isNotEmpty()) {
+            ActivityRecordingLiveSensorStats(
+                state = state,
+                unitFormatter = unitFormatter,
+            )
+        }
+    }
+}
+
+/** The big live count with its ± corrections; the rest countdown too, outside a plan run. */
+@Composable
+internal fun RepetitionCountAdjustRow(
+    state: ActivityRecordingState,
+    countLabel: String,
+    unitFormatter: UnitFormatter,
+    onAdjustRepetitionCount: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
         OpenVitalsSurface(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
         ) {
             Column(
@@ -121,7 +147,7 @@ internal fun RepetitionRecordingStats(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Remove,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_remove_one_repetition),
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -132,7 +158,7 @@ internal fun RepetitionRecordingStats(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Add,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_add_one_repetition),
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -142,7 +168,7 @@ internal fun RepetitionRecordingStats(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (state.status == ActivityRecordingStatus.RESTING) {
+                if (state.status == ActivityRecordingStatus.RESTING && !state.isPlanRun) {
                     Text(
                         text = stringResource(
                             R.string.activity_entry_recording_rest_remaining,
@@ -154,9 +180,17 @@ internal fun RepetitionRecordingStats(
                 }
             }
         }
+}
 
+@Composable
+internal fun RepetitionRecordingTotals(
+    state: ActivityRecordingState,
+    totalTime: Duration,
+    movingTime: Duration,
+    modifier: Modifier = Modifier,
+) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             RecordingStat(
@@ -175,14 +209,6 @@ internal fun RepetitionRecordingStats(
                 modifier = Modifier.weight(1f),
             )
         }
-
-        if (state.bleDeviceStatuses.isNotEmpty()) {
-            ActivityRecordingLiveSensorStats(
-                state = state,
-                unitFormatter = unitFormatter,
-            )
-        }
-    }
 }
 
 @Composable

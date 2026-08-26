@@ -11,10 +11,11 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import android.content.Context
 import android.location.Location
+import dagger.hilt.android.qualifiers.ApplicationContext
 import android.net.Uri
 import androidx.health.connect.client.records.ExerciseSegment
-import androidx.health.connect.client.records.PlannedExerciseStep
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,6 +25,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import tech.mmarca.openvitals.features.workoutplans.toCopyForDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlin.math.ceil
@@ -48,17 +51,23 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
-import tech.mmarca.openvitals.domain.model.PlannedExerciseBlockData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
-import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
-import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_ID_ARG
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_MODE_ARG
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_PLAN_ID_ARG
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_TYPE_ARG
 import tech.mmarca.openvitals.navigation.Screen
+import tech.mmarca.openvitals.core.presentation.isPermissionFailure
+import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
+import tech.mmarca.openvitals.features.workoutplans.WorkoutPlanGoalType
+import tech.mmarca.openvitals.features.workoutplans.WorkoutPlanStepChoice
+import tech.mmarca.openvitals.features.workoutplans.planRequestFromRows
+import tech.mmarca.openvitals.features.workoutplans.toPlannedBlocks
+import tech.mmarca.openvitals.features.workoutplans.toRepetitionSetInput
+import tech.mmarca.openvitals.features.workoutplans.toRepetitionSetInputs
+import tech.mmarca.openvitals.features.workoutplans.toPlanRunSteps
 
 @HiltViewModel
 class ActivityEntryViewModel(
@@ -75,6 +84,7 @@ class ActivityEntryViewModel(
     private val launchMode: String? = null,
     private val launchPlanId: String? = null,
     private val launchActivityTypeId: String? = null,
+    private val appContext: Context? = null,
 ) : ViewModel() {
 
     @Inject
@@ -88,6 +98,7 @@ class ActivityEntryViewModel(
         markerRepository: ActivityMarkerRepository,
         coMapsNavigationRepository: CoMapsNavigationRepository,
         savedStateHandle: SavedStateHandle,
+        @ApplicationContext context: Context,
     ) : this(
         repository = repository,
         heartRepository = heartRepository,
@@ -102,6 +113,7 @@ class ActivityEntryViewModel(
         launchMode = savedStateHandle[ACTIVITY_ENTRY_MODE_ARG],
         launchPlanId = savedStateHandle[ACTIVITY_ENTRY_PLAN_ID_ARG],
         launchActivityTypeId = savedStateHandle[ACTIVITY_ENTRY_TYPE_ARG],
+        appContext = context.applicationContext,
     )
 
     private var editEntryLoaded = false
@@ -163,77 +175,285 @@ class ActivityEntryViewModel(
             ?.let { type -> _uiState.value = _uiState.value.copy(selectedActivityType = type) }
 
         when {
+            launchPlanId != null && launchMode == Screen.ActivityEntryMode.RECORD -> prepareGuidedPlan(launchPlanId)
             launchPlanId != null -> startWithPlan(launchPlanId)
             launchMode == Screen.ActivityEntryMode.RECORD -> prepareGpsRecording()
             launchMode == Screen.ActivityEntryMode.MANUAL -> startManualEntry()
-            launchMode == Screen.ActivityEntryMode.PLAN -> startFromExistingPlan()
+            // The bare route and the legacy PLAN intent both land on the start hub;
+            // the state is already fresh, so only the plan list needs loading.
+            else -> loadHubPlans()
         }
     }
 
     /**
-     * Loads the existing planned workouts and, if the requested plan is present, applies it
-     * immediately so the user lands on the prefilled entry form. Falls back to the activity
-     * picker when the plan can no longer be found.
+     * Opens the requested plan straight into the prefilled entry form. A plan
+     * that no longer exists falls back to the hub, which says so.
      */
     fun startWithPlan(planId: String) {
         recordingDraftStore?.clear()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                mode = ActivityEntryMode.PLAN_ACTIVITY_PICKER,
-                plannedWorkouts = emptyList(),
-                selectedPlannedWorkoutId = null,
-                selectedPlannedWorkoutActivityTypeId = null,
-                isLoadingPlannedWorkouts = true,
+                mode = ActivityEntryMode.START_HUB,
+                isLoadingHubPlans = true,
                 isRecordingDraft = false,
                 entryError = null,
                 detailError = null,
                 validationErrors = emptySet(),
             )
-            runCatching {
-                repository.loadExistingPlannedWorkouts(LocalDate.now(clock))
-            }.onSuccess { plans ->
-                _uiState.value = _uiState.value.copy(
-                    plannedWorkouts = plans,
-                    isLoadingPlannedWorkouts = false,
-                )
-                if (plans.any { it.id == planId }) {
-                    applyPlannedWorkout(planId)
-                } else {
-                    autoAdvancePlanSelection(plans)
-                }
-            }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    plannedWorkouts = emptyList(),
-                    isLoadingPlannedWorkouts = false,
-                    writePermissions = repository.plannedWorkoutWritePermissions(),
-                    canWrite = false,
-                    entryError = if (error is SecurityException) {
-                        ActivityEntryError.MISSING_WRITE_PERMISSION
+            runCatching { repository.loadPlannedWorkout(planId) }
+                .onSuccess { plan ->
+                    if (plan != null) {
+                        applyPlannedWorkout(plan)
                     } else {
-                        ActivityEntryError.WRITE_FAILED
-                    },
-                    detailError = error.toScreenError(),
-                )
-            }
+                        _uiState.value = _uiState.value.copy(
+                            isLoadingHubPlans = false,
+                            entryError = ActivityEntryError.PLAN_NOT_FOUND,
+                        )
+                        loadHubPlans()
+                    }
+                }
+                .onFailure { error ->
+                    showStartHub()
+                    _uiState.value = _uiState.value.copy(hubPlansError = error.toScreenError())
+                }
+        }
+    }
+
+    /** The start hub: today's and upcoming plans, then record / log manually. */
+    fun showStartHub() {
+        if (_uiState.value.isEditMode) return
+        recordingDraftStore?.clear()
+        activityRecorder?.stopBlePreview()
+        activityRecorder?.clearPreparedRecording()
+        _uiState.value = initialActivityEntryState(clock, repository, preferredActivityType()).copy(
+            mode = ActivityEntryMode.START_HUB,
+            canWrite = _uiState.value.canWrite,
+            isCheckingPermission = _uiState.value.isCheckingPermission,
+            hubPlans = _uiState.value.hubPlans,
+            hubPlansAvailable = _uiState.value.hubPlansAvailable,
+            editRecordId = editActivityId,
+        )
+        refreshPermission()
+        loadHubPlans()
+    }
+
+    fun loadHubPlans() {
+        val available = repository.plannedWorkoutWritePermissions().isNotEmpty()
+        if (!available) {
+            _uiState.value = _uiState.value.copy(hubPlansAvailable = false, hubPlans = emptyList(), isLoadingHubPlans = false)
+            return
+        }
+        val today = LocalDate.now(clock)
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingHubPlans = true, hubPlansError = null, hubPlansAvailable = true)
+            runCatching { repository.loadExistingPlannedWorkouts(today) }
+                .onSuccess { plans ->
+                    // Recently done plans are the ones worth repeating; a missing
+                    // permission here costs the Repeat row, never the hub.
+                    val recent = runCatching {
+                        repository.loadPlannedWorkouts(today.minusDays(RecentPlanLookbackDays), today)
+                    }.getOrDefault(emptyList())
+                        .filter { it.completedExerciseSessionId != null }
+                        .sortedByDescending { it.startTime }
+                        .distinctBy { it.title ?: it.id }
+                        .take(MaxRecentPlans)
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingHubPlans = false,
+                        hubPlans = plans
+                            .filter { !it.startTime.atZone(it.startZoneOffset ?: clock.zone).toLocalDate().isBefore(today) }
+                            .sortedBy { it.startTime },
+                        recentPlans = recent,
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingHubPlans = false,
+                        hubPlans = emptyList(),
+                        hubPlansError = error.toScreenError(),
+                    )
+                }
         }
     }
 
     /**
-     * Skips picker steps that offer no real choice: a single plan is applied outright, and a
-     * single activity type advances straight to its plan list. Multiple genuine choices keep the
-     * picker visible.
+     * A hub row's Start: show the recording setup for this plan. A plan the
+     * recorder cannot walk through (a running plan, say) falls back to the
+     * prefilled form, which is what Log would have done.
      */
-    private fun autoAdvancePlanSelection(plans: List<PlannedExerciseData>) {
-        val selectable = plans.filter { it.completedExerciseSessionId == null }
-        if (selectable.isEmpty()) return
-        if (selectable.size == 1) {
-            applyPlannedWorkout(selectable.first().id)
+    fun prepareGuidedPlan(planId: String) {
+        val cached = _uiState.value.hubPlans.firstOrNull { it.id == planId }
+        if (cached != null) {
+            showGuidedPlanSetup(cached)
             return
         }
-        val typeIds = selectable.mapNotNull { it.toActivityEntryType()?.id }.distinct()
-        if (typeIds.size == 1) {
-            selectPlannedWorkoutActivity(typeIds.first())
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingHubPlans = true, entryError = null, detailError = null)
+            runCatching { repository.loadPlannedWorkout(planId) }
+                .onSuccess { plan ->
+                    if (plan != null) {
+                        showGuidedPlanSetup(plan)
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            mode = ActivityEntryMode.START_HUB,
+                            isLoadingHubPlans = false,
+                            entryError = ActivityEntryError.PLAN_NOT_FOUND,
+                        )
+                        loadHubPlans()
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(isLoadingHubPlans = false, hubPlansError = error.toScreenError())
+                }
         }
+    }
+
+    private fun showGuidedPlanSetup(plan: PlannedExerciseData) {
+        val activityType = plan.toActivityEntryType()
+        val steps = plan.toPlanRunSteps()
+        if (activityType == null || !activityType.isRepetitionLike || steps.isEmpty()) {
+            recordingDraftStore?.clear()
+            applyPlannedWorkout(plan)
+            return
+        }
+        recordingDraftStore?.clear()
+        _uiState.value = _uiState.value.copy(
+            mode = ActivityEntryMode.RECORDING,
+            guidedPlan = ActivityGuidedPlan(plan, activityType, steps),
+            selectedActivityType = activityType,
+            linkedPlan = ActivityLinkedPlan(plan.id, plan.title),
+            titleText = plan.title.orEmpty(),
+            notesText = plan.notes.orEmpty(),
+            importedRoute = null,
+            recordedPauseIntervals = emptyList(),
+            recordedLaps = emptyList(),
+            recordedMarkers = emptyList(),
+            isRecordingDraft = false,
+            isLoadingHubPlans = false,
+            distanceText = "",
+            elevationText = "",
+            entryError = null,
+            detailError = null,
+            validationErrors = emptySet(),
+        )
+        refreshPermission()
+        activityRecorder?.clearPreparedRecording()
+        activityRecorder?.previewBleConnections()
+    }
+
+    /** Setup's Start for a guided plan. */
+    fun startPlanRecording() {
+        val guided = _uiState.value.guidedPlan ?: return
+        val recorder = activityRecorder
+        if (recorder == null) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.RECORDING_FAILED,
+                detailError = ScreenError.Message("Recording is not available."),
+                validationErrors = emptySet(),
+            )
+            return
+        }
+        recordingDraftStore?.clear()
+        val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
+        _uiState.value = _uiState.value.copy(
+            mode = ActivityEntryMode.RECORDING,
+            selectedActivityType = guided.activityType,
+            startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(now),
+            startTimeText = TimeFormatter.format(now.toLocalTime()),
+            durationMinutesText = "1",
+            recordedRecoveryStartTime = null,
+            entryError = null,
+            detailError = null,
+            validationErrors = emptySet(),
+        )
+        if (!recorder.startPlanRecording(guided.plan, guided.activityType)) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.RECORDING_FAILED,
+                detailError = recorder.state.value.errorMessage?.let(ScreenError::Message),
+                validationErrors = emptySet(),
+            )
+        }
+    }
+
+    fun completePlanStep() {
+        activityRecorder?.completeCurrentPlanStep()
+    }
+
+    fun skipPlanStep() {
+        activityRecorder?.skipPlanStep()
+    }
+
+    fun undoPlanStep() {
+        activityRecorder?.undoPlanStep()
+    }
+
+    /** A Repeat row: today's copy of a plan done before, straight into the guided setup. */
+    fun repeatPlan(planId: String) {
+        val plan = _uiState.value.recentPlans.firstOrNull { it.id == planId } ?: return
+        val today = LocalDate.now(clock)
+        val now = LocalTime.now(clock).withSecond(0).withNano(0)
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingHubPlans = true, entryError = null, detailError = null)
+            runCatching { repository.writePlannedWorkout(plan.toCopyForDate(today, clock.zone, startTimeOfDay = now)) }
+                .onSuccess { newId -> prepareGuidedPlan(newId) }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingHubPlans = false,
+                        writePermissions = repository.plannedWorkoutWritePermissions(),
+                        canWrite = false,
+                        entryError = if (error.isPermissionFailure()) {
+                            ActivityEntryError.MISSING_WRITE_PERMISSION
+                        } else {
+                            ActivityEntryError.WRITE_FAILED
+                        },
+                        detailError = error.toScreenError(),
+                    )
+                }
+        }
+    }
+
+    /** A hub row: log the session from that plan. */
+    fun logFromPlan(planId: String) {
+        val plan = _uiState.value.hubPlans.firstOrNull { it.id == planId } ?: return
+        recordingDraftStore?.clear()
+        applyPlannedWorkout(plan)
+    }
+
+    /** After the builder saved the linked plan (under a new id): pick the edited version up again. */
+    fun reapplyPlan(planId: String) {
+        viewModelScope.launch {
+            runCatching { repository.loadPlannedWorkout(planId) }
+                .onSuccess { plan -> if (plan != null) applyPlannedWorkout(plan) }
+                .onFailure { error -> _uiState.value = _uiState.value.copy(detailError = error.toScreenError()) }
+        }
+    }
+
+    fun clearLinkedPlan() {
+        _uiState.value = _uiState.value.copy(linkedPlan = null)
+    }
+
+    private fun applyPlannedWorkout(plan: PlannedExerciseData) {
+        val activityType = plan.toActivityEntryType() ?: _uiState.value.selectedActivityType
+        val sets = plan.toRepetitionSetInputs(activityType.segmentType)
+        val selectedAt = LocalDateTime.now(clock).withSecond(0).withNano(0)
+        _uiState.value = _uiState.value.copy(
+            mode = ActivityEntryMode.MANUAL,
+            selectedActivityType = activityType,
+            linkedPlan = ActivityLinkedPlan(plan.id, plan.title),
+            titleText = plan.title.orEmpty(),
+            notesText = plan.notes.orEmpty(),
+            startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(selectedAt),
+            startTimeText = TimeFormatter.format(selectedAt.toLocalTime()),
+            durationMinutesText = plan.durationMinutesText(),
+            repetitionMode = ActivityRepetitionEntryMode.SETS,
+            repetitionTotalText = "",
+            repetitionSets = sets.ifEmpty { listOf(ActivityRepetitionSetInput()) },
+            isLoadingHubPlans = false,
+            isRecordingDraft = false,
+            entryError = null,
+            detailError = null,
+            validationErrors = emptySet(),
+        )
+        refreshPermission()
     }
 
     private fun initialState(recordingDraft: ActivityEntryUiState?): ActivityEntryUiState {
@@ -253,7 +473,7 @@ class ActivityEntryViewModel(
         }
 
         return initialActivityEntryState(clock, repository, preferredActivityType()).copy(
-            mode = if (editActivityId == null) ActivityEntryMode.CHOOSE_SOURCE else ActivityEntryMode.MANUAL,
+            mode = if (editActivityId == null) ActivityEntryMode.START_HUB else ActivityEntryMode.MANUAL,
             editRecordId = editActivityId,
         )
     }
@@ -297,9 +517,8 @@ class ActivityEntryViewModel(
         }
         _uiState.value = currentState.copy(
             selectedActivityType = type,
-            plannedWorkouts = emptyList(),
-            selectedPlannedWorkoutId = null,
-            selectedPlannedWorkoutActivityTypeId = null,
+            // A mixed-exercise type has no single "total": its rows each name an exercise.
+            repetitionMode = if (type.supportsMixedExercises) ActivityRepetitionEntryMode.SETS else currentState.repetitionMode,
             distanceText = currentState.distanceText.takeIf { type.supportsDistance }.orEmpty(),
             elevationText = currentState.elevationText.takeIf { type.supportsElevation }.orEmpty(),
             importedRoute = retainedRoute,
@@ -316,15 +535,13 @@ class ActivityEntryViewModel(
             validationErrors = emptySet(),
         )
         refreshPermission()
-        refreshPlannedWorkouts()
     }
 
     fun startManualEntry() {
         recordingDraftStore?.clear()
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
-            selectedPlannedWorkoutId = null,
-            selectedPlannedWorkoutActivityTypeId = null,
+            linkedPlan = null,
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
             recordedLaps = emptyList(),
@@ -335,80 +552,10 @@ class ActivityEntryViewModel(
             validationErrors = emptySet(),
         )
         refreshPermission()
-        refreshPlannedWorkouts()
     }
 
-    fun startFromExistingPlan() {
-        recordingDraftStore?.clear()
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                mode = ActivityEntryMode.PLAN_ACTIVITY_PICKER,
-                plannedWorkouts = emptyList(),
-                selectedPlannedWorkoutId = null,
-                selectedPlannedWorkoutActivityTypeId = null,
-                isLoadingPlannedWorkouts = true,
-                isRecordingDraft = false,
-                entryError = null,
-                detailError = null,
-                validationErrors = emptySet(),
-            )
-            runCatching {
-                repository.loadExistingPlannedWorkouts(LocalDate.now(clock))
-            }.onSuccess { plans ->
-                _uiState.value = _uiState.value.copy(
-                    plannedWorkouts = plans,
-                    isLoadingPlannedWorkouts = false,
-                )
-                autoAdvancePlanSelection(plans)
-            }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    plannedWorkouts = emptyList(),
-                    isLoadingPlannedWorkouts = false,
-                    writePermissions = repository.plannedWorkoutWritePermissions(),
-                    canWrite = false,
-                    entryError = if (error is SecurityException) {
-                        ActivityEntryError.MISSING_WRITE_PERMISSION
-                    } else {
-                        ActivityEntryError.WRITE_FAILED
-                    },
-                    detailError = error.toScreenError(),
-                )
-            }
-        }
-    }
-
-    fun selectPlannedWorkoutActivity(typeId: String) {
-        _uiState.value = _uiState.value.copy(
-            mode = ActivityEntryMode.PLAN_PICKER,
-            selectedPlannedWorkoutActivityTypeId = typeId,
-            selectedPlannedWorkoutId = null,
-            entryError = null,
-            detailError = null,
-        )
-    }
-
-    fun choosePlannedWorkoutActivity() {
-        _uiState.value = _uiState.value.copy(
-            mode = ActivityEntryMode.PLAN_ACTIVITY_PICKER,
-            selectedPlannedWorkoutActivityTypeId = null,
-            selectedPlannedWorkoutId = null,
-            entryError = null,
-            detailError = null,
-        )
-    }
-
-    fun chooseSource() {
-        if (_uiState.value.isEditMode) return
-        recordingDraftStore?.clear()
-        activityRecorder?.stopBlePreview()
-        activityRecorder?.clearPreparedRecording()
-        _uiState.value = initialActivityEntryState(clock, repository, preferredActivityType()).copy(
-            canWrite = _uiState.value.canWrite,
-            isCheckingPermission = _uiState.value.isCheckingPermission,
-            editRecordId = editActivityId,
-        )
-        refreshPermission()
-    }
+    /** Kept for the recording screens' "choose another method" affordance. */
+    fun chooseSource() = showStartHub()
 
     fun updateTitle(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.TITLE)) {
@@ -426,9 +573,8 @@ class ActivityEntryViewModel(
 
     fun updateStartDate(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.START_DATE, ActivityEntryField.START_TIME)) {
-            copy(startDateText = text, selectedPlannedWorkoutId = null, entryError = null, detailError = null)
+            copy(startDateText = text, entryError = null, detailError = null)
         }
-        refreshPlannedWorkouts()
     }
 
     fun updateStartTime(text: String) {
@@ -503,11 +649,56 @@ class ActivityEntryViewModel(
         }
     }
 
+    /** "Add set": another round of whatever the last row was doing. */
     fun addRepetitionSet() {
         updateState(clearFields = setOf(ActivityEntryField.REPETITIONS)) {
+            val template = repetitionSets.lastOrNull()
             copy(
                 repetitionMode = ActivityRepetitionEntryMode.SETS,
-                repetitionSets = repetitionSets + ActivityRepetitionSetInput(),
+                repetitionSets = repetitionSets + (template?.copy() ?: ActivityRepetitionSetInput()),
+                entryError = null,
+                detailError = null,
+            )
+        }
+    }
+
+    /** "Add exercise": a new row for a picked exercise, with the picker's default goal. */
+    fun addExerciseStep(choice: WorkoutPlanStepChoice) {
+        updateState(clearFields = setOf(ActivityEntryField.REPETITIONS)) {
+            val blankOnly = repetitionSets.size == 1 && repetitionSets.single().repetitionsText.isBlank()
+            copy(
+                repetitionMode = ActivityRepetitionEntryMode.SETS,
+                repetitionSets = (if (blankOnly) emptyList() else repetitionSets) + choice.toRepetitionSetInput(),
+                entryError = null,
+                detailError = null,
+            )
+        }
+    }
+
+    fun updateRepetitionSetExercise(index: Int, choice: WorkoutPlanStepChoice) {
+        updateState(clearFields = setOf(ActivityEntryField.REPETITIONS)) {
+            copy(
+                repetitionSets = repetitionSets.mapIndexed { itemIndex, item ->
+                    if (itemIndex != index) return@mapIndexed item
+                    val goalChanges = item.repetitionsText.isBlank()
+                    item.copy(
+                        segmentType = choice.segmentType,
+                        label = choice.description,
+                        isDuration = if (goalChanges) choice.defaultGoal == WorkoutPlanGoalType.DURATION else item.isDuration,
+                    )
+                },
+                entryError = null,
+                detailError = null,
+            )
+        }
+    }
+
+    fun updateRepetitionSetGoalType(index: Int, isDuration: Boolean) {
+        updateState(clearFields = setOf(ActivityEntryField.REPETITIONS)) {
+            copy(
+                repetitionSets = repetitionSets.mapIndexed { itemIndex, item ->
+                    if (itemIndex == index) item.copy(isDuration = isDuration) else item
+                },
                 entryError = null,
                 detailError = null,
             )
@@ -563,105 +754,23 @@ class ActivityEntryViewModel(
         }
     }
 
-    fun refreshPlannedWorkouts() {
-        val snapshot = _uiState.value
-        if (!snapshot.selectedActivityType.supportsSetRepetitions) {
-            _uiState.value = snapshot.copy(
-                plannedWorkouts = emptyList(),
-                selectedPlannedWorkoutId = null,
-                isLoadingPlannedWorkouts = false,
-            )
-            return
-        }
-        val date = snapshot.startDateText.trim().let { runCatching { LocalDate.parse(it) }.getOrNull() }
-            ?: return
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingPlannedWorkouts = true)
-            runCatching {
-                repository.loadPlannedWorkoutOptions(date, snapshot.selectedActivityType.exerciseType)
-            }.onSuccess { plans ->
-                val currentSelectedId = _uiState.value.selectedPlannedWorkoutId
-                val selectedId = currentSelectedId?.takeIf { selected ->
-                    plans.isEmpty() || plans.any { it.id == selected }
-                }
-                _uiState.value = _uiState.value.copy(
-                    plannedWorkouts = plans,
-                    selectedPlannedWorkoutId = selectedId,
-                    isLoadingPlannedWorkouts = false,
-                )
-            }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    plannedWorkouts = emptyList(),
-                    selectedPlannedWorkoutId = null,
-                    isLoadingPlannedWorkouts = false,
-                    detailError = error.toScreenError(),
-                )
-            }
-        }
-    }
-
-    fun applyPlannedWorkout(planId: String) {
-        val plan = _uiState.value.plannedWorkouts.firstOrNull { it.id == planId } ?: return
-        val sets = plan.toRepetitionSetInputs()
-        if (sets.isEmpty()) return
-        val activityType = plan.toActivityEntryType() ?: _uiState.value.selectedActivityType
-        val selectedAt = LocalDateTime.now(clock).withSecond(0).withNano(0)
-        val startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(selectedAt)
-        val startTimeText = TimeFormatter.format(selectedAt.toLocalTime())
-        val durationMinutesText = plan.durationMinutesText()
-        _uiState.value = _uiState.value.copy(
-            mode = ActivityEntryMode.MANUAL,
-            selectedActivityType = activityType,
-            selectedPlannedWorkoutId = plan.id,
-            selectedPlannedWorkoutBaseline = plan.toBaseline(
-                activityType = activityType,
-                startDateText = startDateText,
-                startTimeText = startTimeText,
-                durationMinutesText = durationMinutesText,
-                sets = sets,
-            ),
-            selectedPlannedWorkoutActivityTypeId = activityType.id,
-            titleText = plan.title.orEmpty(),
-            notesText = plan.notes.orEmpty(),
-            startDateText = startDateText,
-            startTimeText = startTimeText,
-            durationMinutesText = durationMinutesText,
-            repetitionMode = ActivityRepetitionEntryMode.SETS,
-            repetitionTotalText = "",
-            repetitionSets = sets,
-            entryError = null,
-            detailError = null,
-            validationErrors = emptySet(),
-        )
-    }
-
-    fun createNewPlannedWorkout() {
+    /**
+     * Hands the current steps to the plan builder: writes a one-block plan
+     * titled like the session, links it, and asks the screen to open the
+     * builder on it. Writing first keeps the builder oblivious to where a plan
+     * came from — it only ever loads by id.
+     */
+    fun saveAsPlan(units: ActivityEntryUnits) {
         val current = _uiState.value
-        _uiState.value = current.copy(
-            selectedPlannedWorkoutId = null,
-            selectedPlannedWorkoutBaseline = null,
-            selectedPlannedWorkoutActivityTypeId = current.selectedActivityType.id,
-            titleText = "",
-            notesText = "",
-            durationMinutesText = "30",
-            repetitionMode = ActivityRepetitionEntryMode.SETS,
-            repetitionTotalText = "",
-            repetitionSets = listOf(ActivityRepetitionSetInput()),
-            entryError = null,
-            detailError = null,
-            validationErrors = emptySet(),
-        )
-    }
-
-    fun saveCurrentAsPlannedWorkout(units: ActivityEntryUnits, updateSelected: Boolean = false) {
-        val current = _uiState.value
-        val validationErrors = validatePlannedExerciseWriteRequest(current, units)
-        val request = buildPlannedExerciseWriteRequest(
-            state = current,
-            units = units,
-            updateExistingId = current.selectedPlannedWorkoutId.takeIf { updateSelected },
-        )
-        if (validationErrors.isNotEmpty() || request == null) {
+        if (current.isSavingAsPlan) return
+        val validationErrors = validateActivityEntry(current, units)
+        val range = activityEntrySessionRange(current)
+        val ownSegmentType = current.selectedActivityType.segmentType ?: ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
+        val blocks = when (current.repetitionMode) {
+            ActivityRepetitionEntryMode.TOTAL -> listOf(ActivityRepetitionSetInput(repetitionsText = current.repetitionTotalText))
+            ActivityRepetitionEntryMode.SETS -> current.repetitionSets
+        }.toPlannedBlocks(ownSegmentType)
+        if (validationErrors.isNotEmpty() || range == null || blocks == null) {
             _uiState.value = current.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
                 detailError = null,
@@ -669,37 +778,47 @@ class ActivityEntryViewModel(
             )
             return
         }
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isSavingPlannedWorkout = true,
-                entryError = null,
-                detailError = null,
-            )
-            runCatching {
-                repository.writePlannedWorkout(request)
-            }.onSuccess { savedPlanId ->
-                val savedState = _uiState.value
-                _uiState.value = savedState.copy(
-                    selectedPlannedWorkoutId = savedPlanId,
-                    selectedPlannedWorkoutBaseline = savedState.plannedWorkoutBaseline(savedPlanId),
-                    isSavingPlannedWorkout = false,
-                    detailError = null,
-                )
-                refreshPlannedWorkouts()
-            }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    isSavingPlannedWorkout = false,
-                    writePermissions = repository.plannedWorkoutWritePermissions(),
-                    canWrite = false,
-                    entryError = if (error is SecurityException) {
-                        ActivityEntryError.MISSING_WRITE_PERMISSION
-                    } else {
-                        ActivityEntryError.WRITE_FAILED
-                    },
-                    detailError = error.toScreenError(),
-                )
-            }
+        val title = current.titleText.trim().ifEmpty {
+            current.selectedActivityType.defaultTitle
+                ?: appContext?.let { exerciseTypeLabel(it, current.selectedActivityType.exerciseType) }
+                ?: ""
         }
+        val request = planRequestFromRows(
+            exerciseType = current.selectedActivityType.exerciseType,
+            title = title,
+            notes = current.activitySaveNotes(),
+            startTime = range.first,
+            endTime = range.second,
+            blocks = blocks,
+        )
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSavingAsPlan = true, entryError = null, detailError = null)
+            runCatching { repository.writePlannedWorkout(request) }
+                .onSuccess { savedPlanId ->
+                    _uiState.value = _uiState.value.copy(
+                        isSavingAsPlan = false,
+                        linkedPlan = ActivityLinkedPlan(savedPlanId, title),
+                        pendingBuilderPlanId = savedPlanId,
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isSavingAsPlan = false,
+                        writePermissions = repository.plannedWorkoutWritePermissions(),
+                        canWrite = false,
+                        entryError = if (error.isPermissionFailure()) {
+                            ActivityEntryError.MISSING_WRITE_PERMISSION
+                        } else {
+                            ActivityEntryError.WRITE_FAILED
+                        },
+                        detailError = error.toScreenError(),
+                    )
+                }
+        }
+    }
+
+    fun onBuilderNavigationHandled() {
+        _uiState.value = _uiState.value.copy(pendingBuilderPlanId = null)
     }
 
     fun clearImportedRoute() {
@@ -744,6 +863,8 @@ class ActivityEntryViewModel(
         val currentState = _uiState.value
 
         recordingDraftStore?.clear()
+        // The setup screen offers today's plan as a shortcut, so the hub list is needed here too.
+        if (currentState.hubPlans.isEmpty()) loadHubPlans()
         _uiState.value = currentState.copy(
             mode = ActivityEntryMode.RECORDING,
             selectedActivityType = preferredActivityType(requireLiveRecording = true),
@@ -977,13 +1098,13 @@ class ActivityEntryViewModel(
         activityRecorder?.discardRecording()
         activityRecorder?.stopBlePreview()
         recordingDraftStore?.clear()
-        chooseSource()
+        showStartHub()
     }
 
     fun discardRecordingDraft() {
         if (!_uiState.value.isRecordingDraft || _uiState.value.isEditMode) return
         recordingDraftStore?.clear()
-        chooseSource()
+        showStartHub()
     }
 
     fun finishGpsRecording(units: ActivityEntryUnits) {
@@ -1049,6 +1170,11 @@ class ActivityEntryViewModel(
                 }
                 val heartRateSamples = heartRepository?.loadHeartRateSamples(workout.startTime, workout.endTime)
                     .orEmpty()
+                // The link is what keeps the plan marked completed across an edit;
+                // its title is only decoration, so a failed lookup costs nothing.
+                val linkedPlan = workout.plannedExerciseSessionId?.let { planId ->
+                    ActivityLinkedPlan(planId, runCatching { repository.loadPlannedWorkout(planId) }.getOrNull()?.title)
+                }
                 val current = _uiState.value
                 _uiState.value = workout.toEditState(
                     units = units,
@@ -1057,6 +1183,7 @@ class ActivityEntryViewModel(
                     canWrite = current.canWrite,
                     isCheckingPermission = current.isCheckingPermission,
                 ).copy(
+                    linkedPlan = linkedPlan,
                     sessionHeartRateSamples = heartRateSamples,
                     recordedMarkers = markerRepository?.markersForActivity(recordId).orEmpty()
                         .ifEmpty {
@@ -1065,7 +1192,6 @@ class ActivityEntryViewModel(
                                 .orEmpty()
                         },
                 )
-                refreshPlannedWorkouts()
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     entryError = ActivityEntryError.WRITE_FAILED,
@@ -1077,7 +1203,7 @@ class ActivityEntryViewModel(
     }
 
     fun addEntry(units: ActivityEntryUnits) {
-        if (_uiState.value.mode == ActivityEntryMode.CHOOSE_SOURCE) {
+        if (_uiState.value.mode == ActivityEntryMode.START_HUB) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
                 detailError = null,
@@ -1223,13 +1349,24 @@ class ActivityEntryViewModel(
         }
         val recordedSets = snapshot.repetitionSets.map { set ->
             ActivityRepetitionSetInput(
-                repetitionsText = set.repetitions.toString(),
+                repetitionsText = if (set.isDuration) {
+                    (set.activeMillis / 1_000L).coerceAtLeast(1L).toString()
+                } else {
+                    set.repetitions.toString()
+                },
                 restMinutesText = set.restSeconds.takeIf { it > 0L }?.toString().orEmpty(),
+                segmentType = set.segmentType?.takeIf { it != selectedActivityType.segmentType },
+                label = set.label,
+                isDuration = set.isDuration,
             )
         }
+        val linkedPlan = snapshot.planId?.let { ActivityLinkedPlan(it, snapshot.planTitle) } ?: currentState.linkedPlan
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
             selectedActivityType = selectedActivityType,
+            linkedPlan = linkedPlan,
+            guidedPlan = null,
+            titleText = currentState.titleText.ifBlank { snapshot.planTitle.orEmpty() },
             importedRoute = null,
             recordedPauseIntervals = snapshot.pauseIntervals,
             recordedLaps = snapshot.manualLaps.map { it.toExerciseLapData() },
@@ -1276,6 +1413,8 @@ class ActivityEntryViewModel(
 
     private companion object {
         private const val TAG = "ActivityEntryViewModel"
+        private const val RecentPlanLookbackDays = 30L
+        private const val MaxRecentPlans = 3
     }
 
     private fun updateState(
@@ -1324,148 +1463,7 @@ private fun ActivityRecordingLap.toExerciseLapData(): ExerciseLapData =
         lengthMeters = distanceMeters,
     )
 
-internal fun buildPlannedExerciseWriteRequest(
-    state: ActivityEntryUiState,
-    units: ActivityEntryUnits,
-    updateExistingId: String? = null,
-): PlannedExerciseWriteRequest? {
-    if (!state.selectedActivityType.supportsSetRepetitions) return null
-    if (validatePlannedExerciseWriteRequest(state, units).isNotEmpty()) return null
-    val activityRequest = buildWriteRequest(state, units) ?: return null
-    val title = state.titleText.trim().takeIf { it.isNotEmpty() } ?: return null
-    val segmentType = state.selectedActivityType.segmentType ?: ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
-    val steps = when (state.repetitionMode) {
-        ActivityRepetitionEntryMode.TOTAL -> {
-            val repetitions = state.repetitionTotalText.trim().toIntOrNull()?.takeIf { it > 0 } ?: return null
-            listOf(repetitionPlanStep(segmentType, repetitions, setNumber = 1))
-        }
-        ActivityRepetitionEntryMode.SETS -> {
-            state.repetitionSets.flatMapIndexed { index, set ->
-                val repetitions = set.repetitionsText.trim().toIntOrNull()?.takeIf { it > 0 } ?: return null
-                buildList {
-                    add(repetitionPlanStep(segmentType, repetitions, setNumber = index + 1))
-                    val restSeconds = set.restMinutesText.trim().toLongOrNull()?.takeIf { it > 0L }
-                    if (restSeconds != null) {
-                        add(restPlanStep(restSeconds))
-                    }
-                }
-            }
-        }
-    }
-    if (steps.isEmpty()) return null
-    return PlannedExerciseWriteRequest(
-        id = updateExistingId,
-        exerciseType = activityRequest.exerciseType,
-        startTime = activityRequest.startTime,
-        endTime = activityRequest.endTime,
-        title = title,
-        notes = activityRequest.notes,
-        blocks = listOf(
-            PlannedExerciseBlockData(
-                repetitions = 1,
-                description = title,
-                steps = steps,
-            )
-        ),
-    )
-}
-
-internal fun validatePlannedExerciseWriteRequest(
-    state: ActivityEntryUiState,
-    units: ActivityEntryUnits,
-): Set<ActivityEntryValidationError> =
-    buildSet {
-        addAll(validateActivityEntry(state, units))
-        if (state.titleText.isBlank()) {
-            add(ActivityEntryValidationError.TRAINING_PLAN_TITLE_REQUIRED)
-        }
-    }
-
-private fun repetitionPlanStep(segmentType: Int, repetitions: Int, setNumber: Int): PlannedExerciseStepData =
-    PlannedExerciseStepData(
-        exerciseType = segmentType,
-        exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
-        description = "Set $setNumber",
-        completion = PlannedExerciseCompletion.Repetitions(repetitions),
-    )
-
-private fun restPlanStep(seconds: Long): PlannedExerciseStepData =
-    PlannedExerciseStepData(
-        exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
-        exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_REST,
-        description = "Rest",
-        completion = PlannedExerciseCompletion.DurationSeconds(seconds),
-    )
-
-internal fun PlannedExerciseData.toRepetitionSetInputs(): List<ActivityRepetitionSetInput> {
-    val sets = mutableListOf<ActivityRepetitionSetInput>()
-    blocks.forEach { block ->
-        repeat(block.repetitions.coerceAtLeast(1)) {
-            block.steps.forEach { step ->
-                when (val completion = step.completion) {
-                    is PlannedExerciseCompletion.Repetitions -> {
-                        sets += ActivityRepetitionSetInput(
-                            repetitionsText = completion.repetitions.toString(),
-                        )
-                    }
-                    is PlannedExerciseCompletion.DurationSeconds -> {
-                        val last = sets.lastOrNull() ?: return@forEach
-                        sets[sets.lastIndex] = last.copy(restMinutesText = completion.seconds.toString())
-                    }
-                    PlannedExerciseCompletion.Manual,
-                    PlannedExerciseCompletion.Unknown -> Unit
-                }
-            }
-        }
-    }
-    return sets
-}
-
-internal fun PlannedExerciseData.toActivityEntryType(): ActivityEntryType? {
-    val activeSegmentType = blocks
-        .asSequence()
-        .flatMap { it.steps.asSequence() }
-        .firstOrNull { step ->
-            step.exercisePhase == PlannedExerciseStep.EXERCISE_PHASE_ACTIVE &&
-                step.completion is PlannedExerciseCompletion.Repetitions
-        }
-        ?.exerciseType
-
-    return DefaultActivityEntryTypes.firstOrNull { type ->
-        type.exerciseType == exerciseType && type.segmentType != null && type.segmentType == activeSegmentType
-    } ?: DefaultActivityEntryTypes.firstOrNull { type ->
-        type.exerciseType == exerciseType && type.supportsSetRepetitions
-    } ?: DefaultActivityEntryTypes.firstOrNull { type ->
-        type.exerciseType == exerciseType
-    }
-}
-
 private fun PlannedExerciseData.durationMinutesText(): String {
     val minutes = Duration.ofMillis(durationMs).toMinutes().coerceAtLeast(1L)
     return minutes.coerceIn(1, MaxActivityDurationMinutes).toString()
 }
-
-private fun PlannedExerciseData.toBaseline(
-    activityType: ActivityEntryType,
-    startDateText: String,
-    startTimeText: String,
-    durationMinutesText: String,
-    sets: List<ActivityRepetitionSetInput>,
-): ActivityPlannedWorkoutBaseline =
-    ActivityPlannedWorkoutBaseline(
-        planId = id,
-        activityTypeId = activityType.id,
-        titleText = title.orEmpty().trim(),
-        notesText = notes.orEmpty(),
-        startDateText = startDateText,
-        startTimeText = startTimeText,
-        durationMinutesText = durationMinutesText,
-        repetitionMode = ActivityRepetitionEntryMode.SETS,
-        repetitionTotalText = "",
-        repetitionSets = sets.map { set ->
-            set.copy(
-                repetitionsText = set.repetitionsText.trim(),
-                restMinutesText = set.restMinutesText.trim(),
-            )
-        },
-    )

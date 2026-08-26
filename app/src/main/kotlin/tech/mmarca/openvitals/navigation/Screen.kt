@@ -36,6 +36,9 @@ fun SavedStateHandle.selectedDayOrNull(): LocalDate? =
 const val ACTIVITY_ENTRY_ID_ARG = "activityEntryId"
 const val ACTIVITY_ENTRY_MODE_ARG = "mode"
 const val ACTIVITY_ENTRY_PLAN_ID_ARG = "planId"
+const val WORKOUT_PLAN_ID_ARG = "workoutPlanId"
+/** SavedStateHandle key the builder sets on the previous entry when it saved a plan. */
+const val WORKOUT_PLAN_SAVED_RESULT = "workoutPlanSavedId"
 const val ACTIVITY_ENTRY_TYPE_ARG = "activityTypeId"
 const val SLEEP_DETAIL_ID_ARG = "sleepId"
 const val METRIC_ID_ARG = "metricId"
@@ -123,6 +126,16 @@ sealed class Screen(val route: String) {
         const val RECORD = "record"
         const val MANUAL = "manual"
         const val PLAN = "plan"
+    }
+    data object WorkoutPlans : Screen("workout_plans")
+    data object WorkoutPlanBuilder : Screen("workout_plans/edit?$WORKOUT_PLAN_ID_ARG={$WORKOUT_PLAN_ID_ARG}") {
+        /** No id opens the builder on a fresh plan; an id loads that plan for editing. */
+        fun createRoute(planId: String? = null): String =
+            if (planId == null) {
+                "workout_plans/edit"
+            } else {
+                "workout_plans/edit?$WORKOUT_PLAN_ID_ARG=${Uri.encode(planId)}"
+            }
     }
     data object ActivityEntryEdit : Screen("manual_entry/activity/edit/{$ACTIVITY_ENTRY_ID_ARG}") {
         fun createRoute(entryId: String): String = "manual_entry/activity/edit/${Uri.encode(entryId)}"

@@ -191,5 +191,6 @@ private fun contextualPermissionCopy(feature: HealthConnectFeature): Pair<Int, I
     HealthConnectFeature.DATA_IMPORT,
     HealthConnectFeature.CSV_IMPORT,
     HealthConnectFeature.HEALTH_REPORT,
+    HealthConnectFeature.WORKOUT_PLANS,
     -> R.string.message_missing_permissions_title to R.string.message_missing_permissions_body
 }

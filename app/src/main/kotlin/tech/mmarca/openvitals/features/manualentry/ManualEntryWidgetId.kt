@@ -25,12 +25,14 @@ enum class ManualEntryWidgetId {
     BODY_TEMPERATURE,
     HRV,
     CYCLE,
+    WORKOUT_PLANS,
 }
 
 val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
     ManualEntryWidgetId.HYDRATION,
     ManualEntryWidgetId.CARBS,
     ManualEntryWidgetId.ACTIVITY,
+    ManualEntryWidgetId.WORKOUT_PLANS,
     ManualEntryWidgetId.MINDFULNESS,
     ManualEntryWidgetId.WEIGHT,
     ManualEntryWidgetId.HEIGHT,

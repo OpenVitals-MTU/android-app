@@ -19,6 +19,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 
@@ -26,6 +27,11 @@ import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 fun ActivityEntryScreen(
     viewModel: ActivityEntryViewModel,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider = DateTimeFormatterProvider(),
+    savedWorkoutPlanId: String? = null,
+    onSavedWorkoutPlanHandled: () -> Unit = {},
+    onOpenWorkoutPlans: () -> Unit = {},
+    onOpenWorkoutPlanBuilder: (String) -> Unit = {},
     pendingRouteImportUri: Uri? = null,
     pendingRouteImportRequestId: Long? = null,
     onPendingRouteImportHandled: (Long) -> Unit = {},
@@ -50,9 +56,11 @@ fun ActivityEntryScreen(
     }
     fun performSourceAction(action: ActivityEntrySourceAction) {
         when (action) {
-            ActivityEntrySourceAction.MANUAL -> viewModel.startManualEntry()
-            ActivityEntrySourceAction.EXISTING_PLAN -> viewModel.startFromExistingPlan()
-            ActivityEntrySourceAction.RECORD_GPS -> viewModel.prepareGpsRecording()
+            ActivityEntrySourceAction.Manual -> viewModel.startManualEntry()
+            ActivityEntrySourceAction.Record -> viewModel.prepareGpsRecording()
+            is ActivityEntrySourceAction.LogFromPlan -> viewModel.logFromPlan(action.planId)
+            is ActivityEntrySourceAction.StartPlan -> viewModel.prepareGuidedPlan(action.planId)
+            is ActivityEntrySourceAction.RepeatPlan -> viewModel.repeatPlan(action.planId)
         }
     }
     val requestRecordingSourcePermissions = rememberLauncherForActivityResult(
@@ -64,7 +72,7 @@ fun ActivityEntryScreen(
         pendingSourceAction = null
         if (hasNotificationPermission && action != null) {
             performSourceAction(action)
-        } else if (action == ActivityEntrySourceAction.RECORD_GPS) {
+        } else if (action?.needsRecordingPermissions == true) {
             viewModel.reportNotificationPermissionNeeded()
         }
     }
@@ -85,7 +93,7 @@ fun ActivityEntryScreen(
         }
     }
     fun continueSourceActionAfterWritePermission(action: ActivityEntrySourceAction) {
-        if (action == ActivityEntrySourceAction.RECORD_GPS && needsActivityRecordingRuntimePermission(context)) {
+        if (action.needsRecordingPermissions && needsActivityRecordingRuntimePermission(context)) {
             pendingSourceAction = action
             requestRecordingSourcePermissions.launch(activityRecordingRuntimePermissions())
         } else {
@@ -131,6 +139,18 @@ fun ActivityEntryScreen(
             onEntrySaved()
         }
     }
+    LaunchedEffect(state.pendingBuilderPlanId) {
+        val planId = state.pendingBuilderPlanId ?: return@LaunchedEffect
+        viewModel.onBuilderNavigationHandled()
+        onOpenWorkoutPlanBuilder(planId)
+    }
+    // The builder saves by delete-then-insert, so the plan comes back under a
+    // new id; re-prefilling from it keeps the session linked to a live record.
+    LaunchedEffect(savedWorkoutPlanId) {
+        val planId = savedWorkoutPlanId ?: return@LaunchedEffect
+        onSavedWorkoutPlanHandled()
+        viewModel.reapplyPlan(planId)
+    }
 
     val isRecordingDashboardVisible =
         state.mode == ActivityEntryMode.RECORDING &&
@@ -171,6 +191,7 @@ fun ActivityEntryScreen(
             state = state,
             recordingState = recordingState,
             unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
             onPerformSourceActionAfterPermission = ::performSourceActionAfterPermission,
             onRequestGpsLocationPermissions = {
                 requestGpsLocationPermissions.launch(activityRecordingLocationPermissions())
@@ -181,7 +202,22 @@ fun ActivityEntryScreen(
             onRequestWritePermissions = {
                 requestWritePermissions.launch(state.writePermissions)
             },
+            onOpenWorkoutPlans = onOpenWorkoutPlans,
+            onOpenWorkoutPlanBuilder = onOpenWorkoutPlanBuilder,
             viewModel = viewModel,
         )
     }
+}
+
+/** What the start hub asked for; each goes through the write-permission gate first. */
+sealed interface ActivityEntrySourceAction {
+    data object Manual : ActivityEntrySourceAction
+    data object Record : ActivityEntrySourceAction
+    data class LogFromPlan(val planId: String) : ActivityEntrySourceAction
+    data class StartPlan(val planId: String) : ActivityEntrySourceAction
+    data class RepeatPlan(val planId: String) : ActivityEntrySourceAction
+
+    /** Recording (plain or guided) runs a foreground service, so it needs the notification permission. */
+    val needsRecordingPermissions: Boolean
+        get() = this is Record || this is StartPlan || this is RepeatPlan
 }

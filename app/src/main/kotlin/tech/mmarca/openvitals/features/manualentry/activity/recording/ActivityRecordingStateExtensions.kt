@@ -44,6 +44,31 @@ fun ActivityRecordingState.restRemainingDuration(now: Instant = Instant.now()): 
     return Duration.ofMillis(Duration.between(now, restEnd).toMillis().coerceAtLeast(0L))
 }
 
+/** Whether this recording walks through a plan. */
+val ActivityRecordingState.isPlanRun: Boolean
+    get() = planSteps.isNotEmpty()
+
+val ActivityRecordingState.currentPlanStep: ActivityPlanRunStep?
+    get() = planSteps.getOrNull(planStepIndex)
+
+val ActivityRecordingState.nextPlanStep: ActivityPlanRunStep?
+    get() = planSteps.getOrNull(planStepIndex + 1)
+
+val ActivityRecordingState.isPlanComplete: Boolean
+    get() = isPlanRun && planStepIndex >= planSteps.size
+
+/** When a timed step ends, or null when the step in progress is not timed. */
+internal fun ActivityRecordingState.planStepEndTime(): Instant? {
+    val step = currentPlanStep ?: return null
+    if (status != ActivityRecordingStatus.RECORDING || step.goalKind != ActivityPlanGoalKind.SECONDS) return null
+    return currentSetStartedAt?.plusSeconds(step.goalValue)
+}
+
+fun ActivityRecordingState.planStepRemaining(now: Instant = Instant.now()): Duration? {
+    val end = planStepEndTime() ?: return null
+    return Duration.ofMillis(Duration.between(now, end).toMillis().coerceAtLeast(0L))
+}
+
 internal fun ActivityRecordingState.restEndTime(): Instant? =
     restStartedAt
         ?.takeIf { status == ActivityRecordingStatus.RESTING && repetitionRestSeconds > 0L }
@@ -61,14 +86,20 @@ internal fun ActivityRecordingState.recordedRepetitionSets(end: Instant): List<A
     } else {
         repetitionSets
     }
-    if (status != ActivityRecordingStatus.RECORDING || currentSetRepetitionCount <= 0L) return sets
+    if (status != ActivityRecordingStatus.RECORDING) return sets
+    val step = currentPlanStep
+    val openTimedStep = step?.goalKind == ActivityPlanGoalKind.SECONDS
+    if (currentSetRepetitionCount <= 0L && !openTimedStep) return sets
     val activeMillis = Duration.between(currentSetStartedAt ?: startTime ?: end, end)
         .toMillis()
         .coerceAtLeast(1L)
     return sets + ActivityRecordedRepetitionSet(
-        repetitions = currentSetRepetitionCount,
+        repetitions = if (openTimedStep) 0L else currentSetRepetitionCount,
         restSeconds = 0L,
         activeMillis = activeMillis,
+        segmentType = step?.segmentType,
+        label = step?.label,
+        isDuration = openTimedStep,
     )
 }
 

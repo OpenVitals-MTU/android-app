@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.features.workoutplans.WorkoutPlanStepChoice
 
 @Composable
 internal fun ActivityEntryCard(
@@ -57,12 +58,15 @@ internal fun ActivityEntryCard(
     onRepetitionTotalChanged: (String) -> Unit,
     onRepetitionSetRepetitionsChanged: (Int, String) -> Unit,
     onRepetitionSetRestChanged: (Int, String) -> Unit,
+    onRepetitionSetGoalTypeChanged: (Int, Boolean) -> Unit,
+    onRepetitionSetExerciseChanged: (Int, WorkoutPlanStepChoice) -> Unit,
+    onAddExerciseStep: (WorkoutPlanStepChoice) -> Unit,
     onAddRepetitionSet: () -> Unit,
     onRemoveRepetitionSet: (Int) -> Unit,
-    onCreateNewPlannedWorkout: () -> Unit,
-    onApplyPlannedWorkout: (String) -> Unit,
-    onSavePlannedWorkout: () -> Unit,
-    onUpdatePlannedWorkout: () -> Unit,
+    onChangePlan: () -> Unit,
+    onEditPlan: (String) -> Unit,
+    onClearLinkedPlan: () -> Unit,
+    onSaveAsPlan: () -> Unit,
     onDistanceChanged: (String) -> Unit,
     onElevationChanged: (String) -> Unit,
     onActiveCaloriesChanged: (String) -> Unit,
@@ -110,12 +114,15 @@ internal fun ActivityEntryCard(
                 errorText = state.validationErrorText(ActivityEntryField.ACTIVITY_TYPE),
             )
 
-            ActivityTrainingPlanSection(
-                state = state,
-                enabled = !state.isSavingEntry && !state.isSavingPlannedWorkout,
-                onCreateNewPlannedWorkout = onCreateNewPlannedWorkout,
-                onApplyPlannedWorkout = onApplyPlannedWorkout,
-            )
+            state.linkedPlan?.let { plan ->
+                ActivityLinkedPlanCard(
+                    plan = plan,
+                    enabled = !state.isSavingEntry,
+                    onChangePlan = onChangePlan,
+                    onEditPlan = { onEditPlan(plan.id) },
+                    onClear = onClearLinkedPlan,
+                )
+            }
 
             OutlinedTextField(
                 value = state.titleText,
@@ -154,6 +161,9 @@ internal fun ActivityEntryCard(
                 onTotalChanged = onRepetitionTotalChanged,
                 onSetRepetitionsChanged = onRepetitionSetRepetitionsChanged,
                 onSetRestChanged = onRepetitionSetRestChanged,
+                onSetGoalTypeChanged = onRepetitionSetGoalTypeChanged,
+                onSetExerciseChanged = onRepetitionSetExerciseChanged,
+                onAddExercise = onAddExerciseStep,
                 onAddSet = onAddRepetitionSet,
                 onRemoveSet = onRemoveRepetitionSet,
             )
@@ -191,11 +201,10 @@ internal fun ActivityEntryCard(
                 savedHeartRateSamples = state.sessionHeartRateSamples,
             )
 
-            ActivityTrainingPlanActions(
+            ActivitySaveAsPlanButton(
                 state = state,
-                enabled = !state.isSavingEntry && !state.isSavingPlannedWorkout,
-                onSavePlannedWorkout = onSavePlannedWorkout,
-                onUpdatePlannedWorkout = onUpdatePlannedWorkout,
+                enabled = !state.isSavingEntry,
+                onSaveAsPlan = onSaveAsPlan,
             )
 
             OpenVitalsButton(

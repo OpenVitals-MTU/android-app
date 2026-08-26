@@ -69,6 +69,9 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
+import androidx.compose.foundation.layout.PaddingValues
+import tech.mmarca.openvitals.ui.theme.Spacing
+import tech.mmarca.openvitals.features.workoutplans.isGuidedRunnable
 
 @Composable
 internal fun ActivityRecordingSetupScreen(
@@ -79,6 +82,8 @@ internal fun ActivityRecordingSetupScreen(
     onStartRecording: (Location?, Long, Boolean) -> Unit,
     onStartHeartRateRecoveryTest: (HeartRateRecoveryTestConfig) -> Unit,
     onRequestLocationPermission: () -> Unit,
+    onStartPlan: () -> Unit = {},
+    onStartTodayPlan: (String) -> Unit = {},
     onRequestActivityRecognitionPermission: () -> Unit,
     onChooseSource: () -> Unit,
     onRequestWritePermission: () -> Unit,
@@ -133,6 +138,22 @@ internal fun ActivityRecordingSetupScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            val guidedPlan = state.guidedPlan
+            if (guidedPlan != null) {
+                ActivityPlanRunSetupCard(guidedPlan = guidedPlan, recordingState = recordingState)
+            } else {
+                // A plan due today is very likely what the Start was for.
+                val todayPlan = state.hubPlans.firstOrNull { plan ->
+                    plan.isGuidedRunnable() &&
+                        !plan.startTime.atZone(java.time.ZoneId.systemDefault()).toLocalDate().isAfter(java.time.LocalDate.now())
+                }
+                if (todayPlan != null) {
+                    TodayPlanShortcutCard(
+                        plan = todayPlan,
+                        enabled = baseEnabled,
+                        onStart = { onStartTodayPlan(todayPlan.id) },
+                    )
+                }
             ActivityTypeSelector(
                 types = state.activityTypes.filter { it.supportsLiveRecording },
                 selectedType = state.selectedActivityType,
@@ -242,8 +263,14 @@ internal fun ActivityRecordingSetupScreen(
                 }
             }
 
+            }
+
             OpenVitalsButton(
                 onClick = {
+                    if (guidedPlan != null) {
+                        onStartPlan()
+                        return@OpenVitalsButton
+                    }
                     when (
                         val action = activityRecordingStartAction(
                             supportsStepCounting = selectedType.supportsStepCounting,
@@ -269,7 +296,7 @@ internal fun ActivityRecordingSetupScreen(
                             onStartRecording(action.initialFix, action.restSeconds, action.withoutGps)
                     }
                 },
-                enabled = enabled,
+                enabled = if (guidedPlan != null) baseEnabled else enabled,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
@@ -696,6 +723,95 @@ internal fun RecordingWithoutGpsWarning(
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 6.dp),
                 )
+            }
+        }
+    }
+}
+
+/** The plan about to run: what it is, how long, and every step in order. */
+@Composable
+internal fun ActivityPlanRunSetupCard(
+    guidedPlan: ActivityGuidedPlan,
+    recordingState: ActivityRecordingState,
+    modifier: Modifier = Modifier,
+) {
+    val plannedMinutes = java.time.Duration.ofMillis(guidedPlan.plan.durationMs).toMinutes().coerceAtLeast(1L)
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        Text(
+            text = stringResource(
+                R.string.activity_recording_plan_setup_title,
+                guidedPlan.plan.title ?: stringResource(guidedPlan.activityType.labelRes),
+            ),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = stringResource(R.string.activity_recording_plan_setup_summary, guidedPlan.steps.size, plannedMinutes),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(R.string.activity_recording_plan_setup_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OpenVitalsSurface(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(Spacing.md),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                guidedPlan.steps.forEachIndexed { index, step ->
+                    val goal = when (step.goalKind) {
+                        ActivityPlanGoalKind.REPS -> stringResource(R.string.activity_entry_plan_preview_reps, step.goalValue.toInt())
+                        ActivityPlanGoalKind.SECONDS -> stringResource(R.string.workout_plan_preview_seconds, step.goalValue)
+                    }
+                    val rest = step.restSeconds.takeIf { it > 0L }?.let {
+                        stringResource(R.string.activity_recording_plan_setup_rest, it)
+                    }
+                    Text(
+                        text = "${index + 1}. ${step.displayLabel()} · $goal" + (rest?.let { " · $it" } ?: ""),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+        guidedPlan.steps.mapNotNull { activityEntryTypeById(it.sensorTypeId) }.distinctBy { it.id }.forEach { type ->
+            RecordingGuidancePanel(activityType = type, sensorReadiness = rememberRecordingSensorReadiness(type))
+        }
+        ActivityRecordingSensorStatusCard(deviceStatuses = recordingState.bleDeviceStatuses)
+    }
+}
+
+@Composable
+private fun TodayPlanShortcutCard(
+    plan: tech.mmarca.openvitals.domain.model.PlannedExerciseData,
+    enabled: Boolean,
+    onStart: () -> Unit,
+) {
+    OpenVitalsSurface(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(Spacing.md),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.activity_recording_today_plan_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = plan.title ?: stringResource(R.string.activity_entry_linked_plan_untitled),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+            }
+            OpenVitalsButton(onClick = onStart, enabled = enabled) {
+                Text(stringResource(R.string.activity_entry_hub_start_plan))
             }
         }
     }

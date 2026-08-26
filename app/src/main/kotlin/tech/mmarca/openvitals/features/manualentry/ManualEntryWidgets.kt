@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -429,10 +430,12 @@ internal fun manualEntryWidgetSpecs(
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onOpenCycleEntry: () -> Unit,
+    onOpenWorkoutPlans: () -> Unit = {},
 ): List<ManualEntryWidgetSpec> {
     val hydrationClick = if (isEditingWidgets) null else onOpenHydrationEntry
     val carbsClick = if (isEditingWidgets) null else onOpenCarbsEntry
     val activityClick = if (isEditingWidgets) null else onOpenActivityEntry
+    val workoutPlansClick = if (isEditingWidgets) null else onOpenWorkoutPlans
     val mindfulnessClick = if (isEditingWidgets) null else onOpenMindfulnessEntry
     val cycleClick = if (isEditingWidgets) null else onOpenCycleEntry
     return listOf(
@@ -472,6 +475,19 @@ internal fun manualEntryWidgetSpecs(
                     accentColor = WorkoutColor,
                     modifier = modifier,
                     onClick = activityClick,
+                )
+            },
+        ),
+        ManualEntryWidgetSpec(
+            id = ManualEntryWidgetId.WORKOUT_PLANS,
+            title = stringResource(R.string.screen_workout_plans),
+            content = { modifier ->
+                ManualEntryMetricTile(
+                    title = stringResource(R.string.screen_workout_plans),
+                    icon = Icons.Outlined.FitnessCenter,
+                    accentColor = WorkoutColor,
+                    modifier = modifier,
+                    onClick = workoutPlansClick,
                 )
             },
         ),

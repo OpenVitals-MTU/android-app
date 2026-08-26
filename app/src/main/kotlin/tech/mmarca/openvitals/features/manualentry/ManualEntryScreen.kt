@@ -27,6 +27,7 @@ fun ManualEntryScreen(
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onOpenCycleEntry: () -> Unit,
     onEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
+    onOpenWorkoutPlans: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestWritePermissions = rememberLauncherForActivityResult(
@@ -73,6 +74,9 @@ fun ManualEntryScreen(
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
         onOpenVitalsMeasurementEntry = viewModel::onVitalsMeasurementWidgetTapped,
         onOpenCycleEntry = viewModel::onCycleWidgetTapped,
+        // The plans screen carries its own Health Connect gate, so the tile
+        // navigates directly instead of going through a permission check here.
+        onOpenWorkoutPlans = onOpenWorkoutPlans,
     )
     val specsById = specs.associateBy { it.id }
     val visibleIds = state.widgets.filter { it in specsById }

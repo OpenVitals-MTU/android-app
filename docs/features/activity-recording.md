@@ -56,3 +56,11 @@ The moment the effort stopped is saved to Health Connect as a rest segment runni
 GPS vertical readings are noisy, and adding up every small rise between points inflates elevation gain badly. OpenVitals instead smooths the route and requires a real change before it counts, so the reported gain matches the climbing that actually happened.
 
 Barometer readings were already filtered and are preferred when the device has one. The same filter is applied to imported route files, so a recorded and an imported version of the same outing agree.
+
+## Entry Point
+
+Recording starts from the activity **start hub** (`ActivityStartHub`, the first screen of `Screen.ActivityEntry`) via *Record activity*; the dashboard's Start opens recording setup directly (`mode=record`). "Choose another method" on the setup and recording screens returns to the hub. A finished recording lands in the manual form for review, as before.
+
+## Guided Plan Run
+
+A repetition recording can carry a workout plan (`ActivityRecordingState.planSteps` / `planStepIndex`, built by `WorkoutPlanStepMapping.toPlanRunSteps`). Each step is an exercise with a reps or seconds goal and a rest after it; rep steps complete when the count reaches the goal (sensor or ±), timed steps on a deadline job, rests through the existing rest timer with the step's own rest seconds. Sensors are re-registered per step for the exercise being counted, and steps nothing can sense are manual. The notification carries the step and a Done / Skip rest action. Entry: `Screen.ActivityEntry.createRoute(mode = record, planId = …)`. See [Activity and training plans](activity-training-plans.md).

@@ -73,6 +73,10 @@ internal fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
         currentSetStartedAt = getLong(KeyCurrentSetStartedAt, MissingLong).toInstantOrNull(),
         restStartedAt = getLong(KeyRestStartedAt, MissingLong).toInstantOrNull(),
         accumulatedRestMillis = getLong(KeyAccumulatedRestMillis, 0L),
+        planId = getString(KeyPlanId, null),
+        planTitle = getString(KeyPlanTitle, null),
+        planSteps = getString(KeyPlanSteps, null).orEmpty().decodePlanRunSteps(),
+        planStepIndex = getInt(KeyPlanStepIndex, 0).coerceAtLeast(0),
         lastAccuracyMeters = getFloat(KeyLastAccuracyMeters, MissingFloat)
             .takeIf { it != MissingFloat }
             ?.toDouble(),
@@ -119,6 +123,10 @@ internal fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingSt
         putLong(KeyCurrentSetStartedAt, state.currentSetStartedAt?.toEpochMilli() ?: MissingLong)
         putLong(KeyRestStartedAt, state.restStartedAt?.toEpochMilli() ?: MissingLong)
         putLong(KeyAccumulatedRestMillis, state.accumulatedRestMillis)
+        putString(KeyPlanId, state.planId)
+        putString(KeyPlanTitle, state.planTitle)
+        putString(KeyPlanSteps, state.planSteps.encodePlanRunSteps())
+        putInt(KeyPlanStepIndex, state.planStepIndex)
         putFloat(KeyLastAccuracyMeters, state.lastAccuracyMeters?.toFloat() ?: MissingFloat)
         putLong(KeyLastLocationTime, state.lastLocationTime?.toEpochMilli() ?: MissingLong)
         putInt(KeyDroppedPointCount, state.droppedPointCount)
@@ -156,9 +164,14 @@ private fun List<ActivityRecordedRepetitionSet>.encodeRecordedRepetitionSets(): 
             set.repetitions.toString(),
             set.restSeconds.toString(),
             set.activeMillis.toString(),
+            set.segmentType?.toString().orEmpty(),
+            if (set.isDuration) "1" else "0",
+            set.label.orEmpty().encodeCompactText(),
+            set.planStepIndex?.toString().orEmpty(),
         ).joinToString(separator = ",")
     }
 
+// Parts 4-6 arrived with plan runs; a draft written before them still decodes.
 private fun String.decodeRecordedRepetitionSets(): List<ActivityRecordedRepetitionSet> =
     lineSequence()
         .mapNotNull { line ->
@@ -168,6 +181,44 @@ private fun String.decodeRecordedRepetitionSets(): List<ActivityRecordedRepetiti
                 repetitions = parts[0].toLongOrNull()?.coerceAtLeast(0L) ?: return@mapNotNull null,
                 restSeconds = parts[1].toLongOrNull()?.coerceAtLeast(0L) ?: return@mapNotNull null,
                 activeMillis = parts[2].toLongOrNull()?.coerceAtLeast(1L) ?: return@mapNotNull null,
+                segmentType = parts.getOrNull(3)?.toIntOrNull(),
+                isDuration = parts.getOrNull(4) == "1",
+                label = parts.getOrNull(5)?.decodeCompactText()?.takeIf { it.isNotBlank() },
+                planStepIndex = parts.getOrNull(6)?.toIntOrNull(),
+            )
+        }
+        .toList()
+
+private fun List<ActivityPlanRunStep>.encodePlanRunSteps(): String =
+    joinToString(separator = "\n") { step ->
+        listOf(
+            step.segmentType.toString(),
+            step.goalKind.name,
+            step.goalValue.toString(),
+            step.restSeconds.toString(),
+            step.blockIndex.toString(),
+            step.round.toString(),
+            step.rounds.toString(),
+            step.sensorTypeId.orEmpty(),
+            step.label.orEmpty().encodeCompactText(),
+        ).joinToString(separator = ",")
+    }
+
+private fun String.decodePlanRunSteps(): List<ActivityPlanRunStep> =
+    lineSequence()
+        .mapNotNull { line ->
+            val parts = line.split(',')
+            if (parts.size < 9) return@mapNotNull null
+            ActivityPlanRunStep(
+                segmentType = parts[0].toIntOrNull() ?: return@mapNotNull null,
+                goalKind = runCatching { ActivityPlanGoalKind.valueOf(parts[1]) }.getOrNull() ?: return@mapNotNull null,
+                goalValue = parts[2].toLongOrNull()?.coerceAtLeast(1L) ?: return@mapNotNull null,
+                restSeconds = parts[3].toLongOrNull()?.coerceAtLeast(0L) ?: 0L,
+                blockIndex = parts[4].toIntOrNull() ?: 0,
+                round = parts[5].toIntOrNull() ?: 1,
+                rounds = parts[6].toIntOrNull() ?: 1,
+                sensorTypeId = parts[7].takeIf { it.isNotBlank() },
+                label = parts[8].decodeCompactText().takeIf { it.isNotBlank() },
             )
         }
         .toList()

@@ -108,14 +108,15 @@ class AchievementsEmptyHistoryTest {
 
         override suspend fun loadPlannedWorkouts(start: LocalDate, end: LocalDate) = error("unused")
 
-        override suspend fun loadPlannedWorkoutOptions(date: LocalDate, exerciseType: Int) =
-            error("unused")
-
         override suspend fun loadExistingPlannedWorkouts(anchorDate: LocalDate) = error("unused")
 
         override suspend fun writePlannedWorkout(
             request: tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest,
         ) = error("unused")
+
+        override suspend fun loadPlannedWorkout(id: String) = error("unused")
+
+        override suspend fun deletePlannedWorkout(id: String) = error("unused")
 
         override suspend fun loadDailyNutrition(start: LocalDate, end: LocalDate) = error("unused")
 

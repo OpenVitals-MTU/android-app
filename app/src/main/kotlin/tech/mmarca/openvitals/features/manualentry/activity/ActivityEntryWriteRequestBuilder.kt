@@ -158,7 +158,7 @@ internal fun buildWriteRequest(
         endTime = end,
         title = state.titleText.trim().takeIf { it.isNotBlank() } ?: state.selectedActivityType.defaultTitle,
         notes = state.activitySaveNotes(),
-        plannedExerciseSessionId = state.selectedPlannedWorkoutId,
+        plannedExerciseSessionId = state.linkedPlan?.id,
         routePoints = routePoints,
         pauseIntervals = pauseIntervals,
         laps = laps,
@@ -355,29 +355,38 @@ internal fun buildSetExerciseSegments(
         .takeIf { it.isNotEmpty() && it.size <= MaxActivityRepetitionSets }
         ?.map { input ->
             ParsedRepetitionSet(
-                repetitions = input.repetitionsText.toPositiveIntOrNull(MaxActivityRepetitions) ?: return null,
+                repetitions = if (input.isDuration) 0 else input.repetitionsText.toPositiveIntOrNull(MaxActivityRepetitions) ?: return null,
                 restSeconds = input.restMinutesText.toOptionalNonNegativeLongOrNull(MaxActivityRestSeconds) ?: return null,
+                segmentType = input.segmentType ?: segmentType,
+                fixedActiveSeconds = if (input.isDuration) input.repetitionsText.toPositiveLongOrNull(MaxActivityRestSeconds) ?: return null else null,
             )
         }
         ?: return null
     val durationSeconds = Duration.between(start, end).seconds.coerceAtLeast(1L)
     val restSeconds = sets.sumOf { it.restSeconds }
-    val activeSeconds = durationSeconds - restSeconds
-    if (activeSeconds < sets.size) return null
+    // Timed sets (a plank) take exactly their seconds; rep sets share what is left.
+    val fixedSeconds = sets.sumOf { it.fixedActiveSeconds ?: 0L }
+    val repSets = sets.count { it.fixedActiveSeconds == null }
+    val activeSeconds = durationSeconds - restSeconds - fixedSeconds
+    if (activeSeconds < repSets) return null
+    if (repSets == 0 && activeSeconds < 0L) return null
 
     var cursor = start
-    var activeRemainder = activeSeconds % sets.size
-    val baseActiveSeconds = activeSeconds / sets.size
+    var activeRemainder = if (repSets > 0) activeSeconds % repSets else 0L
+    val baseActiveSeconds = if (repSets > 0) activeSeconds / repSets else 0L
     return buildList {
         sets.forEachIndexed { index, set ->
-            val thisActiveSeconds = baseActiveSeconds + if (activeRemainder > 0L) 1L else 0L
-            if (activeRemainder > 0L) activeRemainder -= 1L
+            val thisActiveSeconds = set.fixedActiveSeconds ?: run {
+                val extra = if (activeRemainder > 0L) 1L else 0L
+                if (activeRemainder > 0L) activeRemainder -= 1L
+                baseActiveSeconds + extra
+            }
             val activeEnd = cursor.plusSeconds(thisActiveSeconds)
             add(
                 ActivityExerciseSegmentWrite(
                     startTime = cursor,
                     endTime = activeEnd,
-                    segmentType = segmentType,
+                    segmentType = set.segmentType,
                     repetitions = set.repetitions,
                     setIndex = index,
                 )
@@ -411,6 +420,9 @@ internal fun ActivityEntryUiState.hasValidRepetitionInput(start: Instant, end: I
 internal data class ParsedRepetitionSet(
     val repetitions: Int,
     val restSeconds: Long,
+    val segmentType: Int = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+    /** Set for a timed set (a plank): its active length is fixed rather than shared out. */
+    val fixedActiveSeconds: Long? = null,
 )
 
 internal fun activityEntrySessionRange(state: ActivityEntryUiState): Pair<Instant, Instant>? {

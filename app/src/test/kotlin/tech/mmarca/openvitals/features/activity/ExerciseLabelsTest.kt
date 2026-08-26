@@ -10,16 +10,16 @@ import tech.mmarca.openvitals.R
 
 class ExerciseLabelsTest {
 
-    @Test fun `exerciseTypeLabel maps known exercise types and falls back`() {
-        assertEquals("Running", exerciseTypeLabel(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING))
-        assertEquals("Biking (stationary)", exerciseTypeLabel(ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY))
-        assertEquals("Exercise", exerciseTypeLabel(-1))
+    @Test fun `exerciseTypeLabelRes maps known exercise types and falls back`() {
+        assertEquals(R.string.hc_exercise_type_running, exerciseTypeLabelRes(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING))
+        assertEquals(R.string.hc_exercise_type_biking_stationary, exerciseTypeLabelRes(ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY))
+        assertEquals(R.string.hc_exercise_type_fallback, exerciseTypeLabelRes(-1))
     }
 
-    @Test fun `exerciseSegmentLabel maps known segments and falls back`() {
-        assertEquals("Deadlift", exerciseSegmentLabel(ExerciseSegment.EXERCISE_SEGMENT_TYPE_DEADLIFT))
-        assertEquals("Running (treadmill)", exerciseSegmentLabel(ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING_TREADMILL))
-        assertEquals("Unknown", exerciseSegmentLabel(-1))
+    @Test fun `exerciseSegmentLabelRes maps known segments and falls back`() {
+        assertEquals(R.string.hc_segment_deadlift, exerciseSegmentLabelRes(ExerciseSegment.EXERCISE_SEGMENT_TYPE_DEADLIFT))
+        assertEquals(R.string.hc_segment_running_treadmill, exerciseSegmentLabelRes(ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING_TREADMILL))
+        assertEquals(R.string.hc_segment_unknown, exerciseSegmentLabelRes(-1))
     }
 
     @Test fun `recordingMethodLabel maps known methods and null`() {

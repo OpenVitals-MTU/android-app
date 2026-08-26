@@ -29,6 +29,7 @@ enum class HealthConnectFeature {
     DATA_IMPORT,
     CSV_IMPORT,
     HEALTH_REPORT,
+    WORKOUT_PLANS,
     ;
 
     fun requiredReadPermissions(manager: HealthConnectManager): Set<String> = when (this) {
@@ -64,6 +65,9 @@ enum class HealthConnectFeature {
         // selected metrics' read permissions, and builds fine on a partial
         // grant — ungranted metrics land in the PDF's notice instead.
         HEALTH_REPORT -> emptySet()
+        // Empty on devices whose Health Connect lacks planned exercise, so the
+        // gate lets the screen through to show its own "unavailable" state.
+        WORKOUT_PLANS -> manager.plannedExercisePermissions
     }
 
     fun missingReadPermissions(

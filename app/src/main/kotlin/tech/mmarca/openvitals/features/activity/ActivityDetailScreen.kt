@@ -52,6 +52,7 @@ internal fun ActivityDetailScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditActivity: (String) -> Unit = {},
     onDeleteActivity: () -> Unit = {},
+    onOpenPlan: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -147,6 +148,8 @@ internal fun ActivityDetailScreen(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             onEditActivity = onEditActivity,
             onDeleteActivity = { viewModel.deleteActivity(onDeleteActivity) },
+            linkedPlanTitle = state.linkedPlan?.title,
+            onOpenPlan = onOpenPlan,
             onOpenRouteInMap = {
                 context.openActivityRouteInMap(workout)
                     .onFailure {
@@ -185,6 +188,8 @@ internal fun ActivityDetailContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditActivity: (String) -> Unit,
     onDeleteActivity: () -> Unit,
+    linkedPlanTitle: String? = null,
+    onOpenPlan: (String) -> Unit = {},
     onOpenRouteInMap: () -> Unit,
     onSaveRouteAsGpx: () -> Unit,
     onSaveRouteAsKmz: () -> Unit,
@@ -212,6 +217,17 @@ internal fun ActivityDetailContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             )
+        }
+        workout.plannedExerciseSessionId?.let { planId ->
+            item {
+                ActivityLinkedPlanDetailCard(
+                    planTitle = linkedPlanTitle,
+                    onOpenPlan = { onOpenPlan(planId) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         }
         if (splits.isNotEmpty) {
             item {

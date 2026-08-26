@@ -29,7 +29,7 @@ internal fun activityTypeFilterOptions(
 ): List<Int> =
     (availableActivityTypes + listOfNotNull(selectedActivityType))
         .distinct()
-        .sortedBy(::exerciseTypeLabel)
+        .sorted()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +42,7 @@ internal fun ActivityTypeFilterSelector(
     var expanded by remember { mutableStateOf(false) }
     val options = activityTypeFilterOptions(availableActivityTypes, selectedActivityType)
     val selectedLabel = selectedActivityType
-        ?.let(::exerciseTypeLabel)
+        ?.let { exerciseTypeLabel(it) }
         ?: stringResource(R.string.activities_filter_all)
 
     ExposedDropdownMenuBox(

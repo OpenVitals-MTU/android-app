@@ -140,6 +140,58 @@ class ActivityRepetitionInputsTest {
         assertEquals("only set two is touched", listOf(1 to "9"), reported)
     }
 
+    @Test
+    fun aMixedExerciseTypeNamesEachStepAndHidesTheTotalSwitch() {
+        // Calisthenics has no single "total": every step is its own exercise,
+        // so each row carries a picker and the Total/Sets switch is gone.
+        setInputs(
+            ActivityEntryUiState(
+                selectedActivityType = checkNotNull(activityEntryTypeById("calisthenics")),
+                repetitionMode = ActivityRepetitionEntryMode.SETS,
+                repetitionSets = listOf(ActivityRepetitionSetInput()),
+            ),
+        )
+
+        composeRule.onNodeWithText(string(R.string.activity_entry_step_choose_exercise)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.workout_plan_add_exercise)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.activity_entry_repetition_mode_total)).assertDoesNotExist()
+    }
+
+    @Test
+    fun pushUpsKeepPlainRowsWithoutAnExercisePicker() {
+        setInputs(
+            ActivityEntryUiState(
+                selectedActivityType = pushUpsEntryType,
+                repetitionMode = ActivityRepetitionEntryMode.SETS,
+                repetitionSets = listOf(ActivityRepetitionSetInput(repetitionsText = "10")),
+            ),
+        )
+
+        composeRule.onNodeWithText(string(R.string.activity_entry_step_choose_exercise)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.workout_plan_add_exercise)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.activity_entry_set_repetitions_label, 1)).assertIsDisplayed()
+    }
+
+    @Test
+    fun aTimedStepIsLabelledInSecondsAndNamesItsExercise() {
+        setInputs(
+            ActivityEntryUiState(
+                selectedActivityType = pushUpsEntryType,
+                repetitionMode = ActivityRepetitionEntryMode.SETS,
+                repetitionSets = listOf(
+                    ActivityRepetitionSetInput(
+                        repetitionsText = "45",
+                        segmentType = androidx.health.connect.client.records.ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+                        isDuration = true,
+                    ),
+                ),
+            ),
+        )
+
+        composeRule.onNodeWithText(string(R.string.activity_entry_set_seconds_label, 1)).assertIsDisplayed()
+        composeRule.onNodeWithText("Plank").assertIsDisplayed()
+    }
+
     private fun setInputs(
         state: ActivityEntryUiState,
         onAddSet: () -> Unit = {},
@@ -156,6 +208,9 @@ class ActivityRepetitionInputsTest {
                         onTotalChanged = {},
                         onSetRepetitionsChanged = onSetRepetitionsChanged,
                         onSetRestChanged = { _, _ -> },
+                        onSetGoalTypeChanged = { _, _ -> },
+                        onSetExerciseChanged = { _, _ -> },
+                        onAddExercise = {},
                         onAddSet = onAddSet,
                         onRemoveSet = onRemoveSet,
                     )

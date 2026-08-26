@@ -41,7 +41,11 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import tech.mmarca.openvitals.MainActivity
@@ -66,6 +70,9 @@ class ActivityRecordingService : Service() {
     }
     private var locationUpdatesStarted = false
     private var sensorUpdatesStarted = false
+    /** The entry type whose recognizers are registered right now; a plan run swaps them per step. */
+    private var activeSensorTypeId: String? = null
+    private var notificationTickerJob: Job? = null
     private var pressureUpdatesStarted = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pushUpRecognizer: PushUpProximityRecognizer? = null
@@ -136,6 +143,8 @@ class ActivityRecordingService : Service() {
             ActionPause -> controller.pauseRecording()
             ActionResume -> controller.resumeRecording()
             ActionDiscard -> controller.discardRecording()
+            ActionCompletePlanStep -> controller.completeCurrentPlanStep()
+            ActionSkipPlanRest -> controller.startNextRepetitionSet()
             ActionStop -> {
                 stopLocationUpdates()
                 stopSelf()
@@ -191,7 +200,11 @@ class ActivityRecordingService : Service() {
                 } else if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.REPETITION) {
                     stopLocationUpdates()
                     stopPressureUpdates()
-                    startSensorUpdates(state)
+                    // In a plan run the exercise changes per step, and with it
+                    // the recognizer; a step nothing can sense gets no sensor.
+                    val wanted = state.sensorActivityType()
+                    if (wanted?.id != activeSensorTypeId) stopSensorUpdates()
+                    if (wanted != null) startSensorUpdates(state) else stopSensorUpdates()
                 } else if (
                     state.status == ActivityRecordingStatus.RECORDING &&
                     state.recordingKind == ActivityRecordingKind.TIMED &&
@@ -216,6 +229,7 @@ class ActivityRecordingService : Service() {
                     stopPressureUpdates()
                 }
                 updateNotification(state)
+                syncNotificationTicker(state)
                 voiceAnnouncer()
                     .onRecordingState(
                         state = state,
@@ -224,6 +238,34 @@ class ActivityRecordingService : Service() {
             }
             .launchIn(serviceScope)
     }
+
+    /**
+     * A plan run's notification carries a countdown, which only moves when the
+     * text is rebuilt; state emits do not happen every second, so a ticker does.
+     */
+    private fun syncNotificationTicker(state: ActivityRecordingState) {
+        val wantsTicker = state.isPlanRun &&
+            (state.status == ActivityRecordingStatus.RESTING || state.planStepEndTime() != null)
+        if (!wantsTicker) {
+            notificationTickerJob?.cancel()
+            notificationTickerJob = null
+            return
+        }
+        if (notificationTickerJob?.isActive == true) return
+        notificationTickerJob = serviceScope.launch {
+            while (isActive) {
+                delay(NotificationTickMillis)
+                updateNotification(controller.state.value)
+            }
+        }
+    }
+
+    private fun ActivityRecordingState.sensorActivityType(): ActivityEntryType? =
+        if (isPlanRun) {
+            activityEntryTypeById(currentPlanStep?.sensorTypeId)
+        } else {
+            activityEntryTypeById(activityTypeId)
+        }
 
     private fun voiceAnnouncer(): ActivityRecordingVoiceAnnouncer =
         voiceAnnouncer ?: ActivityRecordingVoiceAnnouncer(this, unitFormatter).also {
@@ -276,7 +318,7 @@ class ActivityRecordingService : Service() {
 
     private fun startSensorUpdates(state: ActivityRecordingState) {
         if (sensorUpdatesStarted) return
-        val activityType = activityEntryTypeById(state.activityTypeId) ?: return
+        val activityType = state.sensorActivityType() ?: return
         val sensorKind = if (activityType.supportsStepCounting) {
             ActivityRecordingSensor.STEP_DETECTOR
         } else {
@@ -313,6 +355,7 @@ class ActivityRecordingService : Service() {
         pullUpRecognizer = if (activityType.id == "pull_ups") PullUpRepetitionRecognizer() else null
         sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
         sensorUpdatesStarted = true
+        activeSensorTypeId = activityType.id
     }
 
     private fun stopSensorUpdates() {
@@ -321,6 +364,7 @@ class ActivityRecordingService : Service() {
             sensorManager.unregisterListener(sensorListener)
         }
         sensorUpdatesStarted = false
+        activeSensorTypeId = null
         pushUpRecognizer = null
         stepRecognizer = null
         jumpRecognizer = null
@@ -431,6 +475,21 @@ class ActivityRecordingService : Service() {
                 servicePendingIntent(ActionResume, RequestResume),
             )
         }
+        if (state.isPlanRun && !state.isPlanComplete) {
+            if (state.status == ActivityRecordingStatus.RECORDING) {
+                builder.addAction(
+                    R.drawable.ic_stat_activity_recording,
+                    getString(R.string.activity_recording_plan_done),
+                    servicePendingIntent(ActionCompletePlanStep, RequestCompletePlanStep),
+                )
+            } else if (state.status == ActivityRecordingStatus.RESTING) {
+                builder.addAction(
+                    R.drawable.ic_stat_activity_recording,
+                    getString(R.string.activity_recording_plan_skip_rest),
+                    servicePendingIntent(ActionSkipPlanRest, RequestSkipPlanRest),
+                )
+            }
+        }
         builder.addAction(
             R.drawable.ic_stat_activity_recording,
             getString(R.string.action_discard),
@@ -441,9 +500,46 @@ class ActivityRecordingService : Service() {
         }
     }
 
+    private fun planNotificationText(state: ActivityRecordingState, now: Instant, totalTime: String): String? {
+        val stepNumber = (state.planStepIndex + 1).coerceAtMost(state.planSteps.size)
+        val stepCount = state.planSteps.size
+        val step = state.currentPlanStep
+        return when {
+            state.isPlanComplete -> getString(R.string.activity_recording_notification_plan_complete, totalTime)
+            state.status == ActivityRecordingStatus.RESTING -> getString(
+                R.string.activity_recording_notification_plan_resting,
+                formatNotificationElapsed(state.restRemainingDuration(now)),
+                step?.displayLabel(this).orEmpty(),
+            )
+            state.status == ActivityRecordingStatus.RECORDING && step != null ->
+                if (step.goalKind == ActivityPlanGoalKind.SECONDS) {
+                    getString(
+                        R.string.activity_recording_notification_plan_timed,
+                        stepNumber,
+                        stepCount,
+                        step.displayLabel(this),
+                        formatNotificationElapsed(state.planStepRemaining(now) ?: java.time.Duration.ZERO),
+                    )
+                } else {
+                    getString(
+                        R.string.activity_recording_notification_plan_reps,
+                        stepNumber,
+                        stepCount,
+                        step.displayLabel(this),
+                        unitFormatter.count(state.currentSetRepetitionCount),
+                        unitFormatter.count(step.goalValue),
+                    )
+                }
+            else -> null
+        }
+    }
+
     private fun notificationText(state: ActivityRecordingState): String {
         val now = Instant.now()
         val totalTime = formatNotificationElapsed(state.elapsedDuration(now))
+        if (state.isPlanRun) {
+            planNotificationText(state, now, totalTime)?.let { return it }
+        }
         if (state.recordingKind == ActivityRecordingKind.REPETITION) {
             val activityType = activityEntryTypeById(state.activityTypeId)
             val unit = if (activityType?.repetitionUnit == ActivityRepetitionUnit.STEPS) {
@@ -538,6 +634,8 @@ class ActivityRecordingService : Service() {
         const val ActionResume = "tech.mmarca.openvitals.action.RESUME_ACTIVITY_RECORDING"
         const val ActionDiscard = "tech.mmarca.openvitals.action.DISCARD_ACTIVITY_RECORDING"
         const val ActionStop = "tech.mmarca.openvitals.action.STOP_ACTIVITY_RECORDING"
+        const val ActionCompletePlanStep = "tech.mmarca.openvitals.action.COMPLETE_PLAN_STEP"
+        const val ActionSkipPlanRest = "tech.mmarca.openvitals.action.SKIP_PLAN_REST"
 
         fun intent(context: Context, action: String): Intent =
             Intent(context, ActivityRecordingService::class.java).setAction(action)
@@ -597,3 +695,6 @@ private const val RequestOpenApp = 10
 private const val RequestPause = 11
 private const val RequestResume = 12
 private const val RequestDiscard = 13
+private const val RequestCompletePlanStep = 14
+private const val RequestSkipPlanRest = 15
+private const val NotificationTickMillis = 1_000L

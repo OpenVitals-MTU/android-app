@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.domain.insights.ActivitySplits
@@ -68,6 +69,9 @@ internal data class ActivityDetailUiState(
 
     /** How the heart rate fell after the effort stopped, for a session that carries a stop mark. */
     val heartRateRecovery: HeartRateRecoveryReading? = null,
+
+    /** The plan this session was logged against, when it still exists and can be read. */
+    val linkedPlan: PlannedExerciseData? = null,
 
     val error: ScreenError? = null,
 )
@@ -157,6 +161,9 @@ internal class ActivityDetailViewModel(
                     val heartRateRecovery = workout?.let {
                         runCatching { loadHeartRateRecovery(it) }.getOrNull()
                     }
+                    val linkedPlan = workout?.plannedExerciseSessionId?.let { planId ->
+                        runCatching { repository.loadPlannedWorkout(planId) }.getOrNull()
+                    }
                     val backfilledWorkout = workout?.withSampleBackfilledMetrics(
                         heartRateSamples = heartRateSamples,
                         speedSamples = speedSamples,
@@ -175,6 +182,7 @@ internal class ActivityDetailViewModel(
                             ?.let { elevationProfile(it.route) }
                             .orEmpty(),
                         heartRateRecovery = heartRateRecovery,
+                        linkedPlan = linkedPlan,
                         error = if (workout == null) ScreenError.NotFound else null,
                     ).withSplitsCutAt(splitDistanceMeters)
                 }

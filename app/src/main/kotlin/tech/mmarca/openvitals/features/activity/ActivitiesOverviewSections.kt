@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.activity
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
@@ -104,6 +105,7 @@ import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
+import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.LocalDate
 import java.time.YearMonth
@@ -245,9 +247,27 @@ internal fun PlannedWorkoutListCard(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onStartPlannedWorkout: (String) -> Unit = {},
+    onManageWorkoutPlans: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        SectionHeader(text = stringResource(R.string.section_planned_workouts))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SectionHeader(
+                text = stringResource(R.string.section_planned_workouts),
+                modifier = Modifier.weight(1f),
+            )
+            if (onManageWorkoutPlans != null) {
+                OpenVitalsTextButton(
+                    onClick = onManageWorkoutPlans,
+                    modifier = Modifier.padding(end = Spacing.sm),
+                ) {
+                    Text(stringResource(R.string.workout_plans_manage))
+                }
+            }
+        }
+        if (plannedWorkouts.isEmpty()) return@Column
         OpenVitalsCard(
             modifier = metricModifier(),
         ) {

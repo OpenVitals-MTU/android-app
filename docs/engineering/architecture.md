@@ -292,6 +292,7 @@ Current feature packages:
 - [`features/recovery`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/recovery)
 - [`features/settings`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 - [`features/watches`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/watches)
+- [`features/workoutplans`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/workoutplans) — plan list/builder; `WorkoutPlanStepMapping.kt` is the one seam between Health Connect plans and the activity form's step rows
 
 Three of these are not metric features and follow their own shape: `features/watches` is the watch UI over the `devices` layer, `features/devicesync` is a phone-to-phone sync wizard, and `features/imports/*` are import workflows.
 

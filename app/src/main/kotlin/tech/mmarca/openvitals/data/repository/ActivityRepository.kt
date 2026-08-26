@@ -420,10 +420,6 @@ class ActivityRepositoryImpl @Inject constructor(
         return loadPlannedWorkouts(start, end, granted)
     }
 
-    override suspend fun loadPlannedWorkoutOptions(date: LocalDate, exerciseType: Int): List<PlannedExerciseData> =
-        loadPlannedWorkouts(date, date)
-            .filter { plan -> plan.exerciseType == exerciseType && plan.completedExerciseSessionId == null }
-
     override suspend fun loadExistingPlannedWorkouts(anchorDate: LocalDate): List<PlannedExerciseData> {
         val granted = grantedPermissionsIfAvailable()
         if (!hc.isPlannedExerciseAvailable() || readPlannedExercisePermission !in granted) {
@@ -444,6 +440,24 @@ class ActivityRepositoryImpl @Inject constructor(
             throw SecurityException("Missing Health Connect planned exercise write permission.")
         }
         return hc.writePlannedExerciseSession(request)
+    }
+
+    override suspend fun loadPlannedWorkout(id: String): PlannedExerciseData? {
+        val granted = grantedPermissionsIfAvailable()
+        if (!hc.isPlannedExerciseAvailable() || readPlannedExercisePermission !in granted) {
+            Log.w(TAG, "Skipping loadPlannedWorkout missingCount=1")
+            throw SecurityException("Missing Health Connect planned exercise read permission.")
+        }
+        return hc.readPlannedExerciseSession(id)
+    }
+
+    override suspend fun deletePlannedWorkout(id: String) {
+        val granted = grantedPermissionsIfAvailable()
+        if (!hc.isPlannedExerciseAvailable() || writePlannedExercisePermission !in granted) {
+            Log.w(TAG, "Skipping deletePlannedWorkout missingCount=1")
+            throw SecurityException("Missing Health Connect planned exercise write permission.")
+        }
+        hc.deletePlannedExerciseSession(id)
     }
 
     private suspend fun loadPlannedWorkouts(

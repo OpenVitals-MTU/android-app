@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.SportsTennis
 import androidx.compose.material.icons.outlined.SportsVolleyball
 import androidx.compose.material.icons.outlined.Surfing
+import android.content.Context
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.health.connect.client.records.ExerciseSegment
@@ -33,69 +34,75 @@ import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import tech.mmarca.openvitals.R
 
-internal fun exerciseTypeLabel(type: Int): String = when (type) {
-    ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON -> "Badminton"
-    ExerciseSessionRecord.EXERCISE_TYPE_BASEBALL -> "Baseball"
-    ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL -> "Basketball"
-    ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> "Biking"
-    ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> "Biking (stationary)"
-    ExerciseSessionRecord.EXERCISE_TYPE_BOOT_CAMP -> "Boot camp"
-    ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> "Boxing"
-    ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> "Calisthenics"
-    ExerciseSessionRecord.EXERCISE_TYPE_CRICKET -> "Cricket"
-    ExerciseSessionRecord.EXERCISE_TYPE_DANCING -> "Dancing"
-    ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL -> "Elliptical"
-    ExerciseSessionRecord.EXERCISE_TYPE_EXERCISE_CLASS -> "Exercise class"
-    ExerciseSessionRecord.EXERCISE_TYPE_FENCING -> "Fencing"
-    ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AMERICAN -> "Football (American)"
-    ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AUSTRALIAN -> "Football (Australian)"
-    ExerciseSessionRecord.EXERCISE_TYPE_FRISBEE_DISC -> "Frisbee disc"
-    ExerciseSessionRecord.EXERCISE_TYPE_GOLF -> "Golf"
-    ExerciseSessionRecord.EXERCISE_TYPE_GUIDED_BREATHING -> "Guided breathing"
-    ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS -> "Gymnastics"
-    ExerciseSessionRecord.EXERCISE_TYPE_HANDBALL -> "Handball"
-    ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "High intensity interval training"
-    ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> "Hiking"
-    ExerciseSessionRecord.EXERCISE_TYPE_ICE_HOCKEY -> "Ice hockey"
-    ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING -> "Ice skating"
-    ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS -> "Martial arts"
-    ExerciseSessionRecord.EXERCISE_TYPE_PADDLING -> "Paddling"
-    ExerciseSessionRecord.EXERCISE_TYPE_PARAGLIDING -> "Paragliding"
-    ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> "Pilates"
-    ExerciseSessionRecord.EXERCISE_TYPE_RACQUETBALL -> "Racquetball"
-    ExerciseSessionRecord.EXERCISE_TYPE_ROCK_CLIMBING -> "Rock climbing"
-    ExerciseSessionRecord.EXERCISE_TYPE_ROLLER_HOCKEY -> "Roller hockey"
-    ExerciseSessionRecord.EXERCISE_TYPE_ROWING -> "Rowing"
-    ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE -> "Rowing (machine)"
-    ExerciseSessionRecord.EXERCISE_TYPE_RUGBY -> "Rugby"
-    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> "Running"
-    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> "Running (treadmill)"
-    ExerciseSessionRecord.EXERCISE_TYPE_SAILING -> "Sailing"
-    ExerciseSessionRecord.EXERCISE_TYPE_SCUBA_DIVING -> "Scuba diving"
-    ExerciseSessionRecord.EXERCISE_TYPE_SKATING -> "Skating"
-    ExerciseSessionRecord.EXERCISE_TYPE_SKIING -> "Skiing"
-    ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING -> "Snowboarding"
-    ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING -> "Snowshoeing"
-    ExerciseSessionRecord.EXERCISE_TYPE_SOCCER -> "Soccer"
-    ExerciseSessionRecord.EXERCISE_TYPE_SOFTBALL -> "Softball"
-    ExerciseSessionRecord.EXERCISE_TYPE_SQUASH -> "Squash"
-    ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING -> "Stair climbing"
-    ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE -> "Stair climbing (machine)"
-    ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING -> "Strength training"
-    ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING -> "Stretching"
-    ExerciseSessionRecord.EXERCISE_TYPE_SURFING -> "Surfing"
-    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> "Swimming (open water)"
-    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> "Swimming (pool)"
-    ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS -> "Table tennis"
-    ExerciseSessionRecord.EXERCISE_TYPE_TENNIS -> "Tennis"
-    ExerciseSessionRecord.EXERCISE_TYPE_VOLLEYBALL -> "Volleyball"
-    ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "Walking"
-    ExerciseSessionRecord.EXERCISE_TYPE_WATER_POLO -> "Water polo"
-    ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING -> "Weightlifting"
-    ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR -> "Wheelchair"
-    ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
-    else -> "Exercise"
+/** The string resource naming a Health Connect exercise session type. */
+fun exerciseTypeLabelRes(type: Int): Int = when (type) {
+    ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON -> R.string.hc_exercise_type_badminton
+    ExerciseSessionRecord.EXERCISE_TYPE_BASEBALL -> R.string.hc_exercise_type_baseball
+    ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL -> R.string.hc_exercise_type_basketball
+    ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> R.string.hc_exercise_type_biking
+    ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> R.string.hc_exercise_type_biking_stationary
+    ExerciseSessionRecord.EXERCISE_TYPE_BOOT_CAMP -> R.string.hc_exercise_type_boot_camp
+    ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> R.string.hc_exercise_type_boxing
+    ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> R.string.hc_exercise_type_calisthenics
+    ExerciseSessionRecord.EXERCISE_TYPE_CRICKET -> R.string.hc_exercise_type_cricket
+    ExerciseSessionRecord.EXERCISE_TYPE_DANCING -> R.string.hc_exercise_type_dancing
+    ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL -> R.string.hc_exercise_type_elliptical
+    ExerciseSessionRecord.EXERCISE_TYPE_EXERCISE_CLASS -> R.string.hc_exercise_type_exercise_class
+    ExerciseSessionRecord.EXERCISE_TYPE_FENCING -> R.string.hc_exercise_type_fencing
+    ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AMERICAN -> R.string.hc_exercise_type_football_american
+    ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AUSTRALIAN -> R.string.hc_exercise_type_football_australian
+    ExerciseSessionRecord.EXERCISE_TYPE_FRISBEE_DISC -> R.string.hc_exercise_type_frisbee_disc
+    ExerciseSessionRecord.EXERCISE_TYPE_GOLF -> R.string.hc_exercise_type_golf
+    ExerciseSessionRecord.EXERCISE_TYPE_GUIDED_BREATHING -> R.string.hc_exercise_type_guided_breathing
+    ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS -> R.string.hc_exercise_type_gymnastics
+    ExerciseSessionRecord.EXERCISE_TYPE_HANDBALL -> R.string.hc_exercise_type_handball
+    ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> R.string.hc_exercise_type_high_intensity_interval_training
+    ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> R.string.hc_exercise_type_hiking
+    ExerciseSessionRecord.EXERCISE_TYPE_ICE_HOCKEY -> R.string.hc_exercise_type_ice_hockey
+    ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING -> R.string.hc_exercise_type_ice_skating
+    ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS -> R.string.hc_exercise_type_martial_arts
+    ExerciseSessionRecord.EXERCISE_TYPE_PADDLING -> R.string.hc_exercise_type_paddling
+    ExerciseSessionRecord.EXERCISE_TYPE_PARAGLIDING -> R.string.hc_exercise_type_paragliding
+    ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> R.string.hc_exercise_type_pilates
+    ExerciseSessionRecord.EXERCISE_TYPE_RACQUETBALL -> R.string.hc_exercise_type_racquetball
+    ExerciseSessionRecord.EXERCISE_TYPE_ROCK_CLIMBING -> R.string.hc_exercise_type_rock_climbing
+    ExerciseSessionRecord.EXERCISE_TYPE_ROLLER_HOCKEY -> R.string.hc_exercise_type_roller_hockey
+    ExerciseSessionRecord.EXERCISE_TYPE_ROWING -> R.string.hc_exercise_type_rowing
+    ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE -> R.string.hc_exercise_type_rowing_machine
+    ExerciseSessionRecord.EXERCISE_TYPE_RUGBY -> R.string.hc_exercise_type_rugby
+    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> R.string.hc_exercise_type_running
+    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> R.string.hc_exercise_type_running_treadmill
+    ExerciseSessionRecord.EXERCISE_TYPE_SAILING -> R.string.hc_exercise_type_sailing
+    ExerciseSessionRecord.EXERCISE_TYPE_SCUBA_DIVING -> R.string.hc_exercise_type_scuba_diving
+    ExerciseSessionRecord.EXERCISE_TYPE_SKATING -> R.string.hc_exercise_type_skating
+    ExerciseSessionRecord.EXERCISE_TYPE_SKIING -> R.string.hc_exercise_type_skiing
+    ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING -> R.string.hc_exercise_type_snowboarding
+    ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING -> R.string.hc_exercise_type_snowshoeing
+    ExerciseSessionRecord.EXERCISE_TYPE_SOCCER -> R.string.hc_exercise_type_soccer
+    ExerciseSessionRecord.EXERCISE_TYPE_SOFTBALL -> R.string.hc_exercise_type_softball
+    ExerciseSessionRecord.EXERCISE_TYPE_SQUASH -> R.string.hc_exercise_type_squash
+    ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING -> R.string.hc_exercise_type_stair_climbing
+    ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE -> R.string.hc_exercise_type_stair_climbing_machine
+    ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING -> R.string.hc_exercise_type_strength_training
+    ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING -> R.string.hc_exercise_type_stretching
+    ExerciseSessionRecord.EXERCISE_TYPE_SURFING -> R.string.hc_exercise_type_surfing
+    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> R.string.hc_exercise_type_swimming_open_water
+    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> R.string.hc_exercise_type_swimming_pool
+    ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS -> R.string.hc_exercise_type_table_tennis
+    ExerciseSessionRecord.EXERCISE_TYPE_TENNIS -> R.string.hc_exercise_type_tennis
+    ExerciseSessionRecord.EXERCISE_TYPE_VOLLEYBALL -> R.string.hc_exercise_type_volleyball
+    ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> R.string.hc_exercise_type_walking
+    ExerciseSessionRecord.EXERCISE_TYPE_WATER_POLO -> R.string.hc_exercise_type_water_polo
+    ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING -> R.string.hc_exercise_type_weightlifting
+    ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR -> R.string.hc_exercise_type_wheelchair
+    ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> R.string.hc_exercise_type_yoga
+    else -> R.string.hc_exercise_type_fallback
 }
+
+@Composable
+internal fun exerciseTypeLabel(type: Int): String = stringResource(exerciseTypeLabelRes(type))
+
+internal fun exerciseTypeLabel(context: Context, type: Int): String = context.getString(exerciseTypeLabelRes(type))
 
 internal fun exerciseTypeIcon(type: Int): ImageVector = when (type) {
     ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
@@ -150,76 +157,82 @@ internal fun exerciseTypeIcon(type: Int): ImageVector = when (type) {
     else -> Icons.AutoMirrored.Outlined.DirectionsRun
 }
 
-internal fun exerciseSegmentLabel(type: Int): String = when (type) {
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_ARM_CURL -> "Arm curl"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BACK_EXTENSION -> "Back extension"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BALL_SLAM -> "Ball slam"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BARBELL_SHOULDER_PRESS -> "Barbell shoulder press"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BENCH_PRESS -> "Bench press"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BENCH_SIT_UP -> "Bench sit up"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING -> "Biking"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING_STATIONARY -> "Biking (stationary)"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BURPEE -> "Burpee"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_CRUNCH -> "Crunch"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DEADLIFT -> "Deadlift"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DOUBLE_ARM_TRICEPS_EXTENSION -> "Double arm triceps extension"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_CURL_LEFT_ARM -> "Dumbbell curl (left arm)"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_CURL_RIGHT_ARM -> "Dumbbell curl (right arm)"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_FRONT_RAISE -> "Dumbbell front raise"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_LATERAL_RAISE -> "Dumbbell lateral raise"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_ROW -> "Dumbbell row"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_TRICEPS_EXTENSION_LEFT_ARM -> "Dumbbell triceps extension (left arm)"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_TRICEPS_EXTENSION_RIGHT_ARM -> "Dumbbell triceps extension (right arm)"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_TRICEPS_EXTENSION_TWO_ARM -> "Dumbbell triceps extension (two arm)"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_ELLIPTICAL -> "Elliptical"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_FORWARD_TWIST -> "Forward twist"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_FRONT_RAISE -> "Front raise"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "High intensity interval training"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_HIP_THRUST -> "Hip thrust"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_HULA_HOOP -> "Hula hoop"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_JUMPING_JACK -> "Jumping jack"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_JUMP_ROPE -> "Jump rope"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_KETTLEBELL_SWING -> "Kettlebell swing"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LATERAL_RAISE -> "Lateral raise"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LAT_PULL_DOWN -> "Lat pull-down"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LEG_CURL -> "Leg curl"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LEG_EXTENSION -> "Leg extension"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LEG_PRESS -> "Leg press"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LEG_RAISE -> "Leg raise"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LUNGE -> "Lunge"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_MOUNTAIN_CLIMBER -> "Mountain climber"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT -> "Other workout"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE -> "Pause"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PILATES -> "Pilates"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK -> "Plank"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP -> "Pull-up"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PUNCH -> "Punch"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST -> "Rest"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_ROWING_MACHINE -> "Rowing machine"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING -> "Running"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING_TREADMILL -> "Running (treadmill)"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SHOULDER_PRESS -> "Shoulder press"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SINGLE_ARM_TRICEPS_EXTENSION -> "Single arm triceps extension"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SIT_UP -> "Sit-up"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT -> "Squat"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_STAIR_CLIMBING -> "Stair climbing"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_STAIR_CLIMBING_MACHINE -> "Stair climbing (machine)"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_STRETCHING -> "Stretching"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BACKSTROKE -> "Swimming backstroke"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BREASTSTROKE -> "Swimming breaststroke"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BUTTERFLY -> "Swimming butterfly"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_FREESTYLE -> "Swimming freestyle"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_MIXED -> "Swimming mixed"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_OPEN_WATER -> "Swimming open water"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_OTHER -> "Swimming other"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_POOL -> "Swimming pool"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_UPPER_TWIST -> "Upper twist"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_WALKING -> "Walking"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_WEIGHTLIFTING -> "Weightlifting"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_WHEELCHAIR -> "Wheelchair"
-    ExerciseSegment.EXERCISE_SEGMENT_TYPE_YOGA -> "Yoga"
-    else -> "Unknown"
+/** The string resource naming a Health Connect exercise segment type. */
+fun exerciseSegmentLabelRes(type: Int): Int = when (type) {
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_ARM_CURL -> R.string.hc_segment_arm_curl
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BACK_EXTENSION -> R.string.hc_segment_back_extension
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BALL_SLAM -> R.string.hc_segment_ball_slam
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BARBELL_SHOULDER_PRESS -> R.string.hc_segment_barbell_shoulder_press
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BENCH_PRESS -> R.string.hc_segment_bench_press
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BENCH_SIT_UP -> R.string.hc_segment_bench_sit_up
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING -> R.string.hc_segment_biking
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING_STATIONARY -> R.string.hc_segment_biking_stationary
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_BURPEE -> R.string.hc_segment_burpee
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_CRUNCH -> R.string.hc_segment_crunch
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DEADLIFT -> R.string.hc_segment_deadlift
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DOUBLE_ARM_TRICEPS_EXTENSION -> R.string.hc_segment_double_arm_triceps_extension
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_CURL_LEFT_ARM -> R.string.hc_segment_dumbbell_curl_left_arm
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_CURL_RIGHT_ARM -> R.string.hc_segment_dumbbell_curl_right_arm
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_FRONT_RAISE -> R.string.hc_segment_dumbbell_front_raise
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_LATERAL_RAISE -> R.string.hc_segment_dumbbell_lateral_raise
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_ROW -> R.string.hc_segment_dumbbell_row
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_TRICEPS_EXTENSION_LEFT_ARM -> R.string.hc_segment_dumbbell_triceps_extension_left_arm
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_TRICEPS_EXTENSION_RIGHT_ARM -> R.string.hc_segment_dumbbell_triceps_extension_right_arm
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_DUMBBELL_TRICEPS_EXTENSION_TWO_ARM -> R.string.hc_segment_dumbbell_triceps_extension_two_arm
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_ELLIPTICAL -> R.string.hc_segment_elliptical
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_FORWARD_TWIST -> R.string.hc_segment_forward_twist
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_FRONT_RAISE -> R.string.hc_segment_front_raise
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> R.string.hc_segment_high_intensity_interval_training
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_HIP_THRUST -> R.string.hc_segment_hip_thrust
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_HULA_HOOP -> R.string.hc_segment_hula_hoop
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_JUMPING_JACK -> R.string.hc_segment_jumping_jack
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_JUMP_ROPE -> R.string.hc_segment_jump_rope
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_KETTLEBELL_SWING -> R.string.hc_segment_kettlebell_swing
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LATERAL_RAISE -> R.string.hc_segment_lateral_raise
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LAT_PULL_DOWN -> R.string.hc_segment_lat_pull_down
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LEG_CURL -> R.string.hc_segment_leg_curl
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LEG_EXTENSION -> R.string.hc_segment_leg_extension
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LEG_PRESS -> R.string.hc_segment_leg_press
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LEG_RAISE -> R.string.hc_segment_leg_raise
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_LUNGE -> R.string.hc_segment_lunge
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_MOUNTAIN_CLIMBER -> R.string.hc_segment_mountain_climber
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT -> R.string.hc_segment_other_workout
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE -> R.string.hc_segment_pause
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PILATES -> R.string.hc_segment_pilates
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK -> R.string.hc_segment_plank
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP -> R.string.hc_segment_pull_up
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_PUNCH -> R.string.hc_segment_punch
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST -> R.string.hc_segment_rest
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_ROWING_MACHINE -> R.string.hc_segment_rowing_machine
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING -> R.string.hc_segment_running
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING_TREADMILL -> R.string.hc_segment_running_treadmill
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SHOULDER_PRESS -> R.string.hc_segment_shoulder_press
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SINGLE_ARM_TRICEPS_EXTENSION -> R.string.hc_segment_single_arm_triceps_extension
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SIT_UP -> R.string.hc_segment_sit_up
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT -> R.string.hc_segment_squat
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_STAIR_CLIMBING -> R.string.hc_segment_stair_climbing
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_STAIR_CLIMBING_MACHINE -> R.string.hc_segment_stair_climbing_machine
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_STRETCHING -> R.string.hc_segment_stretching
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BACKSTROKE -> R.string.hc_segment_swimming_backstroke
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BREASTSTROKE -> R.string.hc_segment_swimming_breaststroke
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BUTTERFLY -> R.string.hc_segment_swimming_butterfly
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_FREESTYLE -> R.string.hc_segment_swimming_freestyle
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_MIXED -> R.string.hc_segment_swimming_mixed
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_OPEN_WATER -> R.string.hc_segment_swimming_open_water
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_OTHER -> R.string.hc_segment_swimming_other
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_POOL -> R.string.hc_segment_swimming_pool
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_UPPER_TWIST -> R.string.hc_segment_upper_twist
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_WALKING -> R.string.hc_segment_walking
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_WEIGHTLIFTING -> R.string.hc_segment_weightlifting
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_WHEELCHAIR -> R.string.hc_segment_wheelchair
+    ExerciseSegment.EXERCISE_SEGMENT_TYPE_YOGA -> R.string.hc_segment_yoga
+    else -> R.string.hc_segment_unknown
 }
+
+@Composable
+internal fun exerciseSegmentLabel(type: Int): String = stringResource(exerciseSegmentLabelRes(type))
+
+internal fun exerciseSegmentLabel(context: Context, type: Int): String = context.getString(exerciseSegmentLabelRes(type))
 
 @Composable
 internal fun recordingMethodLabel(method: Int?): String = stringResource(

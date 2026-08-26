@@ -1,8 +1,8 @@
 package tech.mmarca.openvitals.domain.model
 
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.LocalDate
 
 data class ExerciseData(
     val id: String,
@@ -151,6 +151,8 @@ data class PlannedExerciseData(
     val exerciseType: Int,
     val startTime: Instant,
     val endTime: Instant,
+    /** The offset the plan was written in; the day it belongs to is read in this, not the phone's current zone. */
+    val startZoneOffset: ZoneOffset? = null,
     val hasExplicitTime: Boolean,
     val completedExerciseSessionId: String?,
     val notes: String?,
@@ -172,13 +174,31 @@ data class PlannedExerciseStepData(
     val exercisePhase: Int,
     val description: String?,
     val completion: PlannedExerciseCompletion,
+    /** Pace/power/heart-rate/… targets other apps attach; carried through untouched. */
+    val performanceTargets: List<PlannedExercisePerformanceTarget> = emptyList(),
 )
 
 sealed interface PlannedExerciseCompletion {
     data class Repetitions(val repetitions: Int) : PlannedExerciseCompletion
     data class DurationSeconds(val seconds: Long) : PlannedExerciseCompletion
+    data class DistanceMeters(val meters: Double) : PlannedExerciseCompletion
+    data class DistanceAndDuration(val meters: Double, val seconds: Long) : PlannedExerciseCompletion
+    data class Steps(val steps: Int) : PlannedExerciseCompletion
+    data class ActiveCaloriesKcal(val kcal: Double) : PlannedExerciseCompletion
+    data class TotalCaloriesKcal(val kcal: Double) : PlannedExerciseCompletion
     data object Manual : PlannedExerciseCompletion
     data object Unknown : PlannedExerciseCompletion
+}
+
+sealed interface PlannedExercisePerformanceTarget {
+    data class Power(val minWatts: Double, val maxWatts: Double) : PlannedExercisePerformanceTarget
+    data class Speed(val minMetersPerSecond: Double, val maxMetersPerSecond: Double) : PlannedExercisePerformanceTarget
+    data class Cadence(val minRpm: Double, val maxRpm: Double) : PlannedExercisePerformanceTarget
+    data class HeartRate(val minBpm: Double, val maxBpm: Double) : PlannedExercisePerformanceTarget
+    data class Weight(val kilograms: Double) : PlannedExercisePerformanceTarget
+    data class RateOfPerceivedExertion(val rpe: Int) : PlannedExercisePerformanceTarget
+    data object Amrap : PlannedExercisePerformanceTarget
+    data object Unknown : PlannedExercisePerformanceTarget
 }
 
 data class PlannedExerciseWriteRequest(

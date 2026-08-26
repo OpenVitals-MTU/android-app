@@ -55,6 +55,8 @@ data class ActivitiesUiState(
     val availableActivityTypes: List<Int> = emptyList(),
     val workouts: List<ExerciseData> = emptyList(),
     val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
+    /** Whether this device's Health Connect supports planned exercise at all; gates the "Manage plans" affordance. */
+    val plannedWorkoutsAvailable: Boolean = false,
     val previousWorkouts: List<ExerciseData> = emptyList(),
     val baselineWorkouts: List<ExerciseData> = emptyList(),
     val activityTypeAggregates: List<ActivityTypeAggregate> = emptyList(),
@@ -304,6 +306,8 @@ class ActivitiesViewModel(
             availableActivityTypes = result.availableActivityTypes(),
             workouts = filtered.workouts,
             plannedWorkouts = filtered.plannedWorkouts,
+            plannedWorkoutsAvailable = runCatching { repository.plannedWorkoutWritePermissions().isNotEmpty() }
+                .getOrDefault(false),
             previousWorkouts = filtered.previousWorkouts,
             baselineWorkouts = filtered.baselineWorkouts,
             activityTypeAggregates = filtered.workouts.activityTypeAggregates(),
@@ -345,7 +349,7 @@ private fun ActivitiesLoadResult.filteredBy(type: Int?): ActivitiesLoadResult {
 private fun ActivitiesLoadResult.availableActivityTypes(): List<Int> =
     (workouts.map { it.exerciseType } + plannedWorkouts.map { it.exerciseType })
         .distinct()
-        .sortedBy(::exerciseTypeLabel)
+        .sorted()
 
 private fun ActivitiesLoadResult.withoutActivityEntry(
     entryId: String,

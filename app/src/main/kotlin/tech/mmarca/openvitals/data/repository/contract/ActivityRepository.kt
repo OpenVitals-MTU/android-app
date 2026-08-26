@@ -65,11 +65,14 @@ interface ActivityRepository {
 
     suspend fun loadPlannedWorkouts(start: LocalDate, end: LocalDate): List<PlannedExerciseData>
 
-    suspend fun loadPlannedWorkoutOptions(date: LocalDate, exerciseType: Int): List<PlannedExerciseData>
-
     suspend fun loadExistingPlannedWorkouts(anchorDate: LocalDate = LocalDate.now()): List<PlannedExerciseData>
 
     suspend fun writePlannedWorkout(request: PlannedExerciseWriteRequest): String
+
+    /** Null when the plan no longer exists. Throws [SecurityException] without planned-exercise read access. */
+    suspend fun loadPlannedWorkout(id: String): PlannedExerciseData?
+
+    suspend fun deletePlannedWorkout(id: String)
 
     suspend fun loadDailyNutrition(start: LocalDate, end: LocalDate): List<DailyNutrition>
 

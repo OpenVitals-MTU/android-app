@@ -37,6 +37,13 @@ class HealthConnectFeatureTest {
         every { cyclePermissions } returns emptySet()
         every { requestableWritePermissions } returns emptySet()
         every { dataImportWritePermissions } returns emptySet()
+        every { plannedExercisePermissions } returns setOf("planned-read", "planned-write")
+    }
+
+    @Test
+    fun workoutPlansFeatureRequiresPlannedExercisePermissions() {
+        val permissions = HealthConnectFeature.WORKOUT_PLANS.requiredReadPermissions(manager())
+        assertEquals(setOf("planned-read", "planned-write"), permissions)
     }
 
     @Test

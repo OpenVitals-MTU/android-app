@@ -1,0 +1,61 @@
+package tech.mmarca.openvitals.features.manualentry.activity.recording
+
+import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.activity.ActivityRecordingSensor
+import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
+import tech.mmarca.openvitals.features.activity.exerciseSegmentLabel
+
+enum class ActivityPlanGoalKind {
+    REPS,
+    SECONDS,
+}
+
+/**
+ * One executable step of a plan run: the plan's blocks unrolled by round, with
+ * each rest folded into the active step before it. [sensorTypeId] names the
+ * entry type whose repetition recognizer counts this step; null means the
+ * count is manual (a plank, a squat — anything the phone cannot sense).
+ */
+@Immutable
+data class ActivityPlanRunStep(
+    val segmentType: Int,
+    /** The plan's own name for the step ("Push-ups"); null means "the segment type's name". */
+    val label: String?,
+    val goalKind: ActivityPlanGoalKind,
+    val goalValue: Long,
+    /** Rest after this step, seconds; zero for none. */
+    val restSeconds: Long,
+    val blockIndex: Int,
+    val round: Int,
+    val rounds: Int,
+    val sensorTypeId: String? = null,
+)
+
+/** The step's name in the current language. */
+fun ActivityPlanRunStep.displayLabel(context: Context): String = label ?: exerciseSegmentLabel(context, segmentType)
+
+/** The step's name in the current language, for composables. */
+@Composable
+internal fun ActivityPlanRunStep.displayLabel(): String = label ?: exerciseSegmentLabel(segmentType)
+
+/** "Push-ups, 10 reps" / "Plank, 45 seconds" — what the voice cue says. */
+fun ActivityPlanRunStep.spokenGoal(context: Context): String = when (goalKind) {
+    ActivityPlanGoalKind.REPS -> context.getString(R.string.activity_recording_plan_spoken_reps, displayLabel(context), goalValue)
+    ActivityPlanGoalKind.SECONDS -> context.getString(R.string.activity_recording_plan_spoken_seconds, displayLabel(context), goalValue)
+}
+
+/**
+ * The entry type whose recognizer can count a step, if any. Matched on the
+ * segment type, and on the preset label for the segment types several
+ * exercises share (push-ups and trampoline jumping are both "other workout").
+ */
+internal fun planStepSensorTypeId(segmentType: Int, label: String?): String? =
+    DefaultActivityEntryTypes.firstOrNull { type ->
+        type.segmentType == segmentType &&
+            (type.recordingSensor == ActivityRecordingSensor.PROXIMITY ||
+                type.recordingSensor == ActivityRecordingSensor.ACCELEROMETER) &&
+            (type.defaultTitle == null || (label != null && type.defaultTitle.equals(label, ignoreCase = true)))
+    }?.id

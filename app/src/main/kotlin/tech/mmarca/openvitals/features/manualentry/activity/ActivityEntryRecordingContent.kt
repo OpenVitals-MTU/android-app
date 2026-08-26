@@ -52,6 +52,9 @@ internal fun ActivityEntryRecordingContent(
         onAdjustRepetitionCount = viewModel::adjustRepetitionRecording,
         onEndRepetitionSet = viewModel::endRepetitionSet,
         onStartNextRepetitionSet = viewModel::startNextRepetitionSet,
+        onCompletePlanStep = viewModel::completePlanStep,
+        onSkipPlanStep = viewModel::skipPlanStep,
+        onUndoPlanStep = viewModel::undoPlanStep,
         onFinishRecording = {
             viewModel.finishGpsRecording(ActivityEntryUnits.from(unitFormatter))
         },

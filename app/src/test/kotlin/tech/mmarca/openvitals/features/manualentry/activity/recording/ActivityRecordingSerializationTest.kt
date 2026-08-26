@@ -29,11 +29,13 @@ class ActivityRecordingSerializationTest {
 
     private lateinit var filesDir: File
     private lateinit var store: ActivityRecordingStore
+    private lateinit var preferences: FakeSharedPreferences
 
     @Before fun setUp() {
         filesDir = Files.createTempDirectory("activity-recording-store").toFile()
         val context = mockk<Context>()
-        every { context.getSharedPreferences(any(), any()) } returns FakeSharedPreferences()
+        preferences = FakeSharedPreferences()
+        every { context.getSharedPreferences(any(), any()) } returns preferences
         every { context.filesDir } returns filesDir
         store = ActivityRecordingStore(context)
     }
@@ -134,5 +136,91 @@ class ActivityRecordingSerializationTest {
 
         assertEquals(ActivityRecordingStatus.IDLE, store.restore().status)
         assertTrue(store.restore().activityTypeId == null)
+    }
+
+    @Test fun `a plan run round-trips its steps, cursor and typed sets`() {
+        val state = ActivityRecordingState(
+            status = ActivityRecordingStatus.RESTING,
+            recordingKind = ActivityRecordingKind.REPETITION,
+            activityTypeId = "calisthenics",
+            exerciseType = 12,
+            startTime = Instant.parse("2026-08-26T17:00:00Z"),
+            restStartedAt = Instant.parse("2026-08-26T17:02:00Z"),
+            repetitionRestSeconds = 30L,
+            planId = "plan-1",
+            planTitle = "Strength, day 1",
+            planStepIndex = 1,
+            planSteps = listOf(
+                ActivityPlanRunStep(
+                    segmentType = 1,
+                    label = "Push-ups, wide",
+                    goalKind = ActivityPlanGoalKind.REPS,
+                    goalValue = 10L,
+                    restSeconds = 30L,
+                    blockIndex = 0,
+                    round = 1,
+                    rounds = 2,
+                    sensorTypeId = "push_ups",
+                ),
+                ActivityPlanRunStep(
+                    segmentType = 44,
+                    label = "Plank",
+                    goalKind = ActivityPlanGoalKind.SECONDS,
+                    goalValue = 45L,
+                    restSeconds = 0L,
+                    blockIndex = 1,
+                    round = 1,
+                    rounds = 1,
+                    sensorTypeId = null,
+                ),
+            ),
+            repetitionSets = listOf(
+                ActivityRecordedRepetitionSet(
+                    repetitions = 10L,
+                    restSeconds = 30L,
+                    activeMillis = 25_000L,
+                    segmentType = 1,
+                    label = "Push-ups, wide",
+                ),
+                ActivityRecordedRepetitionSet(
+                    repetitions = 0L,
+                    restSeconds = 0L,
+                    activeMillis = 45_000L,
+                    segmentType = 44,
+                    label = "Plank",
+                    isDuration = true,
+                ),
+            ),
+        )
+
+        store.storeMetadata(state)
+        val restored = store.restore()
+
+        assertEquals(state.planId, restored.planId)
+        assertEquals(state.planTitle, restored.planTitle)
+        assertEquals(state.planStepIndex, restored.planStepIndex)
+        assertEquals(state.planSteps, restored.planSteps)
+        assertEquals(state.repetitionSets, restored.repetitionSets)
+    }
+
+    @Test fun `repetition sets written before plan runs still decode`() {
+        store.storeMetadata(
+            ActivityRecordingState(
+                status = ActivityRecordingStatus.RECORDING,
+                recordingKind = ActivityRecordingKind.REPETITION,
+                startTime = Instant.parse("2026-08-26T17:00:00Z"),
+            ),
+        )
+        preferences.edit().putString(KeyRepetitionSets, "8,60,30000\n6,0,20000").apply()
+
+        val restored = store.restore()
+
+        assertEquals(
+            listOf(
+                ActivityRecordedRepetitionSet(repetitions = 8L, restSeconds = 60L, activeMillis = 30_000L),
+                ActivityRecordedRepetitionSet(repetitions = 6L, restSeconds = 0L, activeMillis = 20_000L),
+            ),
+            restored.repetitionSets,
+        )
     }
 }

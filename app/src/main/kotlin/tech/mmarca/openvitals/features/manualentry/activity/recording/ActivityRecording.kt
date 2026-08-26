@@ -23,6 +23,7 @@ import android.location.altitude.AltitudeConverter
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.SystemClock
 import android.os.VibrationEffect
@@ -74,6 +75,8 @@ import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
+import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.features.workoutplans.toPlanRunSteps
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 
 enum class ActivityRecordingStatus {
@@ -175,6 +178,12 @@ data class ActivityRecordingState(
     val currentSetStartedAt: Instant? = null,
     val restStartedAt: Instant? = null,
     val accumulatedRestMillis: Long = 0L,
+    /** The plan being walked through, if any: its steps and where the cursor is. */
+    val planId: String? = null,
+    val planTitle: String? = null,
+    val planSteps: List<ActivityPlanRunStep> = emptyList(),
+    /** Index of the step in progress (or resting before); == planSteps.size once every step is done. */
+    val planStepIndex: Int = 0,
     val lastAccuracyMeters: Double? = null,
     val lastLocationTime: Instant? = null,
     val droppedPointCount: Int = 0,
@@ -244,6 +253,13 @@ data class ActivityRecordedRepetitionSet(
     val repetitions: Long,
     val restSeconds: Long,
     val activeMillis: Long,
+    /** The exercise, when it is not the session type's own (a plank inside a push-up plan). */
+    val segmentType: Int? = null,
+    val label: String? = null,
+    /** A timed hold: [activeMillis] is the goal, not the time it took to do [repetitions]. */
+    val isDuration: Boolean = false,
+    /** Which plan step produced this set, so Back knows whether the last set is the previous step's. */
+    val planStepIndex: Int? = null,
 )
 
 @Immutable
@@ -262,6 +278,8 @@ data class ActivityRecordingSnapshot(
     val elevationGainedMeters: Double,
     val repetitionCount: Long = 0L,
     val repetitionSets: List<ActivityRecordedRepetitionSet> = emptyList(),
+    val planId: String? = null,
+    val planTitle: String? = null,
     val bleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
     /**
      * When the effort stopped, for a heart-rate-recovery test. This is what
@@ -298,6 +316,7 @@ class ActivityRecordingController @Inject constructor(
     private val _state = MutableStateFlow(recordingStore.restore())
     private var recordingGeneration = 0L
     private var restCompletionJob: Job? = null
+    private var planStepJob: Job? = null
     val state: StateFlow<ActivityRecordingState> = _state.asStateFlow()
 
     private val coMapsPrestartWatchRequested = MutableStateFlow(false)
@@ -323,6 +342,7 @@ class ActivityRecordingController @Inject constructor(
 
     init {
         scheduleRestCompletion(_state.value)
+        schedulePlanStepCompletion(_state.value)
         bleSensorCoordinator.metrics
             .onEach { metrics -> acceptBleMetrics(metrics) }
             .launchIn(bleMetricsScope)
@@ -489,9 +509,34 @@ class ActivityRecordingController @Inject constructor(
         return true
     }
 
+    /**
+     * Walks a plan step by step inside an ordinary repetition recording: the
+     * cursor and the step list ride in the state, so a killed process comes
+     * back mid-plank exactly where it was.
+     */
+    fun startPlanRecording(plan: PlannedExerciseData, activityType: ActivityEntryType): Boolean {
+        val steps = plan.toPlanRunSteps()
+        if (steps.isEmpty()) {
+            updateAndPersist(
+                _state.value.copy(errorMessage = context.getString(R.string.activity_recording_error_plan_empty)),
+            )
+            return false
+        }
+        val started = startRepetitionRecording(
+            activityType = activityType,
+            repetitionRestSeconds = steps.first().restSeconds,
+            planSeed = PlanSeed(plan.id, plan.title, steps),
+        )
+        if (started) cuePlanStep(steps.first(), withBell = true)
+        return started
+    }
+
+    private data class PlanSeed(val id: String, val title: String?, val steps: List<ActivityPlanRunStep>)
+
     private fun startRepetitionRecording(
         activityType: ActivityEntryType,
         repetitionRestSeconds: Long,
+        planSeed: PlanSeed? = null,
     ): Boolean {
         if (!hasNotificationPermission(context)) {
             updateAndPersist(
@@ -515,9 +560,15 @@ class ActivityRecordingController @Inject constructor(
                 activityTypeId = activityType.id,
                 exerciseType = activityType.exerciseType,
                 startTime = now,
-                keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording,
+                // A plan run is read from the floor between reps; a screen that
+                // goes dark mid-countdown leaves only the bell.
+                keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording || planSeed != null,
                 currentSetStartedAt = now,
                 repetitionRestSeconds = repetitionRestSeconds.coerceAtLeast(0L),
+                planId = planSeed?.id,
+                planTitle = planSeed?.title,
+                planSteps = planSeed?.steps.orEmpty(),
+                planStepIndex = 0,
                 dashboardLayout = dashboardLayout,
             ),
             replaceRoutePoints = true,
@@ -713,13 +764,91 @@ class ActivityRecordingController @Inject constructor(
      */
     private fun cueHrr(text: String) {
         playBell()
-        speakHrrCue(text)
-        vibrateHeavy()
+        speakCue(text)
+        vibrate(HrrCueVibrationMillis)
+    }
+
+    /**
+     * A step change in a plan run: the bell the user already chose for rest
+     * timers, a short buzz so a phone on the floor still registers, and the
+     * next step spoken only when voice announcements are on.
+     */
+    private fun cuePlanStep(step: ActivityPlanRunStep, withBell: Boolean) {
+        if (withBell) playRestTimerBellIfEnabled()
+        vibrate(PlanStepCueVibrationMillis)
+        if (preferencesRepository.activityRecordingPreferences().voiceAnnouncementsEnabled) {
+            speakCue(
+                listOfNotNull(
+                    context.getString(R.string.activity_recording_plan_cue_next, step.spokenGoal(context)),
+                    // The pace announcer never speaks for repetition sessions, so a
+                    // strapped-on heart-rate sensor would otherwise stay silent.
+                    _state.value.currentHeartRateBpm?.let { context.getString(R.string.activity_recording_plan_cue_heart_rate, it) },
+                ).joinToString(". "),
+            )
+        }
+    }
+
+    private var restCountdownJob: Job? = null
+
+    /**
+     * Three short beeps before a rest ends, so the next step is not a surprise
+     * to someone lying on the floor with the phone out of reach. Same gate as
+     * the bell it precedes.
+     */
+    private fun scheduleRestCountdown(state: ActivityRecordingState) {
+        restCountdownJob?.cancel()
+        restCountdownJob = null
+        if (!state.isPlanRun) return
+        val restEnd = state.restEndTime() ?: return
+        val scheduledStart = state.restStartedAt
+        restCountdownJob = bleMetricsScope.launch {
+            for (secondsLeft in RestCountdownSeconds downTo 1L) {
+                val delayMillis = Duration.between(Instant.now(), restEnd.minusSeconds(secondsLeft)).toMillis()
+                if (delayMillis < 0L) continue
+                delay(delayMillis)
+                val current = _state.value
+                if (current.status != ActivityRecordingStatus.RESTING || current.restStartedAt != scheduledStart) return@launch
+                if (preferencesRepository.activityRecordingPreferences().restTimerBellEnabled) playCountdownBeep()
+                vibrate(CountdownVibrationMillis)
+            }
+        }
+    }
+
+    private fun playCountdownBeep() {
+        runCatching {
+            val tone = ToneGenerator(AudioManager.STREAM_MUSIC, CountdownBeepVolume)
+            tone.startTone(ToneGenerator.TONE_PROP_BEEP, CountdownBeepMillis)
+            bleMetricsScope.launch {
+                delay(CountdownBeepMillis.toLong() + 50L)
+                runCatching { tone.release() }
+            }
+        }
+    }
+
+    private fun cuePlanRest(restSeconds: Long, next: ActivityPlanRunStep?, withBell: Boolean) {
+        if (withBell) playRestTimerBellIfEnabled()
+        vibrate(PlanStepCueVibrationMillis)
+        if (preferencesRepository.activityRecordingPreferences().voiceAnnouncementsEnabled) {
+            val text = if (next != null) {
+                context.getString(R.string.activity_recording_plan_cue_rest, restSeconds, next.spokenGoal(context))
+            } else {
+                context.getString(R.string.activity_recording_plan_cue_rest_last, restSeconds)
+            }
+            speakCue(text)
+        }
+    }
+
+    private fun cuePlanComplete() {
+        playRestTimerBellIfEnabled()
+        vibrate(PlanStepCueVibrationMillis)
+        if (preferencesRepository.activityRecordingPreferences().voiceAnnouncementsEnabled) {
+            speakCue(context.getString(R.string.activity_recording_plan_cue_complete))
+        }
     }
 
     private var hrrCueTts: TextToSpeech? = null
 
-    private fun speakHrrCue(text: String) {
+    private fun speakCue(text: String) {
         runCatching {
             hrrCueTts?.shutdown()
             var tts: TextToSpeech? = null
@@ -738,7 +867,7 @@ class ActivityRecordingController @Inject constructor(
         }
     }
 
-    private fun vibrateHeavy() {
+    private fun vibrate(millis: Long) {
         runCatching {
             val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE)
@@ -749,7 +878,7 @@ class ActivityRecordingController @Inject constructor(
                 context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             }
             vibrator.vibrate(
-                VibrationEffect.createOneShot(400L, VibrationEffect.DEFAULT_AMPLITUDE),
+                VibrationEffect.createOneShot(millis, VibrationEffect.DEFAULT_AMPLITUDE),
             )
         }
     }
@@ -815,6 +944,13 @@ class ActivityRecordingController @Inject constructor(
                 pausedStartedAt = null,
                 totalPausedMillis = current.totalPausedMillis + pausedMillis,
                 pauseIntervals = current.pauseIntervals + listOfNotNull(closedPause),
+                // A paused plank does not keep counting down: the step's clock
+                // moves forward by exactly the pause.
+                currentSetStartedAt = if (current.isPlanRun) {
+                    current.currentSetStartedAt?.plusMillis(pausedMillis)
+                } else {
+                    current.currentSetStartedAt
+                },
                 errorMessage = null,
             )
         )
@@ -930,6 +1066,8 @@ class ActivityRecordingController @Inject constructor(
             elevationGainedMeters = current.displayElevationGainedMeters(),
             repetitionCount = current.repetitionCount,
             repetitionSets = repetitionSets,
+            planId = current.planId,
+            planTitle = current.planTitle,
             bleSamples = bleSamples,
             // Only when there is heart rate to go with it. A rest segment
             // saying "the recovery began here" with no heart-rate series
@@ -1036,17 +1174,162 @@ class ActivityRecordingController @Inject constructor(
 
         val nextCurrentSetCount = (current.currentSetRepetitionCount + delta).coerceAtLeast(0L)
         val completedCount = current.repetitionSets.sumOf { it.repetitions }
+        val next = current.copy(
+            currentSetRepetitionCount = nextCurrentSetCount,
+            repetitionCount = completedCount + nextCurrentSetCount,
+            errorMessage = null,
+        )
+        // Reaching the target IS the "done": counting past it on purpose is
+        // also done, and only ever happens via "+", never via "−".
+        val step = next.currentPlanStep
+        if (delta > 0L && step != null && step.goalKind == ActivityPlanGoalKind.REPS && nextCurrentSetCount >= step.goalValue) {
+            completePlanStep(next, Instant.now())
+            return
+        }
+        updateAndPersist(next)
+    }
+
+    /** "Done" for the step in progress; a rep step with nothing counted is treated as skipped. */
+    fun completeCurrentPlanStep() {
+        val current = _state.value
+        if (current.status != ActivityRecordingStatus.RECORDING || !current.isPlanRun || current.isPlanComplete) return
+        completePlanStep(current, Instant.now())
+    }
+
+    /**
+     * Back one step: the step just finished (or the one in progress) is undone
+     * and reopened with its count restored, so a rep the sensor imagined can be
+     * taken away with "−" and the set ended again.
+     */
+    fun undoPlanStep() {
+        val current = _state.value
+        if (!current.isPlanRun || current.status == ActivityRecordingStatus.PAUSED || !current.isActive) return
+        val now = Instant.now()
+        val previousIndex = when {
+            current.isPlanComplete -> current.planSteps.lastIndex
+            current.status == ActivityRecordingStatus.RESTING -> current.planStepIndex - 1
+            else -> current.planStepIndex - 1
+        }
+        if (previousIndex < 0) return
+        val previousStep = current.planSteps[previousIndex]
+        val lastSet = current.repetitionSets.lastOrNull()?.takeIf { it.planStepIndex == previousIndex }
+        val sets = if (lastSet != null) current.repetitionSets.dropLast(1) else current.repetitionSets
+        val restoredCount = lastSet?.takeIf { !it.isDuration }?.repetitions ?: 0L
         updateAndPersist(
             current.copy(
-                currentSetRepetitionCount = nextCurrentSetCount,
-                repetitionCount = completedCount + nextCurrentSetCount,
+                status = ActivityRecordingStatus.RECORDING,
+                repetitionSets = sets,
+                repetitionCount = sets.sumOf { it.repetitions } + restoredCount,
+                currentSetRepetitionCount = restoredCount,
+                accumulatedRestMillis = current.accumulatedRestMillis + current.openRestMillis(now),
+                restStartedAt = null,
+                currentSetStartedAt = now,
+                repetitionRestSeconds = previousStep.restSeconds,
+                planStepIndex = previousIndex,
                 errorMessage = null,
-            )
+            ),
         )
+        cuePlanStep(previousStep, withBell = false)
+    }
+
+    fun skipPlanStep() {
+        val current = _state.value
+        if (current.status != ActivityRecordingStatus.RECORDING || !current.isPlanRun || current.isPlanComplete) return
+        advancePlanStep(current, completedSet = null, now = Instant.now(), restAfter = 0L)
+    }
+
+    private fun completePlanStep(state: ActivityRecordingState, now: Instant) {
+        val step = state.currentPlanStep ?: return
+        val isTimed = step.goalKind == ActivityPlanGoalKind.SECONDS
+        if (!isTimed && state.currentSetRepetitionCount <= 0L) {
+            advancePlanStep(state, completedSet = null, now = now, restAfter = 0L)
+            return
+        }
+        val activeMillis = Duration.between(state.currentSetStartedAt ?: state.startTime ?: now, now)
+            .toMillis()
+            .coerceAtLeast(1L)
+        val completedSet = ActivityRecordedRepetitionSet(
+            repetitions = if (isTimed) 0L else state.currentSetRepetitionCount,
+            restSeconds = step.restSeconds,
+            activeMillis = activeMillis,
+            segmentType = step.segmentType,
+            label = step.label,
+            isDuration = isTimed,
+            planStepIndex = state.planStepIndex,
+        )
+        advancePlanStep(state, completedSet, now, restAfter = step.restSeconds)
+    }
+
+    private fun advancePlanStep(
+        state: ActivityRecordingState,
+        completedSet: ActivityRecordedRepetitionSet?,
+        now: Instant,
+        restAfter: Long,
+    ) {
+        val nextIndex = state.planStepIndex + 1
+        val sets = state.repetitionSets + listOfNotNull(completedSet)
+        val completedCount = sets.sumOf { it.repetitions }
+        val next = state.planSteps.getOrNull(nextIndex)
+        when {
+            next == null -> {
+                // The last step has nothing to rest for: a trailing rest would
+                // land in the saved session as a phantom.
+                updateAndPersist(
+                    state.copy(
+                        status = ActivityRecordingStatus.RECORDING,
+                        repetitionSets = sets.withLastRestSeconds(0L),
+                        repetitionCount = completedCount,
+                        currentSetRepetitionCount = 0L,
+                        currentSetStartedAt = null,
+                        restStartedAt = null,
+                        planStepIndex = state.planSteps.size,
+                        errorMessage = null,
+                    ),
+                )
+                cuePlanComplete()
+            }
+            restAfter > 0L -> {
+                updateAndPersist(
+                    state.copy(
+                        status = ActivityRecordingStatus.RESTING,
+                        repetitionSets = sets,
+                        repetitionCount = completedCount,
+                        currentSetRepetitionCount = 0L,
+                        restStartedAt = now,
+                        // Read by restEndTime() and the rest bell: this step's rest, not the plan's first.
+                        repetitionRestSeconds = restAfter,
+                        currentSetStartedAt = null,
+                        planStepIndex = nextIndex,
+                        errorMessage = null,
+                    ),
+                )
+                cuePlanRest(restAfter, next, withBell = true)
+            }
+            else -> {
+                updateAndPersist(
+                    state.copy(
+                        status = ActivityRecordingStatus.RECORDING,
+                        repetitionSets = sets,
+                        repetitionCount = completedCount,
+                        currentSetRepetitionCount = 0L,
+                        restStartedAt = null,
+                        repetitionRestSeconds = next.restSeconds,
+                        currentSetStartedAt = now,
+                        planStepIndex = nextIndex,
+                        errorMessage = null,
+                    ),
+                )
+                cuePlanStep(next, withBell = true)
+            }
+        }
     }
 
     fun endRepetitionSet() {
         val current = _state.value
+        if (current.isPlanRun) {
+            completeCurrentPlanStep()
+            return
+        }
         if (current.status != ActivityRecordingStatus.RECORDING ||
             current.recordingKind != ActivityRecordingKind.REPETITION ||
             current.currentSetRepetitionCount <= 0L
@@ -1177,6 +1460,10 @@ class ActivityRecordingController @Inject constructor(
     private fun clearRecording() {
         persistenceScope.coroutineContext.cancelChildren()
         restCompletionJob?.cancel()
+        planStepJob?.cancel()
+        planStepJob = null
+        restCountdownJob?.cancel()
+        restCountdownJob = null
         hrrPhaseJob?.cancel()
         hrrPhaseJob = null
         hrrTargetHits = 0
@@ -1196,6 +1483,8 @@ class ActivityRecordingController @Inject constructor(
         _state.value = state
         persistMetadata(state, throttle = throttlePersist)
         scheduleRestCompletion(state)
+        schedulePlanStepCompletion(state)
+        scheduleRestCountdown(state)
         if (replaceRoutePoints) {
             persistenceScope.launch {
                 recordingStore.replaceRoutePoints(state.points)
@@ -1240,7 +1529,7 @@ class ActivityRecordingController @Inject constructor(
             ) {
                 restCompletionJob = null
                 playRestTimerBellIfEnabled()
-                startNextRepetitionSet(current, Instant.now())
+                startNextRepetitionSet(current, Instant.now(), cueBell = false)
             }
         }
     }
@@ -1295,18 +1584,47 @@ class ActivityRecordingController @Inject constructor(
         }
     }
 
-    private fun startNextRepetitionSet(state: ActivityRecordingState, now: Instant) {
+    private fun startNextRepetitionSet(state: ActivityRecordingState, now: Instant, cueBell: Boolean = true) {
         val actualRestMillis = state.openRestMillis(now)
         val updatedSets = state.repetitionSets.withLastRestSeconds((actualRestMillis / 1_000L).coerceAtLeast(0L))
+        val nextStep = state.currentPlanStep
         val nextState = state.copy(
             status = ActivityRecordingStatus.RECORDING,
             repetitionSets = updatedSets,
             accumulatedRestMillis = state.accumulatedRestMillis + actualRestMillis,
             restStartedAt = null,
             currentSetStartedAt = now,
+            // The next step's own rest, ready for when it ends.
+            repetitionRestSeconds = nextStep?.restSeconds ?: state.repetitionRestSeconds,
             errorMessage = null,
         )
         updateAndPersist(nextState)
+        if (nextStep != null) cuePlanStep(nextStep, withBell = cueBell)
+    }
+
+    /**
+     * A timed step ends by itself. Like the recovery-test phases, the deadline
+     * is verified against the state it was scheduled for before it fires, so a
+     * step skipped or paused meanwhile leaves a stale timer with nothing to do.
+     */
+    private fun schedulePlanStepCompletion(state: ActivityRecordingState) {
+        planStepJob?.cancel()
+        planStepJob = null
+        val deadline = state.planStepEndTime() ?: return
+        val scheduledIndex = state.planStepIndex
+        val scheduledStart = state.currentSetStartedAt
+        val delayMillis = Duration.between(Instant.now(), deadline).toMillis().coerceAtLeast(0L)
+        planStepJob = bleMetricsScope.launch {
+            delay(delayMillis)
+            val current = _state.value
+            if (current.status == ActivityRecordingStatus.RECORDING &&
+                current.planStepIndex == scheduledIndex &&
+                current.currentSetStartedAt == scheduledStart
+            ) {
+                planStepJob = null
+                completeCurrentPlanStep()
+            }
+        }
     }
 
     private fun stopRecordingService() {
@@ -1428,6 +1746,12 @@ internal const val BarometerSmoothingAlpha = 0.3
 internal const val MinBarometerElevationStepMeters = 3.0
 internal const val RestTimerBellVolume = 0.42f
 internal const val HrrTargetHitsToEndEffort = 2
+internal const val PlanStepCueVibrationMillis = 150L
+internal const val CountdownVibrationMillis = 60L
+internal const val RestCountdownSeconds = 3L
+internal const val CountdownBeepMillis = 120
+internal const val CountdownBeepVolume = 70
+internal const val HrrCueVibrationMillis = 400L
 internal const val MetadataPersistThrottleMillis = 2_000L
 internal const val MissingInt = Int.MIN_VALUE
 internal const val MissingLong = Long.MIN_VALUE
@@ -1467,6 +1791,10 @@ internal const val KeyRepetitionRestSeconds = "repetition_rest_seconds"
 internal const val KeyCurrentSetStartedAt = "current_set_started_at"
 internal const val KeyRestStartedAt = "rest_started_at"
 internal const val KeyAccumulatedRestMillis = "accumulated_rest_millis"
+internal const val KeyPlanId = "plan_id"
+internal const val KeyPlanTitle = "plan_title"
+internal const val KeyPlanSteps = "plan_steps"
+internal const val KeyPlanStepIndex = "plan_step_index"
 internal const val KeyLastAccuracyMeters = "last_accuracy_meters"
 internal const val KeyLastLocationTime = "last_location_time"
 internal const val KeyDroppedPointCount = "dropped_point_count"

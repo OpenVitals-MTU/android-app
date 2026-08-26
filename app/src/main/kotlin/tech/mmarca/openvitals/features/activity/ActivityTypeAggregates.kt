@@ -52,7 +52,7 @@ internal fun List<ExerciseData>.activityTypeAggregates(): List<ActivityTypeAggre
         }
         .sortedWith(
             compareByDescending<ActivityTypeAggregate> { it.totalDurationMs }
-                .thenBy { exerciseTypeLabel(it.exerciseType) },
+                .thenBy { it.exerciseType },
         )
 
 private fun ExerciseData.averageMovingSpeedMetersPerSecond(): Double? {

@@ -6,6 +6,11 @@ import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseCompletionGoal
+import tech.mmarca.openvitals.domain.model.PlannedExercisePerformanceTarget
+import androidx.health.connect.client.units.Mass
+import androidx.health.connect.client.units.Length
+import androidx.health.connect.client.units.Energy
+import androidx.health.connect.client.records.ExercisePerformanceTarget
 import androidx.health.connect.client.records.ExerciseLap
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.PlannedExerciseBlock
@@ -922,31 +927,41 @@ internal class ActivityHealthReader(
                 timeRangeFilter = TimeRangeFilter.between(start, end),
                 ascendingOrder = true,
                 pageSize = 100,
-            ).map { record ->
-                PlannedExerciseData(
-                    id = record.metadata.id,
-                    title = record.title,
-                    exerciseType = record.exerciseType,
-                    startTime = record.startTime,
-                    endTime = record.endTime,
-                    hasExplicitTime = record.hasExplicitTime,
-                    completedExerciseSessionId = record.completedExerciseSessionId,
-                    notes = record.notes,
-                    blockCount = record.blocks.size,
-                    source = SyncedSourceOverlay.displaySource(record.metadata),
-                    blocks = record.blocks.map { it.toPlannedExerciseBlockData() },
-                )
-            }
+            ).map { record -> record.toPlannedExerciseData() }
         }
 
-    suspend fun writePlannedExerciseSession(request: PlannedExerciseWriteRequest): String = withContext(Dispatchers.IO) {
-        request.id?.let { existingId ->
-            support.client().deleteRecords(
-                recordType = PlannedExerciseSessionRecord::class,
-                recordIdsList = listOf(existingId),
-                clientRecordIdsList = emptyList(),
-            )
+    /** Null when Health Connect no longer has the record (deleted, or an id from another device). */
+    suspend fun readPlannedExerciseSession(id: String): PlannedExerciseData? =
+        support.withLogging("readPlannedExerciseSession[$id]", null) {
+            support.client().readRecord(PlannedExerciseSessionRecord::class, id).record.toPlannedExerciseData()
         }
+
+    suspend fun deletePlannedExerciseSession(id: String) = withContext(Dispatchers.IO) {
+        support.client().deleteRecords(
+            recordType = PlannedExerciseSessionRecord::class,
+            recordIdsList = listOf(id),
+            clientRecordIdsList = emptyList(),
+        )
+    }
+
+    private fun PlannedExerciseSessionRecord.toPlannedExerciseData(): PlannedExerciseData =
+        PlannedExerciseData(
+            id = metadata.id,
+            title = title,
+            exerciseType = exerciseType,
+            startTime = startTime,
+            endTime = endTime,
+            startZoneOffset = startZoneOffset,
+            hasExplicitTime = hasExplicitTime,
+            completedExerciseSessionId = completedExerciseSessionId,
+            notes = notes,
+            blockCount = blocks.size,
+            source = SyncedSourceOverlay.displaySource(metadata),
+            blocks = blocks.map { it.toPlannedExerciseBlockData() },
+        )
+
+    suspend fun writePlannedExerciseSession(request: PlannedExerciseWriteRequest): String = withContext(Dispatchers.IO) {
+        request.id?.let { existingId -> deletePlannedExerciseSession(existingId) }
         val zone = ZoneId.systemDefault()
         val record = PlannedExerciseSessionRecord(
             startTime = request.startTime,
@@ -1462,6 +1477,7 @@ internal fun PlannedExerciseStep.toPlannedExerciseStepData(): PlannedExerciseSte
         exercisePhase = exercisePhase,
         description = description,
         completion = completionGoal.toPlannedExerciseCompletion(),
+        performanceTargets = performanceTargets.map { it.toPlannedExercisePerformanceTarget() },
     )
 
 internal fun PlannedExerciseBlockData.toPlannedExerciseBlock(): PlannedExerciseBlock =
@@ -1477,31 +1493,67 @@ internal fun PlannedExerciseStepData.toPlannedExerciseStep(): PlannedExerciseSte
         exercisePhase = exercisePhase,
         description = description,
         completionGoal = completion.toExerciseCompletionGoal(),
-        performanceTargets = emptyList(),
+        performanceTargets = performanceTargets.map { it.toExercisePerformanceTarget() },
     )
 
 private fun ExerciseCompletionGoal.toPlannedExerciseCompletion(): PlannedExerciseCompletion =
     when (this) {
-        is ExerciseCompletionGoal.RepetitionsGoal ->
-            PlannedExerciseCompletion.Repetitions(repetitions)
-        is ExerciseCompletionGoal.DurationGoal ->
-            PlannedExerciseCompletion.DurationSeconds(duration.seconds)
-        ExerciseCompletionGoal.ManualCompletion ->
-            PlannedExerciseCompletion.Manual
-        else ->
-            PlannedExerciseCompletion.Unknown
+        is ExerciseCompletionGoal.RepetitionsGoal -> PlannedExerciseCompletion.Repetitions(repetitions)
+        is ExerciseCompletionGoal.DurationGoal -> PlannedExerciseCompletion.DurationSeconds(duration.seconds)
+        is ExerciseCompletionGoal.DistanceGoal -> PlannedExerciseCompletion.DistanceMeters(distance.inMeters)
+        is ExerciseCompletionGoal.DistanceAndDurationGoal ->
+            PlannedExerciseCompletion.DistanceAndDuration(distance.inMeters, duration.seconds)
+        is ExerciseCompletionGoal.StepsGoal -> PlannedExerciseCompletion.Steps(steps)
+        is ExerciseCompletionGoal.ActiveCaloriesBurnedGoal ->
+            PlannedExerciseCompletion.ActiveCaloriesKcal(activeCalories.inKilocalories)
+        is ExerciseCompletionGoal.TotalCaloriesBurnedGoal ->
+            PlannedExerciseCompletion.TotalCaloriesKcal(totalCalories.inKilocalories)
+        ExerciseCompletionGoal.ManualCompletion -> PlannedExerciseCompletion.Manual
+        else -> PlannedExerciseCompletion.Unknown
     }
 
 private fun PlannedExerciseCompletion.toExerciseCompletionGoal(): ExerciseCompletionGoal =
     when (this) {
-        is PlannedExerciseCompletion.Repetitions ->
-            ExerciseCompletionGoal.RepetitionsGoal(repetitions)
+        is PlannedExerciseCompletion.Repetitions -> ExerciseCompletionGoal.RepetitionsGoal(repetitions)
         is PlannedExerciseCompletion.DurationSeconds ->
             ExerciseCompletionGoal.DurationGoal(Duration.ofSeconds(seconds.coerceAtLeast(1L)))
-        PlannedExerciseCompletion.Manual ->
-            ExerciseCompletionGoal.ManualCompletion
-        PlannedExerciseCompletion.Unknown ->
-            ExerciseCompletionGoal.UnknownGoal
+        is PlannedExerciseCompletion.DistanceMeters -> ExerciseCompletionGoal.DistanceGoal(Length.meters(meters))
+        is PlannedExerciseCompletion.DistanceAndDuration ->
+            ExerciseCompletionGoal.DistanceAndDurationGoal(Length.meters(meters), Duration.ofSeconds(seconds.coerceAtLeast(1L)))
+        is PlannedExerciseCompletion.Steps -> ExerciseCompletionGoal.StepsGoal(steps)
+        is PlannedExerciseCompletion.ActiveCaloriesKcal ->
+            ExerciseCompletionGoal.ActiveCaloriesBurnedGoal(Energy.kilocalories(kcal))
+        is PlannedExerciseCompletion.TotalCaloriesKcal ->
+            ExerciseCompletionGoal.TotalCaloriesBurnedGoal(Energy.kilocalories(kcal))
+        PlannedExerciseCompletion.Manual -> ExerciseCompletionGoal.ManualCompletion
+        PlannedExerciseCompletion.Unknown -> ExerciseCompletionGoal.UnknownGoal
+    }
+
+private fun ExercisePerformanceTarget.toPlannedExercisePerformanceTarget(): PlannedExercisePerformanceTarget =
+    when (this) {
+        is ExercisePerformanceTarget.PowerTarget ->
+            PlannedExercisePerformanceTarget.Power(minPower.inWatts, maxPower.inWatts)
+        is ExercisePerformanceTarget.SpeedTarget ->
+            PlannedExercisePerformanceTarget.Speed(minSpeed.inMetersPerSecond, maxSpeed.inMetersPerSecond)
+        is ExercisePerformanceTarget.CadenceTarget -> PlannedExercisePerformanceTarget.Cadence(minCadence, maxCadence)
+        is ExercisePerformanceTarget.HeartRateTarget -> PlannedExercisePerformanceTarget.HeartRate(minHeartRate, maxHeartRate)
+        is ExercisePerformanceTarget.WeightTarget -> PlannedExercisePerformanceTarget.Weight(mass.inKilograms)
+        is ExercisePerformanceTarget.RateOfPerceivedExertionTarget -> PlannedExercisePerformanceTarget.RateOfPerceivedExertion(rpe)
+        ExercisePerformanceTarget.AmrapTarget -> PlannedExercisePerformanceTarget.Amrap
+        else -> PlannedExercisePerformanceTarget.Unknown
+    }
+
+private fun PlannedExercisePerformanceTarget.toExercisePerformanceTarget(): ExercisePerformanceTarget =
+    when (this) {
+        is PlannedExercisePerformanceTarget.Power -> ExercisePerformanceTarget.PowerTarget(Power.watts(minWatts), Power.watts(maxWatts))
+        is PlannedExercisePerformanceTarget.Speed ->
+            ExercisePerformanceTarget.SpeedTarget(Velocity.metersPerSecond(minMetersPerSecond), Velocity.metersPerSecond(maxMetersPerSecond))
+        is PlannedExercisePerformanceTarget.Cadence -> ExercisePerformanceTarget.CadenceTarget(minRpm, maxRpm)
+        is PlannedExercisePerformanceTarget.HeartRate -> ExercisePerformanceTarget.HeartRateTarget(minBpm, maxBpm)
+        is PlannedExercisePerformanceTarget.Weight -> ExercisePerformanceTarget.WeightTarget(Mass.kilograms(kilograms))
+        is PlannedExercisePerformanceTarget.RateOfPerceivedExertion -> ExercisePerformanceTarget.RateOfPerceivedExertionTarget(rpe)
+        PlannedExercisePerformanceTarget.Amrap -> ExercisePerformanceTarget.AmrapTarget
+        PlannedExercisePerformanceTarget.Unknown -> ExercisePerformanceTarget.UnknownTarget
     }
 
 internal fun ActivityWriteRequest.toExerciseSegments(): List<ExerciseSegment> {

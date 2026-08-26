@@ -15,6 +15,9 @@ import androidx.annotation.StringRes
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
+import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.domain.model.activeSteps
 
 enum class ActivityRecordingSensor {
     NONE,
@@ -58,6 +61,10 @@ val ActivityEntryType.isRepetitionLike: Boolean
 
 val ActivityEntryType.supportsStepCounting: Boolean
     get() = repetitionUnit == ActivityRepetitionUnit.STEPS
+
+/** Generic set types (calisthenics, strength sets): every step picks its own exercise. */
+val ActivityEntryType.supportsMixedExercises: Boolean
+    get() = supportsSetRepetitions && recordingSensor == ActivityRecordingSensor.NONE
 
 fun activityEntryTypeById(id: String?): ActivityEntryType? =
     id?.let { typeId -> DefaultActivityEntryTypes.firstOrNull { it.id == typeId } }
@@ -152,6 +159,29 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
         supportsDistance = false,
         recordingSensor = ActivityRecordingSensor.BLE,
     ),
+    // Generic set-based sessions for a plan that mixes exercises (push-ups, then
+    // planks). They have no rep sensor, so they are manual-entry and plan only;
+    // each set carries its own segment type instead of the type's.
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
+        id = "strength_sets",
+        labelRes = R.string.exercise_type_strength_sets,
+        supportsGpsRoute = false,
+        supportsDistance = false,
+        recordingSensor = ActivityRecordingSensor.NONE,
+        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+        repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
+    ),
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+        id = "calisthenics",
+        labelRes = R.string.exercise_type_calisthenics,
+        supportsGpsRoute = false,
+        supportsDistance = false,
+        recordingSensor = ActivityRecordingSensor.NONE,
+        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+        repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
+    ),
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL,
         id = "treadmill",
@@ -211,3 +241,33 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
         supportsDistance = false,
     ),
 )
+
+/**
+ * The entry type a plan opens as. A plan that mixes exercises is a generic set
+ * session whose rows each carry their own exercise; a single-exercise plan
+ * resolves to that exercise's own type (push-ups, pull-ups), with the generic
+ * types only matching when no specific type claims the segment.
+ */
+fun PlannedExerciseData.toActivityEntryType(): ActivityEntryType? {
+    val activeSteps = activeSteps()
+    if (activeSteps.map { it.exerciseType }.distinct().size > 1) {
+        return genericSetActivityType(exerciseType)
+    }
+    val activeSegmentType = activeSteps
+        .firstOrNull { it.completion is PlannedExerciseCompletion.Repetitions }
+        ?.exerciseType
+    val candidates = DefaultActivityEntryTypes.sortedBy { it.recordingSensor == ActivityRecordingSensor.NONE }
+    return candidates.firstOrNull { type ->
+        type.exerciseType == exerciseType && type.segmentType != null && type.segmentType == activeSegmentType
+    } ?: candidates.firstOrNull { type ->
+        type.exerciseType == exerciseType && type.supportsSetRepetitions
+    } ?: candidates.firstOrNull { type ->
+        type.exerciseType == exerciseType
+    }
+}
+
+/** The manual-only set type for a session type; strength sets when the type has no generic entry. */
+fun genericSetActivityType(exerciseType: Int): ActivityEntryType =
+    DefaultActivityEntryTypes.firstOrNull { type ->
+        type.exerciseType == exerciseType && type.supportsMixedExercises
+    } ?: DefaultActivityEntryTypes.first { it.id == "strength_sets" }

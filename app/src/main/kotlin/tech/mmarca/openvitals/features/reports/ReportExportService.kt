@@ -213,7 +213,7 @@ class ReportExportService @Inject constructor(
             sleepRem = context.getString(R.string.report_pdf_sleep_rem),
             sleepLight = context.getString(R.string.report_pdf_sleep_light),
             sleepAwake = context.getString(R.string.report_pdf_sleep_awake),
-            workoutTypeLabel = ::exerciseTypeLabel,
+            workoutTypeLabel = { exerciseTypeLabel(context, it) },
             pageLabel = { page, count -> context.getString(R.string.report_pdf_page_of, page, count) },
         )
     }

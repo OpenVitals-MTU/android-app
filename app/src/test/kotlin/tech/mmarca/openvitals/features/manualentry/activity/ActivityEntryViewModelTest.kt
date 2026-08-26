@@ -36,6 +36,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.features.workoutplans.toRepetitionSetInputs
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
@@ -426,7 +427,7 @@ class ActivityEntryViewModelTest {
     @Test fun `buildWriteRequest links selected planned workout`() {
         val state = ActivityEntryUiState(
             selectedActivityType = DefaultActivityEntryTypes.first { it.id == "pull_ups" },
-            selectedPlannedWorkoutId = "planned-id",
+            linkedPlan = ActivityLinkedPlan("planned-id", null),
             startDateText = "2026-05-26",
             startTimeText = "8:30",
             durationMinutesText = "5",
@@ -440,31 +441,6 @@ class ActivityEntryViewModelTest {
 
         requireNotNull(request)
         assertEquals("planned-id", request.plannedExerciseSessionId)
-    }
-
-    @Test fun `buildPlannedExerciseWriteRequest maps sets and rest steps`() {
-        val state = ActivityEntryUiState(
-            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "pull_ups" },
-            titleText = "Pull day",
-            startDateText = "2026-05-26",
-            startTimeText = "8:30",
-            durationMinutesText = "5",
-            repetitionMode = ActivityRepetitionEntryMode.SETS,
-            repetitionSets = listOf(
-                ActivityRepetitionSetInput(repetitionsText = "8", restMinutesText = "60"),
-                ActivityRepetitionSetInput(repetitionsText = "6"),
-            ),
-        )
-
-        val request = buildPlannedExerciseWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC))
-
-        requireNotNull(request)
-        assertEquals("Pull day", request.title)
-        assertEquals(1, request.blocks.size)
-        assertEquals(3, request.blocks.first().steps.size)
-        assertEquals(PlannedExerciseCompletion.Repetitions(8), request.blocks.first().steps[0].completion)
-        assertEquals(PlannedExerciseCompletion.DurationSeconds(60), request.blocks.first().steps[1].completion)
-        assertEquals(PlannedExerciseCompletion.Repetitions(6), request.blocks.first().steps[2].completion)
     }
 
     @Test fun `buildWriteRequest writes treadmill steps as steps count`() {
@@ -563,79 +539,37 @@ class ActivityEntryViewModelTest {
         assertTrue(vm.uiState.value.saveCompleted)
     }
 
-    @Test fun `selecting planned workout prefills editable set structure`() = runTest {
-        val plan = plannedPullUpPlan()
-        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plan))
+    @Test fun `the bare route opens the start hub with today's and upcoming plans`() = runTest {
+        val today = plannedPullUpPlan()
+        val later = today.copy(id = "later", startTime = today.startTime.plusSeconds(2 * 86_400), endTime = today.endTime.plusSeconds(2 * 86_400))
+        val past = today.copy(id = "past", startTime = today.startTime.minusSeconds(86_400), endTime = today.endTime.minusSeconds(86_400))
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(later, past, today))
         val vm = ActivityEntryViewModel(
             repository = repo,
             clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
         )
         advanceUntilIdle()
 
-        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
-        vm.startManualEntry()
-        advanceUntilIdle()
-        vm.applyPlannedWorkout("planned-id")
-
-        assertEquals("planned-id", vm.uiState.value.selectedPlannedWorkoutId)
-        assertFalse(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
-        assertEquals("Pull-up ladder", vm.uiState.value.titleText)
-        assertEquals(ActivityRepetitionEntryMode.SETS, vm.uiState.value.repetitionMode)
-        assertEquals(
-            listOf(
-                ActivityRepetitionSetInput(repetitionsText = "8", restMinutesText = "60"),
-                ActivityRepetitionSetInput(repetitionsText = "6"),
-            ),
-            vm.uiState.value.repetitionSets,
-        )
-
-        vm.updateTitle("Pull-up ladder plus")
-
-        assertTrue(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
+        assertEquals(ActivityEntryMode.START_HUB, vm.uiState.value.mode)
+        assertEquals(listOf("planned-id", "later"), vm.uiState.value.hubPlans.map { it.id })
+        assertFalse(vm.uiState.value.isLoadingHubPlans)
+        assertTrue(vm.uiState.value.hubPlansAvailable)
     }
 
-    @Test fun `start from existing plan auto-applies the only available plan`() = runTest {
-        val plan = plannedPullUpPlan()
-        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plan))
+    @Test fun `the legacy plan launch mode also lands on the hub`() = runTest {
         val vm = ActivityEntryViewModel(
-            repository = repo,
+            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan())),
             clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            launchMode = tech.mmarca.openvitals.navigation.Screen.ActivityEntryMode.PLAN,
         )
         advanceUntilIdle()
 
-        vm.startFromExistingPlan()
-        advanceUntilIdle()
-
-        // With a single planned workout there is no meaningful choice, so the picker steps are
-        // skipped and the plan opens directly in the editable manual entry form.
-        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
-        assertEquals(listOf(plan), vm.uiState.value.plannedWorkouts)
-        assertEquals("planned-id", vm.uiState.value.selectedPlannedWorkoutId)
-        assertFalse(vm.uiState.value.isLoadingPlannedWorkouts)
-    }
-
-    @Test fun `start from existing plan keeps picker when multiple activity types exist`() = runTest {
-        val pullUps = plannedPullUpPlan()
-        val pushUps = plannedPushUpPlan()
-        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(pullUps, pushUps))
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
-        advanceUntilIdle()
-
-        vm.startFromExistingPlan()
-        advanceUntilIdle()
-
-        assertEquals(ActivityEntryMode.PLAN_ACTIVITY_PICKER, vm.uiState.value.mode)
-        assertEquals(listOf(pullUps, pushUps), vm.uiState.value.plannedWorkouts)
-        assertFalse(vm.uiState.value.isLoadingPlannedWorkouts)
+        assertEquals(ActivityEntryMode.START_HUB, vm.uiState.value.mode)
+        assertEquals(listOf("planned-id"), vm.uiState.value.hubPlans.map { it.id })
     }
 
     @Test fun `startWithPlan opens the requested plan directly in manual entry`() = runTest {
-        val pullUps = plannedPullUpPlan()
-        val pushUps = plannedPushUpPlan()
-        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(pullUps, pushUps))
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan(), plannedPushUpPlan()))
         val vm = ActivityEntryViewModel(
             repository = repo,
             clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
@@ -646,33 +580,105 @@ class ActivityEntryViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
-        assertEquals("planned-push-id", vm.uiState.value.selectedPlannedWorkoutId)
+        assertEquals(ActivityLinkedPlan("planned-push-id", "Push-up pyramid"), vm.uiState.value.linkedPlan)
         assertEquals("push_ups", vm.uiState.value.selectedActivityType.id)
-    }
-
-    @Test fun `selecting activity then plan opens editable manual entry`() = runTest {
-        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
-        )
-        advanceUntilIdle()
-
-        vm.startFromExistingPlan()
-        advanceUntilIdle()
-        vm.selectPlannedWorkoutActivity("pull_ups")
-        vm.applyPlannedWorkout("planned-id")
-
-        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
-        assertEquals("pull_ups", vm.uiState.value.selectedActivityType.id)
-        assertEquals("planned-id", vm.uiState.value.selectedPlannedWorkoutId)
         assertEquals("2026-05-27", vm.uiState.value.startDateText)
         assertEquals("9:45", vm.uiState.value.startTimeText)
     }
 
-    @Test fun `edit entry loads matching planned workouts without selecting a plan`() = runTest {
+    @Test fun `a missing plan id falls back to the hub and says so`() = runTest {
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan())),
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startWithPlan("gone")
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.START_HUB, vm.uiState.value.mode)
+        assertEquals(ActivityEntryError.PLAN_NOT_FOUND, vm.uiState.value.entryError)
+        assertEquals(listOf("planned-id"), vm.uiState.value.hubPlans.map { it.id })
+        assertNull(vm.uiState.value.linkedPlan)
+    }
+
+    @Test fun `logging from a hub plan prefills the set structure and links the plan`() = runTest {
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.logFromPlan("planned-id")
+
+        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
+        assertEquals(ActivityLinkedPlan("planned-id", "Pull-up ladder"), vm.uiState.value.linkedPlan)
+        assertEquals("pull_ups", vm.uiState.value.selectedActivityType.id)
+        assertEquals("Pull-up ladder", vm.uiState.value.titleText)
+        assertEquals(ActivityRepetitionEntryMode.SETS, vm.uiState.value.repetitionMode)
+        assertEquals(
+            listOf(
+                ActivityRepetitionSetInput(repetitionsText = "8", restMinutesText = "60"),
+                ActivityRepetitionSetInput(repetitionsText = "6"),
+            ),
+            vm.uiState.value.repetitionSets,
+        )
+
+        vm.clearLinkedPlan()
+        assertNull(vm.uiState.value.linkedPlan)
+    }
+
+    @Test fun `a duration-only plan prefills seconds rows`() = runTest {
+        val plank = plannedPullUpPlan().copy(
+            id = "plank-plan",
+            blocks = listOf(
+                PlannedExerciseBlockData(
+                    repetitions = 2,
+                    description = null,
+                    steps = listOf(
+                        PlannedExerciseStepData(
+                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                            description = null,
+                            completion = PlannedExerciseCompletion.DurationSeconds(45),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plank)),
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.logFromPlan("plank-plan")
+
+        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
+        assertEquals(2, vm.uiState.value.repetitionSets.size)
+        assertTrue(vm.uiState.value.repetitionSets.all { it.isDuration && it.repetitionsText == "45" })
+    }
+
+    @Test fun `reapplyPlan after the builder returns re-prefills from the new id`() = runTest {
+        val original = plannedPullUpPlan()
+        val edited = original.copy(id = "new-id", title = "Pull-up ladder v2")
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(original, edited)),
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+        vm.logFromPlan("planned-id")
+
+        vm.reapplyPlan("new-id")
+        advanceUntilIdle()
+
+        assertEquals(ActivityLinkedPlan("new-id", "Pull-up ladder v2"), vm.uiState.value.linkedPlan)
+        assertEquals("Pull-up ladder v2", vm.uiState.value.titleText)
+    }
+
+    @Test fun `editing a plan-linked session keeps the link and shows its title`() = runTest {
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        val plan = plannedPullUpPlan()
         val workout = ExerciseData(
             id = "activity-id",
             title = "Pull-up ladder",
@@ -692,7 +698,8 @@ class ActivityEntryViewModelTest {
             ),
             isOpenVitalsEntry = true,
         )
-        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plan), workout = workout)
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()), workout = workout)
+        coEvery { repo.updateActivityEntry(any(), any()) } returns Unit
         val vm = ActivityEntryViewModel(
             repository = repo,
             clock = Clock.fixed(start, ZoneId.of("UTC")),
@@ -704,30 +711,29 @@ class ActivityEntryViewModelTest {
         advanceUntilIdle()
 
         assertEquals("pull_ups", vm.uiState.value.selectedActivityType.id)
-        assertEquals(listOf(plan), vm.uiState.value.plannedWorkouts)
-        assertNull(vm.uiState.value.selectedPlannedWorkoutId)
+        assertEquals(ActivityLinkedPlan("planned-id", "Pull-up ladder"), vm.uiState.value.linkedPlan)
+
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
         coVerify {
-            repo.loadPlannedWorkoutOptions(any(), ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS)
+            repo.updateActivityEntry("activity-id", match<ActivityWriteRequest> { it.plannedExerciseSessionId == "planned-id" })
         }
     }
 
-    @Test fun `missing planned read permission is surfaced when loading existing plans`() = runTest {
-        val repo = activityRepo(canWrite = true, canReadPlans = false)
+    @Test fun `missing planned read permission is surfaced on the hub`() = runTest {
         val vm = ActivityEntryViewModel(
-            repository = repo,
+            repository = activityRepo(canWrite = true, canReadPlans = false),
             clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
         )
         advanceUntilIdle()
 
-        vm.startFromExistingPlan()
-        advanceUntilIdle()
-
-        assertEquals(ActivityEntryMode.PLAN_ACTIVITY_PICKER, vm.uiState.value.mode)
-        assertEquals(ActivityEntryError.MISSING_WRITE_PERMISSION, vm.uiState.value.entryError)
-        assertEquals(PlannedWorkoutWritePermissions, vm.uiState.value.writePermissions)
+        assertEquals(ActivityEntryMode.START_HUB, vm.uiState.value.mode)
+        assertEquals(ScreenError.PermissionDenied, vm.uiState.value.hubPlansError)
+        assertTrue(vm.uiState.value.hubPlans.isEmpty())
     }
 
-    @Test fun `activity entry writes selected planned workout id`() = runTest {
+    @Test fun `activity entry writes the linked plan id`() = runTest {
         val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
         val vm = ActivityEntryViewModel(
             repository = repo,
@@ -735,10 +741,8 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
-        vm.startManualEntry()
+        vm.logFromPlan("planned-id")
         advanceUntilIdle()
-        vm.applyPlannedWorkout("planned-id")
         vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
@@ -747,7 +751,7 @@ class ActivityEntryViewModelTest {
         }
     }
 
-    @Test fun `saving current structure writes planned workout`() = runTest {
+    @Test fun `save as plan writes a one-block plan and asks to open the builder`() = runTest {
         val repo = activityRepo(canWrite = true)
         val vm = ActivityEntryViewModel(
             repository = repo,
@@ -763,51 +767,33 @@ class ActivityEntryViewModelTest {
         vm.updateRepetitionSetRest(0, "60")
         vm.addRepetitionSet()
         vm.updateRepetitionSetRepetitions(1, "6")
+        vm.updateRepetitionSetRest(1, "")
         advanceUntilIdle()
-        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        vm.saveAsPlan(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         coVerify {
             repo.writePlannedWorkout(match<PlannedExerciseWriteRequest> { request ->
                 request.id == null &&
-                    request.blocks.first().steps.map { it.completion } == listOf(
+                    request.title == "Pull-up ladder" &&
+                    // Different rep counts do not collapse into one block of rounds.
+                    request.blocks.map { it.repetitions } == listOf(1, 1) &&
+                    request.blocks[0].steps.map { it.completion } == listOf(
                         PlannedExerciseCompletion.Repetitions(8),
                         PlannedExerciseCompletion.DurationSeconds(60),
-                        PlannedExerciseCompletion.Repetitions(6),
-                    )
+                    ) &&
+                    request.blocks[1].steps.map { it.completion } == listOf(PlannedExerciseCompletion.Repetitions(6))
             })
         }
-        assertEquals("saved-plan-id", vm.uiState.value.selectedPlannedWorkoutId)
+        assertEquals(ActivityLinkedPlan("saved-plan-id", "Pull-up ladder"), vm.uiState.value.linkedPlan)
+        assertEquals("saved-plan-id", vm.uiState.value.pendingBuilderPlanId)
+        assertFalse(vm.uiState.value.isSavingAsPlan)
+
+        vm.onBuilderNavigationHandled()
+        assertNull(vm.uiState.value.pendingBuilderPlanId)
     }
 
-    @Test fun `updating selected plan clears changed highlight baseline`() = runTest {
-        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
-        advanceUntilIdle()
-
-        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
-        vm.startManualEntry()
-        advanceUntilIdle()
-        vm.applyPlannedWorkout("planned-id")
-        vm.updateTitle("Pull-up ladder plus")
-
-        assertTrue(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
-
-        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC), updateSelected = true)
-        advanceUntilIdle()
-
-        coVerify {
-            repo.writePlannedWorkout(match<PlannedExerciseWriteRequest> { request ->
-                request.id == "planned-id" && request.title == "Pull-up ladder plus"
-            })
-        }
-        assertFalse(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
-    }
-
-    @Test fun `saving current structure requires a training plan title`() = runTest {
+    @Test fun `save as plan without a title uses the type's default title`() = runTest {
         val repo = activityRepo(canWrite = true)
         val vm = ActivityEntryViewModel(
             repository = repo,
@@ -815,55 +801,22 @@ class ActivityEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "push_ups" })
         vm.startManualEntry()
-        vm.updateRepetitionMode(ActivityRepetitionEntryMode.SETS)
-        vm.updateRepetitionSetRepetitions(0, "8")
+        vm.updateRepetitionTotal("10")
         advanceUntilIdle()
-        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC))
-        advanceUntilIdle()
-
-        assertEquals(ActivityEntryError.INVALID_VALUE, vm.uiState.value.entryError)
-        assertTrue(
-            ActivityEntryValidationError.TRAINING_PLAN_TITLE_REQUIRED in vm.uiState.value.validationErrors
-        )
-        coVerify(exactly = 0) { repo.writePlannedWorkout(any()) }
-    }
-
-    @Test fun `new plan option clears selected plan and saves a new planned workout`() = runTest {
-        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
-        advanceUntilIdle()
-
-        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
-        vm.startManualEntry()
-        advanceUntilIdle()
-        vm.applyPlannedWorkout("planned-id")
-        vm.createNewPlannedWorkout()
-
-        assertNull(vm.uiState.value.selectedPlannedWorkoutId)
-        assertEquals("", vm.uiState.value.titleText)
-        assertEquals("", vm.uiState.value.notesText)
-        assertEquals("30", vm.uiState.value.durationMinutesText)
-        assertEquals(ActivityRepetitionEntryMode.SETS, vm.uiState.value.repetitionMode)
-        assertEquals(listOf(ActivityRepetitionSetInput()), vm.uiState.value.repetitionSets)
-
-        vm.updateTitle("New pull-up plan")
-        vm.updateRepetitionSetRepetitions(0, "5")
-        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        vm.saveAsPlan(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         coVerify {
             repo.writePlannedWorkout(match<PlannedExerciseWriteRequest> { request ->
-                request.id == null && request.title == "New pull-up plan"
+                request.title == "Push-ups" &&
+                    request.blocks.single().steps.single().completion == PlannedExerciseCompletion.Repetitions(10)
             })
         }
     }
 
-    @Test fun `missing planned workout permission is surfaced before saving plan`() = runTest {
+    @Test fun `missing planned workout permission is surfaced when saving as plan`() = runTest {
         val repo = activityRepo(canWrite = true, canWritePlan = false)
         val vm = ActivityEntryViewModel(
             repository = repo,
@@ -873,15 +826,228 @@ class ActivityEntryViewModelTest {
 
         vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
         vm.startManualEntry()
-        vm.updateTitle("Pull-up ladder")
         vm.updateRepetitionMode(ActivityRepetitionEntryMode.SETS)
         vm.updateRepetitionSetRepetitions(0, "8")
         advanceUntilIdle()
-        vm.saveCurrentAsPlannedWorkout(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        vm.saveAsPlan(ActivityEntryUnits.uniform(UnitSystem.METRIC))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryError.MISSING_WRITE_PERMISSION, vm.uiState.value.entryError)
         assertEquals(PlannedWorkoutWritePermissions, vm.uiState.value.writePermissions)
+        assertNull(vm.uiState.value.pendingBuilderPlanId)
+    }
+
+    @Test fun `starting a plan from the hub shows the guided recording setup`() = runTest {
+        val recorder = recorderMock()
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPushUpPlan())),
+            activityRecorder = recorder,
+            recordingDraftStore = ActivityRecordingDraftStore(),
+            preferencesRepository = activityPrefs(),
+            clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.prepareGuidedPlan("planned-push-id")
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(ActivityEntryMode.RECORDING, state.mode)
+        assertEquals("planned-push-id", state.guidedPlan?.plan?.id)
+        assertEquals("push_ups", state.guidedPlan?.activityType?.id)
+        assertEquals(1, state.guidedPlan?.steps?.size)
+        assertEquals(ActivityLinkedPlan("planned-push-id", "Push-up pyramid"), state.linkedPlan)
+
+        every { recorder.startPlanRecording(any(), any()) } returns true
+        vm.startPlanRecording()
+        verify(exactly = 1) { recorder.startPlanRecording(match { it.id == "planned-push-id" }, match { it.id == "push_ups" }) }
+    }
+
+    @Test fun `the record launch mode with a plan id opens the guided setup`() = runTest {
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPushUpPlan())),
+            activityRecorder = recorderMock(),
+            recordingDraftStore = ActivityRecordingDraftStore(),
+            preferencesRepository = activityPrefs(),
+            clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
+            launchMode = tech.mmarca.openvitals.navigation.Screen.ActivityEntryMode.RECORD,
+            launchPlanId = "planned-push-id",
+        )
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.RECORDING, vm.uiState.value.mode)
+        assertEquals("planned-push-id", vm.uiState.value.guidedPlan?.plan?.id)
+    }
+
+    @Test fun `a plan the recorder cannot walk through falls back to the prefilled form`() = runTest {
+        val runPlan = plannedPullUpPlan().copy(
+            id = "run-plan",
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            blocks = listOf(
+                PlannedExerciseBlockData(
+                    repetitions = 1,
+                    description = null,
+                    steps = listOf(
+                        PlannedExerciseStepData(
+                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING,
+                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                            description = null,
+                            completion = PlannedExerciseCompletion.DurationSeconds(600),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(runPlan)),
+            activityRecorder = recorderMock(),
+            recordingDraftStore = ActivityRecordingDraftStore(),
+            preferencesRepository = activityPrefs(),
+            clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.prepareGuidedPlan("run-plan")
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
+        assertNull(vm.uiState.value.guidedPlan)
+        assertEquals("run-plan", vm.uiState.value.linkedPlan?.id)
+    }
+
+    @Test fun `a finished plan run lands in the form with its exercises and the plan linked`() = runTest {
+        val start = Instant.parse("2026-05-27T09:45:00Z")
+        val recorder = recorderMock()
+        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+            recordingKind = ActivityRecordingKind.REPETITION,
+            activityTypeId = "calisthenics",
+            startTime = start,
+            endTime = start.plusSeconds(300),
+            points = emptyList(),
+            pauseIntervals = emptyList(),
+            distanceMeters = 0.0,
+            elevationGainedMeters = 0.0,
+            repetitionCount = 10L,
+            repetitionSets = listOf(
+                ActivityRecordedRepetitionSet(
+                    repetitions = 10L,
+                    restSeconds = 60L,
+                    activeMillis = 30_000L,
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+                    label = "Push-ups",
+                ),
+                ActivityRecordedRepetitionSet(
+                    repetitions = 0L,
+                    restSeconds = 0L,
+                    activeMillis = 44_600L,
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+                    label = "Plank",
+                    isDuration = true,
+                ),
+            ),
+            planId = "planned-id",
+            planTitle = "Strength",
+        )
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true),
+            activityRecorder = recorder,
+            recordingDraftStore = ActivityRecordingDraftStore(),
+            preferencesRepository = activityPrefs(),
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(ActivityEntryMode.MANUAL, state.mode)
+        assertEquals("calisthenics", state.selectedActivityType.id)
+        assertEquals(ActivityLinkedPlan("planned-id", "Strength"), state.linkedPlan)
+        assertEquals("Strength", state.titleText)
+        assertEquals(ActivityRepetitionEntryMode.SETS, state.repetitionMode)
+        assertEquals(
+            listOf(
+                ActivityRepetitionSetInput(repetitionsText = "10", restMinutesText = "60", label = "Push-ups"),
+                ActivityRepetitionSetInput(
+                    repetitionsText = "44",
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+                    label = "Plank",
+                    isDuration = true,
+                ),
+            ),
+            state.repetitionSets,
+        )
+        assertTrue(state.isRecordingDraft)
+    }
+
+    @Test fun `the hub lists recently completed plans to repeat, and repeat starts today's copy`() = runTest {
+        val done = plannedPushUpPlan().copy(
+            id = "done-id",
+            completedExerciseSessionId = "session-1",
+            startTime = Instant.parse("2026-05-20T07:00:00Z"),
+            endTime = Instant.parse("2026-05-20T07:20:00Z"),
+        )
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
+        coEvery { repo.loadPlannedWorkouts(any(), any()) } returns listOf(done)
+        coEvery { repo.loadPlannedWorkout("saved-plan-id") } returns done.copy(id = "saved-plan-id", completedExerciseSessionId = null)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            activityRecorder = recorderMock(),
+            recordingDraftStore = ActivityRecordingDraftStore(),
+            preferencesRepository = activityPrefs(),
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf("done-id"), vm.uiState.value.recentPlans.map { it.id })
+        assertEquals(listOf("planned-id"), vm.uiState.value.hubPlans.map { it.id })
+
+        vm.repeatPlan("done-id")
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writePlannedWorkout(match<PlannedExerciseWriteRequest> { request ->
+                request.id == null &&
+                    request.startTime.atZone(ZoneId.of("UTC")).toLocalDate().toString() == "2026-05-26" &&
+                    request.startTime.atZone(ZoneId.of("UTC")).toLocalTime().toString() == "08:30"
+            })
+        }
+        assertEquals(ActivityEntryMode.RECORDING, vm.uiState.value.mode)
+        assertEquals("saved-plan-id", vm.uiState.value.guidedPlan?.plan?.id)
+    }
+
+    @Test fun `a mixed-exercise type composes steps from picked exercises`() = runTest {
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true),
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startManualEntry()
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "calisthenics" })
+        assertEquals(ActivityRepetitionEntryMode.SETS, vm.uiState.value.repetitionMode)
+
+        val plank = tech.mmarca.openvitals.features.workoutplans.WorkoutPlanStepChoice(ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK)
+        vm.addExerciseStep(plank)
+        // The single blank starter row is replaced, not kept in front of the first real step.
+        assertEquals(1, vm.uiState.value.repetitionSets.size)
+        assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK, vm.uiState.value.repetitionSets.single().segmentType)
+        assertTrue(vm.uiState.value.repetitionSets.single().isDuration)
+        assertEquals("30", vm.uiState.value.repetitionSets.single().repetitionsText)
+
+        vm.addRepetitionSet()
+        assertEquals(2, vm.uiState.value.repetitionSets.size)
+        assertEquals(vm.uiState.value.repetitionSets[0], vm.uiState.value.repetitionSets[1])
+
+        vm.updateRepetitionSetGoalType(1, false)
+        assertFalse(vm.uiState.value.repetitionSets[1].isDuration)
+        assertEquals("30", vm.uiState.value.repetitionSets[1].repetitionsText)
+
+        vm.updateRepetitionSetExercise(1, tech.mmarca.openvitals.features.workoutplans.WorkoutPlanStepCatalog.first())
+        assertEquals("Push-ups", vm.uiState.value.repetitionSets[1].label)
+        assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, vm.uiState.value.repetitionSets[1].segmentType)
     }
 
     @Test fun `activity entry defaults to latest recorded activity when no favorite is set`() = runTest {
@@ -1091,7 +1257,7 @@ class ActivityEntryViewModelTest {
         assertNull(draftStore.restore())
     }
 
-    @Test fun `discarding a finished recording draft clears it and returns to source choice`() = runTest {
+    @Test fun `discarding a finished recording draft clears it and returns to the start hub`() = runTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()
         val recorder = mockk<ActivityRecordingController>()
@@ -1126,7 +1292,7 @@ class ActivityEntryViewModelTest {
         advanceUntilIdle()
 
         assertNull(draftStore.restore())
-        assertEquals(ActivityEntryMode.CHOOSE_SOURCE, vm.uiState.value.mode)
+        assertEquals(ActivityEntryMode.START_HUB, vm.uiState.value.mode)
         assertFalse(vm.uiState.value.isRecordingDraft)
         assertNull(vm.uiState.value.importedRoute)
     }
@@ -1538,7 +1704,12 @@ class ActivityEntryViewModelTest {
         }
         every { recorder.discardRecording() } answers { state.value = ActivityRecordingState() }
         every { recorder.stopBlePreview() } returns Unit
+        every { recorder.previewBleConnections() } returns Unit
         every { recorder.clearPreparedRecording() } returns Unit
+        every { recorder.startPlanRecording(any(), any()) } answers {
+            state.value = ActivityRecordingState(status = ActivityRecordingStatus.RECORDING)
+            true
+        }
         every { recorder.finishRecording() } returns null
     }
 
@@ -1613,7 +1784,7 @@ class ActivityEntryViewModelTest {
         )
     }
 
-    @Test fun `discarding clears the session and returns to source choice`() = runTest {
+    @Test fun `discarding clears the session and returns to the start hub`() = runTest {
         val recorder = recorderMock(startResult = false, errorMessage = "Waiting for GPS")
         val draftStore = ActivityRecordingDraftStore()
         val vm = ActivityEntryViewModel(
@@ -1633,7 +1804,7 @@ class ActivityEntryViewModelTest {
 
         verify(exactly = 1) { recorder.discardRecording() }
         assertNull(draftStore.restore())
-        assertEquals(ActivityEntryMode.CHOOSE_SOURCE, vm.uiState.value.mode)
+        assertEquals(ActivityEntryMode.START_HUB, vm.uiState.value.mode)
         assertNull(vm.uiState.value.entryError)
         assertNull(vm.uiState.value.detailError)
         assertFalse(recorder.state.value.isActive)
@@ -1687,7 +1858,10 @@ class ActivityEntryViewModelTest {
             coEvery { repo.loadWorkout(any()) } answers {
                 if (loadWorkoutFailure != null) throw loadWorkoutFailure else workout
             }
-            coEvery { repo.loadPlannedWorkoutOptions(any(), any()) } returns plannedWorkouts
+            coEvery { repo.loadPlannedWorkout(any()) } answers {
+                if (!canReadPlans) throw SecurityException("Missing Health Connect planned exercise read permission.")
+                plannedWorkouts.firstOrNull { it.id == firstArg() }
+            }
             coEvery { repo.loadExistingPlannedWorkouts(any()) } answers {
                 if (canReadPlans) plannedWorkouts else throw SecurityException("Missing Health Connect planned exercise read permission.")
             }
@@ -1735,6 +1909,119 @@ class ActivityEntryViewModelTest {
             "read_planned",
             "write_planned",
         )
+    }
+
+    @Test fun `toRepetitionSetInputs ignores timed active steps instead of treating them as rest`() {
+        val plan = plannedPullUpPlan().copy(
+            blocks = listOf(
+                PlannedExerciseBlockData(
+                    repetitions = 1,
+                    description = null,
+                    steps = listOf(
+                        PlannedExerciseStepData(
+                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                            description = "Push-ups",
+                            completion = PlannedExerciseCompletion.Repetitions(10),
+                        ),
+                        PlannedExerciseStepData(
+                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
+                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_REST,
+                            description = null,
+                            completion = PlannedExerciseCompletion.DurationSeconds(60),
+                        ),
+                        PlannedExerciseStepData(
+                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                            description = null,
+                            completion = PlannedExerciseCompletion.DurationSeconds(45),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val sets = plan.toRepetitionSetInputs(ownSegmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT)
+
+        assertEquals(
+            listOf(
+                ActivityRepetitionSetInput(repetitionsText = "10", restMinutesText = "60", label = "Push-ups"),
+                ActivityRepetitionSetInput(
+                    repetitionsText = "45",
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+                    isDuration = true,
+                ),
+            ),
+            sets,
+        )
+    }
+
+    @Test fun `a plan mixing exercises maps to the generic set type of its session type`() {
+        val mixed = plannedPullUpPlan().copy(
+            blocks = listOf(
+                PlannedExerciseBlockData(
+                    repetitions = 1,
+                    description = null,
+                    steps = listOf(
+                        PlannedExerciseStepData(
+                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                            description = "Push-ups",
+                            completion = PlannedExerciseCompletion.Repetitions(10),
+                        ),
+                        PlannedExerciseStepData(
+                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                            description = null,
+                            completion = PlannedExerciseCompletion.DurationSeconds(45),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals("calisthenics", mixed.toActivityEntryType()?.id)
+        assertEquals(
+            "strength_sets",
+            mixed.copy(exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING).toActivityEntryType()?.id,
+        )
+        // A single-exercise plan still resolves to that exercise.
+        assertEquals("pull_ups", plannedPullUpPlan().toActivityEntryType()?.id)
+    }
+
+    @Test fun `timed sets take their own seconds and segment type when building segments`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "push_ups" },
+            startDateText = "2026-08-26",
+            startTimeText = "8:00",
+            durationMinutesText = "5",
+            repetitionMode = ActivityRepetitionEntryMode.SETS,
+            repetitionSets = listOf(
+                ActivityRepetitionSetInput(repetitionsText = "10", restMinutesText = "60"),
+                ActivityRepetitionSetInput(
+                    repetitionsText = "45",
+                    restMinutesText = "30",
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+                    isDuration = true,
+                ),
+                ActivityRepetitionSetInput(repetitionsText = "10"),
+            ),
+        )
+        val (start, end) = requireNotNull(activityEntrySessionRange(state))
+
+        val segments = requireNotNull(buildActivityExerciseSegments(state, start, end))
+
+        // 300 s total - 90 s rest - 45 s plank = 165 s shared by the two rep sets.
+        assertEquals(5, segments.size)
+        val plank = segments[2]
+        assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK, plank.segmentType)
+        assertEquals(0, plank.repetitions)
+        assertEquals(45L, java.time.Duration.between(plank.startTime, plank.endTime).seconds)
+        assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, segments[0].segmentType)
+        assertEquals(10, segments[0].repetitions)
+        assertEquals(83L, java.time.Duration.between(segments[0].startTime, segments[0].endTime).seconds)
+        assertEquals(82L, java.time.Duration.between(segments[4].startTime, segments[4].endTime).seconds)
+        assertEquals(end, segments.last().endTime)
     }
 }
 

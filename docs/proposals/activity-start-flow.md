@@ -1,5 +1,8 @@
 # Activity Start Flow Analysis
 
+> **Status (2026-08-26):** Historical. Proposals 1, 2, 4 and 6 are implemented; 3 and 5 are superseded by the activity start hub (see [Activity and training plans](../features/activity-training-plans.md)); 7 (resume an active or draft recording from the dashboard Start) is still open.
+
+
 > **Status:** Analysis and proposal context. Current implemented behavior remains documented in [Recording of activity](../features/activity-recording.md).
 > **Implementation map:** [Feature map](../features/feature-map.md).
 

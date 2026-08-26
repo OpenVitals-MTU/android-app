@@ -71,6 +71,8 @@ internal fun ExerciseData.toEditState(
         repetitionMode = repetitionEditState.mode,
         repetitionTotalText = repetitionEditState.totalText,
         repetitionSets = repetitionEditState.sets,
+        // Carried so an edit keeps the plan completed; the title arrives later, if at all.
+        linkedPlan = plannedExerciseSessionId?.let { ActivityLinkedPlan(id = it, title = null) },
         importedRoute = routeImport,
         recordedPauseIntervals = segments
             .filter { it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE }
@@ -89,7 +91,12 @@ internal fun ExerciseData.inferStoredActivityType(): ActivityEntryType {
         it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE ||
             it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST
     }
+    val distinctActiveTypes = activeSegments.map { it.segmentType }.distinct()
     return when {
+        distinctActiveTypes.size > 1 && (
+            exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS ||
+                exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING
+            ) -> genericSetActivityType(exerciseType)
         exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> {
             DefaultActivityEntryTypes.first { it.id == "treadmill" }
         }
@@ -127,10 +134,14 @@ internal fun ExerciseData.toRepetitionEditState(type: ActivityEntryType): Repeti
     if (type.repetitionUnit != ActivityRepetitionUnit.REPETITIONS) return RepetitionEditState()
 
     val activeSegments = segments
-        .filter { it.segmentType == type.segmentType && it.repetitions > 0 }
+        .filterNot {
+            it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST ||
+                it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE
+        }
+        .filter { it.repetitions > 0 || it.segmentType != type.segmentType }
         .sortedBy { it.startTime }
     if (activeSegments.isEmpty()) return RepetitionEditState()
-    if (activeSegments.size == 1) {
+    if (activeSegments.size == 1 && activeSegments.first().segmentType == type.segmentType) {
         return RepetitionEditState(totalText = activeSegments.first().repetitions.toString())
     }
 
@@ -148,9 +159,16 @@ internal fun ExerciseData.toRepetitionEditState(type: ActivityEntryType): Repeti
                     ?.toString()
             }
             .orEmpty()
+        val isDuration = segment.repetitions <= 0
         ActivityRepetitionSetInput(
-            repetitionsText = segment.repetitions.toString(),
+            repetitionsText = if (isDuration) {
+                Duration.between(segment.startTime, segment.endTime).seconds.coerceAtLeast(1L).toString()
+            } else {
+                segment.repetitions.toString()
+            },
             restMinutesText = restSeconds,
+            segmentType = segment.segmentType.takeIf { it != type.segmentType },
+            isDuration = isDuration,
         )
     }
     return RepetitionEditState(

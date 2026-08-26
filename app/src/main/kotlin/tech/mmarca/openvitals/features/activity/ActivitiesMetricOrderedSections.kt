@@ -83,6 +83,7 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
     onEditActivity: (String) -> Unit,
     onDeleteActivity: (String) -> Unit,
     onStartPlannedWorkout: (String) -> Unit,
+    onManageWorkoutPlans: () -> Unit = {},
     onOpenCardioLoad: (() -> Unit)?,
     onOpenSteps: (() -> Unit)?,
     onOpenDistance: (() -> Unit)?,
@@ -156,12 +157,13 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
                         unitFormatter = unitFormatter,
                     )
                 }
-                if (state.plannedWorkouts.isNotEmpty()) {
+                if (state.plannedWorkouts.isNotEmpty() || state.plannedWorkoutsAvailable) {
                     PlannedWorkoutListCard(
                         plannedWorkouts = state.plannedWorkouts,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onStartPlannedWorkout = onStartPlannedWorkout,
+                        onManageWorkoutPlans = onManageWorkoutPlans,
                     )
                 }
             }

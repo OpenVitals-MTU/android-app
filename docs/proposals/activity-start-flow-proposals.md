@@ -1,5 +1,8 @@
 # Activity Start Flow Simplification Proposals
 
+> **Status (2026-08-26):** Historical. See the status note in [Activity start flow analysis](activity-start-flow.md); the source chooser and plan pickers this document proposes replacing are gone, replaced by the start hub.
+
+
 > **Status:** Proposal, not the current implemented flow.
 > **Current behavior source:** [Recording of activity](../features/activity-recording.md) and [Activity and training plans](../features/activity-training-plans.md).
 > **Implementation map:** [Feature map](../features/feature-map.md).

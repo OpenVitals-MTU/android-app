@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
@@ -302,6 +303,42 @@ class ActivityRepositoryGatingTest {
         assertEquals(LocalDate.of(2026, 7, 1).atStartOfDay(zone).toInstant(), capturedStart)
         // Inclusive end day: through the start of the following day.
         assertEquals(LocalDate.of(2026, 7, 8).atStartOfDay(zone).toInstant(), capturedEnd)
+    }
+
+    // --- planned workouts --------------------------------------------------
+
+    @Test
+    fun `loadPlannedWorkout throws SecurityException when planned exercise is unavailable`() = runTest {
+        val hc = hc(granted = setOf(exercisePermission))
+
+        val error = runCatching { ActivityRepositoryImpl(hc).loadPlannedWorkout("plan-1") }.exceptionOrNull()
+
+        assertTrue(error is SecurityException)
+        coVerify(exactly = 0) { hc.readPlannedExerciseSession(any()) }
+    }
+
+    @Test
+    fun `deletePlannedWorkout throws SecurityException without the planned write permission`() = runTest {
+        val readPlanned = HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class)
+        val hc = hc(granted = setOf(readPlanned))
+        every { hc.isPlannedExerciseAvailable() } returns true
+
+        val error = runCatching { ActivityRepositoryImpl(hc).deletePlannedWorkout("plan-1") }.exceptionOrNull()
+
+        assertTrue(error is SecurityException)
+        coVerify(exactly = 0) { hc.deletePlannedExerciseSession(any()) }
+    }
+
+    @Test
+    fun `deletePlannedWorkout forwards to Health Connect with the planned write permission`() = runTest {
+        val writePlanned = HealthPermission.getWritePermission(PlannedExerciseSessionRecord::class)
+        val hc = hc(granted = setOf(writePlanned))
+        every { hc.isPlannedExerciseAvailable() } returns true
+        coEvery { hc.deletePlannedExerciseSession("plan-1") } returns Unit
+
+        ActivityRepositoryImpl(hc).deletePlannedWorkout("plan-1")
+
+        coVerify(exactly = 1) { hc.deletePlannedExerciseSession("plan-1") }
     }
 
     // --- fixtures ----------------------------------------------------------

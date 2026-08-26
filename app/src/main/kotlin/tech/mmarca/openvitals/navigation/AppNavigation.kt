@@ -199,6 +199,8 @@ fun AppNavigation(
             Screen.CarbsEntry.route,
             Screen.ActivityEntry.basePath,
             Screen.ActivityEntryEdit.basePath,
+            Screen.WorkoutPlans.route,
+            Screen.WorkoutPlanBuilder.basePath,
             Screen.MindfulnessEntry.route,
             Screen.MindfulnessEntryEdit.route,
             Screen.BodyMeasurementEntry.route,
@@ -329,6 +331,8 @@ fun AppNavigation(
         SleepScoreDetailRoute -> stringResource(R.string.recovery_sleep_score)
         HeartRecoveryDetailRoute -> stringResource(R.string.heart_rate_recovery_history_title)
         Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
+        Screen.WorkoutPlans.route -> stringResource(R.string.screen_workout_plans)
+        Screen.WorkoutPlanBuilder.basePath -> stringResource(R.string.screen_workout_plan_builder)
         Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
         Screen.HydrationEntryEdit.route -> stringResource(R.string.screen_hydration_entry)
         Screen.HydrationEntryLogDrink.route -> stringResource(R.string.screen_hydration_entry)
@@ -682,6 +686,7 @@ fun AppNavigation(
             manualEntryRoutes(
                 navController = navController,
                 unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
                 appThemeMode = appThemeMode,
                 routeImportRequest = activeRouteImportRequest,
                 onRouteImportRequestHandled = { requestId ->
@@ -765,7 +770,12 @@ fun AppNavigation(
                         navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
                     },
                     onStartPlannedWorkout = { planId ->
-                        navController.navigate(Screen.ActivityEntry.createRoute(planId = planId))
+                        navController.navigate(
+                            Screen.ActivityEntry.createRoute(mode = Screen.ActivityEntryMode.RECORD, planId = planId),
+                        )
+                    },
+                    onManageWorkoutPlans = {
+                        navController.navigate(Screen.WorkoutPlans.route)
                     },
                     onOpenSleepSession = { sleepId ->
                         navController.navigate(Screen.SleepDetail.createRoute(sleepId))
@@ -872,7 +882,12 @@ fun AppNavigation(
                         navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
                     },
                     onStartPlannedWorkout = { planId ->
-                        navController.navigate(Screen.ActivityEntry.createRoute(planId = planId))
+                        navController.navigate(
+                            Screen.ActivityEntry.createRoute(mode = Screen.ActivityEntryMode.RECORD, planId = planId),
+                        )
+                    },
+                    onManageWorkoutPlans = {
+                        navController.navigate(Screen.WorkoutPlans.route)
                     },
                     onOpenCardioLoad = {
                         navController.navigate(CardioLoadDetailRoute)
@@ -910,6 +925,9 @@ fun AppNavigation(
                     onDeleteActivity = {
                         markDashboardDirty()
                         navController.popBackStack()
+                    },
+                    onOpenPlan = { planId ->
+                        navController.navigate(Screen.WorkoutPlanBuilder.createRoute(planId))
                     },
                 )
             }

@@ -140,6 +140,7 @@ class HealthConnectManager @Inject constructor(
     val vitalsWritePermissions: Set<String> get() = permissionService.vitalsWritePermissions
     val dataImportWritePermissions: Set<String> get() = permissionService.dataImportWritePermissions
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
+    val plannedExercisePermissions: Set<String> get() = permissionService.plannedExercisePermissions
     val cycleWritePermissions: Set<String> get() = permissionService.cycleWritePermissions
 
     fun onboardingPermissionCatalog(): OnboardingPermissionCatalog =
@@ -387,8 +388,14 @@ class HealthConnectManager @Inject constructor(
     suspend fun readPlannedExerciseSessions(start: Instant, end: Instant): List<PlannedExerciseData> =
         activityReader.readPlannedExerciseSessions(start, end)
 
+    suspend fun readPlannedExerciseSession(id: String): PlannedExerciseData? =
+        activityReader.readPlannedExerciseSession(id)
+
     suspend fun writePlannedExerciseSession(request: PlannedExerciseWriteRequest): String =
         withSyncEnabled { activityReader.writePlannedExerciseSession(request) }
+
+    suspend fun deletePlannedExerciseSession(id: String) =
+        withSyncEnabled { activityReader.deletePlannedExerciseSession(id) }
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String =
         withSyncEnabled { activityReader.writeActivityEntry(request) }

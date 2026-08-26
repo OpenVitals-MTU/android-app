@@ -245,10 +245,10 @@ class ActivitiesOverviewSectionsTest {
             selectedActivityType = ExerciseSessionRecord.EXERCISE_TYPE_YOGA,
         )
 
-        // The absent selection is kept, and the list is sorted by label.
+        // The absent selection is kept, and the list has a stable order.
         assertEquals(3, options.size)
         assertTrue(options.contains(ExerciseSessionRecord.EXERCISE_TYPE_YOGA))
-        assertEquals(options.sortedBy(::exerciseTypeLabel), options)
+        assertEquals(options.sorted(), options)
     }
 
     // endregion
