@@ -1473,7 +1473,7 @@
     <string name="settings_debug_logs_saved">Debug logs saved</string>
     <string name="settings_debug_logs_save_failed">Could not save diagnostics logs</string>
     <string name="settings_privacy_policy_link">View privacy policy</string>
-    <string name="settings_privacy_policy_url" translatable="false">https://codeberg.org/OpenVitals/android-app/src/branch/main/PRIVACY.md</string>
+    <string name="settings_privacy_policy_url" translatable="false">https://codeberg.org/OpenVitals/mobile-app/src/branch/main/PRIVACY.md</string>
     <string name="settings_app_lock_title">App lock</string>
     <string name="settings_app_lock_body">Require device unlock to open OpenVitals.</string>
     <string name="onboarding_core_required">Activity and sleep are needed to show you anything at all. The rest are optional \u2014 you can add them now or later from Settings.</string>
@@ -1835,15 +1835,15 @@
     <string name="settings_offline_maps_import_notification_text_with_percent">%1$s • %2$d%%.</string>
     <string name="settings_offline_maps_help_prompt">Do you want to learn how to add offline maps? Go to:</string>
     <string name="settings_offline_maps_help_link">Open offline maps guide</string>
-    <string name="settings_offline_maps_help_url" translatable="false">https://openvitals.codeberg.page/website/how-to/offline-maps/</string>
+    <string name="settings_offline_maps_help_url" translatable="false">https://docs.openvitals.health/how-to/offline-maps</string>
     <string name="section_support">Support</string>
     <string name="settings_support_title">Support OpenVitals</string>
     <string name="settings_support_body">Report bugs, join community support discussions, or help fund ongoing development.</string>
     <string name="settings_support_issues_action">Report an issue</string>
     <string name="settings_support_discussion_action">Join Zulip discussions</string>
     <string name="settings_support_action">Open Liberapay</string>
-    <string name="settings_support_issues_url" translatable="false">https://codeberg.org/mmarca-tech/OpenVitals/issues</string>
-    <string name="settings_support_discussion_url" translatable="false">http://openvitals.zulipchat.com/</string>
+    <string name="settings_support_issues_url" translatable="false">https://codeberg.org/OpenVitals/mobile-app/issues</string>
+    <string name="settings_support_discussion_url" translatable="false">https://openvitals.zulipchat.com/</string>
     <string name="settings_support_url" translatable="false">https://liberapay.com/manuel.mmarca.tech/donate</string>
     <string name="crash_report_email_chooser_title">Email OpenVitals report</string>
     <string name="crash_report_fallback_title">No email app found</string>
