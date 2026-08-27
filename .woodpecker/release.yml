@@ -309,3 +309,24 @@ steps:
     when:
       - event: deployment
         evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
+
+  # Announce the release from the OpenVitals Mastodon account once Play and the
+  # Codeberg stable release are both live. The script skips when the account
+  # already carries a post for this tag, so re-running the deployment is safe.
+  - name: announce-mastodon
+    depends_on:
+      - publish-codeberg-stable
+    image: *alpine_image
+    environment:
+      MASTODON_ACCESS_TOKEN:
+        from_secret: MASTODON_ACCESS_TOKEN
+    commands:
+      - set -eu
+      - apk add --no-cache curl jq
+      - . .woodpecker/tmp/release-context.env
+      - test -n "$${MASTODON_ACCESS_TOKEN}"
+      - chmod +x scripts/announce-mastodon.sh
+      - LC_ALL=C.UTF-8 scripts/announce-mastodon.sh "$${OPENVITALS_RELEASE_TAG}" .woodpecker/tmp/release-notes.md
+    when:
+      - event: deployment
+        evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'

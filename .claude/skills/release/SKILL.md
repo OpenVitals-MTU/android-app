@@ -74,7 +74,12 @@ changelog filenames; if a nightly stole the code, rename the files and amend
 before anyone pulls.
 
 CI (Woodpecker) takes it from the tag: signed APK, signed debug APK, and AAB
-on the Codeberg release; Play production upload from the approved deployment.
+on the Codeberg release; Play production upload from the approved deployment,
+which also toots the release from `@openvitals@techhub.social`
+(`scripts/announce-mastodon.sh`). The toot's body is the narrative paragraph
+of `docs/releases/X.Y.Z.md` - the paragraph right after `Released YYYY-MM-DD.` -
+so write it to read well on its own; it gets cut at a sentence boundary to fit
+500 characters together with the Codeberg and Play links.
 
 ## 4. Companion repos (after the tag is pushed)
 
