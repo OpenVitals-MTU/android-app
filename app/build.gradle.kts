@@ -125,6 +125,7 @@ android {
             if (minifyDebugForCi) {
                 isDebuggable = false
                 isMinifyEnabled = true
+                isShrinkResources = true
                 proguardFiles(
                     getDefaultProguardFile("proguard-android-optimize.txt"),
                     "proguard-rules.pro"
@@ -143,6 +144,9 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
             isMinifyEnabled = true
+            // Drop unused resources (the only dynamic lookup, getIdentifier in
+            // ActivityRecordingFocusMode, targets the "android" package).
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
