@@ -153,9 +153,10 @@ deployment uploads the signed release AAB to Google Play production, promotes
 the matching Codeberg prerelease to stable, and then announces the release from
 the OpenVitals Mastodon account (`https://techhub.social/@openvitals`) with the
 release notes' narrative paragraph and links to the Codeberg release and the
-Play listing (`scripts/announce-mastodon.sh`). The announcement step checks the
-account's recent posts for the tag first, so re-running a deployment never
-toots twice.
+Play listing (`scripts/announce-mastodon.sh`), and posts the full release notes
+to the Zulip `releases` channel under a `vX.Y.Z` topic
+(`scripts/announce-zulip.sh`). Both announcement steps check for an existing
+post for the tag first, so re-running a deployment never announces twice.
 
 Configure the Woodpecker cron named `nightly` to run at `00:00 UTC` on the
 default branch. The cron-triggered release workflow and the manual release
@@ -182,7 +183,10 @@ application, scopes `write:statuses` and `read:accounts`, redirect URI left at
 the default `urn:ietf:wg:oauth:2.0:oob` - no OAuth flow is used; copy the
 "Your access token" shown on the application page) so the production
 deployment can post the release announcement; the token is only exposed to the
-`announce-mastodon` step.
+`announce-mastodon` step. Configure `ZULIP_BOT_EMAIL` and `ZULIP_BOT_API_KEY`
+for a generic bot on `openvitals.zulipchat.com` (Personal settings > Bots >
+Add a new bot) that is subscribed to the `releases` channel; they are only
+exposed to the `announce-zulip` step.
 
 After a successful `main` push pipeline, Woodpecker mirrors the checked commit to
 `git@github.com:mmarca-tech/OpenVitals.git`. Configure the Woodpecker secret
@@ -214,8 +218,8 @@ git diff --check
 7. After validation, use the approved Woodpecker deployment button with target
    `production` from the version tag commit. The deployment uploads the signed
    release AAB to Google Play production, promotes the matching Codeberg
-   prerelease to stable, and toots the announcement from the OpenVitals
-   Mastodon account.
+   prerelease to stable, toots the announcement from the OpenVitals Mastodon
+   account, and posts the release notes to the Zulip `releases` channel.
 
 For an immediate nightly release, move the fixed `nightly` tag to the desired
 commit and push it. The tag pipeline runs the same release checks, publishes the

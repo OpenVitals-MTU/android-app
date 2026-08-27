@@ -79,7 +79,8 @@ which also toots the release from `@openvitals@techhub.social`
 (`scripts/announce-mastodon.sh`). The toot's body is the narrative paragraph
 of `docs/releases/X.Y.Z.md` - the paragraph right after `Released YYYY-MM-DD.` -
 so write it to read well on its own; it gets cut at a sentence boundary to fit
-500 characters together with the Codeberg and Play links.
+500 characters together with the Codeberg and Play links. The same deployment
+posts the full notes to the Zulip `releases` channel (`scripts/announce-zulip.sh`).
 
 ## 4. Companion repos (after the tag is pushed)
 

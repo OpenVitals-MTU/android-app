@@ -330,3 +330,26 @@ steps:
     when:
       - event: deployment
         evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
+
+  # Same trigger and idempotency story as announce-mastodon, for the Zulip
+  # "releases" channel (full release notes under a vX.Y.Z topic).
+  - name: announce-zulip
+    depends_on:
+      - publish-codeberg-stable
+    image: *alpine_image
+    environment:
+      ZULIP_BOT_EMAIL:
+        from_secret: ZULIP_BOT_EMAIL
+      ZULIP_BOT_API_KEY:
+        from_secret: ZULIP_BOT_API_KEY
+    commands:
+      - set -eu
+      - apk add --no-cache curl jq
+      - . .woodpecker/tmp/release-context.env
+      - test -n "$${ZULIP_BOT_EMAIL}"
+      - test -n "$${ZULIP_BOT_API_KEY}"
+      - chmod +x scripts/announce-zulip.sh
+      - LC_ALL=C.UTF-8 scripts/announce-zulip.sh "$${OPENVITALS_RELEASE_TAG}" .woodpecker/tmp/release-notes.md
+    when:
+      - event: deployment
+        evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
