@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,22 +23,25 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.DetailSectionCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.theme.Emphasis
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
  * Every way a workout leaves the app, in one place. The route formats (GPX,
- * KMZ) appear only when a route exists; the metric formats (TCX, CSV) are on
- * every workout, because a treadmill session has data worth getting out too,
- * and a session with a route may be shared with someone who should not get
- * the location half of it. The description names which formats carry the
- * route, so the privacy choice is made with open eyes.
+ * KMZ) appear only when a route exists; the metric formats (TCX, CSV, FIT)
+ * are on every workout, because a treadmill session has data worth getting
+ * out too, and a session with a route may be shared with someone who should
+ * not get the location half of it. The description names which formats carry
+ * the route, so the privacy choice is made with open eyes.
  */
 @Composable
 internal fun WorkoutExportCard(
     onSaveAsTcx: () -> Unit,
     onSaveAsCsv: () -> Unit,
+    onSaveAsFit: () -> Unit,
     onShareAsTcx: () -> Unit,
     onShareAsCsv: () -> Unit,
+    onShareAsFit: () -> Unit,
     onSaveRouteAsGpx: (() -> Unit)? = null,
     onSaveRouteAsKmz: (() -> Unit)? = null,
     onShareRouteAsGpx: (() -> Unit)? = null,
@@ -60,60 +64,79 @@ internal fun WorkoutExportCard(
         )
         Spacer(Modifier.height(Spacing.md))
         if (hasRouteFormats) {
-            WorkoutExportButtonRow(
-                firstLabel = stringResource(R.string.activity_route_export_gpx),
-                secondLabel = stringResource(R.string.activity_route_export_kmz),
-                icon = Icons.Outlined.FileDownload,
-                onFirst = checkNotNull(onSaveRouteAsGpx),
-                onSecond = checkNotNull(onSaveRouteAsKmz),
+            WorkoutFormatRow(
+                saveLabel = stringResource(R.string.activity_route_export_gpx),
+                shareLabel = stringResource(R.string.activity_route_share_gpx),
+                onSave = checkNotNull(onSaveRouteAsGpx),
+                onShare = checkNotNull(onShareRouteAsGpx),
             )
-            WorkoutExportButtonRow(
-                firstLabel = stringResource(R.string.activity_route_share_gpx),
-                secondLabel = stringResource(R.string.activity_route_share_kmz),
-                icon = Icons.Outlined.Share,
-                onFirst = checkNotNull(onShareRouteAsGpx),
-                onSecond = checkNotNull(onShareRouteAsKmz),
+            ExportRowDivider()
+            WorkoutFormatRow(
+                saveLabel = stringResource(R.string.activity_route_export_kmz),
+                shareLabel = stringResource(R.string.activity_route_share_kmz),
+                onSave = checkNotNull(onSaveRouteAsKmz),
+                onShare = checkNotNull(onShareRouteAsKmz),
             )
+            ExportRowDivider()
         }
-        WorkoutExportButtonRow(
-            firstLabel = stringResource(R.string.activity_workout_export_tcx),
-            secondLabel = stringResource(R.string.activity_workout_export_csv),
-            icon = Icons.Outlined.FileDownload,
-            onFirst = onSaveAsTcx,
-            onSecond = onSaveAsCsv,
+        WorkoutFormatRow(
+            saveLabel = stringResource(R.string.activity_workout_export_tcx),
+            shareLabel = stringResource(R.string.activity_workout_share_tcx),
+            onSave = onSaveAsTcx,
+            onShare = onShareAsTcx,
         )
-        WorkoutExportButtonRow(
-            firstLabel = stringResource(R.string.activity_workout_share_tcx),
-            secondLabel = stringResource(R.string.activity_workout_share_csv),
-            icon = Icons.Outlined.Share,
-            onFirst = onShareAsTcx,
-            onSecond = onShareAsCsv,
+        ExportRowDivider()
+        WorkoutFormatRow(
+            saveLabel = stringResource(R.string.activity_workout_export_csv),
+            shareLabel = stringResource(R.string.activity_workout_share_csv),
+            onSave = onSaveAsCsv,
+            onShare = onShareAsCsv,
+        )
+        ExportRowDivider()
+        WorkoutFormatRow(
+            saveLabel = stringResource(R.string.activity_workout_export_fit),
+            shareLabel = stringResource(R.string.activity_workout_share_fit),
+            onSave = onSaveAsFit,
+            onShare = onShareAsFit,
         )
     }
 }
 
+/** A quiet rule between format rows — the subtle between-item tint, tight padding. */
 @Composable
-private fun WorkoutExportButtonRow(
-    firstLabel: String,
-    secondLabel: String,
-    icon: ImageVector,
-    onFirst: () -> Unit,
-    onSecond: () -> Unit,
+private fun ExportRowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = Spacing.xs),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Emphasis.fill),
+    )
+}
+
+/**
+ * One format per row, save on the left and share on the right — the columns
+ * are the actions, so a reader scans down for their format and across for
+ * what to do with it.
+ */
+@Composable
+private fun WorkoutFormatRow(
+    saveLabel: String,
+    shareLabel: String,
+    onSave: () -> Unit,
+    onShare: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         WorkoutExportButton(
-            label = firstLabel,
-            icon = icon,
-            onClick = onFirst,
+            label = saveLabel,
+            icon = Icons.Outlined.FileDownload,
+            onClick = onSave,
             modifier = Modifier.weight(1f),
         )
         WorkoutExportButton(
-            label = secondLabel,
-            icon = icon,
-            onClick = onSecond,
+            label = shareLabel,
+            icon = Icons.Outlined.Share,
+            onClick = onShare,
             modifier = Modifier.weight(1f),
         )
     }

@@ -18,7 +18,7 @@ import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
  * The export card is every way a workout leaves the app. The metric formats
- * (TCX, CSV) are unconditional — the data they export exists for every
+ * (TCX, CSV, FIT) are unconditional — the data they export exists for every
  * workout. The route formats (GPX, KMZ) appear exactly when a route does:
  * offering them for a routeless workout would export an empty track, and no
  * export action may be offered for a route that does not exist.
@@ -40,16 +40,18 @@ class ActivityWorkoutExportButtonsTest {
             R.string.activity_route_share_kmz,
             R.string.activity_workout_export_tcx,
             R.string.activity_workout_export_csv,
+            R.string.activity_workout_export_fit,
             R.string.activity_workout_share_tcx,
             R.string.activity_workout_share_csv,
+            R.string.activity_workout_share_fit,
         ).forEach { actionRes ->
             composeRule.onNodeWithText(string(actionRes)).performScrollTo().assertIsDisplayed()
         }
 
         composeRule.onNodeWithText(string(R.string.activity_route_share_kmz)).performScrollTo().performClick()
-        composeRule.onNodeWithText(string(R.string.activity_workout_share_csv)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.activity_workout_share_fit)).performScrollTo().performClick()
 
-        assertEquals(listOf("share-kmz", "share-csv"), pressed)
+        assertEquals(listOf("share-kmz", "share-fit"), pressed)
     }
 
     @Test
@@ -68,8 +70,10 @@ class ActivityWorkoutExportButtonsTest {
         listOf(
             R.string.activity_workout_export_tcx,
             R.string.activity_workout_export_csv,
+            R.string.activity_workout_export_fit,
             R.string.activity_workout_share_tcx,
             R.string.activity_workout_share_csv,
+            R.string.activity_workout_share_fit,
         ).forEach { actionRes ->
             composeRule.onNodeWithText(string(actionRes)).performScrollTo().assertIsDisplayed()
         }
@@ -88,8 +92,10 @@ class ActivityWorkoutExportButtonsTest {
                     WorkoutExportCard(
                         onSaveAsTcx = action("save-tcx"),
                         onSaveAsCsv = action("save-csv"),
+                        onSaveAsFit = action("save-fit"),
                         onShareAsTcx = action("share-tcx"),
                         onShareAsCsv = action("share-csv"),
+                        onShareAsFit = action("share-fit"),
                         onSaveRouteAsGpx = routeAction("save-gpx"),
                         onSaveRouteAsKmz = routeAction("save-kmz"),
                         onShareRouteAsGpx = routeAction("share-gpx"),

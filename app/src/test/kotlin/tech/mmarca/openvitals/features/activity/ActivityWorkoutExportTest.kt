@@ -7,8 +7,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.core.fit.FitCrc
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitRouteParser
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.TcxRouteParser
 
 /**
@@ -166,14 +168,117 @@ class ActivityWorkoutExportTest {
         assertTrue(row.contains(",156,172,"))
     }
 
+    @Test fun `fit export round-trips through the app's own parser without a route`() {
+        val output = ByteArrayOutputStream()
+
+        writeActivityWorkoutFit(
+            workout = workout(),
+            heartRateSamples = heartRateSamples(),
+            output = output,
+        )
+
+        val parsed = FitRouteParser.parse(output.toByteArray(), fileName = "morning-run.fit")
+        assertTrue(parsed.points.isEmpty())
+        assertEquals(Instant.parse("2026-05-26T08:30:00Z"), parsed.startTime)
+        assertEquals(3600L, parsed.durationSeconds)
+        assertEquals(10250.5, parsed.distanceMeters, 0.001)
+        assertEquals(640.0, parsed.totalCaloriesKcal!!, 0.001)
+        assertEquals("running", parsed.type)
+        assertEquals("Morning run", parsed.name)
+        val heartRates = parsed.bleSamples.heartRateSamples
+        assertEquals(listOf(140L, 172L), heartRates.map { it.beatsPerMinute })
+        assertEquals(Instant.parse("2026-05-26T08:40:00Z"), heartRates.first().time)
+    }
+
+    @Test fun `fit container is framed with real CRCs`() {
+        val output = ByteArrayOutputStream()
+
+        writeActivityWorkoutFit(
+            workout = workout(),
+            heartRateSamples = heartRateSamples(),
+            output = output,
+        )
+
+        // The app's own decoder never verifies CRCs, but Garmin-class
+        // importers do — the framing has to hold up outside this codebase.
+        val bytes = output.toByteArray()
+        assertEquals(14, bytes[0].toInt())
+        assertEquals(".FIT", String(bytes, 8, 4, Charsets.US_ASCII))
+        assertEquals(FitCrc.compute(bytes, offset = 0, length = 12), bytes.uint16At(12))
+        assertEquals(
+            FitCrc.compute(bytes, offset = 0, length = bytes.size - 2),
+            bytes.uint16At(bytes.size - 2),
+        )
+    }
+
+    @Test fun `fit without heart rate writes no record messages at all`() {
+        val output = ByteArrayOutputStream()
+
+        writeActivityWorkoutFit(
+            workout = workout(),
+            heartRateSamples = emptyList(),
+            output = output,
+        )
+
+        val parsed = FitRouteParser.parse(output.toByteArray())
+        assertTrue(parsed.bleSamples.heartRateSamples.isEmpty())
+        // Still a complete activity to the app's own parser.
+        assertEquals(3600L, parsed.durationSeconds)
+    }
+
+    @Test fun `fit drops samples outside the session and zero readings`() {
+        val output = ByteArrayOutputStream()
+        val samples = heartRateSamples() + listOf(
+            sample("2026-05-26T07:00:00Z", 130), // before the session
+            sample("2026-05-26T10:00:00Z", 120), // after it
+            sample("2026-05-26T08:45:00Z", 0), // sensor dropout, not a heart
+        )
+
+        writeActivityWorkoutFit(
+            workout = workout(),
+            heartRateSamples = samples,
+            output = output,
+        )
+
+        val parsed = FitRouteParser.parse(output.toByteArray())
+        assertEquals(listOf(140L, 172L), parsed.bleSamples.heartRateSamples.map { it.beatsPerMinute })
+    }
+
+    @Test fun `fit sport mapping survives the round trip`() {
+        assertEquals("treadmill", fitTypeFor(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL))
+        assertEquals("strength training", fitTypeFor(ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING))
+        // Outside the FIT vocabulary: generic sport, and generic says nothing.
+        assertEquals(null, fitTypeFor(ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON))
+    }
+
+    @Test fun `fit absent metrics come back absent`() {
+        val output = ByteArrayOutputStream()
+        val bare = workout().copy(
+            totalDistanceMeters = null,
+            totalCaloriesKcal = null,
+            elevationGainedMeters = null,
+        )
+
+        writeActivityWorkoutFit(bare, heartRateSamples = emptyList(), output = output)
+
+        val parsed = FitRouteParser.parse(output.toByteArray())
+        assertEquals(0.0, parsed.distanceMeters, 0.001)
+        assertEquals(null, parsed.totalCaloriesKcal)
+        assertEquals(0.0, parsed.elevationGainedMeters, 0.001)
+        assertEquals(3600L, parsed.durationSeconds)
+    }
+
     @Test fun `workout export file names use selected format extension`() {
         val tcxName = workout(title = "Morning Run!").workoutExportFileName(ActivityWorkoutExportFormat.TCX)
         val csvName = workout(title = "Morning Run!").workoutExportFileName(ActivityWorkoutExportFormat.CSV)
+        val fitName = workout(title = "Morning Run!").workoutExportFileName(ActivityWorkoutExportFormat.FIT)
 
         assertTrue(tcxName.startsWith("morning-run-"))
         assertTrue(tcxName.endsWith(".tcx"))
         assertTrue(csvName.startsWith("morning-run-"))
         assertTrue(csvName.endsWith(".csv"))
+        assertTrue(fitName.startsWith("morning-run-"))
+        assertTrue(fitName.endsWith(".fit"))
     }
 
     @Test fun `blank title falls back to workout`() {
@@ -206,6 +311,19 @@ class ActivityWorkoutExportTest {
         sample("2026-05-26T08:40:00Z", 140),
         sample("2026-05-26T08:50:00Z", 172),
     )
+
+    private fun fitTypeFor(exerciseType: Int): String? {
+        val output = ByteArrayOutputStream()
+        writeActivityWorkoutFit(
+            workout = workout(exerciseType = exerciseType),
+            heartRateSamples = emptyList(),
+            output = output,
+        )
+        return FitRouteParser.parse(output.toByteArray()).type
+    }
+
+    private fun ByteArray.uint16At(offset: Int): Int =
+        (this[offset].toInt() and 0xFF) or ((this[offset + 1].toInt() and 0xFF) shl 8)
 
     private fun sample(time: String, beatsPerMinute: Long) = HeartRateSample(
         time = Instant.parse(time),

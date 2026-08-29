@@ -2,8 +2,8 @@ package tech.mmarca.openvitals.core.fit
 
 import java.time.Instant
 
-/** FIT epoch (1989-12-31T00:00:00Z) in Unix seconds. */
-private const val FitEpochUnixSeconds = 631_065_600L
+/** FIT epoch (1989-12-31T00:00:00Z) in Unix seconds. Shared with [fitTimestamp]. */
+internal const val FitEpochUnixSeconds = 631_065_600L
 
 /** A FIT timestamp — seconds since the FIT epoch — as a UTC [Instant]. */
 fun fitInstant(value: Long): Instant = Instant.ofEpochSecond(FitEpochUnixSeconds + value)

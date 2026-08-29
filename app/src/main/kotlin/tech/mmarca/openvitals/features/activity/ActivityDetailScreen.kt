@@ -149,12 +149,16 @@ internal fun ActivityDetailScreen(
     val saveCsvWorkout = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(ActivityWorkoutExportFormat.CSV.mimeType),
     ) { uri -> saveWorkoutExport(ActivityWorkoutExportFormat.CSV, uri) }
+    val saveFitWorkout = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ActivityWorkoutExportFormat.FIT.mimeType),
+    ) { uri -> saveWorkoutExport(ActivityWorkoutExportFormat.FIT, uri) }
     fun launchWorkoutExport(format: ActivityWorkoutExportFormat) {
         val currentWorkout = latestWorkout ?: return
         val fileName = currentWorkout.workoutExportFileName(format)
         when (format) {
             ActivityWorkoutExportFormat.TCX -> saveTcxWorkout.launch(fileName)
             ActivityWorkoutExportFormat.CSV -> saveCsvWorkout.launch(fileName)
+            ActivityWorkoutExportFormat.FIT -> saveFitWorkout.launch(fileName)
         }
     }
     fun shareWorkout(format: ActivityWorkoutExportFormat) {
@@ -224,8 +228,10 @@ internal fun ActivityDetailScreen(
             onShareRouteAsKmz = { shareRoute(ActivityRouteExportFormat.KMZ) },
             onSaveWorkoutAsTcx = { launchWorkoutExport(ActivityWorkoutExportFormat.TCX) },
             onSaveWorkoutAsCsv = { launchWorkoutExport(ActivityWorkoutExportFormat.CSV) },
+            onSaveWorkoutAsFit = { launchWorkoutExport(ActivityWorkoutExportFormat.FIT) },
             onShareWorkoutAsTcx = { shareWorkout(ActivityWorkoutExportFormat.TCX) },
             onShareWorkoutAsCsv = { shareWorkout(ActivityWorkoutExportFormat.CSV) },
+            onShareWorkoutAsFit = { shareWorkout(ActivityWorkoutExportFormat.FIT) },
         )
     }
 }
@@ -259,8 +265,10 @@ internal fun ActivityDetailContent(
     onShareRouteAsKmz: () -> Unit,
     onSaveWorkoutAsTcx: () -> Unit = {},
     onSaveWorkoutAsCsv: () -> Unit = {},
+    onSaveWorkoutAsFit: () -> Unit = {},
     onShareWorkoutAsTcx: () -> Unit = {},
     onShareWorkoutAsCsv: () -> Unit = {},
+    onShareWorkoutAsFit: () -> Unit = {},
 ) {
     val context = LocalContext.current
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
@@ -444,8 +452,10 @@ internal fun ActivityDetailContent(
             WorkoutExportCard(
                 onSaveAsTcx = onSaveWorkoutAsTcx,
                 onSaveAsCsv = onSaveWorkoutAsCsv,
+                onSaveAsFit = onSaveWorkoutAsFit,
                 onShareAsTcx = onShareWorkoutAsTcx,
                 onShareAsCsv = onShareWorkoutAsCsv,
+                onShareAsFit = onShareWorkoutAsFit,
                 onSaveRouteAsGpx = onSaveRouteAsGpx.takeIf { hasExportableRoute },
                 onSaveRouteAsKmz = onSaveRouteAsKmz.takeIf { hasExportableRoute },
                 onShareRouteAsGpx = onShareRouteAsGpx.takeIf { hasExportableRoute },

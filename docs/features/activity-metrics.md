@@ -20,7 +20,7 @@ Activity metric detail screens currently cover:
 - Elevation.
 - Wheelchair pushes.
 
-The workout/session area also covers activity lists, activity detail, route preview/export, routeless workout export (TCX/CSV), heart-rate charts for workouts, activity summaries, and cardio-load context.
+The workout/session area also covers activity lists, activity detail, route preview/export, routeless workout export (TCX/CSV/FIT), heart-rate charts for workouts, activity summaries, and cardio-load context.
 
 ## Detail Pattern
 

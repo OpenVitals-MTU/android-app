@@ -10,6 +10,10 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import org.xmlpull.v1.XmlSerializer
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.export.stageExport
+import tech.mmarca.openvitals.core.fit.FitBaseType
+import tech.mmarca.openvitals.core.fit.FitEncoder
+import tech.mmarca.openvitals.core.fit.FitEncoderField
+import tech.mmarca.openvitals.core.fit.fitTimestamp
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import java.io.File
@@ -35,6 +39,7 @@ internal enum class ActivityWorkoutExportFormat(
 ) {
     TCX(TcxMimeType, "tcx"),
     CSV(CsvMimeType, "csv"),
+    FIT(FitMimeType, "fit"),
 }
 
 internal fun Context.saveActivityWorkoutExport(
@@ -101,6 +106,7 @@ private fun writeActivityWorkoutExport(
     when (format) {
         ActivityWorkoutExportFormat.TCX -> writeActivityWorkoutTcx(workout, heartRateSamples, output)
         ActivityWorkoutExportFormat.CSV -> writeActivityWorkoutCsv(workout, heartRateSamples, output)
+        ActivityWorkoutExportFormat.FIT -> writeActivityWorkoutFit(workout, heartRateSamples, output)
     }
 }
 
@@ -225,6 +231,190 @@ internal fun writeActivityWorkoutCsv(
     output.write(csv.toByteArray(Charsets.UTF_8))
 }
 
+/**
+ * A routeless FIT Activity file: file_id, heart-rate-only records, one lap,
+ * one session, one activity message — and no position field DEFINED anywhere,
+ * which is this format's whole promise. Framing (header, sentinels, CRCs) is
+ * [FitEncoder]'s; this function owns the message vocabulary, the same split
+ * the read side keeps between [FitDecoder] and `FitRouteParser`.
+ *
+ * Two field choices look asymmetric on purpose, because our own re-importer
+ * reads field 21 as `total_ascent` on BOTH the session and the lap, while the
+ * real FIT profile numbers ascent 22 on the session (21 there is `max_power`):
+ * ascent is written as session 22 (what Garmin/Strava read) AND lap 21 (what
+ * `FitRouteParser` reads — also correct FIT). For the same reason the session
+ * power fields (20/21) and the lap position fields (3-6) are never written.
+ *
+ * Everything numeric is a scaled integer: our decoder's `fitLong` drops float
+ * fields, and scaled integers are what watches write anyway.
+ */
+internal fun writeActivityWorkoutFit(
+    workout: ExerciseData,
+    heartRateSamples: List<HeartRateSample>,
+    output: OutputStream,
+) {
+    val samples = workout.heartRateSamplesForExport(heartRateSamples)
+    val averageBpm = workout.averageHeartRateForExport(samples)?.coerceIn(1, 255)
+    val maximumBpm = samples.maxOfOrNull { it.beatsPerMinute }?.coerceIn(1, 255)
+    val startTimestamp = fitTimestamp(workout.startTime)
+    val endTimestamp = fitTimestamp(workout.endTime)
+    val (sport, subSport) = workout.exerciseType.toFitSport()
+    val durationScaled = workout.durationMs // total_elapsed/timer_time carry ms directly (scale 1000)
+    val distanceScaled = workout.totalDistanceMeters?.let { (it * FitDistanceScale).roundToLong() }
+    val calories = (workout.totalCaloriesKcal ?: workout.activeCaloriesKcal)
+        ?.roundToLong()
+        ?.coerceIn(0, 0xFFFE)
+    val ascentMeters = workout.elevationGainedMeters?.roundToLong()?.coerceIn(0, 0xFFFE)
+    val title = workout.title?.takeIf { it.isNotBlank() }
+
+    val encoder = FitEncoder()
+
+    encoder.defineMessage(
+        FitLocalFileId, FitFileIdMessage,
+        listOf(
+            FitEncoderField(FitFileIdTypeField, FitBaseType.ENUM),
+            FitEncoderField(FitFileIdManufacturerField, FitBaseType.UINT16),
+            FitEncoderField(FitFileIdProductField, FitBaseType.UINT16),
+            FitEncoderField(FitFileIdTimeCreatedField, FitBaseType.UINT32),
+        ),
+    )
+    encoder.writeMessage(
+        FitLocalFileId,
+        mapOf(
+            FitFileIdTypeField to FitFileTypeActivity,
+            FitFileIdManufacturerField to FitManufacturerDevelopment,
+            FitFileIdProductField to 1L,
+            FitFileIdTimeCreatedField to startTimestamp,
+        ),
+    )
+
+    if (samples.isNotEmpty()) {
+        encoder.defineMessage(
+            FitLocalRecord, FitRecordMessage,
+            listOf(
+                FitEncoderField(FitTimestampField, FitBaseType.UINT32),
+                FitEncoderField(FitRecordHeartRateField, FitBaseType.UINT8),
+            ),
+        )
+        samples.forEach { sample ->
+            encoder.writeMessage(
+                FitLocalRecord,
+                mapOf(
+                    FitTimestampField to fitTimestamp(sample.time),
+                    FitRecordHeartRateField to sample.beatsPerMinute,
+                ),
+            )
+        }
+    }
+
+    encoder.defineMessage(
+        FitLocalLap, FitLapMessage,
+        listOf(
+            FitEncoderField(FitTimestampField, FitBaseType.UINT32),
+            FitEncoderField(FitMessageIndexField, FitBaseType.UINT16),
+            FitEncoderField(FitEventField, FitBaseType.ENUM),
+            FitEncoderField(FitEventTypeField, FitBaseType.ENUM),
+            FitEncoderField(FitStartTimeField, FitBaseType.UINT32),
+            FitEncoderField(FitTotalElapsedTimeField, FitBaseType.UINT32),
+            FitEncoderField(FitTotalTimerTimeField, FitBaseType.UINT32),
+            FitEncoderField(FitTotalDistanceField, FitBaseType.UINT32),
+            FitEncoderField(FitTotalCaloriesField, FitBaseType.UINT16),
+            FitEncoderField(FitLapAvgHeartRateField, FitBaseType.UINT8),
+            FitEncoderField(FitLapMaxHeartRateField, FitBaseType.UINT8),
+            FitEncoderField(FitLapTotalAscentField, FitBaseType.UINT16),
+        ),
+    )
+    encoder.writeMessage(
+        FitLocalLap,
+        mapOf(
+            FitTimestampField to endTimestamp,
+            FitMessageIndexField to 0L,
+            FitEventField to FitEventLap,
+            FitEventTypeField to FitEventTypeStop,
+            FitStartTimeField to startTimestamp,
+            FitTotalElapsedTimeField to durationScaled,
+            FitTotalTimerTimeField to durationScaled,
+            FitTotalDistanceField to distanceScaled,
+            FitTotalCaloriesField to calories,
+            FitLapAvgHeartRateField to averageBpm,
+            FitLapMaxHeartRateField to maximumBpm,
+            FitLapTotalAscentField to ascentMeters,
+        ),
+    )
+
+    encoder.defineMessage(
+        FitLocalSession, FitSessionMessage,
+        listOf(
+            FitEncoderField(FitTimestampField, FitBaseType.UINT32),
+            FitEncoderField(FitMessageIndexField, FitBaseType.UINT16),
+            FitEncoderField(FitEventField, FitBaseType.ENUM),
+            FitEncoderField(FitEventTypeField, FitBaseType.ENUM),
+            FitEncoderField(FitStartTimeField, FitBaseType.UINT32),
+            FitEncoderField(FitSessionSportField, FitBaseType.ENUM),
+            FitEncoderField(FitSessionSubSportField, FitBaseType.ENUM),
+            FitEncoderField(FitTotalElapsedTimeField, FitBaseType.UINT32),
+            FitEncoderField(FitTotalTimerTimeField, FitBaseType.UINT32),
+            FitEncoderField(FitTotalDistanceField, FitBaseType.UINT32),
+            FitEncoderField(FitTotalCaloriesField, FitBaseType.UINT16),
+            FitEncoderField(FitSessionAvgHeartRateField, FitBaseType.UINT8),
+            FitEncoderField(FitSessionMaxHeartRateField, FitBaseType.UINT8),
+            FitEncoderField(FitSessionTotalAscentField, FitBaseType.UINT16),
+            FitEncoderField(FitSessionFirstLapIndexField, FitBaseType.UINT16),
+            FitEncoderField(FitSessionNumLapsField, FitBaseType.UINT16),
+        ),
+    )
+    encoder.writeMessage(
+        FitLocalSession,
+        mapOf(
+            FitTimestampField to endTimestamp,
+            FitMessageIndexField to 0L,
+            FitEventField to FitEventSession,
+            FitEventTypeField to FitEventTypeStop,
+            FitStartTimeField to startTimestamp,
+            FitSessionSportField to sport,
+            FitSessionSubSportField to subSport,
+            FitTotalElapsedTimeField to durationScaled,
+            FitTotalTimerTimeField to durationScaled,
+            FitTotalDistanceField to distanceScaled,
+            FitTotalCaloriesField to calories,
+            FitSessionAvgHeartRateField to averageBpm,
+            FitSessionMaxHeartRateField to maximumBpm,
+            FitSessionTotalAscentField to ascentMeters,
+            FitSessionFirstLapIndexField to 0L,
+            FitSessionNumLapsField to 1L,
+        ),
+    )
+
+    val activityFields = mutableListOf(
+        FitEncoderField(FitTimestampField, FitBaseType.UINT32),
+        FitEncoderField(FitActivityTotalTimerTimeField, FitBaseType.UINT32),
+        FitEncoderField(FitActivityNumSessionsField, FitBaseType.UINT16),
+        FitEncoderField(FitActivityTypeField, FitBaseType.ENUM),
+        FitEncoderField(FitActivityEventField, FitBaseType.ENUM),
+        FitEncoderField(FitActivityEventTypeField, FitBaseType.ENUM),
+    )
+    if (title != null) {
+        // FIT strings are fixed-size; size the field to this title, capped.
+        val titleSize = minOf(title.toByteArray(Charsets.UTF_8).size + 1, MaxFitActivityNameBytes)
+        activityFields += FitEncoderField(FitActivityNameField, FitBaseType.STRING, titleSize)
+    }
+    encoder.defineMessage(FitLocalActivity, FitActivityMessage, activityFields)
+    encoder.writeMessage(
+        FitLocalActivity,
+        values = mapOf(
+            FitTimestampField to endTimestamp,
+            FitActivityTotalTimerTimeField to durationScaled,
+            FitActivityNumSessionsField to 1L,
+            FitActivityTypeField to FitActivityTypeManual,
+            FitActivityEventField to FitEventActivity,
+            FitActivityEventTypeField to FitEventTypeStop,
+        ),
+        strings = if (title != null) mapOf(FitActivityNameField to title) else emptyMap(),
+    )
+
+    encoder.writeTo(output)
+}
+
 internal fun ExerciseData.workoutExportFileName(format: ActivityWorkoutExportFormat): String =
     exportFileName(extension = format.extension, fallbackName = "workout")
 
@@ -263,6 +453,52 @@ private fun Int.toTcxSport(): String = when (this) {
     ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY,
     -> "Biking"
     else -> "Other"
+}
+
+/**
+ * Health Connect exercise type → FIT `(sport, sub_sport)`. The sub-sport is
+ * only set where it IS the activity (a treadmill run, a trainer ride) or where
+ * FIT files the sport under a generic bucket (fitness equipment, training) and
+ * the sub-sport carries the identity. Everything unmapped is (generic, generic),
+ * which importers treat as "a workout" — the same fallback the CSV takes.
+ */
+private fun Int.toFitSport(): Pair<Long, Long> = when (this) {
+    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> 1L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> 1L to 1L
+    ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> 2L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> 2L to 6L
+    ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> 11L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> 17L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> 5L to 17L
+    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> 5L to 18L
+    ExerciseSessionRecord.EXERCISE_TYPE_ROWING -> 15L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE -> 15L to 14L
+    ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
+    ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING,
+    ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+    -> 10L to 20L
+    ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL -> 4L to 15L
+    ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING,
+    ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE,
+    -> 4L to 16L
+    ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> 62L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL -> 6L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_SOCCER -> 7L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_TENNIS -> 8L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AMERICAN -> 9L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_SKIING -> 13L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING -> 14L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_PADDLING -> 19L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_GOLF -> 25L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_ROCK_CLIMBING -> 31L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_SAILING -> 32L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING,
+    ExerciseSessionRecord.EXERCISE_TYPE_SKATING,
+    -> 33L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING -> 35L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_SURFING -> 38L to 0L
+    ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> 47L to 0L
+    else -> 0L to 0L
 }
 
 /** `<HeartRateBpm><Value>128</Value></HeartRateBpm>` — the value is a child, not text. */
@@ -364,5 +600,63 @@ internal fun exerciseTypeExportName(type: Int): String = when (type) {
 // TCX has no IANA registration; this is the type Garmin's own tools use.
 private const val TcxMimeType = "application/vnd.garmin.tcx+xml"
 private const val CsvMimeType = "text/csv"
+// FIT has none either; this is the de-facto ANT/Garmin type share targets match.
+private const val FitMimeType = "application/vnd.ant.fit"
 private const val TcxNamespace = "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
 internal const val WorkoutExportCacheDirectory = "workout_exports"
+
+// The FIT vocabulary this exporter writes. Message and field numbers are from
+// Garmin's FIT profile; only what the writer emits is named here — the read
+// side keeps its own table in FitRouteParser, deliberately (interpretation
+// stays with each consumer).
+private const val FitLocalFileId = 0
+private const val FitLocalRecord = 1
+private const val FitLocalLap = 2
+private const val FitLocalSession = 3
+private const val FitLocalActivity = 4
+private const val FitFileIdMessage = 0
+private const val FitSessionMessage = 18
+private const val FitLapMessage = 19
+private const val FitRecordMessage = 20
+private const val FitActivityMessage = 34
+private const val FitTimestampField = 253
+private const val FitMessageIndexField = 254
+private const val FitFileIdTypeField = 0
+private const val FitFileIdManufacturerField = 1
+private const val FitFileIdProductField = 2
+private const val FitFileIdTimeCreatedField = 4
+private const val FitRecordHeartRateField = 3
+private const val FitEventField = 0
+private const val FitEventTypeField = 1
+private const val FitStartTimeField = 2
+private const val FitSessionSportField = 5
+private const val FitSessionSubSportField = 6
+private const val FitTotalElapsedTimeField = 7
+private const val FitTotalTimerTimeField = 8
+private const val FitTotalDistanceField = 9
+private const val FitTotalCaloriesField = 11
+private const val FitLapAvgHeartRateField = 15
+private const val FitLapMaxHeartRateField = 16
+/** Lap numbering; also what our own importer reads on BOTH messages. */
+private const val FitLapTotalAscentField = 21
+private const val FitSessionAvgHeartRateField = 16
+private const val FitSessionMaxHeartRateField = 17
+/** Session numbering — 21 there is max_power and must never be written. */
+private const val FitSessionTotalAscentField = 22
+private const val FitSessionFirstLapIndexField = 25
+private const val FitSessionNumLapsField = 26
+private const val FitActivityTotalTimerTimeField = 0
+private const val FitActivityNumSessionsField = 1
+private const val FitActivityTypeField = 2
+private const val FitActivityEventField = 3
+private const val FitActivityEventTypeField = 4
+private const val FitActivityNameField = 8
+private const val FitFileTypeActivity = 4L
+private const val FitManufacturerDevelopment = 255L
+private const val FitEventLap = 9L
+private const val FitEventSession = 8L
+private const val FitEventActivity = 26L
+private const val FitEventTypeStop = 1L
+private const val FitActivityTypeManual = 0L
+private const val FitDistanceScale = 100.0
+private const val MaxFitActivityNameBytes = 64
