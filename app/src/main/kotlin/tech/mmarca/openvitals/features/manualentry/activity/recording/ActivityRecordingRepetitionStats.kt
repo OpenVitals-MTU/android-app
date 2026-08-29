@@ -58,6 +58,9 @@ import java.time.Instant
 import java.util.Locale
 import kotlinx.coroutines.delay
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.ui.components.CountdownRing
+import tech.mmarca.openvitals.ui.components.CountdownRingDefaults
+import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
@@ -169,14 +172,27 @@ internal fun RepetitionCountAdjustRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (state.status == ActivityRecordingStatus.RESTING && !state.isPlanRun) {
-                    Text(
-                        text = stringResource(
-                            R.string.activity_entry_recording_rest_remaining,
-                            formatRecordingElapsed(state.restRemainingDuration()),
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    val now = Instant.now()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        CountdownRing(
+                            endsAt = state.restEndTime(),
+                            totalMillis = state.repetitionRestSeconds * 1_000L,
+                            now = now,
+                            size = CountdownRingDefaults.CompactSize,
+                            strokeWidth = CountdownRingDefaults.CompactStrokeWidth,
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.activity_entry_recording_rest_remaining,
+                                formatRecordingElapsed(state.restRemainingDuration(now)),
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
             }
         }

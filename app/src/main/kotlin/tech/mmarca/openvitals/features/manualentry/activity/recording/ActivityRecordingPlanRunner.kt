@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -27,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import java.time.Instant
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.ui.components.CountdownRing
+import tech.mmarca.openvitals.ui.components.CountdownRingDefaults
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
@@ -53,7 +56,12 @@ internal fun ActivityPlanStepBanner(
     val step = state.currentPlanStep
     val stepNumber = (state.planStepIndex + 1).coerceAtMost(state.planSteps.size)
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(Spacing.lg)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.lg),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Text(
                 text = listOfNotNull(
                     stringResource(R.string.activity_recording_plan_step_progress, stepNumber, state.planSteps.size),
@@ -86,15 +94,24 @@ internal fun ActivityPlanStepBanner(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     )
-                    Text(
-                        text = hrrCountdownText(remaining),
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        // Read out only through the final seconds, not every tick.
-                        modifier = if (gettingReady) Modifier.semantics { liveRegion = LiveRegionMode.Assertive } else Modifier,
-                    )
+                    Spacer(Modifier.height(Spacing.sm))
+                    CountdownRing(
+                        endsAt = state.restEndTime(),
+                        totalMillis = state.repetitionRestSeconds * 1_000L,
+                        now = now,
+                        size = CountdownRingDefaults.LargeSize,
+                        strokeWidth = CountdownRingDefaults.LargeStrokeWidth,
+                    ) {
+                        Text(
+                            text = hrrCountdownText(remaining),
+                            style = MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            // Read out only through the final seconds, not every tick.
+                            modifier = if (gettingReady) Modifier.semantics { liveRegion = LiveRegionMode.Assertive } else Modifier,
+                        )
+                    }
                     step?.let {
-                        Spacer(Modifier.height(Spacing.xs))
+                        Spacer(Modifier.height(Spacing.sm))
                         Text(
                             text = stringResource(R.string.activity_recording_plan_next, planStepGoalText(it, unitFormatter)),
                             style = MaterialTheme.typography.titleMedium,
@@ -109,22 +126,37 @@ internal fun ActivityPlanStepBanner(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     )
-                    Text(
-                        text = when (step.goalKind) {
-                            ActivityPlanGoalKind.REPS -> stringResource(
+                    when (step.goalKind) {
+                        ActivityPlanGoalKind.REPS -> Text(
+                            text = stringResource(
                                 R.string.activity_recording_plan_reps_progress,
                                 unitFormatter.count(state.currentSetRepetitionCount),
                                 unitFormatter.count(step.goalValue),
-                            )
-                            ActivityPlanGoalKind.SECONDS -> hrrCountdownText(
-                                state.planStepRemaining(now) ?: java.time.Duration.ofSeconds(step.goalValue),
-                            )
-                        },
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                            ),
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        ActivityPlanGoalKind.SECONDS -> {
+                            Spacer(Modifier.height(Spacing.sm))
+                            CountdownRing(
+                                endsAt = state.planStepEndTime(),
+                                totalMillis = step.goalValue * 1_000L,
+                                now = now,
+                                size = CountdownRingDefaults.LargeSize,
+                                strokeWidth = CountdownRingDefaults.LargeStrokeWidth,
+                            ) {
+                                Text(
+                                    text = hrrCountdownText(
+                                        state.planStepRemaining(now) ?: java.time.Duration.ofSeconds(step.goalValue),
+                                    ),
+                                    style = MaterialTheme.typography.displayMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+                    }
                     state.nextPlanStep?.let { next ->
-                        Spacer(Modifier.height(Spacing.xs))
+                        Spacer(Modifier.height(Spacing.sm))
                         Text(
                             text = stringResource(R.string.activity_recording_plan_next, planStepGoalText(next, unitFormatter)),
                             style = MaterialTheme.typography.bodyMedium,
