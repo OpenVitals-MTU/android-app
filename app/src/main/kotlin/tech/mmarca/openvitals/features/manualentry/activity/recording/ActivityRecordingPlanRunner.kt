@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import java.time.Instant
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.CountdownRing
 import tech.mmarca.openvitals.ui.components.CountdownRingDefaults
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -37,6 +39,16 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 private val PlanControlHeight = 56.dp
+
+/**
+ * The row holds up to four controls once Back appears (step 2 onwards), so
+ * the icon-only buttons are squares with no side padding and the text
+ * buttons give up Material's 24dp — otherwise "Done" and "Finish session"
+ * wrap mid-word on a phone-width screen (#281). The labels shrink rather
+ * than wrap as a last resort.
+ */
+private val PlanIconButtonPadding = PaddingValues(0.dp)
+private val PlanTextButtonPadding = PaddingValues(horizontal = Spacing.md)
 
 /** The last seconds of a rest read as "Get ready" and are announced. */
 internal const val GetReadySeconds = 5L
@@ -201,7 +213,8 @@ internal fun PlanRunControls(
             if (canUndo) {
                 OpenVitalsOutlinedButton(
                     onClick = onUndoStep,
-                    modifier = Modifier.height(PlanControlHeight),
+                    modifier = Modifier.size(PlanControlHeight),
+                    contentPadding = PlanIconButtonPadding,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.Undo,
@@ -217,9 +230,10 @@ internal fun PlanRunControls(
                         modifier = Modifier
                             .weight(1f)
                             .height(PlanControlHeight),
+                        contentPadding = PlanTextButtonPadding,
                     ) {
                         Icon(imageVector = Icons.Outlined.PlayArrow, contentDescription = null)
-                        Text(
+                        AutoResizeText(
                             text = stringResource(R.string.activity_entry_recording_start_next_set),
                             modifier = Modifier.padding(start = Spacing.sm),
                         )
@@ -232,9 +246,10 @@ internal fun PlanRunControls(
                         modifier = Modifier
                             .weight(1f)
                             .height(PlanControlHeight),
+                        contentPadding = PlanTextButtonPadding,
                     ) {
                         Icon(imageVector = Icons.Outlined.Check, contentDescription = null)
-                        Text(
+                        AutoResizeText(
                             text = stringResource(R.string.activity_recording_plan_done),
                             modifier = Modifier.padding(start = Spacing.sm),
                         )
@@ -242,7 +257,8 @@ internal fun PlanRunControls(
                     OpenVitalsOutlinedButton(
                         onClick = onSkipStep,
                         enabled = state.status == ActivityRecordingStatus.RECORDING,
-                        modifier = Modifier.height(PlanControlHeight),
+                        modifier = Modifier.size(PlanControlHeight),
+                        contentPadding = PlanIconButtonPadding,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.SkipNext,
@@ -256,8 +272,9 @@ internal fun PlanRunControls(
                 modifier = Modifier
                     .weight(1f)
                     .height(PlanControlHeight),
+                contentPadding = PlanTextButtonPadding,
             ) {
-                Text(stringResource(R.string.activity_entry_recording_end_session))
+                AutoResizeText(stringResource(R.string.activity_entry_recording_end_session))
             }
         }
     }
