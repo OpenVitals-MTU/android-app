@@ -4,6 +4,9 @@
         name="route_exports"
         path="route_exports/" />
     <cache-path
+        name="workout_exports"
+        path="workout_exports/" />
+    <cache-path
         name="diagnostics_exports"
         path="diagnostics_exports/" />
     <cache-path

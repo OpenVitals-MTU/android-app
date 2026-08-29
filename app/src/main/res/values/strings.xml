@@ -314,6 +314,17 @@
     <string name="activity_route_share_kmz">Share KMZ</string>
     <string name="activity_route_share_chooser_title">Share route with</string>
     <string name="activity_route_share_failed">Could not share route file.</string>
+    <string name="activity_workout_export_title">Export workout</string>
+    <string name="activity_workout_export_description">Save this workout\'s metrics as a file. The GPS route is not included.</string>
+    <string name="activity_workout_export_description_with_route">Save this workout as a file. GPX and KMZ include the GPS route; TCX and CSV leave it out.</string>
+    <string name="activity_workout_export_tcx">Save TCX</string>
+    <string name="activity_workout_export_csv">Save CSV</string>
+    <string name="activity_workout_share_tcx">Share TCX</string>
+    <string name="activity_workout_share_csv">Share CSV</string>
+    <string name="activity_workout_export_saved">Workout saved.</string>
+    <string name="activity_workout_export_failed">Could not save workout file.</string>
+    <string name="activity_workout_share_chooser_title">Share workout with</string>
+    <string name="activity_workout_share_failed">Could not share workout file.</string>
     <string name="activity_splits_laps_title">Laps</string>
     <string name="activity_splits_laps_body">Recorded by the device or app that saved this activity.</string>
     <string name="activity_splits_derived_title">Splits · every %1$s</string>

@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -353,10 +351,6 @@ internal fun RouteCard(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenRouteInMap: (() -> Unit)? = null,
-    onSaveRouteAsGpx: (() -> Unit)? = null,
-    onSaveRouteAsKmz: (() -> Unit)? = null,
-    onShareRouteAsGpx: (() -> Unit)? = null,
-    onShareRouteAsKmz: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     DetailSectionCard(title = stringResource(R.string.detail_route), modifier = modifier) {
@@ -390,76 +384,6 @@ internal fun RouteCard(
                                 text = stringResource(R.string.activity_route_open_in_map),
                                 modifier = Modifier.padding(start = 6.dp),
                             )
-                        }
-                    }
-                    if (onSaveRouteAsGpx != null && onSaveRouteAsKmz != null) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            OpenVitalsOutlinedButton(
-                                onClick = onSaveRouteAsGpx,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.FileDownload,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Text(
-                                    text = stringResource(R.string.activity_route_export_gpx),
-                                    modifier = Modifier.padding(start = 6.dp),
-                                )
-                            }
-                            OpenVitalsOutlinedButton(
-                                onClick = onSaveRouteAsKmz,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.FileDownload,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Text(
-                                    text = stringResource(R.string.activity_route_export_kmz),
-                                    modifier = Modifier.padding(start = 6.dp),
-                                )
-                            }
-                        }
-                    }
-                    if (onShareRouteAsGpx != null && onShareRouteAsKmz != null) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            OpenVitalsOutlinedButton(
-                                onClick = onShareRouteAsGpx,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Share,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Text(
-                                    text = stringResource(R.string.activity_route_share_gpx),
-                                    modifier = Modifier.padding(start = 6.dp),
-                                )
-                            }
-                            OpenVitalsOutlinedButton(
-                                onClick = onShareRouteAsKmz,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Share,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Text(
-                                    text = stringResource(R.string.activity_route_share_kmz),
-                                    modifier = Modifier.padding(start = 6.dp),
-                                )
-                            }
                         }
                     }
                     DetailRow(stringResource(R.string.detail_status), stringResource(R.string.detail_status_available))

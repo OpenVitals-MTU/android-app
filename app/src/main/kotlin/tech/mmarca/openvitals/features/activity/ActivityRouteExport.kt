@@ -226,15 +226,19 @@ private fun XmlSerializer.textElement(name: String, value: String) {
     endTag(null, name)
 }
 
-internal fun ExerciseData.routeExportFileName(format: ActivityRouteExportFormat): String {
+internal fun ExerciseData.routeExportFileName(format: ActivityRouteExportFormat): String =
+    exportFileName(extension = format.extension, fallbackName = "activity-route")
+
+/** Shared by the route and workout exports: sanitized title, start time, extension. */
+internal fun ExerciseData.exportFileName(extension: String, fallbackName: String): String {
     val titlePart = title
         ?.takeIf { it.isNotBlank() }
-        ?.sanitizeRouteFileName()
-        ?: "activity-route"
+        ?.sanitizeRouteFileName(fallbackName)
+        ?: fallbackName
     val timePart = startTime
         .atZone(ZoneId.systemDefault())
         .format(RouteExportTimeFormatter)
-    return "$titlePart-$timePart.${format.extension}"
+    return "$titlePart-$timePart.$extension"
 }
 
 internal fun ExerciseData.sortedRoutePointsForExport(): List<ExerciseRoutePoint> {
@@ -243,13 +247,13 @@ internal fun ExerciseData.sortedRoutePointsForExport(): List<ExerciseRoutePoint>
     return routePoints
 }
 
-private fun String.sanitizeRouteFileName(): String =
+private fun String.sanitizeRouteFileName(fallbackName: String): String =
     trim()
         .lowercase(Locale.US)
         .replace(UnsafeRouteFileNameChars, "-")
         .trim('-')
         .take(MaxRouteFileNamePrefixLength)
-        .ifBlank { "activity-route" }
+        .ifBlank { fallbackName }
 
 private fun Double.toRouteCoordinate(): String =
     "%.7f".format(Locale.US, this)

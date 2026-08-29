@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,12 +38,14 @@ import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationSnapshot
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 
 @Composable
@@ -114,6 +117,61 @@ internal fun ActivityDetailScreen(
             ActivityRouteExportFormat.KMZ -> saveKmzRoute.launch(fileName)
         }
     }
+    val latestHeartRateSamples by rememberUpdatedState(state.heartRateSamples)
+    fun showWorkoutExportFailure() {
+        Toast.makeText(
+            context,
+            R.string.activity_workout_export_failed,
+            Toast.LENGTH_LONG,
+        ).show()
+    }
+    fun saveWorkoutExport(format: ActivityWorkoutExportFormat, destination: Uri?) {
+        val currentWorkout = latestWorkout ?: return
+        if (destination == null) return
+        context.saveActivityWorkoutExport(
+            workout = currentWorkout,
+            heartRateSamples = latestHeartRateSamples,
+            format = format,
+            destination = destination,
+        )
+            .onSuccess {
+                Toast.makeText(
+                    context,
+                    R.string.activity_workout_export_saved,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            .onFailure { showWorkoutExportFailure() }
+    }
+    val saveTcxWorkout = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ActivityWorkoutExportFormat.TCX.mimeType),
+    ) { uri -> saveWorkoutExport(ActivityWorkoutExportFormat.TCX, uri) }
+    val saveCsvWorkout = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ActivityWorkoutExportFormat.CSV.mimeType),
+    ) { uri -> saveWorkoutExport(ActivityWorkoutExportFormat.CSV, uri) }
+    fun launchWorkoutExport(format: ActivityWorkoutExportFormat) {
+        val currentWorkout = latestWorkout ?: return
+        val fileName = currentWorkout.workoutExportFileName(format)
+        when (format) {
+            ActivityWorkoutExportFormat.TCX -> saveTcxWorkout.launch(fileName)
+            ActivityWorkoutExportFormat.CSV -> saveCsvWorkout.launch(fileName)
+        }
+    }
+    fun shareWorkout(format: ActivityWorkoutExportFormat) {
+        val currentWorkout = latestWorkout ?: return
+        context.shareActivityWorkout(
+            workout = currentWorkout,
+            heartRateSamples = latestHeartRateSamples,
+            format = format,
+        )
+            .onFailure {
+                Toast.makeText(
+                    context,
+                    R.string.activity_workout_share_failed,
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+    }
     fun shareRoute(format: ActivityRouteExportFormat) {
         val currentWorkout = latestWorkout ?: return
         context.shareActivityRoute(workout = currentWorkout, format = format)
@@ -164,6 +222,10 @@ internal fun ActivityDetailScreen(
             onSaveRouteAsKmz = { launchRouteExport(ActivityRouteExportFormat.KMZ) },
             onShareRouteAsGpx = { shareRoute(ActivityRouteExportFormat.GPX) },
             onShareRouteAsKmz = { shareRoute(ActivityRouteExportFormat.KMZ) },
+            onSaveWorkoutAsTcx = { launchWorkoutExport(ActivityWorkoutExportFormat.TCX) },
+            onSaveWorkoutAsCsv = { launchWorkoutExport(ActivityWorkoutExportFormat.CSV) },
+            onShareWorkoutAsTcx = { shareWorkout(ActivityWorkoutExportFormat.TCX) },
+            onShareWorkoutAsCsv = { shareWorkout(ActivityWorkoutExportFormat.CSV) },
         )
     }
 }
@@ -195,6 +257,10 @@ internal fun ActivityDetailContent(
     onSaveRouteAsKmz: () -> Unit,
     onShareRouteAsGpx: () -> Unit,
     onShareRouteAsKmz: () -> Unit,
+    onSaveWorkoutAsTcx: () -> Unit = {},
+    onSaveWorkoutAsCsv: () -> Unit = {},
+    onShareWorkoutAsTcx: () -> Unit = {},
+    onShareWorkoutAsCsv: () -> Unit = {},
 ) {
     val context = LocalContext.current
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
@@ -365,13 +431,28 @@ internal fun ActivityDetailContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenRouteInMap = onOpenRouteInMap,
-                onSaveRouteAsGpx = onSaveRouteAsGpx,
-                onSaveRouteAsKmz = onSaveRouteAsKmz,
-                onShareRouteAsGpx = onShareRouteAsGpx,
-                onShareRouteAsKmz = onShareRouteAsKmz,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        item {
+            // The route formats join the card only when there is a route to
+            // put in them; the metric formats are unconditional.
+            val hasExportableRoute = workout.route.status == ExerciseRouteStatus.DATA &&
+                workout.route.points.isNotEmpty()
+            WorkoutExportCard(
+                onSaveAsTcx = onSaveWorkoutAsTcx,
+                onSaveAsCsv = onSaveWorkoutAsCsv,
+                onShareAsTcx = onShareWorkoutAsTcx,
+                onShareAsCsv = onShareWorkoutAsCsv,
+                onSaveRouteAsGpx = onSaveRouteAsGpx.takeIf { hasExportableRoute },
+                onSaveRouteAsKmz = onSaveRouteAsKmz.takeIf { hasExportableRoute },
+                onShareRouteAsGpx = onShareRouteAsGpx.takeIf { hasExportableRoute },
+                onShareRouteAsKmz = onShareRouteAsKmz.takeIf { hasExportableRoute },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
         }
         item {

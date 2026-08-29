@@ -24,17 +24,13 @@ import tech.mmarca.openvitals.testing.testUnitFormatter
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's
+ * Descendant of Flutter's
  * `test/features/activity/activity_route_export_buttons_test.dart`.
  *
- * Three actions with three different intents, none a substitute for another:
- * open-in-map hands the route to a map app, save raises the system file picker,
- * share offers messengers and mail. Losing one of them is the only copy of that
- * route the user can never get out of the app — Health Connect has no export.
- *
- * Where Flutter drops the whole card for a routeless workout, Kotlin keeps the
- * card and says there is no route in it; what both guarantee is that no export
- * action is offered for a route that does not exist.
+ * The save/share format buttons have since moved to the export card
+ * ([ActivityWorkoutExportButtonsTest] covers them there); what remains the
+ * route card's own is open-in-map — offered exactly when a route exists,
+ * because handing a map app an empty track renders as a blank map.
  */
 class ActivityRouteExportButtonsTest {
 
@@ -42,38 +38,23 @@ class ActivityRouteExportButtonsTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun aRouteOffersOpenInMapAndBothSaveAndShareFormats() {
+    fun aRouteOffersOpenInMap() {
         val pressed = mutableListOf<String>()
         setCard(route = routeWithPoints(), pressed = pressed)
 
-        listOf(
-            R.string.activity_route_open_in_map,
-            R.string.activity_route_export_gpx,
-            R.string.activity_route_export_kmz,
-            R.string.activity_route_share_gpx,
-            R.string.activity_route_share_kmz,
-        ).forEach { actionRes ->
-            composeRule.onNodeWithText(string(actionRes)).performScrollTo().assertIsDisplayed()
-        }
+        composeRule.onNodeWithText(string(R.string.activity_route_open_in_map))
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
 
-        composeRule.onNodeWithText(string(R.string.activity_route_share_kmz)).performScrollTo().performClick()
-
-        assertEquals(listOf("share-kmz"), pressed)
+        assertEquals(listOf("open"), pressed)
     }
 
     @Test
-    fun aWorkoutWithoutARouteOffersNoExportAtAll() {
+    fun aWorkoutWithoutARouteOffersNoMapOpening() {
         setCard(route = ExerciseRouteData(status = ExerciseRouteStatus.NO_DATA))
 
-        listOf(
-            R.string.activity_route_open_in_map,
-            R.string.activity_route_export_gpx,
-            R.string.activity_route_export_kmz,
-            R.string.activity_route_share_gpx,
-            R.string.activity_route_share_kmz,
-        ).forEach { actionRes ->
-            composeRule.onNodeWithText(string(actionRes)).assertDoesNotExist()
-        }
+        composeRule.onNodeWithText(string(R.string.activity_route_open_in_map)).assertDoesNotExist()
         composeRule.onNodeWithText(string(R.string.message_no_route_data)).performScrollTo().assertIsDisplayed()
     }
 
@@ -100,10 +81,6 @@ class ActivityRouteExportButtonsTest {
                         unitFormatter = testUnitFormatter(),
                         dateTimeFormatterProvider = DateTimeFormatterProvider(),
                         onOpenRouteInMap = { pressed += "open" },
-                        onSaveRouteAsGpx = { pressed += "save-gpx" },
-                        onSaveRouteAsKmz = { pressed += "save-kmz" },
-                        onShareRouteAsGpx = { pressed += "share-gpx" },
-                        onShareRouteAsKmz = { pressed += "share-kmz" },
                     )
                 }
             }
