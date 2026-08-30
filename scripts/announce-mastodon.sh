@@ -29,7 +29,7 @@ instance="${MASTODON_INSTANCE_URL:-https://techhub.social}"
 instance="${instance%/}"
 limit="${MASTODON_STATUS_LIMIT:-500}"
 
-if [ -z "${MASTODON_ACCESS_TOKEN:-}" ]; then
+if [ -z "${MASTODON_ACCESS_TOKEN:-}" ] && [ -z "${MASTODON_DRY_RUN:-}" ]; then
     echo "MASTODON_ACCESS_TOKEN is required" >&2
     exit 1
 fi
@@ -68,20 +68,43 @@ narrative="$(awk '
     seen { started = 1; printf "%s%s", (n++ ? " " : ""), $0 }
 ' "$notes_file")"
 
-fixed_length="$(printf '%s\n\n\n\n%s' "$headline" "$links" | wc -m)"
+# Mastodon counts every link as 23 characters whatever its length, so the fixed
+# part is measured with the URLs replaced by 23-character stand-ins; counting
+# the real Codeberg URL threw away ~40 characters of narrative per post.
+url_stand_in="xxxxxxxxxxxxxxxxxxxxxxx"
+links_counted="$(printf '%s' "$links" | sed "s#https\{0,1\}://[^[:space:]]*#$url_stand_in#g")"
+fixed_length="$(printf '%s\n\n\n\n%s' "$headline" "$links_counted" | wc -m)"
 room=$((limit - fixed_length))
 if [ "$room" -lt 0 ]; then
     echo "Status limit $limit is too small for the fixed part of the announcement." >&2
     exit 1
 fi
 if [ "$(printf '%s' "$narrative" | wc -m)" -gt "$room" ]; then
-    # Cut at the last sentence end that fits; if none, cut at a word and add an ellipsis.
+    # Cut at the last sentence end that fits - but only if that keeps a
+    # worthwhile share of the room. A short opener followed by one long
+    # sentence used to leave "This release is about training with a plan."
+    # and nothing else. Below that share, cut at the last clause boundary
+    # (semicolon, colon, dash, comma) and, failing that, at a word, with an
+    # ellipsis either way so the cut reads as one.
     cut="$(printf '%s' "$narrative" | cut -c1-"$room")"
+    min_keep=$((room * 6 / 10))
     sentence="$(printf '%s' "$cut" | sed -n 's/^\(.*[.!?]\)[^.!?]*$/\1/p')"
-    if [ -n "$sentence" ]; then
+    if [ -n "$sentence" ] && [ "$(printf '%s' "$sentence" | wc -m)" -ge "$min_keep" ]; then
         narrative="$sentence"
     else
-        narrative="$(printf '%s' "$cut" | cut -c1-$((room - 3)) | sed 's/[[:space:]]*[^[:space:]]*$//')..."
+        short="$(printf '%s' "$cut" | cut -c1-$((room - 3)))"
+        # Last "; " ": " ", " and last " - " that fit; the longer of the two wins.
+        clause_p="$(printf '%s' "$short" | sed -n 's/^\(.*[;:,]\)[[:space:]].*$/\1/p' | sed 's/[;:,]$//')"
+        clause_d="$(printf '%s' "$short" | sed -n 's/^\(.*[^[:space:]]\)[[:space:]]-[[:space:]].*$/\1/p')"
+        clause="$clause_p"
+        if [ "$(printf '%s' "$clause_d" | wc -m)" -gt "$(printf '%s' "$clause_p" | wc -m)" ]; then
+            clause="$clause_d"
+        fi
+        if [ -n "$clause" ] && [ "$(printf '%s' "$clause" | wc -m)" -ge "$min_keep" ]; then
+            narrative="$clause..."
+        else
+            narrative="$(printf '%s' "$short" | sed 's/[[:space:]]*[^[:space:]]*$//')..."
+        fi
     fi
 fi
 
@@ -89,6 +112,15 @@ if [ -n "$narrative" ]; then
     status="$(printf '%s\n\n%s\n\n%s' "$headline" "$narrative" "$links")"
 else
     status="$(printf '%s\n\n%s' "$headline" "$links")"
+fi
+
+# MASTODON_DRY_RUN=1 prints the status that would be posted and stops before
+# touching the instance - no token needed.
+if [ -n "${MASTODON_DRY_RUN:-}" ]; then
+    printf '%s\n' "$status"
+    printf -- '--- %s characters as Mastodon counts them ---\n' \
+        "$(printf '%s' "$status" | sed "s#https\{0,1\}://[^[:space:]]*#$url_stand_in#g" | wc -m)" >&2
+    exit 0
 fi
 
 auth="Authorization: Bearer $MASTODON_ACCESS_TOKEN"
