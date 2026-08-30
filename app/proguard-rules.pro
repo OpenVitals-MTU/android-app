@@ -21,3 +21,13 @@
     public static int v(...);
     public static int i(...);
 }
+
+# Glance instantiates ActionCallback subclasses reflectively at tap time:
+# RunCallbackAction does Class.forName(name).getDeclaredConstructor().newInstance().
+# glance-appwidget's bundled consumer rule (-keep public class * extends
+# ActionCallback, no member spec) keeps the class name but, under the strict
+# full-mode keep rules this build runs with, not the no-arg constructor. R8
+# stripped <init>() and every widget tap died in a silent NoSuchMethodException.
+-keepclassmembers class * extends androidx.glance.appwidget.action.ActionCallback {
+    <init>();
+}
