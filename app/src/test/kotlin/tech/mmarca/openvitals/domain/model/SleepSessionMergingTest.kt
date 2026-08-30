@@ -99,6 +99,44 @@ class SleepSessionMergingTest {
         )
     }
 
+    @Test fun `mergeSleepSessions does not double count overlapping same-source records`() {
+        // Mi Fitness shape: the night once as a whole, and again as a partial record
+        // covering the same hours. Summing the parts showed 8h23m of stages as 13h15m.
+        val whole = sleep(
+            id = "whole",
+            source = "com.xiaomi.wearable",
+            start = "2026-08-23T22:47:00Z",
+            end = "2026-08-24T07:15:00Z",
+            stages = listOf(
+                stage("2026-08-23T22:47:00Z", "2026-08-24T03:00:00Z", SleepStage.STAGE_LIGHT),
+                stage("2026-08-24T03:00:00Z", "2026-08-24T03:05:00Z", SleepStage.STAGE_AWAKE),
+                stage("2026-08-24T03:05:00Z", "2026-08-24T07:15:00Z", SleepStage.STAGE_DEEP),
+            ),
+        )
+        val partial = sleep(
+            id = "partial",
+            source = "com.xiaomi.wearable",
+            start = "2026-08-24T03:05:00Z",
+            end = "2026-08-24T06:52:00Z",
+            stages = listOf(stage("2026-08-24T03:05:00Z", "2026-08-24T06:52:00Z", SleepStage.STAGE_LIGHT)),
+        )
+
+        val merged = mergeSleepSessions(listOf(whole, partial)).single()
+
+        // 8h28m in bed minus the 5 awake minutes — the same number the day view shows.
+        assertEquals(Duration.ofHours(8).plusMinutes(23).toMillis(), merged.durationMs)
+        assertEquals(merged.durationMs, sleepDurationMsFromStages(merged.stages, 0L))
+    }
+
+    @Test fun `mergeSleepSessions falls back to the union of spans when the parts are stage-less`() {
+        val whole = sleep(id = "whole", start = "2026-08-23T22:00:00Z", end = "2026-08-24T06:00:00Z")
+        val partial = sleep(id = "partial", start = "2026-08-24T01:00:00Z", end = "2026-08-24T05:00:00Z")
+
+        val merged = mergeSleepSessions(listOf(whole, partial)).single()
+
+        assertEquals(Duration.ofHours(8).toMillis(), merged.durationMs)
+    }
+
     @Test fun `sleepDurationMsFromStages excludes awake stages when sleep stages are present`() {
         val stages = listOf(
             stage("2026-05-06T00:00:00Z", "2026-05-06T04:00:00Z", SleepStage.STAGE_LIGHT),

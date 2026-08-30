@@ -81,12 +81,17 @@ private fun List<SleepData>.toMergedSleepSession(maxGap: Duration): SleepData {
     val startTime = first.startTime
     val endTime = last.endTime
     val distinctSources = ordered.map { it.source }.distinct()
+    val stages = mergedSleepStages(ordered, maxGap)
 
     return SleepData(
         id = mergedSleepSessionId(ordered.map { it.id }),
         startTime = startTime,
         endTime = endTime,
-        durationMs = ordered.sumOf { it.durationMs.coerceAtLeast(0L) },
+        // From the RESOLVED stages, never a sum of the parts: a writer that stores one
+        // night as several overlapping same-source records (Mi Fitness does) would
+        // otherwise have the overlap counted twice — 8h23m of stages shown as 13h15m.
+        // Stage-less parts fall back to the union of their spans for the same reason.
+        durationMs = sleepDurationMsFromStages(stages, fallbackDurationMs = sleepSessionsUnionMs(ordered)),
         source = distinctSources.singleOrNull() ?: first.source,
         title = ordered
             .mapNotNull { session -> session.title?.takeIf { it.isNotBlank() } }
@@ -103,7 +108,7 @@ private fun List<SleepData>.toMergedSleepSession(maxGap: Duration): SleepData {
         clientRecordVersion = null,
         recordingMethod = ordered.mapNotNull { it.recordingMethod }.distinct().singleOrNull(),
         device = ordered.mapNotNull { it.device }.distinct().singleOrNull(),
-        stages = mergedSleepStages(ordered, maxGap),
+        stages = stages,
     )
 }
 
