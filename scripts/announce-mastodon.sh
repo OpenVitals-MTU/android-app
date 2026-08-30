@@ -99,10 +99,19 @@ if [ -z "$account_id" ] || [ "$account_id" = "null" ]; then
     exit 1
 fi
 
-already="$(curl -fsS -H "$auth" \
+# The duplicate check reads the account's PUBLIC statuses, so it is made
+# without the token: authenticated it would need read:statuses, and a token
+# without that scope got a 403 here. A failed read must stop the script - the
+# whole point of the check is to never post twice, so an empty answer is an
+# error, not "nothing found" (a 403 inside $(...) once fell through to a post).
+already="$(curl -fsS \
     "$instance/api/v1/accounts/$account_id/statuses?limit=40&exclude_replies=true&exclude_reblogs=true" \
-    | jq -r --arg needle "$headline" '[.[] | select(.content | test($needle; "i"))] | length')"
-if [ "${already:-0}" -gt 0 ]; then
+    | jq -r --arg needle "$headline" '[.[] | select(.content | test($needle; "i"))] | length')" || already=""
+if [ -z "$already" ]; then
+    echo "Could not read $instance/@$account_id's statuses to check for an existing announcement; not posting." >&2
+    exit 1
+fi
+if [ "$already" -gt 0 ]; then
     echo "An announcement for $release_tag is already on $instance; skipping."
     exit 0
 fi
