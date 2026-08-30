@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.domain.model.isRestStep
 import tech.mmarca.openvitals.domain.model.restPlanStep
+import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityRepetitionSetInput
 import tech.mmarca.openvitals.features.manualentry.activity.isRepetitionLike
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityPlanGoalKind
@@ -67,9 +68,13 @@ fun PlannedExerciseData.toRepetitionSetInputs(ownSegmentType: Int?): List<Activi
 /**
  * The plan as the live recording runs it: the same unroll and rest folding as
  * the form rows, but with absolute segment types and resolved labels, plus the
- * recognizer (if any) that can count each step.
+ * recognizer (if any) that can count each step. [localizedTitle] offers each
+ * sensor-backed exercise's name in the phone's language so a step named
+ * "Liegestütze" finds the push-up recognizer as readily as "Push-ups" does.
  */
-fun PlannedExerciseData.toPlanRunSteps(): List<ActivityPlanRunStep> {
+fun PlannedExerciseData.toPlanRunSteps(
+    localizedTitle: (type: ActivityEntryType) -> String? = { null },
+): List<ActivityPlanRunStep> {
     val steps = mutableListOf<ActivityPlanRunStep>()
     forEachUnrolledStep { blockIndex, round, rounds, step ->
         val isRest = step.isRestStep()
@@ -87,7 +92,7 @@ fun PlannedExerciseData.toPlanRunSteps(): List<ActivityPlanRunStep> {
                     blockIndex = blockIndex,
                     round = round,
                     rounds = rounds,
-                    sensorTypeId = planStepSensorTypeId(step.exerciseType, label),
+                    sensorTypeId = planStepSensorTypeId(step.exerciseType, label, localizedTitle),
                 )
             }
             is PlannedExerciseCompletion.DurationSeconds -> if (isRest) {

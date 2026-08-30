@@ -515,7 +515,7 @@ class ActivityRecordingController @Inject constructor(
      * back mid-plank exactly where it was.
      */
     fun startPlanRecording(plan: PlannedExerciseData, activityType: ActivityEntryType): Boolean {
-        val steps = plan.toPlanRunSteps()
+        val steps = plan.toPlanRunSteps(localizedTitle = { context.getString(it.labelRes) })
         if (steps.isEmpty()) {
             updateAndPersist(
                 _state.value.copy(errorMessage = context.getString(R.string.activity_recording_error_plan_empty)),

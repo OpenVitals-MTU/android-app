@@ -203,6 +203,19 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
         defaultTitle = "Push-ups",
         repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
     ),
+    // Squats have their own segment, so a plan step needs no label to find
+    // this. Same recognizer as push-ups: the phone on the floor, a rep each
+    // time you come down to it.
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+        id = "squats",
+        labelRes = R.string.hc_segment_squat,
+        supportsGpsRoute = false,
+        supportsDistance = false,
+        recordingSensor = ActivityRecordingSensor.PROXIMITY,
+        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT,
+        repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
+    ),
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
         id = "pull_ups",

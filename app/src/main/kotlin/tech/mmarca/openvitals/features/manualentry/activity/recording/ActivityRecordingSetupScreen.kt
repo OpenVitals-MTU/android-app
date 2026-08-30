@@ -444,6 +444,7 @@ internal fun RecordingGuidancePanel(
 
     val guidanceRes = when (activityType.id) {
         "push_ups" -> R.string.activity_recording_guidance_push_ups
+        "squats" -> R.string.activity_recording_guidance_squats
         "pull_ups" -> R.string.activity_recording_guidance_pull_ups
         "rope_skipping" -> R.string.activity_recording_guidance_rope_skipping
         "trampoline_jumping" -> R.string.activity_recording_guidance_trampoline_jumping

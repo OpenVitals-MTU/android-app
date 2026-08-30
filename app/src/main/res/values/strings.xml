@@ -385,11 +385,12 @@
     <string name="activity_recording_hrr_phase_complete">Recovery complete</string>
     <string name="activity_recording_hrr_end_effort">End effort</string>
     <string name="activity_recording_hrr_current_bpm">%1$d bpm</string>
-    <string name="activity_recording_error_proximity_sensor">This device does not expose a proximity sensor for push-up counting.</string>
+    <string name="activity_recording_error_proximity_sensor">This device does not expose a proximity sensor for rep counting.</string>
     <string name="activity_recording_error_accelerometer">This device does not expose an accelerometer for this recording.</string>
     <string name="activity_recording_error_step_detector">This device does not expose Android step detector events.</string>
     <string name="activity_recording_how_it_works">How recording works</string>
     <string name="activity_recording_guidance_push_ups">Place the phone screen-up under the chest or head area. The proximity sensor counts a rep when you move close to the phone.</string>
+    <string name="activity_recording_guidance_squats">Place the phone screen-up on the floor between your feet, or hold it in front of you. The proximity sensor counts a rep each time you come close to it at the bottom of the squat.</string>
     <string name="activity_recording_guidance_pull_ups">Secure the phone on your body. The accelerometer counts the pull and relax motion.</string>
     <string name="activity_recording_guidance_rope_skipping">Keep the phone secured on your body. The accelerometer counts jumps.</string>
     <string name="activity_recording_guidance_trampoline_jumping">Keep the phone secured on your body. Jump detection uses a longer jump window than rope skipping.</string>

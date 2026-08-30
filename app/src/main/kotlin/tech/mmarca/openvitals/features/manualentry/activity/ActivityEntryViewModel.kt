@@ -309,7 +309,7 @@ class ActivityEntryViewModel(
 
     private fun showGuidedPlanSetup(plan: PlannedExerciseData) {
         val activityType = plan.toActivityEntryType()
-        val steps = plan.toPlanRunSteps()
+        val steps = plan.toPlanRunSteps(localizedTitle = { appContext?.getString(it.labelRes) })
         if (activityType == null || !activityType.isRepetitionLike || steps.isEmpty()) {
             recordingDraftStore?.clear()
             applyPlannedWorkout(plan)

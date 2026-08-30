@@ -170,6 +170,21 @@ class WorkoutPlanStepMappingTest {
         assertEquals("push_ups", planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, "push-ups"))
         assertEquals("trampoline_jumping", planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, "Trampoline jumping"))
         assertNull(planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, "Burpees"))
+        // The label is typed by hand: spelling variants of the preset still count.
+        assertEquals("push_ups", planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, "Pushups"))
+        assertEquals("push_ups", planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, " push ups "))
+        assertEquals("push_ups", planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, "PUSH-UPS"))
+        // And so does the exercise's name in the phone's language, when offered.
+        val german: (tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType) -> String? =
+            { type -> if (type.id == "push_ups") "Liegestütze" else null }
+        assertEquals(
+            "push_ups",
+            planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, "liegestutze", german),
+        )
+        assertNull(planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, "Liegestütze"))
+        // Squats have a segment of their own, so the label is not consulted.
+        assertEquals("squats", planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT, null))
+        assertEquals("squats", planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT, "Air squats"))
         assertNull(planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK, null))
         assertNull(planStepSensorTypeId(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, null))
     }
