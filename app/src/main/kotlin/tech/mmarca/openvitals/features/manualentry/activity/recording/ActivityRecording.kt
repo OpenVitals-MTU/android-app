@@ -791,7 +791,7 @@ class ActivityRecordingController @Inject constructor(
     private var restCountdownJob: Job? = null
 
     /**
-     * Three short beeps before a rest ends, so the next step is not a surprise
+     * One short beep per second for the last [RestCountdownSeconds] of a rest, so the next step is not a surprise
      * to someone lying on the floor with the phone out of reach. Same gate as
      * the bell it precedes.
      */
@@ -1748,7 +1748,9 @@ internal const val RestTimerBellVolume = 0.42f
 internal const val HrrTargetHitsToEndEffort = 2
 internal const val PlanStepCueVibrationMillis = 150L
 internal const val CountdownVibrationMillis = 60L
-internal const val RestCountdownSeconds = 3L
+// Five, not three: three beeps gave someone mid-rest barely enough time to get
+// back into position before the bell (#285).
+internal const val RestCountdownSeconds = 5L
 internal const val CountdownBeepMillis = 120
 internal const val CountdownBeepVolume = 70
 internal const val HrrCueVibrationMillis = 400L
