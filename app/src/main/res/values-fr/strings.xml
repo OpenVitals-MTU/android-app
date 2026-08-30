@@ -623,7 +623,7 @@
     <string name="sleep_score_rating_good">Bon</string>
     <string name="sleep_score_rating_fair">Moyen</string>
     <string name="sleep_score_rating_poor">Faible</string>
-    <string name="dashboard_sleep_score_subtitle">%1$s &#8226; %2$s</string>
+    <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">Mode de calcul</string>
     <string name="sleep_score_day_numbers_title">Valeurs du jour</string>
     <string name="sleep_score_references_title">Références</string>
@@ -1008,7 +1008,7 @@
     <string name="dashboard_sensor_status_title">Batterie des capteurs</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% au plus bas</string>
     <string name="dashboard_sensor_battery_unknown">Batterie en attente</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d actifs &#8226; %2$d connectés</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d actifs • %2$d connectés</string>
     <string name="dashboard_sensor_status_all_disabled">Tous les capteurs sont désactivés</string>
     <string name="dashboard_delete_activity_title">Supprimer l\'activité ?</string>
     <string name="dashboard_delete_activity_message">Supprimer cette activité %1$s d\'OpenVitals ?</string>
