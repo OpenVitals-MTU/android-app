@@ -592,9 +592,9 @@
     <string name="section_activities">Atividades</string>
     <string name="section_activity_type_stats">Por tipo de atividade</string>
     <plurals name="activity_type_stats_activity_count">
-            <item quantity="one">%d atividade</item>
-            <item quantity="other">%d atividades</item>
-        </plurals>
+        <item quantity="one">%d atividade</item>
+        <item quantity="other">%d atividades</item>
+    </plurals>
     <string name="section_planned_workouts">Treinos planeados</string>
     <string name="activities_filter_activity_type_label">Tipo de atividade</string>
     <string name="activities_filter_all">Todas as atividades</string>
@@ -616,7 +616,7 @@
     <string name="sleep_score_rating_good">Boa</string>
     <string name="sleep_score_rating_fair">Razoável</string>
     <string name="sleep_score_rating_poor">Fraca</string>
-    <string name="dashboard_sleep_score_subtitle">%1$s &#8226; %2$s</string>
+    <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">Como se calcula</string>
     <string name="sleep_score_day_numbers_title">Valores de hoje</string>
     <string name="sleep_score_references_title">Ligações de referência</string>
@@ -996,7 +996,7 @@
     <string name="dashboard_sensor_status_title">Bateria dos sensores</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% mais baixa</string>
     <string name="dashboard_sensor_battery_unknown">Bateria pendente</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d ativos &#8226; %2$d ligados</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d ativos • %2$d ligados</string>
     <string name="dashboard_sensor_status_all_disabled">Todos os sensores desativados</string>
     <string name="dashboard_delete_activity_title">Eliminar atividade?</string>
     <string name="dashboard_delete_activity_message">Eliminar esta atividade de %1$s do OpenVitals?</string>
