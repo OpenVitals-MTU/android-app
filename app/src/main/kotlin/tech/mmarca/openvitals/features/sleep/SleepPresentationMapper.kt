@@ -232,6 +232,7 @@ fun List<SleepOverviewDay>.toSleepOverviewSummary(): SleepOverviewSummary {
         timeInBedMs = durationSource.averageDurationMs { it.timeInBedMs },
         schedule = mainSessions.averageSchedule(),
         awakeDurationMs = durationSource.averageDurationMs { it.awakeDurationMs },
+        outOfBedDurationMs = durationSource.averageDurationMs { it.outOfBedDurationMs },
         remDurationMs = durationSource.averageDurationMs { it.remDurationMs },
         coreDurationMs = durationSource.averageDurationMs { it.coreDurationMs },
         deepDurationMs = durationSource.averageDurationMs { it.deepDurationMs },
@@ -271,6 +272,10 @@ private val SleepOverviewDay.timeInBedMs: Long
 
 private val SleepOverviewDay.awakeDurationMs: Long
     get() = combineNightStages(nightSessions, maxGap = SleepNapGap).durationMsForTypes(AwakeStageTypes)
+
+private val SleepOverviewDay.outOfBedDurationMs: Long
+    get() = combineNightStages(nightSessions, maxGap = SleepNapGap)
+        .durationMsForTypes(setOf(SleepStage.STAGE_OUT_OF_BED))
 
 private val SleepOverviewDay.remDurationMs: Long
     get() = sessions.stageDurationMs(setOf(SleepStage.STAGE_REM))

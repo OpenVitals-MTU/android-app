@@ -144,9 +144,12 @@ fun fitHealthSnapshotImportRecords(snapshot: FitHealthSnapshot): List<Record> = 
 /**
  * Turns daytime naps into `SleepSessionRecord` imports.
  *
- * Deliberately stage-less: the nap message bounds the sleep but carries no
- * stage breakdown, and inventing one would put fabricated stages next to the
- * measured ones from a night.
+ * The nap message (412) only bounds the sleep — start and end, no `sleep_level`
+ * breakdown — so the whole span is recorded as ONE light-sleep stage, the same
+ * call Gadgetbridge makes ("overlap nap samples as light sleep"). A stage-less
+ * session read as "in bed, nothing recorded" on the timeline and contributed
+ * nothing to the stage shares; light is the honest floor for a nap the watch
+ * did classify as sleep.
  */
 fun fitNapImportRecords(naps: List<FitNap>): List<Record> = buildList {
     for (nap in naps) {
@@ -160,7 +163,13 @@ fun fitNapImportRecords(naps: List<FitNap>): List<Record> = buildList {
                 metadata = importMetadata("garmin_fit_nap_${nap.start.toEpochMilli()}"),
                 title = "Nap",
                 notes = null,
-                stages = emptyList(),
+                stages = listOf(
+                    SleepSessionRecord.Stage(
+                        startTime = nap.start,
+                        endTime = nap.end,
+                        stage = SleepSessionRecord.STAGE_TYPE_LIGHT,
+                    ),
+                ),
             ),
         )
     }

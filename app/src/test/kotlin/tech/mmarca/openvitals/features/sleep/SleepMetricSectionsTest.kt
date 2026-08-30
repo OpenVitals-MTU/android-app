@@ -90,6 +90,30 @@ class SleepMetricSectionsTest {
         assertTrue(sleepStageShares(durations).all { it.percent == 25 })
     }
 
+    @Test fun `time out of bed gets its own share row after awake`() {
+        val hour = 3_600_000L
+        val summary = SleepOverviewSummary(
+            awakeDurationMs = hour,
+            outOfBedDurationMs = hour,
+            remDurationMs = hour,
+            coreDurationMs = hour,
+            deepDurationMs = 0L,
+        )
+
+        val shares = sleepStageShares(sleepStageDurationsOf(summary))
+
+        assertEquals(
+            listOf(
+                SleepStage.STAGE_AWAKE,
+                SleepStage.STAGE_OUT_OF_BED,
+                SleepStage.STAGE_REM,
+                SleepStage.STAGE_LIGHT,
+            ),
+            shares.map { it.stageType },
+        )
+        assertTrue(shares.all { it.percent == 25 })
+    }
+
     // ─── the entry lists come out newest night first ─────────────────────────
 
     @Test fun `the entry lists come out newest night first`() {

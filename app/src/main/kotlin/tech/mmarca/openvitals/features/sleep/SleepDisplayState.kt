@@ -49,6 +49,8 @@ data class SleepOverviewSummary(
     val timeInBedMs: Long = 0L,
     val schedule: SleepOverviewSchedule? = null,
     val awakeDurationMs: Long = 0L,
+    /** Time between the segments of a night slept in two goes; not counted as awake in bed. */
+    val outOfBedDurationMs: Long = 0L,
     val remDurationMs: Long = 0L,
     val coreDurationMs: Long = 0L,
     val deepDurationMs: Long = 0L,

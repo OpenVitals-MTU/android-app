@@ -293,7 +293,7 @@ class FitMetricsSleepTest {
     }
 
     @Test
-    fun `naps become their own stage-less sleep sessions`() {
+    fun `naps become their own sleep sessions recorded as one light stage`() {
         val napStart = Instant.parse("2026-07-22T14:00:00Z")
         val napEnd = Instant.parse("2026-07-22T14:35:00Z")
         val wellness = parseGarminWellness(
@@ -305,9 +305,13 @@ class FitMetricsSleepTest {
         val nap = records.single() as SleepSessionRecord
         assertEquals(napStart, nap.startTime)
         assertEquals(napEnd, nap.endTime)
-        // No stages: the nap message carries none, and inventing one would put
-        // a fabricated stage next to the measured ones from the night.
-        assertTrue(nap.stages.isEmpty())
+        // The nap message carries no sleep_level breakdown, so the whole span is
+        // one light stage — as Gadgetbridge does — rather than a stage-less
+        // session that reads as "nothing recorded".
+        val stage = nap.stages.single()
+        assertEquals(napStart, stage.startTime)
+        assertEquals(napEnd, stage.endTime)
+        assertEquals(SleepSessionRecord.STAGE_TYPE_LIGHT, stage.stage)
         assertEquals(
             "garmin_fit_nap_${napStart.toEpochMilli()}",
             nap.metadata.clientRecordId,

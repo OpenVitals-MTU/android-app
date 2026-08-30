@@ -325,6 +325,7 @@ internal fun sleepStageDurationsOf(summary: SleepOverviewSummary) = SleepStageDu
     remMs = summary.remDurationMs,
     lightMs = summary.coreDurationMs,
     deepMs = summary.deepDurationMs,
+    outOfBedMs = summary.outOfBedDurationMs,
 )
 
 /**

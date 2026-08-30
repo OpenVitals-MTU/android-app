@@ -416,14 +416,18 @@ internal fun SleepStagesLaneChart(
     }
 }
 
-/** Grouped per-stage durations (Awake / REM / Light / Deep) for the stage breakdown. */
+/**
+ * Grouped per-stage durations (Awake / REM / Light / Deep, plus any out-of-bed gap in a
+ * night slept in two goes) for the stage breakdown.
+ */
 internal data class SleepStageDurations(
     val awakeMs: Long,
     val remMs: Long,
     val lightMs: Long,
     val deepMs: Long,
+    val outOfBedMs: Long = 0L,
 ) {
-    val totalMs: Long get() = awakeMs + remMs + lightMs + deepMs
+    val totalMs: Long get() = awakeMs + remMs + lightMs + deepMs + outOfBedMs
 }
 
 /** One stage's share of the recorded stage time in the breakdown card. */
@@ -436,12 +440,15 @@ internal data class SleepStageShare(
 
 /**
  * The rows of [SleepStageBreakdown]: only the stages that recorded any time, each with its share
- * of the recorded total. Empty when nothing was recorded, in which case the card self-hides.
+ * of the recorded total. Out of bed — the gap of a night slept in two goes — gets its own row
+ * after Awake, so the shares account for the whole span the timeline draws. Empty when nothing
+ * was recorded, in which case the card self-hides.
  */
 internal fun sleepStageShares(durations: SleepStageDurations): List<SleepStageShare> {
     val totalMs = durations.totalMs.takeIf { it > 0L } ?: return emptyList()
     return listOf(
         SleepStage.STAGE_AWAKE to durations.awakeMs,
+        SleepStage.STAGE_OUT_OF_BED to durations.outOfBedMs,
         SleepStage.STAGE_REM to durations.remMs,
         SleepStage.STAGE_LIGHT to durations.lightMs,
         SleepStage.STAGE_DEEP to durations.deepMs,
@@ -587,14 +594,12 @@ internal fun stageColor(stageType: Int): Color = when (stageType) {
     SleepStage.STAGE_REM -> Color(0xFFB3E5FC)
     SleepStage.STAGE_AWAKE_IN_BED -> Color(0xFFF8A6C6)
     SleepStage.STAGE_SLEEPING -> Color(0xFF7EA7F5)
-    // Out of bed is the one entry here that is not a sleep stage, and it is coloured to
-    // say so. Every stage above is cool — violet, two blues, a cyan — or pink; a
-    // desaturated warm neutral sits outside that family altogether, so it cannot be
-    // misread as one of them. Measured worst case across the light, dark and AMOLED
-    // surfaces it is 31 CIEDE2000 from Deep and 27 from its nearest neighbour of any
-    // kind. Translucent SleepColor, which this stretch used to take from the base block
-    // behind it, was 15.8 from Deep — close enough to read as deep sleep in a thumbnail.
-    SleepStage.STAGE_OUT_OF_BED -> Color(0xFF8D7F76)
+    // Out of bed sits on the Awake lane and is a kind of awake, so it belongs to the
+    // Awake pink family — a dusty, desaturated rose rather than the bright pink — so
+    // it reads as "up" at a glance while still telling apart from awake-in-bed. It
+    // stays far from every sleep stage (all cool: violet, two blues, a cyan). The
+    // earlier warm brown-grey read as a different kind of thing altogether.
+    SleepStage.STAGE_OUT_OF_BED -> Color(0xFFC98FA6)
     else -> Color(0xFF90A4AE)
 }
 
