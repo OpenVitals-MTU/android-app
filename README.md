@@ -46,6 +46,8 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Opt-in hydration reminders with active hours, daily-goal pause logic, and automatic hiding after saved hydration entries
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ route import, FIT activity/course/workout import, offline PMTiles/Mapsforge map packs with two-finger rotation and a camera that follows the recording, and GPS activity recording with review before saving
+- Workout plans built once and started as guided runs: blocks of exercises with reps or seconds goals, rests and rounds, reps counted by the phone where it can (push-ups and squats on the proximity sensor, pull-ups and jumps on the accelerometer), timed steps counting down on a ring, spoken cues, and plans stored in Health Connect so ones from other apps can be started too
+- Workout export without the route - TCX, FIT or CSV with type, times, duration, distance, calories and heart rate - from every workout detail screen
 - Configurable activity recording dashboard with Focus mode, high-contrast outdoor mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
 - Live CoMaps turn-by-turn guidance while recording GPS activities, with the planned route, turn arrows, and destination drawn on the offline map, and guidance optionally saved with the activity on-device
 - CoMaps guidance on a Garmin watch whenever CoMaps is navigating, on its own per-watch switch and independent of activity recording
