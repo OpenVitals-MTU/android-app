@@ -957,6 +957,7 @@ internal class ActivityHealthReader(
             notes = notes,
             blockCount = blocks.size,
             source = SyncedSourceOverlay.displaySource(metadata),
+            dataOriginPackage = metadata.dataOrigin.packageName,
             blocks = blocks.map { it.toPlannedExerciseBlockData() },
         )
 

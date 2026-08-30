@@ -77,6 +77,21 @@ class WorkoutPlanListViewModelTest {
     }
 
     @Test
+    fun `a sync-received plan written by the app is editable despite its foreign display source`() = runTest {
+        val synced = plan("synced", Instant.parse("2026-08-26T18:00:00Z"), source = "com.other.app")
+            .copy(dataOriginPackage = "tech.mmarca.openvitals")
+        val vm = viewModel(repo(plans = listOf(synced, foreignDone)))
+        advanceUntilIdle()
+
+        val item = vm.uiState.value.items.first { it.plan.id == "synced" }
+        assertTrue(item.isOwnedByApp)
+        assertTrue(item.canEdit)
+        assertTrue(item.canDelete)
+        val foreign = vm.uiState.value.items.first { it.plan.id == "foreign" }
+        assertFalse(foreign.canDelete)
+    }
+
+    @Test
     fun `unavailable planned exercise skips loading`() = runTest {
         val repository = repo(available = false)
         val vm = viewModel(repository)

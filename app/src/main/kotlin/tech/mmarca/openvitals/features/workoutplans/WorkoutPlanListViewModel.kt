@@ -166,7 +166,7 @@ class WorkoutPlanListViewModel(
         }
         return WorkoutPlanListItem(
             plan = this,
-            isOwnedByApp = isOpenVitalsRecord(source, appPackageName),
+            isOwnedByApp = isOpenVitalsRecord(dataOriginPackage, appPackageName),
             group = group,
         )
     }

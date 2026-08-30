@@ -77,7 +77,7 @@ class WorkoutPlanBuilderViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            isOwnedByApp = isOpenVitalsRecord(plan.source, appPackageName),
+                            isOwnedByApp = isOpenVitalsRecord(plan.dataOriginPackage, appPackageName),
                             form = form,
                             baseline = form,
                         )
