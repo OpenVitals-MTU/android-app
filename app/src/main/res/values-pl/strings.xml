@@ -1,3 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    </resources>
+    <string name="app_name">OpenVitals</string>
+    <string name="cd_settings">Ustawienia</string>
+    <string name="cd_achievements">Osiągnięcia</string>
+    <string name="cd_sensor_battery_status">Stan baterii czujnika</string>
+    <string name="cd_edit_dashboard">Podsumowanie edycji</string>
+    <string name="cd_finish_dashboard_editing">Zakończ edycję podsumowania</string>
+    <string name="cd_edit_saved_drinks">Edytuj zapisane napoje</string>
+    <string name="cd_done_editing_saved_drinks">Zakończ edycję zapisanych napoi</string>
+    <string name="cd_edit_drink">Edytuj napój</string>
+    <string name="cd_delete_drink">Usuń napój</string>
+    <string name="cd_move_drink_category">Zmień kategorię napoju</string>
+    <string name="cd_expand_drink_category">Rozwiń %1$s</string>
+    <string name="cd_collapse_drink_category">Zwiń %1$s</string>
+    <string name="cd_edit_recording_dashboard">Edytuj panel nagrywania</string>
+    <string name="cd_finish_recording_dashboard_editing">Zakończ edycję panelu nagrywania</string>
+    <string name="cd_move_widget_up">Przenieś widżet w górę</string>
+    <string name="cd_move_widget_down">Przenieś widżet w dół</string>
+    <string name="cd_move_section_up">Przenieś sekcję w górę</string>
+    <string name="cd_move_section_down">Przenieś sekcję w dół</string>
+    <string name="cd_remove_widget">Usuń widżet</string>
+    <string name="cd_decrease_recording_dashboard_widget_size">Zmniejsz widżet</string>
+    <string name="cd_increase_recording_dashboard_widget_size">Powiększ widżet</string>
+    <string name="cd_exit_recording_focus_mode">Wyjdź z trybu uwagi</string>
+</resources>
