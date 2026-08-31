@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OpenVitals</string>
-
     <string name="cd_back">返回</string>
     <string name="cd_settings">设置</string>
     <string name="cd_achievements">成就</string>
@@ -78,7 +77,6 @@
     <string name="not_recorded">未记录</string>
     <string name="no_data">暂无数据</string>
     <string name="loading">加载中…</string>
-
     <string name="home_metric_widget_description">OpenVitals 指标</string>
     <string name="home_metric_widget_config_title">选择指标</string>
     <string name="home_metric_widget_config_prompt">选择小组件要显示的指标：</string>
@@ -106,7 +104,6 @@
     <string name="home_widget_body_energy_steady">平稳</string>
     <string name="home_widget_body_energy_limited">有限</string>
     <string name="home_widget_body_energy_low">偏低</string>
-
     <string name="screen_steps">步数</string>
     <string name="screen_activities">活动</string>
     <string name="screen_calories">卡路里</string>
@@ -131,7 +128,6 @@
     <string name="screen_carbs_entry">碳水记录</string>
     <string name="screen_body_measurement_entry">身体测量记录</string>
     <string name="screen_vitals_measurement_entry">生命体征记录</string>
-
     <string name="bottom_nav_dashboard">概览</string>
     <string name="manual_entry_activity_title">活动</string>
     <string name="manual_entry_date_label">记录日期</string>
@@ -426,7 +422,6 @@
     <string name="vitals_entry_add_selected">添加 %1$s</string>
     <string name="vitals_entry_invalid_value">请输入有效的生命体征值。</string>
     <string name="vitals_entry_write_failed">无法保存生命体征：%1$s</string>
-
     <string name="range_day">日</string>
     <string name="range_week">周</string>
     <string name="range_month">月</string>
@@ -441,7 +436,6 @@
     <string name="period_last_30_days">最近 30 天</string>
     <string name="period_last_365_days">最近 365 天</string>
     <string name="period_selected">所选周期</string>
-
     <string name="metric_steps">步数</string>
     <string name="metric_distance">距离</string>
     <string name="metric_average_pace">平均配速</string>
@@ -593,7 +587,6 @@
     <string name="metric_average_power">平均功率</string>
     <string name="metric_steps_cadence">步频</string>
     <string name="metric_cycling_cadence">骑行踏频</string>
-
     <string name="unit_steps">步</string>
     <string name="unit_reps">次</string>
     <string name="unit_pushes">次</string>
@@ -603,7 +596,6 @@
     <string name="unit_tests">次</string>
     <string name="unit_total">总计</string>
     <string name="unit_grams">克</string>
-
     <string name="section_activities">活动</string>
     <string name="section_activity_type_stats">按活动类型</string>
     <plurals name="activity_type_stats_activity_count">
@@ -631,7 +623,7 @@
     <string name="sleep_score_rating_good">良好</string>
     <string name="sleep_score_rating_fair">一般</string>
     <string name="sleep_score_rating_poor">较差</string>
-    <string name="dashboard_sleep_score_subtitle">%1$s &#8226; %2$s</string>
+    <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">计算方式</string>
     <string name="sleep_score_day_numbers_title">今日数值</string>
     <string name="sleep_score_references_title">参考链接</string>
@@ -757,7 +749,6 @@
     <string name="section_vitamins">维生素</string>
     <string name="section_minerals">矿物质</string>
     <string name="section_other_nutrients">其他营养素</string>
-
     <string name="summary_daily_average">日均 %1$s</string>
     <string name="summary_days_in_range">范围内 %1$s 天</string>
     <string name="summary_entries">%1$s 条记录</string>
@@ -1007,7 +998,6 @@
     <string name="cd_decrease_hydration_reminder_interval">减少饮水提醒间隔</string>
     <string name="cd_increase_hydration_reminder_interval">增加饮水提醒间隔</string>
     <string name="unit_percent_symbol">%</string>
-
     <string name="message_no_dashboard_data">暂无概览数据。</string>
     <string name="message_missing_permissions_title">缺少部分权限</string>
     <string name="message_missing_permissions_body">请授予缺失的权限以查看完整概览。</string>
@@ -1028,7 +1018,7 @@
     <string name="dashboard_sensor_status_title">传感器电量</string>
     <string name="dashboard_sensor_battery_lowest">最低 %1$d%%</string>
     <string name="dashboard_sensor_battery_unknown">电量获取中</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d 活跃 &#8226; %2$d 已连接</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d 活跃 • %2$d 已连接</string>
     <string name="dashboard_sensor_status_all_disabled">所有传感器已禁用</string>
     <string name="dashboard_delete_activity_title">删除活动？</string>
     <string name="dashboard_delete_activity_message">从 OpenVitals 删除此 %1$s 活动？</string>
@@ -1113,7 +1103,6 @@
     <string name="message_no_route_data">未记录路线数据。</string>
     <string name="message_no_stages">未记录分期。</string>
     <string name="message_no_kcal">无千卡</string>
-
     <string name="onboarding_tagline">你的健康数据，留在你的设备上</string>
     <string name="onboarding_privacy_title">隐私优先</string>
     <string name="onboarding_privacy_body">无需账号。数据留在你的设备上。无云端上传、无分析、无广告。</string>
@@ -1211,7 +1200,6 @@
     <string name="onboarding_action_next">下一步</string>
     <string name="onboarding_action_back">返回</string>
     <string name="onboarding_action_skip">暂不</string>
-
     <string name="settings_all_requestable_granted">所有可申请权限已授予</string>
     <string name="settings_manual_permissions_title">需要手动授权</string>
     <string name="settings_manual_permissions_body">部分 Health Connect 权限无法从常规申请对话框授予。请打开 Health Connect 并为 OpenVitals 启用。</string>
@@ -1835,7 +1823,6 @@
     <string name="settings_privacy_on_device">数据留在你的设备上</string>
     <string name="settings_privacy_read_only">除你明确记录的内容外只读</string>
     <string name="settings_app_version">版本 %1$s (%2$d)</string>
-
     <string name="detail_metrics">指标</string>
     <string name="detail_session_details">会话详情</string>
     <string name="detail_duration">时长</string>
@@ -1876,7 +1863,6 @@
     <string name="detail_stage_events">分期事件</string>
     <string name="detail_stages">分期</string>
     <string name="detail_sleep_session">睡眠会话</string>
-
     <string name="recording_comaps_title">CoMaps 导航</string>
     <string name="recording_comaps_permission_missing">允许 OpenVitals 读取 CoMaps 导航，以在记录时显示逐转弯引导。</string>
     <string name="recording_comaps_permission_action">允许 CoMaps 导航</string>
@@ -1904,7 +1890,6 @@
     <string name="activity_detail_comaps_to_turn">距转弯 %1$s</string>
     <string name="activity_detail_comaps_to_destination">距目的地 %1$s</string>
     <string name="activity_detail_comaps_to_next_stop">距下一站 %1$s</string>
-
     <string name="recording_actively_recorded">主动记录</string>
     <string name="recording_automatically_recorded">自动记录</string>
     <string name="recording_manual_entry">手动录入</string>
@@ -1917,7 +1902,6 @@
     <string name="device_fitness_band">健身手环</string>
     <string name="device_chest_strap">胸带</string>
     <string name="device_smart_display">智能显示屏</string>
-
     <string name="sleep_stage_awake">清醒</string>
     <string name="sleep_stage_sleeping">睡眠中</string>
     <string name="sleep_stage_out_of_bed">离床</string>
@@ -1927,7 +1911,6 @@
     <string name="sleep_stage_awake_in_bed">床上清醒</string>
     <string name="sleep_stage_unknown">未知</string>
     <string name="sleep_stages_share_title">在床时间占比</string>
-
     <string name="cycle_permissions_missing_title">缺少周期权限</string>
     <string name="cycle_permissions_missing_body">请授予周期追踪权限以显示经期天数、排卵测试、宫颈粘液和基础体温。</string>
     <string name="cycle_observation_menstruation_period">经期</string>
@@ -1999,7 +1982,6 @@
     <string name="weekday_friday_short">五</string>
     <string name="weekday_saturday_short">六</string>
     <string name="weekday_sunday_short">日</string>
-
     <string name="vitals_permissions_needed_title">需要生命体征权限</string>
     <string name="vitals_permissions_needed_body">请授予血压、血氧饱和度、呼吸频率、体温、最大摄氧量和血糖权限以填充此页面。</string>
     <string name="vitals_respiratory_rate_readings">呼吸频率读数</string>
@@ -2032,7 +2014,6 @@
     <string name="heart_rate_recovery_empty_watch">心率恢复从一次专项测试测量：热身、将心率推至接近极限、然后停下休息一到五分钟。从活动记录器启动一次测试。普通锻炼中你只是减速但仍在运动，无法测量。</string>
     <string name="heart_rate_recovery_unmeasured">%1$d 次测试无法比较</string>
     <string name="heart_rate_recovery_truncated">此周期内仅读取了最近的 %1$d 次锻炼。</string>
-
     <string name="meal_breakfast">早餐</string>
     <string name="meal_lunch">午餐</string>
     <string name="meal_dinner">晚餐</string>
@@ -2043,7 +2024,6 @@
     <string name="macro_fat_short">脂肪 %1$sg</string>
     <string name="macro_fiber">纤维 %1$sg</string>
     <string name="macro_sugar">糖 %1$sg</string>
-
     <string name="caffeine_section_overview">概览</string>
     <string name="caffeine_section_dashboard">面板</string>
     <string name="caffeine_section_analytics">分析</string>
@@ -2116,7 +2096,6 @@
     <string name="caffeine_reference_efsa">EFSA 咖啡因安全与睡眠说明</string>
     <string name="caffeine_reference_health_connect">Health Connect 营养记录字段</string>
     <string name="unknown_source">未知来源</string>
-
     <string name="achievements_legacy_title">传统活动徽章</string>
     <string name="achievements_progress_summary">已解锁 %1$d / %2$d</string>
     <string name="achievements_data_window">%1$s 至 %2$s · %3$s 追踪天数</string>
@@ -2144,14 +2123,12 @@
     <string name="achievements_no_floor_data_title">无楼层数据</string>
     <string name="achievements_no_floor_data_body">当 Health Connect 有爬楼层数据时楼层徽章解锁。</string>
     <string name="achievements_error_title">成就不可用</string>
-
     <string name="readiness_confidence_reason_complete">本地数据完整</string>
     <string name="readiness_confidence_reason_missing_sleep">缺失睡眠数据</string>
     <string name="readiness_confidence_reason_missing_hrv">缺失 HRV 数据</string>
     <string name="readiness_confidence_reason_baseline">基线仍在构建</string>
     <string name="readiness_confidence_reason_partial">本地数据部分缺失</string>
     <string name="readiness_confidence_line">%1$s · %2$s</string>
-
     <string name="data_confidence_title">数据可信度</string>
     <string name="data_confidence_high">高可信度</string>
     <string name="data_confidence_medium">中等可信度</string>
@@ -2172,7 +2149,6 @@
     <string name="data_confidence_warning_manual">此周期内包含手动记录。</string>
     <string name="data_confidence_warning_calculated">此值为派生，非直接测量。</string>
     <string name="data_confidence_warning_no_sources">此汇总项不提供来源级详情。</string>
-
     <string name="settings_body_energy_group_title">身体电量</string>
     <string name="settings_body_energy_group_body">日内能量估算和强度区间校准。</string>
     <string name="body_energy_calibration_title">开启身体电量</string>
@@ -2243,7 +2219,6 @@
     <string name="body_energy_calculation_inputs_body">心率、静息心率、个人区间、睡眠、锻炼、HRV 和呼吸频率都可改善估算。缺失输入使估算更保守、可信度更低。</string>
     <string name="body_energy_calculation_limits_body">这是设备端健康估算，不是直接测量或医疗建议。展示输入和原因是为了让方法可审查和改进。</string>
     <string name="metric_body_energy">身体电量</string>
-
     <string name="privacy_policy_title">隐私政策</string>
     <string name="privacy_policy_body_1">OpenVitals 从 Health Connect 读取数据，在你的设备上显示步数、锻炼、睡眠、心率、体重、卡路里、饮水、营养、正念和生命体征。你明确记录的内容，包括导入的 GPX/KML/KMZ 路线和导入的 FIT 文件，会写入 Health Connect。</string>
     <string name="privacy_policy_body_2">此应用不会将你的健康数据上传到云服务，不包含广告，也不与第三方分享数据。</string>
@@ -2335,7 +2310,6 @@
         <item quantity="one">从 %1$d 条手表读数学习。每条都是下方可见的简单乘数。</item>
         <item quantity="other">从 %1$d 条手表读数学习。每条都是下方可见的简单乘数。</item>
     </plurals>
-
     <!-- 与另一台手机同步（features/devicesync） -->
     <string name="settings_device_sync_group_title">与另一台手机同步</string>
     <string name="settings_device_sync_group_body">通过蓝牙将 Health Connect 记录复制到附近的手机</string>
@@ -2408,7 +2382,6 @@
     <string name="device_sync_notification_channel">手机间同步</string>
     <string name="device_sync_notification_title">正在与另一台手机同步</string>
     <string name="device_sync_notification_text">同步完成前请保持两台手机靠近。</string>
-
     <!-- 手表通知转发（features/watches） -->
     <string name="notification_listener_label">手表通知</string>
     <string name="screen_watch_notifications">手表通知</string>
@@ -2430,7 +2403,6 @@
     <string name="settings_watch_notifications_disclosure_body">要在手表上显示通知，OpenVitals 会读取你手机收到的通知 — 包括其文字内容。\n\n它们在此设备上读取，仅通过蓝牙发送到你配对的手表。不保存到文件或数据库，且 OpenVitals 无联网权限，因此通知无法发送到其他任何地方。\n\n你可随时关闭此功能，并从 Android 设置撤销通知访问。</string>
     <string name="settings_watch_notifications_disclosure_accept">继续</string>
     <string name="settings_watch_notifications_disclosure_decline">暂不</string>
-
     <!-- 手表设置分区和列表页面（features/watches） -->
     <string name="settings_watches_group_title">手表</string>
     <string name="settings_watches_group_body">复制手表上记录的睡眠、心率和活动</string>
@@ -2439,7 +2411,6 @@
     <string name="settings_watches_empty_body">配对手表可让 OpenVitals 复制其记录 — 睡眠分期、静息心率、压力和身体电量 — 而不向互联网发送任何内容。</string>
     <string name="settings_watches_add">配对手表</string>
     <string name="settings_watches_scan_empty">尚未找到手表。请确保手表已唤醒且靠近手机。</string>
-
     <!-- 手表引导（features/watches） -->
     <string name="settings_watch_pair_title">配对此手表</string>
     <string name="settings_watch_pair_body">OpenVitals 将与手表配对，然后复制其记录的活动、睡眠和健康文件。出现时请确认手表上显示的代码。</string>
@@ -2450,7 +2421,6 @@
     <string name="settings_watch_pair_action">配对</string>
     <string name="settings_watch_unsupported_notice">已配对，但此手表使用 OpenVitals 尚不支持的连接方式，因此无法同步。</string>
     <string name="settings_watch_no_companion_notice">已配对，但未授予 Android 访问权限。OpenVitals 打开时同步可用。</string>
-
     <!-- 手表设备页面（features/watches） -->
     <string name="settings_watch_connected">已连接</string>
     <string name="settings_watch_not_connected">未连接</string>
@@ -2488,14 +2458,12 @@
     <string name="settings_device_remove_confirm_title">移除 %1$s？</string>
     <string name="settings_watch_remove_confirm_body">OpenVitals 将取消配对手表并忘记已复制的文件，以便将来配对从新开始。已保存到 Health Connect 的数据保留。</string>
     <string name="action_remove">移除</string>
-
     <!-- 自行车码表实时传感器角色（features/watches） -->
     <string name="settings_bike_live_sensor_section">实时传感器</string>
     <string name="settings_bike_live_sensor_body">广播心率、速度、踏频或功率以在活动中实时记录。请先在设备上开启广播。</string>
     <string name="settings_bike_detect_sensors">检测广播传感器</string>
     <string name="settings_bike_detecting">检测中…</string>
     <string name="settings_bike_no_broadcast">未找到广播传感器。请在设备上开启广播后重试。</string>
-
     <!-- 手表数据页面（features/watches） -->
     <string name="settings_watch_data_title">手表数据</string>
     <string name="settings_watch_data_intro">仅手表制作的测量。Health Connect 没有这些的位置，因此它们留在 OpenVitals 中。</string>
