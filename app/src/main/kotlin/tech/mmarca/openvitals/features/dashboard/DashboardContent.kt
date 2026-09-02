@@ -200,19 +200,10 @@ internal fun DashboardContent(
                 .fillMaxWidth()
                 .widthIn(max = 1080.dp),
         ) {
-            // The banner sits ABOVE the list, not in it. The list's items are all
-            // keyed, so the scroll position follows the key it was already showing:
-            // prepending a keyed banner kept the day row pinned to the top of the
-            // viewport and pushed the banner out of sight above it — all the user
-            // saw was a sliver of card under the top bar. Pinned here it is always
-            // fully visible, and it never disturbs the list's scroll anchor.
-            // This is the ONLY sync banner the dashboard renders — the screen
-            // shell's inline one is switched off so a single load cannot show up
-            // twice.
-            if (syncPaused || isRefreshing) {
+            if (syncPaused) {
                 HealthConnectSyncStatusBanner(
                     syncPaused = syncPaused,
-                    syncInProgress = isRefreshing && !syncPaused,
+                    syncInProgress = false,
                     modifier = Modifier.padding(
                         start = DashboardScreenPadding,
                         end = DashboardScreenPadding,
