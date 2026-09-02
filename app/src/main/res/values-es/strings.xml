@@ -2733,4 +2733,11 @@
     <string name="activity_workout_share_chooser_title">Compartir el entrenamiento con</string>
     <string name="activity_workout_share_failed">Erroral compartir el entrenamiento.</string>
     <string name="activity_recording_guidance_squats">Coloca el teléfono pantalla arriba en el suelo entre tus pies o sostenlo enfrente. El sensor de proximidad cuenta una repetición cada vez que te acercas abajo en la sentadilla.</string>
+    <string name="settings_csv_import_role_end_timestamp">Fecha y hora de finalización</string>
+    <string name="settings_csv_import_interval_end_hint">Cada fila comprende desde la fecha y hora de inicio hasta la columna de \'Fecha y hora de finalización\'. Si falta este dato, la fila se contabiliza como un minuto.</string>
+    <string name="settings_csv_import_metric_steps">Pasos</string>
+    <string name="settings_csv_import_unit_count">Un recuento</string>
+    <string name="settings_csv_import_issue_multiple_end_timestamps">Solo una columna puede contener la fecha y hora de finalización.</string>
+    <string name="settings_csv_import_reason_unparsable_end_timestamp">Fecha de finalización no válida</string>
+    <string name="settings_csv_import_reason_end_not_after_start">El fin debe ser posterior al inicio</string>
 </resources>
