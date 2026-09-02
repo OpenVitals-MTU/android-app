@@ -81,15 +81,22 @@ if [ "$room" -lt 0 ]; then
 fi
 if [ "$(printf '%s' "$narrative" | wc -m)" -gt "$room" ]; then
     # Cut at the last sentence end that fits - but only if that keeps a
-    # worthwhile share of the room. A short opener followed by one long
-    # sentence used to leave "This release is about training with a plan."
-    # and nothing else. Below that share, cut at the last clause boundary
-    # (semicolon, colon, dash, comma) and, failing that, at a word, with an
-    # ellipsis either way so the cut reads as one.
+    # worthwhile share of the room AND wastes little of it. A short opener
+    # followed by one long sentence used to leave "This release is about
+    # training with a plan." and nothing else, and 2.7.2's two-sentence
+    # narrative once dropped its whole second sentence, tooting 371/500
+    # with 128 characters of room unused. When the sentence cut fails
+    # either test, cut at the last clause boundary (semicolon, colon,
+    # dash, comma) and, failing that, at a word, with an ellipsis either
+    # way so the cut reads as one; a clean sentence end that keeps its
+    # share still wins when the clause cut cannot actually get further.
     cut="$(printf '%s' "$narrative" | cut -c1-"$room")"
     min_keep=$((room * 6 / 10))
+    max_slack=$((room / 4))
     sentence="$(printf '%s' "$cut" | sed -n 's/^\(.*[.!?]\)[^.!?]*$/\1/p')"
-    if [ -n "$sentence" ] && [ "$(printf '%s' "$sentence" | wc -m)" -ge "$min_keep" ]; then
+    sentence_len="$(printf '%s' "$sentence" | wc -m)"
+    if [ -n "$sentence" ] && [ "$sentence_len" -ge "$min_keep" ] \
+        && [ $((room - sentence_len)) -le "$max_slack" ]; then
         narrative="$sentence"
     else
         short="$(printf '%s' "$cut" | cut -c1-$((room - 3)))"
@@ -100,7 +107,11 @@ if [ "$(printf '%s' "$narrative" | wc -m)" -gt "$room" ]; then
         if [ "$(printf '%s' "$clause_d" | wc -m)" -gt "$(printf '%s' "$clause_p" | wc -m)" ]; then
             clause="$clause_d"
         fi
-        if [ -n "$clause" ] && [ "$(printf '%s' "$clause" | wc -m)" -ge "$min_keep" ]; then
+        clause_len="$(printf '%s' "$clause" | wc -m)"
+        if [ -n "$sentence" ] && [ "$sentence_len" -ge "$min_keep" ] \
+            && [ "$sentence_len" -ge "$clause_len" ]; then
+            narrative="$sentence"
+        elif [ -n "$clause" ] && [ "$clause_len" -ge "$min_keep" ]; then
             narrative="$clause..."
         else
             narrative="$(printf '%s' "$short" | sed 's/[[:space:]]*[^[:space:]]*$//')..."
