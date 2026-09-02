@@ -282,6 +282,14 @@ internal fun List<AggregationResultGroupedByDuration>.byLocalDate(
 internal const val DailyAggregateMaxQueryDays = 122L
 
 /**
+ * Chunk size for hour-bucketed aggregate reads (daily heart-rate summaries).
+ * 21 days is ~504 buckets per request — roughly four times the bucket count of
+ * a [DailyAggregateMaxQueryDays] daily read, still comfortably inside the
+ * shared Binder budget, while a year stays under twenty sequential requests.
+ */
+internal const val HourlyAggregateMaxQueryDays = 21L
+
+/**
  * Splits `[startDate, endDate]` (inclusive) into consecutive inclusive chunks
  * of at most [maxDays] days, for day-bucketed aggregate reads that must not
  * exceed [DailyAggregateMaxQueryDays] per request. Empty for inverted ranges.

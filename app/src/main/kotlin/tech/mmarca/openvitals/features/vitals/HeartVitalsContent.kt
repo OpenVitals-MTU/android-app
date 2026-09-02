@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.features.heart.HeartUiState
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
@@ -96,7 +97,13 @@ fun LazyListScope.HeartVitalsContent(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     accentColor = oxygenColor,
                     summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
-                        stringResource(R.string.summary_value_avg, unitFormatter.percent(state.spO2.map { it.percent }.average()).text)
+                        stringResource(
+                            R.string.summary_value_avg,
+                            unitFormatter.percent(
+                                state.spO2.timeBucketedAverageOrNull(time = { it.time }, value = { it.percent })
+                                    ?: 0.0,
+                            ).text,
+                        )
                     }",
                     time = { it.time },
                     value = { it.percent },

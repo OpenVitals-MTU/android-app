@@ -53,6 +53,7 @@ import tech.mmarca.openvitals.domain.insights.calculateIntensityMinutes
 import tech.mmarca.openvitals.domain.insights.calculateSleepScoreForDate
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
@@ -449,9 +450,7 @@ class DashboardDataLoader @Inject constructor(
             "respiratory rate",
         ) {
             hc.readRespiratoryRateEntries(nightStart, dayEnd)
-                .map { it.breathsPerMinute }
-                .average()
-                .takeUnless { it.isNaN() }
+                .timeBucketedAverageOrNull(time = { it.time }, value = { it.breathsPerMinute })
         }
         val bodyTemperature = readIfNeeded(
             wants(DashboardMetric.BODY_TEMPERATURE),
@@ -563,9 +562,7 @@ class DashboardDataLoader @Inject constructor(
         val trainingSignals = weeklyTrainingSignals?.await()
         val dayHrvSamples = hrvSamples?.await().orEmpty()
         val dayHrvRmssd = dayHrvSamples
-            .takeIf { it.isNotEmpty() }
-            ?.map { it.rmssdMs }
-            ?.average()
+            .timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })
         val dayHrvBaselineRmssd = hrvBaseline?.await()
         val latestBodyFatPercent = bodyFat?.await()
         val overnightHrv = dayHrvRmssd?.let { rmssd ->

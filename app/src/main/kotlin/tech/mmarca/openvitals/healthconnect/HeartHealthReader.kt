@@ -31,17 +31,15 @@ internal class HeartHealthReader(
         private const val MaxAggregateBuckets = 240L
     }
 
-    suspend fun readAvgHeartRate(date: LocalDate): Long? {
-        val (start, end) = support.dayRange(date)
-        return support.withNullableLogging("readAvgHeartRate[$date][$start..$end]") {
-            support.client().aggregate(
-                AggregateRequest(
-                    metrics = setOf(HeartRateRecord.BPM_AVG),
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                )
-            )[HeartRateRecord.BPM_AVG]
-        }
-    }
+    /**
+     * Hour-bucketed, not the whole-day BPM_AVG aggregate: Health Connect's
+     * average weights every sample equally, so a 1 Hz workout series outvotes
+     * the per-minute background series and prints a day that averaged 79 bpm
+     * as 115. Averaging hour buckets duration-weighted bounds that skew to an
+     * hour's share of the day. Same arithmetic as [readDailyHeartRateSummaries].
+     */
+    suspend fun readAvgHeartRate(date: LocalDate): Long? =
+        readDailyHeartRateSummaries(date, date).firstOrNull { it.date == date }?.avgBpm
 
     suspend fun readAvgHeartRateToday(): Long? = readAvgHeartRate(LocalDate.now())
 
@@ -198,10 +196,18 @@ internal class HeartHealthReader(
         endDate: LocalDate,
     ): List<HeartRateSummary> {
         val zone = ZoneId.systemDefault()
-        // Chunked like the other day-bucketed aggregates: a year of daily
-        // buckets with three metrics each returns in one Binder parcel and can
-        // blow the shared 1 MB buffer (see DailyAggregateMaxQueryDays).
-        return dailyAggregateDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
+        // Hour buckets, folded per day by weightedAverage: a whole-day BPM_AVG
+        // bucket is sample-weighted, so a 1 Hz workout series drags the day's
+        // average toward workout heart rate (79 bpm days printing as 115).
+        // Hour buckets bound that skew to the workout hour's share of the day.
+        // Chunked smaller than the day-bucketed aggregates because each request
+        // now returns 24x the buckets against the same shared 1 MB Binder
+        // buffer (see HourlyAggregateMaxQueryDays).
+        return dailyAggregateDateChunks(
+            startDate,
+            endDate,
+            maxDays = HourlyAggregateMaxQueryDays,
+        ).flatMap { (chunkStart, chunkEnd) ->
             val start = chunkStart.atStartOfDay(zone).toInstant()
             val end = chunkEnd.plusDays(1).atStartOfDay(zone).toInstant()
             support.withLogging("readDailyHeartRateSummaries[$start..$end]", emptyList()) {
@@ -213,7 +219,7 @@ internal class HeartHealthReader(
                             HeartRateRecord.BPM_MAX,
                         ),
                         timeRangeFilter = TimeRangeFilter.between(start, end),
-                        timeRangeSlicer = Duration.ofDays(1),
+                        timeRangeSlicer = Duration.ofHours(1),
                     )
                 ).byLocalDate(zone).mapNotNull { day ->
                     val avg = day.weightedAverage { it[HeartRateRecord.BPM_AVG] } ?: return@mapNotNull null

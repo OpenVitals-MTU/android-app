@@ -31,6 +31,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.stats.averageOrNull
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
@@ -437,7 +438,11 @@ internal fun LazyListScope.restingHeartRateContent(
             // average could sit outside the range printed next to it. The aggregate
             // is still what we show when there are no samples to average.
             val restingValues = dayRestingSamples.map { it.beatsPerMinute }
-            val restingBpm = restingValues.averageOrNull()?.roundToLong() ?: state.dayRestingBpm ?: return
+            val restingBpm = dayRestingSamples
+                .timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
+                ?.roundToLong()
+                ?: state.dayRestingBpm
+                ?: return
             val lowRestingBpm = restingValues.minOrNull() ?: restingBpm
             val highRestingBpm = restingValues.maxOrNull() ?: restingBpm
             renderChartMetricSections(
@@ -623,7 +628,9 @@ internal fun LazyListScope.hrvContent(
             val dayHrvSamples = state.dayHrvSamples.sortedBy { it.time }
             // Same population for the average as for the range — see restingHeartRateContent.
             val hrvValues = dayHrvSamples.map { it.rmssdMs }
-            val hrvMs = hrvValues.averageOrNull() ?: state.dayHrvMs ?: return
+            val hrvMs = dayHrvSamples.timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })
+                ?: state.dayHrvMs
+                ?: return
             val lowHrvMs = hrvValues.minOrNull() ?: hrvMs
             val highHrvMs = hrvValues.maxOrNull() ?: hrvMs
             renderChartMetricSections(

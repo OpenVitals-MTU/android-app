@@ -137,9 +137,11 @@ class HealthConnectDstBucketTest {
             val day = days.single { it.date == LAST }
             assertThat(day.maxBpm).isEqualTo(150)
             assertThat(day.minBpm).isEqualTo(60)
-            // Duration-weighted: the 24h bucket's mean of 70 dominates the one-hour
-            // bucket's 150, so the day reads near 70 rather than halfway to it.
-            assertThat(day.avgBpm).isIn(70L..75L)
+            // Hour-sliced and duration-weighted: three recorded hours (60, 80,
+            // 150 — the last inside the DST leftover hour) count once each, so
+            // the tail sample is a third of the day's average, neither the whole
+            // of it nor drowned by an all-day bucket.
+            assertThat(day.avgBpm).isIn(96L..97L)
         }
 
     private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)

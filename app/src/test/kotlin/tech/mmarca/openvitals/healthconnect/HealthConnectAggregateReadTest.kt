@@ -443,6 +443,60 @@ class HealthConnectAggregateReadTest {
         assertThat(series.single { it.date == date }.avgBpm).isEqualTo(72L)
     }
 
+    /**
+     * The 79-vs-115 field report: Health Connect's BPM_AVG weights every
+     * sample equally, so a whole-day bucket let a 1 Hz workout outvote the
+     * per-minute background series. The summaries read now slices by hour and
+     * folds the hours duration-weighted, so the workout counts as the hour it
+     * was, not as the majority of the day's samples.
+     */
+    @Test
+    fun `readDailyHeartRateSummaries keeps a 1 Hz workout from becoming the day average`() = runTest {
+        val zone = ZoneId.systemDefault()
+        val dayStart = date.atStartOfDay(zone).toInstant()
+        // One background sample per hour at 70 bpm, except the workout hour.
+        val background = (0L until 24L).filter { it != 19L }.map { hour ->
+            HeartRateRecord(
+                startTime = dayStart.plusSeconds(hour * 3_600),
+                startZoneOffset = null,
+                endTime = dayStart.plusSeconds(hour * 3_600 + 60),
+                endZoneOffset = null,
+                samples = listOf(
+                    HeartRateRecord.Sample(
+                        time = dayStart.plusSeconds(hour * 3_600),
+                        beatsPerMinute = 70L,
+                    ),
+                ),
+                metadata = Metadata.autoRecorded(watch),
+            )
+        }
+        // A five-minute 1 Hz workout at 140 bpm inside hour 19: 300 samples
+        // against the day's other 23.
+        val workout = HeartRateRecord(
+            startTime = dayStart.plusSeconds(19L * 3_600),
+            startZoneOffset = null,
+            endTime = dayStart.plusSeconds(19L * 3_600 + 300),
+            endZoneOffset = null,
+            samples = (0L until 300L).map { second ->
+                HeartRateRecord.Sample(
+                    time = dayStart.plusSeconds(19L * 3_600 + second),
+                    beatsPerMinute = 140L,
+                )
+            },
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val client = seeded(*(background + workout).toTypedArray())
+
+        val day = HeartHealthReader(support(client), APP_PACKAGE)
+            .readDailyHeartRateSummaries(startDate = date, endDate = date)
+            .single { it.date == date }
+
+        // (23 × 70 + 140) / 24 ≈ 73. The per-sample day aggregate said 135.
+        assertThat(day.avgBpm).isEqualTo(73L)
+        assertThat(day.minBpm).isEqualTo(70L)
+        assertThat(day.maxBpm).isEqualTo(140L)
+    }
+
     @Test
     fun `readDailyRestingHR chunks a long range and stitches the series back together`() = runTest {
         val zone = ZoneId.systemDefault()

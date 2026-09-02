@@ -32,6 +32,7 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.stats.averageOrNull
 import tech.mmarca.openvitals.core.stats.averageOrZero
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
@@ -390,7 +391,12 @@ private fun CardiovascularOverviewChartsContent(
                     stringResource(
                         R.string.summary_value_avg,
                         unitFormatter.percent(
-                            state.spO2Daily.weightedMeanOrNull() ?: sortedSpO2.map { it.percent }.average(),
+                            state.spO2Daily.weightedMeanOrNull()
+                                ?: sortedSpO2.timeBucketedAverageOrNull(
+                                    time = { it.time },
+                                    value = { it.percent },
+                                )
+                                ?: 0.0,
                         ).text,
                     )
                 }",
@@ -685,7 +691,7 @@ internal fun HeartUiState.skinTemperatureCardSource(): String? =
 
 internal fun HeartUiState.averageHeartRateValue(unitFormatter: UnitFormatter): DisplayValue? =
     if (selectedRange == TimeRange.DAY) {
-        daySamples.map { it.beatsPerMinute }.averageOrNull()
+        daySamples.timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
             ?.roundToInt()
             ?.toLong()
             ?.let(unitFormatter::heartRate)
@@ -701,7 +707,12 @@ internal fun HeartUiState.averageHeartRateValue(unitFormatter: UnitFormatter): D
 // had landed but the aggregate had not — with the chart above already drawn.
 internal fun HeartUiState.restingHeartRateValue(unitFormatter: UnitFormatter): DisplayValue? =
     if (selectedRange == TimeRange.DAY) {
-        (dayRestingSamples.map { it.beatsPerMinute }.averageOrNull()?.roundToLong() ?: dayRestingBpm)
+        (
+            dayRestingSamples
+                .timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
+                ?.roundToLong()
+                ?: dayRestingBpm
+            )
             ?.let(unitFormatter::heartRate)
     } else {
         dailyRestingHR.map { it.bpm }.averageOrNull()
@@ -712,7 +723,8 @@ internal fun HeartUiState.restingHeartRateValue(unitFormatter: UnitFormatter): D
 
 private fun HeartUiState.hrvValue(unitFormatter: UnitFormatter): DisplayValue? =
     if (selectedRange == TimeRange.DAY) {
-        (dayHrvSamples.map { it.rmssdMs }.averageOrNull() ?: dayHrvMs)?.let(unitFormatter::hrv)
+        (dayHrvSamples.timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs }) ?: dayHrvMs)
+            ?.let(unitFormatter::hrv)
     } else {
         dailyHrv.map { it.rmssdMs }.averageOrNull()?.let(unitFormatter::hrv)
     }

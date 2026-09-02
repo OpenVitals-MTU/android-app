@@ -15,6 +15,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.celsius
 import androidx.health.connect.client.units.millimetersOfMercury
 import androidx.health.connect.client.units.percent
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
 import tech.mmarca.openvitals.domain.model.BpRecordValues
@@ -262,7 +263,12 @@ internal class VitalsHealthReader(
             maxRecords = 1,
         ).firstOrNull()
 
-    /** Bucket raw records into one [DailyVitalPoint] per local date. */
+    /**
+     * Bucket raw records into one [DailyVitalPoint] per local date. The day's
+     * value is the minute-bucketed mean, so continuous monitoring (overnight
+     * SpO2, workout-dense series) does not outvote sparse spot checks; `count`
+     * stays the raw reading count the screens print.
+     */
     private fun <T> List<T>.dailyPoints(
         time: (T) -> Instant,
         value: (T) -> Double?,
@@ -270,12 +276,16 @@ internal class VitalsHealthReader(
         val zone = ZoneId.systemDefault()
         return groupBy { time(it).atZone(zone).toLocalDate() }
             .mapNotNull { (date, records) ->
-                val values = records.mapNotNull(value)
-                if (values.isEmpty()) return@mapNotNull null
+                val timedValues = records.mapNotNull { record ->
+                    value(record)?.let { time(record) to it }
+                }
+                val average = timedValues
+                    .timeBucketedAverageOrNull(time = { it.first }, value = { it.second })
+                    ?: return@mapNotNull null
                 DailyVitalPoint(
                     date = date,
-                    value = values.average(),
-                    count = values.size,
+                    value = average,
+                    count = timedValues.size,
                 )
             }
             .sortedBy { it.date }

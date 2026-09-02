@@ -99,11 +99,20 @@ class AggregatingFakeHealthConnectClient(
         val slice = request.internalSlicer()
         groupByDurationRequestRanges += start to end
 
+        // One store read per record type per REQUEST, not per bucket. An
+        // hour-sliced multi-week request is hundreds of buckets, and paging the
+        // whole store back out for each one made the fixture-corpus tests crawl
+        // past their timeout.
+        val recordsByType = mutableMapOf<KClass<out Record>, List<Record>>()
+        val recordsOf: suspend (KClass<out Record>) -> List<Record> = { type ->
+            recordsByType.getOrPut(type) { readAll(type) }
+        }
+
         val out = mutableListOf<AggregationResultGroupedByDuration>()
         var bucketStart = start
         while (bucketStart.isBefore(end)) {
             val bucketEnd = minOf(bucketStart.plus(slice), end)
-            val result = compute(metrics, bucketStart, bucketEnd)
+            val result = compute(metrics, bucketStart, bucketEnd, recordsOf)
             // Health Connect OMITS an empty bucket rather than returning a zero one, and
             // the app depends on it: "no data" and "zero" are different answers, and
             // several screens branch on exactly that difference.
@@ -166,6 +175,7 @@ class AggregatingFakeHealthConnectClient(
         metrics: Set<AggregateMetric<*>>,
         start: Instant,
         end: Instant,
+        recordsOf: suspend (KClass<out Record>) -> List<Record> = { readAll(it) },
     ): AggregationResult {
         val values = mutableMapOf<AggregateMetric<Any>, Any>()
         val origins = mutableSetOf<DataOrigin>()
@@ -175,7 +185,7 @@ class AggregatingFakeHealthConnectClient(
                 "No aggregation emulated for $metric. Add it to SPECS — otherwise a test is " +
                     "silently asserting against a metric nobody computed.",
             )
-            val records = readAll(spec.recordType)
+            val records = recordsOf(spec.recordType)
             if (records.isEmpty()) continue
 
             val value = spec.compute(records, start, end) ?: continue

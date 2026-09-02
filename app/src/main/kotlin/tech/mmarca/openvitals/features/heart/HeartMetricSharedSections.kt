@@ -60,6 +60,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.stats.averageOrNull
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.features.vitals.respiratoryRateAverage
 import tech.mmarca.openvitals.features.vitals.respiratoryRateBuckets
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -514,15 +515,25 @@ internal data class VitalReadingStats(
     val readings: Int,
 )
 
-private fun vitalReadingStats(values: List<Double>, readings: Int): VitalReadingStats? {
-    val average = values.averageOrNull() ?: return null
+private fun vitalReadingStats(
+    values: List<Double>,
+    readings: Int,
+    average: Double? = values.averageOrNull(),
+): VitalReadingStats? {
+    if (average == null) return null
     val low = values.minOrNull() ?: return null
     val high = values.maxOrNull() ?: return null
     return VitalReadingStats(average = average, low = low, high = high, readings = readings)
 }
 
 internal fun spO2Stats(entries: List<SpO2Entry>): VitalReadingStats? =
-    vitalReadingStats(entries.map { it.percent }, entries.size)
+    vitalReadingStats(
+        values = entries.map { it.percent },
+        readings = entries.size,
+        // Minute-bucketed: continuous overnight monitoring must not drown the
+        // day's spot checks the way a per-reading mean lets it.
+        average = entries.timeBucketedAverageOrNull(time = { it.time }, value = { it.percent }),
+    )
 
 internal fun skinTemperatureStats(entries: List<SkinTemperatureEntry>): VitalReadingStats? =
     // readings counts every entry, including the delta-less ones the chart drops;

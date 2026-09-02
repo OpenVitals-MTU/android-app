@@ -10,6 +10,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.SleepData
@@ -136,15 +137,12 @@ fun overnightHrvInputsByDate(
     }.associateWith { date ->
         val session = sessionsByDate[date].orEmpty().mainSleepSession() ?: return@associateWith null
         hrvSamples
-            .asSequence()
             .filter { sample ->
-                !sample.time.isBefore(session.startTime) && !sample.time.isAfter(session.endTime)
+                !sample.time.isBefore(session.startTime) &&
+                    !sample.time.isAfter(session.endTime) &&
+                    sample.rmssdMs > 0.0
             }
-            .map { it.rmssdMs }
-            .filter { it > 0.0 }
-            .toList()
-            .takeIf { it.isNotEmpty() }
-            ?.average()
+            .timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })
     }
     return overnightHrvInputsFromNightRmssd(nightRmssd)
 }

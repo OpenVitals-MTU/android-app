@@ -85,6 +85,33 @@ class HeartMetricStatsTest {
         assertEquals(95L, stats.paddedMax)
     }
 
+    @Test fun `a 1 Hz workout burst does not outvote the per-minute background`() {
+        // Nine background minutes at 70 bpm, then one minute recorded at 1 Hz
+        // (60 samples) at 130 bpm — the shape Gadgetbridge syncs for a workout.
+        val background = (0L until 9L).map { minute ->
+            HeartRateSample(
+                time = Instant.parse("2026-03-02T08:00:00Z").plusSeconds(minute * 60),
+                beatsPerMinute = 70L,
+                source = "Test",
+            )
+        }
+        val workout = (0L until 60L).map { second ->
+            HeartRateSample(
+                time = Instant.parse("2026-03-02T08:09:00Z").plusSeconds(second),
+                beatsPerMinute = 130L,
+                source = "Test",
+            )
+        }
+
+        val stats = heartRateTimelineStats(background + workout)
+
+        // Minute-bucketed: (9 × 70 + 130) / 10. The per-sample mean would have
+        // said 122 — the dense minute outvoting the other nine.
+        assertEquals(76, stats.avgBpm)
+        assertEquals(70L, stats.minBpm)
+        assertEquals(130L, stats.maxBpm)
+    }
+
     @Test fun `the intraday axis floors at 30 never at min minus five below it`() {
         val low = heartRateTimelineStats(listOf(sample(6, 33L), sample(7, 40L)))
         // 33 - 5 = 28, below the plausible-resting floor: clamped to 30.

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
@@ -34,7 +35,8 @@ import kotlin.math.roundToLong
 
 /**
  * Day-timeline card statistics, hoisted out of the composable so the sort, the
- * extremes, the sample mean and the 30 bpm axis floor are testable on the JVM.
+ * extremes, the minute-bucketed mean and the 30 bpm axis floor are testable on
+ * the JVM.
  */
 internal data class HeartRateTimelineStats(
     val sorted: List<HeartRateSample>,
@@ -49,7 +51,12 @@ internal fun heartRateTimelineStats(samples: List<HeartRateSample>): HeartRateTi
     val sorted = samples.sortedBy { it.time }
     val minBpm = sorted.minOfOrNull { it.beatsPerMinute } ?: 40L
     val maxBpm = sorted.maxOfOrNull { it.beatsPerMinute } ?: 160L
-    val avgBpm = sorted.map { it.beatsPerMinute }.average().roundToInt()
+    // Minute-bucketed, not per-sample: a workout recorded at 1 Hz must not
+    // outvote the per-minute background series it sits inside.
+    val avgBpm = sorted
+        .timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
+        ?.roundToInt()
+        ?: 0
     // The intraday axis is padded by 5 either side, floored at 30 bpm — never at
     // min-5 below a plausible resting rate.
     val paddedMin = (minBpm - 5L).coerceAtLeast(30L)
@@ -176,7 +183,7 @@ internal fun HrvTimelineCard(
     val sorted = samples.sortedBy { it.time }
     val minMs = sorted.minOfOrNull { it.rmssdMs } ?: 0.0
     val maxMs = sorted.maxOfOrNull { it.rmssdMs } ?: 1.0
-    val avgMs = sorted.map { it.rmssdMs }.average()
+    val avgMs = sorted.timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs }) ?: 0.0
     val paddedMin = (minMs - 5.0).coerceAtLeast(0.0)
     val paddedMax = maxMs + 5.0
     val dayStart = date.atStartOfDay(zone).toInstant()

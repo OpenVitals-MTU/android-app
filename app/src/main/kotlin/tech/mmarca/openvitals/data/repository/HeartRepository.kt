@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -406,10 +407,10 @@ class HeartRepositoryImpl @Inject constructor(
 }
 
 private fun List<RestingHeartRateSample>.averageRestingBpm(): Long? =
-    takeIf { it.isNotEmpty() }?.map { it.beatsPerMinute }?.average()?.roundToLong()
+    timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })?.roundToLong()
 
 private fun List<HrvSample>.averageRmssdMs(): Double? =
-    takeIf { it.isNotEmpty() }?.map { it.rmssdMs }?.average()
+    timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })
 
 enum class HeartPeriodMetric {
     ALL,
