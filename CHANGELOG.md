@@ -1,5 +1,49 @@
 # Changelog
 
+## 2.7.2 - 2026-09-02
+
+### English
+
+- **A workout no longer skews the day's heart rate.** Averages now weight each reading by how long it held, not by how often the device wrote: a watch records a workout about once a second but the rest of the day about once a minute, so a 50-minute run outvoted the other 23 hours and a day that averaged 79 bpm printed as 115. Heart rate, HRV, respiratory rate, SpO2, the sleep score's overnight HRV and the stress score all use the corrected averages.
+- **Steps in the CSV importer.** Steps join the metrics a CSV can bring in. Map an optional "End date and time" column and each row spans from its start to that end; a row without one counts as one minute. A row whose end cannot be read rejects only its steps - the other columns still import - and re-importing the same file replaces rather than duplicates.
+- **The quick beverage widget logs again.** Tapping the 1x1 widget or the 2x1's Add button had silently stopped logging in 2.7.0 and 2.7.1.
+- **Fixes:** a workout plan created on this phone keeps its Edit and Delete entries even when device sync relabels its source; the dashboard no longer shifts down while a sync runs; updated Czech, Spanish, French, Portuguese and Simplified Chinese translations, and Finnish and Polish have begun on Codeberg Translate.
+
+### Espanol
+
+- **Un entrenamiento ya no distorsiona la frecuencia cardiaca del dia.** Las medias ponderan ahora cada lectura por el tiempo que se mantuvo, no por la frecuencia con que el dispositivo escribio: un reloj registra un entrenamiento una vez por segundo pero el resto del dia una vez por minuto, asi que una carrera de 50 minutos pesaba mas que las otras 23 horas y un dia con media de 79 ppm se mostraba como 115. Frecuencia cardiaca, HRV, frecuencia respiratoria, SpO2, la HRV nocturna de la puntuacion de sueno y la puntuacion de estres usan las medias corregidas.
+- **Pasos en el importador CSV.** Los pasos se suman a las metricas que un CSV puede traer. Asigna una columna opcional "Fecha y hora de fin" y cada fila abarca desde su inicio hasta ese fin; una fila sin el cuenta como un minuto. Una fila cuyo fin no se puede leer rechaza solo sus pasos - las demas columnas se importan igual - y reimportar el mismo archivo reemplaza en vez de duplicar.
+- **El widget de bebida rapida vuelve a registrar.** Tocar el widget 1x1 o el boton Anadir del 2x1 habia dejado de registrar en silencio en 2.7.0 y 2.7.1.
+- **Correcciones:** un plan de entrenamiento creado en este telefono conserva sus entradas Editar y Eliminar aunque la sincronizacion del dispositivo reetiquete su origen; el panel ya no se desplaza mientras corre una sincronizacion; traducciones actualizadas de checo, espanol, frances, portugues y chino simplificado, y el fines y el polaco han comenzado en Codeberg Translate.
+
+### Deutsch
+
+- **Ein Training verzerrt den Tagesmittelwert der Herzfrequenz nicht mehr.** Mittelwerte gewichten jede Messung jetzt danach, wie lange sie galt, nicht danach, wie oft das Geraet schrieb: eine Uhr schreibt im Training etwa jede Sekunde, den Rest des Tages etwa jede Minute, also ueberstimmte ein 50-Minuten-Lauf die uebrigen 23 Stunden und ein Tag mit 79 bpm im Schnitt zeigte 115. Herzfrequenz, HRV, Atemfrequenz, SpO2, die naechtliche HRV des Schlafwerts und der Stresswert nutzen die korrigierten Mittelwerte.
+- **Schritte im CSV-Import.** Schritte gehoeren jetzt zu den Metriken, die eine CSV mitbringen kann. Eine optionale Spalte "Enddatum und -zeit" zuordnen, und jede Zeile reicht von ihrem Beginn bis zu diesem Ende; eine Zeile ohne zaehlt als eine Minute. Eine Zeile mit unlesbarem Ende verwirft nur ihre Schritte - die uebrigen Spalten werden trotzdem importiert - und derselbe Import ersetzt statt zu duplizieren.
+- **Das Schnellgetraenk-Widget speichert wieder.** Ein Tipp auf das 1x1-Widget oder den Hinzufuegen-Knopf des 2x1 speicherte in 2.7.0 und 2.7.1 stillschweigend nichts.
+- **Korrekturen:** ein auf diesem Telefon erstellter Trainingsplan behaelt seine Eintraege Bearbeiten und Loeschen, auch wenn die Geraetesynchronisation seine Quelle umbenennt; das Dashboard verschiebt sich nicht mehr, waehrend eine Synchronisation laeuft; aktualisierte Uebersetzungen fuer Tschechisch, Spanisch, Franzoesisch, Portugiesisch und vereinfachtes Chinesisch, und Finnisch und Polnisch haben auf Codeberg Translate begonnen.
+
+### Italiano
+
+- **Un allenamento non distorce piu la frequenza cardiaca del giorno.** Le medie ora pesano ogni lettura per quanto e durata, non per quanto spesso il dispositivo ha scritto: un orologio registra un allenamento circa una volta al secondo ma il resto del giorno una volta al minuto, cosi una corsa di 50 minuti contava piu delle altre 23 ore e un giorno con media 79 bpm mostrava 115. Frequenza cardiaca, HRV, frequenza respiratoria, SpO2, l'HRV notturna del punteggio del sonno e il punteggio di stress usano le medie corrette.
+- **Passi nell'importatore CSV.** I passi si aggiungono alle metriche che un CSV puo portare. Mappa una colonna opzionale "Data e ora di fine" e ogni riga copre dal suo inizio a quella fine; una riga senza conta come un minuto. Una riga con una fine illeggibile scarta solo i suoi passi - le altre colonne si importano comunque - e reimportare lo stesso file sostituisce invece di duplicare.
+- **Il widget bevanda rapida registra di nuovo.** Toccare il widget 1x1 o il pulsante Aggiungi del 2x1 non registrava piu nulla, in silenzio, in 2.7.0 e 2.7.1.
+- **Correzioni:** un piano di allenamento creato su questo telefono conserva le voci Modifica ed Elimina anche quando la sincronizzazione del dispositivo ne rietichetta l'origine; la dashboard non si sposta piu mentre una sincronizzazione e in corso; traduzioni aggiornate per ceco, spagnolo, francese, portoghese e cinese semplificato, e finlandese e polacco sono iniziate su Codeberg Translate.
+
+### Eesti
+
+- **Treening ei moonuta enam paeva pulsikeskmist.** Keskmised kaaluvad nuud iga naitu selle jargi, kui kaua see kehtis, mitte selle jargi, kui tihti seade kirjutas: kell salvestab treeningul umbes kord sekundis, ulejaanud paeval kord minutis, nii et 50-minutine jooks kaalus ules ulejaanud 23 tundi ja paev keskmisega 79 looki minutis naitas 115. Pulss, HRV, hingamissagedus, SpO2, unehinde oine HRV ja stressihinne kasutavad parandatud keskmisi.
+- **Sammud CSV-importijas.** Sammud lisanduvad moodikutele, mida CSV saab tuua. Maara valikuline veerg "Lopu kuupaev ja kellaaeg" ja iga rida ulatub oma algusest selle lopuni; ilma selleta loeb rida uhe minutina. Rida, mille loppu ei saa lugeda, hulgab ainult oma sammud - teised veerud imporditakse ikka - ja sama faili uuesti importimine asendab, mitte ei dubleeri.
+- **Kiire joogi vidin salvestab jalle.** 1x1 vidina voi 2x1 nupu Lisa puudutus ei salvestanud 2.7.0 ja 2.7.1 vaikselt midagi.
+- **Parandused:** selles telefonis loodud treeningplaan hoiab oma kirjeid Muuda ja Kustuta ka siis, kui seadme sunkroonimine tema allika umber margistab; toolaud ei nihku enam sunkroonimise ajal; uuendatud tsehhi, hispaania, prantsuse, portugali ja lihtsustatud hiina tolked ning soome ja poola keel on Codeberg Translate'is alustatud.
+
+### Portugues
+
+- **Um treino ja nao distorce a media cardiaca do dia.** As medias ponderam agora cada leitura pelo tempo que se manteve, nao pela frequencia com que o dispositivo escreveu: um relogio regista um treino cerca de uma vez por segundo mas o resto do dia uma vez por minuto, pelo que uma corrida de 50 minutos pesava mais do que as outras 23 horas e um dia com media de 79 bpm aparecia como 115. Frequencia cardiaca, HRV, frequencia respiratoria, SpO2, a HRV noturna da pontuacao de sono e a pontuacao de stress usam as medias corrigidas.
+- **Passos no importador CSV.** Os passos juntam-se as metricas que um CSV pode trazer. Mapeia uma coluna opcional "Data e hora de fim" e cada linha vai do seu inicio a esse fim; uma linha sem ele conta como um minuto. Uma linha cujo fim nao se consegue ler rejeita apenas os seus passos - as outras colunas importam na mesma - e reimportar o mesmo ficheiro substitui em vez de duplicar.
+- **O widget de bebida rapida volta a registar.** Tocar no widget 1x1 ou no botao Adicionar do 2x1 tinha deixado de registar, em silencio, em 2.7.0 e 2.7.1.
+- **Correcoes:** um plano de treino criado neste telemovel mantem as entradas Editar e Eliminar mesmo quando a sincronizacao do dispositivo reetiqueta a sua origem; o painel ja nao se desloca enquanto decorre uma sincronizacao; traducoes atualizadas de checo, espanhol, frances, portugues e chines simplificado, e o finlandes e o polaco comecaram no Codeberg Translate.
+
 ## 2.7.1 - 2026-08-30
 
 ### English

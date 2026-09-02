@@ -54,6 +54,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Experimental Garmin watch support over Bluetooth only: file sync with a dashboard watch tile, scheduled automatic sync chosen per watch, notification forwarding, an always-connected companion mode with live heart rate and steps, weather from a phone weather app, calendar on the watch, find-my-phone both ways, GPS ephemeris hand-over, and the watch's own settings tree - no vendor account, no internet permission
 - App language support with an in-app language picker for system default, English, Czech, Spanish, French, German, Italian, Estonian, Portuguese, and Simplified Chinese
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
+- CSV import with hand-mapped columns for body measurements, vitals and steps - a smart scale's history, a temperature log, a step export - with an optional end-time column giving each steps row its span
 - Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
 - Wheelchair activity and wheelchair push tracking when Health Connect data is available
 - Dedicated Calories detail screen with total, active, and BMR calorie context
@@ -99,7 +100,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Achievement screen with Fitbit-inspired badges and progress for daily steps, lifetime distance, floors, workouts, hydration, sleep, and mindfulness
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
-- Data Importers setting for supported Apple Health `export.xml` or `export.zip` records and FIT activity/course/workout files
+- Data Importers setting for supported Apple Health `export.xml` or `export.zip` records, FIT activity/course/workout files, and column-mapped CSV files for body measurements, vitals and steps
 - Cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views after Health Connect cycle permissions are granted
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
