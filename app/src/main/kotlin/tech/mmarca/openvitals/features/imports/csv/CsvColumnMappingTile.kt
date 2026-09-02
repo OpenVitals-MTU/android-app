@@ -86,6 +86,14 @@ internal fun CsvColumnMappingTile(
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.settings_csv_import_role_end_timestamp)) },
+                        onClick = {
+                            roleExpanded = false
+                            onSetRole(CsvColumnRole.END_TIMESTAMP, null)
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
                     CsvImportMetric.entries.forEach { metric ->
                         DropdownMenuItem(
                             text = { Text(csvMetricLabel(metric)) },
@@ -144,6 +152,14 @@ internal fun CsvColumnMappingTile(
                         modifier = Modifier.padding(top = 6.dp),
                     )
                 }
+                if (spec.isInterval) {
+                    Text(
+                        text = stringResource(R.string.settings_csv_import_interval_end_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
             }
         }
     }
@@ -152,6 +168,7 @@ internal fun CsvColumnMappingTile(
 @Composable
 private fun roleValueLabel(mapping: CsvColumnMapping): String = when (mapping.role) {
     CsvColumnRole.TIMESTAMP -> stringResource(R.string.settings_csv_import_role_timestamp)
+    CsvColumnRole.END_TIMESTAMP -> stringResource(R.string.settings_csv_import_role_end_timestamp)
     CsvColumnRole.METRIC -> mapping.metric?.let { csvMetricLabel(it) }
         ?: stringResource(R.string.settings_csv_import_role_ignore)
     CsvColumnRole.IGNORE -> stringResource(R.string.settings_csv_import_role_ignore)

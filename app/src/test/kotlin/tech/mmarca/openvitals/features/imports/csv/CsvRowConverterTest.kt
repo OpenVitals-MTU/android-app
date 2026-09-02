@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import java.time.Instant
@@ -515,6 +516,175 @@ class CsvRowConverterTest {
         )
     }
 
+    // ── steps ────────────────────────────────────────────────────────────────
+
+    /**
+     * The TimeFrom/TimeTo shape a steps export has:
+     * `TimeFrom,TimeTo,Steps[,Weight]` — start, end, then metrics.
+     */
+    private fun stepsMapping(withWeight: Boolean = false): CsvImportMapping = CsvImportMapping(
+        columns = listOfNotNull(
+            CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+            CsvColumnMapping(columnIndex = 1, role = CsvColumnRole.END_TIMESTAMP),
+            CsvColumnMapping(
+                columnIndex = 2,
+                role = CsvColumnRole.METRIC,
+                metric = CsvImportMetric.STEPS,
+                interpretation = CsvDirectValue(CsvUnit.COUNT),
+            ),
+            if (withWeight) {
+                CsvColumnMapping(
+                    columnIndex = 3,
+                    role = CsvColumnRole.METRIC,
+                    metric = CsvImportMetric.WEIGHT,
+                    interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
+                )
+            } else {
+                null
+            },
+        ),
+        dateTime = CsvDateTimeSettings(
+            format = CsvDateTimeFormat.YEAR_FIRST,
+            zone = CsvTimeZoneMode.UTC,
+        ),
+    )
+
+    @Test
+    fun `a steps row spans exactly its TimeFrom and TimeTo`() {
+        val conversion = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "2026-07-01 09:00:00", "1500")),
+            mapping = stepsMapping(),
+        )
+
+        val steps = conversion.records.single().record as StepsRecord
+        assertEquals(1500L, steps.count)
+        assertEquals(Instant.parse("2026-07-01T08:00:00Z"), steps.startTime)
+        assertEquals(Instant.parse("2026-07-01T09:00:00Z"), steps.endTime)
+    }
+
+    @Test
+    fun `the steps id derives from the start, so a corrected end or count replaces instead of duplicating`() {
+        val before = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "2026-07-01 09:00:00", "1500")),
+            mapping = stepsMapping(),
+        ).records.single()
+        val after = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "2026-07-01 09:30:00", "1750")),
+            mapping = stepsMapping(),
+        ).records.single()
+
+        assertEquals(before.clientRecordId, after.clientRecordId)
+    }
+
+    @Test
+    fun `a blank TimeTo cell falls back to a one-minute span`() {
+        val conversion = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "", "1500", "78.4")),
+            mapping = stepsMapping(withWeight = true),
+        )
+
+        assertTrue(conversion.diagnostics.isEmpty())
+        val steps = conversion.records.single { it.targetType == "StepsRecord" }.record as StepsRecord
+        assertEquals(Instant.parse("2026-07-01T08:00:00Z"), steps.startTime)
+        assertEquals(Instant.parse("2026-07-01T08:01:00Z"), steps.endTime)
+    }
+
+    @Test
+    fun `a row truncated before the end column is a blank end, not a rejected row`() {
+        // Trailing empty columns are normal in exports; losing the row's weight
+        // because its optional TimeTo was cut off would be the wrong trade.
+        val mapping = CsvImportMapping(
+            columns = listOf(
+                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+                CsvColumnMapping(
+                    columnIndex = 1,
+                    role = CsvColumnRole.METRIC,
+                    metric = CsvImportMetric.STEPS,
+                    interpretation = CsvDirectValue(CsvUnit.COUNT),
+                ),
+                CsvColumnMapping(columnIndex = 2, role = CsvColumnRole.END_TIMESTAMP),
+            ),
+            dateTime = CsvDateTimeSettings(
+                format = CsvDateTimeFormat.YEAR_FIRST,
+                zone = CsvTimeZoneMode.UTC,
+            ),
+        )
+
+        val conversion = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "1500")),
+            mapping = mapping,
+        )
+
+        assertTrue(conversion.diagnostics.isEmpty())
+        val steps = conversion.records.single().record as StepsRecord
+        assertEquals(Instant.parse("2026-07-01T08:01:00Z"), steps.endTime)
+    }
+
+    @Test
+    fun `a mapping with no end column at all imports steps as one-minute spans`() {
+        // `TimeFrom,Steps` — the shape a bare export has. The mapping is not
+        // blocked; each row just claims no more time than its own instant.
+        val conversion = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "1500")),
+            mapping = singleMetricMapping(CsvImportMetric.STEPS, CsvDirectValue(CsvUnit.COUNT)),
+        )
+
+        assertTrue(conversion.diagnostics.isEmpty())
+        val steps = conversion.records.single().record as StepsRecord
+        assertEquals(1500L, steps.count)
+        assertEquals(Instant.parse("2026-07-01T08:00:00Z"), steps.startTime)
+        assertEquals(Instant.parse("2026-07-01T08:01:00Z"), steps.endTime)
+    }
+
+    @Test
+    fun `an unparsable TimeTo cell costs the steps only`() {
+        val conversion = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "not a date", "1500")),
+            mapping = stepsMapping(),
+        )
+
+        assertTrue(conversion.records.isEmpty())
+        assertEquals(
+            CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP,
+            conversion.diagnostics.single().reason,
+        )
+    }
+
+    @Test
+    fun `an end on or before the start is rejected — TimeFrom and TimeTo swapped`() {
+        val swapped = convertCsvRow(
+            row = row(listOf("2026-07-01 09:00:00", "2026-07-01 08:00:00", "1500")),
+            mapping = stepsMapping(),
+        )
+        val zeroLength = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "2026-07-01 08:00:00", "1500")),
+            mapping = stepsMapping(),
+        )
+
+        assertEquals(
+            CsvImportDiagnosticReason.END_NOT_AFTER_START,
+            swapped.diagnostics.single().reason,
+        )
+        assertEquals(
+            CsvImportDiagnosticReason.END_NOT_AFTER_START,
+            zeroLength.diagnostics.single().reason,
+        )
+    }
+
+    @Test
+    fun `zero steps is rejected, because Health Connect refuses a count below one`() {
+        val conversion = convertCsvRow(
+            row = row(listOf("2026-07-01 08:00:00", "2026-07-01 09:00:00", "0")),
+            mapping = stepsMapping(),
+        )
+
+        assertTrue(conversion.records.isEmpty())
+        assertEquals(
+            CsvImportDiagnosticReason.OUT_OF_RANGE,
+            conversion.diagnostics.single().reason,
+        )
+    }
+
     @Test
     fun `every catalog metric can build a record from its canonical value`() {
         // Guards the switch in buildCsvImportRecord against a metric added to
@@ -525,6 +695,7 @@ class CsvRowConverterTest {
                 metric = metric,
                 value = (spec.plausibleMin + spec.plausibleMax) / 2,
                 instant = CsvInstant(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC),
+                end = CsvInstant(Instant.parse("2026-07-01T01:00:00Z"), ZoneOffset.UTC),
             )
             assertEquals(metric.name, spec.targetType, converted.targetType)
             assertEquals(metric.name, spec.recordType, converted.record::class)

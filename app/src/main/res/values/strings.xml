@@ -1955,6 +1955,8 @@
     <string name="settings_csv_import_columns_title">Columns</string>
     <string name="settings_csv_import_role_ignore">Not imported</string>
     <string name="settings_csv_import_role_timestamp">Date and time</string>
+    <string name="settings_csv_import_role_end_timestamp">End date and time</string>
+    <string name="settings_csv_import_interval_end_hint">Each row spans from the date and time to the \"End date and time\" column. Without one, a row counts as one minute.</string>
     <string name="settings_csv_import_metric_weight">Weight</string>
     <string name="settings_csv_import_metric_body_fat">Body fat</string>
     <string name="settings_csv_import_metric_lean_body_mass">Lean body mass (muscle mass)</string>
@@ -1971,6 +1973,7 @@
     <string name="settings_csv_import_metric_basal_body_temperature">Basal body temperature</string>
     <string name="settings_csv_import_metric_blood_glucose">Blood glucose</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ max</string>
+    <string name="settings_csv_import_metric_steps">Steps</string>
     <string name="settings_csv_import_value_label">Values are</string>
     <string name="settings_csv_import_unit_kilograms">Kilograms (kg)</string>
     <string name="settings_csv_import_unit_pounds">Pounds (lb)</string>
@@ -1993,6 +1996,7 @@
     <string name="settings_csv_import_unit_millimoles_per_liter">Millimoles per litre (mmol/L)</string>
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrams per decilitre (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
+    <string name="settings_csv_import_unit_count">A count</string>
     <string name="settings_csv_import_interpretation_mass_share">A mass in %1$s, as a share of the weight column</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect stores body fat as a percentage, so this is worked out from the weight measured in the same row.</string>
     <string name="settings_csv_import_date_time_title">Date and time</string>
@@ -2020,6 +2024,7 @@
     <string name="settings_csv_import_issue_duplicate_metric">Two columns are mapped to the same measurement.</string>
     <string name="settings_csv_import_issue_needs_weight">Body fat given as a mass needs a weight column in the same file to work out the percentage.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">None of the sampled rows match this date format.</string>
+    <string name="settings_csv_import_issue_multiple_end_timestamps">Only one column can hold the end date and time.</string>
     <string name="settings_csv_import_confirm_title">Ready to import</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d measurements per row</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s to %3$s</string>
@@ -2043,6 +2048,8 @@
     <string name="settings_csv_import_reason_out_of_range">Value outside a plausible range</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">No weight to work out the percentage from</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect refused the record</string>
+    <string name="settings_csv_import_reason_unparsable_end_timestamp">End date not understood</string>
+    <string name="settings_csv_import_reason_end_not_after_start">End is not after the start</string>
     <string name="settings_csv_import_save_report">Save report</string>
     <string name="settings_csv_import_report_saved">Report saved.</string>
     <string name="settings_csv_import_report_save_failed">The report could not be saved.</string>

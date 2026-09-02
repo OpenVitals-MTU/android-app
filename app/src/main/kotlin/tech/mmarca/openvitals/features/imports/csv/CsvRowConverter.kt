@@ -16,6 +16,7 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Device
@@ -26,6 +27,7 @@ import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Power
 import androidx.health.connect.client.units.Temperature
 import java.security.MessageDigest
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Locale
@@ -72,7 +74,9 @@ data class CsvRowConversion(
  * Failure granularity matches the Apple importer: a bad **timestamp** or a row
  * too short costs the whole row, because nothing in it can be placed in time; a
  * bad **value** costs only that metric, so one unparsable body-fat cell does
- * not throw away a perfectly good weight.
+ * not throw away a perfectly good weight. A bad **end timestamp** sits in
+ * between: it costs the interval metrics only, because the instant metrics
+ * beside it are still perfectly placed in time by the start alone.
  */
 fun convertCsvRow(
     row: CsvRow,
@@ -85,6 +89,10 @@ fun convertCsvRow(
 
     // A row is "too short" only relative to what the mapping actually reads.
     // Trailing empty columns are normal in exports and must not reject the row.
+    // The end-timestamp column is deliberately NOT counted: a row truncated
+    // before it reads as a blank end and falls back to the one-minute span,
+    // the same treatment a blank end cell gets — not a rejected row.
+    val endTimestampColumn = mapping.endTimestampColumn
     val highestIndex = (metricColumns.map { it.columnIndex } + timestampColumn.columnIndex).max()
     if (row.fields.size <= highestIndex) {
         return CsvRowConversion(
@@ -125,6 +133,12 @@ fun convertCsvRow(
     // metrics can need it.
     val rowWeightKg = resolveRowWeightKg(row, mapping)
 
+    // The end timestamp too — but a bad end costs only the interval metrics,
+    // never the row: the instant metrics beside it are still perfectly placed
+    // in time by the start alone.
+    val endText = endTimestampColumn?.let { row.cell(it.columnIndex) }
+    val endInstant = endText?.let { resolveCsvInstant(it, mapping.dateTime) }
+
     val records = mutableListOf<CsvConvertedRecord>()
     val diagnostics = mutableListOf<CsvImportDiagnostic>()
 
@@ -133,6 +147,31 @@ fun convertCsvRow(
         val spec = CsvMetricCatalog[metric]
         val interpretation = column.effectiveInterpretation
         if (spec == null || interpretation == null) continue
+
+        // A row that names no end — the column unmapped, or its cell blank —
+        // defaults to a one-minute span: the total stays pinned at its start
+        // without claiming a duration the file never stated. An end the file
+        // DOES state but that is garbage, or not after the start, still
+        // rejects: silently re-timing stated data is worse than skipping it.
+        var intervalEnd: CsvInstant? = null
+        if (spec.isInterval) {
+            val reason = when {
+                endText == null -> null
+                endInstant == null -> CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP
+                !endInstant.utc.isAfter(instant.utc) -> CsvImportDiagnosticReason.END_NOT_AFTER_START
+                else -> null
+            }
+            if (reason != null) {
+                diagnostics += CsvImportDiagnostic(
+                    rowNumber = row.rowNumber,
+                    reason = reason,
+                    columnIndex = endTimestampColumn?.columnIndex ?: column.columnIndex,
+                    detail = endText,
+                )
+                continue
+            }
+            intervalEnd = endInstant ?: instant.plusDefaultIntervalSpan()
+        }
 
         // A blank cell is a gap in the data, not an error: scales skip metrics.
         val text = row.cell(column.columnIndex) ?: continue
@@ -174,7 +213,12 @@ fun convertCsvRow(
             continue
         }
 
-        records += buildCsvImportRecord(metric = metric, value = canonical, instant = instant)
+        records += buildCsvImportRecord(
+            metric = metric,
+            value = canonical,
+            instant = instant,
+            end = intervalEnd,
+        )
     }
 
     return CsvRowConversion(records = records, diagnostics = diagnostics)
@@ -193,11 +237,16 @@ private fun resolveRowWeightKg(row: CsvRow, mapping: CsvImportMapping): Double? 
     return convertCsvValueToCanonical(raw, interpretation.unit)
 }
 
-/** Builds the record for [metric] at [instant] from an already-canonical [value]. */
+/**
+ * Builds the record for [metric] at [instant] from an already-canonical
+ * [value]. An interval metric additionally needs [end], the caller-validated
+ * end of its span; instant metrics ignore it.
+ */
 fun buildCsvImportRecord(
     metric: CsvImportMetric,
     value: Double,
     instant: CsvInstant,
+    end: CsvInstant? = null,
 ): CsvConvertedRecord {
     val spec = CsvMetricCatalog.getValue(metric)
     val clientRecordId = buildCsvClientRecordId(targetType = spec.targetType, utc = instant.utc)
@@ -283,6 +332,19 @@ fun buildCsvImportRecord(
             measurementMethod = Vo2MaxRecord.MEASUREMENT_METHOD_OTHER,
             metadata = metadata,
         )
+        // The one interval metric: the span is the row's own TimeFrom..TimeTo.
+        // convertCsvRow guarantees the end exists and lies after the start.
+        CsvImportMetric.STEPS -> {
+            val until = checkNotNull(end) { "STEPS needs an end instant." }
+            StepsRecord(
+                startTime = time,
+                startZoneOffset = offset,
+                endTime = until.utc,
+                endZoneOffset = until.offset,
+                count = value.roundToLong(),
+                metadata = metadata,
+            )
+        }
     }
 
     return CsvConvertedRecord(
@@ -295,6 +357,17 @@ fun buildCsvImportRecord(
         record = record,
     )
 }
+
+/**
+ * What an interval row spans when the file names no end. One minute, not zero
+ * (Health Connect requires end > start) and not a day (that would claim a
+ * duration the file never stated). Part of the Flutter-parity contract: both
+ * apps must build the same record from the same file.
+ */
+private val DefaultIntervalSpan = Duration.ofMinutes(1)
+
+private fun CsvInstant.plusDefaultIntervalSpan(): CsvInstant =
+    CsvInstant(utc = utc.plus(DefaultIntervalSpan), offset = offset)
 
 private fun csvMetadata(clientRecordId: String): Metadata =
     Metadata.manualEntry(
@@ -314,6 +387,10 @@ private fun csvMetadata(clientRecordId: String): Metadata =
  * Also deliberately excluded: the file name, the column header, the unit chosen
  * and the mapping. Re-exporting the same history with the columns reordered, or
  * in pounds instead of kilograms, resolves to the same records.
+ *
+ * For an interval metric the instant is the interval's START, and the end is
+ * excluded exactly like the value: a re-export that corrects a bucket's end
+ * time replaces the record rather than duplicating it.
  *
  * BYTE-COMPATIBLE with the Flutter build's `buildCsvClientRecordId`: users who
  * imported through that build must dedup against these exact ids, so the hash

@@ -25,6 +25,20 @@ enum class CsvImportDiagnosticReason {
      */
     DERIVATION_MISSING_WEIGHT,
 
+    /**
+     * The end-timestamp cell did not parse. Costs the interval metrics only —
+     * the instant metrics on the row never read it. (A BLANK end is not an
+     * error: the row falls back to a one-minute span.)
+     */
+    UNPARSABLE_END_TIMESTAMP,
+
+    /**
+     * The end resolves on or before the start, which no interval can survive —
+     * usually TimeFrom and TimeTo mapped the wrong way round. Interval metrics
+     * only.
+     */
+    END_NOT_AFTER_START,
+
     /** Health Connect refused the record. */
     WRITE_FAILED,
 }

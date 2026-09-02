@@ -330,4 +330,58 @@ class CsvMappingValidationTest {
         assertNull(detectCsvUnitInHeader("Comments"))
         assertNull(detectCsvUnitInHeader("Date"))
     }
+
+    // ── interval metrics ─────────────────────────────────────────────────────
+
+    /** `TimeFrom,TimeTo,Steps` sampled rows. */
+    private val stepsSample = listOf(
+        listOf("2026-07-01 08:00:00", "2026-07-01 09:00:00", "1500"),
+        listOf("2026-07-01 09:00:00", "2026-07-01 10:00:00", "2500"),
+    )
+
+    private fun stepsColumns(endRole: CsvColumnRole = CsvColumnRole.END_TIMESTAMP) = listOf(
+        CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+        CsvColumnMapping(columnIndex = 1, role = endRole),
+        CsvColumnMapping(
+            columnIndex = 2,
+            role = CsvColumnRole.METRIC,
+            metric = CsvImportMetric.STEPS,
+            interpretation = CsvDirectValue(CsvUnit.COUNT),
+        ),
+    )
+
+    @Test
+    fun `a steps mapping with start and end columns reports no issues`() {
+        assertTrue(validateCsvMapping(mappingOf(stepsColumns()), stepsSample).isEmpty())
+    }
+
+    @Test
+    fun `steps without an end column is still importable — rows default to a one-minute span`() {
+        val issues = validateCsvMapping(
+            mappingOf(stepsColumns(endRole = CsvColumnRole.IGNORE)),
+            stepsSample,
+        )
+
+        assertTrue(issues.isEmpty())
+    }
+
+    @Test
+    fun `two end columns report the conflict`() {
+        val issues = validateCsvMapping(
+            mappingOf(stepsColumns() + CsvColumnMapping(columnIndex = 3, role = CsvColumnRole.END_TIMESTAMP)),
+            stepsSample,
+        )
+
+        assertTrue(CsvMappingIssue.MULTIPLE_END_TIMESTAMP_COLUMNS in issues)
+    }
+
+    @Test
+    fun `an end column that parses in no sampled row blocks the mapping`() {
+        val issues = validateCsvMapping(
+            mappingOf(stepsColumns()),
+            listOf(listOf("2026-07-01 08:00:00", "not a date", "1500")),
+        )
+
+        assertTrue(CsvMappingIssue.TIMESTAMP_FORMAT_MATCHES_NO_SAMPLE_ROW in issues)
+    }
 }

@@ -16,6 +16,7 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import kotlin.reflect.KClass
@@ -24,12 +25,17 @@ import kotlin.reflect.KClass
  * What a CSV column can be mapped onto, and how its raw text becomes the
  * canonical (metric) value Health Connect stores.
  *
- * v1 covers instant-in-time measurements only — the metrics a smart scale or a
+ * v1 covered instant-in-time measurements only — the metrics a smart scale or a
  * vitals export produces. Every one is a single measurement at a single moment,
  * so a mapping needs exactly one timestamp column and one column per metric.
- * Interval records (steps, sleep, workouts) need a second timestamp and are
- * deliberately absent; adding them later is an entry in [CsvMetricCatalog] plus
- * an end-timestamp column role, not a rewrite.
+ *
+ * [STEPS] is the first interval record ([CsvMetricSpec.isInterval]): its value
+ * covers a span of time, so a second timestamp — a [CsvColumnRole.END_TIMESTAMP]
+ * column — can say where each row's span ends, with the existing timestamp
+ * column as its start. The interval is exactly what the file says, whether
+ * that is an hour or a whole day; a row that supplies no end falls back to a
+ * one-minute span. Other interval records (sleep, workouts) remain absent:
+ * they need more than a number per row.
  *
  * Blood pressure is absent on purpose: systolic and diastolic have to become
  * ONE record, which needs a two-columns-to-one-record rule the mapping model
@@ -38,6 +44,9 @@ import kotlin.reflect.KClass
  * NOTE: the enum order, the catalog contents and the unit conversions mirror
  * the Flutter build byte for byte — both apps must resolve the same file to the
  * same records so their deterministic clientRecordIds dedup against each other.
+ * [STEPS] is appended AFTER that snapshot and defines the contract first: a
+ * Flutter build adding it must derive the id from the interval's START instant
+ * (`"StepsRecord|<startEpochMillis>"`), exactly like the instant metrics.
  */
 enum class CsvImportMetric {
     WEIGHT,
@@ -56,6 +65,7 @@ enum class CsvImportMetric {
     BASAL_BODY_TEMPERATURE,
     BLOOD_GLUCOSE,
     VO2_MAX,
+    STEPS,
 }
 
 /**
@@ -88,6 +98,7 @@ enum class CsvUnit {
     MILLIMOLES_PER_LITER,
     MILLIGRAMS_PER_DECILITER,
     MILLILITERS_PER_KG_PER_MINUTE,
+    COUNT,
 }
 
 // The same constants the manual-entry screens use, kept private per file as the
@@ -156,6 +167,13 @@ data class CsvMetricSpec(
      */
     val plausibleMin: Double,
     val plausibleMax: Double,
+
+    /**
+     * Whether the value covers a span of time rather than an instant. An
+     * interval metric reads the mapping's [CsvColumnRole.END_TIMESTAMP] column
+     * for each row's end; a row without one spans one minute from its start.
+     */
+    val isInterval: Boolean = false,
 ) {
     val defaultInterpretation: CsvValueInterpretation get() = interpretations.first()
 }
@@ -351,6 +369,21 @@ val CsvMetricCatalog: Map<CsvImportMetric, CsvMetricSpec> = mapOf(
         plausibleMin = 5.0,
         plausibleMax = 100.0,
     ),
+
+    // ── Intervals ────────────────────────────────────────────────────────────
+    // A steps cell counts what happened between the row's start and end
+    // timestamps; without an END_TIMESTAMP column the span defaults to a minute.
+    CsvImportMetric.STEPS to CsvMetricSpec(
+        targetType = "StepsRecord",
+        recordType = StepsRecord::class,
+        writePermission = HealthPermission.getWritePermission(StepsRecord::class),
+        interpretations = listOf(CsvDirectValue(CsvUnit.COUNT)),
+        // Health Connect refuses a count below 1; 200,000 a day is past any
+        // recorded ultramarathon, so beyond it the column is not steps.
+        plausibleMin = 1.0,
+        plausibleMax = 200000.0,
+        isInterval = true,
+    ),
 )
 
 /**
@@ -381,6 +414,7 @@ fun convertCsvValueToCanonical(value: Double, unit: CsvUnit): Double = when (uni
     CsvUnit.MILLIMOLES_PER_LITER -> value
     CsvUnit.MILLIGRAMS_PER_DECILITER -> value / MilligramsPerDeciliterPerMillimolePerLiter
     CsvUnit.MILLILITERS_PER_KG_PER_MINUTE -> value
+    CsvUnit.COUNT -> value
 }
 
 /**

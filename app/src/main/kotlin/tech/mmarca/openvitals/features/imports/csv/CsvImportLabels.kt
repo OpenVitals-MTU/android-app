@@ -31,6 +31,7 @@ internal fun csvMetricLabel(metric: CsvImportMetric): String = stringResource(
         CsvImportMetric.BASAL_BODY_TEMPERATURE -> R.string.settings_csv_import_metric_basal_body_temperature
         CsvImportMetric.BLOOD_GLUCOSE -> R.string.settings_csv_import_metric_blood_glucose
         CsvImportMetric.VO2_MAX -> R.string.settings_csv_import_metric_vo2_max
+        CsvImportMetric.STEPS -> R.string.settings_csv_import_metric_steps
     },
 )
 
@@ -58,6 +59,7 @@ internal fun csvUnitLabel(unit: CsvUnit): String = stringResource(
         CsvUnit.MILLIMOLES_PER_LITER -> R.string.settings_csv_import_unit_millimoles_per_liter
         CsvUnit.MILLIGRAMS_PER_DECILITER -> R.string.settings_csv_import_unit_milligrams_per_deciliter
         CsvUnit.MILLILITERS_PER_KG_PER_MINUTE -> R.string.settings_csv_import_unit_milliliters_per_kg_per_minute
+        CsvUnit.COUNT -> R.string.settings_csv_import_unit_count
     },
 )
 
@@ -118,6 +120,7 @@ internal fun csvIssueLabel(issue: CsvMappingIssue): String = stringResource(
         CsvMappingIssue.MASS_SHARE_NEEDS_WEIGHT_COLUMN -> R.string.settings_csv_import_issue_needs_weight
         CsvMappingIssue.TIMESTAMP_FORMAT_MATCHES_NO_SAMPLE_ROW -> R.string.settings_csv_import_issue_timestamp_unparsed
         CsvMappingIssue.AMBIGUOUS_DAY_MONTH_ORDER -> R.string.settings_csv_import_date_format_ambiguous
+        CsvMappingIssue.MULTIPLE_END_TIMESTAMP_COLUMNS -> R.string.settings_csv_import_issue_multiple_end_timestamps
     },
 )
 
@@ -130,6 +133,8 @@ internal fun csvDiagnosticReasonLabel(reason: CsvImportDiagnosticReason): String
         CsvImportDiagnosticReason.UNPARSABLE_NUMBER -> R.string.settings_csv_import_reason_unparsable_number
         CsvImportDiagnosticReason.OUT_OF_RANGE -> R.string.settings_csv_import_reason_out_of_range
         CsvImportDiagnosticReason.DERIVATION_MISSING_WEIGHT -> R.string.settings_csv_import_reason_derivation_missing_weight
+        CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> R.string.settings_csv_import_reason_unparsable_end_timestamp
+        CsvImportDiagnosticReason.END_NOT_AFTER_START -> R.string.settings_csv_import_reason_end_not_after_start
         CsvImportDiagnosticReason.WRITE_FAILED -> R.string.settings_csv_import_reason_write_failed
     },
 )

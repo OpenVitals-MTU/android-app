@@ -130,6 +130,7 @@ private val CsvImportMetric.reportName: String
         CsvImportMetric.BASAL_BODY_TEMPERATURE -> "basalBodyTemperature"
         CsvImportMetric.BLOOD_GLUCOSE -> "bloodGlucose"
         CsvImportMetric.VO2_MAX -> "vo2Max"
+        CsvImportMetric.STEPS -> "steps"
     }
 
 private val CsvUnit.reportName: String
@@ -155,6 +156,7 @@ private val CsvUnit.reportName: String
         CsvUnit.MILLIMOLES_PER_LITER -> "millimolesPerLiter"
         CsvUnit.MILLIGRAMS_PER_DECILITER -> "milligramsPerDeciliter"
         CsvUnit.MILLILITERS_PER_KG_PER_MINUTE -> "millilitersPerKgPerMinute"
+        CsvUnit.COUNT -> "count"
     }
 
 private fun outcomeLabel(outcome: CsvImportOutcome): String = when (outcome) {
@@ -189,6 +191,7 @@ private fun offsetLabel(settings: CsvDateTimeSettings): String {
 private fun roleLabel(column: CsvColumnMapping): String = when (column.role) {
     CsvColumnRole.IGNORE -> "not imported"
     CsvColumnRole.TIMESTAMP -> "date and time"
+    CsvColumnRole.END_TIMESTAMP -> "end date and time"
     CsvColumnRole.METRIC -> {
         val metric = column.metric
         if (metric == null) {
@@ -213,5 +216,7 @@ private fun reasonLabel(reason: CsvImportDiagnosticReason): String = when (reaso
     CsvImportDiagnosticReason.UNPARSABLE_NUMBER -> "value not a number"
     CsvImportDiagnosticReason.OUT_OF_RANGE -> "value outside a plausible range"
     CsvImportDiagnosticReason.DERIVATION_MISSING_WEIGHT -> "no weight to derive the percentage from"
+    CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> "end date not understood"
+    CsvImportDiagnosticReason.END_NOT_AFTER_START -> "end is not after the start"
     CsvImportDiagnosticReason.WRITE_FAILED -> "Health Connect refused the record"
 }

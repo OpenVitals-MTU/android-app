@@ -12,8 +12,16 @@ enum class CsvColumnRole {
     /** Not imported. The default — a column has to be opted in. */
     IGNORE,
 
-    /** The measurement's date and time. */
+    /** The measurement's date and time; for an interval metric, its start. */
     TIMESTAMP,
+
+    /**
+     * Where an interval metric's span ends. Only consumed by metrics whose
+     * spec says [CsvMetricSpec.isInterval]; instant metrics on the same row
+     * ignore it. Optional: a row that supplies no end — the column unmapped,
+     * or its cell blank — spans one minute from its start instead.
+     */
+    END_TIMESTAMP,
 
     /** A body metric. */
     METRIC,
@@ -34,6 +42,8 @@ data class CsvColumnMapping(
     val isMetric: Boolean get() = role == CsvColumnRole.METRIC && metric != null
 
     val isTimestamp: Boolean get() = role == CsvColumnRole.TIMESTAMP
+
+    val isEndTimestamp: Boolean get() = role == CsvColumnRole.END_TIMESTAMP
 
     /**
      * The interpretation to actually use, falling back to the metric's default
@@ -57,6 +67,10 @@ data class CsvImportMapping(
     /** The single timestamp column, or null when none or several are set. */
     val timestampColumn: CsvColumnMapping?
         get() = columns.filter { it.isTimestamp }.singleOrNull()
+
+    /** The single end-timestamp column, or null when none or several are set. */
+    val endTimestampColumn: CsvColumnMapping?
+        get() = columns.filter { it.isEndTimestamp }.singleOrNull()
 
     /** The column supplying body weight, which a mass-share derivation needs. */
     val weightColumn: CsvColumnMapping?
@@ -96,6 +110,9 @@ enum class CsvMappingIssue {
 
     /** Two columns map to the same metric, so one would overwrite the other. */
     DUPLICATE_METRIC,
+
+    /** More than one column claims to be the interval end. */
+    MULTIPLE_END_TIMESTAMP_COLUMNS,
 
     /** Body fat is given as a mass but no weight column is mapped to divide by. */
     MASS_SHARE_NEEDS_WEIGHT_COLUMN,
@@ -141,6 +158,13 @@ fun validateCsvMapping(
         issues += CsvMappingIssue.MASS_SHARE_NEEDS_WEIGHT_COLUMN
     }
 
+    // No issue for an interval metric WITHOUT an end column: the converter
+    // defaults those rows to a one-minute span, so the mapping is importable.
+    val endTimestamps = mapping.columns.filter { it.isEndTimestamp }
+    if (endTimestamps.size > 1) {
+        issues += CsvMappingIssue.MULTIPLE_END_TIMESTAMP_COLUMNS
+    }
+
     if (timestamps.size == 1 && sample.isNotEmpty()) {
         val index = timestamps.single().columnIndex
         val values = sample.mapNotNull { row ->
@@ -160,6 +184,22 @@ fun validateCsvMapping(
                 // repeating it would block a mapping that is now fully specified.
                 issues += CsvMappingIssue.AMBIGUOUS_DAY_MONTH_ORDER
             }
+        }
+    }
+
+    // The end column is read with the same format settings, so a TimeTo column
+    // that parses nowhere should stop the mapping too — but the day/month
+    // ambiguity question is asked once, on the start column above.
+    if (endTimestamps.size == 1 && sample.isNotEmpty()) {
+        val index = endTimestamps.single().columnIndex
+        val values = sample.mapNotNull { row ->
+            row.getOrNull(index)?.trim()?.takeIf { it.isNotEmpty() }
+        }
+        if (values.isNotEmpty() &&
+            values.none { parseCsvWallClock(it, mapping.dateTime.format, mapping.dateTime.customPattern) != null } &&
+            CsvMappingIssue.TIMESTAMP_FORMAT_MATCHES_NO_SAMPLE_ROW !in issues
+        ) {
+            issues += CsvMappingIssue.TIMESTAMP_FORMAT_MATCHES_NO_SAMPLE_ROW
         }
     }
 
