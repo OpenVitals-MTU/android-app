@@ -342,6 +342,32 @@ internal fun vitalContextStatusText(status: VitalContextStatus): String =
             stringResource(R.string.interpretation_vital_oxygen_very_low)
     }
 
+/**
+ * Day-view heart rate statistics, hoisted out of the composable so the
+ * minute-bucketed mean is testable on the JVM.
+ *
+ * The mean is bucketed, not per-sample, for the same reason as
+ * [heartRateTimelineStats]: a workout recorded at 1 Hz must not outvote the
+ * per-minute background series. A per-sample mean here printed 116 bpm for a
+ * day the dashboard and Health Connect both put at 82.
+ */
+internal data class HeartRateSampleStats(
+    val average: Double,
+    val low: Long,
+    val high: Long,
+    val readings: Int,
+)
+
+internal fun heartRateSampleAverage(samples: List<HeartRateSample>): Double? =
+    samples.timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
+
+internal fun heartRateSampleStats(samples: List<HeartRateSample>): HeartRateSampleStats? {
+    val average = heartRateSampleAverage(samples) ?: return null
+    val low = samples.minOfOrNull { it.beatsPerMinute } ?: return null
+    val high = samples.maxOfOrNull { it.beatsPerMinute } ?: return null
+    return HeartRateSampleStats(average = average, low = low, high = high, readings = samples.size)
+}
+
 @Composable
 internal fun HeartRateSampleStatisticsContent(
     samples: List<HeartRateSample>,
@@ -351,18 +377,15 @@ internal fun HeartRateSampleStatisticsContent(
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
-    val values = samples.map { it.beatsPerMinute }
-    val average = values.averageOrNull() ?: return
-    val low = values.minOrNull() ?: return
-    val high = values.maxOrNull() ?: return
-    val previousValues = previousSamples.map { it.beatsPerMinute }
+    val stats = heartRateSampleStats(samples) ?: return
+    val average = stats.average
     HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.heartRate(average.roundToInt().toLong()),
-        low = unitFormatter.heartRate(low),
-        high = unitFormatter.heartRate(high),
-        readings = samples.size,
-        comparison = previousValues.averageOrNull()?.let { periodComparison(average, it) },
+        low = unitFormatter.heartRate(stats.low),
+        high = unitFormatter.heartRate(stats.high),
+        readings = stats.readings,
+        comparison = heartRateSampleAverage(previousSamples)?.let { periodComparison(average, it) },
         selectedRange = selectedRange,
         comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
         icon = Icons.Outlined.Favorite,

@@ -35,6 +35,7 @@ import tech.mmarca.openvitals.features.heart.metricModifier
 import tech.mmarca.openvitals.features.heart.noHeartMetricData
 import tech.mmarca.openvitals.features.heart.renderChartMetricSections
 import tech.mmarca.openvitals.features.heart.skinTemperatureValue
+import tech.mmarca.openvitals.features.heart.spO2Stats
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricLineChart
@@ -69,9 +70,13 @@ internal fun LazyListScope.spO2Content(
                     period = period,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     accentColor = oxygenColor,
-                    summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
-                        stringResource(R.string.summary_value_avg, unitFormatter.percent(state.spO2.map { it.percent }.average()).text)
-                    }",
+                    // The same minute-bucketed mean as the statistics card below,
+                    // so the chart caption and the card agree on the average.
+                    summaryText = spO2Stats(state.spO2)?.let { stats ->
+                        "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                            stringResource(R.string.summary_value_avg, unitFormatter.percent(stats.average).text)
+                        }"
+                    } ?: localizedPeriodTitle(state.selectedRange, period),
                     time = { it.time },
                     value = { it.percent },
                     valueFormatter = { unitFormatter.percent(it).text },
@@ -303,7 +308,11 @@ internal fun LazyListScope.respiratoryRateContent(
                 )
             },
             contextInsight = {
-                RespiratoryRateContextCardContent(state.respiratoryRate.map { it.breathsPerMinute }.average())
+                // ONE average per screen: the per-day mean the chart and the
+                // statistics card use, not the flat mean of every raw reading.
+                RespiratoryRateContextCardContent(
+                    respiratoryRateAverage(respiratoryRateBuckets(state.respiratoryRate, state.selectedRange, period)),
+                )
             },
             statistics = {
                 RespiratoryRateStatisticsContent(

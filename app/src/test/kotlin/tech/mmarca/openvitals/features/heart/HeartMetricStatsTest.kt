@@ -112,6 +112,43 @@ class HeartMetricStatsTest {
         assertEquals(130L, stats.maxBpm)
     }
 
+    @Test fun `the statistics card averages the day the way the timeline does`() {
+        // The 82-vs-116 field report: the dashboard card was already minute
+        // bucketed, but the detail screen's Statistics section still took the
+        // per-sample mean, so the two screens disagreed on the same day.
+        val background = (0L until 9L).map { minute ->
+            HeartRateSample(
+                time = Instant.parse("2026-09-02T08:00:00Z").plusSeconds(minute * 60),
+                beatsPerMinute = 70L,
+                source = "Test",
+            )
+        }
+        val workout = (0L until 60L).map { second ->
+            HeartRateSample(
+                time = Instant.parse("2026-09-02T08:09:00Z").plusSeconds(second),
+                beatsPerMinute = 130L,
+                source = "Test",
+            )
+        }
+        val samples = background + workout
+
+        val stats = heartRateSampleStats(samples)!!
+
+        // Ten minutes, one of them at 130: (9 × 70 + 130) / 10 = 76, not the
+        // per-sample (9 × 70 + 60 × 130) / 69 ≈ 122.
+        assertEquals(76.0, stats.average, 1e-9)
+        assertEquals(heartRateTimelineStats(samples).avgBpm, stats.average.toInt())
+        assertEquals(70L, stats.low)
+        assertEquals(130L, stats.high)
+        assertEquals(69, stats.readings)
+        assertEquals(76.0, heartRateSampleAverage(samples)!!, 1e-9)
+    }
+
+    @Test fun `the statistics card has nothing to say about an empty day`() {
+        assertNull(heartRateSampleStats(emptyList()))
+        assertNull(heartRateSampleAverage(emptyList()))
+    }
+
     @Test fun `the intraday axis floors at 30 never at min minus five below it`() {
         val low = heartRateTimelineStats(listOf(sample(6, 33L), sample(7, 40L)))
         // 33 - 5 = 28, below the plausible-resting floor: clamped to 30.
