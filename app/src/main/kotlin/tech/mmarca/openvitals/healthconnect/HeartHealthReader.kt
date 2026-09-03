@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateChartBucketDuration
@@ -289,10 +290,10 @@ internal class HeartHealthReader(
     suspend fun readHrvRmssd(date: LocalDate): Double? {
         val (start, end) = support.dayRange(date)
         return support.withNullableLogging("readHrvRmssd[$date][$start..$end]") {
+            // Minute-bucketed like every other intraday mean: continuous
+            // overnight readings must not outvote the day's spot checks.
             readHrvSamples(start, end)
-                .takeIf { it.isNotEmpty() }
-                ?.map { it.rmssdMs }
-                ?.average()
+                .timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })
         }
     }
 
@@ -328,11 +329,16 @@ internal class HeartHealthReader(
                 ascendingOrder = true,
             )
                 .groupBy { it.time.atZone(zone).toLocalDate() }
-                .map { (date, records) ->
-                    DailyHrv(
-                        date = date,
-                        rmssdMs = records.map { it.heartRateVariabilityMillis }.average(),
-                    )
+                .mapNotNull { (date, records) ->
+                    // Minute-bucketed per day, the same mean the day view and
+                    // the dashboard show, so a week chart's point agrees with
+                    // the day card for that date. groupBy never yields an empty
+                    // group, so the null branch is only the type saying so.
+                    val rmssdMs = records.timeBucketedAverageOrNull(
+                        time = { it.time },
+                        value = { it.heartRateVariabilityMillis },
+                    ) ?: return@mapNotNull null
+                    DailyHrv(date = date, rmssdMs = rmssdMs)
                 }
         }
     }

@@ -23,7 +23,7 @@ import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
 import tech.mmarca.openvitals.domain.model.toBodyTempEntries
 import tech.mmarca.openvitals.domain.model.toVo2MaxEntries
 import tech.mmarca.openvitals.domain.model.totalReadings
-import tech.mmarca.openvitals.domain.model.weightedMeanOrNull
+import tech.mmarca.openvitals.domain.model.dailyMeanOrNull
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.heart.HeartUiState
 import tech.mmarca.openvitals.features.heart.bloodPressureStats
@@ -188,10 +188,11 @@ class HeartVitalsOverviewCardsTest {
             spO2Daily = listOf(point(monday, 95.0, 1), point(tuesday, 98.0, 3)),
         )
 
-        // "Average every reading" → count-weighted: (95*1 + 98*3) / 4 = 97.25.
-        assertEquals(97.25, state.spO2Daily.weightedMeanOrNull()!!, 1e-9)
+        // One vote per day: (95 + 98) / 2 = 96.5, not the count-weighted
+        // (95*1 + 98*3) / 4 = 97.25 that let a well-sampled day outvote the rest.
+        assertEquals(96.5, state.spO2Daily.dailyMeanOrNull()!!, 1e-9)
         assertEquals(4, state.spO2Daily.totalReadings())
-        assertNull(emptyList<DailyVitalPoint>().weightedMeanOrNull())
+        assertNull(emptyList<DailyVitalPoint>().dailyMeanOrNull())
         assertEquals(0, emptyList<DailyVitalPoint>().totalReadings())
     }
 
@@ -249,7 +250,7 @@ class HeartVitalsOverviewCardsTest {
 
     // ─── skin temperature ─────────────────────────────────────────────────────
 
-    @Test fun `skin temperature charts a daily delta point per day with a weighted mean`() {
+    @Test fun `skin temperature charts a daily delta point per day with a daily mean`() {
         val daily = listOf(point(monday, -0.2, 2), point(tuesday, 0.4, 1))
         val chartEntries = skinTemperatureChartEntries(
             daily.map { skinFromPoint(it) },
@@ -257,8 +258,9 @@ class HeartVitalsOverviewCardsTest {
 
         assertEquals(2, chartEntries.size)
         assertEquals(listOf(-0.2, 0.4), chartEntries.map { it.averageDeltaCelsius })
-        // Count-weighted over the days: (-0.2*2 + 0.4*1) / 3 = 0.0.
-        assertEquals(0.0, daily.weightedMeanOrNull()!!, 1e-9)
+        // One vote per day: (-0.2 + 0.4) / 2 = 0.1, not the count-weighted
+        // (-0.2*2 + 0.4*1) / 3 = 0.0.
+        assertEquals(0.1, daily.dailyMeanOrNull()!!, 1e-9)
     }
 
     @Test fun `day view charts only the raw entries that carry a delta`() {

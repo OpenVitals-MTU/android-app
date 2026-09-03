@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.ui.components.MetricLinePoint
 import tech.mmarca.openvitals.ui.components.dailyAverageLinePoints
 import tech.mmarca.openvitals.ui.components.mapLinePoints
 
@@ -128,6 +129,75 @@ class HeartVitalsSummariesTest {
         assertEquals(LocalDate.of(2026, 4, 20), points[0].date)
         assertEquals(15.0, points[0].value, 0.0)
         assertNull(points[0].time)
+    }
+
+    @Test fun `dailyAverageLinePoints buckets a burst so it does not outvote the spot checks`() {
+        // Two spot checks at 12 and 18, and one minute at 12:30 recorded every second
+        // at 30 — the overnight-monitoring shape. Three occupied minutes:
+        // (12 + 18 + 30) / 3 = 20, not the per-sample (12 + 18 + 60 × 30) / 62.
+        val burst = (0L until 60L).map { second ->
+            reading(Instant.parse("2026-04-20T12:30:00Z").plusSeconds(second).toString(), 30.0)
+        }
+        val points = dailyAverageLinePoints(
+            (listOf(
+                reading("2026-04-20T12:00:00Z", 12.0),
+                reading("2026-04-20T18:00:00Z", 18.0),
+            ) + burst).mapLinePoints(
+                time = { it.time },
+                value = { it.breathsPerMinute },
+            )
+        )
+
+        assertEquals(1, points.size)
+        assertEquals(20.0, points[0].value, 1e-9)
+    }
+
+    @Test fun `dailyAverageLinePoints still averages timeless daily points`() {
+        val points = dailyAverageLinePoints(
+            listOf(
+                MetricLinePoint(date = LocalDate.of(2026, 4, 20), value = 12.0),
+                MetricLinePoint(date = LocalDate.of(2026, 4, 20), value = 18.0),
+            )
+        )
+
+        assertEquals(15.0, points.single().value, 1e-9)
+    }
+
+    @Test fun `dailyRangeVitalsPoints buckets the average but keeps the raw extremes`() {
+        val burst = (0L until 60L).map { second ->
+            reading(Instant.parse("2026-04-20T12:30:00Z").plusSeconds(second).toString(), 30.0)
+        }
+        val range = dailyRangeVitalsPoints(
+            entries = listOf(
+                reading("2026-04-20T12:00:00Z", 12.0),
+                reading("2026-04-20T18:00:00Z", 18.0),
+            ) + burst,
+            time = { it.time },
+            value = { it.breathsPerMinute },
+        )
+
+        assertEquals(20.0, range.average.single().value, 1e-9)
+        assertEquals(12.0, range.min.single().value, 0.0)
+        assertEquals(30.0, range.max.single().value, 0.0)
+    }
+
+    @Test fun `respiratory day buckets and day summaries share the bucketed mean`() {
+        val burst = (0L until 60L).map { second ->
+            reading(Instant.parse("2026-04-20T12:30:00Z").plusSeconds(second).toString(), 30.0)
+        }
+        val entries = listOf(
+            reading("2026-04-20T12:00:00Z", 12.0),
+            reading("2026-04-20T18:00:00Z", 18.0),
+        ) + burst
+        val period = DatePeriod(LocalDate.of(2026, 4, 20), LocalDate.of(2026, 4, 26))
+
+        val bucket = respiratoryRateBuckets(entries, TimeRange.WEEK, period)
+            .single { it.value > 0.0 }
+        val summary = respiratoryRateDaySummaries(entries).single()
+
+        assertEquals(20.0, bucket.value, 1e-9)
+        assertEquals(20.0, summary.average, 1e-9)
+        assertEquals(62, summary.readings)
     }
 
     @Test fun `dailyRangeVitalsPoints exposes average min and max lines`() {

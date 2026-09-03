@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.core.stats.averageOrNull
 import tech.mmarca.openvitals.core.stats.averageOrZero
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.ui.components.MetricLinePoint
 import tech.mmarca.openvitals.ui.components.MetricLineSeries
@@ -157,10 +158,13 @@ internal fun <T> dailyRangeVitalsPoints(
     val dayRanges = entries
         .groupBy { time(it).atZone(ZoneId.systemDefault()).toLocalDate() }
         // groupBy never yields an empty group, so these aggregates always have a
-        // value; averageOrZero states that rather than leaning on NaN not showing.
+        // value; the zero fallback states that rather than leaning on NaN not
+        // showing. Minute-bucketed like every other per-day mean, so the line
+        // agrees with the daily series and the statistics card.
         .map { (date, dayEntries) ->
             val values = dayEntries.map(value)
-            MetricLinePoint(date = date, value = values.averageOrZero()) to
+            val average = dayEntries.timeBucketedAverageOrNull(time = time, value = value) ?: 0.0
+            MetricLinePoint(date = date, value = average) to
                 (MetricLinePoint(date = date, value = values.min()) to
                     MetricLinePoint(date = date, value = values.max()))
         }

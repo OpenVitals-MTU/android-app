@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -567,16 +568,29 @@ fun <T> List<T>.mapLinePoints(
         )
     }.sortedBy { it.time }
 
-fun dailyAverageLinePoints(points: List<MetricLinePoint>): List<MetricLinePoint> =
-    points
+/**
+ * One point per date, minute-bucketed rather than a flat mean of the day's
+ * points: continuous overnight monitoring (SpO2 every few seconds) must not
+ * outvote the day's spot checks, and the statistics card beside the chart
+ * already averages that way. A point without a time (a synthesised daily
+ * value) sits at its day's midnight, so a day of those is still their mean.
+ * groupBy never yields an empty group, so the null branch is only the type
+ * saying so.
+ */
+fun dailyAverageLinePoints(points: List<MetricLinePoint>): List<MetricLinePoint> {
+    val zone = ZoneId.systemDefault()
+    return points
         .groupBy { it.date }
-        .map { (date, dayPoints) ->
-            MetricLinePoint(
-                date = date,
-                value = dayPoints.map { it.value }.average(),
-            )
+        .mapNotNull { (date, dayPoints) ->
+            val dayStart = date.atStartOfDay(zone).toInstant()
+            val value = dayPoints.timeBucketedAverageOrNull(
+                time = { it.time ?: dayStart },
+                value = { it.value },
+            ) ?: return@mapNotNull null
+            MetricLinePoint(date = date, value = value)
         }
         .sortedBy { it.date }
+}
 
 /**
  * The geometry of a plotted line: the pixel positions, the smoothed [Path], its

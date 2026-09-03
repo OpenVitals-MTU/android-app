@@ -38,7 +38,7 @@ import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrder
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.totalReadings
-import tech.mmarca.openvitals.domain.model.weightedMeanOrNull
+import tech.mmarca.openvitals.domain.model.dailyMeanOrNull
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.features.heart.HeartMetric
 import tech.mmarca.openvitals.features.heart.HeartRateTimelineCard
@@ -391,7 +391,7 @@ private fun CardiovascularOverviewChartsContent(
                     stringResource(
                         R.string.summary_value_avg,
                         unitFormatter.percent(
-                            state.spO2Daily.weightedMeanOrNull()
+                            state.spO2Daily.dailyMeanOrNull()
                                 ?: sortedSpO2.timeBucketedAverageOrNull(
                                     time = { it.time },
                                     value = { it.percent },
@@ -446,7 +446,7 @@ private fun CardiovascularOverviewChartsContent(
                     stringResource(
                         R.string.summary_value_avg,
                         unitFormatter.bloodGlucose(
-                            state.bloodGlucoseDaily.weightedMeanOrNull()
+                            state.bloodGlucoseDaily.dailyMeanOrNull()
                                 ?: sortedBloodGlucose.map { it.millimolesPerLiter }.average(),
                         ).text,
                     )
@@ -548,7 +548,7 @@ private fun RespiratoryOverviewChartsContent(
                     stringResource(
                         R.string.summary_value_avg,
                         unitFormatter.temperatureDelta(
-                            state.skinTemperatureDaily.weightedMeanOrNull()
+                            state.skinTemperatureDaily.dailyMeanOrNull()
                                 ?: chartEntries.mapNotNull { it.averageDeltaCelsius }.averageOrZero(),
                         ).text,
                     )

@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.stats.averageOrZero
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
 import tech.mmarca.openvitals.ui.components.PeriodChartBucket
@@ -69,13 +70,21 @@ internal fun respiratoryRateBuckets(
         .map { (date, dayEntries) ->
             PeriodChartValue(
                 date = date,
-                value = dayEntries.map { it.breathsPerMinute }.averageOrZero(),
+                value = dayEntries.respiratoryRateDayAverage(),
             )
         },
     selectedRange = selectedRange,
     period = period,
     yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
 )
+
+/**
+ * A day's respiratory rate: minute-bucketed, the same mean the Health Connect
+ * daily series uses for the same date, so the two paths cannot disagree. Zero
+ * for no entries, matching the zero-means-no-data convention of the buckets.
+ */
+private fun List<RespiratoryRateEntry>.respiratoryRateDayAverage(): Double =
+    timeBucketedAverageOrNull(time = { it.time }, value = { it.breathsPerMinute }) ?: 0.0
 
 internal fun respiratoryRateAverage(buckets: List<PeriodChartBucket>): Double =
     buckets
@@ -101,7 +110,7 @@ internal fun respiratoryRateDaySummaries(entries: List<RespiratoryRateEntry>): L
             val values = dayEntries.map { it.breathsPerMinute }
             RespiratoryRateDaySummary(
                 date = date,
-                average = values.averageOrZero(),
+                average = dayEntries.respiratoryRateDayAverage(),
                 min = values.min(),
                 max = values.max(),
                 readings = values.size,

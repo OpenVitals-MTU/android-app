@@ -73,11 +73,18 @@ internal fun List<DailyVitalPoint>.toSkinTemperatureEntries(): List<SkinTemperat
         )
     }
 
-/** Count-weighted period mean: `Σ(value·count) / Σ(count)`, null with no readings. */
-internal fun List<DailyVitalPoint>.weightedMeanOrNull(): Double? {
-    val readings = sumOf { it.count }
-    if (readings == 0) return null
-    return sumOf { it.value * it.count } / readings
+/**
+ * Period mean with one vote per day, null with no days.
+ *
+ * Not count-weighted: each day's value is already the minute-bucketed mean of
+ * its readings, and weighting days by their raw reading count would let one
+ * night of continuous SpO2 monitoring (hundreds of readings) outvote a week
+ * of spot checks — the same skew the per-sample heart rate mean had. The
+ * heart rate overview averages its daily summaries the same way.
+ */
+internal fun List<DailyVitalPoint>.dailyMeanOrNull(): Double? {
+    if (isEmpty()) return null
+    return sumOf { it.value } / size
 }
 
 internal fun List<DailyVitalPoint>.totalReadings(): Int = sumOf { it.count }

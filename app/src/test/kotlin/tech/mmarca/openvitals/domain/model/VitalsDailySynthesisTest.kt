@@ -10,18 +10,20 @@ class VitalsDailySynthesisTest {
 
     private val date = LocalDate.of(2026, 6, 10)
 
-    @Test fun `weighted mean weighs each day by its reading count`() {
+    @Test fun `daily mean gives every day one vote regardless of its reading count`() {
         val points = listOf(
             DailyVitalPoint(date = date, value = 90.0, count = 1),
             DailyVitalPoint(date = date.plusDays(1), value = 100.0, count = 3),
         )
 
-        assertEquals(97.5, points.weightedMeanOrNull()!!, 0.0001)
+        // (90 + 100) / 2, not the count-weighted (90 + 3 × 100) / 4 = 97.5: a
+        // night of continuous monitoring must not outvote a day's spot check.
+        assertEquals(95.0, points.dailyMeanOrNull()!!, 0.0001)
         assertEquals(4, points.totalReadings())
     }
 
-    @Test fun `weighted mean is null with no readings`() {
-        assertNull(emptyList<DailyVitalPoint>().weightedMeanOrNull())
+    @Test fun `daily mean is null with no days`() {
+        assertNull(emptyList<DailyVitalPoint>().dailyMeanOrNull())
     }
 
     @Test fun `synthesised entries land at local midnight with no source`() {

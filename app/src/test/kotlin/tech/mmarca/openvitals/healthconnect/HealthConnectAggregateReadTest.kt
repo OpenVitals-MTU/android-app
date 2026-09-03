@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -495,6 +496,36 @@ class HealthConnectAggregateReadTest {
         assertThat(day.avgBpm).isEqualTo(73L)
         assertThat(day.minBpm).isEqualTo(70L)
         assertThat(day.maxBpm).isEqualTo(140L)
+    }
+
+    @Test
+    fun `readDailyHRV buckets a burst of readings so it does not outvote the spot checks`() = runTest {
+        val zone = ZoneId.systemDefault()
+        val dayStart = date.atStartOfDay(zone).toInstant()
+        fun hrv(at: Instant, ms: Double) = HeartRateVariabilityRmssdRecord(
+            time = at,
+            zoneOffset = null,
+            heartRateVariabilityMillis = ms,
+            metadata = Metadata.autoRecorded(watch),
+        )
+        // Two daytime spot checks and one minute of second-by-second overnight
+        // readings: three occupied minutes, (40 + 60 + 20) / 3 = 40. The
+        // per-sample mean said (40 + 60 + 60 × 20) / 62 ≈ 21, and disagreed
+        // with the day card, which was already bucketed.
+        val spots = listOf(
+            hrv(dayStart.plusSeconds(9L * 3_600), 40.0),
+            hrv(dayStart.plusSeconds(15L * 3_600), 60.0),
+        )
+        val burst = (0L until 60L).map { second ->
+            hrv(dayStart.plusSeconds(23L * 3_600 + second), 20.0)
+        }
+        val client = seeded(*(spots + burst).toTypedArray())
+        val reader = HeartHealthReader(support(client), APP_PACKAGE)
+
+        val day = reader.readDailyHRV(startDate = date, endDate = date).single()
+        assertThat(day.date).isEqualTo(date)
+        assertThat(day.rmssdMs).isWithin(1e-9).of(40.0)
+        assertThat(reader.readHrvRmssd(date)).isWithin(1e-9).of(40.0)
     }
 
     @Test
