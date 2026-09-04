@@ -10,6 +10,43 @@ mode gone.
 This is the Android adaptation of the image the Flutter era ran; same design,
 different base.
 
+## Local APK build
+
+From the repository root, run:
+
+```bash
+scripts/build-apk-in-docker.sh
+```
+
+The script builds this image locally as
+`openvitals-android-builder:android-37`, mounts the checkout into it, and runs
+`:app:assembleDebug`. The resulting installable APK is copied to:
+
+```text
+dist/OpenVitals-debug.apk
+```
+
+The host does not need Java, Gradle, or an Android SDK. It only needs Docker
+and internet access for the first image/dependency download. Gradle downloads
+are retained under the ignored `.docker-cache/gradle` directory, so subsequent
+builds are incremental. Files created by Gradle retain the invoking user's UID
+instead of becoming root-owned. The generated debug signing key is retained in
+`.docker-cache/android`; keep that directory while a Docker-built debug APK is
+installed, otherwise Android will reject the next build as a differently signed
+application.
+
+To choose a different local image name:
+
+```bash
+OPENVITALS_ANDROID_BUILDER_IMAGE=my-openvitals-builder:latest \
+  scripts/build-apk-in-docker.sh
+```
+
+This intentionally builds the Debug variant, which uses the separate
+`tech.mmarca.openvitals.debug` application ID and needs no release keystore.
+Release and Nightly artifacts must continue through the documented signing
+workflow; do not copy signing secrets into an image.
+
 ## Using it
 
 Both pipelines run `ghcr.io/mmarca-tech/openvitals-android-ci:android-37`

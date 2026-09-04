@@ -91,6 +91,9 @@ class GarminNotificationForwarder(
     private val agpsSource: GarminAgpsSource? = null,
     private val calendarProvider: ((beginEpochSeconds: Long, endEpochSeconds: Long) -> List<GarminCalendarEvent>?)? = null,
     private val onFileAnnounced: (() -> Unit)? = null,
+    private val alreadySyncedFileKeys: () -> Set<String> = { emptySet() },
+    private val onGarminFileDownloaded: (suspend (GarminDownloadedFile) -> Unit)? = null,
+    private val onGarminFilesDownloaded: ((List<GarminDownloadedFile>) -> Unit)? = null,
     private val locationProvider: (() -> GarminPhoneLocation?)? = null,
     private val hostForeground: (() -> Boolean)? = null,
     /** Live-streaming services to open on each link, and where readings go. */
@@ -235,6 +238,9 @@ class GarminNotificationForwarder(
                     agpsSource = agpsSource,
                     calendarProvider = calendarProvider,
                     onFileAnnounced = onFileAnnounced,
+                    alreadySyncedFileKeys = alreadySyncedFileKeys(),
+                    onGarminFileDownloaded = onGarminFileDownloaded,
+                    onGarminFilesDownloaded = onGarminFilesDownloaded,
                     locationProvider = locationProvider,
                     hostForeground = hostForeground,
                     realtimeServices = realtimeServices(),
@@ -287,6 +293,15 @@ class GarminNotificationForwarder(
                 delay(renewInterval)
                 if (disposed || link == null) continue
                 if (lease.renew(address, GarminRadioOwners.NOTIFICATIONS)) continue
+                val current = link
+                if (current?.isSynchronizing == true &&
+                    lease.acquire(address, GarminRadioOwners.NOTIFICATIONS)
+                ) {
+                    GarminLog.log(
+                        "[GARMIN-NOTIFY] radio requested; finishing active sync before yielding",
+                    )
+                    continue
+                }
                 GarminLog.log(
                     "[GARMIN-NOTIFY] the radio was requested by something the user " +
                         "started; yielding",

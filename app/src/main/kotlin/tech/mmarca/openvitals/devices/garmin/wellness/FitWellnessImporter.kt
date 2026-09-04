@@ -73,6 +73,7 @@ class FitWellnessImporter @Inject constructor(
             wellness.metrics?.let { records += fitMetricsImportRecords(it) }
             records += fitNapImportRecords(wellness.naps)
             wellness.healthSnapshot?.let { records += fitHealthSnapshotImportRecords(it) }
+            wellness.weights.forEach { records += fitWeightImportRecords(it) }
 
             // Counters are mapped once at the end: an interval needs the reading before it.
             wellness.monitoring?.let { counters = counters.merge(fitMonitoringCounters(it)) }

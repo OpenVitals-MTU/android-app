@@ -167,6 +167,20 @@ class GarminNotificationBridge @Inject constructor(
                 }
             },
             onFileAnnounced = { syncAnnouncedFile(address) },
+            alreadySyncedFileKeys = {
+                deviceRepository.devices
+                    .firstOrNull { it.address.equals(address, ignoreCase = true) }
+                    ?.let { syncService.syncedFileKeys(it.id) }
+                    .orEmpty()
+            },
+            onGarminFileDownloaded = { file -> syncService.storeAnnouncedFile(file) },
+            onGarminFilesDownloaded = { files ->
+                val device = deviceRepository.devices
+                    .firstOrNull { it.address.equals(address, ignoreCase = true) }
+                if (device != null && files.isNotEmpty()) {
+                    syncService.importAnnouncedFiles(device, files)
+                }
+            },
             locationProvider = { locationSource.lastKnown() },
             hostForeground = { foregroundGate.isForeground },
             realtimeServices = {

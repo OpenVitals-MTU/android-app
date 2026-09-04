@@ -162,4 +162,23 @@ class GarminDeviceStateStoreTest {
 
         assertEquals(AutoSyncInterval.OFF, GarminDeviceStateStore(prefs).autoSyncInterval(deviceId))
     }
+
+    @Test
+    fun `sync protocol starts unknown and records proven legacy`() {
+        assertEquals(GarminSyncProtocol.UNKNOWN, store.syncProtocol(deviceId))
+
+        store.recordSyncProtocol(deviceId, GarminSyncProtocol.LEGACY)
+
+        assertEquals(GarminSyncProtocol.LEGACY, GarminDeviceStateStore(prefs).syncProtocol(deviceId))
+    }
+
+    @Test
+    fun `file sync protocol remains enabled and clear forgets it`() {
+        store.recordSyncProtocol(deviceId, GarminSyncProtocol.FILE_SYNC)
+        assertEquals(GarminSyncProtocol.FILE_SYNC, store.syncProtocol(deviceId))
+
+        store.clear(deviceId)
+
+        assertEquals(GarminSyncProtocol.UNKNOWN, store.syncProtocol(deviceId))
+    }
 }

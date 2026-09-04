@@ -353,7 +353,7 @@ class GarminSettingsLink private constructor(
             val gatt = GarminGattClient(context, address)
             val ready = CompletableDeferred<Unit>()
 
-            var transport: GarminMlTransport? = null
+            var transport: GarminFrameTransport? = null
             val session = GarminSession(
                 scope = scope,
                 send = { frame ->

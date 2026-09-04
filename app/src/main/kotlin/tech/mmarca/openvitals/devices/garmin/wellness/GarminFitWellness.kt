@@ -188,7 +188,14 @@ data class FitNap(
     val end: Instant,
 )
 
-/** The wellness data one FIT file carried. At most one carrier is populated. */
+/** One FIT weight-scale measurement. */
+data class FitWeightReading(val time: Instant, val kilograms: Double)
+
+/**
+ * The wellness data a FIT file carried, from one decode pass. Each Garmin file
+ * is a single type, so at most one of these is populated (activities have
+ * none).
+ */
 data class FitWellness(
     /** `file_id.type`. Tells an unmappable wellness file from an activity file. */
     val fileType: Int? = null,
@@ -208,6 +215,7 @@ data class FitWellness(
      * file carried real stages, in which case [sleep] is set instead.
      */
     val sleepMinutes: List<FitSleepMinute> = emptyList(),
+    val weights: List<FitWeightReading> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = sleep == null &&
@@ -218,7 +226,8 @@ data class FitWellness(
             dailySleep == null &&
             sleepDemand == null &&
             healthSnapshot == null &&
-            sleepMinutes.isEmpty()
+            sleepMinutes.isEmpty() &&
+            weights.isEmpty()
 
     /** True for activity (4), workout (5) and course (6). */
     val isActivityType: Boolean
@@ -247,7 +256,28 @@ fun parseGarminWellness(fitBytes: ByteArray, fileName: String? = null): FitWelln
         dailySleep = result.metrics.toDailySleep(),
         sleepDemand = result.metrics.toSleepDemand(),
         healthSnapshot = result.metrics.toHealthSnapshot(),
+        weights = parseWeightReadings(fitBytes),
     )
+}
+
+private fun parseWeightReadings(bytes: ByteArray): List<FitWeightReading> {
+    val readings = mutableListOf<FitWeightReading>()
+    var offset = 0
+    while (offset < bytes.size && FitDecoder.isFitFileAt(bytes, offset)) {
+        val file = FitDecoder.readFile(bytes, offset)
+        for (message in file.messages) {
+            if (message.globalMessageNumber != FitWeightScaleMessageNumber) continue
+            val timestamp = message.timestamp ?: continue
+            val raw = message.values[FitWeightFieldNumber] ?: continue
+            if (raw == FitUint16Invalid || raw <= 0) continue
+            readings += FitWeightReading(
+                time = fitInstant(timestamp),
+                kilograms = raw / FitWeightScale,
+            )
+        }
+        offset = file.nextOffset
+    }
+    return readings
 }
 
 /** The Garmin sleep session in [fitBytes], or null if it carries none. */
@@ -1008,8 +1038,12 @@ private class GarminWellnessInterpreter {
             val ts16 = values[FitMonitoringTimestamp16FieldNumber]
             val anchor = monLastTimestampRaw
             tsRaw = if (ts16 != null && anchor != null) {
-                // Roll the low 16 bits forward from the anchor (FIT timestamp_16).
-                val rolled = anchor + ((ts16 - (anchor and 0xFFFF)) and 0xFFFF)
+                // timestamp_16 is the nearest matching low-16-bit timestamp,
+                // not necessarily the next one. Monitoring records can be
+                // written just before their full timestamp anchor; forcing a
+                // negative delta forward adds 65,536 seconds (18h12m16s) and
+                // moves heart-rate samples across a day boundary.
+                val rolled = resolveMonitoringTimestamp16(anchor, ts16)
                 monLastTimestampRaw = rolled
                 rolled
             } else {
@@ -1061,6 +1095,20 @@ private class GarminWellnessInterpreter {
     }
 }
 
+/**
+ * Resolves Garmin FIT `timestamp_16` around the closest 16-bit rollover.
+ * Mirrors Gadgetbridge's `FitMonitoring.computeTimestamp`.
+ */
+internal fun resolveMonitoringTimestamp16(anchor: Long, timestamp16: Long): Long {
+    var delta = (timestamp16 and 0xFFFF) - (anchor and 0xFFFF)
+    if (delta < -0x8000) {
+        delta += 0x1_0000
+    } else if (delta > 0x8000) {
+        delta -= 0x1_0000
+    }
+    return anchor + delta
+}
+
 private const val FitFileIdMessageNumber = 0
 private const val FitFileIdTypeFieldNumber = 0
 
@@ -1071,6 +1119,9 @@ private const val FitEventFieldNumber = 0
 private const val FitEventTypeFieldNumber = 1
 private const val FitSleepLevelFieldNumber = 0
 private const val FitSleepEventValue = 74 // `event` == sleep (Garmin-proprietary)
+private const val FitWeightScaleMessageNumber = 30
+private const val FitWeightFieldNumber = 0
+private const val FitWeightScale = 100.0
 private const val FitEventTypeStart = 0
 private const val FitEventTypeStop = 1
 private const val FitSleepLevelUnmeasurable = 0

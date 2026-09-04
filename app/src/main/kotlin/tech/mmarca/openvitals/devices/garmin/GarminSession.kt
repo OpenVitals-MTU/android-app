@@ -52,7 +52,27 @@ class GarminSession(
     private val onFileDownloaded: (suspend (GarminDownloadedFile) -> Unit)? = null,
     /** How long an empty sync waits for a late SYNCHRONIZATION announcement. */
     private val emptyGrace: Duration = 6.seconds,
-    /** Diagnostic: keep decoding and acking frames after the sync ends. */
+    /** Maximum wait for a FILTER ACK or download-status response. */
+    private val responseTimeout: Duration = 10.seconds,
+    /**
+     * Directory generation is slower than an ordinary response. An Instinct
+     * 2X spent about 16 seconds completing startup protobuf conversations
+     * after accepting FILTER before it served the listing.
+     */
+    private val directoryResponseTimeout: Duration = 30.seconds,
+    /** Maximum silence between accepted chunks of an active file transfer. */
+    private val transferInactivityTimeout: Duration = 15.seconds,
+    /**
+     * Diagnostic only: keep decoding and acknowledging what the watch sends
+     * after the sync has finished, instead of ignoring it.
+     *
+     * A sync lasts about a second, so anything the watch volunteers on its
+     * own schedule — or in response to being touched — lands long after the
+     * session is done and is normally dropped on the floor by
+     * [handleFrameSerially]. Acknowledging still matters while listening: an
+     * unanswered message is retransmitted on a timer and eventually takes the
+     * link down with it.
+     */
     private val keepAnsweringAfterSync: Boolean = false,
     /** Called after the capabilities exchange, when the watch accepts requests. */
     private val onHandshakeReady: (() -> Unit)? = null,
@@ -70,7 +90,19 @@ class GarminSession(
     private val onFindPhoneCancel: (() -> Unit)? = null,
     /** The watch announced a file this session cannot download. The owner decides. */
     private val onFileAnnounced: ((GarminDirectoryEntry) -> Unit)? = null,
-    /** Weather for the watch's ask, or null to ack it and leave it unanswered. */
+    /**
+     * The watch announced that one or more sync categories are ready on a
+     * held link that deliberately cannot transfer files. The owner starts a
+     * proper sync before that one-shot announcement is lost.
+     */
+    private val onSynchronizationAnnounced: (() -> Unit)? = null,
+    /** A held link finished downloading one filtered synchronization batch. */
+    private val onSynchronizationFilesDownloaded: ((List<GarminDownloadedFile>) -> Unit)? = null,
+    /**
+     * The weather to serve when the watch asks ([GarminWeatherRequest]), or
+     * null when there is none fresh enough — the ask is then acked and left
+     * unanswered, exactly as a phone with no weather app would.
+     */
     private val weatherProvider: (() -> tech.mmarca.openvitals.devices.weather.WeatherSnapshot?)? = null,
     /** Last-known phone position. Without it the watch never fetches weather. */
     private val locationProvider: (() -> GarminPhoneLocation?)? = null,
@@ -120,7 +152,29 @@ class GarminSession(
     /** True once the directory is fetched. */
     private var directoryFetched = false
 
+    /** A structurally valid legacy directory was received, even if it listed no new files. */
+    var hasValidDirectoryListing = false
+        private set
+
+    /** True while a FILTER-scoped companion transfer must keep its BLE link. */
+    val isSynchronizationTransferActive: Boolean
+        get() = handoffAfterDirectory
+
+    /** A synchronization announcement was answered; wait for FILTER's ACK before relisting. */
+    private var awaitingFilterAck = false
+
+    /**
+     * A held companion link accepted FILTER and is fetching the resulting
+     * directory before yielding the radio. Garmin's filtered listing is
+     * connection-scoped on real watches: handing off immediately after the
+     * ACK reconnected into an empty placeholder directory.
+     */
+    private var handoffAfterDirectory = false
+
     private var finished = false
+    /** Non-null when [done] contains only the files recovered before an abort. */
+    var abortReason: String? = null
+        private set
     private var filesTotal = 0
 
     /** Everything downloaded, or the protocol error that ended the sync. */
@@ -203,7 +257,15 @@ class GarminSession(
                 send(buildGenericAck(frame.messageType))
             }
             if (protobuf.handleInbound(frame)) return
-            dispatch(decodeGarminMessage(frame))
+            val message = decodeGarminMessage(frame)
+            // A kept-open diagnostic/listen link still answers time, auth,
+            // calendar and notification traffic after the sync result is
+            // sealed. It must never restart the file state machine after an
+            // abort: doing so downloaded and archived files after done had
+            // already completed with an empty snapshot, so those files were
+            // neither imported nor offered by the watch again.
+            if (abortReason != null && message.drivesFileSync) return
+            dispatch(message)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -318,10 +380,11 @@ class GarminSession(
                         },
                 )
                 send(buildSystemEvent(GarminSystemEventType.SYNC_READY))
-                // Filter before listing: an unfiltered listing came back empty on a watch
-                // that held sleep data.
+                // Gadgetbridge flushes current monitor/activity data by asking
+                // for directory index 0 directly. FILTER is not an initializer:
+                // it is the reply to a later SYNCHRONIZATION announcement.
+                // Sending both back-to-back raced the watch's listing state.
                 if (!syncFiles) return
-                send(buildFilterMessage())
                 report(GarminSyncPhase.LISTING)
                 requestDirectory()
             }
@@ -337,13 +400,29 @@ class GarminSession(
                         "bits=${message.setBits} proceed=${message.shouldProceed}",
                 )
                 if (message.shouldProceed) {
-                    // The watch holds something: cancel the give-up and re-read the listing.
-                    if (!syncFiles) return
+                    if (!syncFiles) {
+                        GarminLog.log(
+                            "[GARMIN-LISTEN] sync data announced on held link; filtering before handoff",
+                        )
+                        if (!awaitingFilterAck) {
+                            awaitingFilterAck = true
+                            send(buildFilterMessage())
+                        }
+                        return
+                    }
+                    // Cancel any pending give-up: the watch has just told us
+                    // it holds something, so re-read the listing rather than
+                    // finishing empty.
                     graceJob?.cancel()
                     graceJob = null
-                    send(buildFilterMessage())
-                    directoryFetched = false
-                    requestDirectory()
+                    if (!awaitingFilterAck) {
+                        awaitingFilterAck = true
+                        armStageTimeout(
+                            responseTimeout,
+                            "Garmin filter response timed out after ${responseTimeout.inWholeSeconds} seconds.",
+                        )
+                        send(buildFilterMessage())
+                    }
                 }
             }
 
@@ -354,10 +433,31 @@ class GarminSession(
                         "[GARMIN-SYNC] NAK ${message.status.name} for " +
                             "message ${message.originalMessageType}",
                     )
+                    if (message.originalMessageType == GarminMessageId.FILTER && awaitingFilterAck) {
+                        awaitingFilterAck = false
+                        cancelStageTimeout()
+                        if (syncFiles) complete()
+                    }
                     return
                 }
                 if (message.originalMessageType == GarminMessageId.FILTER) {
+                    cancelStageTimeout()
                     GarminLog.log("[GARMIN-SYNC] filter accepted")
+                    if (awaitingFilterAck) {
+                        awaitingFilterAck = false
+                        if (!syncFiles) {
+                            GarminLog.log(
+                                "[GARMIN-LISTEN] filter accepted; reading directory before handoff",
+                            )
+                            handoffAfterDirectory = true
+                            directoryFetched = false
+                            requestDirectory()
+                            return
+                        }
+                        directoryFetched = false
+                        report(GarminSyncPhase.LISTING)
+                        requestDirectory()
+                    }
                 }
                 if (message.originalMessageType == GarminMessageId.FIT_DEFINITION) {
                     val data = pendingWeatherData ?: return
@@ -366,6 +466,8 @@ class GarminSession(
                     send(GarminGfdiFrame.build(GarminMessageId.FIT_DATA, data))
                 }
             }
+
+            is GarminProtobufStatus -> protobuf.handleStatus(message)
 
             is GarminCurrentTimeRequest -> {
                 // This app is the watch's only clock source: reply with time, zone and DST.
@@ -409,13 +511,13 @@ class GarminSession(
             is GarminFileAvailable -> onFileAvailable(message.entry)
 
             is GarminUnhandledMessage -> {
-                // Log unexpected chatter: it is the evidence a stalled sync needs.
-                // Whole while listening, truncated otherwise.
-                GarminLog.logLazy {
+                // Type and length are enough to correlate a repeated unknown
+                // message. Payload bytes can contain notification text,
+                // locations or service credentials and never belong in logcat.
+                GarminLog.log(
                     "[GARMIN-SYNC] unhandled message " +
-                        "${message.messageType} (${message.payload.size}B) " +
-                        hex(message.payload, max = if (keepAnsweringAfterSync) 512 else 32)
-                }
+                        "${message.messageType} (${message.payload.size}B)",
+                )
             }
         }
     }
@@ -432,20 +534,40 @@ class GarminSession(
                 fileDate = null,
             ),
         )
+        armStageTimeout(
+            directoryResponseTimeout,
+            "Garmin directory response timed out after " +
+                "${directoryResponseTimeout.inWholeSeconds} seconds.",
+        )
         send(buildDownloadRequest(fileIndex = 0))
     }
 
     private suspend fun onDownloadStatus(status: GarminDownloadRequestStatus) {
-        val current = active ?: return // Transfer already abandoned.
+        val current = active ?: return // Status for a transfer we already abandoned.
+        cancelStageTimeout()
 
         if (!status.canProceed) {
             GarminLog.log(
                 "[GARMIN-SYNC] download refused for index " +
                     "${current.entry.fileIndex}: ${status.downloadStatus.name}",
             )
-            // One unreadable file must not end the sync.
+            // One unreadable data file must not end the sync. A refused root
+            // directory is different: there can never be a chunk that flips
+            // directoryFetched, so treating it as an ordinary skip leaves
+            // done pending until the three-minute global timeout.
             active = null
-            next()
+            if (current.entry.type == GarminFileType.DIRECTORY) {
+                directoryFetched = true
+                if (handoffAfterDirectory) {
+                    handoffAfterDirectory = false
+                    onSynchronizationFilesDownloaded?.invoke(emptyList())
+                        ?: onSynchronizationAnnounced?.invoke()
+                } else {
+                    complete()
+                }
+            } else {
+                next()
+            }
             return
         }
         current.begin(status.maxFileSize)
@@ -453,6 +575,8 @@ class GarminSession(
         if (current.isComplete) {
             active = null
             onFileComplete(current)
+        } else {
+            armTransferInactivityTimeout(current)
         }
     }
 
@@ -467,14 +591,17 @@ class GarminSession(
                     "${current.entry.fileIndex}; skipping file",
             )
             active = null
+            cancelStageTimeout()
             next()
             return
         }
 
+        armTransferInactivityTimeout(current)
         send(buildFileTransferDataAck(current.received))
         if (!current.isComplete) return
 
         active = null
+        cancelStageTimeout()
         onFileComplete(current)
     }
 
@@ -484,9 +611,43 @@ class GarminSession(
         if (finishedDownload.entry.type == GarminFileType.DIRECTORY) {
             directoryFetched = true
             val listing = GarminDirectory.parseWithDiagnostics(bytes)
-            // Skip what a previous sync imported. A null dedup key is always fetched.
-            // Never re-send the archive flag for a held file: the key may collide
-            // and drop a file nobody downloaded.
+            hasValidDirectoryListing = true
+            if (handoffAfterDirectory) {
+                GarminLog.log(
+                    "[GARMIN-LISTEN] handoff directory ${bytes.size}B " +
+                        listing.describe(),
+                )
+                if (onSynchronizationFilesDownloaded != null && onFileDownloaded != null) {
+                    val fresh = listing.entries.filter { entry ->
+                        val key = entry.dedupKey
+                        key == null || key !in alreadySynced
+                    }
+                    queue.clear()
+                    queue.addAll(fresh)
+                    filesTotal = fresh.size
+                    GarminLog.log(
+                        "[GARMIN-LISTEN] downloading ${fresh.size} file(s) on filtered link",
+                    )
+                    report(GarminSyncPhase.DOWNLOADING)
+                    next()
+                } else {
+                    handoffAfterDirectory = false
+                    onSynchronizationAnnounced?.invoke()
+                }
+                return
+            }
+            // Skip what a previous sync already imported — bandwidth only.
+            // A null dedup key means the file cannot be identified across
+            // syncs, so it is always fetched rather than guessed at — see
+            // [GarminDirectoryEntry.dedupKey].
+            //
+            // Skipped is ALL a held file gets. This used to also re-send the
+            // archive flag for it, on the theory that a watch still offering
+            // a held file had missed the flag the first time. But "held" only
+            // means its key is in a list; the copy is long pruned, and a key
+            // collision — which the old key had — turned that into telling
+            // the watch to drop a file nobody had downloaded. The archive
+            // flag follows a download in THIS session or it is not sent.
             val fresh = listing.entries.filter { entry ->
                 val key = entry.dedupKey
                 key == null || key !in alreadySynced
@@ -499,10 +660,6 @@ class GarminSession(
                 "[GARMIN-SYNC] directory ${bytes.size}B " +
                     "${listing.describe()} new=${fresh.size}",
             )
-            if (listing.entries.isEmpty() && bytes.isNotEmpty()) {
-                // The raw listing separates "nothing" from "answers elsewhere".
-                GarminLog.logLazy { "[GARMIN-SYNC] raw directory: ${hex(bytes)}" }
-            }
             report(GarminSyncPhase.DOWNLOADING)
             next()
             return
@@ -616,12 +773,29 @@ class GarminSession(
     private suspend fun next() {
         if (!directoryFetched) return // Still waiting on the listing.
         if (queue.isEmpty()) {
+            if (handoffAfterDirectory) {
+                handoffAfterDirectory = false
+                directoryFetched = false
+                val batch = downloaded.toList()
+                downloaded.clear()
+                filesTotal = 0
+                GarminLog.log(
+                    "[GARMIN-LISTEN] filtered sync complete: ${batch.size} files",
+                )
+                onSynchronizationFilesDownloaded?.invoke(batch)
+                return
+            }
             complete()
             return
         }
         val entry = queue.removeAt(0)
         active = ActiveDownload(entry = entry)
         report(GarminSyncPhase.DOWNLOADING, file = entry.type.label)
+        armStageTimeout(
+            responseTimeout,
+            "Garmin download response for ${entry.type.label} timed out after " +
+                "${responseTimeout.inWholeSeconds} seconds.",
+        )
         send(buildDownloadRequest(fileIndex = entry.fileIndex))
     }
 
@@ -633,6 +807,36 @@ class GarminSession(
 
     private var graceJob: Job? = null
     private var graceUsed = false
+    private var stageTimeoutJob: Job? = null
+
+    private fun armTransferInactivityTimeout(download: ActiveDownload) {
+        armStageTimeout(
+            transferInactivityTimeout,
+            "Garmin ${download.entry.type.label} transfer stalled for " +
+                "${transferInactivityTimeout.inWholeSeconds} seconds.",
+        )
+    }
+
+    /**
+     * Keeps protocol-stage failures shorter and more descriptive than the
+     * service's three-minute whole-sync safety net. Only one legacy request
+     * or transfer is active at a time, so a new stage replaces the old timer.
+     */
+    private fun armStageTimeout(duration: Duration, reason: String) {
+        stageTimeoutJob?.cancel()
+        stageTimeoutJob = scope.launch {
+            delay(duration)
+            mutex.withLock {
+                stageTimeoutJob = null
+                if (!finished) abort(reason)
+            }
+        }
+    }
+
+    private fun cancelStageTimeout() {
+        stageTimeoutJob?.cancel()
+        stageTimeoutJob = null
+    }
 
     private suspend fun complete() {
         if (finished) return
@@ -670,6 +874,7 @@ class GarminSession(
         finished = true
         graceJob?.cancel()
         graceJob = null
+        cancelStageTimeout()
         send(buildSystemEvent(GarminSystemEventType.SYNC_COMPLETE))
         report(GarminSyncPhase.COMPLETE)
         GarminLog.log("[GARMIN-SYNC] complete: ${downloaded.size} files")
@@ -682,6 +887,7 @@ class GarminSession(
     private fun fail(error: Exception) {
         if (finished) return
         finished = true
+        cancelStageTimeout()
         report(GarminSyncPhase.FAILED)
         GarminLog.log("[GARMIN-SYNC] failed: $error")
         doneDeferred.completeExceptionally(error)
@@ -690,28 +896,51 @@ class GarminSession(
     /** Ends the sync early. What was already downloaded is still returned. */
     fun abort(reason: Any? = null) {
         protobuf.abort()
-        if (finished) return
+        val message = reason?.toString() ?: "The Garmin session ended unexpectedly."
+        // The legacy directory can finish before WatchSyncService starts the
+        // protobuf FileSync fallback. A link drop in that second phase must
+        // still make the overall pull incomplete even though this session's
+        // original result has already been sealed.
+        if (finished) {
+            if (abortReason == null) abortReason = message
+            return
+        }
+        // Every item here was already persisted by onFileDownloaded before
+        // its archive flag was sent. Import that safe partial batch even when
+        // Android drops the held link; otherwise archived files disappear
+        // from the watch without ever reaching Health Connect.
+        if (handoffAfterDirectory && downloaded.isNotEmpty()) {
+            val partial = downloaded.toList()
+            downloaded.clear()
+            GarminLog.log(
+                "[GARMIN-LISTEN] importing ${partial.size} persisted file(s) after interruption",
+            )
+            onSynchronizationFilesDownloaded?.invoke(partial)
+        }
         finished = true
+        abortReason = message
+        active = null
+        queue.clear()
         graceJob?.cancel()
         graceJob = null
+        cancelStageTimeout()
         report(GarminSyncPhase.FAILED)
-        GarminLog.log("[GARMIN-SYNC] aborted: ${reason ?: "no reason given"}")
+        GarminLog.log("[GARMIN-SYNC] aborted: $abortReason")
         doneDeferred.complete(downloaded.toList())
     }
 
-    private companion object {
-        /** Bytes as hex, capped to keep logs short. */
-        fun hex(bytes: ByteArray, max: Int = 256): String {
-            val shown = if (bytes.size > max) bytes.copyOf(max) else bytes
-            val text = shown.joinToString(" ") {
-                (it.toInt() and 0xFF).toString(16).padStart(2, '0')
-            }
-            return if (bytes.size > max) "$text … (+${bytes.size - max}B)" else text
-        }
-    }
 }
 
-/** One file being received: expected size, bytes so far, running CRC. */
+private val GarminInboundMessage.drivesFileSync: Boolean
+    get() = this is GarminDownloadRequestStatus ||
+        this is GarminFileTransferData ||
+        this is GarminSynchronization ||
+        this is GarminFileAvailable
+
+/**
+ * One file being received: the expected size, the bytes so far, and the
+ * running CRC the watch checks each chunk against.
+ */
 private class ActiveDownload(val entry: GarminDirectoryEntry) {
 
     private var size = 0L

@@ -29,7 +29,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Thrown when the watch cannot be reached or does not expose the V2 transport. */
+/** Thrown when the watch cannot be reached or exposes no supported Garmin transport. */
 class GarminGattClientException(message: String) : Exception(message)
 
 /**
@@ -68,6 +68,7 @@ class GarminGattClient(
     private var closed = false
 
     private var ml: GarminMlTransport? = null
+    private var v1: GarminV1Transport? = null
     private var sendCharacteristic: BluetoothGattCharacteristic? = null
 
     @Volatile
@@ -103,6 +104,16 @@ class GarminGattClient(
 
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                val failure = GarminGattClientException("GATT connection failed (status $status)")
+                ml?.close()
+                connectedSignal.completeExceptionally(failure)
+                servicesSignal.completeExceptionally(failure)
+                descriptorWritten?.completeExceptionally(failure)
+                writeCompleted?.completeExceptionally(failure)
+                if (!closed) disconnected.tryEmit("GATT status $status")
+                return
+            }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> connectedSignal.complete(Unit)
                 BluetoothProfile.STATE_DISCONNECTED -> {
@@ -110,6 +121,7 @@ class GarminGattClient(
                         log("[GARMIN-BLE] link dropped")
                         disconnected.tryEmit("link dropped")
                     }
+                    ml?.close()
                     val gone = GarminGattClientException("Link dropped")
                     connectedSignal.completeExceptionally(gone)
                     servicesSignal.completeExceptionally(gone)
@@ -153,7 +165,14 @@ class GarminGattClient(
             characteristic: BluetoothGattCharacteristic,
             status: Int,
         ) {
-            writeCompleted?.complete(Unit)
+            val waiter = writeCompleted ?: return
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                waiter.complete(Unit)
+            } else {
+                waiter.completeExceptionally(
+                    GarminGattClientException("Characteristic write failed (status $status)"),
+                )
+            }
         }
 
         override fun onCharacteristicChanged(
@@ -182,27 +201,47 @@ class GarminGattClient(
         value: ByteArray,
     ) {
         if (characteristic.uuid == receiveUuid) {
-            ml?.handleInbound(value)
+            ml?.handleInbound(value) ?: v1?.handleInbound(value)
         }
     }
 
     /**
-     * Connects, opens the GFDI channel and returns the transport. Throws
-     * [GarminGattClientException] when unreachable or when there is no V2
-     * pair (a V1 device, not implemented).
+     * Connects, opens the GFDI channel and returns the transport to send on.
+     *
+     * Prefers V2 multi-link when both variants exist, matching Gadgetbridge,
+     * and falls back to the direct V1 characteristic pair.
      */
     @SuppressLint("MissingPermission")
     suspend fun connect(
         onFrame: (GarminGfdiFrame) -> Unit,
         onRealtime: ((GarminRealtimeService, GarminRealtimeReading) -> Unit)? = null,
-    ): GarminMlTransport {
+    ): GarminFrameTransport {
         val (services, mtu) = connectAndDiscover()
         val pair = findMlPair(services)
         if (pair == null) {
-            close()
-            throw GarminGattClientException(
-                "No Garmin multi-link characteristics — this watch is not V2",
+            val v1Pair = findV1Pair(services)
+            if (v1Pair == null) {
+                close()
+                throw GarminGattClientException("No supported Garmin GFDI characteristics")
+            }
+            val (receive, send) = v1Pair
+            sendCharacteristic = send
+            receiveUuid = receive.uuid
+            log("[GARMIN-BLE] using V1 receive=${receive.uuid} send=${send.uuid} mtu=$mtu")
+            val transport = GarminV1Transport(
+                write = { packet -> writeToCharacteristic(packet) },
+                onFrame = onFrame,
+                onLog = ::log,
             )
+            transport.onMtuChanged(mtu)
+            v1 = transport
+            try {
+                subscribe(receive)
+            } catch (error: Exception) {
+                close()
+                throw GarminGattClientException("Could not subscribe: ${error.message}")
+            }
+            return transport
         }
         val (receive, send) = pair
         sendCharacteristic = send
@@ -230,6 +269,14 @@ class GarminGattClient(
                         .onFailure { log("[GARMIN-BLE] GFDI reopen failed: $it") }
                 }
             },
+            onControlPacket = { packet ->
+                healScope.launch {
+                    runCatching { writeToCharacteristic(packet) }
+                        .onFailure { error ->
+                            log("[GARMIN-BLE] control write failed: $error")
+                        }
+                }
+            },
             onLog = ::log,
         )
         transport.onMtuChanged(mtu)
@@ -253,7 +300,20 @@ class GarminGattClient(
         return transport
     }
 
-    /** Connects, enumerates the GATT table and hangs up. The probe path. */
+    private fun findV1Pair(
+        services: List<BluetoothGattService>,
+    ): Pair<BluetoothGattCharacteristic, BluetoothGattCharacteristic>? {
+        val characteristics = services.flatMap { it.characteristics }
+            .associateBy { it.uuid.toString().lowercase() }
+        val receive = characteristics[GarminUuids.GFDI_RECEIVE_V1]
+        val send = characteristics[GarminUuids.GFDI_SEND_V1]
+        return if (receive != null && send != null) receive to send else null
+    }
+
+    /**
+     * Connects, enumerates the GATT table and hangs up — the probe path. No
+     * GFDI traffic, no writes.
+     */
     suspend fun enumerateServices(): List<GarminGattService> {
         val (services, _) = connectAndDiscover(requestMtu = false)
         return services.map { service ->
@@ -401,9 +461,14 @@ class GarminGattClient(
                 writeCompleted = null
                 throw GarminGattClientException("Characteristic write failed")
             }
-            // Paced, not required: some stacks coalesce no-response writes.
-            withTimeoutOrNull(WRITE_TIMEOUT) { runCatching { completion.await() } }
+            // Paced, not required: some stacks omit callbacks for
+            // write-without-response, but an explicit failure callback is a
+            // real transport error and must not be discarded.
+            val outcome = withTimeoutOrNull(WRITE_TIMEOUT) {
+                runCatching { completion.await() }
+            }
             writeCompleted = null
+            outcome?.getOrThrow()
         }
     }
 
@@ -414,6 +479,7 @@ class GarminGattClient(
         healScope.cancel()
         ml?.close()
         ml = null
+        v1 = null
         sendCharacteristic = null
         receiveUuid = null
         gatt?.let { currentGatt ->

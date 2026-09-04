@@ -13,6 +13,8 @@ build/
 **/build/
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+.docker-cache/
+dist/
 # Local configuration
 local.properties
 *.local.properties

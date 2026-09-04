@@ -180,9 +180,7 @@ class GarminProtobufTest {
     }
 
     @Test
-    fun `a COMPLETE message is acknowledged by request id not generically`() = runTest {
-        // The watch also wants to hear the protobuf message was kept. Without that it retransmitted
-        // every message every five seconds, so a stale reply was in flight during a different request.
+    fun `a COMPLETE message is acknowledged generically`() = runTest {
         val acks = mutableListOf<GarminGfdiFrame>()
         val transport = GarminProtobufTransport(send = { frame ->
             val parsed = GarminGfdiFrame.parse(frame)
@@ -192,11 +190,13 @@ class GarminProtobufTest {
         transport.handleInbound(reply(4242, b(0x62, 0x00)))
 
         val ack = acks.single().payload
-        // [u16 acked type][u8 ACK][u16 requestId][u32 offset][kept][no error]
-        assertEquals(11, ack.size)
-        assertEquals(4242, (ack[3].toInt() and 0xFF) or ((ack[4].toInt() and 0xFF) shl 8))
-        assertArrayEquals(b(0, 0, 0, 0), ack.copyOfRange(5, 9))
-        assertArrayEquals(b(0, 0), ack.copyOfRange(9, 11))
+        // Gadgetbridge/firmware use the ordinary [u16 type][u8 ACK] shape for
+        // complete protobuf messages. The extended shape is chunk-only.
+        assertArrayEquals(
+            b(GarminMessageId.PROTOBUF_RESPONSE and 0xFF,
+                GarminMessageId.PROTOBUF_RESPONSE ushr 8, 0),
+            ack,
+        )
     }
 
     @Test

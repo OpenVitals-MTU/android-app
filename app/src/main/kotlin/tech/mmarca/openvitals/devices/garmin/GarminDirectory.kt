@@ -16,6 +16,8 @@ data class GarminDirectoryEntry(
     val fileSize: Long,
     /** When the watch recorded the file, or null for its "no date" sentinel. */
     val fileDate: Instant?,
+    /** Stable id supplied by the protobuf FileSyncService, when used. */
+    val remoteDedupKey: String? = null,
 ) {
     companion object {
         /** The watch's "no file number" sentinel. Several different files carry it. */
@@ -31,6 +33,7 @@ data class GarminDirectoryEntry(
      */
     val dedupKey: String?
         get() {
+            remoteDedupKey?.let { return it }
             val date = fileDate
             if (fileNumber == UNSET_FILE_NUMBER || date == null) return null
             return "${type.dataType}/${type.subType}/$fileNumber/${date.epochSecond}/$fileSize"

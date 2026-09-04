@@ -211,6 +211,55 @@ class FitWellnessImportTest {
     // Monitoring (type 32) high-frequency series.
 
     @Test
+    fun `timestamp16 may resolve before its full timestamp anchor`() {
+        val anchor = 0x12_1000L
+
+        assertEquals(0x12_0F00L, resolveMonitoringTimestamp16(anchor, 0x0F00))
+    }
+
+    @Test
+    fun `timestamp16 rolls forward across the unsigned 16 bit boundary`() {
+        val anchor = 0x12_FFF0L
+
+        assertEquals(0x13_0010L, resolveMonitoringTimestamp16(anchor, 0x0010))
+    }
+
+    @Test
+    fun `timestamp16 chooses the nearest rollover instead of shifting a day`() {
+        val anchor = fitTimestamp(utc(2026, 8, 27, 0, 5))
+        val fiveMinutesEarlier = fitTimestamp(utc(2026, 8, 27, 0, 0))
+
+        assertEquals(
+            fiveMinutesEarlier,
+            resolveMonitoringTimestamp16(anchor, fiveMinutesEarlier and 0xFFFF),
+        )
+    }
+
+    @Test
+    fun `monitoring heart rate before its anchor keeps the correct day and time`() {
+        val anchor = utc(2026, 8, 27, 0, 5)
+        val sampleTime = utc(2026, 8, 27, 0, 0)
+        val data = FitW().fileId(32)
+        data.def(1, 103, listOf(tsField))
+            .u8(1)
+            .u32(fitTimestamp(anchor))
+        data.def(
+            2,
+            55,
+            listOf(
+                listOf(26, 2, 0x84), // timestamp_16
+                listOf(27, 1, 0x02), // heart_rate
+            ),
+        ).u8(2)
+            .u16((fitTimestamp(sampleTime) and 0xFFFF).toInt())
+            .u8(72)
+
+        val monitoring = parseGarminWellness(fitWrap(data.toBytes())).monitoring!!
+
+        assertEquals(listOf(sampleTime to 72), monitoring.heartRateSamples)
+    }
+
+    @Test
     fun `HR packs hourly, respiration averages hourly, steps span the file`() {
         val bytes = fitMonitoringSeriesBytes(
             hr = listOf(
