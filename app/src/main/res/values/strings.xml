@@ -1408,7 +1408,7 @@
     <string name="onboarding_category_nutrition_hydration">Nutrition &amp; hydration</string>
     <string name="onboarding_category_nutrition_hydration_desc">Health Connect will ask for:\n* Hydration\n* Nutrition</string>
     <string name="onboarding_category_manual_entry_write">Manual entry write access</string>
-    <string name="onboarding_category_manual_entry_write_desc">Health Connect will ask for write access to:\n* Exercise\n* Distance\n* Elevation gained\n* Active calories burned\n* Total calories burned\n* Exercise route\n* Hydration\n* Weight\n* Height\n* Body fat\n* Blood pressure\n* Oxygen saturation\n* Respiratory rate\n* Body temperature\n* Mindfulness, when supported</string>
+    <string name="onboarding_category_manual_entry_write_desc">Health Connect will ask for write access to:\n* Exercise\n* Distance\n* Elevation gained\n* Active calories burned\n* Total calories burned\n* Exercise route\n* Hydration\n* Weight\n* Height\n* Body fat\n* Blood pressure\n* Oxygen saturation\n* Respiratory rate\n* Body temperature\n* Heart rate variability\n* Mindfulness, when supported</string>
     <string name="onboarding_category_data_import_write">Data import write access</string>
     <string name="onboarding_category_data_import_write_desc">Health Connect will ask for write access to imported records:\n* Activity, exercise, calories, and distance\n* Heart rate, resting heart rate, and heart rate variability\n* Body measurements\n* Hydration and nutrition\n* Sleep\n* Vitals\n* Mindfulness, when supported\n* Cycle tracking records</string>
     <string name="onboarding_category_mindfulness">Mindfulness</string>

@@ -93,7 +93,7 @@ class MindfulnessRepositoryImpl @Inject constructor(
         val missingPermissions = mindfulnessWritePermissions - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping writeMindfulnessSessionEntry missingCount=${missingPermissions.size}")
-            throw IllegalStateException("Missing Health Connect write permission for mindfulness.")
+            throw SecurityException("Missing Health Connect write permission for mindfulness.")
         }
         return hc.writeMindfulnessSessionEntry(request)
     }
@@ -121,7 +121,7 @@ class MindfulnessRepositoryImpl @Inject constructor(
         val missingPermissions = mindfulnessWritePermissions - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping updateMindfulnessSessionEntry missingCount=${missingPermissions.size}")
-            throw IllegalStateException("Missing Health Connect write permission for mindfulness.")
+            throw SecurityException("Missing Health Connect write permission for mindfulness.")
         }
         hc.updateMindfulnessSessionEntry(id, request)
     }
@@ -134,7 +134,7 @@ class MindfulnessRepositoryImpl @Inject constructor(
         val missingPermissions = mindfulnessWritePermissions - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping deleteMindfulnessSessionEntry missingCount=${missingPermissions.size}")
-            throw IllegalStateException("Missing Health Connect write permission for mindfulness.")
+            throw SecurityException("Missing Health Connect write permission for mindfulness.")
         }
         hc.deleteMindfulnessSessionEntry(id)
     }

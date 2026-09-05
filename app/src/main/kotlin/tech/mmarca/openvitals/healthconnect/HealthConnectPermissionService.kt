@@ -213,6 +213,10 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(OxygenSaturationRecord::class),
         HealthPermission.getWritePermission(RespiratoryRateRecord::class),
         HealthPermission.getWritePermission(BodyTemperatureRecord::class),
+        // The HRV tile writes HeartRateVariabilityRmssdRecord; keeping it here
+        // keeps the Settings "Manual entry write access" card in step with
+        // what the log can actually write.
+        HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class),
     )
 
     val dataImportWritePermissions: Set<String> get() = buildSet {
@@ -657,7 +661,7 @@ internal class HealthConnectPermissionService(
 
     companion object {
         /** Bump when requestable/managed permissions change so existing users see the new-permissions prompt. */
-        const val PERMISSION_SET_VERSION = 3
+        const val PERMISSION_SET_VERSION = 4
 
         private const val GrantedPermissionsCacheMillis = 500L
         private const val TAG = "HealthConnectPermissions"

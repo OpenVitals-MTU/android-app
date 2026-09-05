@@ -9,6 +9,7 @@ import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.IntermenstrualBleedingRecord
 import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
@@ -65,10 +66,11 @@ class HealthConnectPermissionServiceTest {
     // ── phased permission sets ──────────────────────────────────────────────
 
     // A bump is a deliberate act, not an accident: it re-prompts every existing
-    // user with the new-permissions dialog. 3 = cycle writes became requestable.
+    // user with the new-permissions dialog. 3 = cycle writes became requestable,
+    // 4 = the HRV write joined the vitals writes.
     @Test
     fun `PERMISSION_SET_VERSION is pinned`() {
-        assertThat(HealthConnectPermissionService.PERMISSION_SET_VERSION).isEqualTo(3)
+        assertThat(HealthConnectPermissionService.PERMISSION_SET_VERSION).isEqualTo(4)
     }
 
     @Test
@@ -299,6 +301,17 @@ class HealthConnectPermissionServiceTest {
         // The derived period record rides the flow write permission.
         assertThat(service.onboardingCycleCategoryPermissions)
             .contains(HealthPermission.getWritePermission(MenstruationPeriodRecord::class))
+    }
+
+    // The log's HRV tile writes HeartRateVariabilityRmssdRecord, so the
+    // Settings "Manual entry write access" card must be able to grant it.
+    @Test
+    fun `the HRV write is a vitals write so the log tile and the Settings card agree`() {
+        val service = service()
+        val hrvWrite = HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class)
+
+        assertThat(service.vitalsWritePermissions).contains(hrvWrite)
+        assertThat(service.requestableWritePermissions).contains(hrvWrite)
     }
 
     @Test

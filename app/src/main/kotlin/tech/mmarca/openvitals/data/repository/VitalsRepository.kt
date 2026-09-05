@@ -576,7 +576,7 @@ class VitalsRepositoryImpl @Inject constructor(
         val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping writeVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
-            throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
+            throw SecurityException("Missing Health Connect write permission for ${request.type}")
         }
         val id = hc.writeVitalsMeasurementEntry(request)
         patchCachedDays(request.type, setOf(request.time.atZone(ZoneId.systemDefault()).toLocalDate()))
@@ -603,7 +603,7 @@ class VitalsRepositoryImpl @Inject constructor(
         val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping updateVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
-            throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
+            throw SecurityException("Missing Health Connect write permission for ${request.type}")
         }
         // The pre-edit day is captured first so an entry moved across midnight
         // patches both the day it left and the day it landed on.
@@ -617,7 +617,7 @@ class VitalsRepositoryImpl @Inject constructor(
         val missingPermissions = vitalsWritePermissions(type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping deleteVitalsMeasurementEntry type=$type missingCount=${missingPermissions.size}")
-            throw IllegalStateException("Missing Health Connect write permission for $type")
+            throw SecurityException("Missing Health Connect write permission for $type")
         }
         val day = dayOfEntry(type, id)
         hc.deleteVitalsMeasurementEntry(type, id)
