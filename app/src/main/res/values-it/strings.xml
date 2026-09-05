@@ -133,12 +133,6 @@
     <string name="manual_entry_select_time">Seleziona orario di inserimento</string>
     <string name="manual_entry_add_widgets">Aggiungi widget</string>
     <string name="manual_entry_all_widgets_added">Tutti i widget sono già mostrati.</string>
-    <string name="manual_entry_write_permission_title">Permessi di scrittura idratazione</string>
-    <string name="manual_entry_activity_write_permission_title">Autorizzazioni di scrittura attività</string>
-    <string name="manual_entry_mindfulness_write_permission_title">Autorizzazione di scrittura consapevolezza</string>
-    <string name="manual_entry_carbs_write_permission_title">Autorizzazione di scrittura carboidrati</string>
-    <string name="manual_entry_body_write_permission_title">Autorizzazione di scrittura %1$s</string>
-    <string name="manual_entry_vitals_write_permission_title">Autorizzazione di scrittura %1$s</string>
     <string name="mindfulness_entry_subtitle">Le sessioni di consapevolezza vengono salvate direttamente su Health Connect.</string>
     <string name="mindfulness_entry_permission_needed">Per il riepilogo, OpenVitals chiede solo i permessi di visualizzazione. Per aggiungere voci di Consapevolezza, abbiamo bisogno del permesso di scrittura. OpenVitals non memorizzerà queste sessioni; le voci vengono salvate in Health Connect.</string>
     <string name="activity_entry_subtitle">Crea una sessione di attività Health Connect. I file di percorso sono scritti solo quando ne importi uno.</string>
@@ -2153,7 +2147,6 @@
     <string name="settings_csv_import_report_copied">Report copiato.</string>
     <string name="screen_cycle_entry">Registra ciclo</string>
     <string name="cycle_log_action">Registra</string>
-    <string name="manual_entry_cycle_write_permission_title">Autorizzazioni di scrittura ciclo</string>
     <string name="cycle_entry_subtitle">Le voci del ciclo vengono salvate direttamente su Health Connect.</string>
     <string name="cycle_entry_permission_needed">Per registrare i dati del ciclo, OpenVitals ha bisogno dell\'autorizzazione di scrittura Health Connect. L\'app non memorizzerà questi dati; le voci vengono salvate in Health Connect.</string>
     <string name="cycle_entry_section_flow">Flusso mestruale</string>

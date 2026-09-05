@@ -134,12 +134,6 @@
     <string name="manual_entry_select_time">Selecionar a hora do registo</string>
     <string name="manual_entry_add_widgets">Adicionar widgets de registo</string>
     <string name="manual_entry_all_widgets_added">Todos os widgets de registo já estão visíveis.</string>
-    <string name="manual_entry_write_permission_title">Permissão de escrita de bebidas</string>
-    <string name="manual_entry_activity_write_permission_title">Permissões de escrita de atividades</string>
-    <string name="manual_entry_mindfulness_write_permission_title">Permissão de escrita de atenção plena</string>
-    <string name="manual_entry_carbs_write_permission_title">Permissão de escrita de hidratos de carbono</string>
-    <string name="manual_entry_body_write_permission_title">Permissão de escrita de %1$s</string>
-    <string name="manual_entry_vitals_write_permission_title">Permissão de escrita de %1$s</string>
     <string name="mindfulness_entry_subtitle">As sessões de atenção plena são guardadas diretamente no Health Connect.</string>
     <string name="mindfulness_entry_permission_needed">Para o resumo, o OpenVitals só pede permissões de visualização. Para adicionar registos de atenção plena, precisamos de permissão de escrita. O OpenVitals não armazena estas sessões; os registos são guardados no Health Connect.</string>
     <string name="activity_entry_subtitle">Crie uma sessão de atividade no Health Connect. Os detalhes de rota ou de atividade importados só são escritos quando guardar.</string>
@@ -1813,7 +1807,6 @@
     <string name="cycle_mucus_value">%1$s, %2$s</string>
     <string name="screen_cycle_entry">Registar ciclo</string>
     <string name="cycle_log_action">Registar</string>
-    <string name="manual_entry_cycle_write_permission_title">Permissões de escrita do ciclo</string>
     <string name="cycle_entry_subtitle">As entradas do ciclo são guardadas diretamente no Health Connect.</string>
     <string name="cycle_entry_permission_needed">Para registar dados do ciclo, o OpenVitals precisa de permissão de escrita no Health Connect. A aplicação não guarda estes dados; as entradas são guardadas no Health Connect.</string>
     <string name="cycle_entry_section_flow">Fluxo menstrual</string>

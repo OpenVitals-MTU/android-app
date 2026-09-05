@@ -135,12 +135,6 @@
     <string name="manual_entry_select_time">选择记录时间</string>
     <string name="manual_entry_add_widgets">添加记录小组件</string>
     <string name="manual_entry_all_widgets_added">所有记录小组件已显示。</string>
-    <string name="manual_entry_write_permission_title">饮品写入权限</string>
-    <string name="manual_entry_activity_write_permission_title">活动写入权限</string>
-    <string name="manual_entry_mindfulness_write_permission_title">正念写入权限</string>
-    <string name="manual_entry_carbs_write_permission_title">碳水写入权限</string>
-    <string name="manual_entry_body_write_permission_title">%1$s 写入权限</string>
-    <string name="manual_entry_vitals_write_permission_title">%1$s 写入权限</string>
     <string name="mindfulness_entry_subtitle">正念会话将直接保存到 Health Connect。</string>
     <string name="mindfulness_entry_permission_needed">概览页面中，OpenVitals 仅申请查看权限。要添加正念记录，需要写入权限。OpenVitals 不会存储这些会话；记录将保存在 Health Connect 中。</string>
     <string name="activity_entry_subtitle">创建 Health Connect 活动会话。导入的路线或活动详情仅在保存时写入。</string>
@@ -1946,7 +1940,6 @@
     <string name="cycle_mucus_value">%1$s，%2$s</string>
     <string name="screen_cycle_entry">记录周期</string>
     <string name="cycle_log_action">记录</string>
-    <string name="manual_entry_cycle_write_permission_title">周期写入权限</string>
     <string name="cycle_entry_subtitle">周期记录将直接保存到 Health Connect。</string>
     <string name="cycle_entry_permission_needed">要记录周期数据，OpenVitals 需要 Health Connect 写入权限。应用不会存储此数据；记录保存在 Health Connect 中。</string>
     <string name="cycle_entry_section_flow">经血量</string>

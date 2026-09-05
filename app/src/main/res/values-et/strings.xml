@@ -134,12 +134,6 @@
     <string name="manual_entry_select_time">Vali kirje kellaaeg</string>
     <string name="manual_entry_add_widgets">Lisa kirje vidinaid</string>
     <string name="manual_entry_all_widgets_added">Kõik kirje vidinad on juba lisatud.</string>
-    <string name="manual_entry_write_permission_title">Joogi kirjutamisluba</string>
-    <string name="manual_entry_activity_write_permission_title">Treeningu kirjutamisload</string>
-    <string name="manual_entry_mindfulness_write_permission_title">Teadveloleku kirjutamisluba</string>
-    <string name="manual_entry_carbs_write_permission_title">Süsivesikute kirjutamisluba</string>
-    <string name="manual_entry_body_write_permission_title">%1$s kirjutamisluba</string>
-    <string name="manual_entry_vitals_write_permission_title">%1$s kirjutamisluba</string>
     <string name="mindfulness_entry_subtitle">Teadveloleku seansid salvestatakse otse Health Connectisse.</string>
     <string name="mindfulness_entry_permission_needed">Kokkuvõtte jaoks küsib OpenVitals ainult vaatamisõigust. Teadveloleku kirjete lisamiseks vajame kirjutamisluba. OpenVitals ei salvesta neid seansse ise; kirjed salvestatakse Health Connectisse.</string>
     <string name="activity_entry_subtitle">Loo Health Connecti treeningsessioon. Imporditud marsruut või treeningu üksikasjad kirjutatakse alles salvestamisel.</string>
@@ -2153,7 +2147,6 @@
     <string name="settings_csv_import_report_copied">Raport kopeeritud.</string>
     <string name="screen_cycle_entry">Logi tsükkel</string>
     <string name="cycle_log_action">Logi</string>
-    <string name="manual_entry_cycle_write_permission_title">Tsükli kirjutamisload</string>
     <string name="cycle_entry_subtitle">Tsükli kirjed salvestatakse otse Health Connectisse.</string>
     <string name="cycle_entry_permission_needed">Tsükliandmete logimiseks vajab OpenVitals Health Connecti kirjutamisluba. Rakendus ei salvesta neid andmeid ise; kirjed salvestatakse Health Connectisse.</string>
     <string name="cycle_entry_section_flow">Menstruatsiooni voolus</string>

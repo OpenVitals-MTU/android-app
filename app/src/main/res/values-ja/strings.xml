@@ -135,12 +135,6 @@
     <string name="manual_entry_select_time">記録時間を選択</string>
     <string name="manual_entry_add_widgets">記録ウィジェットを追加</string>
     <string name="manual_entry_all_widgets_added">全ての記録ウィジェットはすでに表示されています。</string>
-    <string name="manual_entry_write_permission_title">飲料の書き込み権限</string>
-    <string name="manual_entry_activity_write_permission_title">アクティビティの書き込み権限</string>
-    <string name="manual_entry_mindfulness_write_permission_title">マインドフルネスの書き込み権限</string>
-    <string name="manual_entry_carbs_write_permission_title">炭水化物の書き込み権限</string>
-    <string name="manual_entry_body_write_permission_title">%1$sの書き込み権限</string>
-    <string name="manual_entry_vitals_write_permission_title">%1$sの書き込み権限</string>
     <string name="mindfulness_entry_subtitle">マインドフルネスのセッションはヘルスコネクトに直接保存されました。</string>
     <string name="mindfulness_entry_permission_needed">概要の表示については、OpenVitalsは読み取り権限のみを要求します。マインドフルネスの記録を追加するには、書き込み権限が必要です。OpenVitalsがこれらのセッションを保存することはありません。記録はヘルスコネクトに保存されます。</string>
     <string name="activity_entry_subtitle">ヘルスコネクトでアクティビティのセッションを作成します。インポートしたルートやアクティビティの詳細は保存時にのみ書き込まれます。</string>
@@ -2302,7 +2296,6 @@
     <string name="cycle_mucus_value">%1$s、%2$s</string>
     <string name="screen_cycle_entry">周期を記録</string>
     <string name="cycle_log_action">記録</string>
-    <string name="manual_entry_cycle_write_permission_title">周期の書き込み権限</string>
     <string name="cycle_entry_subtitle">周期の記録は Health Connect に直接保存されます。</string>
     <string name="cycle_entry_permission_needed">周期データを記録するには、OpenVitals に Health Connect の書き込み権限が必要です。アプリはこのデータを保持せず、記録は Health Connect に保存されます。</string>
     <string name="cycle_entry_section_flow">月経の量</string>

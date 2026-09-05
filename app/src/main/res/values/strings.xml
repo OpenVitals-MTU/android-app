@@ -139,12 +139,6 @@
     <string name="manual_entry_select_time">Select entry time</string>
     <string name="manual_entry_add_widgets">Add entry widgets</string>
     <string name="manual_entry_all_widgets_added">All entry widgets are already shown.</string>
-    <string name="manual_entry_write_permission_title">Beverage write permission</string>
-    <string name="manual_entry_activity_write_permission_title">Activity write permissions</string>
-    <string name="manual_entry_mindfulness_write_permission_title">Mindfulness write permission</string>
-    <string name="manual_entry_carbs_write_permission_title">Carbs write permission</string>
-    <string name="manual_entry_body_write_permission_title">%1$s write permission</string>
-    <string name="manual_entry_vitals_write_permission_title">%1$s write permission</string>
     <string name="mindfulness_entry_subtitle">Mindfulness sessions are saved directly to Health Connect.</string>
     <string name="mindfulness_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.</string>
     <string name="activity_entry_subtitle">Create a Health Connect activity session. Imported route or activity details are written only when you save.</string>
@@ -2235,7 +2229,6 @@
     <string name="cycle_mucus_value">%1$s, %2$s</string>
     <string name="screen_cycle_entry">Log cycle</string>
     <string name="cycle_log_action">Log</string>
-    <string name="manual_entry_cycle_write_permission_title">Cycle write permissions</string>
     <string name="cycle_entry_subtitle">Cycle entries are saved directly to Health Connect.</string>
     <string name="cycle_entry_permission_needed">To log cycle data, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.</string>
     <string name="cycle_entry_section_flow">Period flow</string>

@@ -132,12 +132,6 @@
     <string name="manual_entry_select_time">Eintragszeit auswählen</string>
     <string name="manual_entry_add_widgets">Eintrags-Widgets hinzufügen</string>
     <string name="manual_entry_all_widgets_added">Alle Eintrags-Widgets werden bereits angezeigt.</string>
-    <string name="manual_entry_write_permission_title">Schreibberechtigung für Hydrierung</string>
-    <string name="manual_entry_activity_write_permission_title">Schreibberechtigungen für Aktivitäten</string>
-    <string name="manual_entry_mindfulness_write_permission_title">Schreibberechtigung für Achtsamkeit</string>
-    <string name="manual_entry_carbs_write_permission_title">Schreibberechtigung für Kohlenhydrate</string>
-    <string name="manual_entry_body_write_permission_title">Schreibberechtigung für %1$s</string>
-    <string name="manual_entry_vitals_write_permission_title">Schreibberechtigung für %1$s</string>
     <string name="mindfulness_entry_subtitle">Achtsamkeitssitzungen werden direkt in Health Connect gespeichert.</string>
     <string name="mindfulness_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen von Achtsamkeitseinträgen benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Sitzungen nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="activity_entry_subtitle">Erstelle eine Aktivitätssitzung in Health Connect. Routendateien werden nur geschrieben, wenn du eine importierst.</string>
@@ -2153,7 +2147,6 @@
     <string name="settings_csv_import_report_copied">Bericht kopiert.</string>
     <string name="screen_cycle_entry">Zyklus protokollieren</string>
     <string name="cycle_log_action">Protokollieren</string>
-    <string name="manual_entry_cycle_write_permission_title">Schreibberechtigungen für Zyklus</string>
     <string name="cycle_entry_subtitle">Zykluseinträge werden direkt in Health Connect gespeichert.</string>
     <string name="cycle_entry_permission_needed">Zum Protokollieren von Zyklusdaten benötigt OpenVitals eine Health-Connect-Schreibberechtigung. Die App speichert diese Daten nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="cycle_entry_section_flow">Menstruationsblutung</string>

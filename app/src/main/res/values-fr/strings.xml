@@ -135,12 +135,6 @@
     <string name="manual_entry_select_time">Sélectionner l\'heure de l\'entrée</string>
     <string name="manual_entry_add_widgets">Ajouter des widgets d\'entrée</string>
     <string name="manual_entry_all_widgets_added">Tous les widgets d\'entrée sont déjà affichés.</string>
-    <string name="manual_entry_write_permission_title">Autorisation d\'écriture des boissons</string>
-    <string name="manual_entry_activity_write_permission_title">Autorisations d\'écriture des activités</string>
-    <string name="manual_entry_mindfulness_write_permission_title">Autorisation d\'écriture de pleine conscience</string>
-    <string name="manual_entry_carbs_write_permission_title">Autorisation d\'écriture des glucides</string>
-    <string name="manual_entry_body_write_permission_title">Autorisation d\'écriture : %1$s</string>
-    <string name="manual_entry_vitals_write_permission_title">Autorisation d\'écriture : %1$s</string>
     <string name="mindfulness_entry_subtitle">Les sessions de pleine conscience sont enregistrées directement dans Santé Connect.</string>
     <string name="mindfulness_entry_permission_needed">Pour le résumé, OpenVitals ne demande que des autorisations de lecture. Pour ajouter des entrées de pleine conscience, nous avons besoin d\'une autorisation d\'écriture. OpenVitals ne conservera pas ces sessions ; les entrées sont enregistrées dans Santé Connect.</string>
     <string name="activity_entry_subtitle">Créez une session d\'activité Santé Connect. Les itinéraires importés ou les détails de l\'activité ne sont écrits qu\'au moment de l\'enregistrement.</string>
@@ -1931,7 +1925,6 @@
     <string name="cycle_mucus_value">%1$s, %2$s</string>
     <string name="screen_cycle_entry">Consigner le cycle</string>
     <string name="cycle_log_action">Consigner</string>
-    <string name="manual_entry_cycle_write_permission_title">Autorisations d\'écriture du cycle</string>
     <string name="cycle_entry_subtitle">Les entrées de cycle sont enregistrées directement dans Santé Connect.</string>
     <string name="cycle_entry_permission_needed">Pour consigner les données de cycle, OpenVitals a besoin de l\'autorisation d\'écriture Santé Connect. L\'application ne stockera pas ces données ; les entrées sont enregistrées dans Santé Connect.</string>
     <string name="cycle_entry_section_flow">Flux des règles</string>
