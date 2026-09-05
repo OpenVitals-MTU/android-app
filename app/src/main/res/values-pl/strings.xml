@@ -139,7 +139,7 @@
     <string name="mindfulness_entry_permission_needed">Podsumowując, OpenVitals prosi tylko o uprawnienia do wyświetlania. Aby dodać wpisy dotyczące uważności, potrzebujemy uprawnień do zapisu. OpenVitals nie będzie przechowywać tych sesji; wpisy są przechowywane w Health Connect.</string>
     <string name="activity_entry_subtitle">Utwórz sesję aktywności Health Connect. Zaimportowane szczegóły trasy lub aktywności są zapisywane tylko gdy Ty to zrobisz.</string>
     <string name="activity_entry_permission_needed">Podsumowując, OpenVitals wymaga jedynie uprawnień do przeglądania. Aby dodawać aktywności, potrzebujemy uprawnień do zapisu w Health Connect w odniesieniu do sesji, tras, dystansu, przewyższenia, kalorii oraz zarejestrowanych danych z czujników, takich jak tętno; w przypadku wpisów dotyczących bieżni wymagane są uprawnienia do zapisu liczby kroków, gdy jest to konieczne. OpenVitals nie będzie przechowywać tych wpisów; są one zapisywane w Health Connect.</string>
-    <string name="activity_entry_hub_plans_empty">Brak planów na dzisiaj. Utwórz plan w sekcji Zarządzaj planami.</string>
+    <string name="activity_entry_hub_plans_empty">Brak planów na dzisiaj. Utwórz plan w sekcji „Zarządzaj planami”.</string>
     <string name="activity_entry_hub_log_from_plan">Wpis</string>
     <string name="activity_entry_hub_log_manually">Wpisz ręcznie</string>
     <string name="activity_entry_hub_manage_plans">Zarządzaj planami</string>
@@ -155,4 +155,19 @@
     <string name="activity_recording_plan_setup_summary">%1$d kroki · około %2$d min</string>
     <string name="activity_recording_plan_setup_rest">odpocznij %1$d s</string>
     <string name="activity_recording_plan_setup_body">Liczba powtórzeń jest zliczana przez telefon, o ile to możliwe; licznik kroków i przerw odlicza czas i przechodzi do kolejnego etapu automatycznie. Przyciski „Gotowe”, „Pomiń” oraz przyciski powtórzeń są zawsze widoczne.</string>
+    <string name="activity_recording_plan_step_progress">Krok %1$d z %2$d</string>
+    <string name="activity_recording_plan_round_progress">Runda %1$d z %2$d</string>
+    <string name="activity_recording_plan_reps_progress">%1$s / %2$s</string>
+    <string name="activity_recording_plan_next">Następne: %1$s</string>
+    <string name="activity_recording_plan_rest">Odpocznij</string>
+    <string name="activity_recording_plan_complete">Plan ukończony</string>
+    <string name="activity_recording_plan_done">Gotowe</string>
+    <string name="activity_recording_plan_skip">Pomiń</string>
+    <string name="activity_recording_plan_skip_rest">Pomiń odpoczynek</string>
+    <string name="activity_recording_plan_spoken_reps">%1$s, %2$d powtórzeń</string>
+    <string name="activity_recording_plan_spoken_seconds">%1$s, %2$d sekund</string>
+    <string name="activity_recording_plan_cue_next">Następne: %1$s</string>
+    <string name="activity_recording_plan_cue_rest">Odpocznij %1$d sekund. Następnie: %2$s</string>
+    <string name="activity_recording_plan_cue_rest_last">Odpocznij %1$d sekund.</string>
+    <string name="activity_recording_plan_cue_complete">Plan ukończony. Zakończ, kiedy będziesz gotowy.</string>
 </resources>
