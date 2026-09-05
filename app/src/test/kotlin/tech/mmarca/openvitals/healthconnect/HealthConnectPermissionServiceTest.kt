@@ -277,6 +277,21 @@ class HealthConnectPermissionServiceTest {
         assertThat(noProvider.onboardingPermissionCatalog().mindfulnessSupportedByDevice).isFalse()
     }
 
+    // Onboarding asks Activity and Sleep for read AND write in one dialog, but
+    // only the reads gate step one: declining every write must still let a
+    // user finish onboarding. The log asks for writes per tile later.
+    @Test
+    fun `the onboarding required set is the activity and sleep reads only`() {
+        val required = service().onboardingPermissionCatalog().requiredPermissions
+
+        assertThat(required).isNotEmpty()
+        assertThat(required.filter { it.contains("WRITE") }).isEmpty()
+        assertThat(required).contains(HealthPermission.getReadPermission(StepsRecord::class))
+        assertThat(required).contains(HealthPermission.getReadPermission(ExerciseSessionRecord::class))
+        assertThat(required).contains(HealthPermission.getReadPermission(SleepSessionRecord::class))
+        assertThat(required).doesNotContain(HealthPermission.PERMISSION_WRITE_EXERCISE_ROUTE)
+    }
+
     @Test
     fun `cycle tracking stays out of the required set, both directions`() {
         val service = service()

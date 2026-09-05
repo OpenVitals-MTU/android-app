@@ -64,7 +64,7 @@ class OnboardingViewModelTest {
         }
         return OnboardingPermissionCatalog(
             categories = categories,
-            requiredPermissions = setOf("activity_r", "activity_w", "sleep_r", "sleep_w"),
+            requiredPermissions = setOf("activity_r", "sleep_r"),
             routeReadPermission = "route_read",
             mindfulnessSupportedByDevice = mindfulnessSupported,
         )
@@ -147,7 +147,10 @@ class OnboardingViewModelTest {
         // The opt-in rows are NOT folded into the required set — there is no
         // second "grant the rest" request for them to feed.
         val required = requireNotNull(state.catalog).requiredPermissions
-        assertEquals(setOf("activity_r", "activity_w", "sleep_r", "sleep_w"), required)
+        assertEquals(setOf("activity_r", "sleep_r"), required)
+        // Writes are asked for alongside the reads but never gate step one.
+        assertFalse("activity_w" in required)
+        assertFalse("sleep_w" in required)
         assertFalse("mindfulness_r" in required)
         assertFalse("cycle_r" in required)
         assertFalse("route_read" in required)
@@ -302,6 +305,15 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.canAdvance)
+    }
+
+    @Test fun `step one advances on the reads alone, with every write declined`() = runTest {
+        val vm = viewModel(repo = repo(granted = setOf("activity_r", "sleep_r")))
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.requiredGranted)
+        assertTrue(vm.uiState.value.canAdvance)
+        assertTrue(vm.uiState.value.currentStepSatisfied)
     }
 
     @Test fun `next walks the applicable steps in order`() = runTest {

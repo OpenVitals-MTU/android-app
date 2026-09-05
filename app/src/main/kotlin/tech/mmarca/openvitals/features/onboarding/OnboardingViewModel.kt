@@ -120,7 +120,7 @@ data class OnboardingUiState(
     val isFirstStep: Boolean get() = stepBefore(step) == null
     val isLastStep: Boolean get() = stepAfter(step) == null
 
-    /** Step one is the only gate: Activity and Sleep must be granted. */
+    /** Step one is the only gate: the Activity and Sleep READS must be granted; writes are optional. */
     val canAdvance: Boolean get() = step != OnboardingStep.CATEGORIES || requiredGranted
 
     /** Whether the current step's ask has been answered (drives Next vs Not now). */

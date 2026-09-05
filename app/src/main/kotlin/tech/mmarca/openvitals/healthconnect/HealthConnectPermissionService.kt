@@ -351,7 +351,12 @@ internal class HealthConnectPermissionService(
         get() = mindfulnessPermissions + mindfulnessWritePermissions
 
     fun onboardingPermissionCatalog(): OnboardingPermissionCatalog {
-        val required = onboardingActivityCategoryPermissions + onboardingSleepCategoryPermissions
+        // Only the reads gate step one. The Activity and Sleep rows still ask
+        // for read AND write together, but a user who declines the writes in
+        // the system dialog can still finish onboarding; the log asks for a
+        // tile's writes again when that tile is tapped.
+        val required = (onboardingActivityCategoryPermissions + onboardingSleepCategoryPermissions)
+            .filterTo(mutableSetOf()) { it.startsWith(HEALTH_READ_PERMISSION_PREFIX) }
         val categories = listOf(
             OnboardingPermissionCategory(
                 id = OnboardingCategoryId.ACTIVITY,
@@ -664,6 +669,7 @@ internal class HealthConnectPermissionService(
         const val PERMISSION_SET_VERSION = 4
 
         private const val GrantedPermissionsCacheMillis = 500L
+        private const val HEALTH_READ_PERMISSION_PREFIX = "android.permission.health.READ_"
         private const val TAG = "HealthConnectPermissions"
         private const val READ_EXERCISE_ROUTES_PERMISSION = "android.permission.health.READ_EXERCISE_ROUTES"
     }
