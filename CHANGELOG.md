@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+### English
+
+- **Log without handing over every write permission.** The Log screen used to lock itself until OpenVitals held every Health Connect write permission, even if you only wanted to record your weight. It now opens with any or no write access, and each tile asks Health Connect for just its own permissions when you tap it. Declining still opens the entry form, which offers Grant again whenever you are ready.
+- **Fixes:** the "Manual entry write access" card in Settings now includes heart rate variability, so the HRV tile can be granted from there; saving a vitals or mindfulness entry without write access now shows the permission message instead of a raw error.
+
+### Espanol
+
+- **Registra sin ceder todos los permisos de escritura.** La pantalla Registrar se bloqueaba hasta que OpenVitals tuviera todos los permisos de escritura de Health Connect, aunque solo quisieras anotar el peso. Ahora se abre con cualquier acceso de escritura o sin ninguno, y cada mosaico pide a Health Connect solo sus propios permisos al tocarlo. Si rechazas, el formulario se abre igualmente y vuelve a ofrecer Conceder cuando quieras.
+- **Correcciones:** la tarjeta "Acceso de escritura para entrada manual" de Ajustes incluye ahora la variabilidad de la frecuencia cardiaca, asi que el mosaico HRV puede concederse desde alli; guardar una entrada de constantes vitales o de atencion plena sin acceso de escritura muestra ahora el mensaje de permiso en lugar de un error en bruto.
+
+### Deutsch
+
+- **Erfassen, ohne jede Schreibberechtigung abzugeben.** Der Bildschirm Erfassen blieb gesperrt, bis OpenVitals jede Health-Connect-Schreibberechtigung hatte, selbst wenn du nur dein Gewicht eintragen wolltest. Er oeffnet sich jetzt mit beliebigem oder gar keinem Schreibzugriff, und jede Kachel fragt Health Connect beim Antippen nur nach ihren eigenen Berechtigungen. Ein Ablehnen oeffnet trotzdem das Formular, das Gewaehren erneut anbietet, sobald du soweit bist.
+- **Korrekturen:** die Karte "Schreibzugriff fuer manuelle Eingabe" in den Einstellungen enthaelt jetzt die Herzfrequenzvariabilitaet, sodass die HRV-Kachel dort gewaehrt werden kann; das Speichern eines Vitalwert- oder Achtsamkeitseintrags ohne Schreibzugriff zeigt jetzt die Berechtigungsmeldung statt eines rohen Fehlers.
+
+### Italiano
+
+- **Registra senza cedere ogni permesso di scrittura.** La schermata Registra restava bloccata finche OpenVitals non aveva ogni permesso di scrittura di Health Connect, anche se volevi solo annotare il peso. Ora si apre con qualsiasi accesso in scrittura o nessuno, e ogni riquadro chiede a Health Connect solo i propri permessi quando lo tocchi. Rifiutare apre comunque il modulo, che propone di nuovo Concedi quando sei pronto.
+- **Correzioni:** la scheda "Accesso in scrittura per inserimento manuale" nelle Impostazioni include ora la variabilita della frequenza cardiaca, cosi il riquadro HRV puo essere concesso da li; salvare una voce di parametri vitali o di consapevolezza senza accesso in scrittura mostra ora il messaggio sul permesso invece di un errore grezzo.
+
+### Eesti
+
+- **Salvesta ilma koiki kirjutamisoigusi loovutamata.** Salvestamise kuva jai lukku, kuni OpenVitalsil oli iga Health Connecti kirjutamisoigus, isegi kui tahtsid vaid kaalu kirja panna. Nuud avaneb see mis tahes kirjutamisoigusega voi ilma selleta ja iga paan kusib Health Connectilt puudutamisel ainult oma oigusi. Keeldumine avab ikkagi vormi, mis pakub Luba uuesti, kui oled valmis.
+- **Parandused:** seadete kaart "Kasitsi sisestuse kirjutamisoigus" sisaldab nuud pulsi varieeruvust, nii et HRV paani saab sealt lubada; eluliste naitajate voi teadveloleku kirje salvestamine ilma kirjutamisoiguseta naitab nuud oiguse teadet toore vea asemel.
+
+### Portugues
+
+- **Registe sem ceder todas as permissoes de escrita.** O ecra Registar ficava bloqueado ate o OpenVitals ter todas as permissoes de escrita do Health Connect, mesmo que so quisesse anotar o peso. Agora abre com qualquer acesso de escrita ou nenhum, e cada mosaico pede ao Health Connect apenas as suas proprias permissoes quando lhe toca. Recusar abre na mesma o formulario, que volta a oferecer Conceder quando estiver pronto.
+- **Correcoes:** o cartao "Acesso de escrita para registo manual" nas Definicoes inclui agora a variabilidade da frequencia cardiaca, pelo que o mosaico HRV pode ser concedido a partir dai; guardar um registo de sinais vitais ou de atencao plena sem acesso de escrita mostra agora a mensagem de permissao em vez de um erro em bruto.
+
 ## 2.7.2 - 2026-09-02
 
 ### English
