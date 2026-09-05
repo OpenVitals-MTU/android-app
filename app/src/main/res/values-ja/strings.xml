@@ -1419,22 +1419,7 @@
 * 水分補給
 * 栄養</string>
     <string name="onboarding_category_manual_entry_write">手動記録の書き込みアクセス</string>
-    <string name="onboarding_category_manual_entry_write_desc">Health Connect が求める書き込みアクセス:
-* 運動
-* 距離
-* 累積上昇
-* 活動消費カロリー
-* 総消費カロリー
-* 運動ルート
-* 水分補給
-* 体重
-* 身長
-* 体脂肪
-* 血圧
-* 血中酸素飽和度
-* 呼吸数
-* 体温
-* マインドフルネス（対応時）</string>
+    <string name="onboarding_category_manual_entry_write_desc">Health Connect が求める書き込みアクセス: * 運動 * 距離 * 累積上昇 * 活動消費カロリー * 総消費カロリー * 運動ルート * 水分補給 * 体重 * 身長 * 体脂肪 * 血圧 * 血中酸素飽和度 * 呼吸数 * 体温 * マインドフルネス（対応時）</string>
     <string name="onboarding_category_data_import_write">データインポートの書き込みアクセス</string>
     <string name="onboarding_category_data_import_write_desc">Health Connect がインポート記録に求める書き込みアクセス:
 * アクティビティ、運動、カロリー、距離
