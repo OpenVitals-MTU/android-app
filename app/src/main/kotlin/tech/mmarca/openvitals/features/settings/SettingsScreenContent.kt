@@ -323,6 +323,14 @@ internal fun LazyListScope.settingsScreenContent(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
+            item { SettingsCardSpacer() }
+            item {
+                DerivedMetricsResetCard(
+                    isResetting = state.isResettingDerivedMetrics,
+                    onReset = actions.onResetDerivedMetrics,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
         SettingsSection.DATA_IMPORT -> {
             item { SectionHeader(stringResource(section.titleRes)) }

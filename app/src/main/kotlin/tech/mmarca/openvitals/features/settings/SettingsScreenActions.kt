@@ -29,4 +29,5 @@ internal data class SettingsScreenActions(
     val onGrantPermissions: (Set<String>) -> Unit,
     val onSaveBodyEnergyCalibration: (BodyEnergyCalibration, Int?) -> Unit,
     val onResetBodyEnergyPersonalTuning: () -> Unit,
+    val onResetDerivedMetrics: () -> Unit,
 )

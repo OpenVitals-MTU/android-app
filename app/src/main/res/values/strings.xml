@@ -2463,6 +2463,13 @@
     <string name="body_energy_calibration_skip">Skip for now</string>
     <string name="body_energy_calibration_saved">Body energy calibration saved</string>
     <string name="body_energy_calibration_reset">Body energy calibration reset to automatic</string>
+    <string name="settings_derived_metrics_reset_title">Start Body energy, Recovery and Expenditure over</string>
+    <string name="settings_derived_metrics_reset_body">Clears everything OpenVitals has worked out on its own for these metrics — the Body energy history and the tuning learned from your watch, the baselines and the expenditure cache — and rebuilds them from Health Connect, as a fresh install would. Your Health Connect data, body profile, heart zones and goals are kept.</string>
+    <string name="settings_derived_metrics_reset_action">Start over</string>
+    <string name="settings_derived_metrics_reset_confirm_title">Start these metrics over?</string>
+    <string name="settings_derived_metrics_reset_confirm_body">Body energy history, learned tuning, baselines and the expenditure cache will be deleted and recomputed from Health Connect. Nothing in Health Connect is changed. This cannot be undone.</string>
+    <string name="settings_derived_metrics_reset_done">Metrics reset. Recomputing from Health Connect in the background.</string>
+    <string name="settings_derived_metrics_reset_failed">Could not reset the metrics</string>
     <string name="body_energy_not_set_up">Not set up</string>
     <string name="body_energy_timeline_estimated">Estimated by OpenVitals</string>
     <string name="body_energy_timeline_current">Current</string>

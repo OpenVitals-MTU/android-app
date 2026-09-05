@@ -36,6 +36,7 @@ import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.sync.DerivedMetricsResetService
 import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
@@ -132,6 +133,7 @@ data class SettingsUiState(
     val healthConnectMindfulnessEnabled: Boolean = false,
     val appLockEnabled: Boolean = false,
     val bodyEnergyCalibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
+    val isResettingDerivedMetrics: Boolean = false,
     val caffeinePreferences: CaffeinePreferences = CaffeinePreferences(),
     val bodyProfile: BodyProfile = BodyProfile(),
     val bodyProfileWeightMeasured: Boolean = false,
@@ -202,6 +204,7 @@ class SettingsViewModel @Inject constructor(
     private val offlineMapImportWorkController: OfflineMapImportWorkController,
     private val permissionUxState: HealthConnectPermissionUxState,
     private val coMapsNavigationRepository: CoMapsNavigationRepository,
+    private val derivedMetricsResetService: DerivedMetricsResetService,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
@@ -1078,6 +1081,33 @@ class SettingsViewModel @Inject constructor(
                 watchObservationCount = 0,
             )
         )
+    }
+
+    /**
+     * Wipes every derived metric the app keeps outside Health Connect — the
+     * Body Energy chain and its learned tuning, the expenditure cache — and
+     * kicks their rebuild. [onComplete] fires once the wipe has landed, with
+     * whether it succeeded; the rebuild carries on in the background.
+     */
+    fun resetDerivedMetrics(onComplete: (Boolean) -> Unit) {
+        if (_uiState.value.isResettingDerivedMetrics) return
+        _uiState.value = _uiState.value.copy(isResettingDerivedMetrics = true)
+        viewModelScope.launch {
+            val succeeded = try {
+                derivedMetricsResetService.reset()
+                true
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
+            } catch (t: Throwable) {
+                Log.w(TAG, "Derived metrics reset failed", t)
+                false
+            }
+            _uiState.value = _uiState.value.copy(
+                isResettingDerivedMetrics = false,
+                bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
+            )
+            onComplete(succeeded)
+        }
     }
 
     fun acceptPrivacyPolicy() {

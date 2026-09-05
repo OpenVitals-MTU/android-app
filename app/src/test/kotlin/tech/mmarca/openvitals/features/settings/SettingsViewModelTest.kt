@@ -922,6 +922,7 @@ class SettingsViewModelTest {
             offlineMapImportWorkController = offlineMapImportWorkController,
             permissionUxState = permissionUxState,
             coMapsNavigationRepository = mockk(relaxed = true),
+            derivedMetricsResetService = mockk(relaxed = true),
         )
 
     private fun bodyRepo(): BodyRepository =

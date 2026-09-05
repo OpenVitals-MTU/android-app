@@ -59,11 +59,24 @@ open class BodyEnergyBaselineCacheStore @Inject constructor(
         }
     }
 
+    /**
+     * Drops every cached baseline — the "start over" reset. The legacy-purge
+     * flag survives: it records a cleanup that happened, not a cache state.
+     */
+    open fun clearBaselines() {
+        val cached = prefs.all.keys.filter { it.startsWith(BaselineKeyPrefix) }
+        if (cached.isEmpty()) return
+        prefs.edit {
+            cached.forEach { remove(it) }
+        }
+    }
+
     private fun baselineCacheKey(date: LocalDate, signature: String): String =
-        "baseline|$date|${signature.hashCode()}"
+        "$BaselineKeyPrefix$date|${signature.hashCode()}"
 
     private companion object {
         const val PrefsFile = "body_energy_timeline_cache"
+        const val BaselineKeyPrefix = "baseline|"
         const val PurgedFlagKey = "bodyEnergyPrefsTimelinePurged.v1"
         val LegacyTimelineKey = Regex("""^\d{4}-\d{2}-\d{2}\|-?\d+$""")
     }

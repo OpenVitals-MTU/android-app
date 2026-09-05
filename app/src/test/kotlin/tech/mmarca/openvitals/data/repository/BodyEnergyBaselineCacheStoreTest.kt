@@ -128,4 +128,31 @@ class BodyEnergyBaselineCacheStoreTest {
 
         assertEquals("written after the purge", prefs.getString("2026-07-07|-2", null))
     }
+
+    @Test fun `clearBaselines drops every baseline and keeps the rest of the file`() {
+        val (store, prefs) = newStore(
+            mapOf(
+                "baseline|2026-07-06|-1234567" to "54||42.5||1699999000000",
+                "baseline|2026-07-05|889900" to "55||41.0||1699998000000",
+                "bodyEnergyPrefsTimelinePurged.v1" to true,
+                "unit_system" to "metric",
+            ),
+        )
+
+        store.clearBaselines()
+
+        val keys = prefs.all.keys
+        assertFalse(keys.any { it.startsWith("baseline|") })
+        assertTrue(prefs.getBoolean("bodyEnergyPrefsTimelinePurged.v1", false))
+        assertEquals("metric", prefs.getString("unit_system", null))
+        assertNull(store.loadBaseline(LocalDate.of(2026, 7, 6), "perm|calib|v2"))
+    }
+
+    @Test fun `clearBaselines on an empty file is a no-op`() {
+        val (store, prefs) = newStore(mapOf("unit_system" to "metric"))
+
+        store.clearBaselines()
+
+        assertEquals(setOf("unit_system"), prefs.all.keys)
+    }
 }

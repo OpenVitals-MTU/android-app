@@ -63,6 +63,8 @@ fun SettingsScreen(
     val debugLogsShareFailed = stringResource(R.string.settings_debug_logs_share_failed)
     val bodyEnergyCalibrationSaved = stringResource(R.string.body_energy_calibration_saved)
     val bodyEnergyCalibrationReset = stringResource(R.string.body_energy_calibration_reset)
+    val derivedMetricsResetDone = stringResource(R.string.settings_derived_metrics_reset_done)
+    val derivedMetricsResetFailed = stringResource(R.string.settings_derived_metrics_reset_failed)
     val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
     val discussionUrl = stringResource(R.string.settings_support_discussion_url)
     val supportUrl = stringResource(R.string.settings_support_url)
@@ -277,6 +279,12 @@ fun SettingsScreen(
         onResetBodyEnergyPersonalTuning = {
             viewModel.resetBodyEnergyPersonalTuning()
             Toast.makeText(context, bodyEnergyCalibrationReset, Toast.LENGTH_SHORT).show()
+        },
+        onResetDerivedMetrics = {
+            viewModel.resetDerivedMetrics { succeeded ->
+                val message = if (succeeded) derivedMetricsResetDone else derivedMetricsResetFailed
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
         },
     )
 
