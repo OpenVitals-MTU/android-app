@@ -124,11 +124,11 @@ fun MetricDetailScaffold(
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 headerItems()
-                if (syncPaused || (isLoading && !pullRefreshRequested)) {
+                if (syncPaused) {
                     item {
                         HealthConnectSyncStatusBanner(
                             syncPaused = syncPaused,
-                            syncInProgress = isLoading && !syncPaused,
+                            syncInProgress = false,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
                     }
