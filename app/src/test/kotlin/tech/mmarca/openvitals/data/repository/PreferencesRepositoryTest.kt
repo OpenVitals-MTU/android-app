@@ -644,11 +644,7 @@ class PreferencesRepositoryTest {
 
     @Test fun `acknowledged permissions union`() {
         val (repo, _) = newRepo()
-        assertTrue(repo.acknowledgedPermissions().isEmpty())
-        repo.acknowledgePermissions(setOf("READ_STEPS"))
-        repo.acknowledgePermissions(setOf("READ_STEPS", "READ_SLEEP"))
-        assertEquals(setOf("READ_STEPS", "READ_SLEEP"), repo.acknowledgedPermissions())
-
+        assertTrue(repo.acknowledgedPermissionsFor(HealthConnectFeature.ACTIVITY).isEmpty())
         repo.acknowledgePermissionsFor(HealthConnectFeature.ACTIVITY, setOf("READ_STEPS"))
         assertEquals(
             setOf("READ_STEPS"),

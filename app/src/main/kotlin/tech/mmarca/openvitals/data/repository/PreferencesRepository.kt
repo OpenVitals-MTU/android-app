@@ -870,15 +870,6 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    fun acknowledgedPermissions(): Set<String> =
-        prefs.getStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, emptySet()) ?: emptySet()
-
-    fun acknowledgePermissions(permissions: Set<String>) {
-        prefs.edit {
-            putStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, acknowledgedPermissions() + permissions)
-        }
-    }
-
     fun acknowledgedPermissionsFor(feature: HealthConnectFeature): Set<String> =
         prefs.getStringSet(acknowledgedFeatureKey(feature), emptySet()) ?: emptySet()
 
@@ -1249,7 +1240,6 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
         private const val KEY_MINDFULNESS_OPT_IN = "mindfulness_opt_in"
         private const val KEY_HEALTH_CONNECT_MINDFULNESS_ENABLED = "health_connect_mindfulness_enabled"
-        private const val KEY_ACKNOWLEDGED_PERMISSIONS = "acknowledged_permissions"
         private const val KEY_ACKNOWLEDGED_FEATURE_PREFIX = "acknowledged_feature_permissions_"
         private const val KEY_LAST_PROMPTED_PERMISSION_SET_VERSION = "last_prompted_permission_set_version"
         private const val KEY_UNIT_SYSTEM = "unit_system"

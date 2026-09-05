@@ -133,6 +133,53 @@ fun ManualEntryScreen(
         }
     }
 
+    // A tile whose write set is missing asks Health Connect for exactly that
+    // set. The trigger is cleared before launching so a configuration change
+    // while the system dialog is up does not launch it a second time; the
+    // result callback opens the entry form either way.
+    LaunchedEffect(state.pendingHydrationWritePermissionRequest) {
+        if (state.pendingHydrationWritePermissionRequest) {
+            viewModel.onHydrationWritePermissionRequestLaunched()
+            requestWritePermissions.launch(state.hydrationWritePermissions)
+        }
+    }
+    LaunchedEffect(state.pendingCarbsWritePermissionRequest) {
+        if (state.pendingCarbsWritePermissionRequest) {
+            viewModel.onCarbsWritePermissionRequestLaunched()
+            requestNutritionWritePermissions.launch(state.nutritionWritePermissions)
+        }
+    }
+    LaunchedEffect(state.pendingActivityWritePermissionRequest) {
+        if (state.pendingActivityWritePermissionRequest) {
+            viewModel.onActivityWritePermissionRequestLaunched()
+            requestActivityWritePermissions.launch(state.activityWritePermissions)
+        }
+    }
+    LaunchedEffect(state.pendingMindfulnessWritePermissionRequest) {
+        if (state.pendingMindfulnessWritePermissionRequest) {
+            viewModel.onMindfulnessWritePermissionRequestLaunched()
+            requestMindfulnessWritePermissions.launch(state.mindfulnessWritePermissions)
+        }
+    }
+    LaunchedEffect(state.pendingCycleWritePermissionRequest) {
+        if (state.pendingCycleWritePermissionRequest) {
+            viewModel.onCycleWritePermissionRequestLaunched()
+            requestCycleWritePermissions.launch(state.cycleWritePermissions)
+        }
+    }
+    LaunchedEffect(state.pendingBodyWritePermissionRequest) {
+        if (state.pendingBodyWritePermissionRequest != null) {
+            viewModel.onBodyWritePermissionRequestLaunched()
+            requestBodyWritePermissions.launch(state.bodyWritePermissions)
+        }
+    }
+    LaunchedEffect(state.pendingVitalsWritePermissionRequest) {
+        if (state.pendingVitalsWritePermissionRequest != null) {
+            viewModel.onVitalsWritePermissionRequestLaunched()
+            requestVitalsWritePermissions.launch(state.vitalsWritePermissions)
+        }
+    }
+
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         item {
             ManualEntryWidgetGrid(
@@ -150,88 +197,5 @@ fun ManualEntryScreen(
             )
         }
         item { Spacer(Modifier.height(16.dp)) }
-    }
-
-    if (state.showHydrationWritePermissionPrompt) {
-        HydrationWritePermissionPrompt(
-            onDismiss = viewModel::dismissHydrationWritePermissionPrompt,
-            onOpenEntry = viewModel::continueHydrationEntryFromWritePermissionPrompt,
-            onGrant = {
-                viewModel.grantHydrationWritePermissionFromPrompt()
-                requestWritePermissions.launch(state.hydrationWritePermissions)
-            },
-        )
-    }
-
-    if (state.showActivityWritePermissionPrompt) {
-        ActivityWritePermissionPrompt(
-            onDismiss = viewModel::dismissActivityWritePermissionPrompt,
-            onOpenEntry = viewModel::continueActivityEntryFromWritePermissionPrompt,
-            onGrant = {
-                viewModel.grantActivityWritePermissionFromPrompt()
-                requestActivityWritePermissions.launch(state.activityWritePermissions)
-            },
-        )
-    }
-
-    if (state.showNutritionWritePermissionPrompt) {
-        NutritionWritePermissionPrompt(
-            onDismiss = viewModel::dismissNutritionWritePermissionPrompt,
-            onOpenEntry = viewModel::continueCarbsEntryFromWritePermissionPrompt,
-            onGrant = {
-                viewModel.grantNutritionWritePermissionFromPrompt()
-                requestNutritionWritePermissions.launch(state.nutritionWritePermissions)
-            },
-        )
-    }
-
-    if (state.showBodyWritePermissionPrompt) {
-        state.bodyWritePermissionPromptType?.let { type ->
-            BodyWritePermissionPrompt(
-                type = type,
-                onDismiss = viewModel::dismissBodyWritePermissionPrompt,
-                onOpenEntry = viewModel::continueBodyEntryFromWritePermissionPrompt,
-                onGrant = {
-                    viewModel.grantBodyWritePermissionFromPrompt()
-                    requestBodyWritePermissions.launch(state.bodyWritePermissions)
-                },
-            )
-        }
-    }
-
-    if (state.showVitalsWritePermissionPrompt) {
-        state.vitalsWritePermissionPromptType?.let { type ->
-            VitalsWritePermissionPrompt(
-                type = type,
-                onDismiss = viewModel::dismissVitalsWritePermissionPrompt,
-                onOpenEntry = viewModel::continueVitalsEntryFromWritePermissionPrompt,
-                onGrant = {
-                    viewModel.grantVitalsWritePermissionFromPrompt()
-                    requestVitalsWritePermissions.launch(state.vitalsWritePermissions)
-                },
-            )
-        }
-    }
-
-    if (state.showMindfulnessWritePermissionPrompt) {
-        MindfulnessWritePermissionPrompt(
-            onDismiss = viewModel::dismissMindfulnessWritePermissionPrompt,
-            onOpenEntry = viewModel::continueMindfulnessEntryFromWritePermissionPrompt,
-            onGrant = {
-                viewModel.grantMindfulnessWritePermissionFromPrompt()
-                requestMindfulnessWritePermissions.launch(state.mindfulnessWritePermissions)
-            },
-        )
-    }
-
-    if (state.showCycleWritePermissionPrompt) {
-        CycleWritePermissionPrompt(
-            onDismiss = viewModel::dismissCycleWritePermissionPrompt,
-            onOpenEntry = viewModel::continueCycleEntryFromWritePermissionPrompt,
-            onGrant = {
-                viewModel.grantCycleWritePermissionFromPrompt()
-                requestCycleWritePermissions.launch(state.cycleWritePermissions)
-            },
-        )
     }
 }

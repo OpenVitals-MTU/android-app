@@ -34,7 +34,7 @@ fun buildHealthConnectScreenUxState(
     val missing = required - grantedPermissions
     val gateRequired = when {
         feature == HealthConnectFeature.DASHBOARD -> emptySet()
-        feature == HealthConnectFeature.MANUAL_ENTRY || feature == HealthConnectFeature.DATA_IMPORT -> required
+        feature == HealthConnectFeature.DATA_IMPORT -> required
         else -> emptySet()
     }
     val accessGateMode = resolveHealthConnectAccessGateMode(

@@ -156,6 +156,67 @@ class HealthConnectFeatureTest {
         assertEquals(setOf(sleepPermission), state.missingReadPermissions)
     }
 
+    // The log grid no longer gates on the write set: each tile asks for its
+    // own writes on tap, so the feature declares no required permissions even
+    // when the manager has plenty of requestable writes.
+    @Test
+    fun `manual entry requires no permissions to open`() {
+        val manager = manager().also {
+            every { it.requestableWritePermissions } returns setOf("write-a", "write-b")
+        }
+        assertEquals(emptySet<String>(), HealthConnectFeature.MANUAL_ENTRY.requiredReadPermissions(manager))
+    }
+
+    @Test
+    fun `manual entry with no write permission shows the grid ungated`() {
+        val manager = manager().also {
+            every { it.requestableWritePermissions } returns setOf("write-a", "write-b")
+        }
+        val state = buildHealthConnectScreenUxState(
+            feature = HealthConnectFeature.MANUAL_ENTRY,
+            manager = manager,
+            availability = HealthConnectAvailability.AVAILABLE,
+            syncEnabled = true,
+            grantedPermissions = emptySet(),
+            showDoubleCancelRecovery = false,
+        )
+        assertNull(state.accessGateMode)
+        assertFalse(state.showContextualPermissionPrompt)
+        assertTrue(state.missingReadPermissions.isEmpty())
+    }
+
+    @Test
+    fun `manual entry still pauses with sync`() {
+        val state = buildHealthConnectScreenUxState(
+            feature = HealthConnectFeature.MANUAL_ENTRY,
+            manager = manager(),
+            availability = HealthConnectAvailability.AVAILABLE,
+            syncEnabled = false,
+            grantedPermissions = emptySet(),
+            showDoubleCancelRecovery = false,
+        )
+        assertEquals(HealthConnectAccessGateMode.SYNC_PAUSED, state.accessGateMode)
+    }
+
+    // The importer keeps its all-or-nothing gate: which writes it needs is
+    // known up front, unlike the log grid.
+    @Test
+    fun `data import still gates on its write set`() {
+        val manager = manager().also {
+            every { it.dataImportWritePermissions } returns setOf("import-w")
+        }
+        val state = buildHealthConnectScreenUxState(
+            feature = HealthConnectFeature.DATA_IMPORT,
+            manager = manager,
+            availability = HealthConnectAvailability.AVAILABLE,
+            syncEnabled = true,
+            grantedPermissions = emptySet(),
+            showDoubleCancelRecovery = false,
+        )
+        assertEquals(HealthConnectAccessGateMode.INSUFFICIENT_ACCESS, state.accessGateMode)
+        assertFalse(state.showContextualPermissionPrompt)
+    }
+
     @Test
     fun buildStateShowsAccessGateWhenSyncPaused() {
         val state = buildHealthConnectScreenUxState(

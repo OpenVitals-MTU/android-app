@@ -36,7 +36,6 @@ import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.SelfImprovement
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -67,9 +66,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.titleRes
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCardStyle
-import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
-import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.CycleColor
@@ -80,171 +77,6 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 internal const val ManualEntryGridColumns = 3
 internal const val ManualEntryEditWiggleDegrees = 0.45f
 internal val ManualEntryTileIconSize = 34.dp
-
-@Composable
-internal fun HydrationWritePermissionPrompt(
-    onDismiss: () -> Unit,
-    onOpenEntry: () -> Unit,
-    onGrant: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.manual_entry_write_permission_title)) },
-        text = { Text(stringResource(R.string.hydration_tracker_permission_needed)) },
-        confirmButton = {
-            OpenVitalsButton(onClick = onGrant) {
-                Text(stringResource(R.string.action_grant))
-            }
-        },
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onOpenEntry) {
-                Text(stringResource(R.string.action_open))
-            }
-        },
-    )
-}
-
-@Composable
-internal fun MindfulnessWritePermissionPrompt(
-    onDismiss: () -> Unit,
-    onOpenEntry: () -> Unit,
-    onGrant: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.manual_entry_mindfulness_write_permission_title)) },
-        text = { Text(stringResource(R.string.mindfulness_entry_permission_needed)) },
-        confirmButton = {
-            OpenVitalsButton(onClick = onGrant) {
-                Text(stringResource(R.string.action_grant))
-            }
-        },
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onOpenEntry) {
-                Text(stringResource(R.string.action_open))
-            }
-        },
-    )
-}
-
-@Composable
-internal fun CycleWritePermissionPrompt(
-    onDismiss: () -> Unit,
-    onOpenEntry: () -> Unit,
-    onGrant: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.manual_entry_cycle_write_permission_title)) },
-        text = { Text(stringResource(R.string.cycle_entry_permission_needed)) },
-        confirmButton = {
-            OpenVitalsButton(onClick = onGrant) {
-                Text(stringResource(R.string.action_grant))
-            }
-        },
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onOpenEntry) {
-                Text(stringResource(R.string.action_open))
-            }
-        },
-    )
-}
-
-@Composable
-internal fun ActivityWritePermissionPrompt(
-    onDismiss: () -> Unit,
-    onOpenEntry: () -> Unit,
-    onGrant: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.manual_entry_activity_write_permission_title)) },
-        text = { Text(stringResource(R.string.activity_entry_permission_needed)) },
-        confirmButton = {
-            OpenVitalsButton(onClick = onGrant) {
-                Text(stringResource(R.string.action_grant))
-            }
-        },
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onOpenEntry) {
-                Text(stringResource(R.string.action_open))
-            }
-        },
-    )
-}
-
-@Composable
-internal fun NutritionWritePermissionPrompt(
-    onDismiss: () -> Unit,
-    onOpenEntry: () -> Unit,
-    onGrant: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.manual_entry_carbs_write_permission_title)) },
-        text = { Text(stringResource(R.string.carbs_entry_permission_needed)) },
-        confirmButton = {
-            OpenVitalsButton(onClick = onGrant) {
-                Text(stringResource(R.string.action_grant))
-            }
-        },
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onOpenEntry) {
-                Text(stringResource(R.string.action_open))
-            }
-        },
-    )
-}
-
-@Composable
-internal fun BodyWritePermissionPrompt(
-    type: BodyMeasurementType,
-    onDismiss: () -> Unit,
-    onOpenEntry: () -> Unit,
-    onGrant: () -> Unit,
-) {
-    val title = stringResource(type.titleRes())
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.manual_entry_body_write_permission_title, title)) },
-        text = { Text(stringResource(R.string.body_entry_permission_needed, title)) },
-        confirmButton = {
-            OpenVitalsButton(onClick = onGrant) {
-                Text(stringResource(R.string.action_grant))
-            }
-        },
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onOpenEntry) {
-                Text(stringResource(R.string.action_open))
-            }
-        },
-    )
-}
-
-@Composable
-internal fun VitalsWritePermissionPrompt(
-    type: VitalsMeasurementType,
-    onDismiss: () -> Unit,
-    onOpenEntry: () -> Unit,
-    onGrant: () -> Unit,
-) {
-    val title = stringResource(type.titleRes())
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.manual_entry_vitals_write_permission_title, title)) },
-        text = { Text(stringResource(R.string.vitals_entry_permission_needed, title)) },
-        confirmButton = {
-            OpenVitalsButton(onClick = onGrant) {
-                Text(stringResource(R.string.action_grant))
-            }
-        },
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onOpenEntry) {
-                Text(stringResource(R.string.action_open))
-            }
-        },
-    )
-}
 
 @Composable
 internal fun ManualEntryWidgetGrid(
