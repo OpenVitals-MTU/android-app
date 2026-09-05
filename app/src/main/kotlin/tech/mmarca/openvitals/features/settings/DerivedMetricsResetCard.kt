@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
  * The "start over" card for the metrics OpenVitals derives itself — Body
@@ -33,6 +34,12 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
  * four months of Body energy history with it, so unlike the tuning reset next
  * to it this one confirms first.
  */
+/** Nudges the leading icon down to sit on the title's cap height. */
+private val LeadingIconOpticalOffset = 2.dp
+private val LeadingIconSize = 20.dp
+private val ProgressIndicatorSize = 18.dp
+private val ProgressStrokeWidth = 2.dp
+
 @Composable
 internal fun DerivedMetricsResetCard(
     isResetting: Boolean,
@@ -42,19 +49,19 @@ internal fun DerivedMetricsResetCard(
     var confirming by rememberSaveable { mutableStateOf(false) }
 
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
             Row(verticalAlignment = Alignment.Top) {
                 Icon(
                     imageVector = Icons.Outlined.RestartAlt,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
-                        .padding(top = 2.dp)
-                        .size(20.dp),
+                        .padding(top = LeadingIconOpticalOffset)
+                        .size(LeadingIconSize),
                 )
                 Column(
                     modifier = Modifier
-                        .padding(start = 12.dp)
+                        .padding(start = Spacing.md)
                         .weight(1f),
                 ) {
                     Text(
@@ -65,7 +72,7 @@ internal fun DerivedMetricsResetCard(
                         text = stringResource(R.string.settings_derived_metrics_reset_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier.padding(top = Spacing.xs),
                     )
                 }
             }
@@ -77,12 +84,12 @@ internal fun DerivedMetricsResetCard(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp),
+                    .padding(top = Spacing.md),
             ) {
                 if (isResetting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(ProgressIndicatorSize),
+                        strokeWidth = ProgressStrokeWidth,
                     )
                 } else {
                     Text(stringResource(R.string.settings_derived_metrics_reset_action))

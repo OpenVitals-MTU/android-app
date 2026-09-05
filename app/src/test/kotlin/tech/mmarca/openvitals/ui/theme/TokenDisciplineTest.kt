@@ -117,7 +117,8 @@ class TokenDisciplineTest {
         // Ceilings, measured 2026-08-04 with named definitions excluded (they
         // are the sanctioned form, so counting them would punish following the
         // rule). These may only ever go DOWN.
-        const val MaxBareDp = 1940
+        // 2026-09-05: DerivedMetricsResetCard migrated (1941 -> 1933).
+        const val MaxBareDp = 1933
         const val MaxBareAlpha = 92
         const val MaxBareCorner = 16
     }
