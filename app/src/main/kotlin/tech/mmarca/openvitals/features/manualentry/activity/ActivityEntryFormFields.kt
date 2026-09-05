@@ -53,11 +53,13 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
 import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
+import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 @Composable
@@ -65,41 +67,38 @@ internal fun ActivityEntryHeader(
     state: ActivityEntryUiState,
     onRequestWritePermission: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.DirectionsRun,
-            contentDescription = null,
-            tint = WorkoutColor,
-            modifier = Modifier.size(22.dp),
-        )
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 12.dp)
-                .weight(1f),
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(R.string.manual_entry_activity_title),
-                style = MaterialTheme.typography.titleSmall,
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.DirectionsRun,
+                contentDescription = null,
+                tint = WorkoutColor,
+                modifier = Modifier.size(22.dp),
             )
-            Text(
-                text = stringResource(
-                    if (state.canWrite) {
-                        R.string.activity_entry_subtitle
-                    } else {
-                        R.string.activity_entry_permission_needed
-                    }
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .weight(1f),
+            ) {
+                Text(
+                    text = stringResource(R.string.manual_entry_activity_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(R.string.activity_entry_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         if (!state.canWrite && !state.isCheckingPermission) {
-            OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
-                Text(stringResource(R.string.action_grant))
-            }
+            ManualEntryWritePermissionCallout(
+                body = stringResource(R.string.activity_entry_permission_needed),
+                onGrant = onRequestWritePermission,
+            )
         }
     }
 }

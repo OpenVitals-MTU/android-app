@@ -30,13 +30,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
-import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 
 private const val GramsPerOunce = 28.349523125
@@ -121,22 +121,18 @@ private fun CarbsEntryCard(
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringResource(
-                            if (state.canWrite) {
-                                R.string.carbs_entry_subtitle
-                            } else {
-                                R.string.carbs_entry_permission_needed
-                            }
-                        ),
+                        text = stringResource(R.string.carbs_entry_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (!state.canWrite && !state.isCheckingPermission) {
-                    OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
-                        Text(stringResource(R.string.action_grant))
-                    }
-                }
+            }
+
+            if (!state.canWrite && !state.isCheckingPermission) {
+                ManualEntryWritePermissionCallout(
+                    body = stringResource(R.string.carbs_entry_permission_needed),
+                    onGrant = onRequestWritePermission,
+                )
             }
 
             OutlinedTextField(

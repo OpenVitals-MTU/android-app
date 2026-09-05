@@ -54,7 +54,6 @@ class MindfulnessEntryContentTest {
                         onNotesChanged = {},
                         onEntryStartTimeChanged = {},
                         onAddEntry = {},
-                        onRequestWritePermission = {},
                     )
                 }
             }

@@ -63,6 +63,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
@@ -73,7 +74,6 @@ import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OptionDropdown
-import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 
 private const val FahrenheitFreezingPoint = 32.0
@@ -188,23 +188,18 @@ private fun VitalsMeasurementEntryCard(
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringResource(
-                            if (state.canWrite) {
-                                R.string.vitals_entry_subtitle
-                            } else {
-                                R.string.vitals_entry_permission_needed
-                            },
-                            title,
-                        ),
+                        text = stringResource(R.string.vitals_entry_subtitle, title),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (!state.canWrite && !state.isCheckingPermission) {
-                    OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
-                        Text(stringResource(R.string.action_grant))
-                    }
-                }
+            }
+
+            if (!state.canWrite && !state.isCheckingPermission) {
+                ManualEntryWritePermissionCallout(
+                    body = stringResource(R.string.vitals_entry_permission_needed, title),
+                    onGrant = onRequestWritePermission,
+                )
             }
 
             if (state.type == VitalsMeasurementType.BLOOD_PRESSURE) {

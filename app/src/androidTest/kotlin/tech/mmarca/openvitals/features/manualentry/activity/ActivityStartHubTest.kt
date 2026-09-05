@@ -7,6 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import java.time.Instant
@@ -71,7 +73,9 @@ class ActivityStartHubTest {
             onRequestWritePermission = { grants++ },
         )
 
-        composeRule.onNodeWithText(string(R.string.action_grant)).performClick()
+        // The header's write-permission callout and the plans error both offer
+        // a grant; the header's comes first in the tree.
+        composeRule.onAllNodesWithText(string(R.string.action_grant_permission)).onFirst().performClick()
         assertEquals(1, grants)
     }
 

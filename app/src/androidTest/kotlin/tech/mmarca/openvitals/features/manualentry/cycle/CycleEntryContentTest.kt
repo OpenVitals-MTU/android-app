@@ -160,7 +160,7 @@ class CycleEntryContentTest {
 
         composeRule.onNodeWithText(string(R.string.cycle_entry_permission_needed))
             .assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.action_grant))
+        composeRule.onNodeWithText(string(R.string.action_grant_permission))
             .assertIsDisplayed()
     }
 

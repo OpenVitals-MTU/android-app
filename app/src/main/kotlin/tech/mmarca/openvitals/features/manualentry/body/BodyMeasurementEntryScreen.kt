@@ -48,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
@@ -55,7 +56,6 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
-import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 
@@ -155,23 +155,18 @@ private fun BodyMeasurementEntryCard(
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringResource(
-                            if (state.canWrite) {
-                                R.string.body_entry_subtitle
-                            } else {
-                                R.string.body_entry_permission_needed
-                            },
-                            title,
-                        ),
+                        text = stringResource(R.string.body_entry_subtitle, title),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (!state.canWrite && !state.isCheckingPermission) {
-                    OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
-                        Text(stringResource(R.string.action_grant))
-                    }
-                }
+            }
+
+            if (!state.canWrite && !state.isCheckingPermission) {
+                ManualEntryWritePermissionCallout(
+                    body = stringResource(R.string.body_entry_permission_needed, title),
+                    onGrant = onRequestWritePermission,
+                )
             }
 
             OutlinedTextField(

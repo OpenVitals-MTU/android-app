@@ -57,6 +57,7 @@ import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.model.MindfulnessBackgroundSound
@@ -69,6 +70,7 @@ import tech.mmarca.openvitals.ui.theme.loopingMotionAllowed
 import tech.mmarca.openvitals.ui.theme.animationDuration
 import tech.mmarca.openvitals.ui.theme.Motion
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 @Composable
 internal fun MindfulnessTimerCard(
@@ -155,41 +157,44 @@ internal fun MindfulnessEntryHeader(
     state: MindfulnessEntryUiState,
     onRequestWritePermission: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.SelfImprovement,
-            contentDescription = null,
-            tint = MindfulnessColor,
-            modifier = Modifier.size(22.dp),
-        )
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 12.dp)
-                .weight(1f),
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(R.string.mindfulness_entry_timer_title),
-                style = MaterialTheme.typography.titleSmall,
+            Icon(
+                imageVector = Icons.Outlined.SelfImprovement,
+                contentDescription = null,
+                tint = MindfulnessColor,
+                modifier = Modifier.size(22.dp),
             )
-            Text(
-                text = stringResource(
-                    when {
-                        !state.mindfulnessAvailable -> R.string.mindfulness_entry_unavailable
-                        state.canWrite -> R.string.mindfulness_entry_subtitle
-                        else -> R.string.mindfulness_entry_permission_needed
-                    }
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .weight(1f),
+            ) {
+                Text(
+                    text = stringResource(R.string.mindfulness_entry_timer_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(
+                        if (state.mindfulnessAvailable) {
+                            R.string.mindfulness_entry_subtitle
+                        } else {
+                            R.string.mindfulness_entry_unavailable
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         if (!state.canWrite && state.mindfulnessAvailable && !state.isCheckingPermission) {
-            OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
-                Text(stringResource(R.string.action_grant))
-            }
+            ManualEntryWritePermissionCallout(
+                body = stringResource(R.string.mindfulness_entry_permission_needed),
+                onGrant = onRequestWritePermission,
+            )
         }
     }
 }
@@ -541,7 +546,6 @@ internal fun MindfulnessManualEntryCard(
     onNotesChanged: (String) -> Unit,
     onEntryStartTimeChanged: (java.time.Instant) -> Unit,
     onAddEntry: () -> Unit,
-    onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
@@ -557,14 +561,6 @@ internal fun MindfulnessManualEntryCard(
                 text = stringResource(R.string.mindfulness_entry_manual_title),
                 style = MaterialTheme.typography.titleSmall,
             )
-            if (!state.canWrite && state.mindfulnessAvailable && !state.isCheckingPermission) {
-                OpenVitalsOutlinedButton(
-                    onClick = onRequestWritePermission,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.action_grant))
-                }
-            }
             OutlinedTextField(
                 value = state.manualMinutesText,
                 onValueChange = onMinutesChanged,

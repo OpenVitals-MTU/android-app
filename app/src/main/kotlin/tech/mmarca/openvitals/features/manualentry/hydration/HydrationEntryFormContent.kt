@@ -100,6 +100,7 @@ import tech.mmarca.openvitals.ui.theme.animationDuration
 import tech.mmarca.openvitals.ui.theme.Motion
 import tech.mmarca.openvitals.ui.theme.loopingMotionAllowed
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.resolve
@@ -296,26 +297,24 @@ internal fun HydrationTrackerCard(
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        text = stringResource(
-                            if (state.canWriteHydration) {
-                                if (state.canWriteNutrition) {
-                                    R.string.hydration_tracker_subtitle
-                                } else {
-                                    R.string.hydration_nutrition_permission_needed
-                                }
-                            } else {
-                                R.string.hydration_tracker_permission_needed
-                            }
-                        ),
+                        text = stringResource(R.string.hydration_tracker_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if ((!state.canWriteHydration || !state.canWriteNutrition) && !state.isCheckingPermission) {
-                    OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
-                        Text(stringResource(R.string.action_grant))
-                    }
-                }
+            }
+
+            if ((!state.canWriteHydration || !state.canWriteNutrition) && !state.isCheckingPermission) {
+                ManualEntryWritePermissionCallout(
+                    body = stringResource(
+                        if (state.canWriteHydration) {
+                            R.string.hydration_nutrition_permission_needed
+                        } else {
+                            R.string.hydration_tracker_permission_needed
+                        }
+                    ),
+                    onGrant = onRequestWritePermission,
+                )
             }
 
             HydrationTodayCounter(

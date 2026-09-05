@@ -75,9 +75,6 @@ fun MindfulnessEntryScreen(
                 onNotesChanged = viewModel::updateNotes,
                 onEntryStartTimeChanged = viewModel::updateEntryStartTime,
                 onAddEntry = viewModel::addManualEntry,
-                onRequestWritePermission = {
-                    requestWritePermissions.launch(state.writePermissions)
-                },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }

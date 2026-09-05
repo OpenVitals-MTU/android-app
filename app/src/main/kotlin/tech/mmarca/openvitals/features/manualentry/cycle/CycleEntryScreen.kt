@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
@@ -53,7 +54,6 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
-import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.CycleColor
 
 @Composable
@@ -160,22 +160,18 @@ internal fun CycleEntryCard(
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringResource(
-                            if (anyGranted) {
-                                R.string.cycle_entry_subtitle
-                            } else {
-                                R.string.cycle_entry_permission_needed
-                            }
-                        ),
+                        text = stringResource(R.string.cycle_entry_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (!anyGranted && !state.isCheckingPermission) {
-                    OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
-                        Text(stringResource(R.string.action_grant))
-                    }
-                }
+            }
+
+            if (!anyGranted && !state.isCheckingPermission) {
+                ManualEntryWritePermissionCallout(
+                    body = stringResource(R.string.cycle_entry_permission_needed),
+                    onGrant = onRequestWritePermission,
+                )
             }
 
             if (state.isEditMode) {
