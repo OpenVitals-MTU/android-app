@@ -125,4 +125,8 @@
     <string name="manual_entry_date_label">Data wpisu</string>
     <string name="manual_entry_time_label">Czas wpisu</string>
     <string name="manual_entry_select_time">Wybierz czas wpisu</string>
+    <string name="cd_edit_manual_entry_widgets">Edytuj widżety dodawania wpisów</string>
+    <string name="cd_finish_manual_entry_editing">Zakońc edytowanie widżetów dodawania wpisów</string>
+    <string name="cd_edit_metric_sections">Edytuj sekcję metryk</string>
+    <string name="cd_finish_metric_section_editing">Zakończ edytowanie sekcji metryk</string>
 </resources>
