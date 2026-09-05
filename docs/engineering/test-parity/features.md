@@ -520,17 +520,18 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/watches/
 | the open-link registry belongs to the container, not the library | N/A-FRAMEWORK | — | Riverpod container-scoping; Kotlin uses DI scoping, link lifecycle covered by WatchSettingsLinksTest.kt |
 
 ## test/features/settings/fit_import_view_model_test.dart
-Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings/SettingsViewModelTest.kt (bulk route import block; Kotlin replaced the SAF folder-walk with an OpenMultipleDocuments picker)
+Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings/FitFolderImportTest.kt (the SAF folder walk lives in `RouteFolderScanner`, mocked at the seam; `SettingsViewModel.importFitFolder` drives it)
 
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| imports every FIT file the folder held | DIVERGED | SettingsViewModelTest.kt: `bulk route import writes all selected files in one batched call` | multi-select batch instead of folder pick; extension filter unasserted |
-| opens the files one at a time, not the whole folder at once | N/A-FRAMEWORK | — | folder-source seam does not exist in Kotlin; per-Uri reads by design |
-| a cancelled pick leaves the card exactly as it was | N/A-FRAMEWORK | — | picker cancellation handled by Android activity-result, never reaches the VM |
-| a folder with no FIT files says so, and is not an error | N/A-FRAMEWORK | — | folder-scan concept absent in Kotlin |
-| a folder too big to list says how much of it was taken | N/A-FRAMEWORK | — | listing truncation is folder-walk specific |
-| one unreadable file fails that file, not the folder | DIVERGED | SettingsViewModelTest.kt: `a failed batch retries file by file so only the guilty file fails` | same per-file isolation principle, different mechanism |
-| a failed scan surfaces, and imports nothing | DIVERGED | SettingsViewModelTest.kt: `a rate-limited batch stops the run without blaming the files` | error surfaces with nothing imported; trigger differs (no scan phase in Kotlin) |
+| imports every FIT file the folder held | PORTED | FitFolderImportTest.kt: `imports every FIT file the folder held` | also asserts the run is tagged `FIT_FOLDER` so the FIT card, not the route card, shows it |
+| opens the files one at a time, not the whole folder at once | PORTED | FitFolderImportTest.kt: `opens the files one at a time, not the whole folder at once` | scan returns URIs only; importer opens each in scan order |
+| a cancelled pick leaves the card exactly as it was | N/A-FRAMEWORK | — | picker cancellation handled by Android activity-result (`OpenDocumentTree` returns null), never reaches the VM |
+| a folder with no FIT files says so, and is not an error | PORTED | FitFolderImportTest.kt: `a folder with no FIT files says so, and is not an error` | `fitFolderHadNoFitFiles`, importer never called |
+| a folder too big to list says how much of it was taken | PORTED | FitFolderImportTest.kt: `a folder too big to list says how much of it was taken` | `fitFolderTruncatedAt` = listed count |
+| one unreadable file fails that file, not the folder | PORTED | FitFolderImportTest.kt: `one unreadable file fails that file, not the folder` | scan error stays null; failure lands on the bulk-import surface |
+| a failed scan surfaces, and imports nothing | PORTED | FitFolderImportTest.kt: `a failed scan surfaces, and imports nothing` | `fitFolderScanError`, importer never called |
+| — | KOTLIN-ONLY | FitFolderImportTest.kt: `a second pick while scanning is ignored`, `a fresh pick clears the outcome of the previous one` | busy guard shared with the route bulk import; outcome lines reset per pick |
 
 ## test/features/settings/garmin_body_energy_invalidation_test.dart
 Kotlin counterpart: none (no garminEarliestAffectedDay equivalent; Kotlin instead revisits unsettled days — BodyEnergyChainSyncServiceTest.kt: `a forced pass bypasses the throttle, so a watch sync is acted on at once`, `a later pass skips settled days and revisits only unsettled ones`)

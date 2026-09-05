@@ -918,6 +918,7 @@ class SettingsViewModelTest {
             appleHealthImportWorkController = appleHealthImportWorkController,
             routeFileImporter = routeFileImporter,
             fitHrvImportService = fitHrvImportService,
+            routeFolderScanner = mockk(relaxed = true),
             offlineMapRepository = offlineMapRepository,
             offlineMapImportWorkController = offlineMapImportWorkController,
             permissionUxState = permissionUxState,

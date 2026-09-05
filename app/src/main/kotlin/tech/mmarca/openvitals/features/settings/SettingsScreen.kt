@@ -139,6 +139,17 @@ fun SettingsScreen(
         }
     }
 
+    // A folder, not files: `OpenDocumentTree` grants access to the whole tree,
+    // which the view model then walks for FIT files (sub-folders included).
+    val fitFolderPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { treeUri ->
+        // Null is the user backing out — a normal thing to do, not an error.
+        if (treeUri != null) {
+            viewModel.importFitFolder(treeUri)
+        }
+    }
+
     val routeFilePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -243,6 +254,9 @@ fun SettingsScreen(
         },
         onImportFitFile = {
             fitFilePicker.launch(FitImportMimeTypes)
+        },
+        onImportFitFolder = {
+            fitFolderPicker.launch(null)
         },
         onOpenCsvImport = onOpenCsvImport,
         onOpenReportExport = onOpenReportExport,

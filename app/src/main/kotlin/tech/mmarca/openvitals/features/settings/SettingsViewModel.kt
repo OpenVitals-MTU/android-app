@@ -43,6 +43,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntry
 import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
 import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntryState
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImporter
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFolderScanner
 import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportPhase
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportProgress
@@ -100,6 +101,33 @@ data class SettingsUiState(
     val routeImportProgress: RouteBulkImportProgress? = null,
     val routeImportResult: RouteBulkImportResult? = null,
     val routeImportError: String? = null,
+    /**
+     * Which card owns the bulk import surface above (progress, result, error).
+     * The route card and the FIT card share one importer, so each shows only
+     * the run it started.
+     */
+    val routeImportSource: RouteBulkImportSource = RouteBulkImportSource.ROUTE_FILES,
+    /**
+     * The FIT folder picker is up, or the tree is being walked. A folder of a
+     * thousand files takes a moment, and a button that looks dead is a button
+     * that gets pressed again.
+     */
+    val isScanningFitFolder: Boolean = false,
+    /**
+     * The folder was readable and simply had no FIT files in it. Its own state,
+     * not an error: the user picked the wrong folder, nothing broke.
+     */
+    val fitFolderHadNoFitFiles: Boolean = false,
+    /**
+     * How many files were listed, when the folder held more than the scan will
+     * take. Null when nothing was dropped.
+     */
+    val fitFolderTruncatedAt: Int? = null,
+    /**
+     * The scan itself failed (an unreadable tree). A file that fails to import
+     * is the bulk importer's business and lands in [routeImportError].
+     */
+    val fitFolderScanError: String? = null,
     val offlineMapPacks: List<OfflineMapPack> = emptyList(),
     val activeOfflineMapFormat: OfflineMapPackFormat? = null,
     val isImportingOfflineMap: Boolean = false,
@@ -161,6 +189,15 @@ data class SettingsUiState(
         unitOverrides[quantity] ?: unitSystem
 }
 
+/** Which Settings card started the running (or last finished) bulk import. */
+enum class RouteBulkImportSource {
+    /** The GPX/KML/KMZ/TCX card's multi-select picker. */
+    ROUTE_FILES,
+
+    /** The FIT card's folder import. */
+    FIT_FOLDER,
+}
+
 @Immutable
 data class RouteBulkImportProgress(
     val totalFiles: Int,
@@ -200,6 +237,7 @@ class SettingsViewModel @Inject constructor(
     private val appleHealthImportWorkController: AppleHealthImportWorkController,
     private val routeFileImporter: RouteFileImporter,
     private val fitHrvImportService: FitHrvImportService,
+    private val routeFolderScanner: RouteFolderScanner,
     private val offlineMapRepository: OfflineMapRepository,
     private val offlineMapImportWorkController: OfflineMapImportWorkController,
     private val permissionUxState: HealthConnectPermissionUxState,
@@ -486,63 +524,142 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun importRouteFiles(uris: List<Uri>) {
-        if (uris.isEmpty() || _uiState.value.isImportingRouteFiles) return
+        if (uris.isEmpty() || isBulkImportBusy) return
 
         viewModelScope.launch {
-            val totalFiles = uris.size
-            var importedFiles = 0
-            var failedFiles = 0
-            var lastError: String? = null
-            var rateLimited = false
+            runBulkImport(uris, RouteBulkImportSource.ROUTE_FILES)
+        }
+    }
 
+    /**
+     * "Import a folder of FIT files": walk the picked tree, list what is in
+     * it, and hand every FIT file to the bulk importer one file at a time.
+     *
+     * The scan's own outcomes (nothing found, list truncated, unreadable tree)
+     * land in the `fitFolder*` state; the import itself reports through the
+     * shared bulk-import surface tagged [RouteBulkImportSource.FIT_FOLDER].
+     */
+    fun importFitFolder(treeUri: Uri) {
+        if (isBulkImportBusy) return
+
+        viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                isImportingRouteFiles = true,
-                routeImportProgress = RouteBulkImportProgress(totalFiles = totalFiles),
-                routeImportResult = null,
-                routeImportError = null,
+                isScanningFitFolder = true,
+                fitFolderHadNoFitFiles = false,
+                fitFolderTruncatedAt = null,
+                fitFolderScanError = null,
             )
 
-            // Health Connect rate-limits per API call, not per record: one
-            // insert per file exhausted the daily allowance around 1700 files.
-            // Parsed activities accumulate and flush as ONE insert per batch,
-            // bounded by file count and by route points so peak memory tracks
-            // GPS data, not file count.
-            val pending = mutableListOf<ActivityWriteRequest>()
-            var pendingRoutePoints = 0
-            // Garmin wellness FIT files carry nightly HRV instead of an
-            // activity; they collect separately and batch the same way.
-            val pendingHrvFiles = mutableListOf<List<FitHrvReading>>()
-
-            suspend fun flushHrv() {
-                if (pendingHrvFiles.isEmpty() || rateLimited) return
-                val files = pendingHrvFiles.toList()
-                pendingHrvFiles.clear()
-                try {
-                    val outcome = fitHrvImportService.writeFiles(files)
-                    importedFiles += outcome.importedFiles
-                    failedFiles += outcome.failedFiles
-                    if (outcome.rateLimited) {
-                        rateLimited = true
-                        lastError = "Health Connect is rate limited."
-                    }
-                } catch (error: Throwable) {
-                    if (error is kotlinx.coroutines.CancellationException) throw error
-                    failedFiles += files.size
-                    lastError = error.localizedMessage ?: error.message ?: "HRV import failed."
-                    Log.e(TAG, "Garmin HRV import failed", error)
-                }
+            val scan = try {
+                routeFolderScanner.scan(treeUri, RouteFolderScanner.FitExtensions)
+            } catch (error: Throwable) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                Log.e(TAG, "FIT folder scan failed", error)
+                _uiState.value = _uiState.value.copy(
+                    isScanningFitFolder = false,
+                    fitFolderScanError = error.localizedMessage?.takeIf { it.isNotBlank() }
+                        ?: error.message?.takeIf { it.isNotBlank() }
+                        ?: "The folder could not be read.",
+                )
+                return@launch
             }
 
-            suspend fun flush() {
-                if (pending.isEmpty() || rateLimited) return
-                val batch = pending.toList()
-                pending.clear()
-                pendingRoutePoints = 0
-                try {
-                    activityRepository.writeActivityEntries(batch)
-                    importedFiles += batch.size
-                    preferencesRepository.lastActivityExerciseType = batch.last().exerciseType
+            if (scan.files.isEmpty()) {
+                _uiState.value = _uiState.value.copy(
+                    isScanningFitFolder = false,
+                    fitFolderHadNoFitFiles = true,
+                )
+                return@launch
+            }
+
+            _uiState.value = _uiState.value.copy(
+                isScanningFitFolder = false,
+                fitFolderTruncatedAt = scan.files.size.takeIf { scan.truncated },
+            )
+            // URIs, not bytes: each file is opened when the importer reaches
+            // it. A folder of four hundred rides costs the heap one ride at a
+            // time.
+            runBulkImport(scan.files.map { it.uri }, RouteBulkImportSource.FIT_FOLDER)
+        }
+    }
+
+    private val isBulkImportBusy: Boolean
+        get() = _uiState.value.isImportingRouteFiles || _uiState.value.isScanningFitFolder
+
+    private suspend fun runBulkImport(uris: List<Uri>, source: RouteBulkImportSource) {
+        val totalFiles = uris.size
+        var importedFiles = 0
+        var failedFiles = 0
+        var lastError: String? = null
+        var rateLimited = false
+
+        _uiState.value = _uiState.value.copy(
+            isImportingRouteFiles = true,
+            routeImportSource = source,
+            routeImportProgress = RouteBulkImportProgress(totalFiles = totalFiles),
+            routeImportResult = null,
+            routeImportError = null,
+        )
+
+        // Health Connect rate-limits per API call, not per record: one
+        // insert per file exhausted the daily allowance around 1700 files.
+        // Parsed activities accumulate and flush as ONE insert per batch,
+        // bounded by file count and by route points so peak memory tracks
+        // GPS data, not file count.
+        val pending = mutableListOf<ActivityWriteRequest>()
+        var pendingRoutePoints = 0
+        // Garmin wellness FIT files carry nightly HRV instead of an
+        // activity; they collect separately and batch the same way.
+        val pendingHrvFiles = mutableListOf<List<FitHrvReading>>()
+
+        suspend fun flushHrv() {
+            if (pendingHrvFiles.isEmpty() || rateLimited) return
+            val files = pendingHrvFiles.toList()
+            pendingHrvFiles.clear()
+            try {
+                val outcome = fitHrvImportService.writeFiles(files)
+                importedFiles += outcome.importedFiles
+                failedFiles += outcome.failedFiles
+                if (outcome.rateLimited) {
+                    rateLimited = true
+                    lastError = "Health Connect is rate limited."
+                }
+            } catch (error: Throwable) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                failedFiles += files.size
+                lastError = error.localizedMessage ?: error.message ?: "HRV import failed."
+                Log.e(TAG, "Garmin HRV import failed", error)
+            }
+        }
+
+        suspend fun flush() {
+            if (pending.isEmpty() || rateLimited) return
+            val batch = pending.toList()
+            pending.clear()
+            pendingRoutePoints = 0
+            try {
+                activityRepository.writeActivityEntries(batch)
+                importedFiles += batch.size
+                preferencesRepository.lastActivityExerciseType = batch.last().exerciseType
+                return
+            } catch (error: Throwable) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                if (HealthConnectRateLimitBackoff.isRateLimitFailure(error)) {
+                    rateLimited = true
+                    lastError = error.localizedMessage ?: error.message ?: "Health Connect is rate limited."
+                    Log.e(TAG, "Route bulk import rate limited; stopping", error)
                     return
+                }
+                Log.w(TAG, "Route bulk import batch failed; retrying file by file", error)
+            }
+            // The batched insert is atomic, so one bad file sinks the whole
+            // batch — retry file by file so only the guilty one fails.
+            for (request in batch) {
+                if (rateLimited) return
+                try {
+                    activityRepository.writeActivityEntry(request)
+                    importedFiles += 1
+                    preferencesRepository.lastActivityExerciseType = request.exerciseType
                 } catch (error: Throwable) {
                     if (error is kotlinx.coroutines.CancellationException) throw error
                     if (HealthConnectRateLimitBackoff.isRateLimitFailure(error)) {
@@ -551,102 +668,83 @@ class SettingsViewModel @Inject constructor(
                         Log.e(TAG, "Route bulk import rate limited; stopping", error)
                         return
                     }
-                    Log.w(TAG, "Route bulk import batch failed; retrying file by file", error)
-                }
-                // The batched insert is atomic, so one bad file sinks the whole
-                // batch — retry file by file so only the guilty one fails.
-                for (request in batch) {
-                    if (rateLimited) return
-                    try {
-                        activityRepository.writeActivityEntry(request)
-                        importedFiles += 1
-                        preferencesRepository.lastActivityExerciseType = request.exerciseType
-                    } catch (error: Throwable) {
-                        if (error is kotlinx.coroutines.CancellationException) throw error
-                        if (HealthConnectRateLimitBackoff.isRateLimitFailure(error)) {
-                            rateLimited = true
-                            lastError = error.localizedMessage ?: error.message ?: "Health Connect is rate limited."
-                            Log.e(TAG, "Route bulk import rate limited; stopping", error)
-                            return
-                        }
-                        failedFiles += 1
-                        lastError = error.localizedMessage ?: error.message ?: "Route import failed."
-                        Log.e(TAG, "Route bulk import file failed in batch retry", error)
-                    }
+                    failedFiles += 1
+                    lastError = error.localizedMessage ?: error.message ?: "Route import failed."
+                    Log.e(TAG, "Route bulk import file failed in batch retry", error)
                 }
             }
+        }
 
-            for ((index, uri) in uris.withIndex()) {
-                if (rateLimited) break
-                _uiState.value = _uiState.value.copy(
-                    routeImportProgress = RouteBulkImportProgress(
-                        totalFiles = totalFiles,
-                        importedFiles = importedFiles,
-                        failedFiles = failedFiles,
-                        currentFileIndex = index + 1,
-                    ),
-                )
-
-                runCatching {
-                    val routeImport = routeFileImporter.import(uri)
-                    // Headless import: the route's texts are generated and
-                    // parsed with the same units, so any consistent pair works.
-                    val importUnits = ActivityEntryUnits.uniform(_uiState.value.unitSystem)
-                    val routeState = initialActivityEntryState(
-                        clock = clock,
-                        repository = activityRepository,
-                        selectedActivityType = preferredActivityType(requireGpsRoute = routeImport.points.isNotEmpty()),
-                    ).withRouteImport(
-                        routeImport = routeImport,
-                        units = importUnits,
-                        clock = clock,
-                    )
-                    val request = buildWriteRequest(routeState, importUnits)
-                        ?: throw IllegalArgumentException("Imported route could not be converted into an activity.")
-                    val hasPermission = activityRepository.hasActivityWritePermission(request)
-                    if (!hasPermission) {
-                        throw SecurityException("Activity import write permissions are missing.")
-                    }
-                    request
-                }.onSuccess { request ->
-                    pending += request
-                    pendingRoutePoints += request.routePoints.size
-                    if (pending.size >= MaxPendingImportFiles || pendingRoutePoints >= MaxPendingImportRoutePoints) {
-                        flush()
-                    }
-                }.onFailure { error ->
-                    // A FIT file that is not an activity may be a Garmin
-                    // wellness file carrying nightly HRV — import that instead
-                    // of failing the file.
-                    val hrvReadings = routeFileImporter.importFitWellnessHrv(uri)
-                    if (hrvReadings.isNotEmpty()) {
-                        pendingHrvFiles += hrvReadings
-                        if (pendingHrvFiles.size >= MaxPendingImportFiles) {
-                            flushHrv()
-                        }
-                    } else {
-                        failedFiles += 1
-                        lastError = error.localizedMessage ?: error.message ?: "Route import failed."
-                        Log.e(TAG, "Route bulk import failed index=${index + 1}", error)
-                    }
-                }
-            }
-            flush()
-            flushHrv()
-
+        for ((index, uri) in uris.withIndex()) {
+            if (rateLimited) break
             _uiState.value = _uiState.value.copy(
-                isImportingRouteFiles = false,
-                routeImportProgress = null,
-                routeImportResult = RouteBulkImportResult(
+                routeImportProgress = RouteBulkImportProgress(
                     totalFiles = totalFiles,
                     importedFiles = importedFiles,
                     failedFiles = failedFiles,
+                    currentFileIndex = index + 1,
                 ),
-                // A rate-limited run stops rather than blaming the files it never
-                // attempted, so the error surfaces even with zero failed files.
-                routeImportError = lastError.takeIf { failedFiles > 0 || rateLimited },
             )
+
+            runCatching {
+                val routeImport = routeFileImporter.import(uri)
+                // Headless import: the route's texts are generated and
+                // parsed with the same units, so any consistent pair works.
+                val importUnits = ActivityEntryUnits.uniform(_uiState.value.unitSystem)
+                val routeState = initialActivityEntryState(
+                    clock = clock,
+                    repository = activityRepository,
+                    selectedActivityType = preferredActivityType(requireGpsRoute = routeImport.points.isNotEmpty()),
+                ).withRouteImport(
+                    routeImport = routeImport,
+                    units = importUnits,
+                    clock = clock,
+                )
+                val request = buildWriteRequest(routeState, importUnits)
+                    ?: throw IllegalArgumentException("Imported route could not be converted into an activity.")
+                val hasPermission = activityRepository.hasActivityWritePermission(request)
+                if (!hasPermission) {
+                    throw SecurityException("Activity import write permissions are missing.")
+                }
+                request
+            }.onSuccess { request ->
+                pending += request
+                pendingRoutePoints += request.routePoints.size
+                if (pending.size >= MaxPendingImportFiles || pendingRoutePoints >= MaxPendingImportRoutePoints) {
+                    flush()
+                }
+            }.onFailure { error ->
+                // A FIT file that is not an activity may be a Garmin
+                // wellness file carrying nightly HRV — import that instead
+                // of failing the file.
+                val hrvReadings = routeFileImporter.importFitWellnessHrv(uri)
+                if (hrvReadings.isNotEmpty()) {
+                    pendingHrvFiles += hrvReadings
+                    if (pendingHrvFiles.size >= MaxPendingImportFiles) {
+                        flushHrv()
+                    }
+                } else {
+                    failedFiles += 1
+                    lastError = error.localizedMessage ?: error.message ?: "Route import failed."
+                    Log.e(TAG, "Route bulk import failed index=${index + 1}", error)
+                }
+            }
         }
+        flush()
+        flushHrv()
+
+        _uiState.value = _uiState.value.copy(
+            isImportingRouteFiles = false,
+            routeImportProgress = null,
+            routeImportResult = RouteBulkImportResult(
+                totalFiles = totalFiles,
+                importedFiles = importedFiles,
+                failedFiles = failedFiles,
+            ),
+            // A rate-limited run stops rather than blaming the files it never
+            // attempted, so the error surfaces even with zero failed files.
+            routeImportError = lastError.takeIf { failedFiles > 0 || rateLimited },
+        )
     }
 
     fun importOfflineMap(uri: Uri) {

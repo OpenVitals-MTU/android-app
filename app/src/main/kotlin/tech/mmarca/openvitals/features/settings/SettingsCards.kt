@@ -2144,9 +2144,9 @@ internal fun RouteImportCard(
                 )
             }
 
-            if (isImporting) {
+            if (isImporting && progress != null) {
                 AppleHealthImportProgressBar(modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
-                val routeProgress = progress ?: RouteBulkImportProgress(totalFiles = 0)
+                val routeProgress = progress
                 Text(
                     text = stringResource(
                         R.string.settings_route_import_progress,
@@ -2214,11 +2214,37 @@ internal fun RouteImportCard(
     }
 }
 
+/**
+ * The FIT importer: one file for review, or a whole FOLDER straight through.
+ *
+ * A single file opens the activity review screen. That is the right thing for
+ * one file and the wrong one for two hundred, which is what the folder button
+ * is for: it writes every FIT file under the picked folder straight to Health
+ * Connect through the same bulk importer the route card uses. The folder is
+ * picked as a SAF tree and walked by `RouteFolderScanner`, so it needs no
+ * storage permission.
+ */
 @Composable
 internal fun FitImportCard(
+    availability: HealthConnectAvailability,
+    importPermissions: Set<String>,
+    grantedPermissions: Set<String>,
+    isScanning: Boolean,
+    folderHadNoFitFiles: Boolean,
+    truncatedAt: Int?,
+    scanError: String?,
+    isImporting: Boolean,
+    progress: RouteBulkImportProgress?,
+    result: RouteBulkImportResult?,
+    error: String?,
+    onGrantPermissions: () -> Unit,
     onImport: () -> Unit,
+    onImportFolder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val missingPermissions = importPermissions - grantedPermissions
+    val healthConnectAvailable = availability == HealthConnectAvailability.AVAILABLE
+    val isBusy = isScanning || isImporting
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -2250,11 +2276,114 @@ internal fun FitImportCard(
                 }
             }
 
+            result?.let { importResult ->
+                Text(
+                    text = stringResource(
+                        R.string.settings_route_import_result,
+                        importResult.importedFiles,
+                        importResult.failedFiles,
+                        importResult.totalFiles,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+
+            // The folder held more files than the scan will take. Said out
+            // loud, because an import that silently skipped the tail would
+            // read exactly like one that finished.
+            truncatedAt?.let { limit ->
+                Text(
+                    text = stringResource(R.string.settings_fit_import_folder_truncated, limit),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            // Not an error: the folder was perfectly readable and simply had
+            // no FIT files in it.
+            if (folderHadNoFitFiles) {
+                Text(
+                    text = stringResource(R.string.settings_fit_import_folder_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            for (message in listOfNotNull(scanError, error)) {
+                if (message.isBlank()) continue
+                Text(
+                    text = stringResource(R.string.settings_fit_import_error, message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            if (isBusy) {
+                AppleHealthImportProgressBar(modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+                val importProgress = progress ?: RouteBulkImportProgress(totalFiles = 0)
+                Text(
+                    text = if (isImporting) {
+                        stringResource(
+                            R.string.settings_route_import_progress,
+                            importProgress.currentFileIndex,
+                            importProgress.totalFiles,
+                            importProgress.importedFiles,
+                            importProgress.failedFiles,
+                        )
+                    } else {
+                        // Walking a memory card with a thousand rides on it
+                        // takes a moment, and a button that looks dead gets
+                        // pressed again.
+                        stringResource(R.string.settings_fit_import_folder_scanning)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            // The folder import writes straight to Health Connect, so it needs
+            // the same write permissions the route bulk import does. A single
+            // file goes through the review screen, which asks on its own.
+            if (missingPermissions.isNotEmpty()) {
+                OpenVitalsTonalButton(
+                    onClick = onGrantPermissions,
+                    enabled = healthConnectAvailable && !isBusy,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                ) {
+                    Text(stringResource(R.string.settings_fit_import_folder_grant))
+                }
+            }
+
             OpenVitalsOutlinedButton(
                 onClick = onImport,
+                enabled = !isBusy,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.widthIn(min = 6.dp))
+                Text(stringResource(R.string.settings_fit_import_action))
+            }
+
+            OpenVitalsOutlinedButton(
+                onClick = onImportFolder,
+                enabled = healthConnectAvailable && missingPermissions.isEmpty() && !isBusy,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.FolderOpen,
@@ -2262,7 +2391,13 @@ internal fun FitImportCard(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.widthIn(min = 6.dp))
-                Text(stringResource(R.string.settings_fit_import_action))
+                Text(
+                    if (isImporting) {
+                        stringResource(R.string.settings_route_importing)
+                    } else {
+                        stringResource(R.string.settings_fit_import_folder_action)
+                    }
+                )
             }
         }
     }

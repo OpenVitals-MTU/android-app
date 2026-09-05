@@ -473,6 +473,7 @@ class RouteBulkImportTest {
             appleHealthImportWorkController = importController(),
             routeFileImporter = routeFileImporter,
             fitHrvImportService = fitHrvImportService,
+            routeFolderScanner = mockk(relaxed = true),
             offlineMapRepository = offlineMapRepository(),
             offlineMapImportWorkController = offlineMapImportController(),
             permissionUxState = mockk<HealthConnectPermissionUxState>(relaxed = true),

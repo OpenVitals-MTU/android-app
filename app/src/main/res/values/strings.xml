@@ -1924,6 +1924,12 @@
     <string name="settings_fit_import_title">FIT importer</string>
     <string name="settings_fit_import_body">Import FIT activity, course, or workout files, review detected details, and choose whether to save them to Health Connect.</string>
     <string name="settings_fit_import_action">Import FIT file</string>
+    <string name="settings_fit_import_folder_action">Import a folder of FIT files</string>
+    <string name="settings_fit_import_folder_scanning">Looking for FIT files…</string>
+    <string name="settings_fit_import_folder_empty">That folder has no FIT files in it.</string>
+    <string name="settings_fit_import_folder_truncated">That folder is very large: only the first %1$d FIT files were imported.</string>
+    <string name="settings_fit_import_folder_grant">Grant import permissions</string>
+    <string name="settings_fit_import_error">FIT import warning: %1$s</string>
     <string name="settings_csv_import_title">CSV importer</string>
     <string name="settings_csv_import_body">Import body measurements from a CSV file — for example a weight and body-composition export from a smart scale. You choose what each column means.</string>
     <string name="settings_csv_import_action">Import a CSV file</string>

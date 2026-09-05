@@ -364,10 +364,12 @@ internal fun LazyListScope.settingsScreenContent(
                     availability = state.availability,
                     importPermissions = state.routeImportWritePermissions,
                     grantedPermissions = state.grantedPermissions,
+                    // One bulk importer serves both this card and the FIT
+                    // card; each shows only the run it started.
                     isImporting = state.isImportingRouteFiles,
-                    progress = state.routeImportProgress,
-                    result = state.routeImportResult,
-                    error = state.routeImportError,
+                    progress = state.routeImportProgress.takeIf { state.routeImportSource == RouteBulkImportSource.ROUTE_FILES },
+                    result = state.routeImportResult.takeIf { state.routeImportSource == RouteBulkImportSource.ROUTE_FILES },
+                    error = state.routeImportError.takeIf { state.routeImportSource == RouteBulkImportSource.ROUTE_FILES },
                     onGrantPermissions = actions.onGrantRouteImportPermissions,
                     onImportSingle = actions.onImportRouteFile,
                     onImportBulk = actions.onImportRouteFiles,
@@ -377,7 +379,20 @@ internal fun LazyListScope.settingsScreenContent(
             item { SettingsCardSpacer() }
             item {
                 FitImportCard(
+                    availability = state.availability,
+                    importPermissions = state.routeImportWritePermissions,
+                    grantedPermissions = state.grantedPermissions,
+                    isScanning = state.isScanningFitFolder,
+                    folderHadNoFitFiles = state.fitFolderHadNoFitFiles,
+                    truncatedAt = state.fitFolderTruncatedAt,
+                    scanError = state.fitFolderScanError,
+                    isImporting = state.isImportingRouteFiles,
+                    progress = state.routeImportProgress.takeIf { state.routeImportSource == RouteBulkImportSource.FIT_FOLDER },
+                    result = state.routeImportResult.takeIf { state.routeImportSource == RouteBulkImportSource.FIT_FOLDER },
+                    error = state.routeImportError.takeIf { state.routeImportSource == RouteBulkImportSource.FIT_FOLDER },
+                    onGrantPermissions = actions.onGrantRouteImportPermissions,
                     onImport = actions.onImportFitFile,
+                    onImportFolder = actions.onImportFitFolder,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
