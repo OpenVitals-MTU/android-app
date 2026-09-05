@@ -292,6 +292,12 @@ internal fun CaffeinePreferencesCard(
 
 /** The leading glyph on a settings card. A glyph's size is not a spacing. */
 private val settingsCardIconSize = 20.dp
+/** Optical nudge that aligns a 20dp card icon with the first line of its title. */
+private val settingsCardIconTopOffset = 2.dp
+
+/** The leading icon inside a full-width card button, and its gap to the label. */
+private val settingsButtonIconSize = 18.dp
+private val settingsButtonIconGap = 6.dp
 
 /**
  * Which days a nutrition average divides by.
@@ -2248,19 +2254,19 @@ internal fun FitImportCard(
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
             Row(verticalAlignment = Alignment.Top) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.DirectionsRun,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
-                        .padding(top = 2.dp)
-                        .size(20.dp),
+                        .padding(top = settingsCardIconTopOffset)
+                        .size(settingsCardIconSize),
                 )
                 Column(
                     modifier = Modifier
-                        .padding(start = 12.dp)
+                        .padding(start = Spacing.md)
                         .weight(1f),
                 ) {
                     Text(
@@ -2271,7 +2277,7 @@ internal fun FitImportCard(
                         text = stringResource(R.string.settings_fit_import_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier.padding(top = Spacing.xs),
                     )
                 }
             }
@@ -2286,7 +2292,7 @@ internal fun FitImportCard(
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 12.dp),
+                    modifier = Modifier.padding(top = Spacing.md),
                 )
             }
 
@@ -2298,7 +2304,7 @@ internal fun FitImportCard(
                     text = stringResource(R.string.settings_fit_import_folder_truncated, limit),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = Spacing.sm),
                 )
             }
 
@@ -2309,7 +2315,7 @@ internal fun FitImportCard(
                     text = stringResource(R.string.settings_fit_import_folder_empty),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = Spacing.sm),
                 )
             }
 
@@ -2319,12 +2325,12 @@ internal fun FitImportCard(
                     text = stringResource(R.string.settings_fit_import_error, message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = Spacing.sm),
                 )
             }
 
             if (isBusy) {
-                AppleHealthImportProgressBar(modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+                AppleHealthImportProgressBar(modifier = Modifier.fillMaxWidth().padding(top = Spacing.md))
                 val importProgress = progress ?: RouteBulkImportProgress(totalFiles = 0)
                 Text(
                     text = if (isImporting) {
@@ -2343,7 +2349,7 @@ internal fun FitImportCard(
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = Spacing.sm),
                 )
             }
 
@@ -2356,7 +2362,7 @@ internal fun FitImportCard(
                     enabled = healthConnectAvailable && !isBusy,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 12.dp),
+                        .padding(top = Spacing.md),
                 ) {
                     Text(stringResource(R.string.settings_fit_import_folder_grant))
                 }
@@ -2367,14 +2373,14 @@ internal fun FitImportCard(
                 enabled = !isBusy,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp),
+                    .padding(top = Spacing.md),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Description,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(settingsButtonIconSize),
                 )
-                Spacer(Modifier.widthIn(min = 6.dp))
+                Spacer(Modifier.widthIn(min = settingsButtonIconGap))
                 Text(stringResource(R.string.settings_fit_import_action))
             }
 
@@ -2383,14 +2389,14 @@ internal fun FitImportCard(
                 enabled = healthConnectAvailable && missingPermissions.isEmpty() && !isBusy,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(top = Spacing.sm),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.FolderOpen,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(settingsButtonIconSize),
                 )
-                Spacer(Modifier.widthIn(min = 6.dp))
+                Spacer(Modifier.widthIn(min = settingsButtonIconGap))
                 Text(
                     if (isImporting) {
                         stringResource(R.string.settings_route_importing)

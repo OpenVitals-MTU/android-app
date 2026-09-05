@@ -118,7 +118,8 @@ class TokenDisciplineTest {
         // are the sanctioned form, so counting them would punish following the
         // rule). These may only ever go DOWN.
         // 2026-09-05: DerivedMetricsResetCard migrated (1941 -> 1933).
-        const val MaxBareDp = 1933
+        // 2026-09-05: FitImportCard migrated (1933 -> 1925).
+        const val MaxBareDp = 1925
         const val MaxBareAlpha = 92
         const val MaxBareCorner = 16
     }
