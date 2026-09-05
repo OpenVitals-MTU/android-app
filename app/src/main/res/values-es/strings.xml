@@ -2747,4 +2747,10 @@
     <string name="settings_derived_metrics_reset_confirm_body">Se borrarán el historial de energía corporal, las optimizaciones aprendidas, las líneas de base y la caché de gasto, y se volverán a calcular a partir de Health Connect. No se modificará nada en Health Connect. Esta acción no se puede deshacer.</string>
     <string name="settings_derived_metrics_reset_done">Métricas restablecidas. Recalculando desde Health Connect en segundo plano.</string>
     <string name="settings_derived_metrics_reset_failed">Error al restablecer las métricas</string>
+    <string name="settings_fit_import_folder_action">Importar una carpeta de archivos FIT</string>
+    <string name="settings_fit_import_folder_scanning">Buscando archivos FIT…</string>
+    <string name="settings_fit_import_folder_empty">Esa carpeta no tiene archivos FIT.</string>
+    <string name="settings_fit_import_folder_truncated">Esa carpeta es muy grande: solo se importaron los primeros %1$d archivos FIT.</string>
+    <string name="settings_fit_import_folder_grant">Permitir la importación</string>
+    <string name="settings_fit_import_error">Advertencia de importación FIT: %1$s</string>
 </resources>
