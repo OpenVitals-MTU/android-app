@@ -2740,4 +2740,11 @@
     <string name="settings_csv_import_issue_multiple_end_timestamps">Solo una columna puede contener la fecha y hora de finalización.</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Fecha de finalización no válida</string>
     <string name="settings_csv_import_reason_end_not_after_start">El fin debe ser posterior al inicio</string>
+    <string name="settings_derived_metrics_reset_title">Comienza con energía corporal, recuperación y gasto</string>
+    <string name="settings_derived_metrics_reset_body">Elimina toda la información que OpenVitals ha generado por sí misma para estas métricas —el historial de energía corporal, el ajuste aprendido de tu reloj, las líneas base y la caché de gasto energético— y los reconstruye a partir de Health Connect, tal como ocurriría con una instalación nueva. Se conservan tus datos de Health Connect, tu perfil corporal, las zonas de frecuencia cardíaca y tus objetivos.</string>
+    <string name="settings_derived_metrics_reset_action">Empezar de nuevo</string>
+    <string name="settings_derived_metrics_reset_confirm_title">¿Reiniciar estas métricas?</string>
+    <string name="settings_derived_metrics_reset_confirm_body">Se borrarán el historial de energía corporal, las optimizaciones aprendidas, las líneas de base y la caché de gasto, y se volverán a calcular a partir de Health Connect. No se modificará nada en Health Connect. Esta acción no se puede deshacer.</string>
+    <string name="settings_derived_metrics_reset_done">Métricas restablecidas. Recalculando desde Health Connect en segundo plano.</string>
+    <string name="settings_derived_metrics_reset_failed">Error al restablecer las métricas</string>
 </resources>
