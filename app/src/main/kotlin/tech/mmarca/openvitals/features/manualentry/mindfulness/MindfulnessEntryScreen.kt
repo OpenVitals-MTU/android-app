@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.manualentry.mindfulness
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,10 +8,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
 
 @Composable
 fun MindfulnessEntryScreen(
@@ -20,9 +19,7 @@ fun MindfulnessEntryScreen(
     onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val requestWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
+    val requestWritePermissions = rememberManualEntryWritePermissionRequester {
         viewModel.refreshPermission()
     }
 

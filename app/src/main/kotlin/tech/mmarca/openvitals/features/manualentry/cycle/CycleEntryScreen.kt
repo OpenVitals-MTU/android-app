@@ -9,7 +9,6 @@ import tech.mmarca.openvitals.features.manualentry.hydration.*
 import tech.mmarca.openvitals.features.manualentry.mindfulness.*
 import tech.mmarca.openvitals.features.manualentry.vitals.*
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,13 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
 import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.resolve
@@ -65,9 +64,7 @@ fun CycleEntryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val unitSystem = unitFormatter.unitSystem(UnitQuantity.TEMPERATURE)
 
-    val requestWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
+    val requestWritePermissions = rememberManualEntryWritePermissionRequester {
         viewModel.refreshPermission()
     }
 

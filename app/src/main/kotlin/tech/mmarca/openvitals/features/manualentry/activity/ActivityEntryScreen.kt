@@ -15,13 +15,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
 
 @Composable
 fun ActivityEntryScreen(
@@ -100,9 +100,7 @@ fun ActivityEntryScreen(
             performSourceAction(action)
         }
     }
-    val requestWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) { grantedPermissions ->
+    val requestWritePermissions = rememberManualEntryWritePermissionRequester { grantedPermissions ->
         viewModel.refreshPermission()
         val action = pendingSourceAction
         pendingSourceAction = null

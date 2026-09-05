@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.manualentry
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -11,7 +10,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -30,41 +28,10 @@ fun ManualEntryScreen(
     onOpenWorkoutPlans: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val requestWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
-        viewModel.onHydrationWritePermissionResult()
-    }
-    val requestBodyWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
-        viewModel.onBodyWritePermissionResult()
-    }
-    val requestNutritionWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
-        viewModel.onNutritionWritePermissionResult()
-    }
-    val requestActivityWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
-        viewModel.onActivityWritePermissionResult()
-    }
-    val requestVitalsWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
-        viewModel.onVitalsWritePermissionResult()
-    }
-    val requestMindfulnessWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
-        viewModel.onMindfulnessWritePermissionResult()
-    }
-    val requestCycleWritePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
-        viewModel.onCycleWritePermissionResult()
-    }
+    // A tile only opens its entry screen. The screen shows the write-permission
+    // callout when needed, and its Grant button is the one place that asks
+    // Health Connect, so the single dialog Health Connect allows is not spent
+    // here before the user has seen the form.
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
@@ -75,7 +42,7 @@ fun ManualEntryScreen(
         onOpenVitalsMeasurementEntry = viewModel::onVitalsMeasurementWidgetTapped,
         onOpenCycleEntry = viewModel::onCycleWidgetTapped,
         // The plans screen carries its own Health Connect gate, so the tile
-        // navigates directly instead of going through a permission check here.
+        // navigates directly instead of going through the view model.
         onOpenWorkoutPlans = onOpenWorkoutPlans,
     )
     val specsById = specs.associateBy { it.id }
@@ -130,53 +97,6 @@ fun ManualEntryScreen(
         if (type != null) {
             viewModel.onVitalsEntryNavigationHandled()
             onOpenVitalsMeasurementEntry(type)
-        }
-    }
-
-    // A tile whose write set is missing asks Health Connect for exactly that
-    // set. The trigger is cleared before launching so a configuration change
-    // while the system dialog is up does not launch it a second time; the
-    // result callback opens the entry form either way.
-    LaunchedEffect(state.pendingHydrationWritePermissionRequest) {
-        if (state.pendingHydrationWritePermissionRequest) {
-            viewModel.onHydrationWritePermissionRequestLaunched()
-            requestWritePermissions.launch(state.hydrationWritePermissions)
-        }
-    }
-    LaunchedEffect(state.pendingCarbsWritePermissionRequest) {
-        if (state.pendingCarbsWritePermissionRequest) {
-            viewModel.onCarbsWritePermissionRequestLaunched()
-            requestNutritionWritePermissions.launch(state.nutritionWritePermissions)
-        }
-    }
-    LaunchedEffect(state.pendingActivityWritePermissionRequest) {
-        if (state.pendingActivityWritePermissionRequest) {
-            viewModel.onActivityWritePermissionRequestLaunched()
-            requestActivityWritePermissions.launch(state.activityWritePermissions)
-        }
-    }
-    LaunchedEffect(state.pendingMindfulnessWritePermissionRequest) {
-        if (state.pendingMindfulnessWritePermissionRequest) {
-            viewModel.onMindfulnessWritePermissionRequestLaunched()
-            requestMindfulnessWritePermissions.launch(state.mindfulnessWritePermissions)
-        }
-    }
-    LaunchedEffect(state.pendingCycleWritePermissionRequest) {
-        if (state.pendingCycleWritePermissionRequest) {
-            viewModel.onCycleWritePermissionRequestLaunched()
-            requestCycleWritePermissions.launch(state.cycleWritePermissions)
-        }
-    }
-    LaunchedEffect(state.pendingBodyWritePermissionRequest) {
-        if (state.pendingBodyWritePermissionRequest != null) {
-            viewModel.onBodyWritePermissionRequestLaunched()
-            requestBodyWritePermissions.launch(state.bodyWritePermissions)
-        }
-    }
-    LaunchedEffect(state.pendingVitalsWritePermissionRequest) {
-        if (state.pendingVitalsWritePermissionRequest != null) {
-            viewModel.onVitalsWritePermissionRequestLaunched()
-            requestVitalsWritePermissions.launch(state.vitalsWritePermissions)
         }
     }
 

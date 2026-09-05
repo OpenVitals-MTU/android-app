@@ -55,10 +55,10 @@ enum class HealthConnectFeature {
             HealthPermission.getReadPermission(ExerciseSessionRecord::class),
             HealthPermission.getReadPermission(RespiratoryRateRecord::class),
         )
-        // The log's grid opens with any (or no) write permission: each tile
-        // asks Health Connect for exactly its own write set when tapped, the
-        // way CSV_IMPORT asks at the confirm step. Only the sync-paused gate
-        // still applies to the grid.
+        // The log's grid opens with any (or no) write permission: each entry
+        // screen asks Health Connect for exactly its own write set from its
+        // Grant button, the way CSV_IMPORT asks at the confirm step. Only the
+        // sync-paused gate still applies to the grid.
         MANUAL_ENTRY -> emptySet()
         DATA_IMPORT -> manager.dataImportWritePermissions
         // The CSV importer's gate requires NO permissions: which write
